@@ -1,0 +1,172 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.ExperimentalSettingsView">
+  <ScrollViewer>
+    <StackPanel Spacing="12">
+
+      <!-- Lead banner -->
+      <Border Padding="18"
+              Classes="surface-card subtle-panel">
+        <StackPanel Spacing="8">
+          <TextBlock x:Name="LeadTitleBlock"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="LeadDescriptionBlock"
+                     MaxWidth="860"
+                     Opacity="0.78"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- Restart notice (hidden until a restart-required setting changes) -->
+      <Border x:Name="RestartNoticeCard"
+              Padding="18"
+              Classes="surface-card warning-panel"
+              IsVisible="False">
+        <StackPanel Spacing="10">
+          <TextBlock x:Name="RestartTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="RestartDescriptionBlock"
+                     MaxWidth="860"
+                     Opacity="0.82"
+                     TextWrapping="Wrap" />
+          <Button x:Name="RestartAppButton"
+                  HorizontalAlignment="Left"
+                  Click="RestartAppButton_OnClick" />
+        </StackPanel>
+      </Border>
+
+      <!-- Background services -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="ServicesTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="ServicesDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="EnableApiCheckBox"
+                    Content="Enable the background package API (UniGetUI Widgets, port 7058)" />
+          <TextBlock x:Name="ServicesHintBlock"
+                     Opacity="0.68"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- Language and icon data -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="LanguageTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="LanguageDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="DownloadLangUpdatesCheckBox"
+                    Content="Download updated language files from GitHub automatically" />
+          <TextBlock x:Name="IconDbTitleBlock"
+                     FontWeight="SemiBold"
+                     Opacity="0.88"
+                     TextWrapping="Wrap" />
+          <TextBox x:Name="IconDbUrlTextBox"
+                   Watermark="Leave empty for default"
+                   MaxLength="512" />
+          <TextBlock x:Name="IconDbHintBlock"
+                     Opacity="0.68"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- Performance -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="PerfTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="PerfDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="DisableTimeoutCheckBox"
+                    Content="Disable the 1-minute timeout for package-related operations" />
+          <TextBlock x:Name="DisableTimeoutHintBlock"
+                     Opacity="0.68"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="EnableDmwOptimizationsCheckBox"
+                    Content="Enable background CPU usage optimizations" />
+          <TextBlock x:Name="DmwOptimizationsHintBlock"
+                     Opacity="0.68"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- Startup integrity -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="IntegrityTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="IntegrityDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="PerformIntegrityChecksCheckBox"
+                    Content="Perform integrity checks at startup" />
+          <TextBlock x:Name="IntegrityHintBlock"
+                     Opacity="0.68"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- Elevation — ForceUserGSudo (secure setting) -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="ElevationTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="ElevationDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="ForceUserGSudoCheckBox"
+                    Content="Use installed GSudo instead of UniGetUI Elevator" />
+          <TextBlock x:Name="ElevationHintBlock"
+                     Opacity="0.68"
+                     TextWrapping="Wrap" />
+          <Border x:Name="GsudoPendingBadge"
+                  Padding="8,4"
+                  Classes="surface-card warning-panel"
+                  IsVisible="False">
+            <TextBlock x:Name="GsudoPendingText"
+                       FontSize="12"
+                       TextWrapping="Wrap" />
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Bundle behavior -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="BundleTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="BundleDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="InstallInstalledPackagesCheckBox"
+                    Content="Also install already-installed packages when batch-installing from a bundle" />
+          <TextBlock x:Name="BundleHintBlock"
+                     Opacity="0.68"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

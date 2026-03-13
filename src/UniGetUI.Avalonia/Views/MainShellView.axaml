@@ -1,0 +1,291 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:pages="using:UniGetUI.Avalonia.Views.Pages"
+             x:Class="UniGetUI.Avalonia.Views.MainShellView">
+  <Grid ColumnDefinitions="Auto,*"
+        RowDefinitions="*">
+    <Border x:Name="SidebarBorder"
+            Width="232"
+            Padding="12"
+            Classes="surface-card flat-shell-panel"
+            BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,*,Auto">
+        <StackPanel Spacing="16">
+          <Grid ColumnDefinitions="*,Auto"
+                PointerPressed="TitleRegion_OnPointerPressed"
+                DoubleTapped="TitleRegion_OnDoubleTapped">
+            <StackPanel Spacing="3">
+              <TextBlock FontSize="16"
+                         FontWeight="Bold"
+                         Text="UniGetUI" />
+              <TextBlock x:Name="ShellSubtitleBlock"
+                         Opacity="0.68"
+                         TextTrimming="CharacterEllipsis"
+                         Text="" />
+            </StackPanel>
+            <Button x:Name="ToggleNavigationButton"
+                    Grid.Column="1"
+                  Width="32"
+                  Height="32"
+                    Padding="0"
+                    Classes="icon-shell"
+                    Click="ToggleNavigationButton_OnClick"
+                    Content="☰" />
+          </Grid>
+
+          <StackPanel Spacing="6">
+            <Button x:Name="DiscoverButton"
+                    Classes="nav"
+                    Click="DiscoverButton_OnClick">
+              <Grid ColumnDefinitions="20,*"
+                ColumnSpacing="10">
+                <TextBlock Text="◎" />
+                <TextBlock x:Name="DiscoverLabel"
+                           Grid.Column="1"
+                           Text="Discover Packages" />
+              </Grid>
+            </Button>
+            <Button x:Name="UpdatesButton"
+                    Classes="nav"
+                    Click="UpdatesButton_OnClick">
+              <Grid ColumnDefinitions="20,*,Auto"
+                ColumnSpacing="10">
+                <TextBlock Text="↻" />
+                <TextBlock x:Name="UpdatesLabel"
+                           Grid.Column="1"
+                           Text="Software Updates" />
+                <Border x:Name="UpdatesBadge"
+                        Grid.Column="2"
+                        IsVisible="False"
+                        CornerRadius="10"
+                        Padding="5,2"
+                        Background="{DynamicResource SystemAccentColor}">
+                  <TextBlock x:Name="UpdatesBadgeCount"
+                             FontSize="10"
+                             FontWeight="Bold"
+                             Foreground="White"
+                             Text="0" />
+                </Border>
+              </Grid>
+            </Button>
+            <Button x:Name="InstalledButton"
+                    Classes="nav"
+                    Click="InstalledButton_OnClick">
+              <Grid ColumnDefinitions="20,*"
+                ColumnSpacing="10">
+                <TextBlock Text="▣" />
+                <TextBlock x:Name="InstalledLabel"
+                           Grid.Column="1"
+                           Text="Installed Packages" />
+              </Grid>
+            </Button>
+            <Button x:Name="BundlesButton"
+                    Classes="nav"
+                    Click="BundlesButton_OnClick">
+              <Grid ColumnDefinitions="20,*"
+                ColumnSpacing="10">
+                <TextBlock Text="☷" />
+                <TextBlock x:Name="BundlesLabel"
+                           Grid.Column="1"
+                           Text="Package Bundles" />
+              </Grid>
+            </Button>
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2"
+                    Spacing="6">
+          <Button x:Name="SettingsButton"
+                  Classes="nav"
+                  Click="SettingsButton_OnClick">
+            <Grid ColumnDefinitions="20,*"
+              ColumnSpacing="10">
+              <TextBlock Text="⚙" />
+              <TextBlock x:Name="SettingsLabel"
+                         Grid.Column="1"
+                         Text="Settings" />
+            </Grid>
+          </Button>
+          <Button x:Name="ManagersButton"
+                  Classes="nav"
+                  Click="ManagersButton_OnClick">
+            <Grid ColumnDefinitions="20,*"
+              ColumnSpacing="10">
+              <TextBlock Text="⌘" />
+              <TextBlock x:Name="ManagersLabel"
+                         Grid.Column="1"
+                         Text="Package Managers" />
+            </Grid>
+          </Button>
+          <Button x:Name="HelpButton"
+                  Classes="nav"
+                  Click="HelpButton_OnClick">
+            <Grid ColumnDefinitions="20,*"
+              ColumnSpacing="10">
+              <TextBlock Text="?" />
+              <TextBlock x:Name="HelpLabel"
+                         Grid.Column="1"
+                         Text="Help" />
+            </Grid>
+          </Button>
+          <Button x:Name="LogsButton"
+                  Classes="nav"
+                  Click="LogsButton_OnClick">
+            <Grid ColumnDefinitions="20,*"
+              ColumnSpacing="10">
+              <TextBlock Text="📋" />
+              <TextBlock x:Name="LogsLabel"
+                         Grid.Column="1"
+                         Text="Logs" />
+            </Grid>
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Column="1"
+          RowDefinitions="Auto,Auto,*,Auto">
+      <Border Padding="18,14,18,14"
+        Classes="surface-card flat-shell-panel"
+        BorderThickness="0,0,0,1"
+        PointerPressed="TitleRegion_OnPointerPressed"
+        DoubleTapped="TitleRegion_OnDoubleTapped">
+        <Grid ColumnDefinitions="Auto,*,Auto"
+              ColumnSpacing="14">
+          <Button x:Name="BackButton"
+                  Width="36"
+                  Height="36"
+                  Padding="0"
+                  IsVisible="False"
+                  Classes="icon-shell"
+                  Click="BackButton_OnClick"
+                  Content="←" />
+
+          <Grid Grid.Column="1"
+                ColumnDefinitions="*,Auto"
+                ColumnSpacing="14">
+            <StackPanel Spacing="1">
+              <TextBlock x:Name="CurrentPageTitleBlock"
+                         FontSize="24"
+                         FontWeight="Bold"
+                         Text="" />
+              <TextBlock x:Name="CurrentPageSubtitleBlock"
+                         Opacity="0.68"
+                         Text="" />
+            </StackPanel>
+            <TextBox x:Name="GlobalSearchBox"
+                     Grid.Column="1"
+                     MaxWidth="500"
+                     MinWidth="280"
+                     Margin="14,0,0,0"
+                     HorizontalAlignment="Right"
+                     VerticalAlignment="Center"
+                     Watermark="Search for packages"
+                     TextChanged="GlobalSearchBox_OnTextChanged" />
+          </Grid>
+
+          <StackPanel Grid.Column="2"
+                      Orientation="Horizontal"
+                  Spacing="6">
+              <Button x:Name="MinimizeWindowButton"
+                  Width="38"
+                  Height="30"
+                      Padding="0"
+                      Classes="caption-button"
+                      Click="MinimizeWindowButton_OnClick"
+                      Content="−" />
+              <Button x:Name="ToggleMaximizeWindowButton"
+                      Width="38"
+                      Height="30"
+                      Padding="0"
+                      Classes="caption-button"
+                      Click="ToggleMaximizeWindowButton_OnClick"
+                      Content="□" />
+              <Button x:Name="CloseWindowButton"
+                      Width="38"
+                      Height="30"
+                      Padding="0"
+                      Classes="caption-button caption-close"
+                      Click="CloseWindowButton_OnClick"
+                      Content="✕" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Auto-update banner (shown when a new installer is ready) -->
+      <Border x:Name="UpdateBannerBorder"
+              Grid.Row="1"
+              IsVisible="False"
+              Padding="16,10"
+              Background="{DynamicResource SystemAccentColor}">
+        <Grid ColumnDefinitions="*,Auto,Auto"
+              ColumnSpacing="12">
+          <TextBlock x:Name="UpdateBannerText"
+                     VerticalAlignment="Center"
+                     Foreground="White"
+                     TextWrapping="Wrap"
+                     Text="" />
+          <Button x:Name="UpdateBannerButton"
+                  Grid.Column="1"
+                  Classes="accent"
+                  Content="Update now"
+                  Click="UpdateBannerButton_OnClick" />
+          <Button x:Name="UpdateBannerDismissButton"
+                  Grid.Column="2"
+                  Padding="6"
+                  Classes="icon-shell"
+                  Content="✕"
+                  Click="UpdateBannerDismissButton_OnClick" />
+        </Grid>
+      </Border>
+
+      <ContentControl x:Name="PageHost"
+                      Grid.Row="2"
+                      Margin="16" />
+
+      <!-- Operations panel -->
+      <Border x:Name="OperationsPanelBorder"
+              Grid.Row="3"
+              IsVisible="False"
+              Classes="surface-card flat-shell-panel"
+              BorderThickness="0,1,0,0"
+              Padding="0">
+        <Grid RowDefinitions="Auto,Auto">
+          <Border Grid.Row="0"
+                  Padding="16,6"
+                  BorderThickness="0,0,0,1">
+            <Border.BorderBrush>
+              <SolidColorBrush Color="{DynamicResource SystemBaseMediumLowColor}" />
+            </Border.BorderBrush>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock x:Name="ActiveOperationsHeaderBlock"
+                         Grid.Column="0"
+                         VerticalAlignment="Center"
+                         FontSize="12"
+                         Opacity="0.7"
+                         Text="Active operations" />
+              <Button x:Name="OperationsBulkMenuButton"
+                      Grid.Column="1"
+                      Padding="6,2"
+                      VerticalAlignment="Center"
+                      Classes="icon-button"
+                      Content="⋯"
+                      ToolTip.Tip="More actions" />
+            </Grid>
+          </Border>
+          <ScrollViewer Grid.Row="1"
+                        MaxHeight="220"
+                        Padding="8">
+            <ItemsControl x:Name="OperationListControl">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <pages:OperationWidgetView />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

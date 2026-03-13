@@ -1,0 +1,93 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UniGetUI.Avalonia.Views.Pages.ReleaseNotesWindow"
+        Width="700"
+  Height="560"
+        MinWidth="560"
+  MinHeight="420"
+        Title="Release notes"
+        WindowStartupLocation="CenterOwner">
+  <Window.Styles>
+    <StyleInclude Source="/Styles/AppStyles.axaml" />
+  </Window.Styles>
+
+  <Grid Margin="18"
+        RowDefinitions="Auto,Auto,*,Auto"
+        RowSpacing="10">
+    <TextBlock x:Name="TitleBlock"
+               FontSize="18"
+               FontWeight="SemiBold"
+               TextWrapping="Wrap"
+               Text="Release notes" />
+
+    <TextBlock x:Name="VersionBlock"
+               Grid.Row="1"
+               Opacity="0.75"
+               TextWrapping="Wrap" />
+
+    <Border Grid.Row="2"
+            Padding="12"
+            Classes="surface-card subtle-panel"
+            CornerRadius="12">
+      <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto"
+            RowSpacing="8">
+  <TextBlock x:Name="StatusBlock"
+       Opacity="0.72"
+       TextWrapping="Wrap"
+       Text="Loading..." />
+
+  <ProgressBar x:Name="LoadingProgressBar"
+         Grid.Row="1"
+         IsIndeterminate="True" />
+
+  <TextBlock x:Name="ReleaseNotesLabelBlock"
+       Grid.Row="2"
+                   FontWeight="SemiBold"
+       Text="Release notes:" />
+
+      <ScrollViewer Grid.Row="3"
+                  MinHeight="240"
+                  Padding="4,0"
+                  VerticalScrollBarVisibility="Auto">
+        <TextBlock x:Name="ReleaseNotesTextBlock"
+                 HorizontalAlignment="Stretch"
+                 TextWrapping="Wrap"
+                 VerticalAlignment="Top" />
+      </ScrollViewer>
+
+  <TextBlock x:Name="UrlLabelBlock"
+       Grid.Row="4"
+       FontWeight="SemiBold"
+       Text="Release notes URL:" />
+
+  <TextBox x:Name="UrlTextBox"
+     Grid.Row="5"
+     IsReadOnly="True"
+     TextWrapping="NoWrap" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="3"
+    ColumnDefinitions="*,Auto,Auto,Auto"
+          ColumnSpacing="8">
+      <Button x:Name="RetryButton"
+        Grid.Column="1"
+        MinWidth="96"
+        Content="Retry"
+        Click="RetryButton_OnClick" />
+
+      <Button x:Name="OpenButton"
+        Grid.Column="2"
+              MinWidth="160"
+              Classes="accent"
+              Content="Open release notes"
+              Click="OpenButton_OnClick" />
+
+      <Button x:Name="CloseButton"
+        Grid.Column="3"
+              MinWidth="96"
+              Content="Close"
+              Click="CloseButton_OnClick" />
+    </Grid>
+  </Grid>
+</Window>

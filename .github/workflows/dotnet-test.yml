@@ -5,10 +5,12 @@ on:
     paths:
       - 'global.json'
       - '**.cs'
+      - '**.axaml'
       - '**.csproj'
       - '**.props'
       - '**.targets'
       - '**.sln'
+      - '**.slnx'
       - 'src/.editorconfig'
       - '.github/workflows/dotnet-test.yml'
 
@@ -17,10 +19,12 @@ on:
     paths:
       - 'global.json'
       - '**.cs'
+      - '**.axaml'
       - '**.csproj'
       - '**.props'
       - '**.targets'
       - '**.sln'
+      - '**.slnx'
       - 'src/.editorconfig'
       - '.github/workflows/dotnet-test.yml'
 
@@ -47,7 +51,7 @@ jobs:
       uses: actions/cache@v5
       with:
         path: ${{ env.NUGET_PACKAGES }}
-        key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln') }}
+        key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln', 'src/**/*.slnx') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
 
@@ -75,14 +79,24 @@ jobs:
 
     - name: Install dependencies
       working-directory: src
-      run: dotnet restore UniGetUI.sln
+      run: |
+        dotnet restore UniGetUI.sln
+        dotnet restore UniGetUI.Avalonia.slnx
 
     - name: Check whitespace formatting
       run: dotnet format whitespace src --folder --verify-no-changes --verbosity minimal
 
-    - name: Check code style formatting
+    - name: Check code style formatting (WinUI solution)
       working-directory: src
       run: dotnet format style UniGetUI.sln --no-restore --verify-no-changes --verbosity minimal
+
+    - name: Check code style formatting (Avalonia solution)
+      working-directory: src
+      run: dotnet format style UniGetUI.Avalonia.slnx --no-restore --verify-no-changes --verbosity minimal
+
+    - name: Build Avalonia solution
+      working-directory: src
+      run: dotnet build UniGetUI.Avalonia.slnx --no-restore --verbosity minimal
 
     - name: Run Tests
       working-directory: src

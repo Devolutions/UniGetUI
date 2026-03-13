@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UniGetUI.Avalonia.Views.Pages.InstallOptionsWindow"
+        Width="660"
+        Height="700"
+        MinWidth="480"
+        MinHeight="460"
+        Title="Install Options"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner">
+  <Window.Styles>
+    <StyleInclude Source="/Styles/AppStyles.axaml" />
+  </Window.Styles>
+  <Grid RowDefinitions="*,Auto">
+
+    <ScrollViewer Grid.Row="0"
+                  Margin="18,18,18,0">
+      <ContentControl x:Name="EditorHost" />
+    </ScrollViewer>
+
+    <!-- Footer buttons (sticky) -->
+    <Border Grid.Row="1"
+            Padding="18,12"
+            Classes="surface-card flat-shell-panel"
+            BorderThickness="0,1,0,0">
+      <StackPanel Orientation="Horizontal"
+                  Spacing="10"
+                  HorizontalAlignment="Right">
+        <Button x:Name="CancelBtn"
+                Classes="toolbar-secondary"
+                MinWidth="90">Cancel</Button>
+        <Button x:Name="SaveBtn"
+                Classes="toolbar-primary"
+                MinWidth="90">Save</Button>
+      </StackPanel>
+    </Border>
+
+  </Grid>
+</Window>

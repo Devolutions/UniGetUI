@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UniGetUI.Avalonia.Views.LoadingView">
+  <Grid>
+    <Border Width="520"
+            Padding="32"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Classes="surface-card"
+            CornerRadius="28">
+      <Grid ColumnDefinitions="Auto,*"
+            ColumnSpacing="24">
+        <Image Width="96"
+               Height="96"
+               Source="/Assets/icon_unsquare.png"
+               Stretch="Uniform" />
+        <StackPanel Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Spacing="6">
+          <TextBlock FontSize="42"
+                     Text="UniGetUI"
+                     Classes="hero-title" />
+          <TextBlock FontSize="18"
+                     Opacity="0.85"
+                     x:Name="TaglineBlock"
+                     Text="Package management made easy" />
+          <StackPanel Margin="0,18,0,0"
+                      Orientation="Horizontal"
+                      Spacing="12">
+            <ProgressBar Width="220"
+                         IsIndeterminate="True" />
+            <TextBlock VerticalAlignment="Center"
+                       x:Name="StatusBlock"
+                       Text="Preparing..." />
+          </StackPanel>
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

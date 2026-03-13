@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UniGetUI.Avalonia.Views.Pages.ManagersPages.ManagersHomeView">
+  <ScrollViewer>
+    <StackPanel Spacing="12">
+      <Border Padding="18"
+              Classes="surface-card subtle-panel">
+        <StackPanel Spacing="8">
+          <TextBlock x:Name="IntroTitleBlock"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="IntroDescriptionBlock"
+                     MaxWidth="860"
+                     Opacity="0.78"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <StackPanel x:Name="RowsHostPanel"
+                  Spacing="10" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -1,0 +1,115 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UniGetUI.Avalonia.Views.Pages.DocumentationBrowserWindow"
+        Width="960"
+        Height="680"
+        MinWidth="720"
+        MinHeight="480"
+        Title="Documentation"
+        WindowStartupLocation="CenterOwner">
+  <Window.Styles>
+    <StyleInclude Source="/Styles/AppStyles.axaml" />
+  </Window.Styles>
+
+  <Grid Margin="18"
+        RowDefinitions="Auto,Auto,Auto,*"
+        RowSpacing="10">
+    <TextBlock x:Name="TitleBlock"
+               FontSize="18"
+               FontWeight="SemiBold"
+               TextWrapping="Wrap"
+               Text="Documentation" />
+
+    <Grid Grid.Row="1"
+          ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto"
+          ColumnSpacing="8">
+      <Button x:Name="BackButton"
+              Grid.Column="0"
+              MinWidth="44"
+              Content="←"
+              Click="BackButton_OnClick" />
+
+      <Button x:Name="ForwardButton"
+              Grid.Column="1"
+              MinWidth="44"
+              Content="→"
+              Click="ForwardButton_OnClick" />
+
+      <Button x:Name="HomeButton"
+              Grid.Column="2"
+              MinWidth="88"
+              Content="Home"
+              Click="HomeButton_OnClick" />
+
+      <Button x:Name="ReloadButton"
+              Grid.Column="3"
+              MinWidth="88"
+              Content="Reload"
+              Click="ReloadButton_OnClick" />
+
+      <Button x:Name="BrowserButton"
+              Grid.Column="5"
+              MinWidth="170"
+              Classes="accent"
+              Content="View page on browser"
+              Click="BrowserButton_OnClick" />
+    </Grid>
+
+    <Border Grid.Row="2"
+            Padding="10"
+            Classes="surface-card subtle-panel"
+            CornerRadius="12">
+      <Grid RowDefinitions="Auto,Auto"
+            RowSpacing="8">
+        <TextBox x:Name="UrlTextBox"
+                 IsReadOnly="True"
+                 TextWrapping="NoWrap" />
+
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*,Auto"
+              ColumnSpacing="8">
+          <TextBlock x:Name="StatusBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap"
+                     Text="Loading..." />
+
+          <ProgressBar x:Name="LoadingProgressBar"
+                       Grid.Column="1"
+                       Width="180"
+                       IsIndeterminate="True" />
+        </Grid>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="3"
+            Padding="14"
+            Classes="surface-card"
+            CornerRadius="14">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="14">
+          <TextBlock x:Name="PageTitleBlock"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+
+          <SelectableTextBlock x:Name="PageContentBlock"
+                               TextWrapping="Wrap" />
+
+          <Border x:Name="LinksSectionBorder"
+                  Padding="12"
+                  Classes="surface-card subtle-panel"
+                  CornerRadius="12"
+                  IsVisible="False">
+            <StackPanel Spacing="10">
+              <TextBlock x:Name="LinksTitleBlock"
+                         FontWeight="SemiBold"
+                         Text="Related pages" />
+              <StackPanel x:Name="LinksPanel"
+                          Spacing="8" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+  </Grid>
+</Window>

@@ -1,0 +1,235 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UniGetUI.Avalonia.Views.Pages.InstallOptionsEditorView">
+  <UserControl.Styles>
+    <StyleInclude Source="/Styles/AppStyles.axaml" />
+  </UserControl.Styles>
+
+  <StackPanel Spacing="10">
+
+    <Border Padding="18"
+            Classes="surface-card subtle-panel">
+      <StackPanel Spacing="4">
+        <TextBlock x:Name="PackageTitleBlock"
+                   FontSize="20"
+                   FontWeight="Bold" />
+        <Grid ColumnDefinitions="Auto,8,*,16,Auto,8,*">
+          <TextBlock Text="ID:"
+                     Opacity="0.60"
+                     VerticalAlignment="Center" />
+          <TextBlock x:Name="PackageIdBlock"
+                     Grid.Column="2"
+                     FontWeight="SemiBold"
+                     VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="Version:"
+                     Grid.Column="4"
+                     Opacity="0.60"
+                     VerticalAlignment="Center" />
+          <TextBlock x:Name="PackageVersionBlock"
+                     Grid.Column="6"
+                     FontWeight="SemiBold"
+                     VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" />
+        </Grid>
+        <TextBlock x:Name="PackageManagerBlock"
+                   Opacity="0.60"
+                   FontSize="12" />
+      </StackPanel>
+    </Border>
+
+    <Border Padding="18"
+            Classes="surface-card">
+      <StackPanel Spacing="10">
+        <TextBlock x:Name="GeneralOptionsTitleBlock"
+                   FontWeight="SemiBold"
+                   FontSize="14"
+                   Opacity="0.80" />
+        <CheckBox x:Name="RunAsAdminCheckBox" />
+        <CheckBox x:Name="InteractiveCheckBox" />
+        <CheckBox x:Name="HashCheckBox" />
+        <CheckBox x:Name="AutoUpdateCheckBox" />
+        <CheckBox x:Name="SkipMinorUpdatesCheckBox" />
+        <CheckBox x:Name="IgnoreUpdatesCheckBox" />
+        <CheckBox x:Name="UninstallPreviousCheckBox"
+                  IsVisible="False" />
+      </StackPanel>
+    </Border>
+
+    <Border Padding="18"
+            Classes="surface-card">
+      <StackPanel Spacing="12">
+        <TextBlock x:Name="VersionSectionTitleBlock"
+                   FontWeight="SemiBold"
+                   FontSize="14"
+                   Opacity="0.80" />
+
+        <Grid ColumnDefinitions="120,*,Auto">
+          <TextBlock x:Name="VersionLabelBlock"
+                     VerticalAlignment="Center"
+                     Opacity="0.70" />
+          <ComboBox x:Name="VersionComboBox"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch" />
+          <ProgressBar x:Name="VersionLoadingBar"
+                       Grid.Column="2"
+                       Width="18"
+                       Height="18"
+                       Margin="8,0,0,0"
+                       IsIndeterminate="True"
+                       IsVisible="False" />
+        </Grid>
+
+        <Grid ColumnDefinitions="120,*">
+          <TextBlock x:Name="ArchitectureLabelBlock"
+                     VerticalAlignment="Center"
+                     Opacity="0.70" />
+          <ComboBox x:Name="ArchitectureComboBox"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch" />
+        </Grid>
+
+        <Grid ColumnDefinitions="120,*">
+          <TextBlock x:Name="ScopeLabelBlock"
+                     VerticalAlignment="Center"
+                     Opacity="0.70" />
+          <ComboBox x:Name="ScopeComboBox"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <Border x:Name="CustomLocationCard"
+            Padding="18"
+            Classes="surface-card"
+            IsVisible="False">
+      <StackPanel Spacing="10">
+        <TextBlock x:Name="LocationTitleBlock"
+                   FontWeight="SemiBold"
+                   FontSize="14"
+                   Opacity="0.80" />
+        <Grid ColumnDefinitions="*,Auto,Auto"
+              ColumnSpacing="6">
+          <TextBox x:Name="CustomLocationTextBox" />
+          <Button x:Name="BrowseLocationButton"
+                  Grid.Column="1"
+                  Classes="toolbar-secondary" />
+          <Button x:Name="ResetLocationButton"
+                  Grid.Column="2"
+                  Classes="toolbar-secondary" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <Border x:Name="CustomParametersCard"
+            Padding="18"
+            Classes="surface-card"
+            IsVisible="False">
+      <StackPanel Spacing="10">
+        <TextBlock x:Name="ParametersTitleBlock"
+                   FontWeight="SemiBold"
+                   FontSize="14"
+                   Opacity="0.80" />
+        <TextBlock x:Name="CustomParamsDescBlock"
+                   Opacity="0.60"
+                   FontSize="12"
+                   TextWrapping="Wrap" />
+        <TextBlock x:Name="InstallParamsLabelBlock"
+                   Opacity="0.70" />
+        <TextBox x:Name="CustomParams1TextBox"
+                 FontFamily="Consolas,Menlo,monospace" />
+        <TextBlock x:Name="UpdateParamsLabelBlock"
+                   Opacity="0.70" />
+        <TextBox x:Name="CustomParams2TextBox"
+                 FontFamily="Consolas,Menlo,monospace" />
+        <TextBlock x:Name="UninstallParamsLabelBlock"
+                   Opacity="0.70" />
+        <TextBox x:Name="CustomParams3TextBox"
+                 FontFamily="Consolas,Menlo,monospace" />
+      </StackPanel>
+    </Border>
+
+    <Border x:Name="KillProcessesCard"
+            Padding="18"
+            Classes="surface-card">
+      <StackPanel Spacing="10">
+        <TextBlock x:Name="KillProcessesTitleBlock"
+                   FontWeight="SemiBold"
+                   FontSize="14"
+                   Opacity="0.80" />
+        <TextBlock x:Name="KillProcessesDescBlock"
+                   Opacity="0.60"
+                   FontSize="12"
+                   TextWrapping="Wrap" />
+        <TextBox x:Name="KillProcessesTextBox"
+                 FontFamily="Consolas,Menlo,monospace" />
+        <CheckBox x:Name="KillProcessesThatWontDieCheckBox" />
+      </StackPanel>
+    </Border>
+
+    <Border x:Name="PrePostCommandsCard"
+            Padding="18"
+            Classes="surface-card"
+            IsVisible="False">
+      <StackPanel Spacing="10">
+        <TextBlock x:Name="PrePostTitleBlock"
+                   FontWeight="SemiBold"
+                   FontSize="14"
+                   Opacity="0.80" />
+        <TextBlock x:Name="PrePostCommandsDescBlock"
+                   Opacity="0.60"
+                   FontSize="12"
+                   TextWrapping="Wrap" />
+
+        <TextBlock x:Name="PreInstallLabelBlock"
+                   Opacity="0.70" />
+        <Grid ColumnDefinitions="*,12,Auto">
+          <TextBox x:Name="PreInstallCommandBox"
+                   FontFamily="Consolas,Menlo,monospace" />
+          <CheckBox x:Name="AbortInstallCheckBox"
+                    Grid.Column="2"
+                    VerticalAlignment="Center" />
+        </Grid>
+
+        <TextBlock x:Name="PostInstallLabelBlock"
+                   Opacity="0.70" />
+        <TextBox x:Name="PostInstallCommandBox"
+                 FontFamily="Consolas,Menlo,monospace" />
+
+        <TextBlock x:Name="PreUpdateLabelBlock"
+                   Opacity="0.70" />
+        <Grid ColumnDefinitions="*,12,Auto">
+          <TextBox x:Name="PreUpdateCommandBox"
+                   FontFamily="Consolas,Menlo,monospace" />
+          <CheckBox x:Name="AbortUpdateCheckBox"
+                    Grid.Column="2"
+                    VerticalAlignment="Center" />
+        </Grid>
+
+        <TextBlock x:Name="PostUpdateLabelBlock"
+                   Opacity="0.70" />
+        <TextBox x:Name="PostUpdateCommandBox"
+                 FontFamily="Consolas,Menlo,monospace" />
+
+        <TextBlock x:Name="PreUninstallLabelBlock"
+                   Opacity="0.70" />
+        <Grid ColumnDefinitions="*,12,Auto">
+          <TextBox x:Name="PreUninstallCommandBox"
+                   FontFamily="Consolas,Menlo,monospace" />
+          <CheckBox x:Name="AbortUninstallCheckBox"
+                    Grid.Column="2"
+                    VerticalAlignment="Center" />
+        </Grid>
+
+        <TextBlock x:Name="PostUninstallLabelBlock"
+                   Opacity="0.70" />
+        <TextBox x:Name="PostUninstallCommandBox"
+                 FontFamily="Consolas,Menlo,monospace" />
+      </StackPanel>
+    </Border>
+
+    <Border Height="8" />
+
+  </StackPanel>
+</UserControl>

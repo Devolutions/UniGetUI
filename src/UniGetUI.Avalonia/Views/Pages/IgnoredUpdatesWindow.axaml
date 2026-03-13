@@ -1,0 +1,155 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UniGetUI.Avalonia.Views.Pages.IgnoredUpdatesWindow"
+        Width="680"
+        Height="500"
+        MinWidth="480"
+        MinHeight="320"
+        Title="Manage ignored updates"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Styles>
+        <StyleInclude Source="/Styles/AppStyles.axaml" />
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto"
+          Margin="16"
+          RowSpacing="12">
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="4">
+            <TextBlock x:Name="HeaderTitleBlock"
+                       Text="Manage ignored updates"
+                       FontSize="20"
+                       FontWeight="SemiBold" />
+            <TextBlock x:Name="HeaderSubtitleBlock"
+                       Text="Packages listed below will not show update notifications."
+                       Opacity="0.7"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!-- Column headers + list -->
+        <Border Grid.Row="1"
+                Classes="surface-card"
+                Padding="0">
+            <Grid RowDefinitions="Auto,*">
+
+                <!-- Column headings -->
+                <Border Grid.Row="0"
+                        Padding="12,8"
+                        BorderThickness="0,0,0,1">
+                    <Border.BorderBrush>
+                        <SolidColorBrush Color="{DynamicResource SystemBaseMediumLowColor}" />
+                    </Border.BorderBrush>
+                    <Grid ColumnDefinitions="2.5*,1.2*,1.5*,Auto"
+                          ColumnSpacing="8">
+                        <TextBlock x:Name="ColPackageBlock"
+                                   Grid.Column="0"
+                                   Text="Package"
+                                   FontWeight="SemiBold"
+                                   Opacity="0.8" />
+                        <TextBlock x:Name="ColManagerBlock"
+                                   Grid.Column="1"
+                                   Text="Manager"
+                                   FontWeight="SemiBold"
+                                   Opacity="0.8" />
+                        <TextBlock x:Name="ColVersionBlock"
+                                   Grid.Column="2"
+                                   Text="Ignored version"
+                                   FontWeight="SemiBold"
+                                   Opacity="0.8" />
+                        <TextBlock Grid.Column="3"
+                                   Width="80"
+                                   Text=""
+                                   FontWeight="SemiBold"
+                                   Opacity="0.8" />
+                    </Grid>
+                </Border>
+
+                <!-- Rows -->
+                <ScrollViewer Grid.Row="1">
+                    <ItemsControl x:Name="EntriesList"
+                                  Padding="0,4">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="12,6"
+                                        Background="Transparent">
+                                    <Grid ColumnDefinitions="2.5*,1.2*,1.5*,Auto"
+                                          ColumnSpacing="8">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding DisplayName}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding ManagerName}"
+                                                   VerticalAlignment="Center"
+                                                   Opacity="0.72"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding DisplayVersion}"
+                                                   VerticalAlignment="Center"
+                                                   Opacity="0.72"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <Button Grid.Column="3"
+                                                Width="80"
+                                                Classes="toolbar-secondary"
+                                                Content="Remove"
+                                                Tag="{Binding}"
+                                                Click="RemoveButton_OnClick" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+            </Grid>
+        </Border>
+
+        <!-- Footer -->
+        <Grid Grid.Row="2"
+              ColumnDefinitions="*,Auto,Auto"
+              ColumnSpacing="8">
+
+            <!-- Confirm reset panel (hidden by default) -->
+            <Border x:Name="ConfirmResetPanel"
+                    Grid.Column="0"
+                    Classes="surface-card"
+                    Padding="10,6"
+                    IsVisible="False">
+                <Grid ColumnDefinitions="*,Auto,Auto"
+                      ColumnSpacing="8">
+                    <TextBlock x:Name="ConfirmResetTextBlock"
+                               Grid.Column="0"
+                               Text="Remove all ignored entries?"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap" />
+                    <Button x:Name="ConfirmYesButton"
+                            Grid.Column="1"
+                            Classes="toolbar-primary accent"
+                            Content="Yes"
+                            Click="ConfirmResetYes_OnClick" />
+                    <Button x:Name="ConfirmCancelButton"
+                            Grid.Column="2"
+                            Classes="toolbar-secondary"
+                            Content="Cancel"
+                            Click="ConfirmResetCancel_OnClick" />
+                </Grid>
+            </Border>
+
+            <Button x:Name="ResetAllButtonControl"
+                    Grid.Column="1"
+                    Classes="toolbar-secondary"
+                    Content="Reset all"
+                    Click="ResetAllButton_OnClick" />
+
+            <Button x:Name="CloseWindowButton"
+                    Grid.Column="2"
+                    Classes="toolbar-primary accent"
+                    Content="Close"
+                    Click="CloseButton_OnClick" />
+        </Grid>
+
+    </Grid>
+</Window>

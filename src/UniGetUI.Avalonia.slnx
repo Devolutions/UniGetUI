@@ -1,8 +1,14 @@
 <Solution>
   <Configurations>
-    <Platform Name="arm64" />
     <Platform Name="x64" />
+    <Platform Name="arm64" />
   </Configurations>
+  <Folder Name="/UniGetUI.Avalonia/">
+    <Project Path="UniGetUI.Avalonia/UniGetUI.Avalonia.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+    </Project>
+  </Folder>
   <Folder Name="/UniGetUI.Core.Logger/">
     <Project Path="UniGetUI.Core.Logger/UniGetUI.Core.Logging.csproj">
       <Platform Solution="*|arm64" Project="arm64" />

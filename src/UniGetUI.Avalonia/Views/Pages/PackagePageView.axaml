@@ -1,0 +1,481 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+                                                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                                                 xmlns:models="using:UniGetUI.Avalonia.Models"
+                                                 x:CompileBindings="False"
+                                                 x:Class="UniGetUI.Avalonia.Views.Pages.PackagePageView">
+        <Grid RowDefinitions="Auto,Auto,Auto,*"
+                                RowSpacing="12">
+                <Border Padding="18"
+                                                Classes="surface-card">
+                        <Grid ColumnDefinitions="Auto,*,Auto"
+                                                ColumnSpacing="14">
+                                <Border Width="48"
+                                                                Height="48"
+                                                                Classes="surface-card subtle-panel"
+                                                                CornerRadius="14">
+                                        <TextBlock x:Name="GlyphBlock"
+                                                                                 HorizontalAlignment="Center"
+                                                                                 VerticalAlignment="Center"
+                                                                                 FontSize="20"
+                                                                                 FontWeight="SemiBold"
+                                                                                 Text="◎" />
+                                </Border>
+
+                                <StackPanel Grid.Column="1"
+                                                                                Spacing="2">
+                                        <TextBlock x:Name="PageTitleBlock"
+                                                                                 FontSize="28"
+                                                                                 FontWeight="Black"
+                                                                                 Classes="hero-title" />
+                                        <TextBlock x:Name="PageSubtitleBlock"
+                                                                                 Opacity="0.72" />
+                                </StackPanel>
+
+                                <Border Grid.Column="2"
+                                                                Padding="10,4"
+                                                                HorizontalAlignment="Right"
+                                                                VerticalAlignment="Top"
+                                                                Classes="surface-card badge-panel">
+                                        <TextBlock x:Name="SearchStateBlock"
+                                                                                 Opacity="0.8"
+                                                                                 Text="Waiting for package engine" />
+                                </Border>
+                        </Grid>
+                </Border>
+
+                <Border x:Name="WinGetWarningCard"
+                                                Grid.Row="1"
+                                                IsVisible="False"
+                                                Padding="14"
+                                                Classes="surface-card warning-panel">
+                        <Grid ColumnDefinitions="*,Auto"
+                                                ColumnSpacing="12">
+                                <StackPanel Spacing="4">
+                                        <TextBlock x:Name="WinGetWarningTitleBlock"
+                                                                                 FontSize="16"
+                                                                                 FontWeight="SemiBold"
+                                                                                 Text="WinGet malfunction detected" />
+                                        <TextBlock x:Name="WinGetWarningDescriptionBlock"
+                                                                                 Opacity="0.8"
+                                                                                 TextWrapping="Wrap"
+                                                                                 Text="It looks like WinGet is not working properly. Do you want to attempt to repair WinGet?" />
+                                </StackPanel>
+                                <Button x:Name="RepairWinGetButton"
+                                                                Grid.Column="1"
+                                                                Classes="toolbar-primary accent"
+                                                                VerticalAlignment="Center"
+                                                                Content="Repair WinGet"
+                                                                Click="RepairWinGetButton_OnClick" />
+                        </Grid>
+                </Border>
+
+                <Border Grid.Row="2"
+                                                Padding="12"
+                                                Classes="surface-card">
+                        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                                                ColumnSpacing="6">
+                                <Button x:Name="PrimaryActionButton"
+                                                                Classes="toolbar-primary accent"
+                                                                IsEnabled="False" />
+                                <Button x:Name="PrimaryActionDropdownButton"
+                                                                Grid.Column="1"
+                                                                Classes="toolbar-primary accent"
+                                                                IsEnabled="False"
+                                                                Content="▾"
+                                                                Padding="8,0" />
+                                <Button x:Name="InstallOptionsButton"
+                                                                Grid.Column="2"
+                                                                Classes="toolbar-secondary"
+                                                                IsEnabled="False"
+                                                                Content="Install options" />
+                                <Button x:Name="DetailsButton"
+                                                                Grid.Column="3"
+                                                                Classes="toolbar-secondary"
+                                                                IsEnabled="False"
+                                                                Content="Details" />
+                                <Button x:Name="ShareButton"
+                                                                Grid.Column="4"
+                                                                Classes="toolbar-secondary"
+                                                                IsEnabled="False"
+                                                                Content="Share" />
+
+                                <TextBlock x:Name="OperationStateBlock"
+                                                               Grid.Column="5"
+                                                               VerticalAlignment="Center"
+                                                               Opacity="0.76"
+                                                               TextTrimming="CharacterEllipsis" />
+
+                                <Button x:Name="ViewOutputButton"
+                                                                Grid.Column="6"
+                                                                Classes="toolbar-secondary"
+                                                                IsVisible="False"
+                                                                Click="ViewOutputButton_OnClick"
+                                                                Content="View output" />
+
+                                <Button x:Name="ManageIgnoredButton"
+                                                                Grid.Column="8"
+                                                                Classes="toolbar-secondary"
+                                                                IsVisible="False"
+                                                                Click="ManageIgnoredButton_OnClick"
+                                                                Content="Manage ignored" />
+
+                                <Button x:Name="IgnoreSelectedButton"
+                                                                Grid.Column="7"
+                                                                Classes="toolbar-secondary"
+                                                                IsVisible="False"
+                                                                Click="IgnoreSelectedButton_OnClick"
+                                                                Content="Ignore selected" />
+
+                                <Button x:Name="ExportSelectionButton"
+                                                                Grid.Column="9"
+                                                                Classes="toolbar-secondary"
+                                                                IsVisible="False"
+                                                                Click="ExportSelectionButton_OnClick"
+                                                                Content="Add to bundle" />
+
+                                <TextBlock x:Name="ViewModeLabelBlock"
+                                                               Grid.Column="10"
+                                                               VerticalAlignment="Center"
+                                                               Opacity="0.76"
+                                                               Text="View" />
+
+                                <ComboBox x:Name="ViewModeSelector"
+                                                                  Grid.Column="11"
+                                                                  Width="132"
+                                                                  SelectedIndex="0">
+                                        <ComboBoxItem Content="List" />
+                                        <ComboBoxItem Content="Grid" />
+                                        <ComboBoxItem Content="Icons" />
+                                </ComboBox>
+
+                                <Button x:Name="ReloadButton"
+                                                                Grid.Column="12"
+                                                                Classes="toolbar-secondary"
+                                                                Content="Reload"
+                                                                Click="ReloadButton_OnClick" />
+                                <ToggleButton x:Name="ToggleFiltersButton"
+                                                                  Grid.Column="13"
+                                                                  Classes="toolbar-secondary"
+                                                                  IsChecked="True"
+                                                                  Content="☰ Filters"
+                                                                  Click="ToggleFiltersButton_OnClick" />
+                        </Grid>
+                </Border>
+
+                <Grid Grid.Row="3"
+                                        x:Name="FilterContentGrid"
+                                        ColumnDefinitions="264,*"
+                                        ColumnSpacing="12">
+                        <StackPanel x:Name="FilterPanelContainer" Spacing="12">
+                                <Border Padding="16"
+                                                                Classes="surface-card">
+                                        <StackPanel Spacing="12">
+                                                <StackPanel Orientation="Horizontal"
+                                                                                        Spacing="8">
+                                                        <TextBlock x:Name="SourcesTitleBlock"
+                                                                                                 FontSize="18"
+                                                                                                 FontWeight="SemiBold"
+                                                                                                 VerticalAlignment="Center"
+                                                                                                 Text="Sources" />
+                                                        <Button x:Name="ClearSourceFilterButton"
+                                                                                        Classes="toolbar-secondary"
+                                                                                        Padding="6,2"
+                                                                                        FontSize="11"
+                                                                                        IsVisible="False"
+                                                                                        Click="ClearSourceFilterButton_OnClick" />
+                                                </StackPanel>
+                                                <TextBlock x:Name="SourcesDescriptionBlock"
+                                                                                         Opacity="0.72"
+                                                                                         TextWrapping="Wrap"
+                                                                                         IsVisible="False"
+                                                                                         Text="Click a source to filter." />
+                                                <TextBlock x:Name="SourcesEmptyStateBlock"
+                                                                                         Opacity="0.62"
+                                                                                         TextWrapping="Wrap"
+                                                                                         IsVisible="False"
+                                                                                         FontSize="12"
+                                                                                         Text="No packages were found" />
+                                                <ItemsControl x:Name="SourceTogglesItemsControl">
+                                                        <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                        <StackPanel Spacing="6" />
+                                                                </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                </ItemsControl>
+                                        </StackPanel>
+                                </Border>
+
+                                <Border Padding="16"
+                                                                Classes="surface-card">
+                                        <StackPanel Spacing="10">
+                                                <TextBlock x:Name="FiltersTitleBlock"
+                                                                                         FontSize="18"
+                                                                                         FontWeight="SemiBold" />
+                                                <RadioButton x:Name="PackageNameFilterRadio"
+                                                                                                 Content="Package Name" />
+                                                <RadioButton x:Name="PackageIdFilterRadio"
+                                                                                                 Content="Package ID" />
+                                                <RadioButton x:Name="BothFilterRadio"
+                                                                                                 IsChecked="True"
+                                                                                                 Content="Both" />
+                                                <RadioButton x:Name="ExactMatchFilterRadio"
+                                                                                                 Content="Exact match" />
+                                                <RadioButton x:Name="ShowSimilarResultsRadio"
+                                                                                                 Content="Show all packages" />
+
+                                                <Separator Margin="0,4" />
+
+                                                <CheckBox x:Name="InstantSearchCheckBox"
+                                                                          IsChecked="True"
+                                                                          Content="Instant search" />
+                                                <CheckBox x:Name="UpperLowerCaseCheckBox"
+                                                                          IsChecked="False"
+                                                                          Content="Distinguish uppercase and lowercase" />
+                                                <CheckBox x:Name="IgnoreSpecialCharsCheckBox"
+                                                                          IsChecked="True"
+                                                                          Content="Ignore special characters" />
+                                        </StackPanel>
+                                </Border>
+                        </StackPanel>
+
+                        <Border Grid.Column="1"
+                                                        Padding="0"
+                                                        Classes="surface-card">
+                                <Grid RowDefinitions="Auto,Auto,*">
+                                        <Grid x:Name="PackageColumnsHeaderGrid"
+                                                                Margin="16,16,16,8"
+                                                                ColumnDefinitions="36,2.5*,2.2*,1.1*,1.2*,1.4*,Auto"
+                                                                ColumnSpacing="14">
+                                                <CheckBox x:Name="SelectAllCheckBox"
+                                                                          HorizontalAlignment="Center"
+                                                                          VerticalAlignment="Center"
+                                                                          IsThreeState="True"
+                                                                          Click="SelectAllCheckBox_OnClick" />
+                                                <Button x:Name="PackageNameSortBtn"
+                                                                Grid.Column="1"
+                                                                Classes="sort-header"
+                                                                Click="NameHeader_OnClick" />
+                                                <Button x:Name="PackageIdSortBtn"
+                                                                Grid.Column="2"
+                                                                Classes="sort-header"
+                                                                Click="IdHeader_OnClick" />
+                                                <Button x:Name="VersionSortBtn"
+                                                                Grid.Column="3"
+                                                                Classes="sort-header"
+                                                                Click="VersionHeader_OnClick" />
+                                                <Button x:Name="UpgradeColumnSortBtn"
+                                                                Grid.Column="4"
+                                                                Classes="sort-header"
+                                                                Click="StatusHeader_OnClick" />
+                                                <Button x:Name="SourceSortBtn"
+                                                                Grid.Column="5"
+                                                                Classes="sort-header"
+                                                                Click="SourceHeader_OnClick" />
+                                                <TextBlock x:Name="ActionHeaderBlock"
+                                                                                         Grid.Column="6"
+                                                                                         Classes="data-header" />
+                                        </Grid>
+
+                                        <ProgressBar x:Name="LoadingProgressBar"
+                                                                     Grid.Row="1"
+                                                                     Height="2"
+                                                                     IsIndeterminate="True"
+                                                                     IsVisible="False"
+                                                                     Margin="0" />
+
+                                        <Grid Grid.Row="2"
+                                                                Margin="16,0,16,16">
+                                                <ScrollViewer x:Name="PackageRowsScrollViewer"
+                                                                IsVisible="False"
+                                                                Focusable="True"
+                                                                KeyDown="PackageRowsScrollViewer_KeyDown">
+                                                        <Grid>
+                                                                <ItemsControl x:Name="PackageRowsListItemsControl">
+                                                                        <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate x:DataType="models:PackageRowModel">
+                                                                                        <Border Classes="data-row"
+                                                                                                Classes.selected="{Binding IsSelected}"
+                                                                                                ContextRequested="PackageRow_ContextRequested">
+                                                                                                <Grid ColumnDefinitions="36,28,2.5*,2.2*,1.1*,1.2*,1.4*,Auto"
+                                                                                                                        ColumnSpacing="14">
+                                                                                                        <CheckBox HorizontalAlignment="Center"
+                                                                                                                          VerticalAlignment="Center"
+                                                                                                                          IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                                                                                          Click="RowCheckBox_OnClick" />
+                                                                                                        <Image Grid.Column="1"
+                                                                                                               Width="20"
+                                                                                                               Height="20"
+                                                                                                               Source="{Binding IconBitmap}"
+                                                                                                               Stretch="Uniform"
+                                                                                                               VerticalAlignment="Center" />
+                                                                                                        <TextBlock Grid.Column="2"
+                                                                                                                                                 Text="{Binding Name}"
+                                                                                                                                                 Classes="data-primary" />
+                                                                                                        <TextBlock Grid.Column="3"
+                                                                                                                                                 Text="{Binding Id}"
+                                                                                                                                                 Classes="data-secondary" />
+                                                                                                        <TextBlock Grid.Column="4"
+                                                                                                                                                 Text="{Binding Version}"
+                                                                                                                                                 Classes="data-secondary" />
+                                                                                                        <TextBlock Grid.Column="5"
+                                                                                                                                                 Text="{Binding Status}"
+                                                                                                                                                 Classes="data-secondary" />
+                                                                                                        <TextBlock Grid.Column="6"
+                                                                                                                                                 Text="{Binding Source}"
+                                                                                                                                                 Classes="data-secondary" />
+                                                                                                        <Button Grid.Column="7"
+                                                                                                                        Classes="toolbar-secondary inline-row-action"
+                                                                                                                        Content="{Binding PrimaryActionLabel}"
+                                                                                                                        Command="{Binding PrimaryActionCommand}"
+                                                                                                                        IsEnabled="{Binding CanExecutePrimaryAction}" />
+                                                                                                </Grid>
+                                                                                        </Border>
+                                                                                </DataTemplate>
+                                                                        </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+
+                                                                <ItemsControl x:Name="PackageRowsGridItemsControl"
+                                                                              IsVisible="False">
+                                                                        <ItemsControl.ItemsPanel>
+                                                                                <ItemsPanelTemplate>
+                                                                                        <WrapPanel ItemWidth="340"
+                                                                                                   ItemHeight="190" />
+                                                                                </ItemsPanelTemplate>
+                                                                        </ItemsControl.ItemsPanel>
+                                                                        <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate x:DataType="models:PackageRowModel">
+                                                                                        <Border Margin="0,0,12,12"
+                                                                                                Padding="12"
+                                                                                                Classes="surface-card subtle-panel data-row"
+                                                                                                Classes.selected="{Binding IsSelected}"
+                                                                                                ContextRequested="PackageRow_ContextRequested">
+                                                                                                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto"
+                                                                                                      ColumnDefinitions="Auto,*"
+                                                                                                      RowSpacing="6"
+                                                                                                      ColumnSpacing="8">
+                                                                                                        <CheckBox Grid.Row="0"
+                                                                                                                  Grid.Column="0"
+                                                                                                                  VerticalAlignment="Center"
+                                                                                                                  IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                                                                                  Click="RowCheckBox_OnClick" />
+                                                                                                        <Image Grid.Row="0"
+                                                                                                               Grid.Column="1"
+                                                                                                               Width="26"
+                                                                                                               Height="26"
+                                                                                                               Source="{Binding IconBitmap}"
+                                                                                                               Stretch="Uniform"
+                                                                                                               VerticalAlignment="Center" />
+
+                                                                                                        <TextBlock Grid.Row="1"
+                                                                                                                   Grid.ColumnSpan="2"
+                                                                                                                   Text="{Binding Name}"
+                                                                                                                   TextTrimming="CharacterEllipsis"
+                                                                                                                   Classes="data-primary" />
+                                                                                                        <TextBlock Grid.Row="2"
+                                                                                                                   Grid.ColumnSpan="2"
+                                                                                                                   Text="{Binding Id}"
+                                                                                                                   TextTrimming="CharacterEllipsis"
+                                                                                                                   Classes="data-secondary" />
+                                                                                                        <TextBlock Grid.Row="3"
+                                                                                                                   Grid.ColumnSpan="2"
+                                                                                                                   Text="{Binding Version}"
+                                                                                                                   Classes="data-secondary" />
+                                                                                                                                                                                                                <StackPanel Grid.Row="4"
+                                                                                                                                                                                                                                        Grid.ColumnSpan="2"
+                                                                                                                                                                                                                                        Orientation="Horizontal"
+                                                                                                                                                                                                                                        Spacing="4">
+                                                                                                                                                                                                                                <TextBlock Text="{Binding Status}"
+                                                                                                                                                                                                                                                   Classes="data-secondary" />
+                                                                                                                                                                                                                                <TextBlock Text="-"
+                                                                                                                                                                                                                                                   Classes="data-secondary" />
+                                                                                                                                                                                                                                <TextBlock Text="{Binding Source}"
+                                                                                                                                                                                                                                                   TextTrimming="CharacterEllipsis"
+                                                                                                                                                                                                                                                   Classes="data-secondary" />
+                                                                                                                                                                                                                </StackPanel>
+
+                                                                                                        <Button Grid.Row="5"
+                                                                                                                Grid.ColumnSpan="2"
+                                                                                                                HorizontalAlignment="Stretch"
+                                                                                                                Classes="toolbar-secondary"
+                                                                                                                Content="{Binding PrimaryActionLabel}"
+                                                                                                                Command="{Binding PrimaryActionCommand}"
+                                                                                                                IsEnabled="{Binding CanExecutePrimaryAction}" />
+                                                                                                </Grid>
+                                                                                        </Border>
+                                                                                </DataTemplate>
+                                                                        </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+
+                                                                <ItemsControl x:Name="PackageRowsIconsItemsControl"
+                                                                              IsVisible="False">
+                                                                        <ItemsControl.ItemsPanel>
+                                                                                <ItemsPanelTemplate>
+                                                                                        <WrapPanel ItemWidth="180"
+                                                                                                   ItemHeight="170" />
+                                                                                </ItemsPanelTemplate>
+                                                                        </ItemsControl.ItemsPanel>
+                                                                        <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate x:DataType="models:PackageRowModel">
+                                                                                        <Border Margin="0,0,12,12"
+                                                                                                Padding="10"
+                                                                                                Classes="surface-card subtle-panel data-row"
+                                                                                                Classes.selected="{Binding IsSelected}"
+                                                                                                ContextRequested="PackageRow_ContextRequested">
+                                                                                                <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                                                                                                      RowSpacing="8">
+                                                                                                        <CheckBox HorizontalAlignment="Right"
+                                                                                                                  IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                                                                                  Click="RowCheckBox_OnClick" />
+                                                                                                        <Image Grid.Row="1"
+                                                                                                               Width="36"
+                                                                                                               Height="36"
+                                                                                                               HorizontalAlignment="Center"
+                                                                                                               Source="{Binding IconBitmap}"
+                                                                                                               Stretch="Uniform" />
+                                                                                                        <TextBlock Grid.Row="2"
+                                                                                                                   Text="{Binding Name}"
+                                                                                                                   HorizontalAlignment="Center"
+                                                                                                                   TextAlignment="Center"
+                                                                                                                   TextTrimming="CharacterEllipsis"
+                                                                                                                   MaxWidth="150"
+                                                                                                                   Classes="data-primary" />
+                                                                                                        <Button Grid.Row="3"
+                                                                                                                HorizontalAlignment="Stretch"
+                                                                                                                Classes="toolbar-secondary"
+                                                                                                                Content="{Binding PrimaryActionLabel}"
+                                                                                                                Command="{Binding PrimaryActionCommand}"
+                                                                                                                IsEnabled="{Binding CanExecutePrimaryAction}" />
+                                                                                                </Grid>
+                                                                                        </Border>
+                                                                                </DataTemplate>
+                                                                        </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                        </Grid>
+                                                </ScrollViewer>
+
+                                                <Border x:Name="EmptyStateCard"
+                                                                                Padding="24"
+                                                                                Classes="surface-card subtle-panel"
+                                                                                CornerRadius="18">
+                                                        <StackPanel HorizontalAlignment="Center"
+                                                                                                        VerticalAlignment="Center"
+                                                                                                        Spacing="10">
+                                                                <TextBlock x:Name="EmptyStateTitleBlock"
+                                                                                                         HorizontalAlignment="Center"
+                                                                                                         FontSize="22"
+                                                                                                         FontWeight="Bold"
+                                                                                                         TextAlignment="Center" />
+                                                                <TextBlock x:Name="EmptyStateDescriptionBlock"
+                                                                                                         MaxWidth="520"
+                                                                                                         HorizontalAlignment="Center"
+                                                                                                         Opacity="0.74"
+                                                                                                         TextAlignment="Center"
+                                                                                                         TextWrapping="Wrap" />
+                                                        </StackPanel>
+                                                </Border>
+                                        </Grid>
+                                </Grid>
+                        </Border>
+                </Grid>
+        </Grid>
+</UserControl>

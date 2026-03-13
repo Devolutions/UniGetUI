@@ -1,0 +1,210 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.AdministratorSettingsView">
+  <ScrollViewer>
+    <StackPanel Spacing="12">
+
+      <!-- Lead banner -->
+      <Border Padding="18"
+              Classes="surface-card subtle-panel">
+        <StackPanel Spacing="8">
+          <TextBlock x:Name="LeadTitleBlock"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="LeadDescriptionBlock"
+                     MaxWidth="860"
+                     Opacity="0.78"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- Security warning banner -->
+      <Border Padding="18"
+              Classes="surface-card warning-panel">
+        <StackPanel Spacing="6">
+          <TextBlock x:Name="WarningTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="WarningDescriptionBlock"
+                     MaxWidth="860"
+                     Opacity="0.82"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- UAC cache section -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="ElevationTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="ElevationDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="DoCacheAdminRightsForBatchesCheckBox"
+                    Content="Ask for administrator privileges once for each batch of operations" />
+          <CheckBox x:Name="DoCacheAdminRightsCheckBox"
+                    Content="Ask only once for administrator privileges" />
+          <TextBlock x:Name="ElevationHintBlock"
+                     Opacity="0.68"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- Prohibit elevation — danger zone -->
+      <Border Padding="18"
+              Classes="surface-card danger-panel">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="ProhibitTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="ProhibitDescriptionBlock"
+                     Opacity="0.78"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="ProhibitElevationCheckBox"
+                    Content="Prohibit any kind of Elevation via UniGetUI Elevator or GSudo" />
+          <TextBlock x:Name="ProhibitHintBlock"
+                     Opacity="0.82"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- Secure settings — package operations -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="OperationsSecureTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="OperationsSecureDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <!-- Allow CLI arguments -->
+          <Border Padding="14"
+                  Classes="surface-card">
+            <StackPanel Spacing="8">
+              <CheckBox x:Name="AllowCLIArgumentsCheckBox"
+                        Content="Allow custom command-line arguments" />
+              <TextBlock x:Name="AllowCLIArgumentsHintBlock"
+                         Opacity="0.68"
+                         TextWrapping="Wrap" />
+              <Border x:Name="AllowCLIArgumentsPendingBadge"
+                      Padding="8,4"
+                      Classes="surface-card warning-panel"
+                      IsVisible="False">
+                <TextBlock x:Name="AllowCLIArgumentsPendingText"
+                           FontSize="12"
+                           TextWrapping="Wrap" />
+              </Border>
+            </StackPanel>
+          </Border>
+          <!-- Allow pre/post commands -->
+          <Border Padding="14"
+                  Classes="surface-card">
+            <StackPanel Spacing="8">
+              <CheckBox x:Name="AllowPrePostCommandsCheckBox"
+                        Content="Allow custom pre-install and post-install commands" />
+              <TextBlock x:Name="AllowPrePostCommandsHintBlock"
+                         Opacity="0.68"
+                         TextWrapping="Wrap" />
+              <Border x:Name="AllowPrePostCommandsPendingBadge"
+                      Padding="8,4"
+                      Classes="surface-card warning-panel"
+                      IsVisible="False">
+                <TextBlock x:Name="AllowPrePostCommandsPendingText"
+                           FontSize="12"
+                           TextWrapping="Wrap" />
+              </Border>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Secure settings — manager paths -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="ManagerPathsTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="ManagerPathsDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <Border Padding="14"
+                  Classes="surface-card">
+            <StackPanel Spacing="8">
+              <CheckBox x:Name="AllowCustomManagerPathsCheckBox"
+                        Content="Allow changing the paths for package manager executables" />
+              <TextBlock x:Name="AllowCustomManagerPathsHintBlock"
+                         Opacity="0.68"
+                         TextWrapping="Wrap" />
+              <Border x:Name="AllowCustomManagerPathsPendingBadge"
+                      Padding="8,4"
+                      Classes="surface-card warning-panel"
+                      IsVisible="False">
+                <TextBlock x:Name="AllowCustomManagerPathsPendingText"
+                           FontSize="12"
+                           TextWrapping="Wrap" />
+              </Border>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Secure settings — bundle import -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="ImportSecureTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="ImportSecureDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <!-- Import CLI arguments -->
+          <Border Padding="14"
+                  Classes="surface-card">
+            <StackPanel Spacing="8">
+              <CheckBox x:Name="AllowImportingCLIArgumentsCheckBox"
+                        Content="Allow importing custom command-line arguments from a bundle" />
+              <TextBlock x:Name="AllowImportingCLIArgumentsHintBlock"
+                         Opacity="0.68"
+                         TextWrapping="Wrap" />
+              <Border x:Name="AllowImportingCLIArgumentsPendingBadge"
+                      Padding="8,4"
+                      Classes="surface-card warning-panel"
+                      IsVisible="False">
+                <TextBlock x:Name="AllowImportingCLIArgumentsPendingText"
+                           FontSize="12"
+                           TextWrapping="Wrap" />
+              </Border>
+            </StackPanel>
+          </Border>
+          <!-- Import pre/post commands -->
+          <Border Padding="14"
+                  Classes="surface-card">
+            <StackPanel Spacing="8">
+              <CheckBox x:Name="AllowImportingPrePostCommandsCheckBox"
+                        Content="Allow importing custom pre/post-install commands from a bundle" />
+              <TextBlock x:Name="AllowImportingPrePostCommandsHintBlock"
+                         Opacity="0.68"
+                         TextWrapping="Wrap" />
+              <Border x:Name="AllowImportingPrePostCommandsPendingBadge"
+                      Padding="8,4"
+                      Classes="surface-card warning-panel"
+                      IsVisible="False">
+                <TextBlock x:Name="AllowImportingPrePostCommandsPendingText"
+                           FontSize="12"
+                           TextWrapping="Wrap" />
+              </Border>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

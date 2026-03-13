@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.SettingsPlaceholderSectionView">
+  <Border Padding="24"
+          Classes="surface-card subtle-panel">
+    <StackPanel Spacing="10">
+      <TextBlock x:Name="LeadBlock"
+                 FontSize="20"
+                 FontWeight="SemiBold"
+                 TextWrapping="Wrap" />
+      <TextBlock x:Name="DescriptionBlock"
+                 Opacity="0.78"
+                 TextWrapping="Wrap" />
+      <Border Padding="16"
+              Margin="0,6,0,0"
+              Classes="surface-card">
+        <TextBlock x:Name="NextStepBlock"
+                   Opacity="0.78"
+                   TextWrapping="Wrap" />
+      </Border>
+    </StackPanel>
+  </Border>
+</UserControl>

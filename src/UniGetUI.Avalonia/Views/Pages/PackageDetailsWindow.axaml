@@ -1,0 +1,421 @@
+<Window xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:pages="clr-namespace:UniGetUI.Avalonia.Views.Pages"
+        x:Class="UniGetUI.Avalonia.Views.Pages.PackageDetailsWindow"
+        Width="680"
+        Height="720"
+        MinWidth="480"
+        MinHeight="400"
+        Title="Package Details"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner">
+  <Window.Styles>
+    <StyleInclude Source="/Styles/AppStyles.axaml" />
+  </Window.Styles>
+
+  <!-- Two-column responsive root: column 1 is the screenshots side panel (shown at ≥950 px) -->
+  <Grid x:Name="RootLayoutGrid"
+        ColumnDefinitions="*,0"
+        ColumnSpacing="0"
+        Margin="18">
+
+    <!-- LEFT / primary column -->
+    <ScrollViewer>
+      <StackPanel x:Name="PrimaryContent" Spacing="12">
+
+        <!-- Header -->
+        <Border Padding="18"
+                Classes="surface-card subtle-panel">
+          <StackPanel Spacing="6">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="12">
+              <Border Width="42"
+                      Height="42"
+                      Classes="surface-card"
+                      CornerRadius="12">
+                <Panel>
+                  <TextBlock x:Name="PackageIconGlyphBlock"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             FontSize="18"
+                             Text="📦" />
+                  <Image x:Name="PackageIconImage"
+                         Width="30"
+                         Height="30"
+                         IsVisible="False"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         Stretch="Uniform" />
+                </Panel>
+              </Border>
+              <StackPanel Spacing="2">
+                <TextBlock x:Name="PackageNameBlock"
+                           FontSize="22"
+                           FontWeight="Bold" />
+                <TextBlock x:Name="PackageIdBlock"
+                           Opacity="0.70" />
+              </StackPanel>
+            </StackPanel>
+            <Grid ColumnDefinitions="Auto,*,Auto,*"
+                  ColumnSpacing="6"
+                  Margin="0,6,0,0">
+              <TextBlock x:Name="PackageVersionLabelBlock"
+                         Text="Version:"
+                         Opacity="0.60"
+                         VerticalAlignment="Center" />
+              <TextBlock x:Name="PackageVersionBlock"
+                         Grid.Column="1"
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center" />
+              <TextBlock x:Name="PackageManagerLabelBlock"
+                         Text="Manager:"
+                         Grid.Column="2"
+                         Opacity="0.60"
+                         VerticalAlignment="Center" />
+              <TextBlock x:Name="PackageManagerBlock"
+                         Grid.Column="3"
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center" />
+            </Grid>
+          </StackPanel>
+        </Border>
+
+      <!-- Loading indicator -->
+      <Border x:Name="LoadingCard"
+              Padding="16"
+              Classes="surface-card">
+        <StackPanel Spacing="8">
+          <ProgressBar IsIndeterminate="True" />
+          <TextBlock x:Name="LoadingStateBlock"
+                     HorizontalAlignment="Center"
+                     Opacity="0.70" />
+        </StackPanel>
+      </Border>
+
+      <Border x:Name="ScreenshotsCard"
+              Padding="18"
+              Classes="surface-card"
+              IsVisible="False">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                ColumnSpacing="8">
+            <TextBlock x:Name="ScreenshotsTitleBlock"
+                       VerticalAlignment="Center"
+                       FontSize="16"
+                       FontWeight="SemiBold" />
+            <TextBlock x:Name="ScreenshotsPipsBlock"
+                       Grid.Column="2"
+                       VerticalAlignment="Center"
+                       Opacity="0.68" />
+            <ProgressBar x:Name="ScreenshotsLoadingBar"
+                         Grid.Column="3"
+                         Width="18"
+                         Height="18"
+                         IsIndeterminate="True"
+                         IsVisible="False" />
+          </Grid>
+
+          <Border x:Name="ScreenshotsImageCard"
+                  Padding="12"
+                  Classes="surface-card subtle-panel"
+                  IsVisible="False">
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  ColumnSpacing="12">
+              <Button x:Name="PreviousScreenshotButton"
+                      VerticalAlignment="Center"
+                      Classes="toolbar-secondary"
+                      Content="◀"
+                      Click="PreviousScreenshotButton_OnClick" />
+              <Image x:Name="ScreenshotImage"
+                     Grid.Column="1"
+                     Height="240"
+                     Stretch="Uniform" />
+              <Button x:Name="NextScreenshotButton"
+                      Grid.Column="2"
+                      VerticalAlignment="Center"
+                      Classes="toolbar-secondary"
+                      Content="▶"
+                      Click="NextScreenshotButton_OnClick" />
+            </Grid>
+          </Border>
+
+          <Border x:Name="ScreenshotsBannerCard"
+                  Padding="12"
+                  Classes="surface-card subtle-panel">
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12">
+              <TextBlock x:Name="ScreenshotsBannerTextBlock"
+                         VerticalAlignment="Center"
+                         TextWrapping="Wrap" />
+              <Button x:Name="ContributeScreenshotsButton"
+                      Grid.Column="1"
+                      Classes="toolbar-secondary"
+                      VerticalAlignment="Center"
+                      Click="ContributeScreenshotsButton_OnClick" />
+            </Grid>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Description -->
+      <Border x:Name="TagsCard"
+          Padding="18"
+          Classes="surface-card subtle-panel"
+          IsVisible="False">
+        <WrapPanel x:Name="TagsPanel" />
+      </Border>
+
+      <Border x:Name="DescriptionCard"
+              Padding="18"
+              Classes="surface-card"
+              IsVisible="False">
+        <StackPanel Spacing="8">
+          <TextBlock x:Name="DescriptionTitleBlock"
+                     FontSize="16"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="DescriptionBlock"
+                     Opacity="0.82"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- Package info -->
+      <Border x:Name="InfoCard"
+              Padding="18"
+              Classes="surface-card"
+              IsVisible="False">
+        <StackPanel Spacing="10">
+          <TextBlock x:Name="InfoTitleBlock"
+                     FontSize="16"
+                     FontWeight="SemiBold" />
+
+          <Grid x:Name="AuthorRow"
+                ColumnDefinitions="160,*"
+                IsVisible="False">
+            <TextBlock x:Name="AuthorLabelBlock"
+                       Opacity="0.68" />
+            <TextBlock x:Name="AuthorValueBlock"
+                       Grid.Column="1"
+                       TextWrapping="Wrap" />
+          </Grid>
+
+          <Grid x:Name="PublisherRow"
+                ColumnDefinitions="160,*"
+                IsVisible="False">
+            <TextBlock x:Name="PublisherLabelBlock"
+                       Opacity="0.68" />
+            <TextBlock x:Name="PublisherValueBlock"
+                       Grid.Column="1"
+                       TextWrapping="Wrap" />
+          </Grid>
+
+          <Grid x:Name="LicenseRow"
+                ColumnDefinitions="160,*"
+                IsVisible="False">
+            <TextBlock x:Name="LicenseLabelBlock"
+                       Opacity="0.68" />
+            <TextBlock x:Name="LicenseValueBlock"
+                       Grid.Column="1"
+                       TextWrapping="Wrap" />
+          </Grid>
+
+          <Grid x:Name="UpdateDateRow"
+                ColumnDefinitions="160,*"
+                IsVisible="False">
+            <TextBlock x:Name="UpdateDateLabelBlock"
+                       Opacity="0.68" />
+            <TextBlock x:Name="UpdateDateValueBlock"
+                       Grid.Column="1"
+                       TextWrapping="Wrap" />
+          </Grid>
+
+          <Grid x:Name="InstallerTypeRow"
+                ColumnDefinitions="160,*"
+                IsVisible="False">
+            <TextBlock x:Name="InstallerTypeLabelBlock"
+                       Opacity="0.68" />
+            <TextBlock x:Name="InstallerTypeValueBlock"
+                       Grid.Column="1"
+                       TextWrapping="Wrap" />
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- Installer details (hash, URL, size, download) -->
+      <Border x:Name="InstallerCard"
+              Padding="18"
+              Classes="surface-card"
+              IsVisible="False">
+        <StackPanel Spacing="10">
+          <TextBlock x:Name="InstallerTitleBlock"
+                     FontSize="16"
+                     FontWeight="SemiBold" />
+          <Grid x:Name="InstallerHashRow"
+                ColumnDefinitions="160,*"
+                IsVisible="False">
+            <TextBlock x:Name="InstallerHashLabelBlock"
+                       Opacity="0.68" />
+            <TextBlock x:Name="InstallerHashValueBlock"
+                       Grid.Column="1"
+                       TextWrapping="Wrap"
+                       FontFamily="Cascadia Mono,Cascadia Code,Consolas,monospace"
+                       FontSize="11" />
+          </Grid>
+          <Grid x:Name="InstallerUrlRow"
+                ColumnDefinitions="160,*"
+                IsVisible="False">
+            <TextBlock x:Name="InstallerUrlLabelBlock"
+                       Opacity="0.68" />
+            <TextBlock x:Name="InstallerUrlValueBlock"
+                       Grid.Column="1"
+                       TextWrapping="Wrap"
+                       TextTrimming="CharacterEllipsis" />
+          </Grid>
+          <Grid x:Name="InstallerSizeRow"
+                ColumnDefinitions="160,*"
+                IsVisible="False">
+            <TextBlock x:Name="InstallerSizeLabelBlock"
+                       Opacity="0.68" />
+            <TextBlock x:Name="InstallerSizeValueBlock"
+                       Grid.Column="1" />
+          </Grid>
+          <Button x:Name="DownloadInstallerButton"
+                  Classes="toolbar-secondary"
+                  HorizontalAlignment="Left"
+                  IsVisible="False"
+                  Click="DownloadInstallerButton_OnClick" />
+        </StackPanel>
+      </Border>
+
+      <!-- Dependencies -->
+      <Border x:Name="DependenciesCard"
+              Padding="18"
+              Classes="surface-card"
+              IsVisible="False">
+        <StackPanel Spacing="8">
+          <TextBlock x:Name="DependenciesTitleBlock"
+                     FontSize="16"
+                     FontWeight="SemiBold" />
+          <StackPanel x:Name="DependenciesPanel"
+                      Spacing="4" />
+        </StackPanel>
+      </Border>
+
+      <!-- Homepage & release notes links -->
+      <Border x:Name="LinksCard"
+              Padding="18"
+              Classes="surface-card"
+              IsVisible="False">
+        <StackPanel Spacing="10">
+          <TextBlock x:Name="LinksTitleBlock"
+                     FontSize="16"
+                     FontWeight="SemiBold" />
+
+          <Button x:Name="HomepageButton"
+                  Classes="toolbar-secondary"
+                  HorizontalAlignment="Left"
+                  IsVisible="False"
+                  Click="HomepageButton_OnClick" />
+
+          <Button x:Name="ReleaseNotesUrlButton"
+                  Classes="toolbar-secondary"
+                  HorizontalAlignment="Left"
+                  IsVisible="False"
+                  Click="ReleaseNotesUrlButton_OnClick" />
+
+          <Button x:Name="ManifestUrlButton"
+                  Classes="toolbar-secondary"
+                  HorizontalAlignment="Left"
+                  IsVisible="False"
+                  Click="ManifestUrlButton_OnClick" />
+        </StackPanel>
+      </Border>
+
+      <!-- Release notes text -->
+      <Border x:Name="ReleaseNotesCard"
+              Padding="18"
+              Classes="surface-card"
+              IsVisible="False">
+        <StackPanel Spacing="8">
+          <TextBlock x:Name="ReleaseNotesTitleBlock"
+                     FontSize="16"
+                     FontWeight="SemiBold" />
+          <Border Padding="12"
+                  Classes="surface-card subtle-panel"
+                  CornerRadius="10">
+            <TextBlock x:Name="ReleaseNotesBlock"
+                       Opacity="0.82"
+                       TextWrapping="Wrap" />
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <Border x:Name="InstallOptionsCard"
+              Padding="18"
+              Classes="surface-card"
+              IsVisible="False">
+        <Expander x:Name="InstallOptionsExpander"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Stretch">
+          <Expander.Header>
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12">
+              <TextBlock x:Name="InstallOptionsTitleBlock"
+                         VerticalAlignment="Center"
+                         FontSize="16"
+                         FontWeight="SemiBold" />
+              <Button x:Name="SaveInstallOptionsButton"
+                      Grid.Column="1"
+                      MinWidth="60"
+                      Height="34"
+                      Classes="toolbar-primary accent"
+                      Click="SaveInstallOptionsButton_OnClick" />
+            </Grid>
+          </Expander.Header>
+          <Border Padding="0,12,0,0">
+            <ContentControl x:Name="InstallOptionsHost" />
+          </Border>
+        </Expander>
+      </Border>
+
+      <!-- Bottom actions -->
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+            ColumnSpacing="4">
+        <Button x:Name="ShareButton"
+          Grid.Column="0"
+          Classes="toolbar-secondary"
+          Click="ShareButton_OnClick" />
+        <Button x:Name="ActionButton"
+          Grid.Column="2"
+                Classes="toolbar-primary accent"
+                IsVisible="False"
+                Click="ActionButton_OnClick" />
+        <Button x:Name="ActionDropdownButton"
+          Grid.Column="3"
+                Classes="toolbar-primary accent"
+                Content="▾"
+                Padding="6,4"
+                IsVisible="False" />
+        <Button x:Name="CloseButton"
+          Grid.Column="4"
+                Margin="8,0,0,0"
+                HorizontalAlignment="Right"
+                Classes="toolbar-secondary"
+                Click="CloseButton_OnClick" />
+      </Grid>
+
+    </StackPanel>
+  </ScrollViewer>
+
+  <!-- RIGHT column: side screenshots panel (activated at ≥950 px) -->
+  <ScrollViewer x:Name="SidePanelScrollViewer"
+                Grid.Column="1"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+    <StackPanel x:Name="SidePanelContent"
+                Spacing="12"
+                Margin="0,0,0,18" />
+  </ScrollViewer>
+
+  </Grid>
+</Window>

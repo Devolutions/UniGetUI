@@ -1,0 +1,63 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UniGetUI.Avalonia.Views.Pages.MissingDependencyDialog"
+        Width="540"
+        MinWidth="400"
+        MinHeight="220"
+        Title="Missing dependency"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <Window.Styles>
+    <StyleInclude Source="/Styles/AppStyles.axaml" />
+  </Window.Styles>
+
+  <StackPanel Margin="24" Spacing="14">
+
+    <!-- Description -->
+    <TextBlock x:Name="DescriptionBlock"
+               TextWrapping="Wrap" />
+
+    <!-- Sub-description -->
+    <TextBlock x:Name="SubDescriptionBlock"
+               TextWrapping="Wrap"
+               Opacity="0.70"
+               FontStyle="Italic" />
+
+    <!-- Manual install command -->
+    <TextBlock x:Name="CommandLabelBlock"
+               TextWrapping="Wrap"
+               Opacity="0.70" />
+
+    <Border Padding="10,8"
+            Classes="surface-card subtle-panel">
+      <TextBlock x:Name="CommandBlock"
+                 TextWrapping="Wrap"
+                 FontFamily="Cascadia Mono,Cascadia Code,Consolas,monospace"
+                 FontSize="12"
+                 IsVisible="False" />
+    </Border>
+
+    <!-- "Don't show again" checkbox -->
+    <CheckBox x:Name="DoNotShowAgainCheckBox"
+              IsVisible="False"
+              Click="DoNotShowAgainCheckBox_OnClick" />
+
+    <!-- Buttons -->
+    <Grid ColumnDefinitions="*,Auto,Auto"
+          ColumnSpacing="8"
+          Margin="0,4,0,0">
+      <Button x:Name="InstallButton"
+              Grid.Column="1"
+              Classes="toolbar-primary accent"
+              MinWidth="130"
+              Click="InstallButton_OnClick" />
+      <Button x:Name="SkipButton"
+              Grid.Column="2"
+              Classes="toolbar-secondary"
+              MinWidth="110"
+              Click="SkipButton_OnClick" />
+    </Grid>
+
+  </StackPanel>
+</Window>

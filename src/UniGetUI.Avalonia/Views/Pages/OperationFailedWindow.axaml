@@ -1,0 +1,64 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UniGetUI.Avalonia.Views.Pages.OperationFailedWindow"
+        Width="680"
+        Height="500"
+        MinWidth="420"
+        MinHeight="300"
+        Title="Operation failed"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner">
+  <Window.Styles>
+    <StyleInclude Source="/Styles/AppStyles.axaml" />
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto,*,Auto"
+        Margin="16"
+        RowSpacing="0">
+
+    <!-- Failure message header -->
+    <TextBlock x:Name="FailureHeaderBlock"
+               Grid.Row="0"
+               TextWrapping="Wrap"
+               Margin="0,0,0,12"
+               FontSize="13" />
+
+    <!-- Color-coded log output -->
+    <Border Grid.Row="1"
+            Classes="surface-card"
+            Padding="0">
+      <ScrollViewer x:Name="LogScrollViewer"
+                    HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="LogLinesPanel"
+                    Margin="12,10"
+                    Spacing="1" />
+      </ScrollViewer>
+    </Border>
+
+    <!-- Footer: hint text + Close + Retry -->
+    <Grid Grid.Row="2"
+          Margin="0,10,0,0"
+          ColumnDefinitions="*,Auto,Auto"
+          ColumnSpacing="8">
+      <TextBlock x:Name="StatusHintBlock"
+                 Grid.Column="0"
+                 VerticalAlignment="Center"
+                 Opacity="0.65"
+                 FontSize="12"
+                 TextTrimming="CharacterEllipsis" />
+      <Button x:Name="CloseBtn"
+              Grid.Column="1"
+              MinWidth="90"
+              Content="Close"
+              Click="CloseBtn_OnClick" />
+      <Button x:Name="RetryBtn"
+              Grid.Column="2"
+              MinWidth="90"
+              Content="Retry"
+              Classes="accent"
+              Click="RetryBtn_OnClick" />
+    </Grid>
+
+  </Grid>
+</Window>

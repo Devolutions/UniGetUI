@@ -1,0 +1,132 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.InterfaceSettingsView">
+  <ScrollViewer>
+    <StackPanel Spacing="12">
+      <Border Padding="18"
+              Classes="surface-card subtle-panel">
+        <StackPanel Spacing="8">
+          <TextBlock x:Name="LeadTitleBlock"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="LeadDescriptionBlock"
+                     MaxWidth="860"
+                     Opacity="0.78"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="ThemeTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="ThemeDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <ComboBox x:Name="ThemeSelector"
+                    MaxDropDownHeight="220"
+                    SelectionChanged="ThemeSelector_OnSelectionChanged" />
+        </StackPanel>
+      </Border>
+
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="StartupTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="StartupDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <ComboBox x:Name="StartupPageSelector"
+                    MaxDropDownHeight="260"
+                    SelectionChanged="StartupPageSelector_OnSelectionChanged" />
+        </StackPanel>
+      </Border>
+
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="NavigationTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="NavigationDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="CollapseNavigationCheckBox"
+                    Content="Collapse the navigation menu on wide screens" />
+          <TextBlock x:Name="NavigationNoteBlock"
+                     Opacity="0.68"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- Package list icons -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="IconsTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="IconsDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="DisableIconsCheckBox"
+                    Content="Disable icons on package lists" />
+          <TextBlock x:Name="IconCacheSizeBlock"
+                     Opacity="0.68"
+                     TextWrapping="Wrap" />
+          <Button x:Name="ResetIconCacheBtn"
+                  Click="ResetIconCacheBtn_OnClick" />
+        </StackPanel>
+      </Border>
+
+      <!-- Updates defaults -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="UpdatesDefaultsTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="UpdatesDefaultsDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="DisableSelectingUpdatesByDefaultCheckBox"
+                    Content="Do not select updates by default" />
+        </StackPanel>
+      </Border>
+
+      <!-- Startup / autostart -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="AutostartTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="AutostartDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <Button x:Name="EditAutostartBtn"
+                  Click="EditAutostartBtn_OnClick" />
+        </StackPanel>
+      </Border>
+
+      <!-- System tray -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="SystemTrayTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="SystemTrayDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+          <CheckBox x:Name="EnableSystemTrayCheckBox" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

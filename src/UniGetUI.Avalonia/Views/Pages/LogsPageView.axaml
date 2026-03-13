@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UniGetUI.Avalonia.Views.Pages.LogsPageView">
+
+    <Grid RowDefinitions="Auto,*"
+          RowSpacing="12">
+
+        <!-- Header / toolbar -->
+        <Border Grid.Row="0"
+                Padding="12,8"
+                Classes="surface-card">
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="8">
+
+                <!-- Tab buttons -->
+                <StackPanel Orientation="Horizontal"
+                            Spacing="6">
+                    <Button x:Name="TabUniGetUILogButton"
+                            Classes="toolbar-primary accent"
+                            Tag="0"
+                            Click="TabButton_OnClick"
+                            Content="UniGetUI Log" />
+                    <Button x:Name="TabOperationHistoryButton"
+                            Classes="toolbar-secondary"
+                            Tag="1"
+                            Click="TabButton_OnClick"
+                            Content="Operation History" />
+                    <Button x:Name="TabManagerLogsButton"
+                            Classes="toolbar-secondary"
+                            Tag="2"
+                            Click="TabButton_OnClick"
+                            Content="Manager Logs" />
+                </StackPanel>
+
+                <!-- Optional selectors + action buttons -->
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="6">
+                    <ComboBox x:Name="LogLevelCombo"
+                              MinWidth="180"
+                              IsVisible="True"
+                              SelectionChanged="LogLevelCombo_SelectionChanged" />
+                    <ComboBox x:Name="ManagerCombo"
+                              MinWidth="200"
+                              IsVisible="False"
+                              SelectionChanged="ManagerCombo_SelectionChanged" />
+                    <Button x:Name="CopyButton"
+                            Classes="toolbar-secondary"
+                            Click="CopyButton_OnClick"
+                            Content="Copy" />
+                    <Button x:Name="ExportButton"
+                            Classes="toolbar-secondary"
+                            Click="ExportButton_OnClick"
+                            Content="Export" />
+                    <Button x:Name="ReloadButton"
+                            Classes="toolbar-secondary"
+                            Click="ReloadButton_OnClick"
+                            Content="Reload" />
+                </StackPanel>
+
+            </Grid>
+        </Border>
+
+        <!-- Log content area -->
+        <Border Grid.Row="1"
+                Classes="surface-card"
+                Padding="4">
+            <ScrollViewer x:Name="LogScrollViewer"
+                          Padding="8">
+                <StackPanel Spacing="0">
+                    <!-- Colored line list (UniGetUI Log + Manager Logs) -->
+                    <ItemsControl x:Name="LogLinesItems">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Text}"
+                                           Foreground="{Binding Foreground}"
+                                           FontFamily="Cascadia Mono,Cascadia Code,Consolas,Courier New,monospace"
+                                           FontSize="12"
+                                           TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Plain text (Operation History) -->
+                    <SelectableTextBlock x:Name="PlainTextBlock"
+                                         IsVisible="False"
+                                         FontFamily="Cascadia Mono,Cascadia Code,Consolas,Courier New,monospace"
+                                         FontSize="12"
+                                         TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+    </Grid>
+</UserControl>

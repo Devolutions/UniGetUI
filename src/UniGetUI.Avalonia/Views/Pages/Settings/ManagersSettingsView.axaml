@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.ManagersSettingsView">
+  <Grid RowDefinitions="Auto,*"
+        RowSpacing="12">
+    <Button x:Name="BackToOverviewButton"
+            HorizontalAlignment="Left"
+            Classes="toolbar-secondary"
+            IsVisible="False"
+            Click="BackToOverviewButton_OnClick"
+            Content="Back to managers" />
+
+    <ContentControl x:Name="SectionContentHost"
+                    Grid.Row="1" />
+  </Grid>
+</UserControl>

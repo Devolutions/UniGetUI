@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UniGetUI.Avalonia.Views.Pages.OperationWidgetView">
+
+  <Border Margin="0,2"
+          Padding="12,8"
+          CornerRadius="8"
+          Classes="surface-card"
+          ContextRequested="Card_ContextRequested">
+    <Grid ColumnDefinitions="*,Auto,Auto"
+          ColumnSpacing="8">
+
+      <!-- Left: title + status + progress -->
+      <StackPanel Spacing="4">
+        <TextBlock x:Name="TitleBlock"
+                   FontWeight="SemiBold"
+                   TextTrimming="CharacterEllipsis"
+                   Text="Operation" />
+        <TextBlock x:Name="LiveLineBlock"
+                   FontSize="12"
+                   Opacity="0.7"
+                   TextTrimming="CharacterEllipsis"
+                   Text="Please wait…" />
+        <ProgressBar x:Name="ProgressBar"
+                     Height="4"
+                     Minimum="0"
+                     Maximum="100"
+                     Value="0"
+                     IsIndeterminate="False" />
+      </StackPanel>
+
+      <!-- Retry / view-output button (content and click handler change by state) -->
+      <Button x:Name="ViewOutputBtn"
+              Grid.Column="1"
+              Classes="toolbar-secondary"
+              VerticalAlignment="Center"
+              Click="ViewOutputButton_OnClick"
+              Content="View output" />
+
+      <!-- Cancel / Close button -->
+      <Button x:Name="ActionBtn"
+              Grid.Column="2"
+              Classes="toolbar-secondary"
+              VerticalAlignment="Center"
+              Click="ActionButton_OnClick"
+              Content="Cancel" />
+
+    </Grid>
+  </Border>
+</UserControl>

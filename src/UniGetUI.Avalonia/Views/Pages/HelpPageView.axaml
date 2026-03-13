@@ -1,0 +1,99 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UniGetUI.Avalonia.Views.Pages.HelpPageView">
+  <ScrollViewer>
+    <StackPanel Spacing="12">
+
+      <!-- Lead card -->
+      <Border Padding="18"
+              Classes="surface-card subtle-panel">
+        <StackPanel Spacing="8">
+          <TextBlock x:Name="LeadTitleBlock"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="LeadDescriptionBlock"
+                     MaxWidth="860"
+                     Opacity="0.78"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- Documentation links -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="DocumentationTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="DocumentationDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+
+          <Button x:Name="OpenDocumentationButton"
+                  Classes="toolbar-secondary"
+                  HorizontalAlignment="Left"
+                  Click="OpenDocumentationButton_OnClick" />
+
+          <Button x:Name="OpenChangelogButton"
+                  Classes="toolbar-secondary"
+                  HorizontalAlignment="Left"
+                  Click="OpenChangelogButton_OnClick" />
+        </StackPanel>
+      </Border>
+
+      <!-- Community & support links -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="CommunityTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <TextBlock x:Name="CommunityDescriptionBlock"
+                     Opacity="0.72"
+                     TextWrapping="Wrap" />
+
+          <Button x:Name="OpenIssuesButton"
+                  Classes="toolbar-secondary"
+                  HorizontalAlignment="Left"
+                  Click="OpenIssuesButton_OnClick" />
+
+          <Button x:Name="OpenDiscussionsButton"
+                  Classes="toolbar-secondary"
+                  HorizontalAlignment="Left"
+                  Click="OpenDiscussionsButton_OnClick" />
+        </StackPanel>
+      </Border>
+
+      <!-- About UniGetUI -->
+      <Border Padding="18"
+              Classes="surface-card">
+        <StackPanel Spacing="12">
+          <TextBlock x:Name="AboutTitleBlock"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+          <Border Padding="14"
+                  Classes="surface-card subtle-panel"
+                  CornerRadius="14">
+            <StackPanel Spacing="6">
+              <TextBlock x:Name="AboutVersionBlock"
+                         TextWrapping="Wrap" />
+              <TextBlock x:Name="AboutLicenseBlock"
+                         Opacity="0.72"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+          <Button x:Name="OpenLicenseButton"
+                  Classes="toolbar-secondary"
+                  HorizontalAlignment="Left"
+                  Click="OpenLicenseButton_OnClick" />
+          <Button x:Name="OpenContributorsButton"
+                  Classes="toolbar-secondary"
+                  HorizontalAlignment="Left"
+                  Click="OpenContributorsButton_OnClick" />
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

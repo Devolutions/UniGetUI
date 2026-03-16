@@ -14,6 +14,12 @@
         <!-- .NET & AppSdk publish options -->
         <WindowsAppSDKWinUI>true</WindowsAppSDKWinUI>
         <WindowsPackageType>None</WindowsPackageType>
+        <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+        <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+        <RuntimeIdentifier
+            Condition="'$(Platform)' != '' and '$(Platform)' != 'AnyCPU' and '$(Platform)' != 'Any CPU'"
+            >win-$(Platform)</RuntimeIdentifier
+        >
 
         <!--PublishAot>true</PublishAot-->
         <PublishTrimmed>true</PublishTrimmed>

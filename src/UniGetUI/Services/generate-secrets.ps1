@@ -12,14 +12,14 @@ if (-not (Test-Path -Path "Generated Files")) {
 }
 
 
-$clientId = $env:GH_UGUI_CLIENT_ID
-$clientSecret = $env:GH_UGUI_CLIENT_SECRET
+$clientId = $env:UNIGETUI_GITHUB_CLIENT_ID
+$clientSecret = $env:UNIGETUI_GITHUB_CLIENT_SECRET
 
 if (-not $clientId) { $clientId = "CLIENT_ID_UNSET" }
 if (-not $clientSecret) { $clientSecret = "CLIENT_SECRET_UNSET" }
 
 @"
-// Auto-generated file - do not modidy
+// Auto-generated file - do not modify
 namespace UniGetUI.Services
 {
     internal static partial class Secrets
@@ -29,4 +29,4 @@ namespace UniGetUI.Services
     }
 }
 "@ | Set-Content -Encoding UTF8 "Generated Files\Secrets.Generated.cs"
-cp "Generated Files\Secrets.Generated.cs" "$OutputPath\Generated Files\Secrets.Generated.cs"
+Copy-Item "Generated Files\Secrets.Generated.cs" "$OutputPath\Generated Files\Secrets.Generated.cs"

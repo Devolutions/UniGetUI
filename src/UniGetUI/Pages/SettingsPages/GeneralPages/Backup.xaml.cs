@@ -354,7 +354,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
 
         private void MoreInfoBtn_OnClick(object sender, RoutedEventArgs e)
         {
-            MainApp.Instance.MainWindow.NavigationPage.ShowHelp("cloud-backup-overview/");
+            CoreTools.Launch("https://devolutions.net/unigetui");
         }
     }
 }

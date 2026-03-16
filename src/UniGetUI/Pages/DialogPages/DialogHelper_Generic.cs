@@ -488,7 +488,7 @@ public static partial class DialogHelper
         p.Inlines.Add(new LineBreak());
         var link = new Hyperlink
         {
-            NavigateUri = new Uri("https://www.marticliment.com/unigetui/privacy/"),
+            NavigateUri = new Uri("https://devolutions.net/legal/"),
         };
         link.Inlines.Add(
             new Run

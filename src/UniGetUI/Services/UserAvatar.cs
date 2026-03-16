@@ -68,7 +68,14 @@ namespace UniGetUI.Services
                     return;
                 }
 
-                await client.SignInAsync();
+                bool success = await client.SignInAsync();
+                if (!success)
+                {
+                    DialogHelper.ShowDismissableBalloon(
+                        CoreTools.Translate("Failed"),
+                        CoreTools.Translate("An error occurred while logging in: ")
+                    );
+                }
             }
             catch (Exception ex)
             {
@@ -132,7 +139,7 @@ namespace UniGetUI.Services
                 FontSize = 12,
             };
             hyperlinkButton.Click += (_, _) =>
-                MainApp.Instance.MainWindow.NavigationPage.ShowHelp("cloud-backup-overview/");
+                CoreTools.Launch("https://devolutions.net/unigetui");
 
             var loginButton = new PointButton
             {
@@ -235,7 +242,7 @@ namespace UniGetUI.Services
                 FontSize = 12,
             };
             hyperlinkButton.Click += (_, _) =>
-                MainApp.Instance.MainWindow.NavigationPage.ShowHelp("cloud-backup-overview/");
+                CoreTools.Launch("https://devolutions.net/unigetui");
 
             var hyperlinkButton2 = new HyperlinkButton
             {

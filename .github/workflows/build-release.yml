@@ -89,6 +89,8 @@ jobs:
     permissions:
       contents: read
     env:
+      UNIGETUI_GITHUB_CLIENT_ID: ${{ secrets.UNIGETUI_GITHUB_CLIENT_ID }}
+      UNIGETUI_GITHUB_CLIENT_SECRET: ${{ secrets.UNIGETUI_GITHUB_CLIENT_SECRET }}
       NUGET_PACKAGES: ${{ github.workspace }}\.nuget\packages
     strategy:
       fail-fast: false
@@ -98,6 +100,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Validate GitHub OAuth secrets
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:UNIGETUI_GITHUB_CLIENT_ID)) {
+            throw "UNIGETUI_GITHUB_CLIENT_ID is not configured for this build environment."
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:UNIGETUI_GITHUB_CLIENT_SECRET)) {
+            throw "UNIGETUI_GITHUB_CLIENT_SECRET is not configured for this build environment."
+          }
+
+          Write-Host "::notice::GitHub OAuth secrets are configured for this build."
 
       - name: Install .NET
         uses: actions/setup-dotnet@v5

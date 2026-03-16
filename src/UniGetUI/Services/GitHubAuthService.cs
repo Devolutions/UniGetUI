@@ -12,6 +12,9 @@ namespace UniGetUI.Services
 {
     public class GitHubAuthService
     {
+        private const string MissingClientId = "CLIENT_ID_UNSET";
+        private const string MissingClientSecret = "CLIENT_SECRET_UNSET";
+        private static readonly TimeSpan LoginTimeout = TimeSpan.FromMinutes(2);
         private readonly string GitHubClientId = Secrets.GetGitHubClientId();
         private readonly string GitHubClientSecret = Secrets.GetGitHubClientSecret();
         private const string RedirectUri = "http://127.0.0.1:58642/";
@@ -47,6 +50,15 @@ namespace UniGetUI.Services
         {
             try
             {
+                if (!HasConfiguredOAuthClient())
+                {
+                    Logger.Error(
+                        "GitHub sign-in is not configured for this build. Missing OAuth client ID or client secret."
+                    );
+                    AuthStatusChanged?.Invoke(this, EventArgs.Empty);
+                    return false;
+                }
+
                 Logger.Info("Initiating GitHub sign-in process using loopback redirect...");
 
                 var request = new OauthLoginRequest(GitHubClientId)
@@ -74,15 +86,25 @@ namespace UniGetUI.Services
                 loginBackend = new GHAuthApiRunner();
                 loginBackend.OnLogin += BackgroundApiOnOnLogin;
                 await loginBackend.Start();
-                await Launcher.LaunchUriAsync(oauthLoginUrl);
 
-                while (codeFromAPI is null)
+                bool launchSucceeded = await Launcher.LaunchUriAsync(oauthLoginUrl);
+                if (!launchSucceeded)
+                {
+                    Logger.Error("Failed to launch the browser for GitHub sign-in.");
+                    AuthStatusChanged?.Invoke(this, EventArgs.Empty);
+                    return false;
+                }
+
+                DateTime timeoutAt = DateTime.UtcNow.Add(LoginTimeout);
+                while (codeFromAPI is null && DateTime.UtcNow < timeoutAt)
                     await Task.Delay(100);
 
-                loginBackend.OnLogin -= BackgroundApiOnOnLogin;
-                await loginBackend.Stop();
-                loginBackend.Dispose();
-                loginBackend = null;
+                if (string.IsNullOrEmpty(codeFromAPI))
+                {
+                    Logger.Error("GitHub sign-in timed out before the loopback callback was received.");
+                    AuthStatusChanged?.Invoke(this, EventArgs.Empty);
+                    return false;
+                }
 
                 return await _completeSignInAsync(codeFromAPI);
             }
@@ -94,6 +116,26 @@ namespace UniGetUI.Services
                 AuthStatusChanged?.Invoke(this, EventArgs.Empty);
                 return false;
             }
+            finally
+            {
+                if (loginBackend is not null)
+                {
+                    try
+                    {
+                        loginBackend.OnLogin -= BackgroundApiOnOnLogin;
+                        await loginBackend.Stop();
+                        loginBackend.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warn(ex);
+                    }
+                    finally
+                    {
+                        loginBackend = null;
+                    }
+                }
+            }
         }
 
         private string? codeFromAPI;
@@ -101,6 +143,18 @@ namespace UniGetUI.Services
         private void BackgroundApiOnOnLogin(object? sender, string c)
         {
             codeFromAPI = c;
+        }
+
+        private bool HasConfiguredOAuthClient()
+        {
+            return !string.IsNullOrWhiteSpace(GitHubClientId)
+                && !string.IsNullOrWhiteSpace(GitHubClientSecret)
+                && !string.Equals(GitHubClientId, MissingClientId, StringComparison.Ordinal)
+                && !string.Equals(
+                    GitHubClientSecret,
+                    MissingClientSecret,
+                    StringComparison.Ordinal
+                );
         }
 
         private async Task<bool> _completeSignInAsync(string code)

@@ -158,7 +158,7 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
         }
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
-            CoreTools.WhichMultiple("dotnet.exe");
+            CoreTools.WhichMultiple(OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
 
         protected override void _loadManagerExecutableFile(
             out bool found,

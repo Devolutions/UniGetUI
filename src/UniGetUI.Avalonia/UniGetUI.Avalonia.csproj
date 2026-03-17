@@ -8,6 +8,10 @@
         <ApplicationIcon>..\UniGetUI\icon.ico</ApplicationIcon>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(EnableAvaloniaDiagnostics)' == 'true'">
+        <DefineConstants>$(DefineConstants);AVALONIA_DIAGNOSTICS_ENABLED</DefineConstants>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.7" />
         <PackageReference Include="Avalonia.Desktop" Version="11.3.7" />
@@ -15,7 +19,7 @@
         <PackageReference Include="Devolutions.AvaloniaTheme.DevExpress" Version="2026.3.13" />
         <PackageReference Include="Devolutions.AvaloniaTheme.MacOS" Version="2026.3.13" />
         <PackageReference Include="Devolutions.AvaloniaTheme.Linux" Version="2026.3.11" />
-        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta3" Condition="'$(Configuration)' == 'Debug'" />
+        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta3" Condition="'$(EnableAvaloniaDiagnostics)' == 'true'" />
         <PackageReference Include="Octokit" Version="14.0.0" />
     </ItemGroup>
 

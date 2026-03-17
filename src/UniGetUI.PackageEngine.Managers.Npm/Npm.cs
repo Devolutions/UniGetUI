@@ -246,7 +246,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
         }
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
-            CoreTools.WhichMultiple("npm.cmd");
+            CoreTools.WhichMultiple(OperatingSystem.IsWindows() ? "npm.cmd" : "npm");
 
         protected override void _loadManagerExecutableFile(
             out bool found,
@@ -257,9 +257,17 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
             var (_found, _executable) = GetExecutableFile();
 
             found = _found;
-            path = CoreData.PowerShell5;
-            callArguments =
-                $"-NoProfile -ExecutionPolicy Bypass -Command \"{_executable.Replace(" ", "` ")}\" ";
+
+            if (OperatingSystem.IsWindows())
+            {
+                path = CoreData.PowerShell5;
+                callArguments =
+                    $"-NoProfile -ExecutionPolicy Bypass -Command \"{_executable.Replace(" ", "` ")}\" ";
+                return;
+            }
+
+            path = _executable;
+            callArguments = "";
         }
 
         protected override void _loadManagerVersion(out string version)

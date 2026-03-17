@@ -25,6 +25,10 @@ namespace UniGetUI.Core.Language
             if (LangName is "default" or "")
             {
                 LangName = CultureInfo.CurrentUICulture.ToString().Replace("-", "_");
+                if (string.IsNullOrWhiteSpace(LangName))
+                {
+                    LangName = "en";
+                }
             }
             LoadLanguage((ForceLanguage != "") ? ForceLanguage : LangName);
         }
@@ -37,14 +41,20 @@ namespace UniGetUI.Core.Language
         {
             try
             {
+                lang = (lang ?? string.Empty).Trim();
+
                 Locale = "en";
                 if (LanguageData.LanguageReference.ContainsKey(lang))
                 {
                     Locale = lang;
                 }
-                else if (LanguageData.LanguageReference.ContainsKey(lang[0..2].Replace("uk", "ua")))
+                else if (lang.Length >= 2)
                 {
-                    Locale = lang[0..2].Replace("uk", "ua");
+                    string prefix = lang[0..2].Replace("uk", "ua");
+                    if (LanguageData.LanguageReference.ContainsKey(prefix))
+                    {
+                        Locale = prefix;
+                    }
                 }
 
                 MainLangDict = LoadLanguageFile(Locale);
@@ -58,6 +68,13 @@ namespace UniGetUI.Core.Language
             {
                 Logger.Error($"Could not load language file \"{lang}\"");
                 Logger.Error(ex);
+
+                // Keep the app functional even if locale resolution fails.
+                Locale = "en";
+                MainLangDict = LoadLanguageFile(Locale);
+                Formatter = new() { Locale = "en" };
+                LoadStaticTranslation();
+                SelectedLocale = Locale;
             }
         }
 
@@ -251,7 +268,8 @@ namespace UniGetUI.Core.Language
 
         public string Translate(string key, Dictionary<string, object?> dict)
         {
-            return Formatter!.FormatMessage(Translate(key), dict);
+            Formatter ??= new() { Locale = (Locale ?? "en").Replace('_', '-') };
+            return Formatter.FormatMessage(Translate(key), dict);
         }
     }
 }

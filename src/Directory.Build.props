@@ -45,6 +45,11 @@
         <Configurations>Debug;Release</Configurations>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <EnableAvaloniaDiagnostics>false</EnableAvaloniaDiagnostics>
+        <EnableAvaloniaDiagnostics Condition="'$(Configuration)' == 'Debug'">true</EnableAvaloniaDiagnostics>
+    </PropertyGroup>
+
     <PropertyGroup Condition="'$(Configuration)' == 'Release'">
         <Optimize>true</Optimize>
         <WholeProgramOptimization>true</WholeProgramOptimization>

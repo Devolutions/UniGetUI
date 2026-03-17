@@ -1,4 +1,5 @@
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Serializable;
@@ -13,20 +14,26 @@ internal sealed class CargoPkgOperationHelper(Cargo cargo) : BasePkgOperationHel
         OperationType operation
     )
     {
-        var version = options.Version == string.Empty ? package.VersionString : options.Version;
-        List<string> parameters = operation switch
+        var installVersion = options.Version == string.Empty ? package.VersionString : options.Version;
+
+        List<string> parameters;
+        switch (operation)
         {
-            OperationType.Install =>
-            [
-                Manager.Properties.InstallVerb,
-                "--version",
-                version,
-                package.Id,
-            ],
-            OperationType.Update => [Manager.Properties.UpdateVerb, package.Id],
-            OperationType.Uninstall => [Manager.Properties.UninstallVerb, package.Id],
-            _ => throw new InvalidDataException("Invalid package operation"),
-        };
+            case OperationType.Install:
+                parameters = [Manager.Properties.InstallVerb, "--version", installVersion, package.Id];
+                break;
+
+            case OperationType.Update:
+                parameters = [Manager.Properties.UpdateVerb, package.Id];
+                break;
+
+            case OperationType.Uninstall:
+                parameters = [Manager.Properties.UninstallVerb, package.Id];
+                break;
+
+            default:
+                throw new InvalidDataException("Invalid package operation");
+        }
 
         if (operation is OperationType.Install or OperationType.Update)
         {

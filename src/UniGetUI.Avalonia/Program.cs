@@ -1,6 +1,8 @@
 using System.Threading;
 using Avalonia;
+#if AVALONIA_DIAGNOSTICS_ENABLED
 using AvaloniaUI.DiagnosticsProtocol;
+#endif
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
@@ -11,9 +13,21 @@ namespace UniGetUI.Avalonia;
 
 internal sealed class Program
 {
+    private const string DevToolsEnvVar = "UNIGETUI_AVALONIA_DEVTOOLS";
+
+    private enum DevToolsRuntimeMode
+    {
+        Auto,
+        Enabled,
+        Disabled,
+    }
+
     // Kept alive for the lifetime of the process to enforce single-instance
     // ReSharper disable once NotAccessedField.Local
     private static Mutex? _singleInstanceMutex;
+
+    private static DevToolsRuntimeMode _devToolsRuntimeMode = DevToolsRuntimeMode.Auto;
+    private static string _devToolsRuntimeModeSource = "default";
 
     [STAThread]
     public static void Main(string[] args)
@@ -60,6 +74,10 @@ internal sealed class Program
             Environment.Exit(0);
             return;
         }
+
+        (_devToolsRuntimeMode, _devToolsRuntimeModeSource) = ResolveDevToolsRuntimeMode(args);
+        Logger.Info(
+            $"Avalonia DevTools runtime mode: {_devToolsRuntimeMode} (source: {_devToolsRuntimeModeSource})");
 
         // ── Single-instance enforcement ────────────────────────────────────
         _singleInstanceMutex = new Mutex(
@@ -263,22 +281,173 @@ internal sealed class Program
         catch { /* best-effort */ }
     }
 
+    private static (DevToolsRuntimeMode Mode, string Source) ResolveDevToolsRuntimeMode(
+        string[] args)
+    {
+        if (TryGetDevToolsModeFromCli(args, out DevToolsRuntimeMode cliMode))
+        {
+            return (cliMode, "cli");
+        }
+
+        string? envValue = Environment.GetEnvironmentVariable(DevToolsEnvVar);
+        if (TryParseDevToolsRuntimeMode(envValue, out DevToolsRuntimeMode envMode))
+        {
+            return (envMode, "env");
+        }
+
+        if (!string.IsNullOrWhiteSpace(envValue))
+        {
+            Logger.Warn(
+                $"Ignoring invalid {DevToolsEnvVar} value '{envValue}'. Expected one of: auto, on, off, true, false, 1, 0.");
+        }
+
+        return (DevToolsRuntimeMode.Auto, "default");
+    }
+
+    private static bool TryGetDevToolsModeFromCli(
+        IEnumerable<string> args,
+        out DevToolsRuntimeMode mode)
+    {
+        bool found = false;
+        mode = DevToolsRuntimeMode.Auto;
+
+        foreach (string rawArg in args)
+        {
+            string arg = rawArg.Trim();
+
+            if (arg.Equals("--enable-devtools", StringComparison.OrdinalIgnoreCase))
+            {
+                mode = DevToolsRuntimeMode.Enabled;
+                found = true;
+                continue;
+            }
+
+            if (arg.Equals("--disable-devtools", StringComparison.OrdinalIgnoreCase))
+            {
+                mode = DevToolsRuntimeMode.Disabled;
+                found = true;
+                continue;
+            }
+
+            const string modePrefix = "--devtools-mode=";
+            if (!arg.StartsWith(modePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string modeValue = arg[modePrefix.Length..].Trim();
+            if (TryParseDevToolsRuntimeMode(modeValue, out DevToolsRuntimeMode parsedMode))
+            {
+                mode = parsedMode;
+                found = true;
+            }
+            else
+            {
+                Logger.Warn(
+                    $"Ignoring invalid --devtools-mode value '{modeValue}'. Expected one of: auto, enabled, disabled.");
+            }
+        }
+
+        return found;
+    }
+
+    private static bool TryParseDevToolsRuntimeMode(
+        string? value,
+        out DevToolsRuntimeMode mode)
+    {
+        mode = DevToolsRuntimeMode.Auto;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        switch (value.Trim().ToLowerInvariant())
+        {
+            case "auto":
+                mode = DevToolsRuntimeMode.Auto;
+                return true;
+            case "enabled":
+            case "enable":
+            case "on":
+            case "true":
+            case "1":
+                mode = DevToolsRuntimeMode.Enabled;
+                return true;
+            case "disabled":
+            case "disable":
+            case "off":
+            case "false":
+            case "0":
+                mode = DevToolsRuntimeMode.Disabled;
+                return true;
+            default:
+                return false;
+        }
+    }
+
     public static AppBuilder BuildAvaloniaApp()
     {
         var builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .LogToTrace();
 
-#if DEBUG
-        builder = builder.WithDeveloperTools(options =>
+#if AVALONIA_DIAGNOSTICS_ENABLED
+        bool isWsl = IsRunningInWsl();
+        bool shouldEnableDevTools = _devToolsRuntimeMode switch
         {
-            options.ApplicationName = "UniGetUI.Avalonia";
-            options.ConnectOnStartup = true;
-            options.EnableDiscovery = true;
-            options.DiagnosticLogger = DiagnosticLogger.CreateConsole();
-        });
+            DevToolsRuntimeMode.Enabled => true,
+            DevToolsRuntimeMode.Disabled => false,
+            _ => !isWsl,
+        };
+
+        if (_devToolsRuntimeMode == DevToolsRuntimeMode.Auto && isWsl)
+        {
+            Logger.Warn("Avalonia DevTools auto mode disabled on WSL to avoid avdt runner crashes.");
+        }
+
+        if (_devToolsRuntimeMode == DevToolsRuntimeMode.Enabled && isWsl)
+        {
+            Logger.Warn("Avalonia DevTools explicitly enabled on WSL. This configuration may be unstable.");
+        }
+
+        if (shouldEnableDevTools)
+        {
+            builder = builder.WithDeveloperTools(options =>
+            {
+                options.ApplicationName = "UniGetUI.Avalonia";
+                options.ConnectOnStartup = true;
+                options.EnableDiscovery = true;
+                options.DiagnosticLogger = DiagnosticLogger.CreateConsole();
+            });
+            Logger.Info(
+                $"Avalonia DevTools enabled (mode: {_devToolsRuntimeMode}, source: {_devToolsRuntimeModeSource}).");
+        }
+        else
+        {
+            Logger.Info(
+                $"Avalonia DevTools disabled (mode: {_devToolsRuntimeMode}, source: {_devToolsRuntimeModeSource}).");
+        }
+#else
+        if (_devToolsRuntimeMode != DevToolsRuntimeMode.Auto)
+        {
+            Logger.Warn(
+                "Avalonia DevTools runtime toggle was requested, but diagnostics support is not included in this build.");
+        }
 #endif
 
         return builder;
     }
+
+#if AVALONIA_DIAGNOSTICS_ENABLED
+    private static bool IsRunningInWsl()
+    {
+        if (!OperatingSystem.IsLinux())
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("WSL_DISTRO_NAME")))
+            return true;
+
+        return !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("WSL_INTEROP"));
+    }
+#endif
 }

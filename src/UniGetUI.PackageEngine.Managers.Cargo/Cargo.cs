@@ -26,23 +26,31 @@ public partial class Cargo : PackageManager
 
     public Cargo()
     {
+        string cargoCommand = OperatingSystem.IsWindows() ? "cargo.exe" : "cargo";
+        string cargoUpdateBinary = OperatingSystem.IsWindows()
+            ? "cargo-install-update.exe"
+            : "cargo-install-update";
+        string cargoBinstallBinary = OperatingSystem.IsWindows()
+            ? "cargo-binstall.exe"
+            : "cargo-binstall";
+
         Dependencies =
         [
             // cargo-update is required to check for installed and upgradable packages
             new ManagerDependency(
                 "cargo-update",
-                CoreData.PowerShell5,
-                "-ExecutionPolicy Bypass -NoLogo -NoProfile -Command \"& {cargo install cargo-update; if ($error.count -ne 0){pause}}\"",
+                cargoCommand,
+                "install cargo-update",
                 "cargo install cargo-update",
-                async () => (await CoreTools.WhichAsync("cargo-install-update.exe")).Item1
+                async () => (await CoreTools.WhichAsync(cargoUpdateBinary)).Item1
             ),
             // Cargo-binstall is required to install and update cargo binaries
             new ManagerDependency(
                 "cargo-binstall",
-                CoreData.PowerShell5,
-                "-ExecutionPolicy Bypass -NoLogo -NoProfile -Command \"& {Set-ExecutionPolicy Unrestricted -Scope Process; iex (iwr \\\"https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.ps1\\\").Content; if ($error.count -ne 0){pause}}\"",
-                "Set-ExecutionPolicy Unrestricted -Scope Process; iex (iwr \"https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.ps1\").Content",
-                async () => (await CoreTools.WhichAsync("cargo-binstall.exe")).Item1
+                cargoCommand,
+                "install cargo-binstall",
+                "cargo install cargo-binstall",
+                async () => (await CoreTools.WhichAsync(cargoBinstallBinary)).Item1
             ),
         ];
 
@@ -151,7 +159,7 @@ public partial class Cargo : PackageManager
     }
 
     public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
-        CoreTools.WhichMultiple("cargo.exe");
+        CoreTools.WhichMultiple(OperatingSystem.IsWindows() ? "cargo.exe" : "cargo");
 
     protected override void _loadManagerExecutableFile(
         out bool found,

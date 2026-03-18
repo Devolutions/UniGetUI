@@ -33,16 +33,6 @@ internal static partial class AvaloniaAutoUpdater
     private const string REG_SKIP_HASH_VALIDATION = "UpdaterSkipHashValidation";
     private const string REG_SKIP_SIGNER_THUMBPRINT_CHECK = "UpdaterSkipSignerThumbprintCheck";
     private const string REG_DISABLE_TLS_VALIDATION = "UpdaterDisableTlsValidation";
-    private const string REG_USE_LEGACY_GITHUB = "UpdaterUseLegacyGithub";
-
-    private const string STABLE_ENDPOINT =
-        "https://www.marticliment.com/versions/unigetui/stable.ver";
-    private const string BETA_ENDPOINT =
-        "https://www.marticliment.com/versions/unigetui/beta.ver";
-    private const string STABLE_INSTALLER_URL =
-        "https://github.com/Devolutions/UniGetUI/releases/latest/download/UniGetUI.Installer.exe";
-    private const string BETA_INSTALLER_URL =
-        "https://github.com/Devolutions/UniGetUI/releases/download/$TAG/UniGetUI.Installer.exe";
 
     private static readonly string[] DEVOLUTIONS_CERT_THUMBPRINTS =
     [
@@ -50,6 +40,17 @@ internal static partial class AvaloniaAutoUpdater
         "8db5a43bb8afe4d2ffb92da9007d8997a4cc4e13",
         "50f753333811ff11f1920274afde3ffd4468b210",
     ];
+
+#if !DEBUG
+    private static readonly string[] RELEASE_IGNORED_REGISTRY_VALUES =
+    [
+        REG_PRODUCTINFO_KEY,
+        REG_ALLOW_UNSAFE_URLS,
+        REG_SKIP_HASH_VALIDATION,
+        REG_SKIP_SIGNER_THUMBPRINT_CHECK,
+        REG_DISABLE_TLS_VALIDATION,
+    ];
+#endif
 
     private static readonly AutoUpdaterJsonContext _jsonContext = new(
         new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
@@ -245,21 +246,7 @@ internal static partial class AvaloniaAutoUpdater
     // ------------------------------------------------------------------ update check sources
     private static async Task<UpdateCandidate> GetUpdateCandidateAsync(UpdaterOverrides overrides)
     {
-        if (overrides.UseLegacyGithub)
-        {
-            return await CheckFromLegacyGitHubAsync(overrides);
-        }
-
-        try
-        {
-            return await CheckFromProductInfoAsync(overrides);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn("ProductInfo source failed; falling back to legacy GitHub source.");
-            Logger.Warn(ex);
-            return await CheckFromLegacyGitHubAsync(overrides);
-        }
+        return await CheckFromProductInfoAsync(overrides);
     }
 
     private static async Task<UpdateCandidate> CheckFromProductInfoAsync(UpdaterOverrides overrides)
@@ -327,40 +314,6 @@ internal static partial class AvaloniaAutoUpdater
         );
 
         return new UpdateCandidate(upgradable, channel.Version, installer.Hash, installer.Url, "ProductInfo");
-    }
-
-    private static async Task<UpdateCandidate> CheckFromLegacyGitHubAsync(UpdaterOverrides overrides)
-    {
-        bool useBeta = Settings.Get(Settings.K.EnableUniGetUIBeta);
-        string endpoint = useBeta ? BETA_ENDPOINT : STABLE_ENDPOINT;
-        string installerUrl = useBeta ? BETA_INSTALLER_URL : STABLE_INSTALLER_URL;
-
-        Logger.Debug($"Checking updates via legacy GitHub endpoint: {endpoint}");
-
-        string[] parts;
-        using (HttpClient client = new(CreateHttpClientHandler(overrides)))
-        {
-            client.Timeout = TimeSpan.FromSeconds(600);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            parts = (await client.GetStringAsync(endpoint)).Split("////");
-        }
-
-        if (parts.Length >= 3)
-        {
-            int latestBuild = int.Parse(parts[0].Trim());
-            string hash = parts[1].Trim();
-            string versionName = parts[2].Trim();
-
-            return new UpdateCandidate(
-                latestBuild > CoreData.BuildNumber,
-                versionName,
-                hash,
-                installerUrl.Replace("$TAG", versionName),
-                "LegacyGitHub"
-            );
-        }
-
-        throw new FormatException("Legacy update file does not follow the expected format.");
     }
 
     // ------------------------------------------------------------------ validation helpers
@@ -488,9 +441,7 @@ internal static partial class AvaloniaAutoUpdater
         return uri.Host.EndsWith("devolutions.net", StringComparison.OrdinalIgnoreCase)
             || uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
             || uri.Host.Equals("objects.githubusercontent.com", StringComparison.OrdinalIgnoreCase)
-            || uri.Host.Equals("release-assets.githubusercontent.com", StringComparison.OrdinalIgnoreCase)
-            || uri.Host.Equals("marticliment.com", StringComparison.OrdinalIgnoreCase)
-            || uri.Host.EndsWith("marticliment.com", StringComparison.OrdinalIgnoreCase);
+            || uri.Host.Equals("release-assets.githubusercontent.com", StringComparison.OrdinalIgnoreCase);
     }
 
     private static ProductInfoFile SelectInstallerFile(List<ProductInfoFile> files)
@@ -531,11 +482,12 @@ internal static partial class AvaloniaAutoUpdater
     private static UpdaterOverrides LoadUpdaterOverrides()
     {
 #pragma warning disable CA1416
-        using RegistryKey? key = Registry.CurrentUser.OpenSubKey(REGISTRY_PATH);
+        using RegistryKey? key = Registry.LocalMachine.OpenSubKey(REGISTRY_PATH);
 
+#if DEBUG
         if (key is not null)
         {
-            Logger.Info($"Updater registry overrides loaded from HKCU\\{REGISTRY_PATH}");
+            Logger.Info($"Updater registry overrides loaded from HKLM\\{REGISTRY_PATH}");
         }
 
         return new UpdaterOverrides(
@@ -544,11 +496,45 @@ internal static partial class AvaloniaAutoUpdater
             GetRegistryBool(key, REG_ALLOW_UNSAFE_URLS),
             GetRegistryBool(key, REG_SKIP_HASH_VALIDATION),
             GetRegistryBool(key, REG_SKIP_SIGNER_THUMBPRINT_CHECK),
-            GetRegistryBool(key, REG_DISABLE_TLS_VALIDATION),
-            GetRegistryBool(key, REG_USE_LEGACY_GITHUB)
+            GetRegistryBool(key, REG_DISABLE_TLS_VALIDATION)
         );
+#else
+        LogIgnoredReleaseOverrides(key);
+        string productInfoUrl = GetRegistryString(key, REG_PRODUCTINFO_URL) ?? DEFAULT_PRODUCTINFO_URL;
+
+        return new UpdaterOverrides(
+            productInfoUrl,
+            DEFAULT_PRODUCTINFO_KEY,
+            false,
+            false,
+            false,
+            false
+        );
+#endif
 #pragma warning restore CA1416
     }
+
+#if !DEBUG
+    private static void LogIgnoredReleaseOverrides(RegistryKey? key)
+    {
+#pragma warning disable CA1416
+        if (key is null)
+        {
+            return;
+        }
+
+        foreach (string valueName in RELEASE_IGNORED_REGISTRY_VALUES)
+        {
+            if (key.GetValue(valueName) is not null)
+            {
+                Logger.Warn(
+                    $"Release build is ignoring updater registry value HKLM\\{REGISTRY_PATH}\\{valueName}."
+                );
+            }
+        }
+#pragma warning restore CA1416
+    }
+#endif
 
     private static string? GetRegistryString(RegistryKey? key, string valueName)
     {
@@ -558,6 +544,7 @@ internal static partial class AvaloniaAutoUpdater
         return string.IsNullOrWhiteSpace(parsed) ? null : parsed.Trim();
     }
 
+#if DEBUG
     private static bool GetRegistryBool(RegistryKey? key, string valueName)
     {
 #pragma warning disable CA1416
@@ -572,6 +559,7 @@ internal static partial class AvaloniaAutoUpdater
             || s.Equals("yes", StringComparison.OrdinalIgnoreCase)
             || s.Equals("on", StringComparison.OrdinalIgnoreCase);
     }
+#endif
 
     // ------------------------------------------------------------------ data types
     private sealed record UpdateCandidate(
@@ -588,8 +576,7 @@ internal static partial class AvaloniaAutoUpdater
         bool AllowUnsafeUrls,
         bool SkipHashValidation,
         bool SkipSignerThumbprintCheck,
-        bool DisableTlsValidation,
-        bool UseLegacyGithub
+        bool DisableTlsValidation
     );
 
     private sealed class ProductInfoProduct

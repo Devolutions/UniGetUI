@@ -38,5 +38,36 @@ namespace UniGetUI.Core.Data.Tests
                 "The executable file does not exist"
             );
         }
+
+        [Theory]
+        [InlineData("3.3.7", "3.3.7")]
+        [InlineData("2026.1.2", "v2026.1.2")]
+        [InlineData("v2026.1.2", "v2026.1.2")]
+        public void CheckGitHubReleaseTag(string versionName, string expectedTag)
+        {
+            Assert.Equal(expectedTag, CoreData.GetGitHubReleaseTag(versionName));
+        }
+
+        [Fact]
+        public void CheckGitHubReleaseTagCandidatesForCalendarVersion()
+        {
+            Assert.Equal(
+                ["v2026.1.2", "2026.1.2"],
+                CoreData.GetGitHubReleaseTagCandidates("2026.1.2")
+            );
+        }
+
+        [Fact]
+        public void CheckGitHubReleaseUrlsUseEscapedResolvedTag()
+        {
+            Assert.Equal(
+                "https://github.com/Devolutions/UniGetUI/releases/tag/v2026.1.2",
+                CoreData.GetGitHubReleasePageUrlFromTag(CoreData.GetGitHubReleaseTag("2026.1.2"))
+            );
+            Assert.Equal(
+                "https://api.github.com/repos/Devolutions/UniGetUI/releases/tags/3.3.7-beta1",
+                CoreData.GetGitHubReleaseApiUrlFromTag("3.3.7-beta1")
+            );
+        }
     }
 }

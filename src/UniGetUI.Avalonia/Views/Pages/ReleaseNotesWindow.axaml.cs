@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -13,10 +14,8 @@ namespace UniGetUI.Avalonia.Views.Pages;
 
 public partial class ReleaseNotesWindow : Window
 {
-    private readonly string _releaseNotesUrl =
-        $"https://github.com/Devolutions/UniGetUI/releases/tag/{CoreData.VersionName}";
-    private readonly string _releaseNotesApiUrl =
-        $"https://api.github.com/repos/Devolutions/UniGetUI/releases/tags/{Uri.EscapeDataString(CoreData.VersionName)}";
+    private readonly string[] _releaseNotesTags = CoreData.GetGitHubReleaseTagCandidates();
+    private readonly string _releaseNotesUrl = CoreData.GetGitHubReleasePageUrl();
 
     private bool _hasLoadedReleaseNotes;
 
@@ -66,6 +65,7 @@ public partial class ReleaseNotesWindow : Window
     private async Task LoadReleaseNotesAsync()
     {
         SetLoadingState(isLoading: true);
+        string? lastAttemptedApiUrl = null;
 
         try
         {
@@ -75,37 +75,51 @@ public partial class ReleaseNotesWindow : Window
             );
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
 
-            using HttpResponseMessage response = await client.GetAsync(_releaseNotesApiUrl);
-            if (!response.IsSuccessStatusCode)
+            foreach (string releaseTag in _releaseNotesTags)
             {
-                throw new HttpRequestException(
-                    $"GitHub API returned status code {(int)response.StatusCode} ({response.StatusCode})."
+                lastAttemptedApiUrl = CoreData.GetGitHubReleaseApiUrlFromTag(releaseTag);
+
+                using HttpResponseMessage response = await client.GetAsync(lastAttemptedApiUrl);
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    continue;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new HttpRequestException(
+                        $"GitHub API returned status code {(int)response.StatusCode} ({response.StatusCode})."
+                    );
+                }
+
+                await using Stream responseStream = await response.Content.ReadAsStreamAsync();
+                GitHubReleaseResponse? release = await JsonSerializer.DeserializeAsync<GitHubReleaseResponse>(
+                    responseStream,
+                    SerializationHelpers.DefaultOptions
                 );
+
+                string releaseBody = string.IsNullOrWhiteSpace(release?.Body)
+                    ? CoreTools.Translate("Please try again later")
+                    : release.Body.Replace("\r\n", "\n").Trim();
+
+                UrlTextBoxControl.Text = string.IsNullOrWhiteSpace(release?.HtmlUrl)
+                    ? CoreData.GetGitHubReleasePageUrlFromTag(releaseTag)
+                    : release.HtmlUrl;
+
+                ReleaseNotesTextBlockControl.Text = releaseBody;
+                StatusBlockControl.IsVisible = false;
+                RetryButtonControl.IsVisible = false;
+                LoadingProgressBarControl.IsVisible = false;
+                return;
             }
 
-            await using Stream responseStream = await response.Content.ReadAsStreamAsync();
-            GitHubReleaseResponse? release = await JsonSerializer.DeserializeAsync<GitHubReleaseResponse>(
-                responseStream,
-                SerializationHelpers.DefaultOptions
+            throw new HttpRequestException(
+                $"GitHub API returned 404 for all known release tags for version {CoreData.VersionName}."
             );
-
-            string releaseBody = string.IsNullOrWhiteSpace(release?.Body)
-                ? CoreTools.Translate("Please try again later")
-                : release.Body.Replace("\r\n", "\n").Trim();
-
-            if (!string.IsNullOrWhiteSpace(release?.HtmlUrl))
-            {
-                UrlTextBoxControl.Text = release.HtmlUrl;
-            }
-
-            ReleaseNotesTextBlockControl.Text = releaseBody;
-            StatusBlockControl.IsVisible = false;
-            RetryButtonControl.IsVisible = false;
-            LoadingProgressBarControl.IsVisible = false;
         }
         catch (Exception ex)
         {
-            Logger.Error($"Failed to load release notes from {_releaseNotesApiUrl}");
+            Logger.Error($"Failed to load release notes from {lastAttemptedApiUrl ?? _releaseNotesUrl}");
             Logger.Error(ex);
 
             ReleaseNotesTextBlockControl.Text = string.Empty;

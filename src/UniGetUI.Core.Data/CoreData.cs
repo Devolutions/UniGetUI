@@ -6,12 +6,15 @@ namespace UniGetUI.Core.Data
 {
     public static class CoreData
     {
+        private const string GitHubReleasePageBaseUrl = "https://github.com/Devolutions/UniGetUI/releases/tag/";
+        private const string GitHubReleaseApiBaseUrl = "https://api.github.com/repos/Devolutions/UniGetUI/releases/tags/";
+
         private static int? __code_page;
         public static int CODE_PAGE
         {
             get => __code_page ??= GetCodePage();
         }
-        public const string VersionName = "3.3.7"; // Do not modify this line, use file scripts/set-version.ps1
+        public const string VersionName = "2026.1.0"; // Do not modify this line, use file scripts/set-version.ps1
         public const int BuildNumber = 106; // Do not modify this line, use file scripts/set-version.ps1
 
         public const string UserAgentString =
@@ -19,6 +22,65 @@ namespace UniGetUI.Core.Data
 
         public const string AppIdentifier = "MartiCliment.UniGetUI";
         public const string MainWindowIdentifier = "MartiCliment.UniGetUI.MainInterface";
+
+        public static string GetGitHubReleaseTag()
+        {
+            return GetGitHubReleaseTag(VersionName);
+        }
+
+        public static string[] GetGitHubReleaseTagCandidates()
+        {
+            return GetGitHubReleaseTagCandidates(VersionName);
+        }
+
+        public static string GetGitHubReleaseTag(string versionName)
+        {
+            return GetGitHubReleaseTagCandidates(versionName)[0];
+        }
+
+        public static string[] GetGitHubReleaseTagCandidates(string versionName)
+        {
+            string normalizedVersion = string.IsNullOrWhiteSpace(versionName)
+                ? VersionName
+                : versionName.Trim();
+
+            if (normalizedVersion.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+            {
+                return [normalizedVersion];
+            }
+
+            string prefixedTag = $"v{normalizedVersion}";
+            return UsesPrefixedCalendarReleaseTags(normalizedVersion)
+                ? [prefixedTag, normalizedVersion]
+                : [normalizedVersion, prefixedTag];
+        }
+
+        public static string GetGitHubReleasePageUrl()
+        {
+            return GetGitHubReleasePageUrlFromTag(GetGitHubReleaseTag());
+        }
+
+        public static string GetGitHubReleasePageUrlFromTag(string releaseTag)
+        {
+            return GitHubReleasePageBaseUrl + releaseTag;
+        }
+
+        public static string GetGitHubReleaseApiUrlFromTag(string releaseTag)
+        {
+            return GitHubReleaseApiBaseUrl + Uri.EscapeDataString(releaseTag);
+        }
+
+        private static bool UsesPrefixedCalendarReleaseTags(string versionName)
+        {
+            int dotIndex = versionName.IndexOf('.');
+            if (dotIndex != 4 || dotIndex == versionName.Length - 1)
+            {
+                return false;
+            }
+
+            ReadOnlySpan<char> year = versionName.AsSpan(0, dotIndex);
+            return int.TryParse(year, out int parsedYear) && parsedYear >= 2000;
+        }
 
         private static bool? IS_PORTABLE;
         private static string? PORTABLE_PATH;

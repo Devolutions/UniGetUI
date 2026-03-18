@@ -51,9 +51,6 @@ Read more in the [Devolutions announcement](https://devolutions.net/blog/2026/03
  - [Frequently Asked Questions](#frequently-asked-questions)
  - [Command-line Arguments](cli-arguments.md)
 
-
-<a href="https://hellogithub.com/repository/46bec642537f449a857215e39a1d64ae" target="_blank"><img src="https://abroad.hellogithub.com/v1/widgets/recommend.svg?rid=46bec642537f449a857215e39a1d64ae&claim_uid=u6sFoX4hC2HztbD&theme=small" alt="Featured｜HelloGitHub" /></a>
-
 ## Installation
 <p>There are multiple ways to install UniGetUI — choose whichever one you prefer!</p>
  
@@ -67,9 +64,9 @@ Read more in the [Devolutions announcement](https://devolutions.net/blog/2026/03
 
 
 ### Install UniGetUI via WinGet:
-![WinGet Package Version](https://img.shields.io/winget/v/MartiCliment.UniGetUI?style=for-the-badge)
+![WinGet Package Version](https://img.shields.io/winget/v/Devolutions.UniGetUI?style=for-the-badge)
 ```cmd
-winget install --exact --id MartiCliment.UniGetUI --source winget
+winget install --exact --id Devolutions.UniGetUI --source winget
 ```
 
 
@@ -99,7 +96,6 @@ UniGetUI has a built-in autoupdater. However, it can also be updated like any ot
  - View detailed metadata about any package before installing it. Get the direct download URL or the name of the publisher, as well as the size of the download.
  - Easily bulk-install, update, or uninstall multiple packages at once selecting multiple packages before performing an operation
  - Automatically update packages, or be notified when updates become available. Skip versions or completely ignore updates on a per-package basis.
- - Manage your available updates at the touch of a button from the **Widgets pane** or from **Dev Home** pane with [Widgets for UniGetUI](https://apps.microsoft.com/detail/9NB9M5KZ8SLX)*.
  - The system tray icon will also show the available updates and installed packages, to efficiently update a program or remove a package from your system.
  - Easily customize how and where packages are installed. Select different installation options and switches for each package. Install an older version or force to install a 32 bit architecture. \[But don't worry, those options will be saved for future updates for this package*]
  - Share packages with your friends using generated package links.

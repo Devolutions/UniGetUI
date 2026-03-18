@@ -48,7 +48,7 @@
       />
       <HyperlinkButton
         HorizontalAlignment="Stretch"
-        NavigateUri="https://www.marticliment.com/unigetui"
+        NavigateUri="https://devolutions.net/unigetui"
       >
         <widgets:TranslatedTextBlock Text="WingetUI Homepage" />
       </HyperlinkButton>

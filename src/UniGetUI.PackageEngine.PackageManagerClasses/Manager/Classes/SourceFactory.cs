@@ -7,7 +7,7 @@ namespace UniGetUI.PackageEngine.Classes.Manager
     {
         private readonly IPackageManager __manager;
         private readonly ConcurrentDictionary<string, IManagerSource> __reference;
-        private readonly Uri __default_uri = new("https://marticliment.com/unigetui/");
+        private readonly Uri __default_uri = new("https://devolutions.net/unigetui");
 
         public SourceFactory(IPackageManager manager)
         {

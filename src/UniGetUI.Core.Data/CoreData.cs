@@ -18,7 +18,7 @@ namespace UniGetUI.Core.Data
         public const int BuildNumber = 106; // Do not modify this line, use file scripts/set-version.ps1
 
         public const string UserAgentString =
-            $"UniGetUI/{VersionName} (https://marticliment.com/unigetui/; contact@marticliment.com)";
+            $"UniGetUI/{VersionName} (https://devolutions.net/unigetui; unigetui@devolutions.net)";
 
         public const string AppIdentifier = "MartiCliment.UniGetUI";
         public const string MainWindowIdentifier = "MartiCliment.UniGetUI.MainInterface";

@@ -100,7 +100,7 @@ namespace UniGetUI.Core.Data
 
         public static Dictionary<string, Uri> HomepageUrls = new()
         {
-            { "UniGetUI", new Uri("https://marticliment.com/unigetui") },
+            { "UniGetUI", new Uri("https://devolutions.net/unigetui") },
             // C# Libraries
             { "Pickers", new Uri("https://github.com/PavlikBender/Pickers/") },
             { "Community Toolkit", new Uri("https://github.com/CommunityToolkit/Windows/") },

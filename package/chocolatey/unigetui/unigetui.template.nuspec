@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>unigetui</id>
+    <title>UniGetUI</title>
+    <version>$VAR1$</version>
+    <authors>Devolutions Inc.</authors>
+    <owners>Devolutions Inc.</owners>
+    <summary>An intuitive GUI to discover, install, update, and uninstall packages from WinGet, Scoop, Chocolatey, npm, Pip, and more.</summary>
+    <description>The main goal of this project is to create an intuitive GUI for the most common CLI package managers for Windows 10 and Windows 11, such as WinGet, Scoop, Chocolatey, npm, Pip, .NET Tool, PowerShell Gallery and Cargo.</description>
+    <projectUrl>https://devolutions.net/unigetui/</projectUrl>
+    <tags>unigetui wingetui cli package-manager windows-10 windows-11 scoop winget chocolatey npm pip dotnet-tool dotnet windows package-manager-interface gui powershell powershell-ui gallery devolutions</tags>
+    <copyright>Copyright © 2006-2026</copyright>
+    <releaseNotes>https://github.com/Devolutions/UniGetUI/releases/tag/v$VAR1$</releaseNotes>
+    <licenseUrl>https://github.com/Devolutions/UniGetUI/blob/HEAD/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <iconUrl>https://cdnweb.devolutions.net/web/common/logos/img-devolutions-unigetui-white.svg</iconUrl>
+  </metadata>
+  <files>
+    <file src="tools\chocolateyInstall.ps1" target="tools" />
+    <file src="tools\chocolateyUninstall.ps1" target="tools" />
+  </files>
+</package>

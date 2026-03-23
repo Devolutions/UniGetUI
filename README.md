@@ -118,7 +118,7 @@ UniGetUI has a built-in autoupdater. However, it can also be updated like any ot
 
 UniGetUI translations are maintained directly in this repository. All supported languages are kept at 100% completion with AI instead of shipping partial translations. If you spot a mistake or want to improve a translation, please open a GitHub issue or submit a pull request.
 
-- <img src='https://flagcdn.com/af.svg' width=20> [Afrikaans](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_af.json)
+- <img src='https://flagcdn.com/za.svg' width=20> [Afrikaans](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_af.json)
 - <img src='https://flagcdn.com/al.svg' width=20> [Albanian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_sq.json)
 - <img src='https://flagcdn.com/sa.svg' width=20> [Arabic](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_ar.json)
 - <img src='https://flagcdn.com/bd.svg' width=20> [Bangla](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_bn.json)

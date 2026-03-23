@@ -87,17 +87,12 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
                     }
                 }
 
-                // Try to get the icon especially for this package
-                string? iconUrl = IconDatabase.Instance.GetIconUrlForId(
-                    Manager.Name + "." + package.Id
-                );
-                if (iconUrl is not null)
-                    return new CacheableIcon(new Uri(iconUrl));
-
-                // Try to get other corresponding icons for the package
-                iconUrl = IconDatabase.Instance.GetIconUrlForId(package.GetIconId());
-                if (iconUrl is not null)
-                    return new CacheableIcon(new Uri(iconUrl));
+                foreach (string lookupId in GetIconDatabaseLookupIds(package))
+                {
+                    string? iconUrl = IconDatabase.Instance.GetIconUrlForId(lookupId);
+                    if (iconUrl is not null)
+                        return new CacheableIcon(new Uri(iconUrl));
+                }
 
                 return null;
             }
@@ -131,31 +126,24 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
                 // Try to get exact screenshots for this package
                 if (!URIs.Any())
                 {
-                    string[] UrlArray = IconDatabase.Instance.GetScreenshotsUrlForId(
-                        Manager.Name + "." + package.Id
-                    );
-                    List<Uri> UriList = [];
-                    foreach (string url in UrlArray)
+                    foreach (string lookupId in GetIconDatabaseLookupIds(package))
                     {
-                        if (url != "")
-                            UriList.Add(new Uri(url));
-                    }
-                    URIs = UriList;
-                }
+                        string[] UrlArray = IconDatabase.Instance.GetScreenshotsUrlForId(
+                            lookupId
+                        );
+                        List<Uri> UriList = [];
+                        foreach (string url in UrlArray)
+                        {
+                            if (url != "")
+                                UriList.Add(new Uri(url));
+                        }
 
-                // Try to get matching screenshots for this package
-                if (!URIs.Any())
-                {
-                    string[] UrlArray = IconDatabase.Instance.GetScreenshotsUrlForId(
-                        package.GetIconId()
-                    );
-                    List<Uri> UriList = [];
-                    foreach (string url in UrlArray)
-                    {
-                        if (url != "")
-                            UriList.Add(new Uri(url));
+                        if (UriList.Count > 0)
+                        {
+                            URIs = UriList;
+                            break;
+                        }
                     }
-                    URIs = UriList;
                 }
 
                 Logger.Info($"Found {URIs.Count} screenshots for package Id={package.Id}");
@@ -170,6 +158,18 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
                 Logger.Error(e);
                 return [];
             }
+        }
+
+        private IEnumerable<string> GetIconDatabaseLookupIds(IPackage package)
+        {
+            yield return Manager.Name + "." + package.Id;
+
+            if (Manager.Name == "Winget")
+            {
+                yield return package.Id;
+            }
+
+            yield return package.GetIconId();
         }
 
         protected abstract void GetDetails_UnSafe(IPackageDetails details);

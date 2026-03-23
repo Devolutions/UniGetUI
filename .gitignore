@@ -13,7 +13,6 @@ vcredist.exe
 unigetui_bin/
 APIKEY.txt
 *.pyc
-WebBasedData/screenshot_database.xlsx
 WebBasedData/new_urls.txt
 WebBasedData/screenshot-database.json.backup
 pr_body.md

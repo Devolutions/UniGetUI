@@ -324,7 +324,8 @@ namespace UniGetUI.Interface.SoftwarePages
             }
 
             if (
-                WinGet.NO_PACKAGES_HAVE_BEEN_LOADED /* && !Settings.Get(Settings.K.DisableWinGetMalfunctionDetector)*/
+                WinGet.NO_PACKAGES_HAVE_BEEN_LOADED
+                && !Settings.Get(Settings.K.DisableWinGetMalfunctionDetector)
             )
             {
                 var infoBar = MainApp.Instance.MainWindow.WinGetWarningBanner;

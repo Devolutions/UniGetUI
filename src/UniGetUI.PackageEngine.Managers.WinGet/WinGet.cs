@@ -218,7 +218,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             try
             {
                 var packages = WinGetHelper.Instance.GetInstalledPackages_UnSafe();
-                NO_PACKAGES_HAVE_BEEN_LOADED = !packages.Any();
+                NO_PACKAGES_HAVE_BEEN_LOADED = false;
                 return packages;
             }
             catch (Exception)

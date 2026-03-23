@@ -276,8 +276,13 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             )
         )
         {
-            if (nativePackage.IsUpdateAvailable)
+            try
             {
+                if (!nativePackage.IsUpdateAvailable)
+                {
+                    continue;
+                }
+
                 IManagerSource source;
                 source = Manager.SourcesHelper.Factory.GetSourceOrDefault(
                     nativePackage.DefaultInstallVersion.PackageCatalog.Info.Name
@@ -311,6 +316,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     );
                 }
             }
+            catch (Exception ex)
+            {
+                LogSkippedPackage(logger, nativePackage, "listing available updates", ex);
+            }
         }
 
         logger.Close(0);
@@ -328,39 +337,90 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             )
         )
         {
-            IManagerSource source;
-            var availableVersions = nativePackage.AvailableVersions?.ToArray() ?? [];
-            if (availableVersions.Length > 0)
+            try
             {
-                var installPackage = nativePackage.GetPackageVersionInfo(availableVersions[0]);
-                source = Manager.SourcesHelper.Factory.GetSourceOrDefault(
-                    installPackage.PackageCatalog.Info.Name
+                IManagerSource source;
+                var availableVersions = nativePackage.AvailableVersions?.ToArray() ?? [];
+                if (availableVersions.Length > 0)
+                {
+                    var installPackage = nativePackage.GetPackageVersionInfo(availableVersions[0]);
+                    source = Manager.SourcesHelper.Factory.GetSourceOrDefault(
+                        installPackage.PackageCatalog.Info.Name
+                    );
+                }
+                else
+                {
+                    source = Manager.GetLocalSource(nativePackage.Id);
+                }
+
+                string version = nativePackage.InstalledVersion.Version;
+                if (version == "Unknown")
+                    version = WinGetPkgOperationHelper.GetLastInstalledVersion(nativePackage.Id);
+
+                logger.Log(
+                    $"Found package {nativePackage.Name} {nativePackage.Id} on source {source.Name}"
                 );
+                var UniGetUIPackage = new Package(
+                    nativePackage.Name,
+                    nativePackage.Id,
+                    version,
+                    source,
+                    Manager
+                );
+                NativePackageHandler.AddPackage(UniGetUIPackage, nativePackage);
+                packages.Add(UniGetUIPackage);
             }
-            else
+            catch (Exception ex)
             {
-                source = Manager.GetLocalSource(nativePackage.Id);
+                LogSkippedPackage(logger, nativePackage, "listing installed packages", ex);
             }
-
-            string version = nativePackage.InstalledVersion.Version;
-            if (version == "Unknown")
-                version = WinGetPkgOperationHelper.GetLastInstalledVersion(nativePackage.Id);
-
-            logger.Log(
-                $"Found package {nativePackage.Name} {nativePackage.Id} on source {source.Name}"
-            );
-            var UniGetUIPackage = new Package(
-                nativePackage.Name,
-                nativePackage.Id,
-                version,
-                source,
-                Manager
-            );
-            NativePackageHandler.AddPackage(UniGetUIPackage, nativePackage);
-            packages.Add(UniGetUIPackage);
         }
         logger.Close(0);
         return packages;
+    }
+
+    private static void LogSkippedPackage(
+        INativeTaskLogger logger,
+        CatalogPackage nativePackage,
+        string operation,
+        Exception ex
+    )
+    {
+        string packageDescription = DescribePackage(nativePackage);
+        logger.Error($"Skipping WinGet package while {operation}: {packageDescription}");
+        logger.Error(ex);
+        Logger.Warn(
+            $"Skipping WinGet package while {operation}: {packageDescription}. {ex.GetType().Name}: {ex.Message}"
+        );
+    }
+
+    private static string DescribePackage(CatalogPackage nativePackage)
+    {
+        try
+        {
+            string id = nativePackage.Id;
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                return id;
+            }
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            string name = nativePackage.Name;
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                return name;
+            }
+        }
+        catch
+        {
+        }
+
+        return "<unknown package>";
     }
 
     private IReadOnlyList<CatalogPackage> GetLocalWinGetPackages()

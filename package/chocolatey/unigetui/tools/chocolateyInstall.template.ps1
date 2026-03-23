@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $PackageName = 'unigetui'
-$Url = 'https://cdn.devolutions.net/download/Devolutions.UniGetUI.win-x64.$VAR1$.0.exe'
+$Url = 'https://cdn.devolutions.net/download/Devolutions.UniGetUI.win-x64.$VAR1$.exe'
 
 $PackageArgs = @{
   packageName   = $PackageName

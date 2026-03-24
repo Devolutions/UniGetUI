@@ -21,22 +21,38 @@
         </Style>
     </Window.Styles>
 
-    <Grid RowDefinitions="Auto,*"
-          Margin="12"
+    <Grid RowDefinitions="Auto,Auto,*"
+          Margin="16"
           RowSpacing="8">
 
+        <!-- ── Title ── -->
+        <TextBlock Grid.Row="0"
+                   Text="{Binding Title}"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,4"/>
+
         <!-- ── Header: description + Reset list button ── -->
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
 
             <TextBlock Text="{Binding Description}"
                        TextWrapping="Wrap"
                        VerticalAlignment="Center"
-                       Opacity="0.85"/>
+                       Opacity="0.75"/>
 
-            <Button Grid.Column="1" VerticalAlignment="Center">
+            <Button x:Name="ResetButton" Grid.Column="1" VerticalAlignment="Center">
                 <TextBlock Text="{Binding ResetLabel}"/>
                 <Button.Flyout>
                     <Flyout Placement="Bottom">
+                        <Flyout.FlyoutPresenterTheme>
+                            <ControlTheme TargetType="FlyoutPresenter">
+                                <Setter Property="Background" Value="{DynamicResource AppDialogPanelBackground}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="CornerRadius" Value="8"/>
+                                <Setter Property="Padding" Value="12"/>
+                            </ControlTheme>
+                        </Flyout.FlyoutPresenterTheme>
                         <Grid Width="300"
                               ColumnDefinitions="*,*"
                               RowDefinitions="Auto,Auto"
@@ -48,11 +64,12 @@
                             <Button Grid.Row="1" Grid.Column="0"
                                     Content="{Binding ResetYes}"
                                     HorizontalAlignment="Stretch"
-                                    Command="{Binding ResetAllCommand}"/>
+                                    Click="ResetYes_Click"/>
                             <Button Grid.Row="1" Grid.Column="1"
                                     Content="{Binding ResetNo}"
                                     HorizontalAlignment="Stretch"
-                                    Classes="accent"/>
+                                    Classes="accent"
+                                    Click="ResetNo_Click"/>
                         </Grid>
                     </Flyout>
                 </Button.Flyout>
@@ -61,10 +78,11 @@
         </Grid>
 
         <!-- ── Package list (DataGrid, mirrors the main package list) ── -->
-        <Border Grid.Row="1"
+        <Border Grid.Row="2"
                 CornerRadius="8"
                 BorderThickness="1"
-                Margin="0,6,0,6">
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                Margin="0,4,0,0">
             <Panel>
 
                 <!-- Empty state -->

@@ -210,22 +210,6 @@ public abstract partial class AbstractPackagesPage : UserControl,
         OrderByDescending_Menu.Icon = Check(!ViewModel.SortAscending);
     }
 
-    // ─── Search mode radio buttons (UI → ViewModel.SearchMode) ───────────────
-    private void QueryNameRadio_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    { if (QueryNameRadio.IsChecked == true) ViewModel.SearchMode = SearchMode.Name; }
-
-    private void QueryIdRadio_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    { if (QueryIdRadio.IsChecked == true) ViewModel.SearchMode = SearchMode.Id; }
-
-    private void QueryBothRadio_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    { if (QueryBothRadio.IsChecked == true) ViewModel.SearchMode = SearchMode.Both; }
-
-    private void QueryExactMatch_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    { if (QueryExactMatch.IsChecked == true) ViewModel.SearchMode = SearchMode.Exact; }
-
-    private void QuerySimilarResultsRadio_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    { if (QuerySimilarResultsRadio.IsChecked == true) ViewModel.SearchMode = SearchMode.Similar; }
-
     // ─── IKeyboardShortcutListener ────────────────────────────────────────────
     public void SearchTriggered()
     {

@@ -331,40 +331,29 @@
                                 </StackPanel>
                             </Expander.Header>
                             <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical" Spacing="0">
-                                <RadioButton x:Name="QueryNameRadio"
-                                             GroupName="QueryOptionsGroup"
-                                             Height="30"
+                                <RadioButton Height="30"
                                              Margin="0,-2,0,-2"
-                                             IsCheckedChanged="QueryNameRadio_IsCheckedChanged">
+                                             IsChecked="{Binding SearchMode_Name, Mode=TwoWay}">
                                     <TextBlock Text="Package Name" TextWrapping="Wrap"/>
                                 </RadioButton>
-                                <RadioButton x:Name="QueryIdRadio"
-                                             GroupName="QueryOptionsGroup"
-                                             Height="30"
+                                <RadioButton Height="30"
                                              Margin="0,-2,0,-2"
-                                             IsCheckedChanged="QueryIdRadio_IsCheckedChanged">
+                                             IsChecked="{Binding SearchMode_Id, Mode=TwoWay}">
                                     <TextBlock Text="Package ID" TextWrapping="Wrap"/>
                                 </RadioButton>
-                                <RadioButton x:Name="QueryBothRadio"
-                                             GroupName="QueryOptionsGroup"
-                                             Height="30"
+                                <RadioButton Height="30"
                                              Margin="0,-2,0,-2"
-                                             IsChecked="True"
-                                             IsCheckedChanged="QueryBothRadio_IsCheckedChanged">
+                                             IsChecked="{Binding SearchMode_Both, Mode=TwoWay}">
                                     <TextBlock Text="Both" TextWrapping="Wrap"/>
                                 </RadioButton>
-                                <RadioButton x:Name="QueryExactMatch"
-                                             GroupName="QueryOptionsGroup"
-                                             Height="30"
+                                <RadioButton Height="30"
                                              Margin="0,-2,0,-2"
-                                             IsCheckedChanged="QueryExactMatch_IsCheckedChanged">
+                                             IsChecked="{Binding SearchMode_Exact, Mode=TwoWay}">
                                     <TextBlock Text="Exact match" TextWrapping="Wrap"/>
                                 </RadioButton>
-                                <RadioButton x:Name="QuerySimilarResultsRadio"
-                                             GroupName="QueryOptionsGroup"
-                                             Height="30"
+                                <RadioButton Height="30"
                                              Margin="0,-2,0,-2"
-                                             IsCheckedChanged="QuerySimilarResultsRadio_IsCheckedChanged"
+                                             IsChecked="{Binding SearchMode_Similar, Mode=TwoWay}"
                                              IsEnabled="{Binding SimilarSearchEnabled}">
                                     <TextBlock Text="Show similar packages" TextWrapping="Wrap"/>
                                 </RadioButton>

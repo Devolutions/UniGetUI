@@ -401,7 +401,24 @@ public partial class PackagesPageViewModel : ViewModelBase
 
     partial void OnUpperLowerCaseChanged(bool value) => FilterPackages();
     partial void OnIgnoreSpecialCharsChanged(bool value) => FilterPackages();
-    partial void OnSearchModeChanged(SearchMode value) => FilterPackages();
+    partial void OnSearchModeChanged(SearchMode value)
+    {
+        OnPropertyChanged(nameof(SearchMode_Both));
+        OnPropertyChanged(nameof(SearchMode_Name));
+        OnPropertyChanged(nameof(SearchMode_Id));
+        OnPropertyChanged(nameof(SearchMode_Exact));
+        OnPropertyChanged(nameof(SearchMode_Similar));
+        FilterPackages();
+    }
+
+    // One bool property per mode — used for two-way RadioButton bindings.
+    // Mutual exclusion is enforced by the ViewModel: setting any one to true
+    // changes SearchMode, which notifies all five properties.
+    public bool SearchMode_Both    { get => SearchMode == SearchMode.Both;    set { if (value) SearchMode = SearchMode.Both; } }
+    public bool SearchMode_Name    { get => SearchMode == SearchMode.Name;    set { if (value) SearchMode = SearchMode.Name; } }
+    public bool SearchMode_Id      { get => SearchMode == SearchMode.Id;      set { if (value) SearchMode = SearchMode.Id; } }
+    public bool SearchMode_Exact   { get => SearchMode == SearchMode.Exact;   set { if (value) SearchMode = SearchMode.Exact; } }
+    public bool SearchMode_Similar { get => SearchMode == SearchMode.Similar; set { if (value) SearchMode = SearchMode.Similar; } }
 
     partial void OnAllPackagesCheckedChanged(bool? value)
     {

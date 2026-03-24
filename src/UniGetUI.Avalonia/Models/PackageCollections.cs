@@ -58,9 +58,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     {
         Package = package;
         _page = page;
-        VersionComboString = package.IsUpgradable
-            ? $"{package.VersionString} -> {package.NewVersionString}"
-            : package.VersionString;
+        VersionComboString = package.VersionString;
 
         Package.PropertyChanged += Package_PropertyChanged;
         UpdateDisplayState();

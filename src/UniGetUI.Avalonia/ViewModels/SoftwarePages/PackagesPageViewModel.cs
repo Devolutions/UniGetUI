@@ -1,19 +1,19 @@
 using System.Collections.Concurrent;
-using System.ComponentModel;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
-using UniGetUI.PackageEngine.Operations;
-using Avalonia.Threading;
-using UniGetUI.Avalonia.ViewModels;
-using UniGetUI.Avalonia.Infrastructure;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages;
 
@@ -56,10 +56,10 @@ public struct PackagesPageData
 /// </summary>
 public class SourceTreeNode : INotifyPropertyChanged
 {
-    public string PackageName { get; set; }
-    public string PackageID { get; init; }
-    public string Version { get; init; }
-    public string Source { get; init; }
+    public string? PackageName { get; set; }
+    public string? PackageID { get; init; }
+    public string? Version { get; init; }
+    public string? Source { get; init; }
     public List<SourceTreeNode> Children { get; } = [];
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -134,7 +134,6 @@ public partial class PackagesPageViewModel : ViewModelBase
     public ObservablePackageCollection FilteredPackages { get; } = new();
     public ObservableCollection<SourceTreeNode> SourceNodes { get; } = new();
     public ObservableCollection<object> ToolBarItems { get; } = new();
-
 
     // ─── Internal state ───────────────────────────────────────────────────────
     private string _searchQuery = "";
@@ -396,7 +395,6 @@ public partial class PackagesPageViewModel : ViewModelBase
         FilterPackages();
     }
 
-
     // ─── Selection ────────────────────────────────────────────────────────────
     partial void OnInstantSearchChanged(bool value)
         => Settings.SetDictionaryItem(Settings.K.DisableInstantSearch, PageName, !value);
@@ -563,7 +561,6 @@ public partial class PackagesPageViewModel : ViewModelBase
     [RelayCommand] private async Task Reload() => await LoadPackages(ReloadReason.Manual);
     [RelayCommand] private void SelectAllSources_Cmd() { SelectAllSources(); FilterPackages(); }
     [RelayCommand] private void ClearSourceSelection_Cmd() { ClearSourceSelection(); FilterPackages(); }
-
 
     [RelayCommand]
     private void SubmitMegaQuery(string query)

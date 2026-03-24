@@ -80,7 +80,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
             () => _ = ExportSelectionToBundleAsync(vm));
         AddToolbarSeparator();
         AddToolbarButton("help", CoreTools.Translate("Help"),
-            () => OpenHelp());
+            OpenHelp);
     }
 
     // ─── Context menu ─────────────────────────────────────────────────────────
@@ -191,7 +191,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
             await LaunchInstall([package]);
     }
 
-    private async Task ExportSelectionToBundleAsync(PackagesPageViewModel vm)
+    private static async Task ExportSelectionToBundleAsync(PackagesPageViewModel vm)
     {
         var packages = vm.FilteredPackages.GetCheckedPackages();
         GetMainWindow()?.Navigate(PageType.Bundles);

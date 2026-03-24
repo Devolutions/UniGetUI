@@ -29,7 +29,7 @@ public class SettingsCard : UserControl
     private bool _isClickEnabled;
 
     // ── Events ─────────────────────────────────────────────────────────────
-    public new event EventHandler<RoutedEventArgs>? Click;
+    public event EventHandler<RoutedEventArgs>? Click;
 
     // ── Properties ────────────────────────────────────────────────────────
 

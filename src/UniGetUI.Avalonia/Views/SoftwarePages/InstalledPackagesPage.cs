@@ -97,7 +97,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
             () => _ = ExportSelectionToBundleAsync(vm));
         AddToolbarSeparator();
-        AddToolbarButton("help", CoreTools.Translate("Help"), () => OpenHelp());
+        AddToolbarButton("help", CoreTools.Translate("Help"), OpenHelp);
     }
 
     // ─── Context menu ─────────────────────────────────────────────────────────
@@ -284,7 +284,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
             Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
     }
 
-    private async Task ExportSelectionToBundleAsync(PackagesPageViewModel vm)
+    private static async Task ExportSelectionToBundleAsync(PackagesPageViewModel vm)
     {
         var packages = vm.FilteredPackages.GetCheckedPackages();
         GetMainWindow()?.Navigate(PageType.Bundles);

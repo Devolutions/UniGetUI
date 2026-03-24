@@ -1,8 +1,8 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using global::Avalonia;
 using global::Avalonia.Controls;
 using global::Avalonia.Platform.Storage;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Core.Data;
 using CoreSettings = global::UniGetUI.Core.SettingsEngine.Settings;

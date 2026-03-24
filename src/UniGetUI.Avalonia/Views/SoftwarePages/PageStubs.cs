@@ -13,8 +13,6 @@ namespace UniGetUI.Avalonia.Views.Pages;
 // Stub classes for pages not yet ported — concrete implementations TBD
 // ---------------------------------------------------------------------------
 
-
-
 public class UniGetUILogPage : UserControl { }
 
 public class ManagerLogsPage : UserControl

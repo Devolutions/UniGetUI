@@ -1,8 +1,8 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using global::Avalonia;
 using global::Avalonia.Controls;
 using global::Avalonia.Platform.Storage;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Logging;
@@ -14,7 +14,7 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 public partial class GeneralViewModel : ViewModelBase
 {
     [RelayCommand]
-    private async Task ShowTelemetryDialog(Visual? visual)
+    private static async Task ShowTelemetryDialog(Visual? visual)
     {
         if (visual is null || TopLevel.GetTopLevel(visual) is not Window owner) return;
         var dialog = new TelemetryDialog();
@@ -40,7 +40,7 @@ public partial class GeneralViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task ExportSettings(Visual? visual)
+    private static async Task ExportSettings(Visual? visual)
     {
         if (visual is null || TopLevel.GetTopLevel(visual) is not { } topLevel) return;
         var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions

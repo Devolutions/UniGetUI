@@ -22,7 +22,7 @@ public partial class InstallOptionsViewModel : ObservableObject
 
     private readonly IPackage _package;
     private readonly InstallOptions _options;
-    private bool _uiLoaded;
+    private readonly bool _uiLoaded;
 
     // ── Translated static labels ───────────────────────────────────────────────
     public string DialogTitle { get; }
@@ -434,7 +434,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         _options.AbortOnPreUninstallFail = s.AbortOnPreUninstallFail;
     }
 
-    private string ScopeToString(string? selected)
+    private static string ScopeToString(string? selected)
     {
         if (selected == CoreTools.Translate(CommonTranslations.ScopeNames[PackageScope.Local])) return "Local";
         if (selected == CoreTools.Translate(CommonTranslations.ScopeNames[PackageScope.Global])) return "Global";

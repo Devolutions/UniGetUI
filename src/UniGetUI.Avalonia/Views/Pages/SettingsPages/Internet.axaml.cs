@@ -112,7 +112,7 @@ public sealed partial class Internet : UserControl, ISettingsPage
         };
     }
 
-    private Control BuildProxyCompatTable()
+    private static Control BuildProxyCompatTable()
     {
         var noStr = CoreTools.Translate("No");
         var yesStr = CoreTools.Translate("Yes");

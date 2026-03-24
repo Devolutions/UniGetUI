@@ -289,7 +289,7 @@ public partial class PackageDetailsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenUrl(string? url)
+    private static void OpenUrl(string? url)
     {
         if (string.IsNullOrEmpty(url) || !url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             return;

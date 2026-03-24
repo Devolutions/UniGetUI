@@ -116,10 +116,10 @@ public class PackageBundlesPage : AbstractPackagesPage
         AddToolbarButton("share", CoreTools.Translate("Share"),
             () => _ = SharePackage(SelectedItem), showLabel: false);
         AddToolbarSeparator();
-        AddToolbarButton("help", CoreTools.Translate("Help"), () => OpenHelp());
+        AddToolbarButton("help", CoreTools.Translate("Help"), OpenHelp);
     }
 
-    private IReadOnlyList<IPackage> GetCheckedNonInstalledPackages(PackagesPageViewModel vm)
+    private static IReadOnlyList<IPackage> GetCheckedNonInstalledPackages(PackagesPageViewModel vm)
     {
         if (Settings.Get(Settings.K.InstallInstalledPackagesBundlesPage))
             return vm.FilteredPackages.GetCheckedPackages();

@@ -98,7 +98,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         AddToolbarButton("clipboard_list", CoreTools.Translate("Manage ignored updates"),
             () => _ = ShowManageIgnoredAsync());
         AddToolbarSeparator();
-        AddToolbarButton("help", CoreTools.Translate("Help"), () => OpenHelp());
+        AddToolbarButton("help", CoreTools.Translate("Help"), OpenHelp);
     }
 
     // ─── Context menu ─────────────────────────────────────────────────────────

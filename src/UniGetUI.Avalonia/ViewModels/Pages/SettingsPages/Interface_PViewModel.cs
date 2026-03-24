@@ -1,7 +1,7 @@
-using global::Avalonia;
-using global::Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using global::Avalonia;
+using global::Avalonia.Controls;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
@@ -16,7 +16,7 @@ public partial class Interface_PViewModel : ViewModelBase
     public event EventHandler? RestartRequired;
 
     [RelayCommand]
-    private void EditAutostartSettings()
+    private static void EditAutostartSettings()
         => CoreTools.Launch("ms-settings:startupapps");
 
     [RelayCommand]

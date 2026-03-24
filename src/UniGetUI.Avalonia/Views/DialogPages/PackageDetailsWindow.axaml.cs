@@ -4,8 +4,8 @@ using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
-using UniGetUI.PackageOperations;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Views;
 

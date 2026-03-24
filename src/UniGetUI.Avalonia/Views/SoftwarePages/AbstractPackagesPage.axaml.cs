@@ -1,14 +1,14 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using UniGetUI.Avalonia.Views;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
-using UniGetUI.Core.Tools;
 using UniGetUI.Avalonia.ViewModels.Pages;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.Controls;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.PackageClasses;

@@ -54,9 +54,9 @@ public class InstalledPackagesPage : AbstractPackagesPage
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {
         // ── Dropdown: uninstall variants ────────────────────────────────────
-        var uninstallAsAdmin     = new MenuItem { Header = CoreTools.Translate("Uninstall as administrator") };
+        var uninstallAsAdmin = new MenuItem { Header = CoreTools.Translate("Uninstall as administrator") };
         var uninstallInteractive = new MenuItem { Header = CoreTools.Translate("Interactive uninstall") };
-        var downloadInstallers   = new MenuItem { Header = CoreTools.Translate("Download selected installers") };
+        var downloadInstallers = new MenuItem { Header = CoreTools.Translate("Download selected installers") };
 
         SetMainButton("delete", CoreTools.Translate("Uninstall selection"), () =>
             _ = LaunchUninstall(vm.FilteredPackages.GetCheckedPackages()));
@@ -66,21 +66,21 @@ public class InstalledPackagesPage : AbstractPackagesPage
             Items = { uninstallAsAdmin, uninstallInteractive, new Separator(), downloadInstallers },
         });
 
-        uninstallAsAdmin.Click     += (_, _) => _ = LaunchUninstall(vm.FilteredPackages.GetCheckedPackages(), elevated: true);
+        uninstallAsAdmin.Click += (_, _) => _ = LaunchUninstall(vm.FilteredPackages.GetCheckedPackages(), elevated: true);
         uninstallInteractive.Click += (_, _) => _ = LaunchUninstall(vm.FilteredPackages.GetCheckedPackages(), interactive: true);
-        downloadInstallers.Click   += (_, _) => { /* TODO: download-only operation not yet ported */ };
+        downloadInstallers.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
         AddToolbarSeparator();
-        AddToolbarButton("options",        CoreTools.Translate("Uninstall options"),
+        AddToolbarButton("options", CoreTools.Translate("Uninstall options"),
             () => _ = ShowInstallationOptionsForPackage(SelectedItem), showLabel: false);
         AddToolbarSeparator();
-        AddToolbarButton("info_round",     CoreTools.Translate("Package details"),
+        AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
-        AddToolbarButton("share",          CoreTools.Translate("Share"),
+        AddToolbarButton("share", CoreTools.Translate("Share"),
             () => _ = SharePackage(SelectedItem), showLabel: false);
         AddToolbarSeparator();
-        AddToolbarButton("pin",            CoreTools.Translate("Ignore selected packages"), async () =>
+        AddToolbarButton("pin", CoreTools.Translate("Ignore selected packages"), async () =>
         {
             foreach (var pkg in vm.FilteredPackages.GetCheckedPackages())
             {
@@ -91,10 +91,10 @@ public class InstalledPackagesPage : AbstractPackagesPage
                 }
             }
         });
-        AddToolbarButton("clipboard_list",CoreTools.Translate("Manage ignored updates"),
+        AddToolbarButton("clipboard_list", CoreTools.Translate("Manage ignored updates"),
             () => _ = ShowManageIgnoredAsync());
         AddToolbarSeparator();
-        AddToolbarButton("add_to",CoreTools.Translate("Add selection to bundle"),
+        AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
             () => _ = ExportSelectionToBundleAsync(vm));
         AddToolbarSeparator();
         AddToolbarButton("help", CoreTools.Translate("Help"), () => OpenHelp());
@@ -225,15 +225,15 @@ public class InstalledPackagesPage : AbstractPackagesPage
         bool isLocal = package.Source.IsVirtualManager;
         var caps = package.Manager.Capabilities;
 
-        _menuAsAdmin.IsEnabled           = caps.CanRunAsAdmin;
-        _menuInteractive.IsEnabled       = caps.CanRunInteractively;
-        _menuRemoveData.IsEnabled        = caps.CanRemoveDataOnUninstall;
+        _menuAsAdmin.IsEnabled = caps.CanRunAsAdmin;
+        _menuInteractive.IsEnabled = caps.CanRunInteractively;
+        _menuRemoveData.IsEnabled = caps.CanRemoveDataOnUninstall;
         _menuDownloadInstaller.IsEnabled = !isLocal && caps.CanDownloadInstaller;
         _menuInstallationOptions.IsEnabled = !isLocal;
-        _menuReinstall.IsEnabled           = !isLocal;
+        _menuReinstall.IsEnabled = !isLocal;
         _menuUninstallThenReinstall.IsEnabled = !isLocal;
-        _menuShare.IsEnabled             = !isLocal;
-        _menuDetails.IsEnabled           = !isLocal;
+        _menuShare.IsEnabled = !isLocal;
+        _menuDetails.IsEnabled = !isLocal;
         _menuOpenInstallLocation.IsEnabled =
             package.Manager.DetailsHelper.GetInstallLocation(package) is not null;
 

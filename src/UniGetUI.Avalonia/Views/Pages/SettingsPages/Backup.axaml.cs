@@ -13,10 +13,10 @@ public sealed partial class Backup : UserControl, ISettingsPage
 {
     private BackupViewModel VM => (BackupViewModel)DataContext!;
 
-    public bool   CanGoBack  => true;
+    public bool CanGoBack => true;
     public string ShortTitle => CoreTools.Translate("Backup and Restore");
 
-    public event EventHandler?       RestartRequired;
+    public event EventHandler? RestartRequired;
     public event EventHandler<Type>? NavigationRequested { add { } remove { } }
 
     private void ShowRestartBanner(object? sender, EventArgs e) => RestartRequired?.Invoke(this, e);
@@ -35,8 +35,8 @@ public sealed partial class Backup : UserControl, ISettingsPage
 
         BuildBackupInfoCard();
 
-        EnablePackageBackupCheckBox_LOCAL.SettingName  = CoreSettings.K.EnablePackageBackup_LOCAL;
-        EnablePackageBackupCheckBox_LOCAL.Text         = "Periodically perform a local backup of the installed packages";
+        EnablePackageBackupCheckBox_LOCAL.SettingName = CoreSettings.K.EnablePackageBackup_LOCAL;
+        EnablePackageBackupCheckBox_LOCAL.Text = "Periodically perform a local backup of the installed packages";
         EnablePackageBackupCheckBox_LOCAL.StateChanged += (_, _) =>
         {
             VM.IsLocalBackupEnabled = EnablePackageBackupCheckBox_LOCAL.Checked;
@@ -45,11 +45,11 @@ public sealed partial class Backup : UserControl, ISettingsPage
         VM.IsLocalBackupEnabled = EnablePackageBackupCheckBox_LOCAL.Checked;
 
         ChangeBackupFileNameTextBox.SettingName = CoreSettings.K.ChangeBackupFileName;
-        ChangeBackupFileNameTextBox.Text        = "Set a custom backup file name";
+        ChangeBackupFileNameTextBox.Text = "Set a custom backup file name";
         ChangeBackupFileNameTextBox.Placeholder = "Leave empty for default";
 
         EnableBackupTimestamping.SettingName = CoreSettings.K.EnableBackupTimestamping;
-        EnableBackupTimestamping.Text        = "Add a timestamp to the backup file names";
+        EnableBackupTimestamping.Text = "Add a timestamp to the backup file names";
     }
 
     private void BuildBackupInfoCard()
@@ -65,14 +65,14 @@ public sealed partial class Backup : UserControl, ISettingsPage
         {
             stack.Children.Add(new TextBlock
             {
-                Text         = " \u25cf " + CoreTools.Translate(line),
+                Text = " \u25cf " + CoreTools.Translate(line),
                 TextWrapping = TextWrapping.Wrap,
             });
         }
         BackupInfoCardHolder.Content = new SettingsCard
         {
             CornerRadius = new CornerRadius(8),
-            Description  = stack,
+            Description = stack,
         };
     }
 }

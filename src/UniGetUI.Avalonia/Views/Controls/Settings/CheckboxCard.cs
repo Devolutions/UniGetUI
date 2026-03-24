@@ -11,8 +11,8 @@ namespace UniGetUI.Avalonia.Views.Controls.Settings;
 public partial class CheckboxCard : SettingsCard
 {
     public ToggleSwitch _checkbox;
-    public TextBlock    _textblock;
-    public TextBlock    _warningBlock;
+    public TextBlock _textblock;
+    public TextBlock _warningBlock;
     protected bool IS_INVERTED;
 
     private CoreSettings.K setting_name = CoreSettings.K.Unset;
@@ -22,9 +22,9 @@ public partial class CheckboxCard : SettingsCard
         {
             _checkbox.IsCheckedChanged -= _checkbox_Toggled;
             setting_name = value;
-            IS_INVERTED  = CoreSettings.ResolveKey(value).StartsWith("Disable");
+            IS_INVERTED = CoreSettings.ResolveKey(value).StartsWith("Disable");
             _checkbox.IsChecked = CoreSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
-            _textblock.Opacity  = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
+            _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
             _checkbox.IsCheckedChanged += _checkbox_Toggled;
         }
     }
@@ -44,7 +44,7 @@ public partial class CheckboxCard : SettingsCard
     {
         set
         {
-            _warningBlock.Text      = CoreTools.Translate(value);
+            _warningBlock.Text = CoreTools.Translate(value);
             _warningBlock.IsVisible = value.Any();
         }
     }
@@ -58,32 +58,32 @@ public partial class CheckboxCard : SettingsCard
     {
         _checkbox = new ToggleSwitch
         {
-            Margin     = new Thickness(0, 0, 8, 0),
-            OnContent  = new TextBlock { Text = CoreTools.Translate("Enabled")  },
+            Margin = new Thickness(0, 0, 8, 0),
+            OnContent = new TextBlock { Text = CoreTools.Translate("Enabled") },
             OffContent = new TextBlock { Text = CoreTools.Translate("Disabled") },
         };
         _textblock = new TextBlock
         {
             VerticalAlignment = VerticalAlignment.Center,
-            TextWrapping      = TextWrapping.Wrap,
+            TextWrapping = TextWrapping.Wrap,
         };
         _warningBlock = new TextBlock
         {
             VerticalAlignment = VerticalAlignment.Center,
-            TextWrapping      = TextWrapping.Wrap,
-            FontSize          = 12,
-            Opacity           = 0.7,
-            IsVisible         = false,
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 12,
+            Opacity = 0.7,
+            IsVisible = false,
         };
         _warningBlock.Classes.Add("setting-warning-text");
         IS_INVERTED = false;
 
         Content = _checkbox;
-        Header  = new StackPanel
+        Header = new StackPanel
         {
-            Spacing     = 4,
+            Spacing = 4,
             Orientation = Orientation.Vertical,
-            Children    = { _textblock, _warningBlock },
+            Children = { _textblock, _warningBlock },
         };
 
         _checkbox.IsCheckedChanged += _checkbox_Toggled;
@@ -127,7 +127,7 @@ public partial class CheckboxCard_Dict : CheckboxCard
     {
         set
         {
-            _dictName   = value;
+            _dictName = value;
             IS_INVERTED = CoreSettings.ResolveKey(value).StartsWith("Disable");
             if (_dictName != CoreSettings.K.Unset && _keyName.Any())
             {

@@ -19,7 +19,7 @@ public partial class PackageDetailsViewModel : ObservableObject
     public readonly OperationType OperationRole;
 
     // ── Header ─────────────────────────────────────────────────────────────────
-    public string PackageName   { get; }
+    public string PackageName { get; }
     public string SourceDisplay { get; }
 
     [ObservableProperty]
@@ -64,13 +64,13 @@ public partial class PackageDetailsViewModel : ObservableObject
     private bool _hasLicenseUrl;
 
     // ── Actions ────────────────────────────────────────────────────────────────
-    public string MainActionLabel          { get; }
-    public string AsAdminLabel             { get; }
-    public string InteractiveLabel         { get; }
+    public string MainActionLabel { get; }
+    public string AsAdminLabel { get; }
+    public string InteractiveLabel { get; }
     public string SkipHashOrRemoveDataLabel { get; }
-    public bool   CanRunAsAdmin            { get; }
-    public bool   CanRunInteractively      { get; }
-    public bool   CanSkipHashOrRemoveData  { get; }
+    public bool CanRunAsAdmin { get; }
+    public bool CanRunInteractively { get; }
+    public bool CanSkipHashOrRemoveData { get; }
 
     // ── Extended details ───────────────────────────────────────────────────────
     public string PackageId { get; }
@@ -120,77 +120,77 @@ public partial class PackageDetailsViewModel : ObservableObject
     private bool _hasReleaseNotesUrl;
 
     // ── Translated labels ──────────────────────────────────────────────────────
-    public string LabelVersion         { get; }
-    public string LabelHomepage        { get; } = CoreTools.Translate("Homepage") + ":";
-    public string LabelAuthor          { get; } = CoreTools.Translate("Author") + ":";
-    public string LabelPublisher       { get; } = CoreTools.Translate("Publisher") + ":";
-    public string LabelLicense         { get; } = CoreTools.Translate("License") + ":";
-    public string LabelPackageId       { get; } = CoreTools.Translate("Package ID") + ":";
-    public string LabelManifest        { get; } = CoreTools.Translate("Manifest") + ":";
-    public string LabelInstallerType   { get; } = CoreTools.Translate("Installer type") + ":";
-    public string LabelInstallerSize   { get; } = CoreTools.Translate("Installer size") + ":";
-    public string LabelInstallerUrl    { get; } = CoreTools.Translate("Installer URL") + ":";
-    public string LabelUpdateDate      { get; } = CoreTools.Translate("Last updated") + ":";
+    public string LabelVersion { get; }
+    public string LabelHomepage { get; } = CoreTools.Translate("Homepage") + ":";
+    public string LabelAuthor { get; } = CoreTools.Translate("Author") + ":";
+    public string LabelPublisher { get; } = CoreTools.Translate("Publisher") + ":";
+    public string LabelLicense { get; } = CoreTools.Translate("License") + ":";
+    public string LabelPackageId { get; } = CoreTools.Translate("Package ID") + ":";
+    public string LabelManifest { get; } = CoreTools.Translate("Manifest") + ":";
+    public string LabelInstallerType { get; } = CoreTools.Translate("Installer type") + ":";
+    public string LabelInstallerSize { get; } = CoreTools.Translate("Installer size") + ":";
+    public string LabelInstallerUrl { get; } = CoreTools.Translate("Installer URL") + ":";
+    public string LabelUpdateDate { get; } = CoreTools.Translate("Last updated") + ":";
     public string LabelReleaseNotesUrl { get; } = CoreTools.Translate("Release notes URL") + ":";
-    public string LabelOpen            { get; } = CoreTools.Translate("Open");
-    public string LabelClose           { get; } = CoreTools.Translate("Close");
-    public string HeaderDetails        { get; } = CoreTools.Translate("Details");
-    public string HeaderDeps           { get; } = CoreTools.Translate("Dependencies");
-    public string HeaderReleaseNotes   { get; } = CoreTools.Translate("Release notes");
+    public string LabelOpen { get; } = CoreTools.Translate("Open");
+    public string LabelClose { get; } = CoreTools.Translate("Close");
+    public string HeaderDetails { get; } = CoreTools.Translate("Details");
+    public string HeaderDeps { get; } = CoreTools.Translate("Dependencies");
+    public string HeaderReleaseNotes { get; } = CoreTools.Translate("Release notes");
 
     public PackageDetailsViewModel(IPackage package, OperationType role)
     {
         if (role == OperationType.None) role = OperationType.Install;
 
-        Package       = package;
+        Package = package;
         OperationRole = role;
-        PackageName   = package.Name;
-        PackageId     = package.Id;
+        PackageName = package.Name;
+        PackageId = package.Id;
         SourceDisplay = package.Source.AsString_DisplayName;
 
         CanDownloadInstaller = package.Manager.Capabilities.CanDownloadInstaller;
-        CanListDependencies  = package.Manager.Capabilities.CanListDependencies;
+        CanListDependencies = package.Manager.Capabilities.CanListDependencies;
 
         var caps = package.Manager.Capabilities;
-        CanRunAsAdmin       = caps.CanRunAsAdmin;
+        CanRunAsAdmin = caps.CanRunAsAdmin;
         CanRunInteractively = caps.CanRunInteractively;
 
         var available = package.GetAvailablePackage();
         var upgradable = package.GetUpgradablePackage();
-        var installed  = upgradable?.GetInstalledPackages().FirstOrDefault();
+        var installed = upgradable?.GetInstalledPackages().FirstOrDefault();
 
         if (role == OperationType.Install)
         {
-            MainActionLabel            = CoreTools.Translate("Install");
-            LabelVersion               = CoreTools.Translate("Version") + ":";
-            VersionDisplay             = available?.VersionString ?? package.VersionString;
-            AsAdminLabel               = CoreTools.Translate("Install as administrator");
-            InteractiveLabel           = CoreTools.Translate("Interactive installation");
-            SkipHashOrRemoveDataLabel  = CoreTools.Translate("Skip hash check");
-            CanSkipHashOrRemoveData    = caps.CanSkipIntegrityChecks;
+            MainActionLabel = CoreTools.Translate("Install");
+            LabelVersion = CoreTools.Translate("Version") + ":";
+            VersionDisplay = available?.VersionString ?? package.VersionString;
+            AsAdminLabel = CoreTools.Translate("Install as administrator");
+            InteractiveLabel = CoreTools.Translate("Interactive installation");
+            SkipHashOrRemoveDataLabel = CoreTools.Translate("Skip hash check");
+            CanSkipHashOrRemoveData = caps.CanSkipIntegrityChecks;
         }
         else if (role == OperationType.Update)
         {
             MainActionLabel = CoreTools.Translate(
                 "Update to version {0}", upgradable?.NewVersionString ?? package.NewVersionString);
-            LabelVersion               = CoreTools.Translate("Installed Version") + ":";
-            VersionDisplay             = (upgradable?.VersionString ?? package.VersionString)
+            LabelVersion = CoreTools.Translate("Installed Version") + ":";
+            VersionDisplay = (upgradable?.VersionString ?? package.VersionString)
                                          + " \u27a4 "
                                          + (upgradable?.NewVersionString ?? package.NewVersionString);
-            AsAdminLabel               = CoreTools.Translate("Update as administrator");
-            InteractiveLabel           = CoreTools.Translate("Interactive update");
-            SkipHashOrRemoveDataLabel  = CoreTools.Translate("Skip hash check");
-            CanSkipHashOrRemoveData    = caps.CanSkipIntegrityChecks;
+            AsAdminLabel = CoreTools.Translate("Update as administrator");
+            InteractiveLabel = CoreTools.Translate("Interactive update");
+            SkipHashOrRemoveDataLabel = CoreTools.Translate("Skip hash check");
+            CanSkipHashOrRemoveData = caps.CanSkipIntegrityChecks;
         }
         else
         {
-            MainActionLabel            = CoreTools.Translate("Uninstall");
-            LabelVersion               = CoreTools.Translate("Installed Version") + ":";
-            VersionDisplay             = installed?.VersionString ?? package.VersionString;
-            AsAdminLabel               = CoreTools.Translate("Uninstall as administrator");
-            InteractiveLabel           = CoreTools.Translate("Interactive uninstall");
-            SkipHashOrRemoveDataLabel  = CoreTools.Translate("Uninstall and remove data");
-            CanSkipHashOrRemoveData    = caps.CanRemoveDataOnUninstall;
+            MainActionLabel = CoreTools.Translate("Uninstall");
+            LabelVersion = CoreTools.Translate("Installed Version") + ":";
+            VersionDisplay = installed?.VersionString ?? package.VersionString;
+            AsAdminLabel = CoreTools.Translate("Uninstall as administrator");
+            InteractiveLabel = CoreTools.Translate("Interactive uninstall");
+            SkipHashOrRemoveDataLabel = CoreTools.Translate("Uninstall and remove data");
+            CanSkipHashOrRemoveData = caps.CanRemoveDataOnUninstall;
         }
     }
 
@@ -204,11 +204,11 @@ public partial class PackageDetailsViewModel : ObservableObject
 
         IsLoading = false;
 
-        Description     = details.Description ?? CoreTools.Translate("Not available");
-        HomepageText    = details.HomepageUrl?.ToString() ?? CoreTools.Translate("Not available");
-        HasHomepageUrl  = details.HomepageUrl is not null;
-        Author          = details.Author    ?? CoreTools.Translate("Not available");
-        Publisher       = details.Publisher ?? CoreTools.Translate("Not available");
+        Description = details.Description ?? CoreTools.Translate("Not available");
+        HomepageText = details.HomepageUrl?.ToString() ?? CoreTools.Translate("Not available");
+        HasHomepageUrl = details.HomepageUrl is not null;
+        Author = details.Author ?? CoreTools.Translate("Not available");
+        Publisher = details.Publisher ?? CoreTools.Translate("Not available");
 
         if (details.License is not null && details.LicenseUrl is not null)
             LicenseText = $"{details.License} ({details.LicenseUrl})";
@@ -220,28 +220,28 @@ public partial class PackageDetailsViewModel : ObservableObject
             LicenseText = CoreTools.Translate("Not available");
         HasLicenseUrl = details.LicenseUrl is not null;
 
-        ManifestText   = details.ManifestUrl?.ToString() ?? CoreTools.Translate("Not available");
+        ManifestText = details.ManifestUrl?.ToString() ?? CoreTools.Translate("Not available");
         HasManifestUrl = details.ManifestUrl is not null;
 
         if (Package.Manager.Properties.Name.Equals("chocolatey", StringComparison.OrdinalIgnoreCase))
             InstallerHashLabel = CoreTools.Translate("Installer SHA512") + ":";
 
-        InstallerHash    = details.InstallerHash ?? CoreTools.Translate("Not available");
-        InstallerType    = details.InstallerType ?? CoreTools.Translate("Not available");
+        InstallerHash = details.InstallerHash ?? CoreTools.Translate("Not available");
+        InstallerType = details.InstallerType ?? CoreTools.Translate("Not available");
         InstallerUrlText = details.InstallerUrl?.ToString() ?? CoreTools.Translate("Not available");
-        HasInstallerUrl  = details.InstallerUrl is not null;
-        InstallerSize    = details.InstallerSize > 0
+        HasInstallerUrl = details.InstallerUrl is not null;
+        InstallerSize = details.InstallerSize > 0
             ? CoreTools.FormatAsSize(details.InstallerSize, 2)
             : CoreTools.Translate("Unknown size");
         UpdateDate = details.UpdateDate ?? CoreTools.Translate("Not available");
 
-        ReleaseNotes       = details.ReleaseNotes ?? CoreTools.Translate("Not available");
+        ReleaseNotes = details.ReleaseNotes ?? CoreTools.Translate("Not available");
         ReleaseNotesUrlText = details.ReleaseNotesUrl?.ToString() ?? CoreTools.Translate("Not available");
-        HasReleaseNotesUrl  = details.ReleaseNotesUrl is not null;
+        HasReleaseNotesUrl = details.ReleaseNotesUrl is not null;
 
         if (!CanListDependencies)
         {
-            DependencyNote    = CoreTools.Translate("Not available");
+            DependencyNote = CoreTools.Translate("Not available");
             HasDependencyNote = true;
         }
         else if (details.Dependencies.Any())
@@ -253,7 +253,7 @@ public partial class PackageDetailsViewModel : ObservableObject
         }
         else
         {
-            DependencyNote    = CoreTools.Translate("No dependencies specified");
+            DependencyNote = CoreTools.Translate("No dependencies specified");
             HasDependencyNote = true;
         }
 
@@ -270,10 +270,10 @@ public partial class PackageDetailsViewModel : ObservableObject
             var iconUrl = await Task.Run(Package.GetIconUrl);
             if (iconUrl is not null)
             {
-                using var http  = new HttpClient();
-                var bytes       = await http.GetByteArrayAsync(iconUrl);
-                using var ms    = new MemoryStream(bytes);
-                PackageIcon     = new Bitmap(ms);
+                using var http = new HttpClient();
+                var bytes = await http.GetByteArrayAsync(iconUrl);
+                using var ms = new MemoryStream(bytes);
+                PackageIcon = new Bitmap(ms);
                 return;
             }
         }

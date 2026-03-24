@@ -14,10 +14,10 @@ public sealed class OperationOutputWindow : Window
 {
     public OperationOutputWindow(AbstractOperation operation)
     {
-        Title  = operation.Metadata.Title;
-        Width  = 700;
+        Title = operation.Metadata.Title;
+        Width = 700;
         Height = 500;
-        MinWidth  = 400;
+        MinWidth = 400;
         MinHeight = 300;
         Background = (Application.Current?.FindResource("AppDialogBackground") as IBrush) ?? new SolidColorBrush(Color.Parse("#1e2025"));
 
@@ -25,24 +25,24 @@ public sealed class OperationOutputWindow : Window
 
         var textBox = new TextBox
         {
-            Text               = lines,
-            IsReadOnly         = true,
-            AcceptsReturn      = true,
-            TextWrapping       = TextWrapping.Wrap,
-            FontFamily         = new FontFamily("Cascadia Mono,Consolas,Menlo,monospace"),
-            FontSize           = 12,
-            Foreground         = (Application.Current?.FindResource("SystemControlForegroundBaseHighBrush") as IBrush) ?? new SolidColorBrush(Color.Parse("#d4d4d4")),
-            Background         = Brushes.Transparent,
-            BorderThickness    = new Thickness(0),
-            VerticalAlignment  = VerticalAlignment.Stretch,
+            Text = lines,
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            FontFamily = new FontFamily("Cascadia Mono,Consolas,Menlo,monospace"),
+            FontSize = 12,
+            Foreground = (Application.Current?.FindResource("SystemControlForegroundBaseHighBrush") as IBrush) ?? new SolidColorBrush(Color.Parse("#d4d4d4")),
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Stretch,
         };
 
         var scroll = new ScrollViewer
         {
             Content = textBox,
             HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
-            VerticalScrollBarVisibility   = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
-            Margin  = new Thickness(8),
+            VerticalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
+            Margin = new Thickness(8),
         };
 
         Content = scroll;

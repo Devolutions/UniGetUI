@@ -9,10 +9,10 @@ public sealed partial class Updates : UserControl, ISettingsPage
 {
     private UpdatesViewModel VM => (UpdatesViewModel)DataContext!;
 
-    public bool   CanGoBack  => true;
+    public bool CanGoBack => true;
     public string ShortTitle => CoreTools.Translate("Package update preferences");
 
-    public event EventHandler?       RestartRequired;
+    public event EventHandler? RestartRequired;
     public event EventHandler<Type>? NavigationRequested;
 
     public void ShowRestartBanner(object? sender, EventArgs e) =>
@@ -25,10 +25,10 @@ public sealed partial class Updates : UserControl, ISettingsPage
 
         // Assign setting names and labels
         DisableAutoCheckForUpdates.SettingName = Settings.K.DisableAutoCheckforUpdates;
-        DisableAutoCheckForUpdates.Text        = "Check for package updates periodically";
+        DisableAutoCheckForUpdates.Text = "Check for package updates periodically";
 
         UpdatesCheckIntervalSelector.SettingName = Settings.K.UpdatesCheckInterval;
-        UpdatesCheckIntervalSelector.Text        = "Check for updates every:";
+        UpdatesCheckIntervalSelector.Text = "Check for updates every:";
         UpdatesCheckIntervalSelector.ValueChanged += ShowRestartBanner;
 
         var updates_dict = new Dictionary<string, string>
@@ -50,23 +50,23 @@ public sealed partial class Updates : UserControl, ISettingsPage
         UpdatesCheckIntervalSelector.ShowAddedItems();
 
         AutomaticallyUpdatePackages.SettingName = Settings.K.AutomaticallyUpdatePackages;
-        AutomaticallyUpdatePackages.Text        = "Install available updates automatically";
+        AutomaticallyUpdatePackages.Text = "Install available updates automatically";
 
-        DisableAUPOnMeteredConnections.SettingName    = Settings.K.DisableAUPOnMeteredConnections;
+        DisableAUPOnMeteredConnections.SettingName = Settings.K.DisableAUPOnMeteredConnections;
         DisableAUPOnMeteredConnections.ForceInversion = true;
-        DisableAUPOnMeteredConnections.Text           = "Do not automatically install updates when the network connection is metered";
+        DisableAUPOnMeteredConnections.Text = "Do not automatically install updates when the network connection is metered";
 
-        DisableAUPOnBattery.SettingName    = Settings.K.DisableAUPOnBattery;
+        DisableAUPOnBattery.SettingName = Settings.K.DisableAUPOnBattery;
         DisableAUPOnBattery.ForceInversion = true;
-        DisableAUPOnBattery.Text           = "Do not automatically install updates when the device runs on battery";
+        DisableAUPOnBattery.Text = "Do not automatically install updates when the device runs on battery";
 
-        DisableAUPOnBatterySaver.SettingName    = Settings.K.DisableAUPOnBatterySaver;
+        DisableAUPOnBatterySaver.SettingName = Settings.K.DisableAUPOnBatterySaver;
         DisableAUPOnBatterySaver.ForceInversion = true;
-        DisableAUPOnBatterySaver.Text           = "Do not automatically install updates when the battery saver is on";
+        DisableAUPOnBatterySaver.Text = "Do not automatically install updates when the battery saver is on";
 
         // Wire navigation cards
         OperationsSettingsButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Operations));
-        AdminButton.Click              += (_, _) => NavigationRequested?.Invoke(this, typeof(Administrator));
+        AdminButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Administrator));
 
         // Set initial VM state from the auto-check toggle
         VM.IsAutoCheckEnabled = DisableAutoCheckForUpdates._checkbox.IsChecked ?? false;

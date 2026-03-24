@@ -19,12 +19,12 @@ internal sealed class HomebrewPkgDetailsHelper : BasePkgDetailsHelper
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName               = Manager.Status.ExecutablePath,
-                Arguments              = $"info --json=v2 {details.Package.Id}",
-                UseShellExecute        = false,
+                FileName = Manager.Status.ExecutablePath,
+                Arguments = $"info --json=v2 {details.Package.Id}",
+                UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                CreateNoWindow         = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
             },
         };
 
@@ -44,7 +44,7 @@ internal sealed class HomebrewPkgDetailsHelper : BasePkgDetailsHelper
 
         // Try formula first, then cask
         var formula = root["formulae"]?.AsArray().FirstOrDefault();
-        var cask    = root["casks"]?.AsArray().FirstOrDefault();
+        var cask = root["casks"]?.AsArray().FirstOrDefault();
 
         if (formula is JsonObject f)
             _populateFromFormula(details, f);
@@ -56,8 +56,8 @@ internal sealed class HomebrewPkgDetailsHelper : BasePkgDetailsHelper
 
     private static void _populateFromFormula(IPackageDetails details, JsonObject f)
     {
-        details.Description  = f["desc"]?.ToString();
-        details.License      = f["license"]?.ToString();
+        details.Description = f["desc"]?.ToString();
+        details.License = f["license"]?.ToString();
         details.InstallerType = "Homebrew Formula";
 
         if (Uri.TryCreate(f["homepage"]?.ToString(), UriKind.Absolute, out var homepage))
@@ -89,7 +89,7 @@ internal sealed class HomebrewPkgDetailsHelper : BasePkgDetailsHelper
 
     private static void _populateFromCask(IPackageDetails details, JsonObject c)
     {
-        details.Description   = c["desc"]?.ToString();
+        details.Description = c["desc"]?.ToString();
         details.InstallerType = "Homebrew Cask";
 
         if (Uri.TryCreate(c["homepage"]?.ToString(), UriKind.Absolute, out var homepage))

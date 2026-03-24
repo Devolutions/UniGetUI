@@ -21,7 +21,7 @@ public partial class TelemetryDialog : Window
         Body3.Text = CoreTools.Translate("Do you accept that UniGetUI collects and sends anonymous usage statistics, with the sole purpose of understanding and improving the user experience?");
 
         DeclineButton.Content = CoreTools.Translate("Decline");
-        AcceptButton.Content  = CoreTools.Translate("Accept");
+        AcceptButton.Content = CoreTools.Translate("Accept");
 
         DetailsLink.Bind(TextBlock.ForegroundProperty,
             DetailsLink.GetResourceObservable("SystemControlHighlightAccentBrush"));
@@ -31,8 +31,8 @@ public partial class TelemetryDialog : Window
                 CoreTools.Launch("https://devolutions.net/legal/");
         };
 
-        Closing        += (_, e) => { if (Result is null) e.Cancel = true; };
+        Closing += (_, e) => { if (Result is null) e.Cancel = true; };
         DeclineButton.Click += (_, _) => { Result = false; Close(); };
-        AcceptButton.Click  += (_, _) => { Result = true;  Close(); };
+        AcceptButton.Click += (_, _) => { Result = true; Close(); };
     }
 }

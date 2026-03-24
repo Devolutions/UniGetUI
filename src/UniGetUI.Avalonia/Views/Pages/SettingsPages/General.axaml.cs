@@ -12,10 +12,10 @@ namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
 public sealed partial class General : UserControl, ISettingsPage
 {
-    public bool   CanGoBack  => true;
+    public bool CanGoBack => true;
     public string ShortTitle => CoreTools.Translate("General preferences");
 
-    public event EventHandler?       RestartRequired;
+    public event EventHandler? RestartRequired;
     public event EventHandler<Type>? NavigationRequested;
 
     private void ShowRestartBanner(object? sender, EventArgs e) => RestartRequired?.Invoke(this, e);
@@ -43,9 +43,9 @@ public sealed partial class General : UserControl, ISettingsPage
         LanguageSelector.ValueChanged += ShowRestartBanner;
         LanguageSelector.Description = BuildTranslatorDescription();
 
-        DisableAutoUpdateWingetUI.SettingName  = CoreSettings.K.DisableAutoUpdateWingetUI;
+        DisableAutoUpdateWingetUI.SettingName = CoreSettings.K.DisableAutoUpdateWingetUI;
         DisableAutoUpdateWingetUI.CheckboxText = "Update WingetUI automatically";
-        DisableAutoUpdateWingetUI.ButtonText   = "Check for updates";
+        DisableAutoUpdateWingetUI.ButtonText = "Check for updates";
         DisableAutoUpdateWingetUI.ButtonAlwaysOn = true;
         DisableAutoUpdateWingetUI.Click += (_, _) => { /* auto-updater not available in Avalonia port */ };
 
@@ -59,18 +59,18 @@ public sealed partial class General : UserControl, ISettingsPage
     {
         var label = new TextBlock
         {
-            Text              = CoreTools.Translate("Is your language missing or incomplete?"),
+            Text = CoreTools.Translate("Is your language missing or incomplete?"),
             VerticalAlignment = VerticalAlignment.Center,
-            Opacity           = 0.8,
+            Opacity = 0.8,
         };
 
         var link = new TextBlock
         {
-            Text              = CoreTools.Translate("Become a translator!"),
-            TextDecorations   = TextDecorations.Underline,
+            Text = CoreTools.Translate("Become a translator!"),
+            TextDecorations = TextDecorations.Underline,
             VerticalAlignment = VerticalAlignment.Center,
-            Cursor            = new Cursor(StandardCursorType.Hand),
-            Margin            = new Thickness(4, 0, 0, 0),
+            Cursor = new Cursor(StandardCursorType.Hand),
+            Margin = new Thickness(4, 0, 0, 0),
         };
         link.Bind(TextBlock.ForegroundProperty, link.GetResourceObservable("SystemControlHighlightAccentBrush"));
         link.PointerPressed += (_, _) =>

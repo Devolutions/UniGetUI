@@ -79,9 +79,9 @@ public class PackageBundlesPage : AbstractPackagesPage
     // ─── Toolbar ──────────────────────────────────────────────────────────────
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {
-        var installAsAdmin     = new MenuItem { Header = CoreTools.Translate("Install as administrator") };
+        var installAsAdmin = new MenuItem { Header = CoreTools.Translate("Install as administrator") };
         var installInteractive = new MenuItem { Header = CoreTools.Translate("Interactive installation") };
-        var installSkipHash    = new MenuItem { Header = CoreTools.Translate("Skip integrity checks") };
+        var installSkipHash = new MenuItem { Header = CoreTools.Translate("Skip integrity checks") };
         var downloadInstallers = new MenuItem { Header = CoreTools.Translate("Download selected installers") };
 
         SetMainButton("download", CoreTools.Translate("Install selection"), () =>
@@ -92,31 +92,31 @@ public class PackageBundlesPage : AbstractPackagesPage
             Items = { installAsAdmin, installInteractive, installSkipHash, new Separator(), downloadInstallers },
         });
 
-        installAsAdmin.Click     += (_, _) => _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm), elevated: true);
+        installAsAdmin.Click += (_, _) => _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm), elevated: true);
         installInteractive.Click += (_, _) => _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm), interactive: true);
-        installSkipHash.Click    += (_, _) => _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm), skiphash: true);
+        installSkipHash.Click += (_, _) => _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm), skiphash: true);
         downloadInstallers.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
 
         AddToolbarSeparator();
-        AddToolbarButton("add_to",      CoreTools.Translate("New"),
+        AddToolbarButton("add_to", CoreTools.Translate("New"),
             () => _ = AskForNewBundle());
         AddToolbarButton("open_folder", CoreTools.Translate("Open"),
             () => _ = AskOpenFromFile());
-        AddToolbarButton("save_as",     CoreTools.Translate("Save as"),
+        AddToolbarButton("save_as", CoreTools.Translate("Save as"),
             () => _ = SaveFile());
         AddToolbarSeparator();
-        AddToolbarButton("delete",      CoreTools.Translate("Remove selection from bundle"), () =>
+        AddToolbarButton("delete", CoreTools.Translate("Remove selection from bundle"), () =>
         {
             HasUnsavedChanges = true;
             _loader.RemoveRange(vm.FilteredPackages.GetCheckedPackages());
         });
         AddToolbarSeparator();
-        AddToolbarButton("info_round",  CoreTools.Translate("Package details"),
+        AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
-        AddToolbarButton("share",       CoreTools.Translate("Share"),
+        AddToolbarButton("share", CoreTools.Translate("Share"),
             () => _ = SharePackage(SelectedItem), showLabel: false);
         AddToolbarSeparator();
-        AddToolbarButton("help",        CoreTools.Translate("Help"), () => OpenHelp());
+        AddToolbarButton("help", CoreTools.Translate("Help"), () => OpenHelp());
     }
 
     private IReadOnlyList<IPackage> GetCheckedNonInstalledPackages(PackagesPageViewModel vm)
@@ -203,14 +203,14 @@ public class PackageBundlesPage : AbstractPackagesPage
         bool isValid = package is not InvalidImportedPackage;
         var caps = package.Manager.Capabilities;
 
-        _menuInstall.IsEnabled           = isValid;
-        _menuInstallOptions.IsEnabled    = isValid;
-        _menuAsAdmin.IsEnabled           = isValid && caps.CanRunAsAdmin;
-        _menuInteractive.IsEnabled       = isValid && caps.CanRunInteractively;
-        _menuSkipHash.IsEnabled          = isValid && caps.CanSkipIntegrityChecks;
+        _menuInstall.IsEnabled = isValid;
+        _menuInstallOptions.IsEnabled = isValid;
+        _menuAsAdmin.IsEnabled = isValid && caps.CanRunAsAdmin;
+        _menuInteractive.IsEnabled = isValid && caps.CanRunInteractively;
+        _menuSkipHash.IsEnabled = isValid && caps.CanSkipIntegrityChecks;
         _menuDownloadInstaller.IsEnabled = isValid && caps.CanDownloadInstaller;
-        _menuShare.IsEnabled             = isValid;
-        _menuDetails.IsEnabled           = isValid;
+        _menuShare.IsEnabled = isValid;
+        _menuDetails.IsEnabled = isValid;
     }
 
     // ─── Abstract action overrides ────────────────────────────────────────────
@@ -293,9 +293,9 @@ public class PackageBundlesPage : AbstractPackagesPage
             var formatType = file.Split('.')[^1].ToLower() switch
             {
                 "yaml" => BundleFormatType.YAML,
-                "xml"  => BundleFormatType.XML,
+                "xml" => BundleFormatType.XML,
                 "json" => BundleFormatType.JSON,
-                _      => BundleFormatType.UBUNDLE,
+                _ => BundleFormatType.UBUNDLE,
             };
 
             string fileContent = await File.ReadAllTextAsync(file);
@@ -437,7 +437,7 @@ public class PackageBundlesPage : AbstractPackagesPage
                 ?? throw new JsonException("Could not parse JSON object")));
 
         var report = new BundleReport { IsEmpty = true };
-        bool allowCLI     = SecureSettings.Get(SecureSettings.K.AllowCLIArguments)
+        bool allowCLI = SecureSettings.Get(SecureSettings.K.AllowCLIArguments)
                             && SecureSettings.Get(SecureSettings.K.AllowImportingCLIArguments);
         bool allowPrePost = SecureSettings.Get(SecureSettings.K.AllowPrePostOpCommand)
                             && SecureSettings.Get(SecureSettings.K.AllowImportPrePostOpCommands);
@@ -446,14 +446,14 @@ public class PackageBundlesPage : AbstractPackagesPage
         foreach (var pkg in deserializedData.packages)
         {
             var opts = pkg.InstallationOptions;
-            ReportList(ref report, pkg.Id,  opts.CustomParameters_Install,   "Custom install arguments",    allowCLI);
-            ReportList(ref report, pkg.Id,  opts.CustomParameters_Update,    "Custom update arguments",     allowCLI);
-            ReportList(ref report, pkg.Id,  opts.CustomParameters_Uninstall, "Custom uninstall arguments",  allowCLI);
-            opts.PreInstallCommand    = ReportStr(ref report, pkg.Id, opts.PreInstallCommand,    "Pre-install command",    allowPrePost);
-            opts.PostInstallCommand   = ReportStr(ref report, pkg.Id, opts.PostInstallCommand,   "Post-install command",   allowPrePost);
-            opts.PreUpdateCommand     = ReportStr(ref report, pkg.Id, opts.PreUpdateCommand,     "Pre-update command",     allowPrePost);
-            opts.PostUpdateCommand    = ReportStr(ref report, pkg.Id, opts.PostUpdateCommand,    "Post-update command",    allowPrePost);
-            opts.PreUninstallCommand  = ReportStr(ref report, pkg.Id, opts.PreUninstallCommand,  "Pre-uninstall command",  allowPrePost);
+            ReportList(ref report, pkg.Id, opts.CustomParameters_Install, "Custom install arguments", allowCLI);
+            ReportList(ref report, pkg.Id, opts.CustomParameters_Update, "Custom update arguments", allowCLI);
+            ReportList(ref report, pkg.Id, opts.CustomParameters_Uninstall, "Custom uninstall arguments", allowCLI);
+            opts.PreInstallCommand = ReportStr(ref report, pkg.Id, opts.PreInstallCommand, "Pre-install command", allowPrePost);
+            opts.PostInstallCommand = ReportStr(ref report, pkg.Id, opts.PostInstallCommand, "Post-install command", allowPrePost);
+            opts.PreUpdateCommand = ReportStr(ref report, pkg.Id, opts.PreUpdateCommand, "Pre-update command", allowPrePost);
+            opts.PostUpdateCommand = ReportStr(ref report, pkg.Id, opts.PostUpdateCommand, "Post-update command", allowPrePost);
+            opts.PreUninstallCommand = ReportStr(ref report, pkg.Id, opts.PreUninstallCommand, "Pre-uninstall command", allowPrePost);
             opts.PostUninstallCommand = ReportStr(ref report, pkg.Id, opts.PostUninstallCommand, "Post-uninstall command", allowPrePost);
             pkg.InstallationOptions = opts;
             packages.Add(DeserializePackage(pkg));
@@ -521,21 +521,24 @@ public class PackageBundlesPage : AbstractPackagesPage
         bool result = false;
         var win = new Window
         {
-            Width = 460, Height = 200, CanResize = false,
+            Width = 460,
+            Height = 200,
+            CanResize = false,
             ShowInTaskbar = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Title = CoreTools.Translate("Unsaved changes"),
         };
 
         var yesBtn = new Button { Content = CoreTools.Translate("Discard changes"), MinWidth = 140 };
-        var noBtn  = new Button { Content = CoreTools.Translate("Cancel"),          MinWidth = 80 };
+        var noBtn = new Button { Content = CoreTools.Translate("Cancel"), MinWidth = 80 };
         yesBtn.Classes.Add("accent");
-        yesBtn.Click += (_, _) => { result = true;  win.Close(); };
-        noBtn.Click  += (_, _) => { result = false; win.Close(); };
+        yesBtn.Click += (_, _) => { result = true; win.Close(); };
+        noBtn.Click += (_, _) => { result = false; win.Close(); };
 
         var btnRow = new StackPanel
         {
-            Orientation = Orientation.Horizontal, Spacing = 8,
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
             HorizontalAlignment = HorizontalAlignment.Right,
         };
         btnRow.Children.Add(noBtn);
@@ -550,12 +553,14 @@ public class PackageBundlesPage : AbstractPackagesPage
         var titleBlock = new TextBlock
         {
             Text = CoreTools.Translate("Unsaved changes"),
-            FontSize = 16, FontWeight = FontWeight.SemiBold,
+            FontSize = 16,
+            FontWeight = FontWeight.SemiBold,
         };
         var msgBlock = new TextBlock
         {
             Text = CoreTools.Translate("You have unsaved changes in the current bundle. Do you want to discard them?"),
-            TextWrapping = TextWrapping.Wrap, Opacity = 0.85,
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.85,
         };
         Grid.SetRow(titleBlock, 0); Grid.SetRow(msgBlock, 1); Grid.SetRow(btnRow, 2);
         root.Children.Add(titleBlock); root.Children.Add(msgBlock); root.Children.Add(btnRow);
@@ -580,14 +585,17 @@ public class PackageBundlesPage : AbstractPackagesPage
 
         var win = new Window
         {
-            Width = 580, Height = 420, CanResize = true,
+            Width = 580,
+            Height = 420,
+            CanResize = true,
             ShowInTaskbar = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Title = CoreTools.Translate("Bundle security report"),
         };
         var okBtn = new Button
         {
-            Content = CoreTools.Translate("OK"), MinWidth = 80,
+            Content = CoreTools.Translate("OK"),
+            MinWidth = 80,
             HorizontalAlignment = HorizontalAlignment.Right,
         };
         okBtn.Classes.Add("accent");
@@ -599,17 +607,21 @@ public class PackageBundlesPage : AbstractPackagesPage
             RowDefinitions = new RowDefinitions("Auto,*,Auto"),
             RowSpacing = 12,
         };
-        var title  = new TextBlock
+        var title = new TextBlock
         {
             Text = CoreTools.Translate("The bundle contained restricted content"),
-            FontSize = 16, FontWeight = FontWeight.SemiBold,
+            FontSize = 16,
+            FontWeight = FontWeight.SemiBold,
         };
         var scroll = new ScrollViewer
         {
             Content = new TextBlock
             {
-                Text = sb.ToString(), TextWrapping = TextWrapping.Wrap,
-                FontFamily = new FontFamily("Monospace"), FontSize = 12, Opacity = 0.85,
+                Text = sb.ToString(),
+                TextWrapping = TextWrapping.Wrap,
+                FontFamily = new FontFamily("Monospace"),
+                FontSize = 12,
+                Opacity = 0.85,
             },
         };
         Grid.SetRow(title, 0); Grid.SetRow(scroll, 1); Grid.SetRow(okBtn, 2);
@@ -623,14 +635,17 @@ public class PackageBundlesPage : AbstractPackagesPage
     {
         var win = new Window
         {
-            Width = 480, Height = 200, CanResize = false,
+            Width = 480,
+            Height = 200,
+            CanResize = false,
             ShowInTaskbar = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Title = title,
         };
         var okBtn = new Button
         {
-            Content = CoreTools.Translate("OK"), MinWidth = 80,
+            Content = CoreTools.Translate("OK"),
+            MinWidth = 80,
             HorizontalAlignment = HorizontalAlignment.Right,
         };
         okBtn.Classes.Add("accent");
@@ -643,7 +658,7 @@ public class PackageBundlesPage : AbstractPackagesPage
             RowSpacing = 12,
         };
         var titleBlock = new TextBlock { Text = title, FontSize = 16, FontWeight = FontWeight.SemiBold };
-        var msgBlock   = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, Opacity = 0.85 };
+        var msgBlock = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, Opacity = 0.85 };
         Grid.SetRow(titleBlock, 0); Grid.SetRow(msgBlock, 1); Grid.SetRow(okBtn, 2);
         root.Children.Add(titleBlock); root.Children.Add(msgBlock); root.Children.Add(okBtn);
         win.Content = root;

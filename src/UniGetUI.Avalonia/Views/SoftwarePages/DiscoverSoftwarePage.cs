@@ -48,8 +48,8 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {
         // ── Main button dropdown: install variants ──────────────────────────
-        var installAsAdmin     = new MenuItem { Header = CoreTools.Translate("Install as administrator") };
-        var installSkipHash    = new MenuItem { Header = CoreTools.Translate("Skip integrity checks") };
+        var installAsAdmin = new MenuItem { Header = CoreTools.Translate("Install as administrator") };
+        var installSkipHash = new MenuItem { Header = CoreTools.Translate("Skip integrity checks") };
         var installInteractive = new MenuItem { Header = CoreTools.Translate("Interactive installation") };
         var downloadInstallers = new MenuItem { Header = CoreTools.Translate("Download selected installers") };
 
@@ -61,25 +61,25 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
             Items = { installAsAdmin, installSkipHash, installInteractive, new Separator(), downloadInstallers },
         });
 
-        installAsAdmin.Click     += (_, _) => _ = LaunchInstall(vm.FilteredPackages.GetCheckedPackages(), elevated: true);
-        installSkipHash.Click    += (_, _) => _ = LaunchInstall(vm.FilteredPackages.GetCheckedPackages(), no_integrity: true);
+        installAsAdmin.Click += (_, _) => _ = LaunchInstall(vm.FilteredPackages.GetCheckedPackages(), elevated: true);
+        installSkipHash.Click += (_, _) => _ = LaunchInstall(vm.FilteredPackages.GetCheckedPackages(), no_integrity: true);
         installInteractive.Click += (_, _) => _ = LaunchInstall(vm.FilteredPackages.GetCheckedPackages(), interactive: true);
         downloadInstallers.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
         AddToolbarSeparator();
-        AddToolbarButton("options",    CoreTools.Translate("Install options"),
+        AddToolbarButton("options", CoreTools.Translate("Install options"),
             () => _ = ShowInstallationOptionsForPackage(SelectedItem));
         AddToolbarSeparator();
         AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
-        AddToolbarButton("share",      CoreTools.Translate("Share"),
+        AddToolbarButton("share", CoreTools.Translate("Share"),
             () => _ = SharePackage(SelectedItem), showLabel: false);
         AddToolbarSeparator();
-        AddToolbarButton("add_to",     CoreTools.Translate("Add selection to bundle"),
+        AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
             () => _ = ExportSelectionToBundleAsync(vm));
         AddToolbarSeparator();
-        AddToolbarButton("help",       CoreTools.Translate("Help"),
+        AddToolbarButton("help", CoreTools.Translate("Help"),
             () => OpenHelp());
     }
 

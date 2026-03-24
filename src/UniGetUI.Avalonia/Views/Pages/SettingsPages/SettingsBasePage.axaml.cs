@@ -17,12 +17,12 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
     private readonly bool _isManagers;
 
     // ── Navigation stack ──────────────────────────────────────────────────
-    private readonly Stack<UserControl> _history     = new();
-    private          UserControl?       _currentContent;
+    private readonly Stack<UserControl> _history = new();
+    private UserControl? _currentContent;
 
     // ── Lazy-created homepages ────────────────────────────────────────────
-    private SettingsHomepage?  _settingsHomepage;
-    private ManagersHomepage?  _managersHomepage;
+    private SettingsHomepage? _settingsHomepage;
+    private ManagersHomepage? _managersHomepage;
 
     public SettingsBasePage(bool isManagers)
     {
@@ -31,7 +31,7 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
         DataContext = new SettingsBasePageViewModel();
         InitializeComponent();
 
-        BackButton.Click    += (_, _) => OnBackClicked();
+        BackButton.Click += (_, _) => OnBackClicked();
         RestartButton.Click += (_, _) => RestartApp();
 
         // Navigate to the appropriate homepage on first load
@@ -58,17 +58,17 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
         if (_currentContent is ISettingsPage oldSp)
         {
             oldSp.NavigationRequested -= Page_NavigationRequested;
-            oldSp.RestartRequired     -= Page_RestartRequired;
+            oldSp.RestartRequired -= Page_RestartRequired;
         }
 
-        Frame.Content   = page;
+        Frame.Content = page;
         _currentContent = page;
 
         // Attach events to the incoming page and update VM-bound header
         if (page is ISettingsPage sp)
         {
             sp.NavigationRequested += Page_NavigationRequested;
-            sp.RestartRequired     += Page_RestartRequired;
+            sp.RestartRequired += Page_RestartRequired;
             VM.Title = sp.ShortTitle;
         }
     }
@@ -102,17 +102,17 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
 
     private static UserControl? CreatePageForType(Type t)
     {
-        if (t == typeof(SettingsHomepage))  return new SettingsHomepage();
-        if (t == typeof(ManagersHomepage))  return new ManagersHomepage();
-        if (t == typeof(General))           return new General();
-        if (t == typeof(Interface_P))       return new Interface_P();
-        if (t == typeof(Internet))          return new Internet();
-        if (t == typeof(Backup))            return new Backup();
-        if (t == typeof(Experimental))      return new Experimental();
-        if (t == typeof(Notifications))     return new Notifications();
-        if (t == typeof(Updates))           return new Updates();
-        if (t == typeof(Operations))        return new Operations();
-        if (t == typeof(Administrator))     return new Administrator();
+        if (t == typeof(SettingsHomepage)) return new SettingsHomepage();
+        if (t == typeof(ManagersHomepage)) return new ManagersHomepage();
+        if (t == typeof(General)) return new General();
+        if (t == typeof(Interface_P)) return new Interface_P();
+        if (t == typeof(Internet)) return new Internet();
+        if (t == typeof(Backup)) return new Backup();
+        if (t == typeof(Experimental)) return new Experimental();
+        if (t == typeof(Notifications)) return new Notifications();
+        if (t == typeof(Updates)) return new Updates();
+        if (t == typeof(Operations)) return new Operations();
+        if (t == typeof(Administrator)) return new Administrator();
         return null;
     }
 

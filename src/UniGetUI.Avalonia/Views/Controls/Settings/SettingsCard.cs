@@ -14,19 +14,19 @@ namespace UniGetUI.Avalonia.Views.Controls.Settings;
 public class SettingsCard : UserControl
 {
     // ── Internal layout elements ───────────────────────────────────────────
-    private readonly Border          _border;
-    private readonly ContentControl  _iconPresenter;
-    private readonly ContentControl  _headerPresenter;
-    private readonly ContentControl  _descriptionPresenter;
-    private readonly ContentControl  _contentPresenter;
-    private readonly StackPanel      _descriptionRow;
+    private readonly Border _border;
+    private readonly ContentControl _iconPresenter;
+    private readonly ContentControl _headerPresenter;
+    private readonly ContentControl _descriptionPresenter;
+    private readonly ContentControl _contentPresenter;
+    private readonly StackPanel _descriptionRow;
 
     // ── Backing stores ─────────────────────────────────────────────────────
-    private object?  _header;
-    private object?  _description;
+    private object? _header;
+    private object? _description;
     private Control? _headerIcon;
-    private object?  _rightContent;
-    private bool     _isClickEnabled;
+    private object? _rightContent;
+    private bool _isClickEnabled;
 
     // ── Events ─────────────────────────────────────────────────────────────
     public new event EventHandler<RoutedEventArgs>? Click;
@@ -182,7 +182,7 @@ public class SettingsCard : UserControl
             MinHeight = 60,
             Margin = new Thickness(16, 8, 16, 8),
         };
-        Grid.SetColumn(leftRow,           0);
+        Grid.SetColumn(leftRow, 0);
         Grid.SetColumn(_contentPresenter, 1);
         grid.Children.Add(leftRow);
         grid.Children.Add(_contentPresenter);

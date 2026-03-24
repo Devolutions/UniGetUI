@@ -49,11 +49,11 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {
         // ── Dropdown: update variants ───────────────────────────────────────
-        var updateAsAdmin      = new MenuItem { Header = CoreTools.Translate("Update as administrator") };
-        var updateSkipHash     = new MenuItem { Header = CoreTools.Translate("Skip integrity checks") };
-        var updateInteractive  = new MenuItem { Header = CoreTools.Translate("Interactive update") };
+        var updateAsAdmin = new MenuItem { Header = CoreTools.Translate("Update as administrator") };
+        var updateSkipHash = new MenuItem { Header = CoreTools.Translate("Skip integrity checks") };
+        var updateInteractive = new MenuItem { Header = CoreTools.Translate("Interactive update") };
         var downloadInstallers = new MenuItem { Header = CoreTools.Translate("Download selected installers") };
-        var uninstallSelected  = new MenuItem { Header = CoreTools.Translate("Uninstall selected packages") };
+        var uninstallSelected = new MenuItem { Header = CoreTools.Translate("Uninstall selected packages") };
 
         SetMainButton("update", CoreTools.Translate("Update selection"), () =>
             _ = LaunchUpdate(vm.FilteredPackages.GetCheckedPackages()));
@@ -70,23 +70,23 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             },
         });
 
-        updateAsAdmin.Click     += (_, _) => _ = LaunchUpdate(vm.FilteredPackages.GetCheckedPackages(), elevated: true);
-        updateSkipHash.Click    += (_, _) => _ = LaunchUpdate(vm.FilteredPackages.GetCheckedPackages(), no_integrity: true);
+        updateAsAdmin.Click += (_, _) => _ = LaunchUpdate(vm.FilteredPackages.GetCheckedPackages(), elevated: true);
+        updateSkipHash.Click += (_, _) => _ = LaunchUpdate(vm.FilteredPackages.GetCheckedPackages(), no_integrity: true);
         updateInteractive.Click += (_, _) => _ = LaunchUpdate(vm.FilteredPackages.GetCheckedPackages(), interactive: true);
         downloadInstallers.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
         uninstallSelected.Click += (_, _) => _ = LaunchUninstallFromUpdates(vm.FilteredPackages.GetCheckedPackages());
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
         AddToolbarSeparator();
-        AddToolbarButton("options",        CoreTools.Translate("Update options"),
+        AddToolbarButton("options", CoreTools.Translate("Update options"),
             () => _ = ShowInstallationOptionsForPackage(SelectedItem), showLabel: false);
         AddToolbarSeparator();
-        AddToolbarButton("info_round",     CoreTools.Translate("Package details"),
+        AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
-        AddToolbarButton("share",          CoreTools.Translate("Share"),
+        AddToolbarButton("share", CoreTools.Translate("Share"),
             () => _ = SharePackage(SelectedItem), showLabel: false);
         AddToolbarSeparator();
-        AddToolbarButton("pin",            CoreTools.Translate("Ignore selected packages"), async () =>
+        AddToolbarButton("pin", CoreTools.Translate("Ignore selected packages"), async () =>
         {
             foreach (var pkg in vm.FilteredPackages.GetCheckedPackages())
             {
@@ -98,7 +98,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         AddToolbarButton("clipboard_list", CoreTools.Translate("Manage ignored updates"),
             () => _ = ShowManageIgnoredAsync());
         AddToolbarSeparator();
-        AddToolbarButton("help",           CoreTools.Translate("Help"), () => OpenHelp());
+        AddToolbarButton("help", CoreTools.Translate("Help"), () => OpenHelp());
     }
 
     // ─── Context menu ─────────────────────────────────────────────────────────
@@ -274,9 +274,9 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         }
 
         var caps = package.Manager.Capabilities;
-        _menuAsAdmin.IsEnabled           = caps.CanRunAsAdmin;
-        _menuInteractive.IsEnabled       = caps.CanRunInteractively;
-        _menuSkipHash.IsEnabled          = caps.CanSkipIntegrityChecks;
+        _menuAsAdmin.IsEnabled = caps.CanRunAsAdmin;
+        _menuInteractive.IsEnabled = caps.CanRunInteractively;
+        _menuSkipHash.IsEnabled = caps.CanSkipIntegrityChecks;
         _menuDownloadInstaller.IsEnabled = caps.CanDownloadInstaller;
         _menuOpenInstallLocation.IsEnabled =
             package.Manager.DetailsHelper.GetInstallLocation(package) is not null;
@@ -357,9 +357,9 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     {
         if (package is null || package.Source.IsVirtualManager) return;
         var uninstallOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
-        var updateOpts    = await InstallOptionsFactory.LoadApplicableAsync(package);
-        var uninstallOp   = new UninstallPackageOperation(package, uninstallOpts);
-        var updateOp      = new UpdatePackageOperation(package, updateOpts, req: uninstallOp);
+        var updateOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
+        var uninstallOp = new UninstallPackageOperation(package, uninstallOpts);
+        var updateOp = new UpdatePackageOperation(package, updateOpts, req: uninstallOp);
         AvaloniaOperationRegistry.Add(uninstallOp);
         AvaloniaOperationRegistry.Add(updateOp);
         _ = uninstallOp.MainThread();

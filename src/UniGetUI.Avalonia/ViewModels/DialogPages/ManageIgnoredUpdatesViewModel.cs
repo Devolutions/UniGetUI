@@ -13,18 +13,18 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
 {
     public event EventHandler? CloseRequested;
 
-    public string Title          { get; } = CoreTools.Translate("Manage ignored updates");
-    public string Description    { get; } = CoreTools.Translate("The packages listed here won't be taken in account when checking for updates. Click the button on their right to stop ignoring their updates.");
-    public string ResetLabel     { get; } = CoreTools.Translate("Reset list");
-    public string ResetConfirm   { get; } = CoreTools.Translate("Do you really want to reset the ignored updates list? This action cannot be reverted");
-    public string ResetYes       { get; } = CoreTools.Translate("Yes");
-    public string ResetNo        { get; } = CoreTools.Translate("No");
-    public string EmptyLabel     { get; } = CoreTools.Translate("No ignored updates");
-    public string ColName        { get; } = CoreTools.Translate("Package name");
-    public string ColId          { get; } = CoreTools.Translate("Package ID");
-    public string ColVersion     { get; } = CoreTools.Translate("Ignored version");
-    public string ColNewVersion  { get; } = CoreTools.Translate("Available update");
-    public string ColManager     { get; } = CoreTools.Translate("Source");
+    public string Title { get; } = CoreTools.Translate("Manage ignored updates");
+    public string Description { get; } = CoreTools.Translate("The packages listed here won't be taken in account when checking for updates. Click the button on their right to stop ignoring their updates.");
+    public string ResetLabel { get; } = CoreTools.Translate("Reset list");
+    public string ResetConfirm { get; } = CoreTools.Translate("Do you really want to reset the ignored updates list? This action cannot be reverted");
+    public string ResetYes { get; } = CoreTools.Translate("Yes");
+    public string ResetNo { get; } = CoreTools.Translate("No");
+    public string EmptyLabel { get; } = CoreTools.Translate("No ignored updates");
+    public string ColName { get; } = CoreTools.Translate("Package name");
+    public string ColId { get; } = CoreTools.Translate("Package ID");
+    public string ColVersion { get; } = CoreTools.Translate("Ignored version");
+    public string ColNewVersion { get; } = CoreTools.Translate("Available update");
+    public string ColManager { get; } = CoreTools.Translate("Source");
 
     public ObservableCollection<IgnoredPackageEntryViewModel> Entries { get; } = [];
 
@@ -49,15 +49,15 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
 
         foreach (var (ignoredId, version) in db.OrderBy(x => x.Key))
         {
-            var parts      = ignoredId.Split('\\');
+            var parts = ignoredId.Split('\\');
             var managerKey = parts[0];
-            var packageId  = parts.Length > 1 ? parts[^1] : ignoredId;
+            var packageId = parts.Length > 1 ? parts[^1] : ignoredId;
 
             string managerDisplay = managerMap.TryGetValue(managerKey, out var mgr)
                 ? mgr.DisplayName
                 : managerKey;
             string managerIconPath = ResolveManagerIcon(managerKey);
-            string packageName     = CoreTools.FormatAsName(packageId);
+            string packageName = CoreTools.FormatAsName(packageId);
 
             string versionDisplay = version == "*"
                 ? CoreTools.Translate("All versions")
@@ -111,19 +111,19 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
     private static string ResolveManagerIcon(string managerKey) =>
         (managerKey switch
         {
-            "winget"      => "winget",
-            "scoop"       => "scoop",
-            "chocolatey"  => "choco",
-            "dotnet"      => "dotnet",
-            "npm"         => "node",
-            "pip"         => "python",
-            "powershell"  => "powershell",
-            "cargo"       => "rust",
-            "vcpkg"       => "vcpkg",
-            "steam"       => "steam",
-            "gog"         => "gog",
-            "uplay"       => "uplay",
-            _             => "ms_store",
+            "winget" => "winget",
+            "scoop" => "scoop",
+            "chocolatey" => "choco",
+            "dotnet" => "dotnet",
+            "npm" => "node",
+            "pip" => "python",
+            "powershell" => "powershell",
+            "cargo" => "rust",
+            "vcpkg" => "vcpkg",
+            "steam" => "steam",
+            "gog" => "gog",
+            "uplay" => "uplay",
+            _ => "ms_store",
         }) is var name
             ? $"avares://UniGetUI.Avalonia/Assets/Symbols/{name}.svg"
             : $"avares://UniGetUI.Avalonia/Assets/Symbols/ms_store.svg";
@@ -133,12 +133,12 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
 {
     public event EventHandler? Removed;
 
-    public string Id              { get; }
-    public string Name            { get; }
-    public string Manager         { get; }
+    public string Id { get; }
+    public string Name { get; }
+    public string Manager { get; }
     public string ManagerIconPath { get; }
-    public string VersionDisplay  { get; }
-    public string NewVersion      { get; }
+    public string VersionDisplay { get; }
+    public string NewVersion { get; }
 
     private readonly string _ignoredId;
 
@@ -147,13 +147,13 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
         string manager, string managerIconPath,
         string versionDisplay, string newVersion)
     {
-        _ignoredId     = ignoredId;
-        Id             = id;
-        Name           = name;
-        Manager        = manager;
+        _ignoredId = ignoredId;
+        Id = id;
+        Name = name;
+        Manager = manager;
         ManagerIconPath = managerIconPath;
         VersionDisplay = versionDisplay;
-        NewVersion     = newVersion;
+        NewVersion = newVersion;
     }
 
     [RelayCommand]
@@ -168,7 +168,7 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
 
     private async Task RestoreToUpdatesAsync()
     {
-        var parts     = _ignoredId.Split('\\');
+        var parts = _ignoredId.Split('\\');
         var packageId = parts.Length > 1 ? parts[^1] : _ignoredId;
 
         if (UpgradablePackagesLoader.Instance.IgnoredPackages.TryRemove(packageId, out var pkg)

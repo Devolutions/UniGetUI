@@ -54,7 +54,7 @@ public class SvgIcon : Control
     private void LoadSvg(string? uri)
     {
         _geometries.Clear();
-        _viewBoxWidth  = 24;
+        _viewBoxWidth = 24;
         _viewBoxHeight = 24;
 
         if (string.IsNullOrEmpty(uri))
@@ -80,7 +80,7 @@ public class SvgIcon : Control
                     double.TryParse(parts[3], System.Globalization.NumberStyles.Any,
                         System.Globalization.CultureInfo.InvariantCulture, out double h))
                 {
-                    _viewBoxWidth  = w;
+                    _viewBoxWidth = w;
                     _viewBoxHeight = h;
                 }
             }
@@ -107,7 +107,7 @@ public class SvgIcon : Control
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        double w = double.IsInfinity(availableSize.Width)  ? _viewBoxWidth  : availableSize.Width;
+        double w = double.IsInfinity(availableSize.Width) ? _viewBoxWidth : availableSize.Width;
         double h = double.IsInfinity(availableSize.Height) ? _viewBoxHeight : availableSize.Height;
         return new Size(w, h);
     }
@@ -118,11 +118,11 @@ public class SvgIcon : Control
 
         IBrush brush = Foreground ?? Brushes.Black;
 
-        double scaleX = Bounds.Width  / _viewBoxWidth;
+        double scaleX = Bounds.Width / _viewBoxWidth;
         double scaleY = Bounds.Height / _viewBoxHeight;
-        double scale  = Math.Min(scaleX, scaleY);
+        double scale = Math.Min(scaleX, scaleY);
 
-        double offsetX = (Bounds.Width  - _viewBoxWidth  * scale) / 2;
+        double offsetX = (Bounds.Width - _viewBoxWidth * scale) / 2;
         double offsetY = (Bounds.Height - _viewBoxHeight * scale) / 2;
 
         using var _ = context.PushTransform(

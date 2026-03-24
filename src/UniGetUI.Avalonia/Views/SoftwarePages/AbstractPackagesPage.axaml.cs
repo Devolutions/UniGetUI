@@ -116,7 +116,8 @@ public abstract partial class AbstractPackagesPage : UserControl,
         var icon = new SvgIcon
         {
             Path = $"avares://UniGetUI.Avalonia/Assets/Symbols/{svgName}.svg",
-            Width = 16, Height = 16,
+            Width = 16,
+            Height = 16,
             VerticalAlignment = VerticalAlignment.Center,
         };
 
@@ -187,12 +188,12 @@ public abstract partial class AbstractPackagesPage : UserControl,
         => PackagesPageViewModel.LaunchInstall(packages, elevated, interactive, no_integrity);
 
     // ─── Order-by menu items (UI → ViewModel.SortFieldIndex / SortAscending) ───
-    private void OrderByName_Click(object? sender, RoutedEventArgs e)       { ViewModel.SortFieldIndex = 0; UpdateSortMenuChecks(); }
-    private void OrderById_Click(object? sender, RoutedEventArgs e)         { ViewModel.SortFieldIndex = 1; UpdateSortMenuChecks(); }
-    private void OrderByVersion_Click(object? sender, RoutedEventArgs e)    { ViewModel.SortFieldIndex = 2; UpdateSortMenuChecks(); }
+    private void OrderByName_Click(object? sender, RoutedEventArgs e) { ViewModel.SortFieldIndex = 0; UpdateSortMenuChecks(); }
+    private void OrderById_Click(object? sender, RoutedEventArgs e) { ViewModel.SortFieldIndex = 1; UpdateSortMenuChecks(); }
+    private void OrderByVersion_Click(object? sender, RoutedEventArgs e) { ViewModel.SortFieldIndex = 2; UpdateSortMenuChecks(); }
     private void OrderByNewVersion_Click(object? sender, RoutedEventArgs e) { ViewModel.SortFieldIndex = 3; UpdateSortMenuChecks(); }
-    private void OrderBySource_Click(object? sender, RoutedEventArgs e)     { ViewModel.SortFieldIndex = 4; UpdateSortMenuChecks(); }
-    private void OrderByAscending_Click(object? sender, RoutedEventArgs e)  { ViewModel.SortAscending = true;  UpdateSortMenuChecks(); }
+    private void OrderBySource_Click(object? sender, RoutedEventArgs e) { ViewModel.SortFieldIndex = 4; UpdateSortMenuChecks(); }
+    private void OrderByAscending_Click(object? sender, RoutedEventArgs e) { ViewModel.SortAscending = true; UpdateSortMenuChecks(); }
     private void OrderByDescending_Click(object? sender, RoutedEventArgs e) { ViewModel.SortAscending = false; UpdateSortMenuChecks(); }
 
     private static TextBlock? Check(bool show) =>
@@ -200,12 +201,12 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
     private void UpdateSortMenuChecks()
     {
-        OrderByName_Menu.Icon       = Check(ViewModel.SortFieldIndex == 0);
-        OrderById_Menu.Icon         = Check(ViewModel.SortFieldIndex == 1);
-        OrderByVersion_Menu.Icon    = Check(ViewModel.SortFieldIndex == 2);
+        OrderByName_Menu.Icon = Check(ViewModel.SortFieldIndex == 0);
+        OrderById_Menu.Icon = Check(ViewModel.SortFieldIndex == 1);
+        OrderByVersion_Menu.Icon = Check(ViewModel.SortFieldIndex == 2);
         OrderByNewVersion_Menu.Icon = Check(ViewModel.SortFieldIndex == 3);
-        OrderBySource_Menu.Icon     = Check(ViewModel.SortFieldIndex == 4);
-        OrderByAscending_Menu.Icon  = Check(ViewModel.SortAscending);
+        OrderBySource_Menu.Icon = Check(ViewModel.SortFieldIndex == 4);
+        OrderByAscending_Menu.Icon = Check(ViewModel.SortAscending);
         OrderByDescending_Menu.Icon = Check(!ViewModel.SortAscending);
     }
 
@@ -231,7 +232,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // TODO: focus global search box
     }
 
-    public void ReloadTriggered()    => ViewModel.TriggerReload();
+    public void ReloadTriggered() => ViewModel.TriggerReload();
     public void SelectAllTriggered() => ViewModel.ToggleSelectAll();
 
     // ─── IEnterLeaveListener ──────────────────────────────────────────────────
@@ -261,7 +262,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         if (pkg is null) return;
 
         bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
-        bool alt  = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
+        bool alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
 
         if (e.Key is Key.Enter or Key.Return)
         {

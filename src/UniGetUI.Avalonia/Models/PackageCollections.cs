@@ -41,15 +41,15 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     {
         string name = icon switch
         {
-            IconType.Chocolatey    => "choco",
-            IconType.MsStore       => "ms_store",
-            IconType.LocalPc       => "local_pc",
-            IconType.SaveAs        => "save_as",
-            IconType.SysTray       => "sys_tray",
+            IconType.Chocolatey => "choco",
+            IconType.MsStore => "ms_store",
+            IconType.LocalPc => "local_pc",
+            IconType.SaveAs => "save_as",
+            IconType.SysTray => "sys_tray",
             IconType.ClipboardList => "clipboard_list",
-            IconType.OpenFolder    => "open_folder",
-            IconType.AddTo         => "add_to",
-            _                      => icon.ToString().ToLowerInvariant(),
+            IconType.OpenFolder => "open_folder",
+            IconType.AddTo => "add_to",
+            _ => icon.ToString().ToLowerInvariant(),
         };
         return $"avares://UniGetUI.Avalonia/Assets/Symbols/{name}.svg";
     }

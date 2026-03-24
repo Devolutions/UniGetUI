@@ -10,7 +10,7 @@ namespace UniGetUI.Avalonia.Views.Controls.Settings;
 public sealed partial class TextboxCard : SettingsCard
 {
     private readonly TextBox _textbox;
-    private readonly Button  _helpbutton;   // WinUI HyperlinkButton → plain Button + Process.Start
+    private readonly Button _helpbutton;   // WinUI HyperlinkButton → plain Button + Process.Start
 
     private CoreSettings.K setting_name = CoreSettings.K.Unset;
     private Uri? _helpUri;
@@ -19,7 +19,7 @@ public sealed partial class TextboxCard : SettingsCard
     {
         set
         {
-            setting_name  = value;
+            setting_name = value;
             _textbox.Text = CoreSettings.GetValue(setting_name);
             _textbox.TextChanged += (_, _) => SaveValue();
         }
@@ -39,7 +39,7 @@ public sealed partial class TextboxCard : SettingsCard
     {
         set
         {
-            _helpUri            = value;
+            _helpUri = value;
             _helpbutton.IsVisible = true;
             _helpbutton.Content = CoreTools.Translate("More info");
         }
@@ -52,7 +52,7 @@ public sealed partial class TextboxCard : SettingsCard
         _helpbutton = new Button
         {
             IsVisible = false,
-            Margin    = new Thickness(0, 0, 8, 0),
+            Margin = new Thickness(0, 0, 8, 0),
         };
         _helpbutton.Click += (_, _) =>
         {

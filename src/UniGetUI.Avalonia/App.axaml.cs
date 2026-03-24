@@ -71,8 +71,8 @@ public partial class App : Application
         Current!.RequestedThemeVariant = value switch
         {
             "light" => ThemeVariant.Light,
-            "dark"  => ThemeVariant.Dark,
-            _       => ThemeVariant.Default,
+            "dark" => ThemeVariant.Dark,
+            _ => ThemeVariant.Default,
         };
     }
 

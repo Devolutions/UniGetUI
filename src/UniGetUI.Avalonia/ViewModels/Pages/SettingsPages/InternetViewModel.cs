@@ -14,7 +14,7 @@ public partial class InternetViewModel : ViewModelBase
         var proxyUri = CoreSettings.GetProxyUrl();
         if (proxyUri is null || !CoreSettings.Get(CoreSettings.K.EnableProxy))
         {
-            Environment.SetEnvironmentVariable("HTTP_PROXY",  "", EnvironmentVariableTarget.Process);
+            Environment.SetEnvironmentVariable("HTTP_PROXY", "", EnvironmentVariableTarget.Process);
             Environment.SetEnvironmentVariable("HTTPS_PROXY", "", EnvironmentVariableTarget.Process);
             return;
         }
@@ -30,7 +30,7 @@ public partial class InternetViewModel : ViewModelBase
                 ? $"{proxyUri.Scheme}://{creds.UserName}:{creds.Password}@{proxyUri.Host}:{proxyUri.Port}"
                 : proxyUri.ToString();
         }
-        Environment.SetEnvironmentVariable("HTTP_PROXY",  content, EnvironmentVariableTarget.Process);
+        Environment.SetEnvironmentVariable("HTTP_PROXY", content, EnvironmentVariableTarget.Process);
         Environment.SetEnvironmentVariable("HTTPS_PROXY", content, EnvironmentVariableTarget.Process);
     }
 }

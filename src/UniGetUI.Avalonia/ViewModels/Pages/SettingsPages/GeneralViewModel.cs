@@ -46,7 +46,7 @@ public partial class GeneralViewModel : ViewModelBase
         var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             SuggestedFileName = CoreTools.Translate("WingetUI Settings") + ".json",
-            FileTypeChoices   = [new FilePickerFileType("Settings JSON") { Patterns = ["*.json"] }],
+            FileTypeChoices = [new FilePickerFileType("Settings JSON") { Patterns = ["*.json"] }],
         });
         if (file is null) return;
         var path = file.TryGetLocalPath();

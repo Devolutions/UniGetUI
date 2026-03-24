@@ -23,12 +23,12 @@ internal sealed class HomebrewSourceHelper : BaseSourceHelper
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName               = Manager.Status.ExecutablePath,
-                Arguments              = "tap",
-                UseShellExecute        = false,
+                FileName = Manager.Status.ExecutablePath,
+                Arguments = "tap",
+                UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                CreateNoWindow         = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
             },
         };
         IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(LoggableTaskType.ListSources, p);
@@ -46,8 +46,8 @@ internal sealed class HomebrewSourceHelper : BaseSourceHelper
             try
             {
                 var parts = name.Split('/');
-                var org   = parts[0];
-                var repo  = parts.Length > 1 ? parts[1] : name;
+                var org = parts[0];
+                var repo = parts.Length > 1 ? parts[1] : name;
                 // Official taps follow the "homebrew-<repo>" convention on GitHub
                 url = new Uri($"https://github.com/{org}/homebrew-{repo}");
             }

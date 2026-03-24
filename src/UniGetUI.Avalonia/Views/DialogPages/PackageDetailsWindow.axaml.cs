@@ -26,9 +26,9 @@ public partial class PackageDetailsWindow : Window
         InitializeComponent();
 
         _vm.CloseRequested += (_, _) => Close();
-        CloseButton.Click  += (_, _) => Close();
+        CloseButton.Click += (_, _) => Close();
 
-        MainActionButton.Click     += (_, _) => OnMainAction();
+        MainActionButton.Click += (_, _) => OnMainAction();
         ActionVariantsButton.Flyout = BuildActionFlyout();
     }
 
@@ -44,31 +44,31 @@ public partial class PackageDetailsWindow : Window
 
         var asAdmin = new MenuItem
         {
-            Header    = _vm.AsAdminLabel,
+            Header = _vm.AsAdminLabel,
             IsEnabled = _vm.CanRunAsAdmin,
         };
         var interactive = new MenuItem
         {
-            Header    = _vm.InteractiveLabel,
+            Header = _vm.InteractiveLabel,
             IsEnabled = _vm.CanRunInteractively,
         };
         var skipOrRemove = new MenuItem
         {
-            Header    = _vm.SkipHashOrRemoveDataLabel,
+            Header = _vm.SkipHashOrRemoveDataLabel,
             IsEnabled = _vm.CanSkipHashOrRemoveData,
         };
 
         var role = _vm.OperationRole;
         if (role is OperationType.Uninstall)
         {
-            asAdmin.Click      += (_, _) => _ = LaunchAndClose(role, elevated: true);
-            interactive.Click  += (_, _) => _ = LaunchAndClose(role, interactive: true);
+            asAdmin.Click += (_, _) => _ = LaunchAndClose(role, elevated: true);
+            interactive.Click += (_, _) => _ = LaunchAndClose(role, interactive: true);
             skipOrRemove.Click += (_, _) => _ = LaunchAndClose(role, remove_data: true);
         }
         else
         {
-            asAdmin.Click      += (_, _) => _ = LaunchAndClose(role, elevated: true);
-            interactive.Click  += (_, _) => _ = LaunchAndClose(role, interactive: true);
+            asAdmin.Click += (_, _) => _ = LaunchAndClose(role, elevated: true);
+            interactive.Click += (_, _) => _ = LaunchAndClose(role, interactive: true);
             skipOrRemove.Click += (_, _) => _ = LaunchAndClose(role, no_integrity: true);
         }
 
@@ -88,25 +88,25 @@ public partial class PackageDetailsWindow : Window
 
     private async Task LaunchAndClose(
         OperationType role,
-        bool? elevated    = null,
+        bool? elevated = null,
         bool? interactive = null,
         bool? no_integrity = null,
-        bool? remove_data  = null)
+        bool? remove_data = null)
     {
         Close();
 
-        var pkg  = _vm.Package;
+        var pkg = _vm.Package;
         var opts = await InstallOptionsFactory.LoadApplicableAsync(
             pkg,
-            elevated:    elevated,
+            elevated: elevated,
             interactive: interactive,
             no_integrity: no_integrity,
             remove_data: remove_data);
 
         AbstractOperation op = role switch
         {
-            OperationType.Install   => new InstallPackageOperation(pkg, opts),
-            OperationType.Update    => new UpdatePackageOperation(pkg, opts),
+            OperationType.Install => new InstallPackageOperation(pkg, opts),
+            OperationType.Update => new UpdatePackageOperation(pkg, opts),
             OperationType.Uninstall => new UninstallPackageOperation(pkg, opts),
             _ => throw new ArgumentOutOfRangeException(nameof(role)),
         };

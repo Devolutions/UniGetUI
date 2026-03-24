@@ -9,10 +9,10 @@ public sealed partial class Notifications : UserControl, ISettingsPage
 {
     private NotificationsViewModel VM => (NotificationsViewModel)DataContext!;
 
-    public bool   CanGoBack  => true;
+    public bool CanGoBack => true;
     public string ShortTitle => CoreTools.Translate("Notification preferences");
 
-    public event EventHandler?       RestartRequired     { add { } remove { } }
+    public event EventHandler? RestartRequired { add { } remove { } }
     public event EventHandler<Type>? NavigationRequested { add { } remove { } }
 
     public Notifications()
@@ -21,17 +21,17 @@ public sealed partial class Notifications : UserControl, ISettingsPage
         InitializeComponent();
 
         // Assign setting names to named controls
-        DisableNotifications.SettingName         = Settings.K.DisableNotifications;
-        DisableUpdatesNotifications.SettingName  = Settings.K.DisableUpdatesNotifications;
+        DisableNotifications.SettingName = Settings.K.DisableNotifications;
+        DisableUpdatesNotifications.SettingName = Settings.K.DisableUpdatesNotifications;
         DisableProgressNotifications.SettingName = Settings.K.DisableProgressNotifications;
-        DisableErrorNotifications.SettingName    = Settings.K.DisableUpdatesNotifications;
-        DisableSuccessNotifications.SettingName  = Settings.K.DisableSuccessNotifications;
+        DisableErrorNotifications.SettingName = Settings.K.DisableUpdatesNotifications;
+        DisableSuccessNotifications.SettingName = Settings.K.DisableSuccessNotifications;
 
-        DisableNotifications.Text         = "Enable WingetUI notifications";
-        DisableUpdatesNotifications.Text  = "Show a notification when there are available updates";
+        DisableNotifications.Text = "Enable WingetUI notifications";
+        DisableUpdatesNotifications.Text = "Show a notification when there are available updates";
         DisableProgressNotifications.Text = "Show a silent notification when an operation is running";
-        DisableErrorNotifications.Text    = "Show a notification when an operation fails";
-        DisableSuccessNotifications.Text  = "Show a notification when an operation finishes successfully";
+        DisableErrorNotifications.Text = "Show a notification when an operation fails";
+        DisableSuccessNotifications.Text = "Show a notification when an operation finishes successfully";
 
         TrayWarningText.Text = CoreTools.Translate("The system tray icon must be enabled in order for notifications to work");
 

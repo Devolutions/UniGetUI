@@ -113,13 +113,13 @@ internal static class MacOsNotificationBridge
             string title, message;
             if (upgradable.Count == 1)
             {
-                title   = CoreTools.Translate("An update was found!");
+                title = CoreTools.Translate("An update was found!");
                 message = CoreTools.Translate("{0} can be updated to version {1}",
                     upgradable[0].Name, upgradable[0].NewVersionString);
             }
             else
             {
-                title   = CoreTools.Translate("Updates found!");
+                title = CoreTools.Translate("Updates found!");
                 message = CoreTools.Translate("{0} packages can be updated", upgradable.Count);
             }
             DeliverNotification(title, message);
@@ -155,14 +155,14 @@ internal static class MacOsNotificationBridge
             string title, message;
             if (shortcuts.Count == 1)
             {
-                title   = CoreTools.Translate("Desktop shortcut created");
+                title = CoreTools.Translate("Desktop shortcut created");
                 message = CoreTools.Translate(
                     "UniGetUI has detected a new desktop shortcut that can be deleted automatically.")
                     + "\n" + shortcuts[0].Split('/')[^1];
             }
             else
             {
-                title   = CoreTools.Translate("{0} desktop shortcuts created", shortcuts.Count);
+                title = CoreTools.Translate("{0} desktop shortcuts created", shortcuts.Count);
                 message = CoreTools.Translate(
                     "UniGetUI has detected {0} new desktop shortcuts that can be deleted automatically.",
                     shortcuts.Count);
@@ -181,12 +181,12 @@ internal static class MacOsNotificationBridge
     private static void DeliverNotification(string title, string message)
     {
         var centerClass = objc_getClass("NSUserNotificationCenter");
-        var center      = MsgSend(centerClass, Sel("defaultUserNotificationCenter"));
+        var center = MsgSend(centerClass, Sel("defaultUserNotificationCenter"));
 
         var notifClass = objc_getClass("NSUserNotification");
-        var notif      = MsgSend(MsgSend(notifClass, Sel("alloc")), Sel("init"));
+        var notif = MsgSend(MsgSend(notifClass, Sel("alloc")), Sel("init"));
 
-        MsgSend(notif, Sel("setTitle:"),           ToNSString(title));
+        MsgSend(notif, Sel("setTitle:"), ToNSString(title));
         MsgSend(notif, Sel("setInformativeText:"), ToNSString(message));
         MsgSend(center, Sel("deliverNotification:"), notif);
         MsgSend(notif, Sel("autorelease"));

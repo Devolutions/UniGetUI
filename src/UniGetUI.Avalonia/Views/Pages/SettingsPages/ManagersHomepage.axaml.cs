@@ -8,10 +8,10 @@ namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
 public sealed partial class ManagersHomepage : UserControl, ISettingsPage
 {
-    public bool   CanGoBack  => false;
+    public bool CanGoBack => false;
     public string ShortTitle => CoreTools.Translate("Package Managers");
 
-    public event EventHandler?       RestartRequired     { add { } remove { } }
+    public event EventHandler? RestartRequired { add { } remove { } }
     public event EventHandler<Type>? NavigationRequested { add { } remove { } }
 
     public ManagersHomepage()
@@ -24,7 +24,7 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
         {
             var btn = new SettingsPageButton
             {
-                Text      = manager.DisplayName,
+                Text = manager.DisplayName,
                 UnderText = CoreTools.Translate(manager.IsEnabled() ? "Enabled" : "Disabled"),
             };
             // TODO: navigate to PackageManagerPage for this manager (Phase 5)

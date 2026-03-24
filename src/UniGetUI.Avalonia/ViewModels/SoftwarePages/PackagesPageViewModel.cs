@@ -145,7 +145,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     protected ConcurrentDictionary<IPackageManager, List<IManagerSource>> UsedSourcesForManager = new();
     protected ConcurrentDictionary<IPackageManager, SourceTreeNode> RootNodeForManager = new();
     protected ConcurrentDictionary<IManagerSource, SourceTreeNode> NodesForSources = new();
-    private readonly SourceTreeNode _localPackagesNode = new(){PackageName = "local"};
+    private readonly SourceTreeNode _localPackagesNode = new() { PackageName = "local" };
 
     // ─── Events (replace abstract methods) ───────────────────────────────────
     public event Action<ReloadReason>? PackagesLoaded;
@@ -176,7 +176,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         AllPackagesChecked = data.PackagesAreCheckedByDefault;
 
         Loader = data.Loader;
-        Loader.StartedLoading  += Loader_StartedLoading;
+        Loader.StartedLoading += Loader_StartedLoading;
         Loader.FinishedLoading += Loader_FinishedLoading;
         Loader.PackagesChanged += Loader_PackagesChanged;
 
@@ -318,11 +318,11 @@ public partial class PackagesPageViewModel : ViewModelBase
 
         Func<IPackage, bool> matchFunc = SearchMode switch
         {
-            SearchMode.Name    => pkg => FilterHelpers.NameContains(pkg, query, filters),
-            SearchMode.Id      => pkg => FilterHelpers.IdContains(pkg, query, filters),
-            SearchMode.Exact   => pkg => FilterHelpers.NameOrIdExactMatch(pkg, query, filters),
+            SearchMode.Name => pkg => FilterHelpers.NameContains(pkg, query, filters),
+            SearchMode.Id => pkg => FilterHelpers.IdContains(pkg, query, filters),
+            SearchMode.Exact => pkg => FilterHelpers.NameOrIdExactMatch(pkg, query, filters),
             SearchMode.Similar => _ => true,
-            _                  => pkg => FilterHelpers.NameOrIdContains(pkg, query, filters),
+            _ => pkg => FilterHelpers.NameOrIdContains(pkg, query, filters),
         };
 
         var selectedSources = GetSelectedSourceNodes();
@@ -346,7 +346,7 @@ public partial class PackagesPageViewModel : ViewModelBase
 
         if (FilteredPackages.Count == 0)
         {
-            BackgroundText        = string.IsNullOrWhiteSpace(query) ? NoPackagesText : NoMatchesText;
+            BackgroundText = string.IsNullOrWhiteSpace(query) ? NoPackagesText : NoMatchesText;
             BackgroundTextVisible = !MegaQueryBoxEnabled || !string.IsNullOrWhiteSpace(query);
         }
         else
@@ -407,7 +407,7 @@ public partial class PackagesPageViewModel : ViewModelBase
 
     partial void OnAllPackagesCheckedChanged(bool? value)
     {
-        if (value == true)  FilteredPackages.SelectAll();
+        if (value == true) FilteredPackages.SelectAll();
         else if (value == false) FilteredPackages.ClearSelection();
     }
 
@@ -502,14 +502,14 @@ public partial class PackagesPageViewModel : ViewModelBase
     {
         bool isList = ViewMode == 0;
         NameHeaderText = isList ? CoreTools.Translate("Package Name") : "";
-        IdHeaderText = isList ? CoreTools.Translate("Package ID")   : "";
-        VersionHeaderText = isList ? CoreTools.Translate("Version")      : "";
-        NewVersionHeaderText = isList ? CoreTools.Translate("New version")  : "";
-        SourceHeaderText = isList ? CoreTools.Translate("Source")       : "";
+        IdHeaderText = isList ? CoreTools.Translate("Package ID") : "";
+        VersionHeaderText = isList ? CoreTools.Translate("Version") : "";
+        NewVersionHeaderText = isList ? CoreTools.Translate("New version") : "";
+        SourceHeaderText = isList ? CoreTools.Translate("Source") : "";
     }
 
-    public bool IsListViewMode  => ViewMode == 0;
-    public bool IsGridViewMode  => ViewMode == 1;
+    public bool IsListViewMode => ViewMode == 0;
+    public bool IsGridViewMode => ViewMode == 1;
     public bool IsIconsViewMode => ViewMode == 2;
 
     partial void OnViewModeChanged(int value)
@@ -561,8 +561,8 @@ public partial class PackagesPageViewModel : ViewModelBase
 
     // ─── Commands ─────────────────────────────────────────────────────────────
     [RelayCommand] private async Task Reload() => await LoadPackages(ReloadReason.Manual);
-    [RelayCommand] private void SelectAllSources_Cmd()  { SelectAllSources();    FilterPackages(); }
-    [RelayCommand] private void ClearSourceSelection_Cmd(){ ClearSourceSelection(); FilterPackages(); }
+    [RelayCommand] private void SelectAllSources_Cmd() { SelectAllSources(); FilterPackages(); }
+    [RelayCommand] private void ClearSourceSelection_Cmd() { ClearSourceSelection(); FilterPackages(); }
 
 
     [RelayCommand]
@@ -627,9 +627,9 @@ public partial class PackagesPageViewModel : ViewModelBase
 
         public static string NormalizeSpecialCharacters(string input)
         {
-            input = input.Replace("-","").Replace("_","").Replace(" ","")
-                         .Replace("@","").Replace("\t","").Replace(".","")
-                         .Replace(",","").Replace(":","");
+            input = input.Replace("-", "").Replace("_", "").Replace(" ", "")
+                         .Replace("@", "").Replace("\t", "").Replace(".", "")
+                         .Replace(",", "").Replace(":", "");
             foreach (var (replacement, chars) in new (char, string)[]
             {
                 ('a',"àáäâ"),('e',"èéëê"),('i',"ìíïî"),('o',"òóöô"),
@@ -639,19 +639,19 @@ public partial class PackagesPageViewModel : ViewModelBase
             return input;
         }
 
-        public static bool NameContains(IPackage pkg, string q, List<Func<string,string>> f)
+        public static bool NameContains(IPackage pkg, string q, List<Func<string, string>> f)
         { var n = pkg.Name; foreach (var x in f) n = x(n); return n.Contains(q); }
 
-        public static bool IdContains(IPackage pkg, string q, List<Func<string,string>> f)
+        public static bool IdContains(IPackage pkg, string q, List<Func<string, string>> f)
         { var id = pkg.Id; foreach (var x in f) id = x(id); return id.Contains(q); }
 
-        public static bool NameOrIdContains(IPackage pkg, string q, List<Func<string,string>> f)
+        public static bool NameOrIdContains(IPackage pkg, string q, List<Func<string, string>> f)
             => NameContains(pkg, q, f) || IdContains(pkg, q, f);
 
-        public static bool NameOrIdExactMatch(IPackage pkg, string q, List<Func<string,string>> f)
+        public static bool NameOrIdExactMatch(IPackage pkg, string q, List<Func<string, string>> f)
         {
-            var id = pkg.Id;   foreach (var x in f) id = x(id);   if (q == id) return true;
-            var n  = pkg.Name; foreach (var x in f) n  = x(n);    return q == n;
+            var id = pkg.Id; foreach (var x in f) id = x(id); if (q == id) return true;
+            var n = pkg.Name; foreach (var x in f) n = x(n); return q == n;
         }
     }
 }

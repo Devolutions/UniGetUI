@@ -10,10 +10,10 @@ public sealed partial class Administrator : UserControl, ISettingsPage
 {
     private AdministratorViewModel VM => (AdministratorViewModel)DataContext!;
 
-    public bool   CanGoBack  => true;
+    public bool CanGoBack => true;
     public string ShortTitle => CoreTools.Translate("Administrator rights and other dangerous settings");
 
-    public event EventHandler?       RestartRequired;
+    public event EventHandler? RestartRequired;
     public event EventHandler<Type>? NavigationRequested { add { } remove { } }
 
     public void ShowRestartBanner(object? sender, EventArgs e) =>
@@ -28,25 +28,25 @@ public sealed partial class Administrator : UserControl, ISettingsPage
         InitializeComponent();
 
         // Populate the warning banner
-        WarningTitleText.Text  = CoreTools.Translate("Warning") + "!";
-        WarningBodyLine1.Text  =
+        WarningTitleText.Text = CoreTools.Translate("Warning") + "!";
+        WarningBodyLine1.Text =
             CoreTools.Translate("The following settings may pose a security risk, hence they are disabled by default.")
             + " "
             + CoreTools.Translate("Enable the settings below IF AND ONLY IF you fully understand what they do, and the implications and dangers they may involve.");
-        WarningBodyLine2.Text  =
+        WarningBodyLine2.Text =
             CoreTools.Translate("The settings will list, in their descriptions, the potential security issues they may have.");
 
         // Admin rights section
-        DoCacheAdminRightsForBatches.SettingName   = Settings.K.DoCacheAdminRightsForBatches;
-        DoCacheAdminRightsForBatches.Text          = "Ask for administrator privileges once for each batch of operations";
+        DoCacheAdminRightsForBatches.SettingName = Settings.K.DoCacheAdminRightsForBatches;
+        DoCacheAdminRightsForBatches.Text = "Ask for administrator privileges once for each batch of operations";
         DoCacheAdminRightsForBatches.StateChanged += RestartCache;
 
-        DoCacheAdminRights.SettingName   = Settings.K.DoCacheAdminRights;
-        DoCacheAdminRights.Text          = "Ask only once for administrator privileges";
+        DoCacheAdminRights.SettingName = Settings.K.DoCacheAdminRights;
+        DoCacheAdminRights.Text = "Ask only once for administrator privileges";
         DoCacheAdminRights.StateChanged += RestartCache;
 
-        ProhibitElevator.SettingName   = Settings.K.ProhibitElevation;
-        ProhibitElevator.Text          = "Prohibit any kind of Elevation via UniGetUI Elevator or GSudo";
+        ProhibitElevator.SettingName = Settings.K.ProhibitElevation;
+        ProhibitElevator.Text = "Prohibit any kind of Elevation via UniGetUI Elevator or GSudo";
         ProhibitElevator.StateChanged += ShowRestartBanner;
 
         // Bind IsElevationEnabled to the ProhibitElevator toggle (inverted)
@@ -58,7 +58,7 @@ public sealed partial class Administrator : UserControl, ISettingsPage
 
         // CLI arguments section
         AllowCLIArguments.SettingName = SecureSettings.K.AllowCLIArguments;
-        AllowCLIArguments.Text        = "Allow custom command-line arguments";
+        AllowCLIArguments.Text = "Allow custom command-line arguments";
         AllowCLIArguments._warningBlock.Text =
             CoreTools.Translate("Custom command-line arguments can change the way in which programs are installed, upgraded or uninstalled, in a way UniGetUI cannot control.")
             + "\n"
@@ -66,7 +66,7 @@ public sealed partial class Administrator : UserControl, ISettingsPage
         AllowCLIArguments._warningBlock.IsVisible = true;
 
         AllowPrePostInstallCommands.SettingName = SecureSettings.K.AllowPrePostOpCommand;
-        AllowPrePostInstallCommands.Text        = "Ignore custom pre-install and post-install commands when importing packages from a bundle";
+        AllowPrePostInstallCommands.Text = "Ignore custom pre-install and post-install commands when importing packages from a bundle";
         AllowPrePostInstallCommands._warningBlock.Text =
             CoreTools.Translate("Pre and post install commands will be run before and after a package gets installed, upgraded or uninstalled.")
             + "\n"
@@ -74,8 +74,8 @@ public sealed partial class Administrator : UserControl, ISettingsPage
         AllowPrePostInstallCommands._warningBlock.IsVisible = true;
 
         // Manager paths section
-        AllowCustomManagerPaths.SettingName   = SecureSettings.K.AllowCustomManagerPaths;
-        AllowCustomManagerPaths.Text          = "Allow changing the paths for package manager executables";
+        AllowCustomManagerPaths.SettingName = SecureSettings.K.AllowCustomManagerPaths;
+        AllowCustomManagerPaths.Text = "Allow changing the paths for package manager executables";
         AllowCustomManagerPaths._warningBlock.Text =
             CoreTools.Translate("Turning this on enables changing the executable file used to interact with package managers.")
             + "\n"
@@ -85,7 +85,7 @@ public sealed partial class Administrator : UserControl, ISettingsPage
 
         // Bundle import restrictions
         AllowImportingCLIArguments.SettingName = SecureSettings.K.AllowImportingCLIArguments;
-        AllowImportingCLIArguments.Text        = "Allow importing custom command-line arguments when importing packages from a bundle";
+        AllowImportingCLIArguments.Text = "Allow importing custom command-line arguments when importing packages from a bundle";
         AllowImportingCLIArguments._warningBlock.Text =
             CoreTools.Translate("Malformed command-line arguments can break packages, or even allow a malicious actor to gain privileged execution.")
             + "\n"
@@ -93,7 +93,7 @@ public sealed partial class Administrator : UserControl, ISettingsPage
         AllowImportingCLIArguments._warningBlock.IsVisible = true;
 
         AllowImportingPrePostInstallCommands.SettingName = SecureSettings.K.AllowImportPrePostOpCommands;
-        AllowImportingPrePostInstallCommands.Text        = "Allow importing custom pre-install and post-install commands when importing packages from a bundle";
+        AllowImportingPrePostInstallCommands.Text = "Allow importing custom pre-install and post-install commands when importing packages from a bundle";
         AllowImportingPrePostInstallCommands._warningBlock.Text =
             CoreTools.Translate("Pre and post install commands can do very nasty things to your device, if designed to do so.")
             + "\n"

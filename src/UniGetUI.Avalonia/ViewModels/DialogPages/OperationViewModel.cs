@@ -28,15 +28,15 @@ public sealed class OperationViewModel : INotifyPropertyChanged
     public OperationViewModel(AbstractOperation operation)
     {
         Operation = operation;
-        ButtonCommand     = new SyncCommand(ButtonClick);
+        ButtonCommand = new SyncCommand(ButtonClick);
         ShowDetailsCommand = new SyncCommand(ShowDetails);
 
-        _title    = operation.Metadata.Title;
+        _title = operation.Metadata.Title;
         _liveLine = operation.GetOutput().Any()
             ? operation.GetOutput()[^1].Item1
             : CoreTools.Translate("Please wait...");
-        _buttonText      = CoreTools.Translate("Cancel");
-        _progressBrush   = new SolidColorBrush(Color.Parse("#888888"));
+        _buttonText = CoreTools.Translate("Cancel");
+        _progressBrush = new SolidColorBrush(Color.Parse("#888888"));
         _backgroundBrush = Brushes.Transparent;
 
         // Route all background-thread events to the UI thread
@@ -51,8 +51,8 @@ public sealed class OperationViewModel : INotifyPropertyChanged
             {
                 Badges.Clear();
                 if (badges.AsAdministrator) Badges.Add(CoreTools.Translate("Administrator"));
-                if (badges.Interactive)     Badges.Add(CoreTools.Translate("Interactive"));
-                if (badges.SkipHashCheck)   Badges.Add(CoreTools.Translate("Skip hash check"));
+                if (badges.Interactive) Badges.Add(CoreTools.Translate("Interactive"));
+                if (badges.SkipHashCheck) Badges.Add(CoreTools.Translate("Skip hash check"));
             });
 
         // Sync with current status in case the operation already started
@@ -66,41 +66,41 @@ public sealed class OperationViewModel : INotifyPropertyChanged
         {
             case OperationStatus.InQueue:
                 ProgressIndeterminate = false;
-                ProgressValue         = 0;
-                ProgressBrush         = new SolidColorBrush(Color.Parse("#888888"));
-                BackgroundBrush       = Brushes.Transparent;
-                ButtonText            = CoreTools.Translate("Cancel");
+                ProgressValue = 0;
+                ProgressBrush = new SolidColorBrush(Color.Parse("#888888"));
+                BackgroundBrush = Brushes.Transparent;
+                ButtonText = CoreTools.Translate("Cancel");
                 break;
 
             case OperationStatus.Running:
                 ProgressIndeterminate = true;
-                ProgressBrush         = new SolidColorBrush(Color.Parse("#F0A500"));
-                BackgroundBrush       = new SolidColorBrush(Color.FromArgb(30, 240, 165, 0));
-                ButtonText            = CoreTools.Translate("Cancel");
+                ProgressBrush = new SolidColorBrush(Color.Parse("#F0A500"));
+                BackgroundBrush = new SolidColorBrush(Color.FromArgb(30, 240, 165, 0));
+                ButtonText = CoreTools.Translate("Cancel");
                 break;
 
             case OperationStatus.Succeeded:
                 ProgressIndeterminate = false;
-                ProgressValue         = 100;
-                ProgressBrush         = new SolidColorBrush(Color.Parse("#0F7B0F"));
-                BackgroundBrush       = new SolidColorBrush(Color.FromArgb(30, 15, 123, 15));
-                ButtonText            = CoreTools.Translate("Close");
+                ProgressValue = 100;
+                ProgressBrush = new SolidColorBrush(Color.Parse("#0F7B0F"));
+                BackgroundBrush = new SolidColorBrush(Color.FromArgb(30, 15, 123, 15));
+                ButtonText = CoreTools.Translate("Close");
                 break;
 
             case OperationStatus.Failed:
                 ProgressIndeterminate = false;
-                ProgressValue         = 100;
-                ProgressBrush         = new SolidColorBrush(Color.Parse("#BC0000"));
-                BackgroundBrush       = new SolidColorBrush(Color.FromArgb(40, 188, 0, 0));
-                ButtonText            = CoreTools.Translate("Close");
+                ProgressValue = 100;
+                ProgressBrush = new SolidColorBrush(Color.Parse("#BC0000"));
+                BackgroundBrush = new SolidColorBrush(Color.FromArgb(40, 188, 0, 0));
+                ButtonText = CoreTools.Translate("Close");
                 break;
 
             case OperationStatus.Canceled:
                 ProgressIndeterminate = false;
-                ProgressValue         = 100;
-                ProgressBrush         = new SolidColorBrush(Color.Parse("#9D5D00"));
-                BackgroundBrush       = Brushes.Transparent;
-                ButtonText            = CoreTools.Translate("Close");
+                ProgressValue = 100;
+                ProgressBrush = new SolidColorBrush(Color.Parse("#9D5D00"));
+                BackgroundBrush = Brushes.Transparent;
+                ButtonText = CoreTools.Translate("Close");
                 break;
         }
     }

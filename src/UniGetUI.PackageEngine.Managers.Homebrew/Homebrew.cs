@@ -42,30 +42,30 @@ public class Homebrew : PackageManager
 
         Capabilities = new ManagerCapabilities
         {
-            CanRunAsAdmin        = false,
+            CanRunAsAdmin = false,
             CanDownloadInstaller = false,
             SupportsCustomSources = true,
             Sources = new SourceCapabilities
             {
                 KnowsPackageCount = false,
-                KnowsUpdateDate   = false,
+                KnowsUpdateDate = false,
             },
-            SupportsProxy    = ProxySupport.No,
+            SupportsProxy = ProxySupport.No,
             SupportsProxyAuth = false,
         };
 
         Properties = new ManagerProperties
         {
-            Name        = "Homebrew",
+            Name = "Homebrew",
             Description = CoreTools.Translate(
                 "The Missing Package Manager for macOS (or Linux).<br>Contains: <b>Formulae, Casks</b>"
             ),
-            IconId                = IconType.Homebrew,
-            ColorIconId           = "homebrew_color",
+            IconId = IconType.Homebrew,
+            ColorIconId = "homebrew_color",
             ExecutableFriendlyName = "brew",
-            InstallVerb           = "install",
-            UpdateVerb            = "upgrade",
-            UninstallVerb         = "uninstall",
+            InstallVerb = "install",
+            UpdateVerb = "upgrade",
+            UninstallVerb = "uninstall",
             KnownSources =
             [
                 new HomebrewSource(this, "Homebrew", new Uri("https://github.com/Homebrew/homebrew-core")),
@@ -74,8 +74,8 @@ public class Homebrew : PackageManager
             DefaultSource = new HomebrewSource(this, "Homebrew", new Uri("https://github.com/Homebrew/homebrew-core")),
         };
 
-        SourcesHelper  = new HomebrewSourceHelper(this);
-        DetailsHelper  = new HomebrewPkgDetailsHelper(this);
+        SourcesHelper = new HomebrewSourceHelper(this);
+        DetailsHelper = new HomebrewPkgDetailsHelper(this);
         OperationHelper = new HomebrewPkgOperationHelper(this);
     }
 
@@ -107,12 +107,12 @@ public class Homebrew : PackageManager
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName               = Status.ExecutablePath,
-                Arguments              = "--version",
-                UseShellExecute        = false,
+                FileName = Status.ExecutablePath,
+                Arguments = "--version",
+                UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                CreateNoWindow         = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
             },
         };
         p.Start();
@@ -129,12 +129,12 @@ public class Homebrew : PackageManager
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName               = Status.ExecutablePath,
-                Arguments              = "update",
-                UseShellExecute        = false,
+                FileName = Status.ExecutablePath,
+                Arguments = "update",
+                UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                CreateNoWindow         = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
             },
         };
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.RefreshIndexes, p);
@@ -152,19 +152,19 @@ public class Homebrew : PackageManager
         var packages = new List<Package>();
 
         IManagerSource formulaeSource = SourcesHelper.Factory.GetSourceOrDefault("Homebrew");
-        IManagerSource caskSource     = SourcesHelper.Factory.GetSourceOrDefault("Homebrew Cask");
+        IManagerSource caskSource = SourcesHelper.Factory.GetSourceOrDefault("Homebrew Cask");
         IManagerSource currentSection = formulaeSource;
 
         using var p = new Process
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName               = Status.ExecutablePath,
-                Arguments              = $"search {query}",
-                UseShellExecute        = false,
+                FileName = Status.ExecutablePath,
+                Arguments = $"search {query}",
+                UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                CreateNoWindow         = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
             },
         };
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages, p);
@@ -175,7 +175,7 @@ public class Homebrew : PackageManager
         {
             logger.AddToStdOut(line);
             if (line.StartsWith("==> Formulae")) { currentSection = formulaeSource; continue; }
-            if (line.StartsWith("==> Casks"))    { currentSection = caskSource;     continue; }
+            if (line.StartsWith("==> Casks")) { currentSection = caskSource; continue; }
 
             foreach (var token in line.Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
@@ -200,7 +200,7 @@ public class Homebrew : PackageManager
     {
         var packages = new List<Package>();
         packages.AddRange(ListInstalledByType("--formula", "Homebrew"));
-        packages.AddRange(ListInstalledByType("--cask",    "Homebrew Cask"));
+        packages.AddRange(ListInstalledByType("--cask", "Homebrew Cask"));
         return packages;
     }
 
@@ -213,12 +213,12 @@ public class Homebrew : PackageManager
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName               = Status.ExecutablePath,
-                Arguments              = $"list {typeFlag} --versions",
-                UseShellExecute        = false,
+                FileName = Status.ExecutablePath,
+                Arguments = $"list {typeFlag} --versions",
+                UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                CreateNoWindow         = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
             },
         };
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListInstalledPackages, p);
@@ -230,7 +230,7 @@ public class Homebrew : PackageManager
             logger.AddToStdOut(line);
             var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length < 2) continue;
-            var id      = parts[0].Trim();
+            var id = parts[0].Trim();
             var version = parts[1].Trim();
             packages.Add(new Package(CoreTools.FormatAsName(id), id, version, source, this));
         }
@@ -254,12 +254,12 @@ public class Homebrew : PackageManager
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName               = Status.ExecutablePath,
-                Arguments              = "outdated --verbose",
-                UseShellExecute        = false,
+                FileName = Status.ExecutablePath,
+                Arguments = "outdated --verbose",
+                UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                CreateNoWindow         = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
             },
         };
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates, p);
@@ -274,7 +274,7 @@ public class Homebrew : PackageManager
             var m = pattern.Match(line);
             if (!m.Success) continue;
 
-            var id         = m.Groups[1].Value.Trim();
+            var id = m.Groups[1].Value.Trim();
             var oldVersion = m.Groups[2].Value.Trim();
             var newVersion = m.Groups[3].Value.Trim();
 

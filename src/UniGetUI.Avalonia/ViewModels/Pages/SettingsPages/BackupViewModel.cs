@@ -11,7 +11,7 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
 public partial class BackupViewModel : ViewModelBase
 {
-    [ObservableProperty] private bool   _isLocalBackupEnabled;
+    [ObservableProperty] private bool _isLocalBackupEnabled;
     [ObservableProperty] private string _backupDirectoryLabel = "";
 
     public BackupViewModel() => RefreshDirectoryLabel();

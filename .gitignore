@@ -90,3 +90,6 @@ UniGetUI Installer_winget-fix-test.exe
 InstallerExtras/uninst-*.e32
 src/.idea/
 src/UniGetUI.v3.ncrunchsolution
+
+# macOS Finder metadata
+.DS_Store

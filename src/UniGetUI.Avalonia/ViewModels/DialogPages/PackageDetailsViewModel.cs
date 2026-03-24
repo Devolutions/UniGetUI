@@ -270,7 +270,7 @@ public partial class PackageDetailsViewModel : ObservableObject
             var iconUrl = await Task.Run(Package.GetIconUrl);
             if (iconUrl is not null)
             {
-                using var http = new HttpClient();
+                using var http = new HttpClient(CoreTools.GenericHttpClientParameters);
                 var bytes = await http.GetByteArrayAsync(iconUrl);
                 using var ms = new MemoryStream(bytes);
                 PackageIcon = new Bitmap(ms);

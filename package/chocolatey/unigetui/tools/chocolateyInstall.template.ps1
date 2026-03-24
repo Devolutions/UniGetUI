@@ -7,8 +7,8 @@ $PackageArgs = @{
   packageName   = $PackageName
   url           = $Url
   fileType      = 'exe'
-  silentArgs    = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /ALLUSERS /NoWinGet /NoAutoStart'
-  validExitCodes= @(0, 3010)
+  silentArgs    = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /NoEdgeWebView /NoVCRedist /NoChocolatey /EnableSystemChocolatey'
+  validExitCodes= @(0, 3010, 1641)
   checksum      = '$VAR2$'
   checksumType  = 'sha256'
 }

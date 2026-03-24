@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views;
@@ -120,6 +121,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _telemetryWarnerVisible;
 
     // ─── Constructor ─────────────────────────────────────────────────────────
+    [RelayCommand]
+    private void ToggleSidebar() => Sidebar.IsPaneOpen = !Sidebar.IsPaneOpen;
+
     public MainWindowViewModel()
     {
         DiscoverPage = new DiscoverSoftwarePage();

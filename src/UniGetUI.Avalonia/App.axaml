@@ -14,18 +14,18 @@
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Dark">
                     <!-- Settings cards -->
-                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#262B3C"/>
+                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#222534"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#3a3a3a"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#2e3448"/>
                     <!-- Window structure -->
-                    <SolidColorBrush x:Key="AppWindowBackground"         Color="#1e2025"/>
-                    <SolidColorBrush x:Key="AppTitleBarBackground"       Color="#313131"/>
+                    <SolidColorBrush x:Key="AppWindowBackground"         Color="#191b29"/>
+                    <SolidColorBrush x:Key="AppTitleBarBackground"       Color="#191b29"/>
                     <SolidColorBrush x:Key="AppSplitterBackground"       Color="#14161a"/>
                     <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#16181c"/>
                     <SolidColorBrush x:Key="AppBorderBrush"              Color="#323439"/>
                     <SolidColorBrush x:Key="AppBadgeBackground"          Color="#3c3e44"/>
                     <!-- Dialogs -->
-                    <SolidColorBrush x:Key="AppDialogBackground"         Color="#1e2025"/>
+                    <SolidColorBrush x:Key="AppDialogBackground"         Color="#191b29"/>
                     <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#2a2d34"/>
                     <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#3a3d44"/>
                     <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#12141a"/>
@@ -40,12 +40,12 @@
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
                     <!-- Settings cards -->
-                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#f3f3f3"/>
-                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#d0d0d0"/>
-                    <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#e8e8e8"/>
+                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#fbfbfd"/>
+                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#eff0f3"/>
+                    <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#f5f6f9"/>
                     <!-- Window structure -->
-                    <SolidColorBrush x:Key="AppWindowBackground"         Color="#f0f0f0"/>
-                    <SolidColorBrush x:Key="AppTitleBarBackground"       Color="#e0e0e0"/>
+                    <SolidColorBrush x:Key="AppWindowBackground"         Color="#f0f3f9"/>
+                    <SolidColorBrush x:Key="AppTitleBarBackground"       Color="#f0f3f9"/>
                     <SolidColorBrush x:Key="AppSplitterBackground"       Color="#d8d8d8"/>
                     <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#f8f8f8"/>
                     <SolidColorBrush x:Key="AppBorderBrush"              Color="#cccccc"/>

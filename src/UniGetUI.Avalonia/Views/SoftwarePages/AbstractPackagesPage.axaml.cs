@@ -302,6 +302,8 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
     private static async Task ShowInfoDialog(Window owner, string title, string message)
     {
+        object? bgResource = null;
+        Application.Current?.Resources.TryGetResource("AppWindowBackground", Application.Current.ActualThemeVariant, out bgResource);
         var dialog = new Window
         {
             Width = 460,
@@ -310,12 +312,14 @@ public abstract partial class AbstractPackagesPage : UserControl,
             ShowInTaskbar = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Title = title,
+            Background = bgResource as IBrush,
         };
 
         var okBtn = new Button
         {
             Content = CoreTools.Translate("OK"),
             MinWidth = 80,
+            CornerRadius = new CornerRadius(4),
             HorizontalAlignment = HorizontalAlignment.Right,
         };
         okBtn.Classes.Add("accent");

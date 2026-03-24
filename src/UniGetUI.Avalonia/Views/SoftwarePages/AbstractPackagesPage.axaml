@@ -19,6 +19,33 @@
       <Style Selector="DataGridCell:current">
          <Setter Property="BorderBrush" Value="Transparent"/>
       </Style>
+      <Style Selector="DataGridColumnHeader">
+         <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+      </Style>
+      <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
+         <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+      </Style>
+      <!-- Toolbar buttons: flat, no background/border in normal state (WinUI AppBarButton style) -->
+      <Style Selector="#ToolbarRow Button">
+         <Setter Property="Background" Value="Transparent"/>
+         <Setter Property="BorderThickness" Value="0"/>
+      </Style>
+      <Style Selector="#ToolbarRow ToggleButton">
+         <Setter Property="Background" Value="Transparent"/>
+         <Setter Property="BorderThickness" Value="0"/>
+      </Style>
+      <Style Selector="#ToolbarRow ToggleButton:checked">
+         <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
+      </Style>
+      <!-- Main action button: card background with border -->
+      <Style Selector="Button#MainToolbarButton">
+         <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+         <Setter Property="BorderThickness" Value="1"/>
+      </Style>
+      <Style Selector="Button#MainToolbarButtonDropdown">
+         <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+         <Setter Property="BorderThickness" Value="1"/>
+      </Style>
    </UserControl.Styles>
 
    <Grid RowDefinitions="Auto,Auto,*" Margin="8,8,8,8">
@@ -148,7 +175,7 @@
               Grid.Row="1"
               ColumnDefinitions="Auto,Auto,*"
               ColumnSpacing="4"
-              Margin="0,0,0,8">
+              Margin="0">
 
             <!-- Filters toggle — MinWidth tracks the filter pane so action buttons stay aligned with the package list -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,0"
@@ -170,7 +197,6 @@
                 <Button x:Name="MainToolbarButton"
                         Height="36"
                         Margin="0,0,1,0"
-                        BorderThickness="0"
                         CornerRadius="4,0,0,4">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                         <controls:SvgIcon x:Name="MainToolbarButtonIcon"
@@ -186,7 +212,6 @@
                         Width="30"
                         Height="36"
                         Padding="4"
-                        BorderThickness="0"
                         CornerRadius="0,4,4,0">
                     <TextBlock Text="▾" FontSize="20" HorizontalAlignment="Center"/>
                 </Button>
@@ -229,7 +254,8 @@
                                   HorizontalContentAlignment="Stretch"
                                   IsExpanded="True"
                                   CornerRadius="8"
-                                  Padding="4,4,4,8">
+                                  Padding="4,4,4,8"
+                                  Background="{DynamicResource SettingsCardBackground}">
                             <Expander.Header>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/local_pc.svg" Width="16" Height="16" VerticalAlignment="Center"/>
@@ -295,7 +321,8 @@
                                   HorizontalContentAlignment="Stretch"
                                   IsExpanded="False"
                                   CornerRadius="8"
-                                  Padding="16,8,16,8">
+                                  Padding="16,8,16,8"
+                                  Background="{DynamicResource SettingsCardBackground}">
                             <Expander.Header>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg" Width="16" Height="16" VerticalAlignment="Center"/>
@@ -323,7 +350,8 @@
                                   HorizontalContentAlignment="Stretch"
                                   IsExpanded="True"
                                   CornerRadius="8"
-                                  Padding="16,8,16,8">
+                                  Padding="16,8,16,8"
+                                  Background="{DynamicResource SettingsCardBackground}">
                             <Expander.Header>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg" Width="16" Height="16" VerticalAlignment="Center"/>
@@ -379,10 +407,24 @@
                 <!-- Package list container -->
                 <Border Margin="0,6,0,6"
                         CornerRadius="8"
-                        BorderThickness="1">
-                <Grid RowDefinitions="*">
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource AppBorderBrush}"
+                        Background="{DynamicResource SettingsCardBackground}">
+                <Grid RowDefinitions="Auto,*">
+                    <!-- Header bar for grid/icons views (select-all) — hidden in list mode, which has its own DataGrid header -->
+                    <Border Grid.Row="0"
+                            IsVisible="{Binding !IsListViewMode}"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderThickness="0,0,0,1"
+                            Padding="10,0">
+                        <CheckBox IsChecked="{Binding AllPackagesChecked, Mode=TwoWay}"
+                                  Content="Select all"
+                                  Height="32"
+                                  VerticalAlignment="Center"/>
+                    </Border>
+
                     <!-- Package list (list/grid/icons views) -->
-                    <Panel >
+                    <Panel Grid.Row="1">
                         <DataGrid x:Name="PackageList"
                                   IsVisible="{Binding IsListViewMode}"
                                   HorizontalAlignment="Stretch"
@@ -594,6 +636,7 @@
                              CornerRadius="8,0,0,8"
                              FontSize="40"
                              Watermark="Search for packages"
+                             Background="{DynamicResource AppWindowBackground}"
                              Text="{Binding MegaQueryText, Mode=TwoWay}"
                              KeyDown="MegaQueryBlock_KeyDown"/>
                     <Button x:Name="MegaFindButton"

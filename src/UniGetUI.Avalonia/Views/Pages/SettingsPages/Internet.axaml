@@ -1,0 +1,49 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.Internet"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:InternetViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical">
+
+            <settings:TranslatedTextBlock Text="Proxy settings"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:CheckboxCard x:Name="EnableProxy"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:TextboxCard x:Name="ProxyURLCard"
+                                  CornerRadius="0,0,8,8"
+                                  BorderThickness="1,0,1,1"
+                                  IsEnabled="{Binding IsProxyEnabled}"/>
+
+            <Border Height="16"/>
+
+            <settings:CheckboxCard x:Name="EnableProxyAuth"
+                                   CornerRadius="8,8,0,0"
+                                   IsEnabled="{Binding IsProxyEnabled}"/>
+
+            <ContentControl x:Name="CredentialsHolder"
+                            IsEnabled="{Binding IsProxyAuthEnabled}"/>
+
+            <Border Height="16"/>
+
+            <ContentControl x:Name="ProxyCompatTableHolder"/>
+
+            <settings:TranslatedTextBlock Text="Other settings"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:CheckboxCard x:Name="DisableWaitForInternetConnection"
+                                   CornerRadius="8"/>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

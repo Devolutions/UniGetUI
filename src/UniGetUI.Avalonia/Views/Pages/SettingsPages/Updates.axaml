@@ -1,0 +1,70 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.Updates"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:UpdatesViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical" Spacing="0">
+
+            <settings:TranslatedTextBlock Text="Update checking"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:CheckboxCard x:Name="DisableAutoCheckForUpdates"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:ComboboxCard x:Name="UpdatesCheckIntervalSelector"
+                                   BorderThickness="1,0"
+                                   CornerRadius="0,0,8,8"
+                                   IsEnabled="{Binding IsAutoCheckEnabled}"/>
+
+            <settings:TranslatedTextBlock Text="Automatic updates"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:CheckboxCard x:Name="AutomaticallyUpdatePackages"
+                                   CornerRadius="8,8,0,0"
+                                   IsEnabled="{Binding IsAutoCheckEnabled}"/>
+
+            <settings:CheckboxCard x:Name="DisableAUPOnMeteredConnections"
+                                   BorderThickness="1,0"
+                                   CornerRadius="0"
+                                   IsEnabled="{Binding IsAutoCheckEnabled}"/>
+
+            <settings:CheckboxCard x:Name="DisableAUPOnBattery"
+                                   BorderThickness="1,1,1,0"
+                                   CornerRadius="0"
+                                   IsEnabled="{Binding IsAutoCheckEnabled}"/>
+
+            <settings:CheckboxCard x:Name="DisableAUPOnBatterySaver"
+                                   CornerRadius="0,0,8,8"
+                                   IsEnabled="{Binding IsAutoCheckEnabled}"/>
+
+            <settings:TranslatedTextBlock Text="Related settings"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:SettingsCard x:Name="OperationsSettingsButton"
+                                   BorderThickness="1,1,1,0"
+                                   CornerRadius="8,8,0,0"
+                                   IsClickEnabled="True">
+                <settings:SettingsCard.Header>Package operation preferences</settings:SettingsCard.Header>
+                <settings:SettingsCard.Description>Change how UniGetUI handles install, update and uninstall operations.</settings:SettingsCard.Description>
+            </settings:SettingsCard>
+
+            <settings:SettingsCard x:Name="AdminButton"
+                                   CornerRadius="0,0,8,8"
+                                   IsClickEnabled="True">
+                <settings:SettingsCard.Header>Administrator rights and other dangerous settings</settings:SettingsCard.Header>
+                <settings:SettingsCard.Description>Reduce UAC prompts, elevate installations by default, unlock certain dangerous features, etc.</settings:SettingsCard.Description>
+            </settings:SettingsCard>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

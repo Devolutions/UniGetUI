@@ -1,0 +1,183 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:UniGetUI.Avalonia.Views"
+        xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
+        xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="750"
+        x:Class="UniGetUI.Avalonia.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Width="1450"
+        MinWidth="700"
+        MinHeight="500"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="PreferSystemChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
+
+    <Panel>
+
+        <!-- Main content pushed below the native title bar -->
+        <Grid ColumnDefinitions="Auto,*"
+              RowDefinitions="*,4,Auto"
+              Background="{DynamicResource AppWindowBackground}"
+              Margin="{Binding $parent[Window].WindowDecorationMargin}">
+
+            <!-- ── Sidebar (spans all rows) ── -->
+            <ContentControl Grid.Column="0" Grid.RowSpan="3"
+                            Width="250"
+                            Content="{Binding Sidebar}"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch">
+                <ContentControl.DataTemplates>
+                    <DataTemplate DataType="vm:SidebarViewModel">
+                        <views:SidebarView/>
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
+
+            <!-- Vertical separator (spans all rows) -->
+            <Border Grid.Column="0" Grid.RowSpan="3"
+                    Width="1"
+                    HorizontalAlignment="Right"
+                    Opacity="0.2"
+                    Background="{DynamicResource SystemBaseMediumColor}"/>
+
+            <!-- ── Page content frame ── -->
+            <ContentControl Grid.Column="1" Grid.Row="0"
+                            Content="{Binding CurrentPageContent}"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"/>
+
+            <!-- ── GridSplitter (only visible when operations are present) ── -->
+            <GridSplitter Grid.Column="1" Grid.Row="1"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          IsVisible="{Binding OperationsPanelVisible}"
+                          Background="{DynamicResource AppSplitterBackground}"
+                          Opacity="0.8"/>
+
+            <!-- ── Operations panel ── -->
+            <Border Grid.Column="1" Grid.Row="2"
+                    IsVisible="{Binding OperationsPanelVisible}"
+                    BorderThickness="0,1,0,0"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    Background="{DynamicResource AppOperationsPanelBackground}">
+                <ScrollViewer MaxHeight="220"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Operations}"
+                                  Margin="8,4,8,4">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:OperationViewModel">
+                                <Border Background="{Binding BackgroundBrush}"
+                                        CornerRadius="6"
+                                        Padding="10,6"
+                                        Margin="0,3,0,3">
+                                    <Grid ColumnDefinitions="*,Auto">
+
+                                        <!-- Left: title, live line, progress, badges -->
+                                        <StackPanel Grid.Column="0"
+                                                    Spacing="3"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,12,0">
+
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="13"
+                                                       TextTrimming="CharacterEllipsis"/>
+
+                                            <Button Content="{Binding LiveLine}"
+                                                    Command="{Binding ShowDetailsCommand}"
+                                                    FontSize="11"
+                                                    Opacity="0.65"
+                                                    HorizontalAlignment="Left"
+                                                    Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    CornerRadius="0"
+                                                    Cursor="Hand"/>
+
+                                            <ProgressBar IsIndeterminate="{Binding ProgressIndeterminate}"
+                                                         Value="{Binding ProgressValue}"
+                                                         Minimum="0" Maximum="100"
+                                                         Height="3"
+                                                         CornerRadius="2"
+                                                         Foreground="{Binding ProgressBrush}"/>
+
+                                            <!-- Badge chips -->
+                                            <ItemsControl ItemsSource="{Binding Badges}"
+                                                          IsVisible="{Binding Badges.Count}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal" Spacing="4"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="x:String">
+                                                        <Border Background="{DynamicResource AppBadgeBackground}"
+                                                                CornerRadius="4"
+                                                                Padding="6,2">
+                                                            <TextBlock Text="{Binding}"
+                                                                       FontSize="10"
+                                                                       Opacity="0.8"/>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                        </StackPanel>
+
+                                        <!-- Right: cancel/close button -->
+                                        <Button Grid.Column="1"
+                                                Content="{Binding ButtonText}"
+                                                Command="{Binding ButtonCommand}"
+                                                VerticalAlignment="Center"
+                                                Padding="12,6"
+                                                CornerRadius="4"
+                                                FontSize="12"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+
+        </Grid>
+
+        <!-- ── Title bar: drag area + search box ── -->
+        <Panel Height="{Binding $parent[Window].WindowDecorationMargin.Top}"
+               VerticalAlignment="Top">
+            <!-- Drag area fills the whole title bar -->
+            <Border Background="{DynamicResource AppTitleBarBackground}"
+                    PointerPressed="TitleBar_PointerPressed"/>
+            <StackPanel HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal"
+                        Margin="0,0,12,0"
+                        Spacing="0">
+                <TextBox Width="200"
+                         MinHeight="20"
+                         Height="22"
+                         FontSize="10"
+                         CornerRadius="4,0,0,4"
+                         Watermark="{Binding GlobalSearchPlaceholder}"
+                         IsEnabled="{Binding GlobalSearchEnabled}"
+                         Text="{Binding GlobalSearchText}"
+                         KeyDown="SearchBox_KeyDown"/>
+                <Button Height="22"
+                        Width="22"
+                        Padding="3"
+                        CornerRadius="0,4,4,0"
+                        IsEnabled="{Binding GlobalSearchEnabled}"
+                        Click="SearchButton_Click">
+                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg"
+                                      Width="12"
+                                      Height="12"/>
+                </Button>
+            </StackPanel>
+        </Panel>
+
+    </Panel>
+</Window>

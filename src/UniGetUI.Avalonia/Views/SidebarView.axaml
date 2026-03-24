@@ -1,0 +1,186 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.SidebarView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:SidebarViewModel"
+             MinWidth="64">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- App branding -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="16,16,16,12">
+            <Image Source="/Assets/icon_unsquare.png" Width="24" Height="24" VerticalAlignment="Center"/>
+            <TextBlock Text="UniGetUI"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Main nav items -->
+        <ListBox x:Name="NavListBox"
+                 Grid.Row="1"
+                 SelectionMode="Single"
+                 SelectionChanged="NavListBox_SelectionChanged"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 Padding="8,0">
+
+            <!-- Discover Packages -->
+            <ListBoxItem x:Name="DiscoverNavBtn" Tag="Discover" Padding="4,2" CornerRadius="6">
+                <Panel>
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
+                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/ms_store.svg" Width="20" Height="20" VerticalAlignment="Center" />
+                        <TextBlock Text="Discover Packages"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <ProgressBar IsIndeterminate="True"
+                                 IsVisible="{Binding DiscoverIsLoading}"
+                                 Height="2"
+                                 VerticalAlignment="Bottom"
+                                 Margin="8,0"/>
+                </Panel>
+            </ListBoxItem>
+
+            <!-- Software Updates -->
+            <ListBoxItem x:Name="UpdatesNavBtn" Tag="Updates" Padding="4,2" CornerRadius="6">
+                <Panel>
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
+                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/update.svg" Width="20" Height="20" VerticalAlignment="Center"/>
+                        <TextBlock Text="Software Updates"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                        <!-- Updates badge -->
+                        <Border Background="{DynamicResource SystemAccentColor}"
+                                CornerRadius="10"
+                                Padding="6,1"
+                                IsVisible="{Binding UpdatesBadgeVisible}"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="{Binding UpdatesBadgeCount}"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Foreground="White"/>
+                        </Border>
+                    </StackPanel>
+                    <ProgressBar IsIndeterminate="True"
+                                 IsVisible="{Binding UpdatesIsLoading}"
+                                 Height="2"
+                                 VerticalAlignment="Bottom"
+                                 Margin="8,0"/>
+                </Panel>
+            </ListBoxItem>
+
+            <!-- Installed Packages -->
+            <ListBoxItem x:Name="InstalledNavBtn" Tag="Installed" Padding="4,2" CornerRadius="6">
+                <Panel>
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
+                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/local_pc.svg" Width="20" Height="20" VerticalAlignment="Center"/>
+                        <TextBlock Text="Installed Packages"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <ProgressBar IsIndeterminate="True"
+                                 IsVisible="{Binding InstalledIsLoading}"
+                                 Height="2"
+                                 VerticalAlignment="Bottom"
+                                 Margin="8,0"/>
+                </Panel>
+            </ListBoxItem>
+
+            <!-- Package Bundles -->
+            <ListBoxItem x:Name="BundlesNavBtn" Tag="Bundles" Padding="4,2" CornerRadius="6">
+                <Panel>
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
+                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/save_as.svg" Width="20" Height="20" VerticalAlignment="Center"/>
+                        <TextBlock Text="Package Bundles"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                        <!-- Unsaved changes badge -->
+                        <Border Background="{DynamicResource SystemFillColorCautionBrush}"
+                                CornerRadius="10"
+                                Width="16"
+                                Height="16"
+                                IsVisible="{Binding BundlesBadgeVisible}"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="!"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                    </StackPanel>
+                </Panel>
+            </ListBoxItem>
+
+        </ListBox>
+
+        <!-- Footer items -->
+        <StackPanel Grid.Row="2" Margin="8,0,8,12" Spacing="2">
+            <Separator Margin="8,4"/>
+
+            <Button x:Name="SettingsNavBtn"
+                    Click="SettingsNavBtn_Click"
+                    HorizontalContentAlignment="Left"
+                    HorizontalAlignment="Stretch"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="12,8"
+                    CornerRadius="6">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/settings.svg" Width="20" Height="20" VerticalAlignment="Center"/>
+                    <TextBlock Text="Settings" FontSize="14" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <Button x:Name="ManagersNavBtn"
+                    Click="ManagersNavBtn_Click"
+                    HorizontalContentAlignment="Left"
+                    HorizontalAlignment="Stretch"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="12,8"
+                    CornerRadius="6">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/clipboard_list.svg" Width="20" Height="20" VerticalAlignment="Center"/>
+                    <TextBlock Text="Package Managers" FontSize="14" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <Button HorizontalContentAlignment="Left"
+                    HorizontalAlignment="Stretch"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="12,8"
+                    CornerRadius="6">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg" Width="20" Height="20" VerticalAlignment="Center"/>
+                    <TextBlock Text="More" FontSize="14" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button.Flyout>
+                    <MenuFlyout Placement="RightEdgeAlignedTop">
+                        <MenuItem Header="WingetUI Log" Click="UniGetUILogs_Click"/>
+                        <MenuItem Header="Package Manager logs" Click="ManagerLogsMenu_Click"/>
+                        <MenuItem Header="Operation history" Click="OperationHistoryMenu_Click"/>
+                        <Separator/>
+                        <MenuItem x:Name="VersionMenuItem" Header="Version" IsEnabled="False"/>
+                        <MenuItem Header="Release notes" Click="ReleaseNotesMenu_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Help" Click="HelpMenu_Click"/>
+                        <MenuItem Header="About" Click="AboutNavButton_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Quit UniGetUI" Click="QuitUniGetUI_Click"/>
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+
+        </StackPanel>
+    </Grid>
+</UserControl>

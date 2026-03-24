@@ -57,6 +57,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UniGetUI.PackageEngine.Mana
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UniGetUI.PackageEngine.Managers.Scoop", "UniGetUI.PackageEngine.Managers.Scoop\UniGetUI.PackageEngine.Managers.Scoop.csproj", "{1143176D-B7F0-477C-90BB-72289068D927}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UniGetUI.PackageEngine.Managers.Homebrew", "UniGetUI.PackageEngine.Managers.Homebrew\UniGetUI.PackageEngine.Managers.Homebrew.csproj", "{A8B3C2D1-5E4F-4A7B-9C0D-E1F2A3B4C5D6}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UniGetUI.PackageEngine.Managers.PowerShell", "UniGetUI.PackageEngine.Managers.PowerShell\UniGetUI.PackageEngine.Managers.PowerShell.csproj", "{E454D3A5-C5C6-4291-BE96-220CF0D5CFFD}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UniGetUI.PackageEngine.Managers.Chocolatey", "UniGetUI.PackageEngine.Managers.Chocolatey\UniGetUI.PackageEngine.Managers.Chocolatey.csproj", "{57D094C1-6913-46BF-A657-84A5F46D4EE7}"
@@ -443,6 +445,14 @@ Global
 		{B0E59327-933E-4DB0-BD2D-FB16EB9B4194}.Release|arm64.ActiveCfg = Release|arm64
 		{B0E59327-933E-4DB0-BD2D-FB16EB9B4194}.Release|x64.Build.0 = Release|x64
 		{B0E59327-933E-4DB0-BD2D-FB16EB9B4194}.Release|arm64.Build.0 = Release|arm64
+		{A8B3C2D1-5E4F-4A7B-9C0D-E1F2A3B4C5D6}.Debug|x64.ActiveCfg = Debug|x64
+		{A8B3C2D1-5E4F-4A7B-9C0D-E1F2A3B4C5D6}.Debug|arm64.ActiveCfg = Debug|arm64
+		{A8B3C2D1-5E4F-4A7B-9C0D-E1F2A3B4C5D6}.Debug|x64.Build.0 = Debug|x64
+		{A8B3C2D1-5E4F-4A7B-9C0D-E1F2A3B4C5D6}.Debug|arm64.Build.0 = Debug|arm64
+		{A8B3C2D1-5E4F-4A7B-9C0D-E1F2A3B4C5D6}.Release|x64.ActiveCfg = Release|x64
+		{A8B3C2D1-5E4F-4A7B-9C0D-E1F2A3B4C5D6}.Release|arm64.ActiveCfg = Release|arm64
+		{A8B3C2D1-5E4F-4A7B-9C0D-E1F2A3B4C5D6}.Release|x64.Build.0 = Release|x64
+		{A8B3C2D1-5E4F-4A7B-9C0D-E1F2A3B4C5D6}.Release|arm64.Build.0 = Release|arm64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -492,6 +502,7 @@ Global
 		{015B44EE-32AE-4105-9016-49140743CAF9} = {7940E867-EEBA-4AFD-9904-1536F003239C}
 		{F1610A61-5444-4C11-9447-13CCA327887E} = {015B44EE-32AE-4105-9016-49140743CAF9}
 		{B0E59327-933E-4DB0-BD2D-FB16EB9B4194} = {E05D1183-D360-4AFE-8968-314A34FAD3B2}
+		{A8B3C2D1-5E4F-4A7B-9C0D-E1F2A3B4C5D6} = {7940E867-EEBA-4AFD-9904-1536F003239C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D044BB14-0B37-47E5-A579-8B30FCBA1F9F}

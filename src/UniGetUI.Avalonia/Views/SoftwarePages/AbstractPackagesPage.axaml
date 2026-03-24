@@ -1,0 +1,625 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.AbstractPackagesPage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:pkg="using:UniGetUI.PackageEngine.PackageClasses"
+
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:PackagesPageViewModel"
+             Name="ABSTRACT_PAGE">
+
+    <UserControl.Styles>
+      <!-- Suppress per-cell focus highlight so the whole row appears selected -->
+      <Style Selector="DataGridCell:current /template/ Grid#FocusVisual">
+         <Setter Property="IsVisible" Value="False"/>
+      </Style>
+      <Style Selector="DataGridCell:current">
+         <Setter Property="BorderBrush" Value="Transparent"/>
+      </Style>
+   </UserControl.Styles>
+
+   <Grid RowDefinitions="Auto,Auto,*" Margin="8,8,8,8">
+
+        <!-- ==================== HEADER ==================== -->
+        <Grid Name="MainHeader"
+              Grid.Row="0"
+              ColumnDefinitions="80,*,Auto"
+              ColumnSpacing="8"
+              Margin="0,0,0,4">
+
+            <controls:SvgIcon x:Name="HeaderIcon"
+                              Grid.Column="0"
+                              Width="40"
+                              Height="40"
+                              Margin="0,0,4,0"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Center"
+                              Path="{Binding PageIconPath}"/>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
+                <TextBlock x:Name="MainTitle"
+                           MaxHeight="60"
+                           HorizontalAlignment="Left"
+                           FontSize="24"
+                           FontWeight="Bold"
+                           TextWrapping="Wrap"
+                           Text="{Binding PageTitle}"/>
+                <TextBlock x:Name="MainSubtitle"
+                           MaxHeight="40"
+                           HorizontalAlignment="Left"
+                           FontSize="12"
+                           FontWeight="Normal"
+                           Opacity="0.6"
+                           TextWrapping="Wrap"
+                           Text="{Binding Subtitle}"/>
+            </StackPanel>
+
+            <!-- Order by + View mode + Reload -->
+            <Grid Grid.Column="2"
+                  RowDefinitions="Auto,Auto"
+                  ColumnDefinitions="Auto,Auto"
+                  RowSpacing="6"
+                  ColumnSpacing="8"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Center">
+
+                <!-- Order by -->
+                <StackPanel x:Name="OrderByContainer"
+                            Grid.Row="0" Grid.Column="0"
+                            Orientation="Horizontal"
+                            Spacing="4"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="Order by:" VerticalAlignment="Center"/>
+                    <Button x:Name="OrderByButton" Padding="8,4" CornerRadius="4">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{Binding SortFieldName}" VerticalAlignment="Center" FontSize="12"/>
+                            <TextBlock Text="▾" VerticalAlignment="Center" FontSize="10" Opacity="0.7"/>
+                        </StackPanel>
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuItem x:Name="OrderByName_Menu"       Header="Name"        Click="OrderByName_Click"/>
+                                <MenuItem x:Name="OrderById_Menu"         Header="Id"          Click="OrderById_Click"/>
+                                <MenuItem x:Name="OrderByVersion_Menu"    Header="Version"     Click="OrderByVersion_Click"/>
+                                <MenuItem x:Name="OrderByNewVersion_Menu" Header="New version" Click="OrderByNewVersion_Click"/>
+                                <MenuItem x:Name="OrderBySource_Menu"     Header="Source"      Click="OrderBySource_Click"/>
+                                <Separator/>
+                                <MenuItem x:Name="OrderByAscending_Menu"  Header="Ascending"   Click="OrderByAscending_Click"/>
+                                <MenuItem x:Name="OrderByDescending_Menu" Header="Descending"  Click="OrderByDescending_Click"/>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
+
+                <!-- Reload button -->
+                <Button x:Name="ReloadButton"
+                        Grid.Row="0" Grid.Column="1"
+                        Width="22" Height="22"
+                        Padding="0"
+                        CornerRadius="4"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Command="{Binding ReloadCommand}"
+                        IsVisible="{Binding ReloadButtonVisible}">
+                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/reload.svg" Width="16" Height="16"/>
+                </Button>
+
+                <!-- View mode selector -->
+                <StackPanel x:Name="ViewModeContainer"
+                            Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                            Orientation="Horizontal"
+                            Spacing="4"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="View mode:" VerticalAlignment="Center"/>
+                    <ListBox x:Name="ViewModeSelector"
+                             SelectionMode="Single"
+                             SelectedIndex="{Binding ViewMode, Mode=TwoWay}"
+                             Background="Transparent"
+                             BorderThickness="1"
+                             CornerRadius="4"
+                             Padding="0">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <!-- List -->
+                        <ListBoxItem x:Name="Selector_List" Padding="6,4" ToolTip.Tip="List">
+                            <TextBlock Text="☰" FontSize="16"/>
+                        </ListBoxItem>
+                        <!-- Grid -->
+                        <ListBoxItem x:Name="Selector_Grid" Padding="6,4" ToolTip.Tip="Grid">
+                            <TextBlock Text="⊞" FontSize="16"/>
+                        </ListBoxItem>
+                        <!-- Icons -->
+                        <ListBoxItem x:Name="Selector_Icons" Padding="6,4" ToolTip.Tip="Icons">
+                            <TextBlock Text="⊟" FontSize="16"/>
+                        </ListBoxItem>
+                    </ListBox>
+                </StackPanel>
+
+            </Grid>
+        </Grid>
+
+        <!-- ==================== TOOLBAR ROW ==================== -->
+        <Grid Name="ToolbarRow"
+              Grid.Row="1"
+              ColumnDefinitions="Auto,Auto,*"
+              ColumnSpacing="4"
+              Margin="0,0,0,8">
+
+            <!-- Filters toggle — MinWidth tracks the filter pane so action buttons stay aligned with the package list -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,0"
+                        MinWidth="{Binding FilterPaneColumnWidth}">
+                <ToggleButton x:Name="ToggleFiltersButton"
+                              Height="36"
+                              Padding="8,4"
+                              CornerRadius="4"
+                              IsChecked="{Binding IsFilterPaneOpen, Mode=TwoWay}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg" Width="16" Height="16" VerticalAlignment="Center"/>
+                        <TextBlock Text="Filters" FontSize="12" FontWeight="Medium" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ToggleButton>
+            </StackPanel>
+
+            <!-- Main action button + dropdown -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button x:Name="MainToolbarButton"
+                        Height="36"
+                        Margin="0,0,1,0"
+                        BorderThickness="0"
+                        CornerRadius="4,0,0,4">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <controls:SvgIcon x:Name="MainToolbarButtonIcon"
+                                          Width="16" Height="16"
+                                          VerticalAlignment="Center"/>
+                        <TextBlock x:Name="MainToolbarButtonText"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button x:Name="MainToolbarButtonDropdown"
+                        Width="30"
+                        Height="36"
+                        Padding="4"
+                        BorderThickness="0"
+                        CornerRadius="0,4,4,0">
+                    <TextBlock Text="▾" FontSize="20" HorizontalAlignment="Center"/>
+                </Button>
+            </StackPanel>
+
+            <!-- Toolbar (AppBarButtons added by subclass) -->
+            <ItemsControl x:Name="ToolBar"
+                          Grid.Column="2"
+                          HorizontalAlignment="Left"
+                          ItemsSource="{Binding ToolBarItems}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="4"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+
+        </Grid>
+
+        <!-- ==================== MAIN CONTENT (SplitView: filter pane + package list) ==================== -->
+        <SplitView x:Name="FilteringPanel"
+                   Grid.Row="2"
+                   DisplayMode="Inline"
+                   PanePlacement="Left"
+                   IsPaneOpen="{Binding IsFilterPaneOpen, Mode=TwoWay}"
+                   OpenPaneLength="220"
+                   BorderThickness="0"
+                   Background="{DynamicResource AppWindowBackground}">
+
+            <!-- ===== FILTER PANE ===== -->
+            <SplitView.Pane>
+                <ScrollViewer x:Name="SidePanel"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Padding="0,0,4,0"
+                              Background="{DynamicResource AppWindowBackground}">
+                    <StackPanel x:Name="SidePanelGrid" Spacing="8" Margin="0,0,0,8">
+
+                        <!-- Sources expander -->
+                        <Expander HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch"
+                                  IsExpanded="True"
+                                  CornerRadius="8"
+                                  Padding="4,4,4,8">
+                            <Expander.Header>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/local_pc.svg" Width="16" Height="16" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Sources" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Expander.Header>
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock x:Name="SourcesPlaceholderText"
+                                           Text="Search for packages to start"
+                                           MinHeight="60"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           Opacity="0.5"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding SourcesPlaceholderVisible}"/>
+                                <Grid x:Name="SourcesTreeViewGrid"
+                                      IsVisible="{Binding SourcesTreeVisible}"
+                                      ColumnDefinitions="*,*"
+                                      RowDefinitions="Auto,Auto"
+                                      RowSpacing="4"
+                                      ColumnSpacing="4">
+                                    <Button x:Name="SelectAllSourcesButton"
+                                            Grid.Column="0"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Center"
+                                            Command="{Binding SelectAllSources_CmdCommand}"
+                                            Padding="2"
+                                            Background="Transparent"
+                                            BorderThickness="0">
+                                        <TextBlock Text="Select all" FontSize="12" FontWeight="SemiBold"/>
+                                    </Button>
+                                    <Button x:Name="ClearSourceSelectionButton"
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Center"
+                                            Command="{Binding ClearSourceSelection_CmdCommand}"
+                                            Padding="2"
+                                            Background="Transparent"
+                                            BorderThickness="0">
+                                        <TextBlock Text="Clear selection" FontSize="12" FontWeight="SemiBold"/>
+                                    </Button>
+                                    <ItemsControl x:Name="SourcesTreeView"
+                                              Grid.Row="1"
+                                              Grid.Column="0"
+                                              Grid.ColumnSpan="2"
+                                              HorizontalAlignment="Stretch"
+                                              ItemsSource="{Binding SourceNodes}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:SourceTreeNode">
+                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                          Content="{Binding PackageName}"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </StackPanel>
+                        </Expander>
+
+                        <!-- Filter options expander -->
+                        <Expander HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch"
+                                  IsExpanded="False"
+                                  CornerRadius="8"
+                                  Padding="16,8,16,8">
+                            <Expander.Header>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg" Width="16" Height="16" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Filters" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Expander.Header>
+                            <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical" Spacing="0">
+                                <CheckBox x:Name="InstantSearchCheckbox"
+                                          IsChecked="{Binding InstantSearch, Mode=TwoWay}">
+                                    <TextBlock Text="Instant search" TextWrapping="Wrap"/>
+                                </CheckBox>
+                                <CheckBox x:Name="UpperLowerCaseCheckbox"
+                                          IsChecked="{Binding UpperLowerCase, Mode=TwoWay}">
+                                    <TextBlock Text="Distinguish between uppercase and lowercase" TextWrapping="Wrap"/>
+                                </CheckBox>
+                                <CheckBox x:Name="IgnoreSpecialCharsCheckbox"
+                                          IsChecked="{Binding IgnoreSpecialChars, Mode=TwoWay}">
+                                    <TextBlock Text="Ignore special characters" TextWrapping="Wrap"/>
+                                </CheckBox>
+                            </StackPanel>
+                        </Expander>
+
+                        <!-- Search mode expander -->
+                        <Expander HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch"
+                                  IsExpanded="True"
+                                  CornerRadius="8"
+                                  Padding="16,8,16,8">
+                            <Expander.Header>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg" Width="16" Height="16" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Search mode" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Expander.Header>
+                            <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical" Spacing="0">
+                                <RadioButton x:Name="QueryNameRadio"
+                                             GroupName="QueryOptionsGroup"
+                                             Height="30"
+                                             Margin="0,-2,0,-2"
+                                             IsCheckedChanged="QueryNameRadio_IsCheckedChanged">
+                                    <TextBlock Text="Package Name" TextWrapping="Wrap"/>
+                                </RadioButton>
+                                <RadioButton x:Name="QueryIdRadio"
+                                             GroupName="QueryOptionsGroup"
+                                             Height="30"
+                                             Margin="0,-2,0,-2"
+                                             IsCheckedChanged="QueryIdRadio_IsCheckedChanged">
+                                    <TextBlock Text="Package ID" TextWrapping="Wrap"/>
+                                </RadioButton>
+                                <RadioButton x:Name="QueryBothRadio"
+                                             GroupName="QueryOptionsGroup"
+                                             Height="30"
+                                             Margin="0,-2,0,-2"
+                                             IsChecked="True"
+                                             IsCheckedChanged="QueryBothRadio_IsCheckedChanged">
+                                    <TextBlock Text="Both" TextWrapping="Wrap"/>
+                                </RadioButton>
+                                <RadioButton x:Name="QueryExactMatch"
+                                             GroupName="QueryOptionsGroup"
+                                             Height="30"
+                                             Margin="0,-2,0,-2"
+                                             IsCheckedChanged="QueryExactMatch_IsCheckedChanged">
+                                    <TextBlock Text="Exact match" TextWrapping="Wrap"/>
+                                </RadioButton>
+                                <RadioButton x:Name="QuerySimilarResultsRadio"
+                                             GroupName="QueryOptionsGroup"
+                                             Height="30"
+                                             Margin="0,-2,0,-2"
+                                             IsCheckedChanged="QuerySimilarResultsRadio_IsCheckedChanged"
+                                             IsEnabled="{Binding SimilarSearchEnabled}">
+                                    <TextBlock Text="Show similar packages" TextWrapping="Wrap"/>
+                                </RadioButton>
+                            </StackPanel>
+                        </Expander>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </SplitView.Pane>
+
+            <!-- ===== PACKAGE LIST ===== -->
+            <Grid x:Name="PackagesListGrid" Margin="0">
+
+                <!-- Loading indicator -->
+                <ProgressBar x:Name="LoadingProgressBar"
+                             IsIndeterminate="True"
+                             IsVisible="{Binding IsLoading}"
+                             Height="4"
+                             VerticalAlignment="Top"
+                             HorizontalAlignment="Stretch"
+                             Margin="1,0,1,0"/>
+
+                <!-- Package list container -->
+                <Border Margin="0,6,0,6"
+                        CornerRadius="8"
+                        BorderThickness="1">
+                <Grid RowDefinitions="*">
+                    <!-- Package list (list/grid/icons views) -->
+                    <Panel >
+                        <DataGrid x:Name="PackageList"
+                                  IsVisible="{Binding IsListViewMode}"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Stretch"
+                                  ItemsSource="{Binding FilteredPackages}"
+                                  AutoGenerateColumns="False"
+                                  CanUserReorderColumns="True"
+                                  CanUserResizeColumns="True"
+                                  CanUserSortColumns="True"
+                                  SelectionMode="Extended"
+                                  GridLinesVisibility="Horizontal">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Width="40">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="pkg:PackageWrapper">
+                                            <CheckBox IsChecked="{Binding IsChecked}"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      Margin="5,0,0,0"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Tag="Name" SortMemberPath="Package.Name"
+                                                        Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).NameHeaderText}"
+                                                        Width="2*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="pkg:PackageWrapper">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
+                                                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
+                                                                  Width="16" Height="16" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Package.Name}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Tag="Id" SortMemberPath="Package.Id"
+                                                        Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).IdHeaderText}"
+                                                        Width="2*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="pkg:PackageWrapper">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
+                                                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/id.svg"
+                                                                  Width="16" Height="16" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Package.Id}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Tag="Version" SortMemberPath="VersionComboString"
+                                                        Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).VersionHeaderText}"
+                                                        Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="pkg:PackageWrapper">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
+                                                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/version.svg"
+                                                                  Width="16" Height="16" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding VersionComboString}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Tag="NewVersion" SortMemberPath="Package.NewVersionString"
+                                                        Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).NewVersionHeaderText}"
+                                                        Width="*"
+                                                        IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).NewVersionHeaderVisible}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="pkg:PackageWrapper">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
+                                                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/download.svg"
+                                                                  Width="16" Height="16" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Package.NewVersionString}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Tag="Source" SortMemberPath="Package.Source.AsString_DisplayName"
+                                                        Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).SourceHeaderText}"
+                                                        Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="pkg:PackageWrapper">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
+                                                <controls:SvgIcon Path="{Binding SourceIconPath}"
+                                                                  Width="16" Height="16" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Package.Source.AsString_DisplayName}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- Select-all checkbox overlaid on the first column header (list mode only) -->
+                        <CheckBox IsChecked="{Binding AllPackagesChecked, Mode=TwoWay}"
+                                  IsVisible="{Binding IsListViewMode}"
+                                  Width="40" Height="32"
+                                  HorizontalAlignment="Left"
+                                  VerticalAlignment="Top"
+                                  Margin="8,0,0,0"
+                                  ZIndex="10"/>
+
+                        <!-- ===== GRID VIEW ===== -->
+                        <ScrollViewer IsVisible="{Binding IsGridViewMode}"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding FilteredPackages}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="pkg:PackageWrapper">
+                                        <Border CornerRadius="4" Margin="4" Width="275" Height="56"
+                                                Background="{DynamicResource AppBorderBrush}" Padding="4">
+                                            <Grid ColumnDefinitions="48,*,24" ColumnSpacing="4">
+                                                <controls:SvgIcon Grid.Column="0"
+                                                                  Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
+                                                                  Width="36" Height="36"
+                                                                  VerticalAlignment="Center"
+                                                                  HorizontalAlignment="Center"/>
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                                    <TextBlock Text="{Binding Package.Name}"
+                                                               FontWeight="SemiBold" FontSize="13"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Package.Id}"
+                                                               FontSize="11" Opacity="0.7"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding VersionComboString}"
+                                                               FontSize="11" Opacity="0.5"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                                <CheckBox Grid.Column="2"
+                                                          IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                          VerticalAlignment="Center"
+                                                          HorizontalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <!-- ===== ICONS VIEW ===== -->
+                        <ScrollViewer IsVisible="{Binding IsIconsViewMode}"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding FilteredPackages}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="pkg:PackageWrapper">
+                                        <Border CornerRadius="4" Margin="4" Width="128" Height="134"
+                                                Background="{DynamicResource AppBorderBrush}" Padding="4">
+                                            <Grid RowDefinitions="22,60,30,15">
+                                                <CheckBox Grid.Row="0"
+                                                          IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                          HorizontalAlignment="Left"
+                                                          VerticalAlignment="Top"
+                                                          Padding="0" Margin="-4,0,0,0"/>
+                                                <controls:SvgIcon Grid.Row="1"
+                                                                  Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
+                                                                  Width="48" Height="48"
+                                                                  VerticalAlignment="Center"
+                                                                  HorizontalAlignment="Center"/>
+                                                <TextBlock Grid.Row="2"
+                                                           Text="{Binding Package.Name}"
+                                                           FontWeight="SemiBold" FontSize="12"
+                                                           TextWrapping="Wrap"
+                                                           HorizontalAlignment="Center"
+                                                           TextAlignment="Center"
+                                                           MaxLines="2"/>
+                                                <TextBlock Grid.Row="3"
+                                                           Text="{Binding VersionComboString}"
+                                                           FontSize="11" Opacity="0.5"
+                                                           HorizontalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <!-- Background text (no packages / no matches) -->
+                        <TextBlock x:Name="BackgroundText"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   FontSize="30"
+                                   FontWeight="Bold"
+                                   Opacity="0.5"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   Text="{Binding BackgroundText}"
+                                   IsVisible="{Binding BackgroundTextVisible}"/>
+                    </Panel>
+                </Grid>
+                </Border>
+
+                <!-- Mega query block (for Discover page) -->
+                <Grid x:Name="MegaQueryBlockGrid"
+                      IsVisible="{Binding MegaQueryVisible}"
+                      RowDefinitions="*,64,*"
+                      ColumnDefinitions="*,8*,64,*">
+                    <TextBox x:Name="MegaQueryBlock"
+                             Grid.Row="1"
+                             Grid.Column="1"
+                             Padding="16,8,10,08"
+                             CornerRadius="8,0,0,8"
+                             FontSize="40"
+                             Watermark="Search for packages"
+                             Text="{Binding MegaQueryText, Mode=TwoWay}"
+                             KeyDown="MegaQueryBlock_KeyDown"/>
+                    <Button x:Name="MegaFindButton"
+                            Grid.Row="1"
+                            Grid.Column="2"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            CornerRadius="0,8,8,0"
+                            Command="{Binding SubmitSearch}">
+                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg" Width="40" Height="40"/>
+                    </Button>
+                </Grid>
+
+            </Grid>
+        </SplitView>
+
+    </Grid>
+</UserControl>

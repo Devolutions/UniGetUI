@@ -9,6 +9,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
         public static DiscoverablePackagesLoader Instance = null!;
 
         private string QUERY_TEXT = string.Empty;
+        private volatile bool _pendingReload;
 
         public DiscoverablePackagesLoader(IReadOnlyList<IPackageManager> managers)
             : base(
@@ -21,6 +22,16 @@ namespace UniGetUI.PackageEngine.PackageLoader
             )
         {
             Instance = this;
+            FinishedLoading += OnFinishedLoading;
+        }
+
+        private void OnFinishedLoading(object? sender, EventArgs e)
+        {
+            if (_pendingReload)
+            {
+                _pendingReload = false;
+                _ = ReloadPackages();
+            }
         }
 
         public async Task ReloadPackages(string query)
@@ -33,6 +44,12 @@ namespace UniGetUI.PackageEngine.PackageLoader
         {
             if (QUERY_TEXT == "")
             {
+                return;
+            }
+
+            if (IsLoading)
+            {
+                _pendingReload = true;
                 return;
             }
 

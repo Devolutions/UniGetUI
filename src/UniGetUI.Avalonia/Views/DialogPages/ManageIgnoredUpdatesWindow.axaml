@@ -1,0 +1,190 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
+        xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        x:Class="UniGetUI.Avalonia.Views.ManageIgnoredUpdatesWindow"
+        x:DataType="vm:ManageIgnoredUpdatesViewModel"
+        Width="900" MinWidth="520"
+        Height="500" MinHeight="280"
+        CanResize="True"
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppDialogBackground}"
+        WindowStartupLocation="CenterOwner"
+        Title="{Binding Title}">
+
+    <Window.Styles>
+        <Style Selector="DataGridCell:current /template/ Grid#FocusVisual">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="DataGridCell:current">
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*"
+          Margin="12"
+          RowSpacing="8">
+
+        <!-- ── Header: description + Reset list button ── -->
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+
+            <TextBlock Text="{Binding Description}"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center"
+                       Opacity="0.85"/>
+
+            <Button Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="{Binding ResetLabel}"/>
+                <Button.Flyout>
+                    <Flyout Placement="Bottom">
+                        <Grid Width="300"
+                              ColumnDefinitions="*,*"
+                              RowDefinitions="Auto,Auto"
+                              ColumnSpacing="8" RowSpacing="16"
+                              Margin="4">
+                            <TextBlock Grid.ColumnSpan="2"
+                                       Text="{Binding ResetConfirm}"
+                                       TextWrapping="Wrap"/>
+                            <Button Grid.Row="1" Grid.Column="0"
+                                    Content="{Binding ResetYes}"
+                                    HorizontalAlignment="Stretch"
+                                    Command="{Binding ResetAllCommand}"/>
+                            <Button Grid.Row="1" Grid.Column="1"
+                                    Content="{Binding ResetNo}"
+                                    HorizontalAlignment="Stretch"
+                                    Classes="accent"/>
+                        </Grid>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+
+        </Grid>
+
+        <!-- ── Package list (DataGrid, mirrors the main package list) ── -->
+        <Border Grid.Row="1"
+                CornerRadius="8"
+                BorderThickness="1"
+                Margin="0,6,0,6">
+            <Panel>
+
+                <!-- Empty state -->
+                <TextBlock Text="{Binding EmptyLabel}"
+                           IsVisible="{Binding ShowEmptyLabel}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="20"
+                           FontWeight="Bold"
+                           Opacity="0.5"/>
+
+                <DataGrid ItemsSource="{Binding Entries}"
+                          AutoGenerateColumns="False"
+                          CanUserReorderColumns="True"
+                          CanUserResizeColumns="True"
+                          CanUserSortColumns="True"
+                          SelectionMode="Single"
+                          GridLinesVisibility="Horizontal"
+                          IsVisible="{Binding HasEntries}">
+                    <DataGrid.Columns>
+
+                        <DataGridTemplateColumn Header="{Binding $parent[Window].((vm:ManageIgnoredUpdatesViewModel)DataContext).ColName}"
+                                                Width="2*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                VerticalAlignment="Center" Margin="0,0,4,0">
+                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
+                                                          Width="16" Height="16" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="{Binding $parent[Window].((vm:ManageIgnoredUpdatesViewModel)DataContext).ColId}"
+                                                Width="2*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                VerticalAlignment="Center" Margin="0,0,4,0">
+                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/id.svg"
+                                                          Width="16" Height="16" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Id}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Id}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="{Binding $parent[Window].((vm:ManageIgnoredUpdatesViewModel)DataContext).ColVersion}"
+                                                Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                VerticalAlignment="Center" Margin="0,0,4,0">
+                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/version.svg"
+                                                          Width="16" Height="16" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding VersionDisplay}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="{Binding $parent[Window].((vm:ManageIgnoredUpdatesViewModel)DataContext).ColNewVersion}"
+                                                Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                VerticalAlignment="Center" Margin="0,0,4,0">
+                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/upgradable.svg"
+                                                          Width="16" Height="16" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding NewVersion}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="{Binding $parent[Window].((vm:ManageIgnoredUpdatesViewModel)DataContext).ColManager}"
+                                               Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                VerticalAlignment="Center" Margin="0,0,4,0">
+                                        <controls:SvgIcon Path="{Binding ManagerIconPath}"
+                                                          Width="16" Height="16"
+                                                          VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Manager}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Remove button column -->
+                        <DataGridTemplateColumn Width="48">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
+                                    <Button Width="32" Height="32"
+                                            Padding="0"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding RemoveCommand}"
+                                            ToolTip.Tip="Remove">
+                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/delete.svg"
+                                                          Width="16" Height="16"/>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                    </DataGrid.Columns>
+                </DataGrid>
+
+            </Panel>
+        </Border>
+
+    </Grid>
+</Window>

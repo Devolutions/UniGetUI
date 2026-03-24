@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -13,23 +14,32 @@ using UniGetUI.PackageOperations;
 namespace UniGetUI.Avalonia.Infrastructure;
 
 /// <summary>
-/// Global registry of <see cref="AbstractOperation"/> instances for the Avalonia shell.
-/// The operations panel in <see cref="UniGetUI.Avalonia.Views.MainShellView"/> binds to
-/// <see cref="Operations"/> to show active, queued, or recently finished operations.
+/// Global registry of operations for the Avalonia shell.
+/// The operations panel binds to <see cref="OperationViewModels"/>.
 /// </summary>
 public static class AvaloniaOperationRegistry
 {
+    /// <summary>Raw operations — kept for compatibility / queue checks.</summary>
     public static readonly ObservableCollection<AbstractOperation> Operations = new();
 
+    /// <summary>Bindable view-models shown in the operations panel.</summary>
+    public static readonly ObservableCollection<OperationViewModel> OperationViewModels = new();
+
     /// <summary>
-    /// Register an operation. Must be called before <c>operation.MainThread()</c>.
+    /// Register an operation and create its UI view-model.
+    /// Must be called before <c>operation.MainThread()</c>.
     /// </summary>
     public static void Add(AbstractOperation op)
     {
+        var vm = new OperationViewModel(op);
+
         Dispatcher.UIThread.Post(() =>
         {
             if (!Operations.Contains(op))
+            {
                 Operations.Add(op);
+                OperationViewModels.Add(vm);
+            }
         });
 
         op.OperationStarting += (_, _) =>
@@ -68,16 +78,32 @@ public static class AvaloniaOperationRegistry
         };
     }
 
+    /// <summary>Remove a view-model (and its backing operation) from the panel. Called by the Close button.</summary>
+    public static void Remove(OperationViewModel vm)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            OperationViewModels.Remove(vm);
+            Operations.Remove(vm.Operation);
+        });
+        while (AbstractOperation.OperationQueue.Remove(vm.Operation)) ;
+    }
+
     private static async Task RemoveAfterDelayAsync(AbstractOperation op, int milliseconds)
     {
         await Task.Delay(milliseconds);
-        Dispatcher.UIThread.Post(() => Operations.Remove(op));
+        Dispatcher.UIThread.Post(() =>
+        {
+            var vm = OperationViewModels.FirstOrDefault(v => v.Operation == op);
+            if (vm is not null) OperationViewModels.Remove(vm);
+            Operations.Remove(op);
+        });
     }
 
     private static void UpdateTrayStatus()
     {
         if (Application.Current?.ApplicationLifetime
-                is IClassicDesktopStyleApplicationLifetime { MainWindow: UniGetUI.Avalonia.MainWindow mw })
+                is IClassicDesktopStyleApplicationLifetime { MainWindow: UniGetUI.Avalonia.Views.MainWindow mw })
             mw.UpdateSystemTrayStatus();
     }
 
@@ -87,6 +113,9 @@ public static class AvaloniaOperationRegistry
             return;
 
         if (WindowsAppNotificationBridge.ShowProgress(op))
+            return;
+
+        if (MacOsNotificationBridge.ShowProgress(op))
             return;
 
         if (TryGetMainWindow() is not { } mainWindow)
@@ -103,7 +132,7 @@ public static class AvaloniaOperationRegistry
         mainWindow.ShowRuntimeNotification(
             title,
             message,
-            UniGetUI.Avalonia.MainWindow.RuntimeNotificationLevel.Progress);
+            UniGetUI.Avalonia.Views.MainWindow.RuntimeNotificationLevel.Progress);
     }
 
     private static void ShowOperationSuccessNotification(AbstractOperation op)
@@ -114,6 +143,9 @@ public static class AvaloniaOperationRegistry
         WindowsAppNotificationBridge.RemoveProgress(op);
 
         if (WindowsAppNotificationBridge.ShowSuccess(op))
+            return;
+
+        if (MacOsNotificationBridge.ShowSuccess(op))
             return;
 
         if (TryGetMainWindow() is not { } mainWindow)
@@ -130,7 +162,7 @@ public static class AvaloniaOperationRegistry
         mainWindow.ShowRuntimeNotification(
             title,
             message,
-            UniGetUI.Avalonia.MainWindow.RuntimeNotificationLevel.Success);
+            UniGetUI.Avalonia.Views.MainWindow.RuntimeNotificationLevel.Success);
     }
 
     private static void ShowOperationFailureNotification(AbstractOperation op)
@@ -141,6 +173,9 @@ public static class AvaloniaOperationRegistry
         WindowsAppNotificationBridge.RemoveProgress(op);
 
         if (WindowsAppNotificationBridge.ShowError(op))
+            return;
+
+        if (MacOsNotificationBridge.ShowError(op))
             return;
 
         if (TryGetMainWindow() is not { } mainWindow)
@@ -157,13 +192,13 @@ public static class AvaloniaOperationRegistry
         mainWindow.ShowRuntimeNotification(
             title,
             message,
-            UniGetUI.Avalonia.MainWindow.RuntimeNotificationLevel.Error);
+            UniGetUI.Avalonia.Views.MainWindow.RuntimeNotificationLevel.Error);
     }
 
-    private static UniGetUI.Avalonia.MainWindow? TryGetMainWindow()
+    private static UniGetUI.Avalonia.Views.MainWindow? TryGetMainWindow()
     {
         return Application.Current?.ApplicationLifetime
-            is IClassicDesktopStyleApplicationLifetime { MainWindow: UniGetUI.Avalonia.MainWindow mw }
+            is IClassicDesktopStyleApplicationLifetime { MainWindow: UniGetUI.Avalonia.Views.MainWindow mw }
             ? mw
             : null;
     }
@@ -210,22 +245,17 @@ public static class AvaloniaOperationRegistry
             await CoreTools.ResetUACForCurrentProcess();
         }
 
-        // Show desktop shortcut dialog if applicable
-        if (!anyStillRunning
-            && Settings.Get(Settings.K.AskToDeleteNewDesktopShortcuts)
-            && DesktopShortcutsDatabase.GetUnknownShortcuts().Count > 0)
+        if (OperatingSystem.IsWindows())
         {
-            var unknownShortcuts = DesktopShortcutsDatabase.GetUnknownShortcuts().ToList();
-            WindowsAppNotificationBridge.ShowNewShortcutsNotification(unknownShortcuts);
-            Dispatcher.UIThread.Post(() =>
-            {
-                var window = new UniGetUI.Avalonia.Views.Pages.DesktopShortcutsWindow(unknownShortcuts);
-                if (Application.Current?.ApplicationLifetime
-                        is IClassicDesktopStyleApplicationLifetime { MainWindow: Window mainWin })
-                    _ = window.ShowDialog(mainWin);
-                else
-                    window.Show();
-            });
+            var unknownShortcuts = UniGetUI.PackageEngine.Classes.Packages.Classes.DesktopShortcutsDatabase.GetUnknownShortcuts();
+            if (unknownShortcuts.Count > 0)
+                WindowsAppNotificationBridge.ShowNewShortcutsNotification(unknownShortcuts);
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            var unknownShortcuts = UniGetUI.PackageEngine.Classes.Packages.Classes.DesktopShortcutsDatabase.GetUnknownShortcuts();
+            if (unknownShortcuts.Count > 0)
+                MacOsNotificationBridge.ShowNewShortcutsNotification(unknownShortcuts);
         }
     }
 }

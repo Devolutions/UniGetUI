@@ -1,0 +1,45 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UniGetUI.Avalonia.Views.DialogPages.TelemetryDialog"
+        Width="520" MinWidth="420"
+        SizeToContent="Height"
+        MinHeight="250"
+        CanResize="False"
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppDialogBackground}"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="20"
+          RowDefinitions="Auto,Auto,Auto"
+          RowSpacing="12">
+
+        <!-- Title -->
+        <TextBlock x:Name="TitleBlock"
+                   Grid.Row="0"
+                   FontSize="18"
+                   FontWeight="SemiBold"/>
+
+        <!-- Body -->
+        <StackPanel Grid.Row="1" Spacing="8">
+            <TextBlock x:Name="Body1" TextWrapping="Wrap" Opacity="0.85"/>
+            <TextBlock x:Name="Body2" TextWrapping="Wrap" Opacity="0.85"/>
+            <TextBlock x:Name="DetailsLink"
+                       TextDecorations="Underline"
+                       Cursor="Hand"
+                       Opacity="0.9"/>
+            <TextBlock x:Name="Body3" TextWrapping="Wrap" Opacity="0.85"/>
+        </StackPanel>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,4,0,0">
+            <Button x:Name="DeclineButton" MinWidth="100"/>
+            <Button x:Name="AcceptButton"  MinWidth="100" Classes="accent"/>
+        </StackPanel>
+
+    </Grid>
+
+</Window>

@@ -1,0 +1,63 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.Interface_P"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:Interface_PViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical">
+
+            <settings:TranslatedTextBlock Text="Appearance"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:ComboboxCard x:Name="ThemeSelector"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:ComboboxCard x:Name="StartupPageSelector"
+                                   CornerRadius="0,0,8,8"
+                                   BorderThickness="1,0,1,1"/>
+
+            <StackPanel x:Name="SystemTraySection" Orientation="Vertical">
+                <settings:TranslatedTextBlock Text="UniGetUI on the background and system tray"
+                                              FontWeight="SemiBold"
+                                              Margin="44,32,4,8"/>
+
+                <settings:CheckboxCard x:Name="DisableSystemTray"
+                                       CornerRadius="8,8,0,0"/>
+
+                <settings:ButtonCard x:Name="EditAutostartSettings"
+                                     CornerRadius="0,0,8,8"
+                                     BorderThickness="1,0,1,1"
+                                     Text="Manage WingetUI autostart behaviour"
+                                     ButtonText="Open"
+                                     Command="{Binding EditAutostartSettingsCommand}"/>
+            </StackPanel>
+
+            <settings:TranslatedTextBlock Text="Package lists"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:CheckboxCard x:Name="DisableIconsOnPackageLists"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:ButtonCard x:Name="ResetIconCache"
+                                 CornerRadius="0,0,8,8"
+                                 BorderThickness="1,0,1,1"
+                                 ButtonText="Clear cache"
+                                 Command="{Binding ResetIconCacheCommand}"
+                                 CommandParameter="{Binding $self}"/>
+
+            <Border Height="16"/>
+
+            <settings:CheckboxCard x:Name="DisableSelectingUpdatesByDefault"
+                                   CornerRadius="8"/>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

@@ -1,0 +1,95 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.SettingsHomepage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:SettingsHomepageViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical" Margin="0,8">
+
+            <!-- ── General ─────────────────────────────────────────────── -->
+            <settings:SettingsPageButton x:Name="GeneralButton"
+                CornerRadius="8"
+                Icon="Settings"
+                Text="General preferences"
+                UnderText="Language, import/export settings, app updates"/>
+
+            <Border Height="16"/>
+
+            <!-- ── Interface + Notifications ──────────────────────────── -->
+            <settings:SettingsPageButton x:Name="InterfaceButton"
+                CornerRadius="8,8,0,0"
+                Icon="Interactive"
+                Text="User interface preferences"
+                UnderText="Theme, tray icon, startup page, icon style"/>
+            <settings:SettingsPageButton x:Name="NotificationsButton"
+                BorderThickness="1,0,1,1"
+                CornerRadius="0,0,8,8"
+                Icon="Megaphone"
+                Text="Notification preferences"
+                UnderText="Control which notifications are shown"/>
+
+            <Border Height="16"/>
+
+            <!-- ── Administrator ──────────────────────────────────────── -->
+            <settings:SettingsPageButton x:Name="AdministratorButton"
+                CornerRadius="8"
+                Icon="UAC"
+                Text="Administrator rights and other dangerous settings"
+                UnderText="Reduce UAC prompts, custom CLI args, bundle import restrictions"/>
+
+            <Border Height="16"/>
+
+            <!-- ── Operations + Updates ───────────────────────────────── -->
+            <settings:SettingsPageButton x:Name="OperationsButton"
+                CornerRadius="8,8,0,0"
+                Icon="Package"
+                Text="Package operation preferences"
+                UnderText="Concurrency, shortcuts, operation list behaviour"/>
+            <settings:SettingsPageButton x:Name="UpdatesButton"
+                BorderThickness="1,0,1,1"
+                CornerRadius="0,0,8,8"
+                Icon="Update"
+                Text="Package update preferences"
+                UnderText="Update check frequency, automatically install updates"/>
+
+            <Border Height="16"/>
+
+            <!-- ── Backup ─────────────────────────────────────────────── -->
+            <settings:SettingsPageButton x:Name="BackupButton"
+                CornerRadius="8"
+                Icon="Disk"
+                Text="Package backup"
+                UnderText="Back up your installed packages locally or to the cloud"/>
+
+            <Border Height="16"/>
+
+            <!-- ── Managers ───────────────────────────────────────────── -->
+            <settings:SettingsPageButton x:Name="ManagersButton"
+                CornerRadius="8"
+                Icon="Search"
+                Text="Manage package managers"
+                UnderText="Enable/disable managers and configure their settings"/>
+
+            <Border Height="16"/>
+
+            <!-- ── Internet + Experimental ────────────────────────────── -->
+            <settings:SettingsPageButton x:Name="InternetButton"
+                CornerRadius="8,8,0,0"
+                Icon="Search"
+                Text="Internet and proxy settings"
+                UnderText="HTTP proxy configuration"/>
+            <settings:SettingsPageButton x:Name="ExperimentalButton"
+                BorderThickness="1,0,1,1"
+                CornerRadius="0,0,8,8"
+                Icon="Experimental"
+                Text="Experimental settings and developer options"
+                UnderText="Unstable features, debugging options"/>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

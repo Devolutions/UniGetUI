@@ -30,6 +30,10 @@
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Chocolatey\UniGetUI.PackageEngine.Managers.Chocolatey.csproj" />
     </ItemGroup>
 
+    <ItemGroup Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Homebrew\UniGetUI.PackageEngine.Managers.Homebrew.csproj" />
+    </ItemGroup>
+
     <ItemGroup>
         <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
     </ItemGroup>

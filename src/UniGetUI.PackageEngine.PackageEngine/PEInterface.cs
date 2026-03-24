@@ -14,6 +14,8 @@ using UniGetUI.PackageEngine.Managers.ChocolateyManager;
 using UniGetUI.PackageEngine.Managers.PowerShellManager;
 using UniGetUI.PackageEngine.Managers.ScoopManager;
 using UniGetUI.PackageEngine.Managers.WingetManager;
+#else
+using UniGetUI.PackageEngine.Managers.HomebrewManager;
 #endif
 
 namespace UniGetUI.PackageEngine
@@ -38,6 +40,9 @@ namespace UniGetUI.PackageEngine
 #endif
         public static readonly Cargo Cargo = new();
         public static readonly Vcpkg Vcpkg = new();
+#if !WINDOWS
+        public static readonly Homebrew Homebrew = new();
+#endif
 
         public static readonly IPackageManager[] Managers = CreateManagers();
 
@@ -47,6 +52,8 @@ namespace UniGetUI.PackageEngine
 #if WINDOWS
             managers.InsertRange(0, [WinGet, Scoop, Chocolatey]);
             managers.Add(PowerShell);
+#else
+            managers.Insert(0, Homebrew);
 #endif
             return [.. managers];
         }
@@ -79,6 +86,11 @@ namespace UniGetUI.PackageEngine
 
                 _ = InstalledPackagesLoader.Instance.ReloadPackages();
                 _ = UpgradablePackagesLoader.Instance.ReloadPackages();
+#if !WINDOWS
+                // Re-run any search that was triggered before all managers were ready,
+                // so results from managers that finished initializing late are included.
+                _ = DiscoverablePackagesLoader.Instance.ReloadPackages();
+#endif
             }
             catch (Exception ex)
             {

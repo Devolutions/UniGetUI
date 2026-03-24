@@ -1,0 +1,63 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.Experimental"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:ExperimentalViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical">
+
+            <settings:CheckboxCard x:Name="ShowVersionNumberOnTitlebar"
+                                   CornerRadius="8"/>
+
+            <UserControl Height="16"/>
+
+            <settings:CheckboxCard x:Name="DisableWidgetsApi"
+                                   BorderThickness="1,1,1,0"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:CheckboxCard x:Name="DisableWaitForInternetConnection"
+                                   CornerRadius="0,0,8,8"/>
+
+            <UserControl Height="16"/>
+
+            <settings:CheckboxCard x:Name="DisableTimeoutOnPackageListingTasks"
+                                   CornerRadius="8"/>
+
+            <UserControl Height="16"/>
+
+            <settings:SecureCheckboxCard x:Name="UseUserGSudoToggle"
+                                         CornerRadius="8"/>
+
+            <UserControl Height="16"/>
+
+            <settings:CheckboxCard x:Name="DisableDownloadingNewTranslations"
+                                   BorderThickness="1,1,1,0"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:TextboxCard x:Name="IconDatabaseURLCard"
+                                  CornerRadius="0,0,8,8"/>
+
+            <UserControl Height="16"/>
+
+            <settings:CheckboxCard x:Name="DisableDMWThreadOptimizations"
+                                   CornerRadius="8"/>
+
+            <UserControl Height="16"/>
+
+            <settings:CheckboxCard x:Name="DisableIntegrityChecks"
+                                   CornerRadius="8"/>
+
+            <UserControl Height="16"/>
+
+            <settings:CheckboxCard x:Name="InstallInstalledPackagesBundlesPage"
+                                   CornerRadius="8"/>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

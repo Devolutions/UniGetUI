@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json.Nodes;
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
@@ -72,38 +73,53 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
             IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages, p);
             p.Start();
 
-            string? line;
-            List<Package> Packages = [];
-            while ((line = p.StandardOutput.ReadLine()) is not null)
-            {
-                logger.AddToStdOut(line);
-                if (line.StartsWith("{"))
-                {
-                    JsonNode? node = JsonNode.Parse(line);
-                    string? id = node?["name"]?.ToString();
-                    string? version = node?["version"]?.ToString();
-                    if (id is not null && version is not null)
-                    {
-                        Packages.Add(
-                            new Package(
-                                CoreTools.FormatAsName(id),
-                                id,
-                                version,
-                                DefaultSource,
-                                this
-                            )
-                        );
-                    }
-                    else
-                    {
-                        logger.AddToStdErr("Line could not be parsed: " + line);
-                    }
-                }
-            }
-
+            string strContents = p.StandardOutput.ReadToEnd();
+            logger.AddToStdOut(strContents);
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
             logger.Close(p.ExitCode);
+
+            List<Package> Packages = [];
+
+            void TryAdd(JsonNode? node)
+            {
+                string? id = node?["name"]?.ToString();
+                string? version = node?["version"]?.ToString();
+                if (id is not null && version is not null)
+                    Packages.Add(new Package(CoreTools.FormatAsName(id), id, version, DefaultSource, this));
+            }
+
+            // npm may emit warning lines before the JSON payload (even with --json).
+            // npm v7+ outputs a JSON array; npm v6 and earlier outputs NDJSON (one object per line).
+            // Try JSON array first (find the first '['); fall back to NDJSON if parsing fails.
+            bool parsedAsArray = false;
+            int arrayStart = strContents.IndexOf('[');
+            if (arrayStart >= 0)
+            {
+                try
+                {
+                    JsonArray? results = JsonNode.Parse(strContents[arrayStart..]) as JsonArray;
+                    foreach (JsonNode? entry in results ?? [])
+                        TryAdd(entry);
+                    parsedAsArray = true;
+                }
+                catch (Exception e)
+                {
+                    Logger.Warn($"npm search JSON array parse failed, falling back to NDJSON: {e.Message}");
+                }
+            }
+
+            if (!parsedAsArray)
+            {
+                // NDJSON fallback (npm v6): one complete JSON object per line
+                foreach (string line in strContents.Split('\n'))
+                {
+                    string trimmed = line.Trim();
+                    if (!trimmed.StartsWith("{")) continue;
+                    try { TryAdd(JsonNode.Parse(trimmed)); }
+                    catch (Exception e) { Logger.Warn($"npm search NDJSON line parse failed: {e.Message}"); }
+                }
+            }
 
             return Packages;
         }

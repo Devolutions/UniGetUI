@@ -1,5 +1,6 @@
 using Avalonia.Threading;
 using UniGetUI.Avalonia.Models;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.IconEngine;
 using UniGetUI.Core.Logging;

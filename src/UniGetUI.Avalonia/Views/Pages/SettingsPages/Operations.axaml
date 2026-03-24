@@ -1,0 +1,59 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.Operations"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:OperationsViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical">
+
+            <settings:TranslatedTextBlock Text="Concurrency and execution"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:ComboboxCard x:Name="ParallelOperationCount"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:CheckboxCard x:Name="MaintainSuccessfulInstalls"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0,0,8,8"/>
+
+            <UserControl Height="16"/>
+
+            <settings:CheckboxCard x:Name="KillProcessesThatRefuseToDie"
+                                   CornerRadius="8"/>
+
+            <settings:TranslatedTextBlock Text="Automatic desktop shortcut remover"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:CheckboxButtonCard x:Name="AskToDeleteNewDesktopShortcuts"
+                                         CornerRadius="8"/>
+
+            <settings:TranslatedTextBlock Text="Related settings"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:SettingsCard x:Name="UpdatesSettingsButton"
+                                   CornerRadius="8,8,0,0"
+                                   IsClickEnabled="True">
+                <settings:SettingsCard.Header>Package update preferences</settings:SettingsCard.Header>
+                <settings:SettingsCard.Description>Update check frequency, automatically install updates, etc.</settings:SettingsCard.Description>
+            </settings:SettingsCard>
+
+            <settings:SettingsCard x:Name="AdminButton"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0,0,8,8"
+                                   IsClickEnabled="True">
+                <settings:SettingsCard.Header>Administrator rights and other dangerous settings</settings:SettingsCard.Header>
+                <settings:SettingsCard.Description>Reduce UAC prompts, elevate installations by default, unlock certain dangerous features, etc.</settings:SettingsCard.Description>
+            </settings:SettingsCard>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

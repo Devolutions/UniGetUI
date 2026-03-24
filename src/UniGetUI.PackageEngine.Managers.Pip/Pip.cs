@@ -364,6 +364,8 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
         public override IReadOnlyList<string> FindCandidateExecutableFiles()
         {
             var FoundPaths = CoreTools.WhichMultiple("python");
+            if (!OperatingSystem.IsWindows() && !FoundPaths.Any())
+                FoundPaths = CoreTools.WhichMultiple("python3");
             List<string> Paths = [];
 
             if (FoundPaths.Any())

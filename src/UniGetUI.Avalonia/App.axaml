@@ -1,8 +1,103 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="UniGetUI.Avalonia.App"
+             xmlns:avaloniaApplication1="clr-namespace:UniGetUI.Avalonia"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
              RequestedThemeVariant="Default">
-  <Application.Styles>
-    <StyleInclude Source="avares://UniGetUI.Avalonia/Styles/AppStyles.axaml" />
-  </Application.Styles>
+
+    <Application.DataTemplates>
+        <avaloniaApplication1:ViewLocator/>
+    </Application.DataTemplates>
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <!-- Settings cards -->
+                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#262B3C"/>
+                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#3a3a3a"/>
+                    <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#2e3448"/>
+                    <!-- Window structure -->
+                    <SolidColorBrush x:Key="AppWindowBackground"         Color="#1e2025"/>
+                    <SolidColorBrush x:Key="AppTitleBarBackground"       Color="#313131"/>
+                    <SolidColorBrush x:Key="AppSplitterBackground"       Color="#14161a"/>
+                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#16181c"/>
+                    <SolidColorBrush x:Key="AppBorderBrush"              Color="#323439"/>
+                    <SolidColorBrush x:Key="AppBadgeBackground"          Color="#3c3e44"/>
+                    <!-- Dialogs -->
+                    <SolidColorBrush x:Key="AppDialogBackground"         Color="#1e2025"/>
+                    <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#2a2d34"/>
+                    <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#3a3d44"/>
+                    <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#12141a"/>
+                    <!-- Warning banner -->
+                    <SolidColorBrush x:Key="WarningBannerBackground"     Color="#3d2800"/>
+                    <SolidColorBrush x:Key="WarningBannerBorderBrush"    Color="#7a5200"/>
+                    <SolidColorBrush x:Key="WarningBannerIconBackground" Color="#f0a500"/>
+                    <SolidColorBrush x:Key="WarningBannerIconForeground" Color="#1a1000"/>
+                    <SolidColorBrush x:Key="WarningBannerSubtext"        Color="#ffe082"/>
+                    <!-- Setting warning subtext (WarningText on cards) -->
+                    <SolidColorBrush x:Key="SettingWarningTextForeground" Color="#ffc107"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <!-- Settings cards -->
+                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#f3f3f3"/>
+                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#d0d0d0"/>
+                    <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#e8e8e8"/>
+                    <!-- Window structure -->
+                    <SolidColorBrush x:Key="AppWindowBackground"         Color="#f0f0f0"/>
+                    <SolidColorBrush x:Key="AppTitleBarBackground"       Color="#e0e0e0"/>
+                    <SolidColorBrush x:Key="AppSplitterBackground"       Color="#d8d8d8"/>
+                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#f8f8f8"/>
+                    <SolidColorBrush x:Key="AppBorderBrush"              Color="#cccccc"/>
+                    <SolidColorBrush x:Key="AppBadgeBackground"          Color="#e0e0e0"/>
+                    <!-- Dialogs -->
+                    <SolidColorBrush x:Key="AppDialogBackground"         Color="#ffffff"/>
+                    <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#f5f5f5"/>
+                    <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#ebebeb"/>
+                    <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#e8e8e8"/>
+                    <!-- Warning banner -->
+                    <SolidColorBrush x:Key="WarningBannerBackground"     Color="#fff8e1"/>
+                    <SolidColorBrush x:Key="WarningBannerBorderBrush"    Color="#d4a700"/>
+                    <SolidColorBrush x:Key="WarningBannerIconBackground" Color="#f0a500"/>
+                    <SolidColorBrush x:Key="WarningBannerIconForeground" Color="#1a1000"/>
+                    <SolidColorBrush x:Key="WarningBannerSubtext"        Color="#7a4f00"/>
+                    <!-- Setting warning subtext (WarningText on cards) -->
+                    <SolidColorBrush x:Key="SettingWarningTextForeground" Color="#a05c00"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+
+        <!-- SettingsCard appearance -->
+        <Style Selector="Border.settings-card">
+            <Setter Property="Background"   Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="BorderBrush"  Value="{DynamicResource SettingsCardBorderBrush}"/>
+            <Setter Property="Margin"       Value="40,0"/>
+        </Style>
+        <Style Selector="Border.settings-card-clickable:pointerover">
+            <Setter Property="Background"   Value="{DynamicResource SettingsCardHoverBackground}"/>
+        </Style>
+
+        <!-- Setting warning subtext (amber, both themes) -->
+        <Style Selector="TextBlock.setting-warning-text">
+            <Setter Property="Foreground" Value="{DynamicResource SettingWarningTextForeground}"/>
+        </Style>
+
+        <!-- Warning banner (InfoBar-style amber/golden) -->
+        <Style Selector="Border.warning-banner">
+            <Setter Property="Background"      Value="{DynamicResource WarningBannerBackground}"/>
+            <Setter Property="BorderBrush"     Value="{DynamicResource WarningBannerBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin"          Value="40,4,40,0"/>
+        </Style>
+
+        <!-- SvgIcon: inherit the Fluent foreground so icons match text colour in both themes -->
+        <Style Selector="controls|SvgIcon">
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+        </Style>
+    </Application.Styles>
 </Application>

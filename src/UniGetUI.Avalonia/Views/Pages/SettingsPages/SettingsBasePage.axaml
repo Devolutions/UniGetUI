@@ -1,0 +1,56 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.SettingsBasePage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:SettingsBasePageViewModel">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <!-- Row 0: Header -->
+        <StackPanel Grid.Row="0"
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center"
+                    Margin="16,12,16,8">
+            <Button x:Name="BackButton"
+                    Content="←"
+                    Margin="0,0,12,0"
+                    Padding="8,4"/>
+            <TextBlock Text="{Binding Title}"
+                       FontSize="26"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Row 1: Restart-required banner -->
+        <Border x:Name="RestartBannerBorder"
+                Grid.Row="1"
+                Classes="warning-banner"
+                CornerRadius="8"
+                Margin="16,0,16,8"
+                Padding="4"
+                IsVisible="{Binding IsRestartBannerVisible}">
+            <StackPanel Orientation="Horizontal"
+                        Margin="8,6">
+                <TextBlock Text="{Binding RestartBannerText}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,16,0"/>
+                <Button x:Name="RestartButton"
+                        Content="{Binding RestartButtonText}"
+                        HorizontalAlignment="Right"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Row 2: Content frame -->
+        <ContentControl x:Name="Frame"
+                        Grid.Row="2"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch"/>
+
+    </Grid>
+
+</UserControl>

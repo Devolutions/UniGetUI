@@ -1,0 +1,18 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.ManagersHomepage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:ManagersHomepageViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel x:Name="ManagersPanel"
+                    Orientation="Vertical"
+                    Spacing="4"
+                    Margin="16,8"/>
+    </ScrollViewer>
+
+</UserControl>

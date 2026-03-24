@@ -1,0 +1,64 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.Backup"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:BackupViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical">
+
+            <settings:TranslatedTextBlock Text="Package backup"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <ContentControl x:Name="BackupInfoCardHolder"/>
+
+            <settings:TranslatedTextBlock Text="Local package backup"
+                                          FontSize="16"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:CheckboxCard x:Name="EnablePackageBackupCheckBox_LOCAL"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:ButtonCard x:Name="BackupNowButton_LOCAL"
+                                 CornerRadius="0,0,8,8"
+                                 BorderThickness="1,0,1,1"
+                                 Text="Perform a local backup now"
+                                 ButtonText="Backup"
+                                 IsEnabled="{Binding IsLocalBackupEnabled}"
+                                 Command="{Binding DoLocalBackupCommand}"
+                                 CommandParameter="{Binding $self}"/>
+
+            <Border Height="16"/>
+
+            <settings:ButtonCard x:Name="ChangeBackupDirectory"
+                                 CornerRadius="8"
+                                 Text="Change backup output directory"
+                                 ButtonText="Select"
+                                 IsEnabled="{Binding IsLocalBackupEnabled}"
+                                 Command="{Binding PickBackupDirectoryCommand}"
+                                 CommandParameter="{Binding $self}"/>
+
+            <settings:TranslatedTextBlock Text="Local backup advanced options"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:TextboxCard x:Name="ChangeBackupFileNameTextBox"
+                                  CornerRadius="8,8,0,0"
+                                  Text="Set a custom backup file name"
+                                  IsEnabled="{Binding IsLocalBackupEnabled}"/>
+
+            <settings:CheckboxCard x:Name="EnableBackupTimestamping"
+                                   CornerRadius="0,0,8,8"
+                                   BorderThickness="1,0,1,1"
+                                   IsEnabled="{Binding IsLocalBackupEnabled}"/>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

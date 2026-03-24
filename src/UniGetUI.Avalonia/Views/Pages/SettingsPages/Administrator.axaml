@@ -1,0 +1,100 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.Administrator"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:AdministratorViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical">
+
+            <!-- Warning banner -->
+            <Border Classes="warning-banner"
+                    CornerRadius="8"
+                    Padding="12,10">
+                <Grid ColumnDefinitions="Auto,*">
+                    <!-- Icon -->
+                    <Border Grid.Column="0"
+                            Width="26" Height="26"
+                            CornerRadius="13"
+                            Background="{DynamicResource WarningBannerIconBackground}"
+                            VerticalAlignment="Top"
+                            Margin="0,1,12,0">
+                        <TextBlock Text="!"
+                                   FontWeight="Bold"
+                                   FontSize="15"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <!-- Text -->
+                    <StackPanel Grid.Column="1" Orientation="Vertical">
+                        <TextBlock x:Name="WarningTitleText"
+                                   FontWeight="SemiBold"
+                                   FontSize="14"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,4"/>
+                        <TextBlock x:Name="WarningBodyLine1"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource WarningBannerSubtext}"
+                                   Margin="0,0,0,6"/>
+                        <TextBlock x:Name="WarningBodyLine2"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource WarningBannerSubtext}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <settings:TranslatedTextBlock Text="Change how operations request administrator rights"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:CheckboxCard x:Name="DoCacheAdminRightsForBatches"
+                                   BorderThickness="1,1,1,0"
+                                   CornerRadius="8,8,0,0"
+                                   IsEnabled="{Binding IsElevationEnabled}"/>
+
+            <settings:CheckboxCard x:Name="DoCacheAdminRights"
+                                   CornerRadius="0,0,8,8"
+                                   IsEnabled="{Binding IsElevationEnabled}"/>
+
+            <UserControl Height="16"/>
+
+            <settings:CheckboxCard x:Name="ProhibitElevator"
+                                   CornerRadius="8"/>
+
+            <settings:TranslatedTextBlock Text="Restrictions on package operations"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:SecureCheckboxCard x:Name="AllowCLIArguments"
+                                         CornerRadius="8,8,0,0"/>
+
+            <settings:SecureCheckboxCard x:Name="AllowPrePostInstallCommands"
+                                         BorderThickness="1,0,1,1"
+                                         CornerRadius="0,0,8,8"/>
+
+            <settings:TranslatedTextBlock Text="Restrictions on package managers"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:SecureCheckboxCard x:Name="AllowCustomManagerPaths"
+                                         CornerRadius="8"/>
+
+            <settings:TranslatedTextBlock Text="Restrictions when importing package bundles"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:SecureCheckboxCard x:Name="AllowImportingCLIArguments"
+                                         CornerRadius="8,8,0,0"/>
+
+            <settings:SecureCheckboxCard x:Name="AllowImportingPrePostInstallCommands"
+                                         BorderThickness="1,0,1,1"
+                                         CornerRadius="0,0,8,8"/>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

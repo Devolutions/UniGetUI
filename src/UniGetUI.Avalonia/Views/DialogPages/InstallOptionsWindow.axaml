@@ -1,0 +1,296 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
+        x:Class="UniGetUI.Avalonia.Views.InstallOptionsWindow"
+        x:DataType="vm:InstallOptionsViewModel"
+        Width="680" MinWidth="500"
+        SizeToContent="Height"
+        CanResize="False"
+        Background="{DynamicResource AppDialogBackground}"
+        Title="{Binding DialogTitle}">
+
+    <ScrollViewer MaxHeight="820"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="16" Spacing="12">
+
+            <!-- ── Header: icon · title · profile selector ── -->
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+
+                <Image Source="{Binding PackageIcon}"
+                       Width="32" Height="32"
+                       VerticalAlignment="Center"/>
+
+                <TextBlock Grid.Column="1"
+                           Text="{Binding DialogTitle}"
+                           FontSize="18" FontWeight="Bold"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"/>
+
+                <StackPanel Grid.Column="2" Spacing="3" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ProfileLabel}"
+                               FontSize="11" Opacity="0.7"/>
+                    <ComboBox ItemsSource="{Binding ProfileOptions}"
+                              SelectedItem="{Binding SelectedProfile}"
+                              MinWidth="110"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- ── Follow-global-options card ── -->
+            <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="8" Padding="16,8">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBlock Text="{Binding FollowGlobalLabel}"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center"/>
+                    <ToggleSwitch Grid.Column="1"
+                                  IsChecked="{Binding FollowGlobal}"
+                                  OnContent="" OffContent=""
+                                  VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+
+            <!-- ── Options tab panel (dimmed when following global) ── -->
+            <TabControl IsEnabled="{Binding IsCustomMode}"
+                        Opacity="{Binding OptionsOpacity}"
+                        Background="Transparent">
+
+                <!-- Tab 0: General -->
+                <TabItem Header="{Binding TabGeneralLabel}" FontSize="18">
+                    <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="0,8,8,8" Padding="16">
+                        <StackPanel Spacing="8">
+
+                            <TextBlock Text="{Binding GeneralInfoLabel}"
+                                       Opacity="0.7" FontSize="11"
+                                       TextWrapping="Wrap"/>
+
+                            <WrapPanel Orientation="Horizontal">
+                                <CheckBox Content="{Binding AdminCheckBox_Content, FallbackValue='Run as admin'}"
+                                          IsChecked="{Binding AdminChecked}"
+                                          IsEnabled="{Binding CanRunAsAdmin}"
+                                          Margin="0,0,16,4"/>
+                                <CheckBox Content="{Binding InteractiveCheckBox_Content, FallbackValue='Interactive installation'}"
+                                          IsChecked="{Binding InteractiveChecked}"
+                                          IsEnabled="{Binding CanRunInteractively}"
+                                          Margin="0,0,16,4"/>
+                                <CheckBox Content="{Binding SkipHashCheckBox_Content, FallbackValue='Skip hash check'}"
+                                          IsChecked="{Binding SkipHashChecked}"
+                                          IsEnabled="{Binding SkipHashEnabled}"
+                                          Margin="0,0,16,4"/>
+                                <CheckBox Content="{Binding UninstallPrevCheckBox_Content, FallbackValue='Uninstall previous versions when updated'}"
+                                          IsChecked="{Binding UninstallPrevChecked}"
+                                          IsEnabled="{Binding CanUninstallPrev}"
+                                          IsVisible="{Binding CanUninstallPrev}"
+                                          Margin="0,0,16,4"/>
+                            </WrapPanel>
+
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <TextBlock Text="{Binding VersionLabel}"
+                                           VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding VersionOptions}"
+                                          SelectedItem="{Binding SelectedVersion}"
+                                          IsEnabled="{Binding VersionEnabled}"
+                                          HorizontalAlignment="Stretch"/>
+                            </Grid>
+
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+                            <WrapPanel Orientation="Horizontal">
+                                <CheckBox Content="{Binding SkipMinorCheckBox_Content, FallbackValue='Skip minor updates'}"
+                                          IsChecked="{Binding SkipMinorChecked}"
+                                          Margin="0,0,16,4"/>
+                                <CheckBox Content="{Binding AutoUpdateCheckBox_Content, FallbackValue='Auto-update this package'}"
+                                          IsChecked="{Binding AutoUpdateChecked}"
+                                          Margin="0,0,16,4"/>
+                            </WrapPanel>
+
+                        </StackPanel>
+                    </Border>
+                </TabItem>
+
+                <!-- Tab 1: Architecture, Scope & Location -->
+                <TabItem Header="{Binding TabLocationLabel}" FontSize="18">
+                    <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="0,8,8,8" Padding="16">
+                        <StackPanel Spacing="8">
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <TextBlock Text="{Binding ArchLabel}" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding ArchOptions}"
+                                          SelectedItem="{Binding SelectedArch}"
+                                          IsEnabled="{Binding ArchEnabled}"
+                                          HorizontalAlignment="Stretch"/>
+                            </Grid>
+
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <TextBlock Text="{Binding ScopeLabel}" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding ScopeOptions}"
+                                          SelectedItem="{Binding SelectedScope}"
+                                          IsEnabled="{Binding ScopeEnabled}"
+                                          HorizontalAlignment="Stretch"/>
+                            </Grid>
+
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding LocationLabel}" VerticalAlignment="Center"/>
+                                <Button Grid.Column="1"
+                                        Content="{Binding SelectDirLabel}"
+                                        IsEnabled="{Binding HasCustomLocations}"
+                                        Padding="8,3" CornerRadius="4"
+                                        Click="SelectDir_Click"/>
+                                <Button Grid.Column="2"
+                                        Content="{Binding ResetDirLabel}"
+                                        IsEnabled="{Binding HasCustomLocations}"
+                                        Padding="8,3" CornerRadius="4"
+                                        Command="{Binding ResetLocationCommand}"/>
+                            </Grid>
+
+                            <TextBox Text="{Binding LocationText}"
+                                     IsEnabled="{Binding LocationEnabled}"
+                                     FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+                                     HorizontalAlignment="Stretch"/>
+
+                        </StackPanel>
+                    </Border>
+                </TabItem>
+
+                <!-- Tab 2: Custom CLI arguments -->
+                <TabItem Header="{Binding TabCLILabel}" FontSize="18">
+                    <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="0,8,8,8" Padding="16">
+                        <Grid ColumnDefinitions="*,2*"
+                              RowDefinitions="Auto,Auto,Auto"
+                              ColumnSpacing="8" RowSpacing="8">
+
+                            <TextBlock Text="{Binding ParamsInstallLabel}"
+                                       VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding ParamsInstall}"
+                                     FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
+
+                            <TextBlock Grid.Row="1"
+                                       Text="{Binding ParamsUpdateLabel}"
+                                       VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="1" Grid.Column="1"
+                                     Text="{Binding ParamsUpdate}"
+                                     FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
+
+                            <TextBlock Grid.Row="2"
+                                       Text="{Binding ParamsUninstallLabel}"
+                                       VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="2" Grid.Column="1"
+                                     Text="{Binding ParamsUninstall}"
+                                     FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
+
+                        </Grid>
+                    </Border>
+                </TabItem>
+
+                <!-- Tab 3: Pre/Post commands -->
+                <TabItem Header="{Binding TabPrePostLabel}" FontSize="18">
+                    <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="0,8,8,8" Padding="16">
+                        <StackPanel Spacing="10">
+
+                            <!-- Install -->
+                            <Grid ColumnDefinitions="*,*"
+                                  RowDefinitions="Auto,80,Auto"
+                                  ColumnSpacing="8" RowSpacing="4">
+                                <TextBlock Text="{Binding PreInstallLabel}"  FontSize="12"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding PostInstallLabel}" FontSize="12"/>
+                                <TextBox Grid.Row="1"
+                                         Text="{Binding PreInstallText}"
+                                         AcceptsReturn="True"
+                                         FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
+                                <TextBox Grid.Row="1" Grid.Column="1"
+                                         Text="{Binding PostInstallText}"
+                                         AcceptsReturn="True"
+                                         FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
+                                <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
+                                          Content="{Binding AbortInstallLabel}"
+                                          IsChecked="{Binding AbortInstall}"/>
+                            </Grid>
+
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+                            <!-- Update -->
+                            <Grid ColumnDefinitions="*,*"
+                                  RowDefinitions="Auto,80,Auto"
+                                  ColumnSpacing="8" RowSpacing="4">
+                                <TextBlock Text="{Binding PreUpdateLabel}"  FontSize="12"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding PostUpdateLabel}" FontSize="12"/>
+                                <TextBox Grid.Row="1"
+                                         Text="{Binding PreUpdateText}"
+                                         AcceptsReturn="True"
+                                         FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
+                                <TextBox Grid.Row="1" Grid.Column="1"
+                                         Text="{Binding PostUpdateText}"
+                                         AcceptsReturn="True"
+                                         FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
+                                <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
+                                          Content="{Binding AbortUpdateLabel}"
+                                          IsChecked="{Binding AbortUpdate}"/>
+                            </Grid>
+
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+                            <!-- Uninstall -->
+                            <Grid ColumnDefinitions="*,*"
+                                  RowDefinitions="Auto,80,Auto"
+                                  ColumnSpacing="8" RowSpacing="4">
+                                <TextBlock Text="{Binding PreUninstallLabel}"  FontSize="12"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding PostUninstallLabel}" FontSize="12"/>
+                                <TextBox Grid.Row="1"
+                                         Text="{Binding PreUninstallText}"
+                                         AcceptsReturn="True"
+                                         FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
+                                <TextBox Grid.Row="1" Grid.Column="1"
+                                         Text="{Binding PostUninstallText}"
+                                         AcceptsReturn="True"
+                                         FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
+                                <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
+                                          Content="{Binding AbortUninstallLabel}"
+                                          IsChecked="{Binding AbortUninstall}"/>
+                            </Grid>
+
+                        </StackPanel>
+                    </Border>
+                </TabItem>
+
+            </TabControl>
+
+            <!-- ── Command-line preview ── -->
+            <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="8" Padding="12">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding CommandPreviewLabel}" Opacity="0.7"/>
+                    <Border Background="{DynamicResource AppDialogDarkBackground}" CornerRadius="4" Padding="8">
+                        <TextBlock Text="{Binding CommandPreview}"
+                                   FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- ── Buttons ── -->
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <Button Content="{Binding SaveLabel}"
+                        Padding="12,5" CornerRadius="4"
+                        HorizontalAlignment="Left"
+                        Command="{Binding SaveCommand}"/>
+                <Button Grid.Column="1"
+                        Content="{Binding ProceedButtonLabel}"
+                        Padding="12,5" CornerRadius="4"
+                        Command="{Binding ProceedCommand}"/>
+            </Grid>
+
+        </StackPanel>
+    </ScrollViewer>
+</Window>

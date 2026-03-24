@@ -6,6 +6,7 @@
         <RootNamespace>UniGetUI.Avalonia</RootNamespace>
         <AssemblyName>UniGetUI.Avalonia</AssemblyName>
         <ApplicationIcon>..\UniGetUI\icon.ico</ApplicationIcon>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(EnableAvaloniaDiagnostics)' == 'true'">
@@ -14,12 +15,15 @@
 
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.7" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.7" />
         <PackageReference Include="Avalonia.Desktop" Version="11.3.7" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.7" />
         <PackageReference Include="Devolutions.AvaloniaTheme.DevExpress" Version="2026.3.13" />
         <PackageReference Include="Devolutions.AvaloniaTheme.MacOS" Version="2026.3.13" />
         <PackageReference Include="Devolutions.AvaloniaTheme.Linux" Version="2026.3.11" />
-        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta3" Condition="'$(EnableAvaloniaDiagnostics)' == 'true'" />
+        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta3" Condition="'$(Configuration)' == 'Debug'" />
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.7" Condition="'$(Configuration)' == 'Debug'" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
         <PackageReference Include="Octokit" Version="14.0.0" />
     </ItemGroup>
 
@@ -37,18 +41,112 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- SVG symbol icons (shared with WinUI project) -->
+        <AvaloniaResource Include="..\UniGetUI\Assets\Symbols\*.svg" Link="Assets\Symbols\%(Filename)%(Extension)" />
+
         <AvaloniaResource Include="..\UniGetUI\icon.ico" Link="Assets\icon.ico" />
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\icon_unsquare.png" Link="Assets\icon_unsquare.png" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\package_color.png" Link="Assets\package_color.png" />
         <!-- Tray status icon variants -->
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_black.ico"      Link="Assets\tray_empty_black.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_white.ico"      Link="Assets\tray_empty_white.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_blue_black.ico"       Link="Assets\tray_blue_black.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_blue_white.ico"       Link="Assets\tray_blue_white.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_green_black.ico"      Link="Assets\tray_green_black.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_green_white.ico"      Link="Assets\tray_green_white.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_orange_black.ico"     Link="Assets\tray_orange_black.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_orange_white.ico"     Link="Assets\tray_orange_white.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_black.ico"  Link="Assets\tray_turquoise_black.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_white.ico"  Link="Assets\tray_turquoise_white.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_black.ico" Link="Assets\tray_empty_black.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_white.ico" Link="Assets\tray_empty_white.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_blue_black.ico" Link="Assets\tray_blue_black.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_blue_white.ico" Link="Assets\tray_blue_white.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_green_black.ico" Link="Assets\tray_green_black.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_green_white.ico" Link="Assets\tray_green_white.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_orange_black.ico" Link="Assets\tray_orange_black.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_orange_white.ico" Link="Assets\tray_orange_white.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_black.ico" Link="Assets\tray_turquoise_black.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_white.ico" Link="Assets\tray_turquoise_white.ico" />
+        <AvaloniaResource Remove="Infrastructure\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AvaloniaXaml Remove="Infrastructure\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Infrastructure\**" />
+      <Compile Include="Infrastructure\AvaloniaOperationRegistry.cs" />
+      <Compile Include="Infrastructure\WindowsAppNotificationBridge.cs" />
+      <Compile Include="Infrastructure\MacOsNotificationBridge.cs" />
+      <Compile Remove="Models\PackagePageMode.cs" />
+      <Compile Remove="Models\PackageRowModel.cs" />
+      <Compile Remove="Models\ShellPageType.cs" />
+      <Compile Update="App.axaml.cs">
+        <DependentUpon>App.axaml</DependentUpon>
+      </Compile>
+      <Compile Update="Views\SidebarView.axaml.cs">
+        <DependentUpon>SidebarView.axaml</DependentUpon>
+      </Compile>
+      <Compile Update="Views\MainWindow.axaml.cs">
+        <DependentUpon>MainWindow.axaml</DependentUpon>
+      </Compile>
+      <Compile Update="Views\Pages\AbstractPackagesPage.axaml.cs">
+        <DependentUpon>AbstractPackagesPage.axaml</DependentUpon>
+      </Compile>
+      <Compile Update="Views\InstallOptionsWindow.axaml.cs">
+        <DependentUpon>InstallOptionsWindow.axaml</DependentUpon>
+      </Compile>
+      <Compile Update="Views\DialogPages\InstallOptionsWindow.axaml.cs">
+        <DependentUpon>InstallOptionsWindow.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\DialogPages\ManageIgnoredUpdatesWindow.axaml.cs">
+        <DependentUpon>ManageIgnoredUpdatesWindow.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\DialogPages\PackageDetailsWindow.axaml.cs">
+        <DependentUpon>PackageDetailsWindow.axaml.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\Pages\SettingsPages\SettingsBasePage.axaml.cs">
+        <DependentUpon>SettingsBasePage.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\Pages\SettingsPages\SettingsHomepage.axaml.cs">
+        <DependentUpon>SettingsHomepage.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\Pages\SettingsPages\Notifications.axaml.cs">
+        <DependentUpon>Notifications.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\Pages\SettingsPages\Updates.axaml.cs">
+        <DependentUpon>Updates.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\Pages\SettingsPages\Operations.axaml.cs">
+        <DependentUpon>Operations.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\Pages\SettingsPages\Experimental.axaml.cs">
+        <DependentUpon>Experimental.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\Pages\SettingsPages\Administrator.axaml.cs">
+        <DependentUpon>Administrator.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\Pages\SettingsPages\ManagersHomepage.axaml.cs">
+        <DependentUpon>ManagersHomepage.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Remove="Infrastructure\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Remove="Infrastructure\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Infrastructure\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Models\" />
     </ItemGroup>
  </Project>

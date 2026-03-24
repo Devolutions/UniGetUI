@@ -1,0 +1,79 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.General"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:GeneralViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical">
+
+            <settings:TranslatedTextBlock Text="Language"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:ComboboxCard x:Name="LanguageSelector"
+                                   CornerRadius="8"/>
+
+            <settings:TranslatedTextBlock Text="UniGetUI updater"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:CheckboxButtonCard x:Name="DisableAutoUpdateWingetUI"
+                                         CornerRadius="8,8,0,0"/>
+
+            <settings:CheckboxCard x:Name="EnableUniGetUIBeta"
+                                   CornerRadius="0,0,8,8"
+                                   BorderThickness="1,0,1,1"/>
+
+            <settings:TranslatedTextBlock Text="Telemetry"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:ButtonCard CornerRadius="8"
+                                 Text="Manage telemetry settings"
+                                 ButtonText="Manage"
+                                 Command="{Binding ShowTelemetryDialogCommand}"
+                                 CommandParameter="{Binding $self}"/>
+
+            <settings:TranslatedTextBlock Text="Manage UniGetUI settings"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:ButtonCard CornerRadius="8,8,0,0"
+                                 Text="Import settings from a local file"
+                                 ButtonText="Import"
+                                 Command="{Binding ImportSettingsCommand}"
+                                 CommandParameter="{Binding $self}"/>
+
+            <settings:ButtonCard BorderThickness="1,0"
+                                 CornerRadius="0"
+                                 Text="Export settings to a local file"
+                                 ButtonText="Export"
+                                 Command="{Binding ExportSettingsCommand}"
+                                 CommandParameter="{Binding $self}"/>
+
+            <settings:ButtonCard CornerRadius="0,0,8,8"
+                                 Text="Reset WingetUI"
+                                 ButtonText="Reset UniGetUI"
+                                 Command="{Binding ResetSettingsCommand}"
+                                 CommandParameter="{Binding $self}"/>
+
+            <settings:TranslatedTextBlock Text="Related settings"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:SettingsPageButton x:Name="InterfaceSettingsButton"
+                                         CornerRadius="8"
+                                         Margin="0,0,0,20"
+                                         Icon="Interactive"
+                                         Text="User interface preferences"
+                                         UnderText="Application theme, startup page, package icons, clear successful installs automatically"/>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

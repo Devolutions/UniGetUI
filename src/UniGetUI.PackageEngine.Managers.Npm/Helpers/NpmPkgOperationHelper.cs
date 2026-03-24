@@ -16,17 +16,27 @@ internal sealed class NpmPkgOperationHelper : BasePkgOperationHelper
         OperationType operation
     )
     {
+        // On Windows, npm runs through PowerShell (-Command), so single quotes act as
+        // PowerShell string delimiters and are stripped before reaching npm.
+        // On macOS/Linux, npm is called directly (no shell), so single quotes are passed
+        // literally and must NOT be included.
+        bool useShellQuotes = OperatingSystem.IsWindows();
+
         List<string> parameters = operation switch
         {
             OperationType.Install =>
             [
                 Manager.Properties.InstallVerb,
-                $"'{package.Id}@{(options.Version == string.Empty ? package.VersionString : options.Version)}'",
+                useShellQuotes
+                    ? $"'{package.Id}@{(options.Version == string.Empty ? package.VersionString : options.Version)}'"
+                    : $"{package.Id}@{(options.Version == string.Empty ? package.VersionString : options.Version)}",
             ],
             OperationType.Update =>
             [
                 Manager.Properties.UpdateVerb,
-                $"'{package.Id}@{package.NewVersionString}'",
+                useShellQuotes
+                    ? $"'{package.Id}@{package.NewVersionString}'"
+                    : $"{package.Id}@{package.NewVersionString}",
             ],
             OperationType.Uninstall => [Manager.Properties.UninstallVerb, package.Id],
             _ => throw new InvalidDataException("Invalid package operation"),

@@ -40,7 +40,7 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         ThemeSelector.AddItem(CoreTools.AutoTranslated("Dark"), "dark");
         ThemeSelector.AddItem(CoreTools.AutoTranslated("Follow system color scheme"), "auto");
         ThemeSelector.SettingName = CoreSettings.K.PreferredTheme;
-        ThemeSelector.Text = "Application theme:";
+        ThemeSelector.Text = CoreTools.AutoTranslated("Application theme:");
         ThemeSelector.ShowAddedItems();
         ThemeSelector.ValueChanged += (_, _) => App.ApplyTheme(CoreSettings.GetValue(CoreSettings.K.PreferredTheme));
 
@@ -51,18 +51,18 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         StartupPageSelector.AddItem(CoreTools.AutoTranslated("Package Bundles"), "bundles");
         StartupPageSelector.AddItem(CoreTools.AutoTranslated("Settings"), "settings");
         StartupPageSelector.SettingName = CoreSettings.K.StartupPage;
-        StartupPageSelector.Text = "UniGetUI startup page:";
+        StartupPageSelector.Text = CoreTools.AutoTranslated("UniGetUI startup page:");
         StartupPageSelector.ShowAddedItems();
 
         DisableSystemTray.SettingName = CoreSettings.K.DisableSystemTray;
-        DisableSystemTray.Text = "Close UniGetUI to the system tray";
+        DisableSystemTray.Text = CoreTools.AutoTranslated("Close UniGetUI to the system tray");
 
         DisableIconsOnPackageLists.SettingName = CoreSettings.K.DisableIconsOnPackageLists;
-        DisableIconsOnPackageLists.Text = "Show package icons on package lists";
+        DisableIconsOnPackageLists.Text = CoreTools.AutoTranslated("Show package icons on package lists");
         DisableIconsOnPackageLists.StateChanged += ShowRestartBanner;
 
         DisableSelectingUpdatesByDefault.SettingName = CoreSettings.K.DisableSelectingUpdatesByDefault;
-        DisableSelectingUpdatesByDefault.Text = "Select upgradable packages by default";
+        DisableSelectingUpdatesByDefault.Text = CoreTools.AutoTranslated("Select upgradable packages by default");
         DisableSelectingUpdatesByDefault.StateChanged += ShowRestartBanner;
     }
 }

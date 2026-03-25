@@ -142,7 +142,7 @@
                     <TextBlock Text="View mode:" VerticalAlignment="Center"/>
                     <ListBox x:Name="ViewModeSelector"
                              SelectionMode="Single"
-                             SelectedIndex="{Binding ViewMode, Mode=TwoWay}"
+                             SelectedIndex="{Binding ViewModeIndex, Mode=TwoWay}"
                              Background="Transparent"
                              BorderThickness="1"
                              CornerRadius="4"

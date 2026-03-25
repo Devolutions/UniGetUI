@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Styling;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.PackageEngine;
@@ -15,6 +16,15 @@ public partial class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+
+        string platform = OperatingSystem.IsWindows() ? "Windows"
+            : OperatingSystem.IsMacOS() ? "macOS"
+            : "Linux";
+
+        Styles.Add(new StyleInclude(new Uri("avares://UniGetUI.Avalonia/"))
+        {
+            Source = new Uri($"avares://UniGetUI.Avalonia/Assets/Styles/Styles.{platform}.axaml")
+        });
     }
 
     public override void OnFrameworkInitializationCompleted()

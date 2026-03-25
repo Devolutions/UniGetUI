@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
@@ -23,7 +24,7 @@ public static class AvaloniaOperationRegistry
     public static readonly ObservableCollection<AbstractOperation> Operations = new();
 
     /// <summary>Bindable view-models shown in the operations panel.</summary>
-    public static readonly ObservableCollection<OperationViewModel> OperationViewModels = new();
+    public static readonly AvaloniaList<OperationViewModel> OperationViewModels = new();
 
     /// <summary>
     /// Register an operation and create its UI view-model.

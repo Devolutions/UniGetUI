@@ -1,6 +1,6 @@
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using Avalonia;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
@@ -47,8 +47,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public event EventHandler<PageType>? CurrentPageChanged;
 
     // ─── Operations panel ─────────────────────────────────────────────────────
-    public ObservableCollection<OperationViewModel> Operations
-        => AvaloniaOperationRegistry.OperationViewModels;
+    public AvaloniaList<OperationViewModel> Operations => AvaloniaOperationRegistry.OperationViewModels;
 
     [ObservableProperty]
     private bool _operationsPanelVisible;

@@ -1,12 +1,11 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Tools;
@@ -15,7 +14,7 @@ using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.ViewModels;
 
-public sealed class OperationViewModel : INotifyPropertyChanged
+public sealed partial class OperationViewModel : ViewModelBase
 {
     public AbstractOperation Operation { get; }
 
@@ -24,6 +23,15 @@ public sealed class OperationViewModel : INotifyPropertyChanged
 
     public ICommand ButtonCommand { get; }
     public ICommand ShowDetailsCommand { get; }
+
+    // ── Bindable properties ───────────────────────────────────────────────────
+    [ObservableProperty] private string _title;
+    [ObservableProperty] private string _liveLine;
+    [ObservableProperty] private string _buttonText;
+    [ObservableProperty] private bool _progressIndeterminate;
+    [ObservableProperty] private double _progressValue;
+    [ObservableProperty] private IBrush _progressBrush;
+    [ObservableProperty] private IBrush _backgroundBrush;
 
     public OperationViewModel(AbstractOperation operation)
     {
@@ -123,61 +131,6 @@ public sealed class OperationViewModel : INotifyPropertyChanged
             _ = win.ShowDialog(mainWindow);
         }
     }
-
-    // ── Bindable properties ───────────────────────────────────────────────────
-    private string _title;
-    public string Title
-    {
-        get => _title;
-        set { _title = value; OnPropertyChanged(); }
-    }
-
-    private string _liveLine;
-    public string LiveLine
-    {
-        get => _liveLine;
-        set { _liveLine = value; OnPropertyChanged(); }
-    }
-
-    private string _buttonText;
-    public string ButtonText
-    {
-        get => _buttonText;
-        set { _buttonText = value; OnPropertyChanged(); }
-    }
-
-    private bool _progressIndeterminate;
-    public bool ProgressIndeterminate
-    {
-        get => _progressIndeterminate;
-        set { _progressIndeterminate = value; OnPropertyChanged(); }
-    }
-
-    private double _progressValue;
-    public double ProgressValue
-    {
-        get => _progressValue;
-        set { _progressValue = value; OnPropertyChanged(); }
-    }
-
-    private IBrush _progressBrush;
-    public IBrush ProgressBrush
-    {
-        get => _progressBrush;
-        set { _progressBrush = value; OnPropertyChanged(); }
-    }
-
-    private IBrush _backgroundBrush;
-    public IBrush BackgroundBrush
-    {
-        get => _backgroundBrush;
-        set { _backgroundBrush = value; OnPropertyChanged(); }
-    }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    private void OnPropertyChanged([CallerMemberName] string? name = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
     // ── Minimal ICommand implementation ───────────────────────────────────────
     private sealed class SyncCommand(Action action) : ICommand

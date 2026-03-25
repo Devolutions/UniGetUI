@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using Avalonia.Collections;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -102,7 +103,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
 /// Avalonia-compatible observable collection of PackageWrapper with sorting support
 /// (replaces WinUI's ObservablePackageCollection that used SortableObservableCollection).
 /// </summary>
-public sealed class ObservablePackageCollection : ObservableCollection<PackageWrapper>
+public sealed class ObservablePackageCollection : AvaloniaList<PackageWrapper>
 {
     public enum Sorter
     {

@@ -1,0 +1,61 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <!-- Settings cards -->
+                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#222534"/>
+                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#3a3a3a"/>
+                    <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#2e3448"/>
+                    <!-- Window structure -->
+                    <SolidColorBrush x:Key="AppWindowBackground"         Color="#191b29"/>
+                    <SolidColorBrush x:Key="AppTitleBarBackground"       Color="#191b29"/>
+                    <SolidColorBrush x:Key="AppSplitterBackground"       Color="#14161a"/>
+                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#16181c"/>
+                    <SolidColorBrush x:Key="AppBorderBrush"              Color="#323439"/>
+                    <SolidColorBrush x:Key="AppBadgeBackground"          Color="#3c3e44"/>
+                    <!-- Dialogs -->
+                    <SolidColorBrush x:Key="AppDialogBackground"         Color="#191b29"/>
+                    <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#2a2d34"/>
+                    <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#3a3d44"/>
+                    <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#12141a"/>
+                    <!-- Warning banner -->
+                    <SolidColorBrush x:Key="WarningBannerBackground"     Color="#3d2800"/>
+                    <SolidColorBrush x:Key="WarningBannerBorderBrush"    Color="#7a5200"/>
+                    <SolidColorBrush x:Key="WarningBannerIconBackground" Color="#f0a500"/>
+                    <SolidColorBrush x:Key="WarningBannerIconForeground" Color="#1a1000"/>
+                    <SolidColorBrush x:Key="WarningBannerSubtext"        Color="#ffe082"/>
+                    <!-- Setting warning subtext -->
+                    <SolidColorBrush x:Key="SettingWarningTextForeground" Color="#ffc107"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <!-- Settings cards -->
+                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#fbfbfd"/>
+                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#eff0f3"/>
+                    <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#f5f6f9"/>
+                    <!-- Window structure -->
+                    <SolidColorBrush x:Key="AppWindowBackground"         Color="#f0f3f9"/>
+                    <SolidColorBrush x:Key="AppTitleBarBackground"       Color="#f0f3f9"/>
+                    <SolidColorBrush x:Key="AppSplitterBackground"       Color="#d8d8d8"/>
+                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#f8f8f8"/>
+                    <SolidColorBrush x:Key="AppBorderBrush"              Color="#cccccc"/>
+                    <SolidColorBrush x:Key="AppBadgeBackground"          Color="#e0e0e0"/>
+                    <!-- Dialogs -->
+                    <SolidColorBrush x:Key="AppDialogBackground"         Color="#ffffff"/>
+                    <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#f5f5f5"/>
+                    <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#ebebeb"/>
+                    <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#e8e8e8"/>
+                    <!-- Warning banner -->
+                    <SolidColorBrush x:Key="WarningBannerBackground"     Color="#fff8e1"/>
+                    <SolidColorBrush x:Key="WarningBannerBorderBrush"    Color="#d4a700"/>
+                    <SolidColorBrush x:Key="WarningBannerIconBackground" Color="#f0a500"/>
+                    <SolidColorBrush x:Key="WarningBannerIconForeground" Color="#1a1000"/>
+                    <SolidColorBrush x:Key="WarningBannerSubtext"        Color="#7a4f00"/>
+                    <!-- Setting warning subtext -->
+                    <SolidColorBrush x:Key="SettingWarningTextForeground" Color="#a05c00"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Styles.Resources>
+</Styles>

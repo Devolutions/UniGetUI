@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using Avalonia.Collections;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -18,6 +19,8 @@ using UniGetUI.PackageEngine.PackageLoader;
 namespace UniGetUI.Avalonia.ViewModels.Pages;
 
 public enum SearchMode { Both, Name, Id, Exact, Similar }
+
+public enum PackageViewMode { List = 0, Grid = 1, Icons = 2 }
 
 public enum ReloadReason
 {
@@ -116,7 +119,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private bool _newVersionHeaderVisible;
     [ObservableProperty] private bool _reloadButtonVisible;
     [ObservableProperty] private bool _isFilterPaneOpen;
-    [ObservableProperty] private int _viewMode;
+    [ObservableProperty] private PackageViewMode _viewMode;
     [ObservableProperty] private int _sortFieldIndex;
     [ObservableProperty] private bool _sortAscending = true;
     [ObservableProperty] private bool _instantSearch = true;
@@ -132,8 +135,8 @@ public partial class PackagesPageViewModel : ViewModelBase
 
     // ─── Collections ──────────────────────────────────────────────────────────
     public ObservablePackageCollection FilteredPackages { get; } = new();
-    public ObservableCollection<SourceTreeNode> SourceNodes { get; } = new();
-    public ObservableCollection<object> ToolBarItems { get; } = new();
+    public AvaloniaList<SourceTreeNode> SourceNodes { get; } = new();
+    public AvaloniaList<object> ToolBarItems { get; } = new();
 
     // ─── Internal state ───────────────────────────────────────────────────────
     private string _searchQuery = "";
@@ -183,8 +186,10 @@ public partial class PackagesPageViewModel : ViewModelBase
 
         InstantSearch = !Settings.GetDictionaryItem<string, bool>(Settings.K.DisableInstantSearch, PageName);
 
-        ViewMode = Settings.GetDictionaryItem<string, int>(Settings.K.PackageListViewMode, PageName);
-        if (ViewMode < 0 || ViewMode > 2) ViewMode = 0;
+        var savedMode = Settings.GetDictionaryItem<string, int>(Settings.K.PackageListViewMode, PageName);
+        ViewMode = Enum.IsDefined(typeof(PackageViewMode), savedMode)
+            ? (PackageViewMode)savedMode
+            : PackageViewMode.List;
 
         _localPackagesNode.PackageName = CoreTools.Translate("Local");
 
@@ -515,7 +520,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     // ─── Header texts ─────────────────────────────────────────────────────────
     public void UpdateHeaderTexts()
     {
-        bool isList = ViewMode == 0;
+        bool isList = ViewMode == PackageViewMode.List;
         NameHeaderText = isList ? CoreTools.Translate("Package Name") : "";
         IdHeaderText = isList ? CoreTools.Translate("Package ID") : "";
         VersionHeaderText = isList ? CoreTools.Translate("Version") : "";
@@ -523,17 +528,25 @@ public partial class PackagesPageViewModel : ViewModelBase
         SourceHeaderText = isList ? CoreTools.Translate("Source") : "";
     }
 
-    public bool IsListViewMode => ViewMode == 0;
-    public bool IsGridViewMode => ViewMode == 1;
-    public bool IsIconsViewMode => ViewMode == 2;
+    public bool IsListViewMode => ViewMode == PackageViewMode.List;
+    public bool IsGridViewMode => ViewMode == PackageViewMode.Grid;
+    public bool IsIconsViewMode => ViewMode == PackageViewMode.Icons;
 
-    partial void OnViewModeChanged(int value)
+    // Shim for SelectedIndex="{Binding ViewModeIndex}" in AXAML (ListBox requires int)
+    public int ViewModeIndex
+    {
+        get => (int)ViewMode;
+        set => ViewMode = (PackageViewMode)value;
+    }
+
+    partial void OnViewModeChanged(PackageViewMode value)
     {
         UpdateHeaderTexts();
-        Settings.SetDictionaryItem(Settings.K.PackageListViewMode, PageName, value);
+        Settings.SetDictionaryItem(Settings.K.PackageListViewMode, PageName, (int)value);
         OnPropertyChanged(nameof(IsListViewMode));
         OnPropertyChanged(nameof(IsGridViewMode));
         OnPropertyChanged(nameof(IsIconsViewMode));
+        OnPropertyChanged(nameof(ViewModeIndex));
     }
 
     // ─── Package count (called by PackageWrapper.IsChecked setter) ────────────

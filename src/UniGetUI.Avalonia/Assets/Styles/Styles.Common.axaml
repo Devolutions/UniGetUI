@@ -1,0 +1,35 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:UniGetUI.Avalonia.Views.Controls">
+
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+
+    <!-- SettingsCard appearance -->
+    <Style Selector="Border.settings-card">
+        <Setter Property="Background"   Value="{DynamicResource SettingsCardBackground}"/>
+        <Setter Property="BorderBrush"  Value="{DynamicResource SettingsCardBorderBrush}"/>
+        <Setter Property="Margin"       Value="40,0"/>
+    </Style>
+    <Style Selector="Border.settings-card-clickable:pointerover">
+        <Setter Property="Background"   Value="{DynamicResource SettingsCardHoverBackground}"/>
+    </Style>
+
+    <!-- Setting warning subtext (amber, both themes) -->
+    <Style Selector="TextBlock.setting-warning-text">
+        <Setter Property="Foreground" Value="{DynamicResource SettingWarningTextForeground}"/>
+    </Style>
+
+    <!-- Warning banner (InfoBar-style amber/golden) -->
+    <Style Selector="Border.warning-banner">
+        <Setter Property="Background"      Value="{DynamicResource WarningBannerBackground}"/>
+        <Setter Property="BorderBrush"     Value="{DynamicResource WarningBannerBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Margin"          Value="40,4,40,0"/>
+    </Style>
+
+    <!-- SvgIcon: inherit the Fluent foreground so icons match text colour in both themes -->
+    <Style Selector="controls|SvgIcon">
+        <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+    </Style>
+
+</Styles>

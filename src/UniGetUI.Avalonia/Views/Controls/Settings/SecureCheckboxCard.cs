@@ -30,16 +30,6 @@ public partial class SecureCheckboxCard : SettingsCard
         }
     }
 
-    public new bool IsEnabled
-    {
-        set
-        {
-            base.IsEnabled = value;
-            _warningBlock.Opacity = value ? 1 : 0.2;
-        }
-        get => base.IsEnabled;
-    }
-
     public bool ForceInversion { get; set; }
     public bool Checked => _checkbox.IsChecked ?? false;
 
@@ -104,6 +94,9 @@ public partial class SecureCheckboxCard : SettingsCard
         };
 
         _checkbox.IsCheckedChanged += (s, e) => _ = _checkbox_Toggled();
+
+        this.GetObservable(IsEnabledProperty)
+            .Subscribe(enabled => _warningBlock.Opacity = enabled ? 1 : 0.2);
     }
 
     protected virtual async Task _checkbox_Toggled()

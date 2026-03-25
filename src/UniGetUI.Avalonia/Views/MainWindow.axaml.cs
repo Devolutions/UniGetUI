@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Pages;
 
@@ -87,22 +86,6 @@ public partial class MainWindow : Window
         if (e.Key == Key.Enter)
             ViewModel.SubmitGlobalSearch();
     }
-
-    private void SearchButton_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel.SubmitGlobalSearch();
-
-    // ─── Banner close handlers ────────────────────────────────────────────────
-    private void UpdatesBannerCloseButton_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel.UpdatesBannerVisible = false;
-
-    private void ErrorBannerCloseButton_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel.ErrorBannerVisible = false;
-
-    private void WinGetWarningBannerCloseButton_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel.WinGetWarningBannerVisible = false;
-
-    private void TelemetryWarnerCloseButton_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel.TelemetryWarnerVisible = false;
 
     // ─── Public navigation API ────────────────────────────────────────────────
     public void Navigate(PageType type) => ViewModel.NavigateTo(type);

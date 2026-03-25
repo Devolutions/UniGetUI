@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -15,17 +16,26 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:CheckboxCard x:Name="EnableProxy"
+            <settings:CheckboxCard SettingName="EnableProxy"
+                                   Text="{t:Translate Connect the internet using a custom proxy}"
+                                   Description="{t:Translate Text='Please note that not all package managers may fully support this feature'}"
+                                   StateChangedCommand="{Binding RefreshProxyEnabledCommand}"
                                    CornerRadius="8,8,0,0"/>
 
-            <settings:TextboxCard x:Name="ProxyURLCard"
+            <settings:TextboxCard SettingName="ProxyURL"
+                                  Text="{t:Translate Proxy URL}"
+                                  Placeholder="{t:Translate Enter proxy URL here}"
+                                  ValueChangedCommand="{Binding ApplyProxyCommand}"
                                   CornerRadius="0,0,8,8"
                                   BorderThickness="1,0,1,1"
                                   IsEnabled="{Binding IsProxyEnabled}"/>
 
             <Border Height="16"/>
 
-            <settings:CheckboxCard x:Name="EnableProxyAuth"
+            <settings:CheckboxCard SettingName="EnableProxyAuth"
+                                   Text="{t:Translate Authenticate to the proxy with a user and a password}"
+                                   Description="{t:Translate Text='Please note that not all package managers may fully support this feature'}"
+                                   StateChangedCommand="{Binding RefreshProxyAuthEnabledCommand}"
                                    CornerRadius="8,8,0,0"
                                    IsEnabled="{Binding IsProxyEnabled}"/>
 
@@ -40,7 +50,9 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:CheckboxCard x:Name="DisableWaitForInternetConnection"
+            <settings:CheckboxCard SettingName="DisableWaitForInternetConnection"
+                                   Text="{t:Translate Wait for the device to be connected to the internet before attempting to do tasks that require internet connectivity.}"
+                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    CornerRadius="8"/>
 
         </StackPanel>

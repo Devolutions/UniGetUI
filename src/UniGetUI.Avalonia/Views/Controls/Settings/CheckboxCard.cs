@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -10,6 +11,15 @@ namespace UniGetUI.Avalonia.Views.Controls.Settings;
 
 public partial class CheckboxCard : SettingsCard
 {
+    public static readonly StyledProperty<ICommand?> StateChangedCommandProperty =
+        AvaloniaProperty.Register<CheckboxCard, ICommand?>(nameof(StateChangedCommand));
+
+    public ICommand? StateChangedCommand
+    {
+        get => GetValue(StateChangedCommandProperty);
+        set => SetValue(StateChangedCommandProperty, value);
+    }
+
     public ToggleSwitch _checkbox;
     public TextBlock _textblock;
     public TextBlock _warningBlock;
@@ -94,6 +104,9 @@ public partial class CheckboxCard : SettingsCard
         CoreSettings.Set(setting_name, (_checkbox.IsChecked ?? false) ^ IS_INVERTED ^ ForceInversion);
         StateChanged?.Invoke(this, EventArgs.Empty);
         _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
+        var cmd = StateChangedCommand;
+        if (cmd?.CanExecute(null) == true)
+            cmd.Execute(null);
     }
 }
 

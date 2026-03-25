@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -10,6 +11,15 @@ namespace UniGetUI.Avalonia.Views.Controls.Settings;
 
 public partial class SecureCheckboxCard : SettingsCard
 {
+    public static readonly StyledProperty<ICommand?> StateChangedCommandProperty =
+        AvaloniaProperty.Register<SecureCheckboxCard, ICommand?>(nameof(StateChangedCommand));
+
+    public ICommand? StateChangedCommand
+    {
+        get => GetValue(StateChangedCommandProperty);
+        set => SetValue(StateChangedCommandProperty, value);
+    }
+
     public ToggleSwitch _checkbox;
     public TextBlock _textblock;
     public TextBlock _warningBlock;
@@ -44,9 +54,22 @@ public partial class SecureCheckboxCard : SettingsCard
     {
         set
         {
-            _warningBlock.Text = value;
+            _warningBlock.Text = FormatTwoLine(value);
             _warningBlock.IsVisible = value.Any();
         }
+    }
+
+    // Splits translated warning text at the first sentence boundary so it renders
+    // on two readable lines. Handles both Latin (". ") and CJK ("。") separators.
+    private static string FormatTwoLine(string text)
+    {
+        var idx = text.IndexOf(". ", StringComparison.Ordinal);
+        if (idx >= 0)
+            return text[..(idx + 1)] + "\n" + text[(idx + 2)..];
+        idx = text.IndexOf('。');
+        if (idx >= 0)
+            return text[..(idx + 1)] + "\n" + text[(idx + 1)..];
+        return text;
     }
 
     public SecureCheckboxCard()
@@ -121,6 +144,9 @@ public partial class SecureCheckboxCard : SettingsCard
                 (_checkbox.IsChecked ?? false) ^ IS_INVERTED ^ ForceInversion
             );
             StateChanged?.Invoke(this, EventArgs.Empty);
+            var cmd = StateChangedCommand;
+            if (cmd?.CanExecute(null) == true)
+                cmd.Execute(null);
             _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
             _checkbox.IsChecked = SecureSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
             _loading.IsVisible = false;

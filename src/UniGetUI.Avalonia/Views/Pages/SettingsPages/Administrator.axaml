@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -31,16 +32,16 @@
                     </Border>
                     <!-- Text -->
                     <StackPanel Grid.Column="1" Orientation="Vertical">
-                        <TextBlock x:Name="WarningTitleText"
+                        <TextBlock Text="{Binding WarningTitle}"
                                    FontWeight="SemiBold"
                                    FontSize="14"
                                    TextWrapping="Wrap"
                                    Margin="0,0,0,4"/>
-                        <TextBlock x:Name="WarningBodyLine1"
+                        <TextBlock Text="{Binding WarningBody1}"
                                    TextWrapping="Wrap"
                                    Foreground="{DynamicResource WarningBannerSubtext}"
                                    Margin="0,0,0,6"/>
-                        <TextBlock x:Name="WarningBodyLine2"
+                        <TextBlock Text="{Binding WarningBody2}"
                                    TextWrapping="Wrap"
                                    Foreground="{DynamicResource WarningBannerSubtext}"/>
                     </StackPanel>
@@ -51,28 +52,40 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:CheckboxCard x:Name="DoCacheAdminRightsForBatches"
+            <settings:CheckboxCard SettingName="DoCacheAdminRightsForBatches"
+                                   Text="{t:Translate Ask for administrator privileges once for each batch of operations}"
+                                   StateChangedCommand="{Binding RestartCacheCommand}"
                                    BorderThickness="1,1,1,0"
                                    CornerRadius="8,8,0,0"
                                    IsEnabled="{Binding IsElevationEnabled}"/>
 
-            <settings:CheckboxCard x:Name="DoCacheAdminRights"
+            <settings:CheckboxCard SettingName="DoCacheAdminRights"
+                                   Text="{t:Translate Ask only once for administrator privileges}"
+                                   StateChangedCommand="{Binding RestartCacheCommand}"
                                    CornerRadius="0,0,8,8"
                                    IsEnabled="{Binding IsElevationEnabled}"/>
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard x:Name="ProhibitElevator"
+            <settings:CheckboxCard SettingName="ProhibitElevation"
+                                   Text="{t:Translate Prohibit any kind of Elevation via UniGetUI Elevator or GSudo}"
+                                   StateChangedCommand="{Binding RefreshElevationStateCommand}"
                                    CornerRadius="8"/>
 
             <settings:TranslatedTextBlock Text="Restrictions on package operations"
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:SecureCheckboxCard x:Name="AllowCLIArguments"
+            <settings:SecureCheckboxCard SettingName="AllowCLIArguments"
+                                         Text="{t:Translate Allow custom command-line arguments}"
+                                         WarningText="{t:Translate Text='Custom command-line arguments can change the way in which programs are installed, upgraded or uninstalled, in a way UniGetUI cannot control. Using custom command-lines can break packages. Proceed with caution.'}"
+                                         StateChangedCommand="{Binding RefreshCLIStateCommand}"
                                          CornerRadius="8,8,0,0"/>
 
-            <settings:SecureCheckboxCard x:Name="AllowPrePostInstallCommands"
+            <settings:SecureCheckboxCard SettingName="AllowPrePostOpCommand"
+                                         Text="{t:Translate Text='Ignore custom pre-install and post-install commands when importing packages from a bundle'}"
+                                         WarningText="{t:Translate Text='Pre and post install commands will be run before and after a package gets installed, upgraded or uninstalled. Be aware that they may break things unless used carefully'}"
+                                         StateChangedCommand="{Binding RefreshPrePostStateCommand}"
                                          BorderThickness="1,0,1,1"
                                          CornerRadius="0,0,8,8"/>
 
@@ -80,17 +93,26 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:SecureCheckboxCard x:Name="AllowCustomManagerPaths"
+            <settings:SecureCheckboxCard SettingName="AllowCustomManagerPaths"
+                                         Text="{t:Translate Allow changing the paths for package manager executables}"
+                                         WarningText="{t:Translate Text='Turning this on enables changing the executable file used to interact with package managers. While this allows finer-grained customization of your install processes, it may also be dangerous'}"
+                                         StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                          CornerRadius="8"/>
 
             <settings:TranslatedTextBlock Text="Restrictions when importing package bundles"
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:SecureCheckboxCard x:Name="AllowImportingCLIArguments"
+            <settings:SecureCheckboxCard SettingName="AllowImportingCLIArguments"
+                                         Text="{t:Translate Allow importing custom command-line arguments when importing packages from a bundle}"
+                                         WarningText="{t:Translate Text='Malformed command-line arguments can break packages, or even allow a malicious actor to gain privileged execution. Therefore, importing custom command-line arguments is disabled by default'}"
+                                         IsEnabled="{Binding IsCLIArgumentsEnabled}"
                                          CornerRadius="8,8,0,0"/>
 
-            <settings:SecureCheckboxCard x:Name="AllowImportingPrePostInstallCommands"
+            <settings:SecureCheckboxCard SettingName="AllowImportPrePostOpCommands"
+                                         Text="{t:Translate Allow importing custom pre-install and post-install commands when importing packages from a bundle}"
+                                         WarningText="{t:Translate Text='Pre and post install commands can do very nasty things to your device, if designed to do so. It can be very dangerous to import the commands from a bundle, unless you trust the source of that package bundle'}"
+                                         IsEnabled="{Binding IsPrePostCommandsEnabled}"
                                          BorderThickness="1,0,1,1"
                                          CornerRadius="0,0,8,8"/>
 

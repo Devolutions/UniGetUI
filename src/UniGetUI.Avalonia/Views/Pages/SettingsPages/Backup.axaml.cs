@@ -5,51 +5,26 @@ using Avalonia.Media;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Avalonia.Views.Controls.Settings;
 using UniGetUI.Core.Tools;
-using CoreSettings = global::UniGetUI.Core.SettingsEngine.Settings;
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
 public sealed partial class Backup : UserControl, ISettingsPage
 {
-    private BackupViewModel VM => (BackupViewModel)DataContext!;
-
     public bool CanGoBack => true;
     public string ShortTitle => CoreTools.Translate("Backup and Restore");
 
     public event EventHandler? RestartRequired;
     public event EventHandler<Type>? NavigationRequested { add { } remove { } }
 
-    private void ShowRestartBanner(object? sender, EventArgs e) => RestartRequired?.Invoke(this, e);
-
     public Backup()
     {
         DataContext = new BackupViewModel();
         InitializeComponent();
 
-        ChangeBackupDirectory.Description = VM.BackupDirectoryLabel;
-        VM.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(VM.BackupDirectoryLabel))
-                ChangeBackupDirectory.Description = VM.BackupDirectoryLabel;
-        };
+        var vm = (BackupViewModel)DataContext;
+        vm.RestartRequired += (s, e) => RestartRequired?.Invoke(s, e);
 
         BuildBackupInfoCard();
-
-        EnablePackageBackupCheckBox_LOCAL.SettingName = CoreSettings.K.EnablePackageBackup_LOCAL;
-        EnablePackageBackupCheckBox_LOCAL.Text = CoreTools.Translate("Periodically perform a local backup of the installed packages");
-        EnablePackageBackupCheckBox_LOCAL.StateChanged += (_, _) =>
-        {
-            VM.IsLocalBackupEnabled = EnablePackageBackupCheckBox_LOCAL.Checked;
-            ShowRestartBanner(this, EventArgs.Empty);
-        };
-        VM.IsLocalBackupEnabled = EnablePackageBackupCheckBox_LOCAL.Checked;
-
-        ChangeBackupFileNameTextBox.SettingName = CoreSettings.K.ChangeBackupFileName;
-        ChangeBackupFileNameTextBox.Text = CoreTools.Translate("Set a custom backup file name");
-        ChangeBackupFileNameTextBox.Placeholder = CoreTools.Translate("Leave empty for default");
-
-        EnableBackupTimestamping.SettingName = CoreSettings.K.EnableBackupTimestamping;
-        EnableBackupTimestamping.Text = CoreTools.Translate("Add a timestamp to the backup file names");
     }
 
     private void BuildBackupInfoCard()

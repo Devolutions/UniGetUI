@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -21,9 +22,20 @@ public class SettingsCard : UserControl
     private readonly ContentControl _contentPresenter;
     private readonly StackPanel _descriptionRow;
 
+    // ── Styled properties ──────────────────────────────────────────────────
+    public static readonly StyledProperty<object?> HeaderProperty =
+        AvaloniaProperty.Register<SettingsCard, object?>(nameof(Header));
+
+    public static readonly StyledProperty<object?> DescriptionProperty =
+        AvaloniaProperty.Register<SettingsCard, object?>(nameof(Description));
+
+    public static readonly StyledProperty<ICommand?> CommandProperty =
+        AvaloniaProperty.Register<SettingsCard, ICommand?>(nameof(Command));
+
+    public static readonly StyledProperty<object?> CommandParameterProperty =
+        AvaloniaProperty.Register<SettingsCard, object?>(nameof(CommandParameter));
+
     // ── Backing stores ─────────────────────────────────────────────────────
-    private object? _header;
-    private object? _description;
     private Control? _headerIcon;
     private object? _rightContent;
     private bool _isClickEnabled;
@@ -47,43 +59,26 @@ public class SettingsCard : UserControl
 
     public object? Header
     {
-        get => _header;
-        set
-        {
-            _header = value;
-            _headerPresenter.Content = value is string s
-                ? new TextBlock
-                {
-                    Text = s,
-                    TextWrapping = TextWrapping.Wrap,
-                    VerticalAlignment = VerticalAlignment.Center,
-                }
-                : value;
-        }
+        get => GetValue(HeaderProperty);
+        set => SetValue(HeaderProperty, value);
+    }
+
+    public ICommand? Command
+    {
+        get => GetValue(CommandProperty);
+        set => SetValue(CommandProperty, value);
+    }
+
+    public object? CommandParameter
+    {
+        get => GetValue(CommandParameterProperty);
+        set => SetValue(CommandParameterProperty, value);
     }
 
     public object? Description
     {
-        get => _description;
-        set
-        {
-            _description = value;
-            if (value is null)
-            {
-                _descriptionRow.IsVisible = false;
-                return;
-            }
-            _descriptionPresenter.Content = value is string s
-                ? new TextBlock
-                {
-                    Text = s,
-                    TextWrapping = TextWrapping.Wrap,
-                    FontSize = 12,
-                    Opacity = 0.7,
-                }
-                : value;
-            _descriptionRow.IsVisible = true;
-        }
+        get => GetValue(DescriptionProperty);
+        set => SetValue(DescriptionProperty, value);
     }
 
     public Control? HeaderIcon
@@ -200,9 +195,51 @@ public class SettingsCard : UserControl
         PointerPressed += OnPointerPressed;
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == HeaderProperty)
+        {
+            var value = change.NewValue;
+            _headerPresenter.Content = value is string s
+                ? new TextBlock
+                {
+                    Text = s,
+                    TextWrapping = TextWrapping.Wrap,
+                    VerticalAlignment = VerticalAlignment.Center,
+                }
+                : value;
+        }
+        else if (change.Property == DescriptionProperty)
+        {
+            var value = change.NewValue;
+            if (value is null)
+            {
+                _descriptionRow.IsVisible = false;
+                return;
+            }
+            _descriptionPresenter.Content = value is string s
+                ? new TextBlock
+                {
+                    Text = s,
+                    TextWrapping = TextWrapping.Wrap,
+                    FontSize = 12,
+                    Opacity = 0.7,
+                }
+                : value;
+            _descriptionRow.IsVisible = true;
+        }
+    }
+
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_isClickEnabled)
+        {
             Click?.Invoke(this, new RoutedEventArgs());
+            var cmd = Command;
+            var param = CommandParameter;
+            if (cmd?.CanExecute(param) == true)
+                cmd.Execute(param);
+        }
     }
 }

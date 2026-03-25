@@ -340,7 +340,14 @@ public partial class MainWindowViewModel : ViewModelBase
         Sidebar.SelectNavButtonForPage(_currentPage);
     }
 
+    // ─── Banner close commands ────────────────────────────────────────────────
+    [RelayCommand] private void CloseUpdatesBanner() => UpdatesBannerVisible = false;
+    [RelayCommand] private void CloseErrorBanner() => ErrorBannerVisible = false;
+    [RelayCommand] private void CloseWinGetWarningBanner() => WinGetWarningBannerVisible = false;
+    [RelayCommand] private void CloseTelemetryWarner() => TelemetryWarnerVisible = false;
+
     // ─── Search box ──────────────────────────────────────────────────────────
+    [RelayCommand]
     public void SubmitGlobalSearch()
     {
         if (CurrentPageContent is ISearchBoxPage page)

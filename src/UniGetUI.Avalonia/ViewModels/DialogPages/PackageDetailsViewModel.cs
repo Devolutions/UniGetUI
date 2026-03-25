@@ -297,6 +297,7 @@ public partial class PackageDetailsViewModel : ObservableObject
         catch { }
     }
 
+    [RelayCommand]
     public void RequestClose() => CloseRequested?.Invoke(this, EventArgs.Empty);
 }
 

@@ -16,10 +16,15 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:CheckboxCard x:Name="DisableAutoCheckForUpdates"
+            <settings:CheckboxCard SettingName="DisableAutoCheckforUpdates"
+                                   Text="{t:Translate Check for package updates periodically}"
+                                   StateChangedCommand="{Binding UpdateAutoCheckEnabledCommand}"
                                    CornerRadius="8,8,0,0"/>
 
             <settings:ComboboxCard x:Name="UpdatesCheckIntervalSelector"
+                                   SettingName="UpdatesCheckInterval"
+                                   Text="{t:Translate Check for updates every:}"
+                                   ValueChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    BorderThickness="1,0"
                                    CornerRadius="0,0,8,8"
                                    IsEnabled="{Binding IsAutoCheckEnabled}"/>
@@ -28,21 +33,28 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:CheckboxCard x:Name="AutomaticallyUpdatePackages"
+            <settings:CheckboxCard SettingName="AutomaticallyUpdatePackages"
+                                   Text="{t:Translate Install available updates automatically}"
                                    CornerRadius="8,8,0,0"
                                    IsEnabled="{Binding IsAutoCheckEnabled}"/>
 
-            <settings:CheckboxCard x:Name="DisableAUPOnMeteredConnections"
+            <settings:CheckboxCard SettingName="DisableAUPOnMeteredConnections"
+                                   ForceInversion="True"
+                                   Text="{t:Translate Do not automatically install updates when the network connection is metered}"
                                    BorderThickness="1,0"
                                    CornerRadius="0"
                                    IsEnabled="{Binding IsAutoCheckEnabled}"/>
 
-            <settings:CheckboxCard x:Name="DisableAUPOnBattery"
+            <settings:CheckboxCard SettingName="DisableAUPOnBattery"
+                                   ForceInversion="True"
+                                   Text="{t:Translate Do not automatically install updates when the device runs on battery}"
                                    BorderThickness="1,1,1,0"
                                    CornerRadius="0"
                                    IsEnabled="{Binding IsAutoCheckEnabled}"/>
 
-            <settings:CheckboxCard x:Name="DisableAUPOnBatterySaver"
+            <settings:CheckboxCard SettingName="DisableAUPOnBatterySaver"
+                                   ForceInversion="True"
+                                   Text="{t:Translate Do not automatically install updates when the battery saver is on}"
                                    CornerRadius="0,0,8,8"
                                    IsEnabled="{Binding IsAutoCheckEnabled}"/>
 
@@ -50,16 +62,16 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:SettingsCard x:Name="OperationsSettingsButton"
-                                   BorderThickness="1,1,1,0"
+            <settings:SettingsCard BorderThickness="1,1,1,0"
                                    CornerRadius="8,8,0,0"
                                    IsClickEnabled="True"
+                                   Command="{Binding NavigateToOperationsCommand}"
                                    Header="{t:Translate Package operation preferences}"
                                    Description="{t:Translate Text='Change how UniGetUI handles install, update and uninstall operations.'}"/>
 
-            <settings:SettingsCard x:Name="AdminButton"
-                                   CornerRadius="0,0,8,8"
+            <settings:SettingsCard CornerRadius="0,0,8,8"
                                    IsClickEnabled="True"
+                                   Command="{Binding NavigateToAdministratorCommand}"
                                    Header="{t:Translate Administrator rights and other dangerous settings}"
                                    Description="{t:Translate Text='Reduce UAC prompts, elevate installations by default, unlock certain dangerous features, etc.'}"/>
 

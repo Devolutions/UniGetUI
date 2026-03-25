@@ -97,26 +97,27 @@ public class PackageBundlesPage : AbstractPackagesPage
         installSkipHash.Click += (_, _) => _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm), skiphash: true);
         downloadInstallers.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
 
-        AddToolbarSeparator();
-        AddToolbarButton("add_to", CoreTools.Translate("New"),
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("add_to", CoreTools.Translate("New"),
             () => _ = AskForNewBundle());
-        AddToolbarButton("open_folder", CoreTools.Translate("Open"),
+        ViewModel.AddToolbarButton("open_folder", CoreTools.Translate("Open"),
             () => _ = AskOpenFromFile());
-        AddToolbarButton("save_as", CoreTools.Translate("Save as"),
+        ViewModel.AddToolbarButton("save_as", CoreTools.Translate("Save as"),
             () => _ = SaveFile());
-        AddToolbarSeparator();
-        AddToolbarButton("delete", CoreTools.Translate("Remove selection from bundle"), () =>
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("delete", CoreTools.Translate("Remove selection from bundle"), () =>
         {
             HasUnsavedChanges = true;
             _loader.RemoveRange(vm.FilteredPackages.GetCheckedPackages());
         });
-        AddToolbarSeparator();
-        AddToolbarButton("info_round", CoreTools.Translate("Package details"),
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
-        AddToolbarButton("share", CoreTools.Translate("Share"),
-            () => _ = SharePackage(SelectedItem), showLabel: false);
-        AddToolbarSeparator();
-        AddToolbarButton("help", CoreTools.Translate("Help"), OpenHelp);
+        ViewModel.AddToolbarButton("share", CoreTools.Translate("Share"),
+            () => vm.RequestShareCommand.Execute(SelectedItem), showLabel: false);
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("help", CoreTools.Translate("Help"),
+            () => vm.RequestHelpCommand.Execute(null));
     }
 
     private static IReadOnlyList<IPackage> GetCheckedNonInstalledPackages(PackagesPageViewModel vm)
@@ -168,7 +169,7 @@ public class PackageBundlesPage : AbstractPackagesPage
         };
 
         _menuShare = new MenuItem { Header = CoreTools.AutoTranslated("Share this package"), Icon = LoadMenuIcon("share") };
-        _menuShare.Click += (_, _) => _ = SharePackage(SelectedItem);
+        _menuShare.Click += (_, _) => ViewModel.RequestShareCommand.Execute(SelectedItem);
 
         _menuDetails = new MenuItem { Header = CoreTools.AutoTranslated("Package details"), Icon = LoadMenuIcon("info_round") };
         _menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);

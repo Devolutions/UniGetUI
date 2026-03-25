@@ -1,8 +1,5 @@
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using UniGetUI.Avalonia.ViewModels;
-using UniGetUI.Core.Data;
-using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views;
 
@@ -13,7 +10,6 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     public SidebarView()
     {
         InitializeComponent();
-        VersionMenuItem.Header = CoreTools.Translate("WingetUI Version {0}", CoreData.VersionName);
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -46,33 +42,6 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         if (_lastNavItemSelectionWasAuto) return;
         if (NavListBox.SelectedItem is ListBoxItem item && item.Tag is string tag
             && Enum.TryParse<PageType>(tag, out var pageType))
-            ViewModel?.RequestNavigation(pageType);
+            ViewModel?.RequestNavigation(pageType.ToString());
     }
-
-    private void SettingsNavBtn_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel?.RequestNavigation(PageType.Settings);
-
-    private void ManagersNavBtn_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel?.RequestNavigation(PageType.Managers);
-
-    private void UniGetUILogs_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel?.RequestNavigation(PageType.OwnLog);
-
-    private void ManagerLogsMenu_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel?.RequestNavigation(PageType.ManagerLog);
-
-    private void OperationHistoryMenu_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel?.RequestNavigation(PageType.OperationHistory);
-
-    private void ReleaseNotesMenu_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel?.RequestNavigation(PageType.ReleaseNotes);
-
-    private void HelpMenu_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel?.RequestNavigation(PageType.Help);
-
-    private void AboutNavButton_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel?.RequestNavigation(PageType.About);
-
-    private void QuitUniGetUI_Click(object? sender, RoutedEventArgs e) =>
-        ViewModel?.RequestNavigation(PageType.Quit);
 }

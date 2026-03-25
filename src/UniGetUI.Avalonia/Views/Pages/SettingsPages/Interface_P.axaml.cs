@@ -15,8 +15,6 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
     public event EventHandler? RestartRequired;
     public event EventHandler<Type>? NavigationRequested { add { } remove { } }
 
-    private void ShowRestartBanner(object? sender, EventArgs e) => RestartRequired?.Invoke(this, e);
-
     public Interface_P()
     {
         DataContext = new Interface_PViewModel();
@@ -25,12 +23,7 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         if (OperatingSystem.IsMacOS())
             SystemTraySection.IsVisible = false;
 
-        VM.RestartRequired += ShowRestartBanner;
-        VM.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(VM.IconCacheSizeText))
-                ResetIconCache.Header = VM.IconCacheSizeText;
-        };
+        VM.RestartRequired += (s, e) => RestartRequired?.Invoke(s, e);
         _ = VM.LoadIconCacheSize();
 
         if (CoreSettings.GetValue(CoreSettings.K.PreferredTheme) == "")
@@ -53,16 +46,5 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         StartupPageSelector.SettingName = CoreSettings.K.StartupPage;
         StartupPageSelector.Text = CoreTools.Translate("UniGetUI startup page:");
         StartupPageSelector.ShowAddedItems();
-
-        DisableSystemTray.SettingName = CoreSettings.K.DisableSystemTray;
-        DisableSystemTray.Text = CoreTools.Translate("Close UniGetUI to the system tray");
-
-        DisableIconsOnPackageLists.SettingName = CoreSettings.K.DisableIconsOnPackageLists;
-        DisableIconsOnPackageLists.Text = CoreTools.Translate("Show package icons on package lists");
-        DisableIconsOnPackageLists.StateChanged += ShowRestartBanner;
-
-        DisableSelectingUpdatesByDefault.SettingName = CoreSettings.K.DisableSelectingUpdatesByDefault;
-        DisableSelectingUpdatesByDefault.Text = CoreTools.Translate("Select upgradable packages by default");
-        DisableSelectingUpdatesByDefault.StateChanged += ShowRestartBanner;
     }
 }

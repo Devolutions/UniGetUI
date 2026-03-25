@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -12,49 +13,68 @@
         <StackPanel Orientation="Vertical">
 
             <settings:CheckboxCard x:Name="ShowVersionNumberOnTitlebar"
+                                   SettingName="ShowVersionNumberOnTitlebar"
+                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    CornerRadius="8"/>
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard x:Name="DisableWidgetsApi"
+            <settings:CheckboxCard SettingName="DisableApi"
+                                   Text="{t:Translate Text='Enable background api (WingetUI Widgets and Sharing, port 7058)'}"
+                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    BorderThickness="1,1,1,0"
                                    CornerRadius="8,8,0,0"/>
 
-            <settings:CheckboxCard x:Name="DisableWaitForInternetConnection"
+            <settings:CheckboxCard SettingName="DisableWaitForInternetConnection"
+                                   Text="{t:Translate Wait for the device to be connected to the internet before attempting to do tasks that require internet connectivity.}"
+                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    CornerRadius="0,0,8,8"/>
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard x:Name="DisableTimeoutOnPackageListingTasks"
+            <settings:CheckboxCard SettingName="DisableTimeoutOnPackageListingTasks"
+                                   ForceInversion="True"
+                                   Text="{t:Translate Disable the 1-minute timeout for package-related operations}"
                                    CornerRadius="8"/>
 
             <UserControl Height="16"/>
 
-            <settings:SecureCheckboxCard x:Name="UseUserGSudoToggle"
+            <settings:SecureCheckboxCard SettingName="ForceUserGSudo"
+                                         Text="{t:Translate Use installed GSudo instead of UniGetUI Elevator}"
+                                         StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                          CornerRadius="8"/>
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard x:Name="DisableDownloadingNewTranslations"
+            <settings:CheckboxCard SettingName="DisableLangAutoUpdater"
+                                   Text="{t:Translate Download updated language files from GitHub automatically}"
+                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    BorderThickness="1,1,1,0"
                                    CornerRadius="8,8,0,0"/>
 
             <settings:TextboxCard x:Name="IconDatabaseURLCard"
+                                  SettingName="IconDataBaseURL"
+                                  Text="{t:Translate Use a custom icon and screenshot database URL}"
+                                  Placeholder="{t:Translate Leave empty for default}"
+                                  ValueChangedCommand="{Binding ShowRestartRequiredCommand}"
                                   CornerRadius="0,0,8,8"/>
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard x:Name="DisableDMWThreadOptimizations"
+            <settings:CheckboxCard SettingName="DisableDMWThreadOptimizations"
+                                   Text="{t:Translate Enable background CPU Usage optimizations (see Pull Request #3278)}"
                                    CornerRadius="8"/>
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard x:Name="DisableIntegrityChecks"
+            <settings:CheckboxCard SettingName="DisableIntegrityChecks"
+                                   Text="{t:Translate Perform integrity checks at startup}"
                                    CornerRadius="8"/>
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard x:Name="InstallInstalledPackagesBundlesPage"
+            <settings:CheckboxCard SettingName="InstallInstalledPackagesBundlesPage"
+                                   Text="{t:Translate Text='When batch installing packages from a bundle, install also packages that are already installed'}"
                                    CornerRadius="8"/>
 
         </StackPanel>

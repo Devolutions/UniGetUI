@@ -361,8 +361,8 @@
         <Border Grid.Row="2"
                 BorderThickness="0,1,0,0"
                 Padding="16,10">
-            <Button x:Name="CloseButton"
-                    Content="{Binding LabelClose}"
+            <Button Content="{Binding LabelClose}"
+                    Command="{Binding RequestCloseCommand}"
                     HorizontalAlignment="Right"
                     Padding="16,6"/>
         </Border>

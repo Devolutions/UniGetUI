@@ -152,8 +152,8 @@
         <StackPanel Grid.Row="1" Margin="8,0,8,12" Spacing="2">
             <Separator Margin="8,4"/>
 
-            <Button x:Name="SettingsNavBtn"
-                    Click="SettingsNavBtn_Click"
+            <Button Command="{Binding RequestNavigationCommand}"
+                    CommandParameter="Settings"
                     HorizontalContentAlignment="Left"
                     HorizontalAlignment="Stretch"
                     Background="Transparent"
@@ -168,8 +168,8 @@
                 </StackPanel>
             </Button>
 
-            <Button x:Name="ManagersNavBtn"
-                    Click="ManagersNavBtn_Click"
+            <Button Command="{Binding RequestNavigationCommand}"
+                    CommandParameter="Managers"
                     HorizontalContentAlignment="Left"
                     HorizontalAlignment="Stretch"
                     Background="Transparent"
@@ -198,17 +198,17 @@
                 </StackPanel>
                 <Button.Flyout>
                     <MenuFlyout Placement="RightEdgeAlignedTop">
-                        <MenuItem Header="{t:Translate WingetUI Log}" Click="UniGetUILogs_Click"/>
-                        <MenuItem Header="{t:Translate Package Manager logs}" Click="ManagerLogsMenu_Click"/>
-                        <MenuItem Header="{t:Translate Operation history}" Click="OperationHistoryMenu_Click"/>
+                        <MenuItem Header="{t:Translate WingetUI Log}" Command="{Binding RequestNavigationCommand}" CommandParameter="OwnLog"/>
+                        <MenuItem Header="{t:Translate Package Manager logs}" Command="{Binding RequestNavigationCommand}" CommandParameter="ManagerLog"/>
+                        <MenuItem Header="{t:Translate Operation history}" Command="{Binding RequestNavigationCommand}" CommandParameter="OperationHistory"/>
                         <Separator/>
-                        <MenuItem x:Name="VersionMenuItem" Header="{t:Translate Version}" IsEnabled="False"/>
-                        <MenuItem Header="{t:Translate Release notes}" Click="ReleaseNotesMenu_Click"/>
+                        <MenuItem Header="{Binding VersionLabel}" IsEnabled="False"/>
+                        <MenuItem Header="{t:Translate Release notes}" Command="{Binding RequestNavigationCommand}" CommandParameter="ReleaseNotes"/>
                         <Separator/>
-                        <MenuItem Header="{t:Translate Help}" Click="HelpMenu_Click"/>
-                        <MenuItem Header="{t:Translate About}" Click="AboutNavButton_Click"/>
+                        <MenuItem Header="{t:Translate Help}" Command="{Binding RequestNavigationCommand}" CommandParameter="Help"/>
+                        <MenuItem Header="{t:Translate About}" Command="{Binding RequestNavigationCommand}" CommandParameter="About"/>
                         <Separator/>
-                        <MenuItem Header="{t:Translate Quit UniGetUI}" Click="QuitUniGetUI_Click"/>
+                        <MenuItem Header="{t:Translate Quit UniGetUI}" Command="{Binding RequestNavigationCommand}" CommandParameter="Quit"/>
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>

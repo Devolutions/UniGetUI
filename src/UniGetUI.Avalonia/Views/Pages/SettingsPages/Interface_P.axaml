@@ -28,7 +28,8 @@
                                               FontWeight="SemiBold"
                                               Margin="44,32,4,8"/>
 
-                <settings:CheckboxCard x:Name="DisableSystemTray"
+                <settings:CheckboxCard SettingName="DisableSystemTray"
+                                       Text="{t:Translate Close UniGetUI to the system tray}"
                                        CornerRadius="8,8,0,0"/>
 
                 <settings:ButtonCard x:Name="EditAutostartSettings"
@@ -43,19 +44,24 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:CheckboxCard x:Name="DisableIconsOnPackageLists"
+            <settings:CheckboxCard SettingName="DisableIconsOnPackageLists"
+                                   Text="{t:Translate Show package icons on package lists}"
+                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    CornerRadius="8,8,0,0"/>
 
             <settings:ButtonCard x:Name="ResetIconCache"
                                  CornerRadius="0,0,8,8"
                                  BorderThickness="1,0,1,1"
+                                 Header="{Binding IconCacheSizeText}"
                                  ButtonText="{t:Translate Clear cache}"
                                  Command="{Binding ResetIconCacheCommand}"
                                  CommandParameter="{Binding $self}"/>
 
             <Border Height="16"/>
 
-            <settings:CheckboxCard x:Name="DisableSelectingUpdatesByDefault"
+            <settings:CheckboxCard SettingName="DisableSelectingUpdatesByDefault"
+                                   Text="{t:Translate Select upgradable packages by default}"
+                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    CornerRadius="8"/>
 
         </StackPanel>

@@ -17,15 +17,23 @@
                                           Margin="44,32,4,8"/>
 
             <settings:ComboboxCard x:Name="ParallelOperationCount"
+                                   SettingName="ParallelOperationCount"
+                                   Text="{t:Translate Choose how many operations should be performed in parallel}"
+                                   ValueChangedCommand="{Binding UpdateMaxOperationsCommand}"
                                    CornerRadius="8,8,0,0"/>
 
-            <settings:CheckboxCard x:Name="MaintainSuccessfulInstalls"
+            <settings:CheckboxCard SettingName="MaintainSuccessfulInstalls"
+                                   ForceInversion="True"
+                                   Text="{t:Translate Clear successful operations from the operation list after a 5 second delay}"
+                                   WarningText="{t:Translate Download operations are not affected by this setting}"
                                    BorderThickness="1,0,1,1"
                                    CornerRadius="0,0,8,8"/>
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard x:Name="KillProcessesThatRefuseToDie"
+            <settings:CheckboxCard SettingName="KillProcessesThatRefuseToDie"
+                                   Text="{t:Translate Try to kill the processes that refuse to close when requested to}"
+                                   WarningText="{t:Translate You may lose unsaved data}"
                                    CornerRadius="8"/>
 
             <settings:TranslatedTextBlock Text="Automatic desktop shortcut remover"
@@ -33,22 +41,25 @@
                                           Margin="44,32,4,8"/>
 
             <settings:CheckboxButtonCard x:Name="AskToDeleteNewDesktopShortcuts"
+                                         SettingName="AskToDeleteNewDesktopShortcuts"
+                                         CheckboxText="{t:Translate Text='Ask to delete desktop shortcuts created during an install or upgrade.'}"
+                                         ButtonText="{t:Translate Manage shortcuts}"
                                          CornerRadius="8"/>
 
             <settings:TranslatedTextBlock Text="Related settings"
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:SettingsCard x:Name="UpdatesSettingsButton"
-                                   CornerRadius="8,8,0,0"
+            <settings:SettingsCard CornerRadius="8,8,0,0"
                                    IsClickEnabled="True"
+                                   Command="{Binding NavigateToUpdatesCommand}"
                                    Header="{t:Translate Package update preferences}"
                                    Description="{t:Translate Text='Update check frequency, automatically install updates, etc.'}"/>
 
-            <settings:SettingsCard x:Name="AdminButton"
-                                   BorderThickness="1,0,1,1"
+            <settings:SettingsCard BorderThickness="1,0,1,1"
                                    CornerRadius="0,0,8,8"
                                    IsClickEnabled="True"
+                                   Command="{Binding NavigateToAdministratorCommand}"
                                    Header="{t:Translate Administrator rights and other dangerous settings}"
                                    Description="{t:Translate Text='Reduce UAC prompts, elevate installations by default, unlock certain dangerous features, etc.'}"/>
 

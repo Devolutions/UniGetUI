@@ -193,7 +193,7 @@
                         Padding="3"
                         CornerRadius="0,4,4,0"
                         IsEnabled="{Binding GlobalSearchEnabled}"
-                        Click="SearchButton_Click">
+                        Command="{Binding SubmitGlobalSearchCommand}">
                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg"
                                       Width="12"
                                       Height="12"/>

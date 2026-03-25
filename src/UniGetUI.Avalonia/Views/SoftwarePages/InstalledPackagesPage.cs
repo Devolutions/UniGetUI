@@ -71,16 +71,16 @@ public class InstalledPackagesPage : AbstractPackagesPage
         downloadInstallers.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
-        AddToolbarSeparator();
-        AddToolbarButton("options", CoreTools.Translate("Uninstall options"),
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("options", CoreTools.Translate("Uninstall options"),
             () => _ = ShowInstallationOptionsForPackage(SelectedItem), showLabel: false);
-        AddToolbarSeparator();
-        AddToolbarButton("info_round", CoreTools.Translate("Package details"),
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
-        AddToolbarButton("share", CoreTools.Translate("Share"),
-            () => _ = SharePackage(SelectedItem), showLabel: false);
-        AddToolbarSeparator();
-        AddToolbarButton("pin", CoreTools.Translate("Ignore selected packages"), async () =>
+        ViewModel.AddToolbarButton("share", CoreTools.Translate("Share"),
+            () => vm.RequestShareCommand.Execute(SelectedItem), showLabel: false);
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("pin", CoreTools.Translate("Ignore selected packages"), async () =>
         {
             foreach (var pkg in vm.FilteredPackages.GetCheckedPackages())
             {
@@ -91,13 +91,14 @@ public class InstalledPackagesPage : AbstractPackagesPage
                 }
             }
         });
-        AddToolbarButton("clipboard_list", CoreTools.Translate("Manage ignored updates"),
-            () => _ = ShowManageIgnoredAsync());
-        AddToolbarSeparator();
-        AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
+        ViewModel.AddToolbarButton("clipboard_list", CoreTools.Translate("Manage ignored updates"),
+            () => vm.RequestManageIgnoredCommand.Execute(null));
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
             () => _ = ExportSelectionToBundleAsync(vm));
-        AddToolbarSeparator();
-        AddToolbarButton("help", CoreTools.Translate("Help"), OpenHelp);
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("help", CoreTools.Translate("Help"),
+            () => vm.RequestHelpCommand.Execute(null));
     }
 
     // ─── Context menu ─────────────────────────────────────────────────────────
@@ -178,7 +179,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
             Header = CoreTools.AutoTranslated("Share this package"),
             Icon = LoadMenuIcon("share"),
         };
-        _menuShare.Click += (_, _) => _ = SharePackage(SelectedItem);
+        _menuShare.Click += (_, _) => ViewModel.RequestShareCommand.Execute(SelectedItem);
 
         _menuDetails = new MenuItem
         {

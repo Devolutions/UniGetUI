@@ -7,7 +7,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using UniGetUI.Avalonia.Infrastructure;
-using UniGetUI.Avalonia.Views;
+using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageOperations;

@@ -1,4 +1,3 @@
-using Avalonia;
 using Avalonia.Controls;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
@@ -31,8 +30,7 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
         DataContext = new SettingsBasePageViewModel();
         InitializeComponent();
 
-        BackButton.Click += (_, _) => OnBackClicked();
-        RestartButton.Click += (_, _) => RestartApp();
+        VM.BackRequested += (_, _) => OnBackClicked();
 
         // Navigate to the appropriate homepage on first load
         NavigateToPage(isManagers ? GetManagersHomepage() : GetSettingsHomepage());
@@ -167,15 +165,4 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
 
     private MainWindowViewModel? GetMainWindowViewModel() =>
         (TopLevel.GetTopLevel(this) is Window { DataContext: MainWindowViewModel vm }) ? vm : null;
-
-    private static void RestartApp()
-    {
-        var exe = Environment.ProcessPath;
-        if (exe is not null)
-            System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = true });
-        (global::Avalonia.Application.Current?.ApplicationLifetime
-            as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)
-            ?.Shutdown();
-    }
 }

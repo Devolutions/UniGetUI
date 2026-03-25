@@ -108,14 +108,14 @@
                         </StackPanel>
                         <Button.Flyout>
                             <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                                <MenuItem x:Name="OrderByName_Menu"       Header="{t:Translate Name}"        Click="OrderByName_Click"/>
-                                <MenuItem x:Name="OrderById_Menu"         Header="{t:Translate Id}"          Click="OrderById_Click"/>
-                                <MenuItem x:Name="OrderByVersion_Menu"    Header="{t:Translate Version}"     Click="OrderByVersion_Click"/>
-                                <MenuItem x:Name="OrderByNewVersion_Menu" Header="{t:Translate New version}" Click="OrderByNewVersion_Click"/>
-                                <MenuItem x:Name="OrderBySource_Menu"     Header="{t:Translate Source}"      Click="OrderBySource_Click"/>
+                                <MenuItem x:Name="OrderByName_Menu"       Header="{t:Translate Name}"        Command="{Binding SortByNameCommand}"/>
+                                <MenuItem x:Name="OrderById_Menu"         Header="{t:Translate Id}"          Command="{Binding SortByIdCommand}"/>
+                                <MenuItem x:Name="OrderByVersion_Menu"    Header="{t:Translate Version}"     Command="{Binding SortByVersionCommand}"/>
+                                <MenuItem x:Name="OrderByNewVersion_Menu" Header="{t:Translate New version}" Command="{Binding SortByNewVersionCommand}"/>
+                                <MenuItem x:Name="OrderBySource_Menu"     Header="{t:Translate Source}"      Command="{Binding SortBySourceCommand}"/>
                                 <Separator/>
-                                <MenuItem x:Name="OrderByAscending_Menu"  Header="{t:Translate Ascendant}"   Click="OrderByAscending_Click"/>
-                                <MenuItem x:Name="OrderByDescending_Menu" Header="{t:Translate Descendant}"  Click="OrderByDescending_Click"/>
+                                <MenuItem x:Name="OrderByAscending_Menu"  Header="{t:Translate Ascendant}"   Command="{Binding SetSortAscendingCommand}"/>
+                                <MenuItem x:Name="OrderByDescending_Menu" Header="{t:Translate Descendant}"  Command="{Binding SetSortDescendingCommand}"/>
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>

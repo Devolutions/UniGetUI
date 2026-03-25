@@ -67,20 +67,20 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         downloadInstallers.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
-        AddToolbarSeparator();
-        AddToolbarButton("options", CoreTools.Translate("Install options"),
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("options", CoreTools.Translate("Install options"),
             () => _ = ShowInstallationOptionsForPackage(SelectedItem));
-        AddToolbarSeparator();
-        AddToolbarButton("info_round", CoreTools.Translate("Package details"),
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
-        AddToolbarButton("share", CoreTools.Translate("Share"),
-            () => _ = SharePackage(SelectedItem), showLabel: false);
-        AddToolbarSeparator();
-        AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
+        ViewModel.AddToolbarButton("share", CoreTools.Translate("Share"),
+            () => vm.RequestShareCommand.Execute(SelectedItem), showLabel: false);
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
             () => _ = ExportSelectionToBundleAsync(vm));
-        AddToolbarSeparator();
-        AddToolbarButton("help", CoreTools.Translate("Help"),
-            OpenHelp);
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("help", CoreTools.Translate("Help"),
+            () => vm.RequestHelpCommand.Execute(null));
     }
 
     // ─── Context menu ─────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         menuInstallOptions.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
 
         var menuShare = new MenuItem { Header = CoreTools.AutoTranslated("Share this package"), Icon = LoadMenuIcon("share") };
-        menuShare.Click += (_, _) => _ = SharePackage(SelectedItem);
+        menuShare.Click += (_, _) => ViewModel.RequestShareCommand.Execute(SelectedItem);
 
         var menuDetails = new MenuItem { Header = CoreTools.AutoTranslated("Package details"), Icon = LoadMenuIcon("info_round") };
         menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);

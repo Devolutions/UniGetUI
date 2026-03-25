@@ -1,6 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.TelemetryDialog"
+        Title="{t:Translate Share anonymous usage data}"
         Width="520" MinWidth="420"
         SizeToContent="Height"
         MinHeight="250"
@@ -14,20 +16,23 @@
           RowSpacing="12">
 
         <!-- Title -->
-        <TextBlock x:Name="TitleBlock"
-                   Grid.Row="0"
+        <TextBlock Grid.Row="0"
+                   Text="{t:Translate Share anonymous usage data}"
                    FontSize="18"
                    FontWeight="SemiBold"/>
 
         <!-- Body -->
         <StackPanel Grid.Row="1" Spacing="8">
-            <TextBlock x:Name="Body1" TextWrapping="Wrap" Opacity="0.85"/>
+            <TextBlock Text="{t:Translate UniGetUI collects anonymous usage data with the sole purpose of understanding and improving the user experience.}"
+                       TextWrapping="Wrap" Opacity="0.85"/>
             <TextBlock x:Name="Body2" TextWrapping="Wrap" Opacity="0.85"/>
             <TextBlock x:Name="DetailsLink"
+                       Text="{t:Translate More details about the shared data and how it will be processed}"
                        TextDecorations="Underline"
                        Cursor="Hand"
                        Opacity="0.9"/>
-            <TextBlock x:Name="Body3" TextWrapping="Wrap" Opacity="0.85"/>
+            <TextBlock Text="{t:Translate Text='Do you accept that UniGetUI collects and sends anonymous usage statistics, with the sole purpose of understanding and improving the user experience?'}"
+                       TextWrapping="Wrap" Opacity="0.85"/>
         </StackPanel>
 
         <!-- Buttons -->
@@ -36,8 +41,8 @@
                     HorizontalAlignment="Right"
                     Spacing="8"
                     Margin="0,4,0,0">
-            <Button x:Name="DeclineButton" MinWidth="100"/>
-            <Button x:Name="AcceptButton"  MinWidth="100" Classes="accent"/>
+            <Button x:Name="DeclineButton" Content="{t:Translate Decline}" MinWidth="100"/>
+            <Button x:Name="AcceptButton"  Content="{t:Translate Accept}" MinWidth="100" Classes="accent"/>
         </StackPanel>
 
     </Grid>

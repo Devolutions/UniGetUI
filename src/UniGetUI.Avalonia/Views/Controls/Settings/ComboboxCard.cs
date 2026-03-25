@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Windows.Input;
+using Avalonia;
 using Avalonia.Controls;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
@@ -8,6 +10,15 @@ namespace UniGetUI.Avalonia.Views.Controls.Settings;
 
 public sealed partial class ComboboxCard : SettingsCard
 {
+    public static readonly StyledProperty<ICommand?> ValueChangedCommandProperty =
+        AvaloniaProperty.Register<ComboboxCard, ICommand?>(nameof(ValueChangedCommand));
+
+    public ICommand? ValueChangedCommand
+    {
+        get => GetValue(ValueChangedCommandProperty);
+        set => SetValue(ValueChangedCommandProperty, value);
+    }
+
     private readonly ComboBox _combobox = new();
     private readonly ObservableCollection<string> _elements = [];
     private readonly Dictionary<string, string> _values_ref = [];
@@ -63,6 +74,9 @@ public sealed partial class ComboboxCard : SettingsCard
                     _values_ref[_combobox.SelectedItem?.ToString() ?? ""]
                 );
                 ValueChanged?.Invoke(this, EventArgs.Empty);
+                var cmd = ValueChangedCommand;
+                if (cmd?.CanExecute(null) == true)
+                    cmd.Execute(null);
             }
             catch (Exception ex)
             {

@@ -23,10 +23,14 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:CheckboxButtonCard x:Name="DisableAutoUpdateWingetUI"
+            <settings:CheckboxButtonCard SettingName="DisableAutoUpdateWingetUI"
+                                         CheckboxText="{t:Translate Update WingetUI automatically}"
+                                         ButtonText="{t:Translate Check for updates}"
+                                         ButtonAlwaysOn="True"
                                          CornerRadius="8,8,0,0"/>
 
-            <settings:CheckboxCard x:Name="EnableUniGetUIBeta"
+            <settings:CheckboxCard SettingName="EnableUniGetUIBeta"
+                                   Text="{t:Translate Install prerelease versions of UniGetUI}"
                                    CornerRadius="0,0,8,8"
                                    BorderThickness="1,0,1,1"/>
 
@@ -67,12 +71,12 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:SettingsPageButton x:Name="InterfaceSettingsButton"
-                                         CornerRadius="8"
+            <settings:SettingsPageButton CornerRadius="8"
                                          Margin="0,0,0,20"
                                          Icon="Interactive"
                                          Text="{t:Translate User interface preferences}"
-                                         UnderText="{t:Translate Text='Application theme, startup page, package icons, clear successful installs automatically'}"/>
+                                         UnderText="{t:Translate Text='Application theme, startup page, package icons, clear successful installs automatically'}"
+                                         Command="{Binding NavigateToInterfaceCommand}"/>
 
         </StackPanel>
     </ScrollViewer>

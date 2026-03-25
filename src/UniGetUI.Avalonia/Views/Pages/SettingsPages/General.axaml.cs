@@ -18,17 +18,16 @@ public sealed partial class General : UserControl, ISettingsPage
     public event EventHandler? RestartRequired;
     public event EventHandler<Type>? NavigationRequested;
 
-    private void ShowRestartBanner(object? sender, EventArgs e) => RestartRequired?.Invoke(this, e);
-
     public General()
     {
         DataContext = new GeneralViewModel();
         InitializeComponent();
 
-        // ViewModel events that need to bubble up to the settings shell
-        ((GeneralViewModel)DataContext).RestartRequired += ShowRestartBanner;
+        var vm = (GeneralViewModel)DataContext;
+        vm.RestartRequired += (s, e) => RestartRequired?.Invoke(s, e);
+        vm.NavigationRequested += (s, t) => NavigationRequested?.Invoke(s, t);
 
-        // Populate language selector
+        // Populate language selector (complex dynamic content)
         var langDict = new Dictionary<string, string>(LanguageData.LanguageReference.AsEnumerable());
         foreach (string key in langDict.Keys.ToList())
         {
@@ -40,19 +39,8 @@ public sealed partial class General : UserControl, ISettingsPage
         LanguageSelector.SettingName = CoreSettings.K.PreferredLanguage;
         LanguageSelector.Text = CoreTools.Translate("WingetUI display language:");
         LanguageSelector.ShowAddedItems();
-        LanguageSelector.ValueChanged += ShowRestartBanner;
+        LanguageSelector.ValueChanged += (s, e) => RestartRequired?.Invoke(s, e);
         LanguageSelector.Description = BuildTranslatorDescription();
-
-        DisableAutoUpdateWingetUI.SettingName = CoreSettings.K.DisableAutoUpdateWingetUI;
-        DisableAutoUpdateWingetUI.CheckboxText = CoreTools.Translate("Update WingetUI automatically");
-        DisableAutoUpdateWingetUI.ButtonText = CoreTools.Translate("Check for updates");
-        DisableAutoUpdateWingetUI.ButtonAlwaysOn = true;
-        DisableAutoUpdateWingetUI.Click += (_, _) => { /* auto-updater not available in Avalonia port */ };
-
-        EnableUniGetUIBeta.SettingName = CoreSettings.K.EnableUniGetUIBeta;
-        EnableUniGetUIBeta.Text = CoreTools.Translate("Install prerelease versions of UniGetUI");
-
-        InterfaceSettingsButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Interface_P));
     }
 
     private static StackPanel BuildTranslatorDescription()

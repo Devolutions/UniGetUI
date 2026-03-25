@@ -5,6 +5,7 @@ using global::Avalonia.Controls;
 using global::Avalonia.Platform.Storage;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.DialogPages;
+using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using CoreSettings = global::UniGetUI.Core.SettingsEngine.Settings;
@@ -64,5 +65,13 @@ public partial class GeneralViewModel : ViewModelBase
     }
 
     public event EventHandler? RestartRequired;
+    public event EventHandler<Type>? NavigationRequested;
+
     private void OnRestartRequired() => RestartRequired?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void ShowRestartRequired() => RestartRequired?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void NavigateToInterface() => NavigationRequested?.Invoke(this, typeof(Interface_P));
 }

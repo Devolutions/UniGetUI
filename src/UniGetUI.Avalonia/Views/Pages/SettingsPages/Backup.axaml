@@ -23,7 +23,9 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:CheckboxCard x:Name="EnablePackageBackupCheckBox_LOCAL"
+            <settings:CheckboxCard SettingName="EnablePackageBackup_LOCAL"
+                                   Text="{t:Translate Periodically perform a local backup of the installed packages}"
+                                   StateChangedCommand="{Binding EnableLocalBackupChangedCommand}"
                                    CornerRadius="8,8,0,0"/>
 
             <settings:ButtonCard x:Name="BackupNowButton_LOCAL"
@@ -37,9 +39,9 @@
 
             <Border Height="16"/>
 
-            <settings:ButtonCard x:Name="ChangeBackupDirectory"
-                                 CornerRadius="8"
+            <settings:ButtonCard CornerRadius="8"
                                  Text="{t:Translate Change backup output directory}"
+                                 Description="{Binding BackupDirectoryLabel}"
                                  ButtonText="{t:Translate Select}"
                                  IsEnabled="{Binding IsLocalBackupEnabled}"
                                  Command="{Binding PickBackupDirectoryCommand}"
@@ -49,12 +51,14 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <settings:TextboxCard x:Name="ChangeBackupFileNameTextBox"
-                                  CornerRadius="8,8,0,0"
+            <settings:TextboxCard SettingName="ChangeBackupFileName"
                                   Text="{t:Translate Set a custom backup file name}"
+                                  Placeholder="{t:Translate Leave empty for default}"
+                                  CornerRadius="8,8,0,0"
                                   IsEnabled="{Binding IsLocalBackupEnabled}"/>
 
-            <settings:CheckboxCard x:Name="EnableBackupTimestamping"
+            <settings:CheckboxCard SettingName="EnableBackupTimestamping"
+                                   Text="{t:Translate Add a timestamp to the backup file names}"
                                    CornerRadius="0,0,8,8"
                                    BorderThickness="1,0,1,1"
                                    IsEnabled="{Binding IsLocalBackupEnabled}"/>

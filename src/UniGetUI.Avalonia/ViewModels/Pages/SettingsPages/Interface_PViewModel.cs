@@ -16,6 +16,9 @@ public partial class Interface_PViewModel : ViewModelBase
     public event EventHandler? RestartRequired;
 
     [RelayCommand]
+    private void ShowRestartRequired() => RestartRequired?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
     private static void EditAutostartSettings()
         => CoreTools.Launch("ms-settings:startupapps");
 

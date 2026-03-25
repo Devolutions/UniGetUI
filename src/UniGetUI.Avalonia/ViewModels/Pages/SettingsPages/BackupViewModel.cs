@@ -11,10 +11,23 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
 public partial class BackupViewModel : ViewModelBase
 {
+    public event EventHandler? RestartRequired;
+
     [ObservableProperty] private bool _isLocalBackupEnabled;
     [ObservableProperty] private string _backupDirectoryLabel = "";
 
-    public BackupViewModel() => RefreshDirectoryLabel();
+    public BackupViewModel()
+    {
+        _isLocalBackupEnabled = CoreSettings.Get(CoreSettings.K.EnablePackageBackup_LOCAL);
+        RefreshDirectoryLabel();
+    }
+
+    [RelayCommand]
+    private void EnableLocalBackupChanged()
+    {
+        IsLocalBackupEnabled = CoreSettings.Get(CoreSettings.K.EnablePackageBackup_LOCAL);
+        RestartRequired?.Invoke(this, EventArgs.Empty);
+    }
 
     private void RefreshDirectoryLabel()
     {

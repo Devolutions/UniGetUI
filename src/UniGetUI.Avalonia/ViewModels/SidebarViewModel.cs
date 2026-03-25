@@ -1,6 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Views;
+using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.ViewModels;
 
@@ -59,9 +62,9 @@ public partial class SidebarViewModel : ViewModelBase
     public double PaneWidth => IsPaneOpen ? 250 : 72;
 
     public bool UpdatesBadgeExpandedVisible => UpdatesBadgeVisible && IsPaneOpen;
-    public bool UpdatesBadgeCompactVisible  => UpdatesBadgeVisible && !IsPaneOpen;
+    public bool UpdatesBadgeCompactVisible => UpdatesBadgeVisible && !IsPaneOpen;
     public bool BundlesBadgeExpandedVisible => BundlesBadgeVisible && IsPaneOpen;
-    public bool BundlesBadgeCompactVisible  => BundlesBadgeVisible && !IsPaneOpen;
+    public bool BundlesBadgeCompactVisible => BundlesBadgeVisible && !IsPaneOpen;
 
     // ─── Selected page ────────────────────────────────────────────────────────
     [ObservableProperty]
@@ -70,8 +73,14 @@ public partial class SidebarViewModel : ViewModelBase
     // ─── Navigation ──────────────────────────────────────────────────────────
     public event EventHandler<PageType>? NavigationRequested;
 
-    public void RequestNavigation(PageType page) =>
-        NavigationRequested?.Invoke(this, page);
+    public string VersionLabel { get; } = CoreTools.Translate("WingetUI Version {0}", CoreData.VersionName);
+
+    [RelayCommand]
+    public void RequestNavigation(string? pageName)
+    {
+        if (Enum.TryParse<PageType>(pageName, out var page))
+            NavigationRequested?.Invoke(this, page);
+    }
 
     public void SelectNavButtonForPage(PageType page) =>
         SelectedPageType = page;

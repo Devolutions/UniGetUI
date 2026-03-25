@@ -26,7 +26,6 @@ public partial class PackageDetailsWindow : Window
         InitializeComponent();
 
         _vm.CloseRequested += (_, _) => Close();
-        CloseButton.Click += (_, _) => Close();
 
         MainActionButton.Click += (_, _) => OnMainAction();
         ActionVariantsButton.Flyout = BuildActionFlyout();

@@ -17,16 +17,9 @@ public sealed partial class SettingsHomepage : UserControl, ISettingsPage
         DataContext = new SettingsHomepageViewModel();
         InitializeComponent();
 
-        GeneralButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(General));
-        InterfaceButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Interface_P));
-        NotificationsButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Notifications));
-        UpdatesButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Updates));
-        OperationsButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Operations));
-        InternetButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Internet));
-        BackupButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Backup));
-        AdministratorButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Administrator));
-        ExperimentalButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Experimental));
+        var vm = (SettingsHomepageViewModel)DataContext;
+        vm.NavigationRequested += (s, t) => NavigationRequested?.Invoke(s, t);
+
         ExperimentalButton.UnderText = CoreTools.Translate("Beta features and other options that shouldn't be touched");
-        ManagersButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(ManagersHomepage));
     }
 }

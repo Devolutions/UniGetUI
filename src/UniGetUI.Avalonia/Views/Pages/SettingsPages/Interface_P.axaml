@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -33,8 +34,8 @@
                 <settings:ButtonCard x:Name="EditAutostartSettings"
                                      CornerRadius="0,0,8,8"
                                      BorderThickness="1,0,1,1"
-                                     Text="Manage WingetUI autostart behaviour"
-                                     ButtonText="Open"
+                                     Text="{t:Translate Manage WingetUI autostart behaviour}"
+                                     ButtonText="{t:Translate Open}"
                                      Command="{Binding EditAutostartSettingsCommand}"/>
             </StackPanel>
 
@@ -48,7 +49,7 @@
             <settings:ButtonCard x:Name="ResetIconCache"
                                  CornerRadius="0,0,8,8"
                                  BorderThickness="1,0,1,1"
-                                 ButtonText="Clear cache"
+                                 ButtonText="{t:Translate Clear cache}"
                                  Command="{Binding ResetIconCacheCommand}"
                                  CommandParameter="{Binding $self}"/>
 

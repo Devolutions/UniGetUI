@@ -36,7 +36,7 @@ public sealed partial class Backup : UserControl, ISettingsPage
         BuildBackupInfoCard();
 
         EnablePackageBackupCheckBox_LOCAL.SettingName = CoreSettings.K.EnablePackageBackup_LOCAL;
-        EnablePackageBackupCheckBox_LOCAL.Text = "Periodically perform a local backup of the installed packages";
+        EnablePackageBackupCheckBox_LOCAL.Text = CoreTools.Translate("Periodically perform a local backup of the installed packages");
         EnablePackageBackupCheckBox_LOCAL.StateChanged += (_, _) =>
         {
             VM.IsLocalBackupEnabled = EnablePackageBackupCheckBox_LOCAL.Checked;
@@ -45,11 +45,11 @@ public sealed partial class Backup : UserControl, ISettingsPage
         VM.IsLocalBackupEnabled = EnablePackageBackupCheckBox_LOCAL.Checked;
 
         ChangeBackupFileNameTextBox.SettingName = CoreSettings.K.ChangeBackupFileName;
-        ChangeBackupFileNameTextBox.Text = "Set a custom backup file name";
-        ChangeBackupFileNameTextBox.Placeholder = "Leave empty for default";
+        ChangeBackupFileNameTextBox.Text = CoreTools.Translate("Set a custom backup file name");
+        ChangeBackupFileNameTextBox.Placeholder = CoreTools.Translate("Leave empty for default");
 
         EnableBackupTimestamping.SettingName = CoreSettings.K.EnableBackupTimestamping;
-        EnableBackupTimestamping.Text = "Add a timestamp to the backup file names";
+        EnableBackupTimestamping.Text = CoreTools.Translate("Add a timestamp to the backup file names");
     }
 
     private void BuildBackupInfoCard()

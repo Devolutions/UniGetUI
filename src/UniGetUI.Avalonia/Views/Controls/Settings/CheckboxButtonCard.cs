@@ -36,12 +36,12 @@ public sealed partial class CheckboxButtonCard : SettingsCard
 
     public string CheckboxText
     {
-        set => _textblock.Text = CoreTools.Translate(value);
+        set => _textblock.Text = value;
     }
 
     public string ButtonText
     {
-        set => Button.Content = CoreTools.Translate(value);
+        set => Button.Content = value;
     }
 
     private bool _buttonAlwaysOn;

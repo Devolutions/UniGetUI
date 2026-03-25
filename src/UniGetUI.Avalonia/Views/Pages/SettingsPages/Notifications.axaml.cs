@@ -27,11 +27,11 @@ public sealed partial class Notifications : UserControl, ISettingsPage
         DisableErrorNotifications.SettingName = Settings.K.DisableUpdatesNotifications;
         DisableSuccessNotifications.SettingName = Settings.K.DisableSuccessNotifications;
 
-        DisableNotifications.Text = "Enable WingetUI notifications";
-        DisableUpdatesNotifications.Text = "Show a notification when there are available updates";
-        DisableProgressNotifications.Text = "Show a silent notification when an operation is running";
-        DisableErrorNotifications.Text = "Show a notification when an operation fails";
-        DisableSuccessNotifications.Text = "Show a notification when an operation finishes successfully";
+        DisableNotifications.Text = CoreTools.Translate("Enable WingetUI notifications");
+        DisableUpdatesNotifications.Text = CoreTools.Translate("Show a notification when there are available updates");
+        DisableProgressNotifications.Text = CoreTools.Translate("Show a silent notification when an operation is running");
+        DisableErrorNotifications.Text = CoreTools.Translate("Show a notification when an operation fails");
+        DisableSuccessNotifications.Text = CoreTools.Translate("Show a notification when an operation finishes successfully");
 
         TrayWarningText.Text = CoreTools.Translate("The system tray icon must be enabled in order for notifications to work");
 

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -34,8 +35,8 @@
                                           Margin="44,32,4,8"/>
 
             <settings:ButtonCard CornerRadius="8"
-                                 Text="Manage telemetry settings"
-                                 ButtonText="Manage"
+                                 Text="{t:Translate Manage telemetry settings}"
+                                 ButtonText="{t:Translate Manage}"
                                  Command="{Binding ShowTelemetryDialogCommand}"
                                  CommandParameter="{Binding $self}"/>
 
@@ -44,21 +45,21 @@
                                           Margin="44,32,4,8"/>
 
             <settings:ButtonCard CornerRadius="8,8,0,0"
-                                 Text="Import settings from a local file"
-                                 ButtonText="Import"
+                                 Text="{t:Translate Import settings from a local file}"
+                                 ButtonText="{t:Translate Import}"
                                  Command="{Binding ImportSettingsCommand}"
                                  CommandParameter="{Binding $self}"/>
 
             <settings:ButtonCard BorderThickness="1,0"
                                  CornerRadius="0"
-                                 Text="Export settings to a local file"
-                                 ButtonText="Export"
+                                 Text="{t:Translate Export settings to a local file}"
+                                 ButtonText="{t:Translate Export}"
                                  Command="{Binding ExportSettingsCommand}"
                                  CommandParameter="{Binding $self}"/>
 
             <settings:ButtonCard CornerRadius="0,0,8,8"
-                                 Text="Reset WingetUI"
-                                 ButtonText="Reset UniGetUI"
+                                 Text="{t:Translate Reset WingetUI}"
+                                 ButtonText="{t:Translate Reset UniGetUI}"
                                  Command="{Binding ResetSettingsCommand}"
                                  CommandParameter="{Binding $self}"/>
 
@@ -70,8 +71,8 @@
                                          CornerRadius="8"
                                          Margin="0,0,0,20"
                                          Icon="Interactive"
-                                         Text="User interface preferences"
-                                         UnderText="Application theme, startup page, package icons, clear successful installs automatically"/>
+                                         Text="{t:Translate User interface preferences}"
+                                         UnderText="{t:Translate Text='Application theme, startup page, package icons, clear successful installs automatically'}"/>
 
         </StackPanel>
     </ScrollViewer>

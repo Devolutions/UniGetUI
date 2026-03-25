@@ -3,6 +3,7 @@
         xmlns:views="using:UniGetUI.Avalonia.Views"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="750"
@@ -163,7 +164,7 @@
                         Background="Transparent"
                         BorderThickness="0"
                         CornerRadius="4"
-                        ToolTip.Tip="Toggle navigation panel"
+                        ToolTip.Tip="{t:Translate Toggle navigation panel}"
                         Command="{Binding ToggleSidebarCommand}">
                     <PathIcon Width="14" Height="14"
                               Data="M1,1 H15 V3 H1 Z M1,7 H15 V9 H1 Z M1,13 H15 V15 H1 Z"/>

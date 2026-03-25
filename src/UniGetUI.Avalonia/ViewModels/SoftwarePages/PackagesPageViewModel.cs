@@ -371,14 +371,14 @@ public partial class PackagesPageViewModel : ViewModelBase
     }
 
     // ─── Sorting ──────────────────────────────────────────────────────────────
-    public string SortFieldName => SortFieldIndex switch
+    public string SortFieldName => CoreTools.Translate(SortFieldIndex switch
     {
         1 => "Id",
         2 => "Version",
         3 => "New version",
         4 => "Source",
         _ => "Name",
-    };
+    });
 
     partial void OnSortFieldIndexChanged(int value)
     {

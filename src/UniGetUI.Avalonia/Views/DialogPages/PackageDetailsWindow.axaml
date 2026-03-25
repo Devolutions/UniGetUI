@@ -28,8 +28,8 @@
 
                 <!-- ── Header: icon + name + source ── -->
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
-
-                    <Border Width="72" Height="72"
+                    <Border
+                        Width="72" Height="72"
                             CornerRadius="12"
                             Background="{DynamicResource AppDialogPanelBackground}"
                             ClipToBounds="True">

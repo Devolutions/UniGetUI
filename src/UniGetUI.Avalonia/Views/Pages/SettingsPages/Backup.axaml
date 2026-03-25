@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -28,8 +29,8 @@
             <settings:ButtonCard x:Name="BackupNowButton_LOCAL"
                                  CornerRadius="0,0,8,8"
                                  BorderThickness="1,0,1,1"
-                                 Text="Perform a local backup now"
-                                 ButtonText="Backup"
+                                 Text="{t:Translate Perform a local backup now}"
+                                 ButtonText="{t:Translate Backup}"
                                  IsEnabled="{Binding IsLocalBackupEnabled}"
                                  Command="{Binding DoLocalBackupCommand}"
                                  CommandParameter="{Binding $self}"/>
@@ -38,8 +39,8 @@
 
             <settings:ButtonCard x:Name="ChangeBackupDirectory"
                                  CornerRadius="8"
-                                 Text="Change backup output directory"
-                                 ButtonText="Select"
+                                 Text="{t:Translate Change backup output directory}"
+                                 ButtonText="{t:Translate Select}"
                                  IsEnabled="{Binding IsLocalBackupEnabled}"
                                  Command="{Binding PickBackupDirectoryCommand}"
                                  CommandParameter="{Binding $self}"/>
@@ -50,7 +51,7 @@
 
             <settings:TextboxCard x:Name="ChangeBackupFileNameTextBox"
                                   CornerRadius="8,8,0,0"
-                                  Text="Set a custom backup file name"
+                                  Text="{t:Translate Set a custom backup file name}"
                                   IsEnabled="{Binding IsLocalBackupEnabled}"/>
 
             <settings:CheckboxCard x:Name="EnableBackupTimestamping"

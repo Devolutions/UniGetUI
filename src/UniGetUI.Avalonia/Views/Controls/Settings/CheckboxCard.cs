@@ -37,14 +37,14 @@ public partial class CheckboxCard : SettingsCard
 
     public string Text
     {
-        set => _textblock.Text = CoreTools.Translate(value);
+        set => _textblock.Text = value;
     }
 
     public string WarningText
     {
         set
         {
-            _warningBlock.Text = CoreTools.Translate(value);
+            _warningBlock.Text = value;
             _warningBlock.IsVisible = value.Any();
         }
     }

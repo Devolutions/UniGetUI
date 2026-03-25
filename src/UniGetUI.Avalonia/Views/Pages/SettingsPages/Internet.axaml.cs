@@ -31,7 +31,7 @@ public sealed partial class Internet : UserControl, ISettingsPage
         InitializeComponent();
 
         EnableProxy.SettingName = CoreSettings.K.EnableProxy;
-        EnableProxy.Text = "Connect the internet using a custom proxy";
+        EnableProxy.Text = CoreTools.Translate("Connect the internet using a custom proxy");
         EnableProxy.Description = CoreTools.Translate("Please note that not all package managers may fully support this feature");
         EnableProxy.StateChanged += (_, _) =>
         {
@@ -41,12 +41,12 @@ public sealed partial class Internet : UserControl, ISettingsPage
         VM.IsProxyEnabled = EnableProxy.Checked;
 
         ProxyURLCard.SettingName = CoreSettings.K.ProxyURL;
-        ProxyURLCard.Text = "Proxy URL";
-        ProxyURLCard.Placeholder = "Enter proxy URL here";
+        ProxyURLCard.Text = CoreTools.Translate("Proxy URL");
+        ProxyURLCard.Placeholder = CoreTools.Translate("Enter proxy URL here");
         ProxyURLCard.ValueChanged += (_, _) => InternetViewModel.ApplyProxyToProcess();
 
         EnableProxyAuth.SettingName = CoreSettings.K.EnableProxyAuth;
-        EnableProxyAuth.Text = "Authenticate to the proxy with a user and a password";
+        EnableProxyAuth.Text = CoreTools.Translate("Authenticate to the proxy with a user and a password");
         EnableProxyAuth.Description = CoreTools.Translate("Please note that not all package managers may fully support this feature");
         EnableProxyAuth.StateChanged += (_, _) =>
         {
@@ -60,7 +60,7 @@ public sealed partial class Internet : UserControl, ISettingsPage
         ProxyCompatTableHolder.Content = BuildProxyCompatTable();
 
         DisableWaitForInternetConnection.SettingName = CoreSettings.K.DisableWaitForInternetConnection;
-        DisableWaitForInternetConnection.Text = "Wait for the device to be connected to the internet before attempting to do tasks that require internet connectivity.";
+        DisableWaitForInternetConnection.Text = CoreTools.Translate("Wait for the device to be connected to the internet before attempting to do tasks that require internet connectivity.");
         DisableWaitForInternetConnection.StateChanged += (_, _) => RestartRequired?.Invoke(this, EventArgs.Empty);
     }
 

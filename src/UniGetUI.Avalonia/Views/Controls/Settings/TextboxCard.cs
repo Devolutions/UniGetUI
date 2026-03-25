@@ -27,12 +27,12 @@ public sealed partial class TextboxCard : SettingsCard
 
     public string Placeholder
     {
-        set => _textbox.Watermark = CoreTools.Translate(value);
+        set => _textbox.Watermark = value;
     }
 
     public string Text
     {
-        set => Header = CoreTools.Translate(value);
+        set => Header = value;
     }
 
     public Uri HelpUrl

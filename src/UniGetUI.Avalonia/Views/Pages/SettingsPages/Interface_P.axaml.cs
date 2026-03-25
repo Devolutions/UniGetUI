@@ -36,33 +36,33 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         if (CoreSettings.GetValue(CoreSettings.K.PreferredTheme) == "")
             CoreSettings.SetValue(CoreSettings.K.PreferredTheme, "auto");
 
-        ThemeSelector.AddItem(CoreTools.AutoTranslated("Light"), "light");
-        ThemeSelector.AddItem(CoreTools.AutoTranslated("Dark"), "dark");
-        ThemeSelector.AddItem(CoreTools.AutoTranslated("Follow system color scheme"), "auto");
+        ThemeSelector.AddItem(CoreTools.Translate("Light"), "light");
+        ThemeSelector.AddItem(CoreTools.Translate("Dark"), "dark");
+        ThemeSelector.AddItem(CoreTools.Translate("Follow system color scheme"), "auto");
         ThemeSelector.SettingName = CoreSettings.K.PreferredTheme;
-        ThemeSelector.Text = CoreTools.AutoTranslated("Application theme:");
+        ThemeSelector.Text = CoreTools.Translate("Application theme:");
         ThemeSelector.ShowAddedItems();
         ThemeSelector.ValueChanged += (_, _) => App.ApplyTheme(CoreSettings.GetValue(CoreSettings.K.PreferredTheme));
 
-        StartupPageSelector.AddItem(CoreTools.AutoTranslated("Default"), "default");
-        StartupPageSelector.AddItem(CoreTools.AutoTranslated("Discover Packages"), "discover");
-        StartupPageSelector.AddItem(CoreTools.AutoTranslated("Software Updates"), "updates");
-        StartupPageSelector.AddItem(CoreTools.AutoTranslated("Installed Packages"), "installed");
-        StartupPageSelector.AddItem(CoreTools.AutoTranslated("Package Bundles"), "bundles");
-        StartupPageSelector.AddItem(CoreTools.AutoTranslated("Settings"), "settings");
+        StartupPageSelector.AddItem(CoreTools.Translate("Default"), "default");
+        StartupPageSelector.AddItem(CoreTools.Translate("Discover Packages"), "discover");
+        StartupPageSelector.AddItem(CoreTools.Translate("Software Updates"), "updates");
+        StartupPageSelector.AddItem(CoreTools.Translate("Installed Packages"), "installed");
+        StartupPageSelector.AddItem(CoreTools.Translate("Package Bundles"), "bundles");
+        StartupPageSelector.AddItem(CoreTools.Translate("Settings"), "settings");
         StartupPageSelector.SettingName = CoreSettings.K.StartupPage;
-        StartupPageSelector.Text = CoreTools.AutoTranslated("UniGetUI startup page:");
+        StartupPageSelector.Text = CoreTools.Translate("UniGetUI startup page:");
         StartupPageSelector.ShowAddedItems();
 
         DisableSystemTray.SettingName = CoreSettings.K.DisableSystemTray;
-        DisableSystemTray.Text = CoreTools.AutoTranslated("Close UniGetUI to the system tray");
+        DisableSystemTray.Text = CoreTools.Translate("Close UniGetUI to the system tray");
 
         DisableIconsOnPackageLists.SettingName = CoreSettings.K.DisableIconsOnPackageLists;
-        DisableIconsOnPackageLists.Text = CoreTools.AutoTranslated("Show package icons on package lists");
+        DisableIconsOnPackageLists.Text = CoreTools.Translate("Show package icons on package lists");
         DisableIconsOnPackageLists.StateChanged += ShowRestartBanner;
 
         DisableSelectingUpdatesByDefault.SettingName = CoreSettings.K.DisableSelectingUpdatesByDefault;
-        DisableSelectingUpdatesByDefault.Text = CoreTools.AutoTranslated("Select upgradable packages by default");
+        DisableSelectingUpdatesByDefault.Text = CoreTools.Translate("Select upgradable packages by default");
         DisableSelectingUpdatesByDefault.StateChanged += ShowRestartBanner;
     }
 }

@@ -14,16 +14,16 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
     public event EventHandler? CloseRequested;
 
     public string Title { get; } = CoreTools.Translate("Manage ignored updates");
-    public string Description { get; } = CoreTools.Translate("The packages listed here won't be taken in account when checking for updates. Click the button on their right to stop ignoring their updates.");
+    public string Description { get; } = CoreTools.Translate("The packages listed here won't be taken in account when checking for updates. Double-click them or click the button on their right to stop ignoring their updates.");
     public string ResetLabel { get; } = CoreTools.Translate("Reset list");
     public string ResetConfirm { get; } = CoreTools.Translate("Do you really want to reset the ignored updates list? This action cannot be reverted");
     public string ResetYes { get; } = CoreTools.Translate("Yes");
     public string ResetNo { get; } = CoreTools.Translate("No");
     public string EmptyLabel { get; } = CoreTools.Translate("No ignored updates");
-    public string ColName { get; } = CoreTools.Translate("Package name");
+    public string ColName { get; } = CoreTools.Translate("Package Name");
     public string ColId { get; } = CoreTools.Translate("Package ID");
     public string ColVersion { get; } = CoreTools.Translate("Ignored version");
-    public string ColNewVersion { get; } = CoreTools.Translate("Available update");
+    public string ColNewVersion { get; } = CoreTools.Translate("New version");
     public string ColManager { get; } = CoreTools.Translate("Source");
 
     public ObservableCollection<IgnoredPackageEntryViewModel> Entries { get; } = [];

@@ -41,9 +41,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- Platform-specific styles -->
-        <AvaloniaResource Include="Assets\Styles\*.axaml" />
-
         <!-- SVG symbol icons (shared with WinUI project) -->
         <AvaloniaResource Include="..\UniGetUI\Assets\Symbols\*.svg" Link="Assets\Symbols\%(Filename)%(Extension)" />
 
@@ -66,6 +63,9 @@
 
     <ItemGroup>
       <AvaloniaXaml Remove="Infrastructure\**" />
+      <!-- Style-only files have no x:Class; exclude from codegen and embed as plain resources -->
+      <AvaloniaXaml Remove="Assets\Styles\*.axaml" />
+      <AvaloniaResource Include="Assets\Styles\*.axaml" />
     </ItemGroup>
 
     <ItemGroup>

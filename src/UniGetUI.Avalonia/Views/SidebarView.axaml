@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
              xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -22,11 +23,11 @@
 
             <!-- Discover Packages -->
             <ListBoxItem x:Name="DiscoverNavBtn" Tag="Discover" Padding="4,2" CornerRadius="6"
-                         ToolTip.Tip="Discover Packages">
+                         ToolTip.Tip="{t:Translate Discover Packages}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/ms_store.svg" Width="24" Height="24" VerticalAlignment="Center" />
-                        <TextBlock Text="Discover Packages"
+                        <TextBlock Text="{t:Translate Discover Packages}"
                                    FontSize="16"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
@@ -42,11 +43,11 @@
 
             <!-- Software Updates -->
             <ListBoxItem x:Name="UpdatesNavBtn" Tag="Updates" Padding="4,2" CornerRadius="6"
-                         ToolTip.Tip="Software Updates">
+                         ToolTip.Tip="{t:Translate Software Updates}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/update.svg" Width="24" Height="24" VerticalAlignment="Center"/>
-                        <TextBlock Text="Software Updates"
+                        <TextBlock Text="{t:Translate Software Updates}"
                                    FontSize="16"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
@@ -90,11 +91,11 @@
 
             <!-- Installed Packages -->
             <ListBoxItem x:Name="InstalledNavBtn" Tag="Installed" Padding="4,2" CornerRadius="6"
-                         ToolTip.Tip="Installed Packages">
+                         ToolTip.Tip="{t:Translate Installed Packages}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/local_pc.svg" Width="24" Height="24" VerticalAlignment="Center"/>
-                        <TextBlock Text="Installed Packages"
+                        <TextBlock Text="{t:Translate Installed Packages}"
                                    FontSize="16"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
@@ -110,11 +111,11 @@
 
             <!-- Package Bundles -->
             <ListBoxItem x:Name="BundlesNavBtn" Tag="Bundles" Padding="4,2" CornerRadius="6"
-                         ToolTip.Tip="Package Bundles">
+                         ToolTip.Tip="{t:Translate Package Bundles}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/save_as.svg" Width="24" Height="24" VerticalAlignment="Center"/>
-                        <TextBlock Text="Package Bundles"
+                        <TextBlock Text="{t:Translate Package Bundles}"
                                    FontSize="16"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
@@ -159,10 +160,10 @@
                     BorderThickness="0"
                     Padding="12,8"
                     CornerRadius="6"
-                    ToolTip.Tip="Settings">
+                    ToolTip.Tip="{t:Translate Settings}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/settings.svg" Width="24" Height="24" VerticalAlignment="Center"/>
-                    <TextBlock Text="Settings" FontSize="16" VerticalAlignment="Center"
+                    <TextBlock Text="{t:Translate Settings}" FontSize="16" VerticalAlignment="Center"
                                IsVisible="{Binding IsPaneOpen}"/>
                 </StackPanel>
             </Button>
@@ -175,10 +176,10 @@
                     BorderThickness="0"
                     Padding="12,8"
                     CornerRadius="6"
-                    ToolTip.Tip="Package Managers">
+                    ToolTip.Tip="{t:Translate Package Managers}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/clipboard_list.svg" Width="24" Height="24" VerticalAlignment="Center"/>
-                    <TextBlock Text="Package Managers" FontSize="16" VerticalAlignment="Center"
+                    <TextBlock Text="{t:Translate Package Managers}" FontSize="16" VerticalAlignment="Center"
                                IsVisible="{Binding IsPaneOpen}"/>
                 </StackPanel>
             </Button>
@@ -189,25 +190,25 @@
                     BorderThickness="0"
                     Padding="12,8"
                     CornerRadius="6"
-                    ToolTip.Tip="More">
+                    ToolTip.Tip="{t:Translate More}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg" Width="24" Height="24" VerticalAlignment="Center"/>
-                    <TextBlock Text="More" FontSize="16" VerticalAlignment="Center"
+                    <TextBlock Text="{t:Translate More}" FontSize="16" VerticalAlignment="Center"
                                IsVisible="{Binding IsPaneOpen}"/>
                 </StackPanel>
                 <Button.Flyout>
                     <MenuFlyout Placement="RightEdgeAlignedTop">
-                        <MenuItem Header="WingetUI Log" Click="UniGetUILogs_Click"/>
-                        <MenuItem Header="Package Manager logs" Click="ManagerLogsMenu_Click"/>
-                        <MenuItem Header="Operation history" Click="OperationHistoryMenu_Click"/>
+                        <MenuItem Header="{t:Translate WingetUI Log}" Click="UniGetUILogs_Click"/>
+                        <MenuItem Header="{t:Translate Package Manager logs}" Click="ManagerLogsMenu_Click"/>
+                        <MenuItem Header="{t:Translate Operation history}" Click="OperationHistoryMenu_Click"/>
                         <Separator/>
-                        <MenuItem x:Name="VersionMenuItem" Header="Version" IsEnabled="False"/>
-                        <MenuItem Header="Release notes" Click="ReleaseNotesMenu_Click"/>
+                        <MenuItem x:Name="VersionMenuItem" Header="{t:Translate Version}" IsEnabled="False"/>
+                        <MenuItem Header="{t:Translate Release notes}" Click="ReleaseNotesMenu_Click"/>
                         <Separator/>
-                        <MenuItem Header="Help" Click="HelpMenu_Click"/>
-                        <MenuItem Header="About" Click="AboutNavButton_Click"/>
+                        <MenuItem Header="{t:Translate Help}" Click="HelpMenu_Click"/>
+                        <MenuItem Header="{t:Translate About}" Click="AboutNavButton_Click"/>
                         <Separator/>
-                        <MenuItem Header="Quit UniGetUI" Click="QuitUniGetUI_Click"/>
+                        <MenuItem Header="{t:Translate Quit UniGetUI}" Click="QuitUniGetUI_Click"/>
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>

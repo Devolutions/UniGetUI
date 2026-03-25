@@ -26,6 +26,7 @@ public sealed partial class SettingsHomepage : UserControl, ISettingsPage
         BackupButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Backup));
         AdministratorButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Administrator));
         ExperimentalButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Experimental));
+        ExperimentalButton.UnderText = CoreTools.Translate("Beta features and other options that shouldn't be touched");
         ManagersButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(ManagersHomepage));
     }
 }

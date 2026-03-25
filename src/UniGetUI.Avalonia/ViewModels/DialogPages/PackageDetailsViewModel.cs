@@ -127,15 +127,15 @@ public partial class PackageDetailsViewModel : ObservableObject
     public string LabelLicense { get; } = CoreTools.Translate("License") + ":";
     public string LabelPackageId { get; } = CoreTools.Translate("Package ID") + ":";
     public string LabelManifest { get; } = CoreTools.Translate("Manifest") + ":";
-    public string LabelInstallerType { get; } = CoreTools.Translate("Installer type") + ":";
-    public string LabelInstallerSize { get; } = CoreTools.Translate("Installer size") + ":";
+    public string LabelInstallerType { get; } = CoreTools.Translate("Installer Type") + ":";
+    public string LabelInstallerSize { get; } = CoreTools.Translate("Size") + ":";
     public string LabelInstallerUrl { get; } = CoreTools.Translate("Installer URL") + ":";
-    public string LabelUpdateDate { get; } = CoreTools.Translate("Last updated") + ":";
+    public string LabelUpdateDate { get; } = CoreTools.Translate("Last updated:");
     public string LabelReleaseNotesUrl { get; } = CoreTools.Translate("Release notes URL") + ":";
     public string LabelOpen { get; } = CoreTools.Translate("Open");
     public string LabelClose { get; } = CoreTools.Translate("Close");
-    public string HeaderDetails { get; } = CoreTools.Translate("Details");
-    public string HeaderDeps { get; } = CoreTools.Translate("Dependencies");
+    public string HeaderDetails { get; } = CoreTools.Translate("Package details");
+    public string HeaderDeps { get; } = CoreTools.Translate("Dependencies:");
     public string HeaderReleaseNotes { get; } = CoreTools.Translate("Release notes");
 
     public PackageDetailsViewModel(IPackage package, OperationType role)

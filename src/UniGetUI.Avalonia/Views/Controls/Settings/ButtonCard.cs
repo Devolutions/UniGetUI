@@ -18,12 +18,12 @@ public sealed partial class ButtonCard : SettingsCard
 
     public string ButtonText
     {
-        set => _button.Content = CoreTools.Translate(value);
+        set => _button.Content = value;
     }
 
     public string Text
     {
-        set => Header = CoreTools.Translate(value);
+        set => Header = value;
     }
 
     public ICommand? Command

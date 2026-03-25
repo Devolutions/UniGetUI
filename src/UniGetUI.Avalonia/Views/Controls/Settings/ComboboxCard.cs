@@ -21,7 +21,7 @@ public sealed partial class ComboboxCard : SettingsCard
 
     public string Text
     {
-        set => Header = CoreTools.Translate(value);
+        set => Header = value;
     }
 
     public event EventHandler<EventArgs>? ValueChanged;

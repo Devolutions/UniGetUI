@@ -38,19 +38,19 @@ public sealed partial class General : UserControl, ISettingsPage
         foreach (var entry in langDict)
             LanguageSelector.AddItem(entry.Value, entry.Key, false);
         LanguageSelector.SettingName = CoreSettings.K.PreferredLanguage;
-        LanguageSelector.Text = "WingetUI display language:";
+        LanguageSelector.Text = CoreTools.Translate("WingetUI display language:");
         LanguageSelector.ShowAddedItems();
         LanguageSelector.ValueChanged += ShowRestartBanner;
         LanguageSelector.Description = BuildTranslatorDescription();
 
         DisableAutoUpdateWingetUI.SettingName = CoreSettings.K.DisableAutoUpdateWingetUI;
-        DisableAutoUpdateWingetUI.CheckboxText = "Update WingetUI automatically";
-        DisableAutoUpdateWingetUI.ButtonText = "Check for updates";
+        DisableAutoUpdateWingetUI.CheckboxText = CoreTools.Translate("Update WingetUI automatically");
+        DisableAutoUpdateWingetUI.ButtonText = CoreTools.Translate("Check for updates");
         DisableAutoUpdateWingetUI.ButtonAlwaysOn = true;
         DisableAutoUpdateWingetUI.Click += (_, _) => { /* auto-updater not available in Avalonia port */ };
 
         EnableUniGetUIBeta.SettingName = CoreSettings.K.EnableUniGetUIBeta;
-        EnableUniGetUIBeta.Text = "Install prerelease versions of UniGetUI";
+        EnableUniGetUIBeta.Text = CoreTools.Translate("Install prerelease versions of UniGetUI");
 
         InterfaceSettingsButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Interface_P));
     }
@@ -66,7 +66,7 @@ public sealed partial class General : UserControl, ISettingsPage
 
         var link = new TextBlock
         {
-            Text = CoreTools.Translate("Become a translator!"),
+            Text = CoreTools.Translate("Become a translator"),
             TextDecorations = TextDecorations.Underline,
             VerticalAlignment = VerticalAlignment.Center,
             Cursor = new Cursor(StandardCursorType.Hand),

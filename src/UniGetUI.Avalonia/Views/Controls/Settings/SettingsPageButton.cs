@@ -12,12 +12,12 @@ public partial class SettingsPageButton : SettingsCard
 {
     public string Text
     {
-        set => Header = CoreTools.Translate(value);
+        set => Header = value;
     }
 
     public string UnderText
     {
-        set => Description = CoreTools.Translate(value);
+        set => Description = value;
     }
 
     public IconType Icon

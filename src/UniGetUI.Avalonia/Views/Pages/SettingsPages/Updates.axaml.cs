@@ -25,10 +25,10 @@ public sealed partial class Updates : UserControl, ISettingsPage
 
         // Assign setting names and labels
         DisableAutoCheckForUpdates.SettingName = Settings.K.DisableAutoCheckforUpdates;
-        DisableAutoCheckForUpdates.Text = "Check for package updates periodically";
+        DisableAutoCheckForUpdates.Text = CoreTools.Translate("Check for package updates periodically");
 
         UpdatesCheckIntervalSelector.SettingName = Settings.K.UpdatesCheckInterval;
-        UpdatesCheckIntervalSelector.Text = "Check for updates every:";
+        UpdatesCheckIntervalSelector.Text = CoreTools.Translate("Check for updates every:");
         UpdatesCheckIntervalSelector.ValueChanged += ShowRestartBanner;
 
         var updates_dict = new Dictionary<string, string>
@@ -50,19 +50,19 @@ public sealed partial class Updates : UserControl, ISettingsPage
         UpdatesCheckIntervalSelector.ShowAddedItems();
 
         AutomaticallyUpdatePackages.SettingName = Settings.K.AutomaticallyUpdatePackages;
-        AutomaticallyUpdatePackages.Text = "Install available updates automatically";
+        AutomaticallyUpdatePackages.Text = CoreTools.Translate("Install available updates automatically");
 
         DisableAUPOnMeteredConnections.SettingName = Settings.K.DisableAUPOnMeteredConnections;
         DisableAUPOnMeteredConnections.ForceInversion = true;
-        DisableAUPOnMeteredConnections.Text = "Do not automatically install updates when the network connection is metered";
+        DisableAUPOnMeteredConnections.Text = CoreTools.Translate("Do not automatically install updates when the network connection is metered");
 
         DisableAUPOnBattery.SettingName = Settings.K.DisableAUPOnBattery;
         DisableAUPOnBattery.ForceInversion = true;
-        DisableAUPOnBattery.Text = "Do not automatically install updates when the device runs on battery";
+        DisableAUPOnBattery.Text = CoreTools.Translate("Do not automatically install updates when the device runs on battery");
 
         DisableAUPOnBatterySaver.SettingName = Settings.K.DisableAUPOnBatterySaver;
         DisableAUPOnBatterySaver.ForceInversion = true;
-        DisableAUPOnBatterySaver.Text = "Do not automatically install updates when the battery saver is on";
+        DisableAUPOnBatterySaver.Text = CoreTools.Translate("Do not automatically install updates when the battery saver is on");
 
         // Wire navigation cards
         OperationsSettingsButton.Click += (_, _) => NavigationRequested?.Invoke(this, typeof(Operations));

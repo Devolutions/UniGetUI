@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -40,18 +41,16 @@
 
             <settings:SettingsCard x:Name="UpdatesSettingsButton"
                                    CornerRadius="8,8,0,0"
-                                   IsClickEnabled="True">
-                <settings:SettingsCard.Header>Package update preferences</settings:SettingsCard.Header>
-                <settings:SettingsCard.Description>Update check frequency, automatically install updates, etc.</settings:SettingsCard.Description>
-            </settings:SettingsCard>
+                                   IsClickEnabled="True"
+                                   Header="{t:Translate Package update preferences}"
+                                   Description="{t:Translate Text='Update check frequency, automatically install updates, etc.'}"/>
 
             <settings:SettingsCard x:Name="AdminButton"
                                    BorderThickness="1,0,1,1"
                                    CornerRadius="0,0,8,8"
-                                   IsClickEnabled="True">
-                <settings:SettingsCard.Header>Administrator rights and other dangerous settings</settings:SettingsCard.Header>
-                <settings:SettingsCard.Description>Reduce UAC prompts, elevate installations by default, unlock certain dangerous features, etc.</settings:SettingsCard.Description>
-            </settings:SettingsCard>
+                                   IsClickEnabled="True"
+                                   Header="{t:Translate Administrator rights and other dangerous settings}"
+                                   Description="{t:Translate Text='Reduce UAC prompts, elevate installations by default, unlock certain dangerous features, etc.'}"/>
 
         </StackPanel>
     </ScrollViewer>

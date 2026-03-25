@@ -19,8 +19,6 @@ public sealed partial class Internet : UserControl, ISettingsPage
     public event EventHandler? RestartRequired;
     public event EventHandler<Type>? NavigationRequested { add { } remove { } }
 
-
-
     public Internet()
     {
         DataContext = new InternetViewModel();

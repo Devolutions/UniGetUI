@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+        xmlns:about="using:UniGetUI.Avalonia.Views.Pages.AboutPages"
+        x:Class="UniGetUI.Avalonia.Views.DialogPages.AboutWindow"
+        Title="{t:Translate About UniGetUI}"
+        Width="700" MinWidth="500"
+        Height="600" MinHeight="400"
+        CanResize="True"
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppDialogBackground}"
+        WindowStartupLocation="CenterOwner">
+
+    <TabControl Margin="8">
+
+        <TabItem Header="{t:Translate About}">
+            <about:AboutPage/>
+        </TabItem>
+
+        <TabItem Header="{t:Translate Third-party licenses}">
+            <about:ThirdPartyLicenses/>
+        </TabItem>
+
+        <TabItem Header="{t:Translate Contributors}">
+            <about:Contributors/>
+        </TabItem>
+
+        <TabItem Header="{t:Translate Translators}">
+            <about:Translators/>
+        </TabItem>
+
+    </TabControl>
+
+</Window>

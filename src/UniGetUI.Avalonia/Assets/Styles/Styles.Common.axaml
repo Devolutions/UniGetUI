@@ -27,6 +27,13 @@
         <Setter Property="Margin"          Value="40,4,40,0"/>
     </Style>
 
+    <!-- Hyperlink-style text (blue accent, underline) -->
+    <Style Selector="TextBlock.hyperlink">
+        <Setter Property="Foreground"       Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
+        <Setter Property="TextDecorations"  Value="Underline"/>
+        <Setter Property="Cursor"           Value="Hand"/>
+    </Style>
+
     <!-- SvgIcon: inherit the Fluent foreground so icons match text colour in both themes -->
     <Style Selector="controls|SvgIcon">
         <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>

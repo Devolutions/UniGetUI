@@ -10,6 +10,7 @@ using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.Pages;
+using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
@@ -336,7 +337,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private async Task ShowAboutDialog()
     {
         Sidebar.SelectNavButtonForPage(PageType.Null);
-        // TODO: await DialogHelper.ShowAboutUniGetUI();
+        var owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+        if (owner is not null)
+            await new AboutWindow().ShowDialog(owner);
         Sidebar.SelectNavButtonForPage(_currentPage);
     }
 

@@ -1,0 +1,63 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.AboutPages.Contributors"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.AboutPages"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:ContributorsViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical" Spacing="4" Margin="16,8">
+
+            <TextBlock Text="{t:Translate Contributors}"
+                       FontSize="24"
+                       FontWeight="Bold"/>
+
+            <TextBlock Text="{Binding ThanksText}"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,8"/>
+
+            <ItemsControl ItemsSource="{Binding ContributorList}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ContributorEntry">
+                        <Grid ColumnDefinitions="Auto,*,Auto"
+                              Margin="0,3"
+                              ColumnSpacing="8">
+
+                            <!-- Avatar -->
+                            <Border Grid.Column="0"
+                                    Width="32" Height="32"
+                                    CornerRadius="16"
+                                    ClipToBounds="True">
+                                <Panel>
+                                    <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"/>
+                                    <Image Source="{Binding ProfilePicture}"
+                                           Stretch="UniformToFill"/>
+                                </Panel>
+                            </Border>
+
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Name}"
+                                       VerticalAlignment="Center"/>
+
+                            <Button Grid.Column="2"
+                                    Tag="{Binding GitHubUrl}"
+                                    IsVisible="{Binding HasGitHubProfile}"
+                                    Click="GitHubButton_Click"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="4,0">
+                                <TextBlock Classes="hyperlink"
+                                           Text="{t:Translate View GitHub Profile}"/>
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

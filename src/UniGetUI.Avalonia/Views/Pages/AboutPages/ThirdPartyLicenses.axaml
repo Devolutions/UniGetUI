@@ -1,0 +1,66 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.AboutPages.ThirdPartyLicenses"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.AboutPages"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:ThirdPartyLicensesViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical" Spacing="4" Margin="16,8">
+
+            <TextBlock Text="{t:Translate WingetUI License}"
+                       FontSize="24"
+                       FontWeight="Bold"/>
+
+            <TextBlock Text="{t:Translate Text='Using WingetUI implies the acceptation of the MIT License'}"
+                       TextWrapping="Wrap"/>
+
+            <TextBlock Text="{t:Translate Third-party licenses}"
+                       FontSize="24"
+                       FontWeight="Bold"
+                       Margin="0,10,0,0"/>
+
+            <TextBlock Text="{Binding LicensesIntro}"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,8"/>
+
+            <ItemsControl ItemsSource="{Binding Licenses}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LibraryLicense">
+                        <Grid ColumnDefinitions="140,*,240"
+                              Margin="0,2">
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding Name}"
+                                       VerticalAlignment="Center"/>
+                            <Button Grid.Column="1"
+                                    Tag="{Binding LicenseURL}"
+                                    Click="LicenseButton_Click"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="4,0"
+                                    HorizontalAlignment="Center">
+                                <TextBlock Classes="hyperlink"
+                                           Text="{Binding License}"/>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Tag="{Binding HomepageUrl}"
+                                    Click="HomepageButton_Click"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="4,0"
+                                    HorizontalAlignment="Right">
+                                <TextBlock Classes="hyperlink"
+                                           Text="{Binding HomepageText}"/>
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

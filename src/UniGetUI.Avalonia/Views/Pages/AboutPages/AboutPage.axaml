@@ -1,0 +1,90 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.AboutPages.AboutPage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.AboutPages"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:AboutPageViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical" Spacing="4" Margin="16,8">
+
+            <TextBlock Text="{t:Translate About WingetUI}"
+                       FontSize="24"
+                       FontWeight="Bold"/>
+
+            <TextBlock Text="{t:Translate Text='WingetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.'}"
+                       TextWrapping="Wrap"/>
+
+            <TextBlock Text="{Binding VersionText}"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       Margin="0,10"/>
+
+            <!-- Disclaimer banner -->
+            <Border Classes="warning-banner"
+                    CornerRadius="8"
+                    Padding="12,10"
+                    Margin="0,6">
+                <Grid ColumnDefinitions="Auto,*">
+                    <!-- Warning icon -->
+                    <Border Grid.Column="0"
+                            Width="26" Height="26"
+                            CornerRadius="13"
+                            Background="{DynamicResource WarningBannerIconBackground}"
+                            VerticalAlignment="Top"
+                            Margin="0,1,12,0">
+                        <TextBlock Text="!"
+                                   FontWeight="Bold"
+                                   FontSize="15"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <!-- Text -->
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Text="{Binding DisclaimerTitle}"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding DisclaimerMessage}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <TextBlock Text="{t:Translate Useful links}"
+                       FontSize="24"
+                       FontWeight="Bold"
+                       Margin="0,10,0,4"/>
+
+            <Button Command="{Binding OpenHomepageCommand}"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="0"
+                    HorizontalAlignment="Center">
+                <TextBlock Classes="hyperlink"
+                           Text="{t:Translate UniGetUI Homepage}"/>
+            </Button>
+
+            <Button Command="{Binding OpenIssuesCommand}"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="0"
+                    HorizontalAlignment="Center">
+                <TextBlock Classes="hyperlink"
+                           Text="{t:Translate Report an issue or submit a feature request}"/>
+            </Button>
+
+            <Button Command="{Binding OpenRepositoryCommand}"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="0"
+                    HorizontalAlignment="Center">
+                <TextBlock Classes="hyperlink"
+                           Text="{t:Translate UniGetUI Repository}"/>
+            </Button>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

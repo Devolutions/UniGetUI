@@ -138,6 +138,9 @@
       <Compile Update="Views\DialogPages\OperationOutputWindow.axaml.cs">
         <DependentUpon>OperationOutputWindow.axaml</DependentUpon>
       </Compile>
+      <Compile Update="Views\Pages\AboutPages\AboutPage.axaml.cs">
+        <DependentUpon>AboutPage.axaml</DependentUpon>
+      </Compile>
     </ItemGroup>
 
     <ItemGroup>

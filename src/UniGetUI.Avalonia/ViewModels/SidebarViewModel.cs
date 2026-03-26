@@ -47,11 +47,11 @@ public partial class SidebarViewModel : ViewModelBase
 
     // ─── Pane open/closed ─────────────────────────────────────────────────────
     [ObservableProperty]
-    private bool _isPaneOpen = false;
+    private bool isPaneOpen = !Settings.Get(Settings.K.CollapseNavMenuOnWideScreen);
 
     partial void OnIsPaneOpenChanged(bool value)
     {
-        Settings.Set(Settings.K.CollapseNavMenuOnWideScreen, value);
+        Settings.Set(Settings.K.CollapseNavMenuOnWideScreen, !value);
         OnPropertyChanged(nameof(PaneWidth));
         OnPropertyChanged(nameof(UpdatesBadgeExpandedVisible));
         OnPropertyChanged(nameof(UpdatesBadgeCompactVisible));

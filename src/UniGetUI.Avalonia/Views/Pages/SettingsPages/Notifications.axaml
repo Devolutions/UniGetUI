@@ -44,7 +44,7 @@
                                    CornerRadius="0"
                                    IsEnabled="{Binding IsNotificationsEnabled}"/>
 
-            <settings:CheckboxCard SettingName="DisableUpdatesNotifications"
+            <settings:CheckboxCard SettingName="DisableErrorNotifications"
                                    Text="{t:Translate Show a notification when an operation fails}"
                                    CornerRadius="0"
                                    IsEnabled="{Binding IsNotificationsEnabled}"/>

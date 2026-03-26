@@ -233,13 +233,14 @@ public class SettingsCard : UserControl
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_isClickEnabled)
-        {
-            Click?.Invoke(this, new RoutedEventArgs());
-            var cmd = Command;
-            var param = CommandParameter;
-            if (cmd?.CanExecute(param) == true)
-                cmd.Execute(param);
-        }
+        if (!_isClickEnabled) return;
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+
+        e.Handled = true;
+        Click?.Invoke(this, new RoutedEventArgs());
+        var cmd = Command;
+        var param = CommandParameter;
+        if (cmd?.CanExecute(param) == true)
+            cmd.Execute(param);
     }
 }

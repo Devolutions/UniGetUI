@@ -1,5 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
@@ -25,5 +28,12 @@ public sealed partial class Operations : UserControl, ISettingsPage
         foreach (var v in VM.ParallelOpCounts)
             ParallelOperationCount.AddItem(v, v, false);
         ParallelOperationCount.ShowAddedItems();
+
+        AskToDeleteNewDesktopShortcuts.Click += async (_, _) =>
+        {
+            if (Application.Current?.ApplicationLifetime
+                    is IClassicDesktopStyleApplicationLifetime { MainWindow: { } win })
+                await new ManageDesktopShortcutsWindow().ShowDialog(win);
+        };
     }
 }

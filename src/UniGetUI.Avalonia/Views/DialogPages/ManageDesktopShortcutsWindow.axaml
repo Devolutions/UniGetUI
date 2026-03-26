@@ -1,0 +1,208 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
+        xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+        x:Class="UniGetUI.Avalonia.Views.ManageDesktopShortcutsWindow"
+        x:DataType="vm:ManageDesktopShortcutsViewModel"
+        Width="950" MinWidth="560"
+        Height="520" MinHeight="300"
+        CanResize="True"
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppDialogBackground}"
+        WindowStartupLocation="CenterOwner"
+        Title="{t:Translate Text='Manage shortcuts'}">
+
+    <Window.Styles>
+        <Style Selector="DataGridCell:current /template/ Grid#FocusVisual">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="DataGridCell:current">
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto"
+          Margin="16"
+          RowSpacing="8">
+
+        <!-- ── Title ── -->
+        <TextBlock Grid.Row="0"
+                   Text="{t:Translate Text='Manage shortcuts'}"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,4"/>
+
+        <!-- ── Header: description + Reset list button ── -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+
+            <StackPanel Orientation="Vertical" Spacing="2">
+                <TextBlock Text="{t:Translate Text='UniGetUI has detected the following desktop shortcuts which can be removed automatically on future upgrades'}"
+                           TextWrapping="Wrap"
+                           Opacity="0.75"/>
+                <TextBlock TextWrapping="Wrap" Opacity="0.75">
+                    <TextBlock.Text>
+                        <t:Translate Text="Here you can change UniGetUI's behaviour regarding the following shortcuts. Checking a shortcut will make UniGetUI delete it if if gets created on a future upgrade. Unchecking it will keep the shortcut intact"/>
+                    </TextBlock.Text>
+                </TextBlock>
+            </StackPanel>
+
+            <Button x:Name="ResetButton" Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="{t:Translate Text='Reset list'}"/>
+                <Button.Flyout>
+                    <Flyout Placement="Bottom">
+                        <Flyout.FlyoutPresenterTheme>
+                            <ControlTheme TargetType="FlyoutPresenter">
+                                <Setter Property="Background" Value="{DynamicResource AppDialogPanelBackground}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="CornerRadius" Value="8"/>
+                                <Setter Property="Padding" Value="12"/>
+                            </ControlTheme>
+                        </Flyout.FlyoutPresenterTheme>
+                        <Grid Width="300"
+                              ColumnDefinitions="*,*"
+                              RowDefinitions="Auto,Auto"
+                              ColumnSpacing="8" RowSpacing="16"
+                              Margin="4">
+                            <TextBlock Grid.ColumnSpan="2"
+                                       Text="{t:Translate Text='Do you really want to reset this list? This action cannot be reverted.'}"
+                                       TextWrapping="Wrap"/>
+                            <Button Grid.Row="1" Grid.Column="0"
+                                    Content="{t:Translate Text='Yes'}"
+                                    HorizontalAlignment="Stretch"
+                                    Click="ResetYes_Click"/>
+                            <Button Grid.Row="1" Grid.Column="1"
+                                    Content="{t:Translate Text='No'}"
+                                    HorizontalAlignment="Stretch"
+                                    Classes="accent"
+                                    Click="ResetNo_Click"/>
+                        </Grid>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+
+        </Grid>
+
+        <!-- ── Shortcut list ── -->
+        <Border Grid.Row="2"
+                CornerRadius="8"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                Margin="0,4,0,0">
+            <DataGrid ItemsSource="{Binding Entries}"
+                      AutoGenerateColumns="False"
+                      CanUserReorderColumns="True"
+                      CanUserResizeColumns="True"
+                      CanUserSortColumns="False"
+                      SelectionMode="Single"
+                      HeadersVisibility="None"
+                      GridLinesVisibility="Horizontal">
+                    <DataGrid.Columns>
+
+                        <!-- Delete? checkbox -->
+                        <DataGridTemplateColumn Width="72">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
+                                    <CheckBox IsChecked="{Binding IsDeletable}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Name -->
+                        <DataGridTemplateColumn Width="2*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                VerticalAlignment="Center" Margin="0,0,4,0">
+                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/id.svg"
+                                                          Width="16" Height="16" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTip.Tip="{Binding Name}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Path -->
+                        <DataGridTemplateColumn Width="3*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                VerticalAlignment="Center" Margin="0,0,4,0">
+                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/open_folder.svg"
+                                                          Width="16" Height="16" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTip.Tip="{Binding Path}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Open in explorer -->
+                        <DataGridTemplateColumn Width="48">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
+                                    <Button Width="32" Height="32"
+                                            Padding="0"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            IsEnabled="{Binding ExistsOnDisk}"
+                                            Command="{Binding OpenCommand}"
+                                            ToolTip.Tip="{t:Translate Text='Open in explorer'}">
+                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/launch.svg"
+                                                          Width="16" Height="16"/>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Reset (remove from list) -->
+                        <DataGridTemplateColumn Width="48">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
+                                    <Button Width="32" Height="32"
+                                            Padding="0"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding RemoveCommand}"
+                                            ToolTip.Tip="{t:Translate Text='Remove from list'}">
+                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/delete.svg"
+                                                          Width="16" Height="16"/>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                    </DataGrid.Columns>
+                </DataGrid>
+        </Border>
+
+        <!-- ── Footer: auto-delete toggle + save button ── -->
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4,0,0">
+
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <ToggleSwitch IsChecked="{Binding AutoDelete}"
+                              OnContent="" OffContent=""
+                              VerticalAlignment="Center"/>
+                <TextBlock Text="{t:Translate Text='When new shortcuts are detected, delete them automatically instead of showing this dialog.'}"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"
+                           MaxWidth="600"
+                           Opacity="0.85"/>
+            </StackPanel>
+
+            <Button Grid.Column="1"
+                    Classes="accent"
+                    Command="{Binding SaveAndCloseCommand}"
+                    VerticalAlignment="Center"
+                    Content="{t:Translate Text='Save and close'}"/>
+
+        </Grid>
+
+    </Grid>
+</Window>

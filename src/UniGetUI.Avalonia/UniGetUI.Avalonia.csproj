@@ -99,6 +99,10 @@
         <DependentUpon>ManageIgnoredUpdatesWindow.axaml</DependentUpon>
         <SubType>Code</SubType>
       </Compile>
+      <Compile Update="Views\DialogPages\ManageDesktopShortcutsWindow.axaml.cs">
+        <DependentUpon>ManageDesktopShortcutsWindow.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
       <Compile Update="Views\DialogPages\PackageDetailsWindow.axaml.cs">
         <DependentUpon>PackageDetailsWindow.axaml.axaml</DependentUpon>
         <SubType>Code</SubType>

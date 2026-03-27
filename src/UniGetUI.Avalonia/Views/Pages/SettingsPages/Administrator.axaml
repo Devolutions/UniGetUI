@@ -69,6 +69,7 @@
 
             <settings:CheckboxCard SettingName="ProhibitElevation"
                                    Text="{t:Translate Prohibit any kind of Elevation via UniGetUI Elevator or GSudo}"
+                                   WarningText="{t:Translate Text='This option WILL cause issues. Any operation incapable of elevating itself WILL FAIL. Install/update/uninstall as administrator will NOT WORK.'}"
                                    StateChangedCommand="{Binding RefreshElevationStateCommand}"
                                    CornerRadius="8"/>
 

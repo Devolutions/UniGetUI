@@ -1,0 +1,19 @@
+{
+    "configurations": [
+        {
+            "name": "UniGetUI.Avalonia (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build UniGetUI.Avalonia (Debug)",
+            "program": "${workspaceFolder}/bin/arm64/Debug/net10.0/UniGetUI.Avalonia",
+            "args": [],
+            "cwd": "${workspaceFolder}/bin/arm64/Debug/net10.0/",
+            "console": "integratedTerminal",
+            "stopAtEntry": false,
+            "env": {
+                "UNIGETUI_GITHUB_CLIENT_ID": "",
+                "UNIGETUI_GITHUB_CLIENT_SECRET": ""
+            }
+        }
+    ]
+}

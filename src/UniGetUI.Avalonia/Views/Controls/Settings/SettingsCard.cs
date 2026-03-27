@@ -21,6 +21,7 @@ public class SettingsCard : UserControl
     private readonly ContentControl _descriptionPresenter;
     private readonly ContentControl _contentPresenter;
     private readonly StackPanel _descriptionRow;
+    private readonly TextBlock _chevron;
 
     // ── Styled properties ──────────────────────────────────────────────────
     public static readonly StyledProperty<object?> HeaderProperty =
@@ -99,6 +100,7 @@ public class SettingsCard : UserControl
         {
             _isClickEnabled = value;
             Cursor = value ? new Cursor(StandardCursorType.Hand) : Cursor.Default;
+            _chevron.IsVisible = value;
             if (value)
                 _border.Classes.Add("settings-card-clickable");
             else
@@ -168,19 +170,32 @@ public class SettingsCard : UserControl
         {
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Right,
+            MinWidth = 80,
             Margin = new Thickness(16, 0, 0, 0),
+        };
+
+        _chevron = new TextBlock
+        {
+            Text = "›",
+            FontSize = 20,
+            VerticalAlignment = VerticalAlignment.Center,
+            Opacity = 0.6,
+            Margin = new Thickness(8, 0, 0, 0),
+            IsVisible = false,
         };
 
         var grid = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"),
             MinHeight = 60,
             Margin = new Thickness(16, 8, 16, 8),
         };
         Grid.SetColumn(leftRow, 0);
         Grid.SetColumn(_contentPresenter, 1);
+        Grid.SetColumn(_chevron, 2);
         grid.Children.Add(leftRow);
         grid.Children.Add(_contentPresenter);
+        grid.Children.Add(_chevron);
 
         _border = new Border
         {
@@ -222,7 +237,8 @@ public class SettingsCard : UserControl
                 ? new TextBlock
                 {
                     Text = s,
-                    TextWrapping = TextWrapping.Wrap,
+                    TextWrapping = TextWrapping.NoWrap,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
                     FontSize = 12,
                     Opacity = 0.7,
                 }

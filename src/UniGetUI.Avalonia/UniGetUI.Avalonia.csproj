@@ -1,4 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
+    <Target Name="GenerateBuildInfo" BeforeTargets="BeforeBuild">
+        <Exec Command="pwsh -File Infrastructure/generate-secrets.ps1 $(IntermediateOutputPath)" Condition="$([MSBuild]::IsOSPlatform('Windows'))"/>
+        <Exec Command="bash Infrastructure/generate-secrets.sh $(IntermediateOutputPath)"         Condition="!$([MSBuild]::IsOSPlatform('Windows'))"/>
+        <ItemGroup>
+            <Compile
+                Include="**/*$(DefaultLanguageSourceExtension)"
+                Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder);$(BaseIntermediateOutputPath)**;$(BaseOutputPath)**;@(Compile)"
+            />
+        </ItemGroup>
+    </Target>
+
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <TargetFrameworks />
@@ -73,6 +85,17 @@
       <Compile Include="Infrastructure\AvaloniaOperationRegistry.cs" />
       <Compile Include="Infrastructure\WindowsAppNotificationBridge.cs" />
       <Compile Include="Infrastructure\MacOsNotificationBridge.cs" />
+      <Compile Include="Infrastructure\Secrets.cs" />
+      <Compile Include="Infrastructure\AsyncCommand.cs" />
+      <Compile Include="Infrastructure\AvaloniaAutoUpdater.cs" />
+      <Compile Include="Infrastructure\AvaloniaBootstrapper.cs" />
+      <Compile Include="Infrastructure\AvaloniaPackageOperationHelper.cs" />
+      <Compile Include="Infrastructure\GitHubAuthApiRunner.cs" />
+      <Compile Include="Infrastructure\GitHubAuthService.cs" />
+      <Compile Include="Infrastructure\GitHubCloudBackupService.cs" />
+      <Compile Include="Infrastructure\RelayCommand.cs" />
+      <Compile Include="Infrastructure\SingleInstanceRedirector.cs" />
+      <Compile Include="Infrastructure\UninstallConfirmationDialog.cs" />
       <Compile Remove="Models\PackagePageMode.cs" />
       <Compile Remove="Models\PackageRowModel.cs" />
       <Compile Remove="Models\ShellPageType.cs" />
@@ -144,6 +167,18 @@
       </Compile>
       <Compile Update="Views\Pages\AboutPages\AboutPage.axaml.cs">
         <DependentUpon>AboutPage.axaml</DependentUpon>
+      </Compile>
+      <Compile Update="Views\Pages\SettingsPages\PackageManagerPage.axaml.cs">
+        <DependentUpon>PackageManagerPage.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\Pages\SettingsPages\InstallOptionsPanel.axaml.cs">
+        <DependentUpon>InstallOptionsPanel.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\Pages\SettingsPages\SourceManagerCard.axaml.cs">
+        <DependentUpon>SourceManagerCard.axaml</DependentUpon>
+        <SubType>Code</SubType>
       </Compile>
     </ItemGroup>
 

@@ -101,7 +101,7 @@ internal static class AvaloniaBootstrapper
             _backgroundApi.OnOpenUpdatesPage += (_, _) =>
                 Dispatcher.UIThread.Post(() =>
                 {
-                    MainWindow.Instance?.NavigateShell(ShellPageType.Updates);
+                    MainWindow.Instance?.Navigate(PageType.Updates);
                     MainWindow.Instance?.ShowFromTray();
                 });
 
@@ -110,10 +110,7 @@ internal static class AvaloniaBootstrapper
                 {
                     Logger.Info($"BackgroundApi: ShowSharedPackage {pkg.Key}/{pkg.Value}");
                     MainWindow.Instance?.ShowFromTray();
-                    if (MainWindow.Instance?.Content is Views.MainShellView shell)
-                    {
-                        shell.OpenSharedPackage(pkg.Key, pkg.Value);
-                    }
+                    MainWindow.Instance?.OpenSharedPackage(pkg.Key, pkg.Value);
                 });
 
             _backgroundApi.OnUpgradeAll += (_, _) =>

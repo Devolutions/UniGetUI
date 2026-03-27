@@ -84,6 +84,15 @@ public class SvgIcon : Control
                     _viewBoxHeight = h;
                 }
             }
+            else if (
+                double.TryParse(svg.Attribute("width")?.Value, System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out double svgW) &&
+                double.TryParse(svg.Attribute("height")?.Value, System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out double svgH))
+            {
+                _viewBoxWidth = svgW;
+                _viewBoxHeight = svgH;
+            }
 
             XNamespace ns = "http://www.w3.org/2000/svg";
             foreach (XElement el in doc.Descendants(ns + "path"))

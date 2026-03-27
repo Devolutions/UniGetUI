@@ -69,6 +69,10 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
             sp.RestartRequired += Page_RestartRequired;
             VM.Title = sp.ShortTitle;
         }
+
+        // Refresh toggle states when returning to the managers list
+        if (page is ManagersHomepage mh)
+            mh.RefreshToggles();
     }
 
     private void NavigateBack()
@@ -117,8 +121,15 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
     private SettingsHomepage GetSettingsHomepage() =>
         _settingsHomepage ??= new SettingsHomepage();
 
-    private ManagersHomepage GetManagersHomepage() =>
-        _managersHomepage ??= new ManagersHomepage();
+    private ManagersHomepage GetManagersHomepage()
+    {
+        if (_managersHomepage is null)
+        {
+            _managersHomepage = new ManagersHomepage();
+            _managersHomepage.ManagerNavigationRequested += (_, manager) => NavigateTo(manager);
+        }
+        return _managersHomepage;
+    }
 
     // ── IInnerNavigationPage ──────────────────────────────────────────────
 
@@ -150,7 +161,10 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
 
     public void NavigateTo(IPackageManager manager)
     {
-        // TODO: navigate to PackageManagerPage for this manager (Phase 5)
+        if (_currentContent is not null)
+            _history.Push(_currentContent);
+
+        NavigateToPage(new PackageManagerPage(manager));
     }
 
     public void NavigateTo(Type page)

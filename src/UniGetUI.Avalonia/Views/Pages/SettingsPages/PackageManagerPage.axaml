@@ -1,0 +1,108 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.PackageManagerPage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:PackageManagerViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Border.status-success">
+            <Setter Property="Background"   Value="{DynamicResource StatusSuccessBackground}"/>
+            <Setter Property="BorderBrush"  Value="{DynamicResource StatusSuccessBorderBrush}"/>
+        </Style>
+        <Style Selector="Border.status-warning">
+            <Setter Property="Background"   Value="{DynamicResource WarningBannerBackground}"/>
+            <Setter Property="BorderBrush"  Value="{DynamicResource WarningBannerBorderBrush}"/>
+        </Style>
+        <Style Selector="Border.status-error">
+            <Setter Property="Background"   Value="{DynamicResource StatusErrorBackground}"/>
+            <Setter Property="BorderBrush"  Value="{DynamicResource StatusErrorBorderBrush}"/>
+        </Style>
+        <Style Selector="Border.status-info">
+            <Setter Property="Background"   Value="{DynamicResource StatusInfoBackground}"/>
+            <Setter Property="BorderBrush"  Value="{DynamicResource StatusInfoBorderBrush}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,10">
+        <StackPanel Orientation="Vertical">
+
+            <!-- Enable/Disable toggle – DictionaryName and KeyName set in code-behind -->
+            <settings:CheckboxCard_Dict x:Name="EnableManager"
+                                        CornerRadius="8"
+                                        FontSize="18"
+                                        FontWeight="SemiBold"/>
+
+            <!-- Status section heading -->
+            <TextBlock Text="{Binding StatusSectionTitle}"
+                       Margin="44,32,4,8"
+                       FontWeight="SemiBold"/>
+
+            <!-- Status banner -->
+            <Border x:Name="StatusBar"
+                    CornerRadius="8,8,0,0"
+                    BorderThickness="1"
+                    Padding="16,12"
+                    Margin="40,0,40,0">
+                <StackPanel Orientation="Vertical" Spacing="2">
+                    <TextBlock Text="{Binding StatusTitle}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding StatusMessage}"
+                               IsVisible="{Binding StatusMessageVisible}"
+                               Opacity="0.85" TextWrapping="Wrap"/>
+                    <Button IsVisible="{Binding ShowVersionVisible}"
+                            Command="{Binding ShowVersionCommand}"
+                            HorizontalAlignment="Left"
+                            Padding="0">
+                        <TextBlock Text="{Binding ShowVersionLabel}" Classes="hyperlink"/>
+                    </Button>
+                    <TextBlock Text="{Binding VersionText}"
+                               IsVisible="{Binding VersionTextVisible}"
+                               FontFamily="Courier New"
+                               FontSize="12"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Executable picker card – built in code-behind -->
+            <ContentControl x:Name="ExecutableHolder"/>
+
+            <!-- Current executable path card – built in code-behind -->
+            <ContentControl x:Name="PathHolder"/>
+
+            <!-- Install options heading and panel -->
+            <TextBlock Text="{Binding InstallSectionTitle}" Margin="44,32,4,8" FontWeight="SemiBold"/>
+            <ContentControl x:Name="InstallOptionsHolder"/>
+
+            <!-- Manager-specific settings heading -->
+            <TextBlock Text="{Binding SettingsSectionTitle}" Margin="44,32,4,8" FontWeight="SemiBold"/>
+
+            <!-- Manager-specific extra controls – built in code-behind -->
+            <StackPanel x:Name="ExtraControls"
+                        HorizontalAlignment="Stretch"
+                        Orientation="Vertical"/>
+
+            <!-- Related settings -->
+            <settings:TranslatedTextBlock Text="Related settings"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <!-- Logs link card -->
+            <settings:SettingsPageButton x:Name="ManagerLogs" CornerRadius="8,8,0,0"/>
+
+            <!-- Python App Execution Alias warning (Pip only) -->
+            <settings:SettingsCard x:Name="AppExecutionAliasWarning"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0,0,8,8"
+                                   IsVisible="False">
+                <settings:SettingsCard.Description>
+                    <TextBlock x:Name="AppExecutionAliasLabel" TextWrapping="Wrap"/>
+                </settings:SettingsCard.Description>
+            </settings:SettingsCard>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

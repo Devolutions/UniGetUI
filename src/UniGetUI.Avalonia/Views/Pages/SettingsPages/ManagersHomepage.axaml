@@ -11,8 +11,7 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel x:Name="ManagersPanel"
                     Orientation="Vertical"
-                    Spacing="4"
-                    Margin="16,8"/>
+                    Margin="0,8"/>
     </ScrollViewer>
 
 </UserControl>

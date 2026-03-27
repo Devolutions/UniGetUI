@@ -16,6 +16,7 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.PackageLoader;
 
@@ -332,6 +333,12 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         NavigateTo(PageType.Help);
         HelpPage?.NavigateTo(uriAttachment);
+    }
+
+    public async Task LoadCloudBundleAsync(string content)
+    {
+        NavigateTo(PageType.Bundles);
+        await BundlesPage.OpenFromString(content, BundleFormatType.UBUNDLE, "GitHub Gist");
     }
 
     private async Task ShowAboutDialog()

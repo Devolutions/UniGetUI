@@ -2,8 +2,10 @@ using System.Diagnostics;
 using Avalonia.Controls;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
+using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Enums;
@@ -29,6 +31,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
     private MenuItem? _menuOpenInstallLocation;
     private MenuItem? _menuDownloadInstaller;
 
+    private static bool _hasBackedUp;
+
     public InstalledPackagesPage() : base(new PackagesPageData
     {
         PageName = "SoftwarePages.InstalledPackagesPage",
@@ -49,7 +53,15 @@ public class InstalledPackagesPage : AbstractPackagesPage
         MainSubtitle_StillLoading = CoreTools.Translate("Loading packages"),
         NoMatches_BackgroundText = CoreTools.Translate("No results were found matching the input criteria"),
     })
-    { }
+    {
+        ViewModel.PackagesLoaded += reason =>
+        {
+            if (_hasBackedUp) return;
+            _hasBackedUp = true;
+            if (Settings.Get(Settings.K.EnablePackageBackup_LOCAL))
+                _ = BackupViewModel.DoLocalBackupStatic();
+        };
+    }
 
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {

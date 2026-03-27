@@ -80,6 +80,7 @@ src/UniGetUI/choco-cli/extensions/chocolatey-dotnetfx/
 
 *.user
 /src/UniGetUI/Generated Files
+/src/UniGetUI.Avalonia/Infrastructure/Generated Files
 /InstallerExtras/MsiCreator/.vs/MsiInstallerWrapper/CopilotIndices
 /InstallerExtras/MsiCreator/.vs
 InstallerExtras/MsiCreator/setup.exe
@@ -93,3 +94,4 @@ src/UniGetUI.v3.ncrunchsolution
 
 # macOS Finder metadata
 .DS_Store
+/src/UniGetUI.Avalonia/Generated Files

@@ -16,7 +16,116 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <ContentControl x:Name="BackupInfoCardHolder"/>
+            <settings:SettingsCard CornerRadius="8">
+                <settings:SettingsCard.Description>
+                    <ItemsControl ItemsSource="{Binding InfoLines}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </settings:SettingsCard.Description>
+            </settings:SettingsCard>
+
+            <!-- ── Cloud package backup ── -->
+            <settings:TranslatedTextBlock Text="Cloud package backup"
+                                          FontSize="16"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <!-- GitHub identity card -->
+            <Border BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8,8,0,0"
+                    Padding="16,12"
+                    Margin="40,0,40,0"
+                    Background="{DynamicResource SettingsCardBackground}">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+
+                    <!-- Avatar (circular clip) -->
+                    <Border Width="40" Height="40"
+                            CornerRadius="20"
+                            ClipToBounds="True"
+                            VerticalAlignment="Center">
+                        <Panel>
+                            <Border Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"/>
+                            <Image Source="{Binding GitHubAvatarBitmap}"
+                                   Stretch="UniformToFill"/>
+                        </Panel>
+                    </Border>
+
+                    <StackPanel Grid.Column="1" Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding GitHubUserTitle}"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding GitHubUserSubtitle}"
+                                   FontSize="12"
+                                   Opacity="0.8"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <!-- Log in button (shown when not logged in) -->
+                    <Button Grid.Column="2"
+                            Classes="accent"
+                            IsVisible="{Binding !IsLoggedIn}"
+                            IsEnabled="{Binding IsLoginButtonEnabled}"
+                            Command="{Binding LoginCommand}"
+                            VerticalAlignment="Center"
+                            Content="{t:Translate Log in with GitHub}"/>
+
+                    <!-- Log out button (shown when logged in) -->
+                    <Button Grid.Column="2"
+                            IsVisible="{Binding IsLoggedIn}"
+                            IsEnabled="{Binding IsLoginButtonEnabled}"
+                            Command="{Binding LogoutCommand}"
+                            VerticalAlignment="Center"
+                            Content="{t:Translate Log out from GitHub}"/>
+
+                    <!-- More details -->
+                    <Button Grid.Column="3"
+                            Command="{Binding MoreDetailsCommand}"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="0">
+                        <TextBlock Classes="hyperlink"
+                                   Text="{t:Translate More details}"/>
+                    </Button>
+
+                </Grid>
+            </Border>
+
+            <!-- Enable cloud backup checkbox -->
+            <settings:CheckboxCard SettingName="EnablePackageBackup_CLOUD"
+                                   Text="{t:Translate Periodically perform a cloud backup of the installed packages}"
+                                   WarningText="{t:Translate Cloud backup uses a private GitHub Gist to store a list of installed packages}"
+                                   StateChangedCommand="{Binding EnableCloudBackupChangedCommand}"
+                                   IsEnabled="{Binding IsCloudControlsEnabled}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0,0,8,8"/>
+
+            <Border Height="16"/>
+
+            <!-- Cloud backup now -->
+            <settings:ButtonCard CornerRadius="8,8,0,0"
+                                 Text="{t:Translate Perform a cloud backup now}"
+                                 ButtonText="{t:Translate Backup}"
+                                 IsEnabled="{Binding IsCloudBackupNowEnabled}"
+                                 Command="{Binding DoCloudBackupCommand}"
+                                 CommandParameter="{Binding $self}"/>
+
+            <!-- Restore from cloud -->
+            <settings:ButtonCard CornerRadius="0,0,8,8"
+                                 BorderThickness="1,0,1,1"
+                                 Text="{t:Translate Restore a backup from the cloud}"
+                                 Description="{t:Translate Begin the process to select a cloud backup and review which packages to restore}"
+                                 ButtonText="{t:Translate Select backup}"
+                                 IsEnabled="{Binding IsCloudControlsEnabled}"
+                                 Command="{Binding RestoreFromCloudCommand}"
+                                 CommandParameter="{Binding $self}"/>
+
+            <!-- ── Local package backup ── -->
 
             <settings:TranslatedTextBlock Text="Local package backup"
                                           FontSize="16"

@@ -308,10 +308,62 @@ jobs:
         run: |
           Remove-Item "unigetui_bin" -Recurse -Force -ErrorAction SilentlyContinue
 
+  build-avalonia:
+    name: Build Avalonia (${{ matrix.platform }})
+    runs-on: macos-latest
+    needs: [preflight]
+    environment: ${{ needs.preflight.outputs.package-env }}
+    permissions:
+      contents: read
+    env:
+      UNIGETUI_GITHUB_CLIENT_ID: ${{ secrets.UNIGETUI_GITHUB_CLIENT_ID }}
+      UNIGETUI_GITHUB_CLIENT_SECRET: ${{ secrets.UNIGETUI_GITHUB_CLIENT_SECRET }}
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [arm64, x64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        working-directory: src
+        run: dotnet restore UniGetUI.Avalonia/UniGetUI.Avalonia.csproj
+
+      - name: Publish
+        working-directory: src
+        run: |
+          dotnet publish UniGetUI.Avalonia/UniGetUI.Avalonia.csproj \
+            --configuration Release \
+            --runtime osx-${{ matrix.platform }} \
+            --self-contained true \
+            --output ../avalonia_bin/${{ matrix.platform }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: UniGetUI-Avalonia-${{ matrix.platform }}
+          path: avalonia_bin/${{ matrix.platform }}/*
+
   publish:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
-    needs: [preflight, build]
+    needs: [preflight, build, build-avalonia]
     if: ${{ fromJSON(needs.preflight.outputs.skip-publish) == false }}
     environment: ${{ needs.preflight.outputs.package-env }}
     permissions:

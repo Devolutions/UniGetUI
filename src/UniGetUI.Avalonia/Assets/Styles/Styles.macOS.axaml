@@ -26,6 +26,17 @@
                     <SolidColorBrush x:Key="WarningBannerIconBackground" Color="#f0a500"/>
                     <SolidColorBrush x:Key="WarningBannerIconForeground" Color="#1a1000"/>
                     <SolidColorBrush x:Key="WarningBannerSubtext"        Color="#ffe082"/>
+                    <!-- Status banners (success / error / info) -->
+                    <SolidColorBrush x:Key="StatusSuccessBackground"     Color="#1a3d1a"/>
+                    <SolidColorBrush x:Key="StatusSuccessBorderBrush"    Color="#2e6b2e"/>
+                    <SolidColorBrush x:Key="StatusErrorBackground"       Color="#3d1a1a"/>
+                    <SolidColorBrush x:Key="StatusErrorBorderBrush"      Color="#6b2e2e"/>
+                    <SolidColorBrush x:Key="StatusInfoBackground"        Color="#1a2035"/>
+                    <SolidColorBrush x:Key="StatusInfoBorderBrush"       Color="#2e3a60"/>
+                    <!-- Status badge foreground -->
+                    <SolidColorBrush x:Key="StatusSuccessForeground"     Color="#66bb6a"/>
+                    <SolidColorBrush x:Key="StatusWarningForeground"     Color="#ffe082"/>
+                    <SolidColorBrush x:Key="StatusErrorForeground"       Color="#ef9a9a"/>
                     <!-- Setting warning subtext -->
                     <SolidColorBrush x:Key="SettingWarningTextForeground" Color="#ffc107"/>
                 </ResourceDictionary>
@@ -52,6 +63,17 @@
                     <SolidColorBrush x:Key="WarningBannerIconBackground" Color="#f0a500"/>
                     <SolidColorBrush x:Key="WarningBannerIconForeground" Color="#1a1000"/>
                     <SolidColorBrush x:Key="WarningBannerSubtext"        Color="#7a4f00"/>
+                    <!-- Status banners (success / error / info) -->
+                    <SolidColorBrush x:Key="StatusSuccessBackground"     Color="#e8f5e9"/>
+                    <SolidColorBrush x:Key="StatusSuccessBorderBrush"    Color="#4caf50"/>
+                    <SolidColorBrush x:Key="StatusErrorBackground"       Color="#ffebee"/>
+                    <SolidColorBrush x:Key="StatusErrorBorderBrush"      Color="#f44336"/>
+                    <SolidColorBrush x:Key="StatusInfoBackground"        Color="#e3f2fd"/>
+                    <SolidColorBrush x:Key="StatusInfoBorderBrush"       Color="#1976d2"/>
+                    <!-- Status badge foreground -->
+                    <SolidColorBrush x:Key="StatusSuccessForeground"     Color="#2e7d32"/>
+                    <SolidColorBrush x:Key="StatusWarningForeground"     Color="#7a4f00"/>
+                    <SolidColorBrush x:Key="StatusErrorForeground"       Color="#c62828"/>
                     <!-- Setting warning subtext -->
                     <SolidColorBrush x:Key="SettingWarningTextForeground" Color="#a05c00"/>
                 </ResourceDictionary>

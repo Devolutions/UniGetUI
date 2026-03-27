@@ -1,0 +1,135 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.SourceManagerCard"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:interfaces="using:UniGetUI.PackageEngine.Interfaces"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Name="Root"
+             x:DataType="vm:SourceManagerCardViewModel">
+
+    <Border Classes="settings-card"
+            CornerRadius="8"
+            BorderThickness="1"
+            Padding="16,12">
+    <StackPanel Orientation="Vertical" Spacing="8">
+
+        <!-- Header row: title left, Add source + reload icon right -->
+        <Grid ColumnDefinitions="*,Auto,Auto">
+            <TextBlock Grid.Column="0"
+                       Text="{Binding TitleText}"
+                       VerticalAlignment="Center"
+                       FontWeight="SemiBold"
+                       FontSize="15"/>
+            <Button Grid.Column="1"
+                    Content="{Binding AddLabel}"
+                    Command="{Binding ShowAddSourceCommand}"
+                    IsVisible="{Binding !ShowAddForm}"
+                    IsEnabled="{Binding !IsLoading}"
+                    Margin="0,0,4,0"/>
+            <Button Grid.Column="2"
+                    Command="{Binding ReloadSourcesCommand}"
+                    IsEnabled="{Binding !IsLoading}"
+                    Padding="6"
+                    ToolTip.Tip="Reload">
+                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/reload.svg"
+                                  Width="16" Height="16"
+                                  Foreground="{DynamicResource TextControlForeground}"/>
+            </Button>
+        </Grid>
+
+        <!-- Loading indicator -->
+        <ProgressBar IsIndeterminate="True"
+                     IsVisible="{Binding IsLoading}"
+                     Height="4"/>
+
+        <!-- Source list: border always visible even when empty -->
+        <Border BorderBrush="{DynamicResource SettingsCardBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                MinHeight="60"
+                Padding="4">
+            <ItemsControl ItemsSource="{Binding Sources}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="interfaces:IManagerSource">
+                    <Grid ColumnDefinitions="4,Auto,*,Auto"
+                          Margin="0,2"
+                          MinHeight="32">
+                        <!-- Accent bar -->
+                        <Border Grid.Column="0"
+                                Background="{DynamicResource SystemAccentColor}"
+                                CornerRadius="2"
+                                Margin="0,4"/>
+                        <!-- Package icon + name -->
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    Margin="10,0,4,0"
+                                    VerticalAlignment="Center">
+                            <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
+                                              Width="16" Height="16"
+                                              Foreground="{DynamicResource TextControlForeground}"/>
+                            <TextBlock Text="{Binding Name}"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       MinWidth="120"/>
+                        </StackPanel>
+                        <!-- URL -->
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding Url}"
+                                   VerticalAlignment="Center"
+                                   Classes="hyperlink"
+                                   TextTrimming="CharacterEllipsis"
+                                   Margin="8,0"/>
+                        <!-- Delete -->
+                        <Button Grid.Column="3"
+                                Padding="6"
+                                VerticalAlignment="Center"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Command="{Binding #Root.((vm:SourceManagerCardViewModel)DataContext).DeleteSourceCommand}"
+                                CommandParameter="{Binding}">
+                            <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/delete.svg"
+                                              Width="16" Height="16"
+                                              Foreground="{DynamicResource TextControlForeground}"/>
+                        </Button>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
+
+        <!-- Add source form -->
+        <StackPanel IsVisible="{Binding ShowAddForm}"
+                    Orientation="Vertical"
+                    Spacing="8"
+                    Margin="0,4,0,0">
+            <ComboBox ItemsSource="{Binding KnownSourceNames}"
+                      SelectedItem="{Binding SelectedKnownSource}"
+                      HorizontalAlignment="Stretch"/>
+            <Grid ColumnDefinitions="*,2*" ColumnSpacing="8">
+                <TextBox Grid.Column="0"
+                         Watermark="{Binding NameHint}"
+                         Text="{Binding NewSourceName}"
+                         IsEnabled="{Binding NameUrlEditable}"
+                         FontFamily="Courier New"/>
+                <TextBox Grid.Column="1"
+                         Watermark="{Binding UrlHint}"
+                         Text="{Binding NewSourceUrl}"
+                         IsEnabled="{Binding NameUrlEditable}"
+                         FontFamily="Courier New"/>
+            </Grid>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
+                <Button Content="{Binding CancelLabel}"
+                        Command="{Binding CancelAddSourceCommand}"/>
+                <Button Content="{Binding AddConfirmLabel}"
+                        Command="{Binding ConfirmAddSourceCommand}"
+                        Classes="accent"/>
+            </StackPanel>
+        </StackPanel>
+
+    </StackPanel>
+    </Border>
+</UserControl>

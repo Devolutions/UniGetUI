@@ -168,6 +168,14 @@
       <Compile Update="Views\Pages\AboutPages\AboutPage.axaml.cs">
         <DependentUpon>AboutPage.axaml</DependentUpon>
       </Compile>
+      <Compile Update="Views\Pages\HelpPage.axaml.cs">
+        <DependentUpon>HelpPage.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\Pages\LogPages\BaseLogPage.axaml.cs">
+        <DependentUpon>BaseLogPage.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
       <Compile Update="Views\Pages\SettingsPages\PackageManagerPage.axaml.cs">
         <DependentUpon>PackageManagerPage.axaml</DependentUpon>
         <SubType>Code</SubType>

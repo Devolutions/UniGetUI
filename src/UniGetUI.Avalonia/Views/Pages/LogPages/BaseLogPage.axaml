@@ -1,0 +1,69 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.LogPages.BaseLogPage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.LogPages"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:BaseLogPageViewModel">
+
+    <Grid RowDefinitions="Auto,*" RowSpacing="4" Margin="8">
+
+        <!-- Toolbar -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto,*,Auto">
+            <Button Grid.Column="0"
+                    Command="{Binding CopyCommand}"
+                    CornerRadius="6,0,0,6">
+                <TextBlock Text="{t:Translate Copy to clipboard}"/>
+            </Button>
+            <Button Grid.Column="1"
+                    Command="{Binding ExportCommand}"
+                    CornerRadius="0,6,6,0">
+                <TextBlock Text="{t:Translate Export to a file}"/>
+            </Button>
+
+            <StackPanel Grid.Column="3"
+                        Orientation="Horizontal"
+                        Spacing="10"
+                        IsVisible="{Binding LogLevelVisible}"
+                        VerticalAlignment="Center">
+                <TextBlock Text="{t:Translate Log level:}"
+                           VerticalAlignment="Center"/>
+                <ComboBox Width="250"
+                          CornerRadius="6"
+                          ItemsSource="{Binding LogLevelItems}"
+                          SelectedIndex="{Binding SelectedLogLevelIndex}"/>
+            </StackPanel>
+
+            <Button Grid.Column="5"
+                    Command="{Binding ReloadCommand}">
+                <TextBlock Text="{t:Translate Reload log}"/>
+            </Button>
+        </Grid>
+
+        <!-- Log content -->
+        <Border Grid.Row="1"
+                CornerRadius="8"
+                Background="{DynamicResource ApplicationPageBackgroundThemeBrush}">
+            <ScrollViewer x:Name="MainScroller"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding LogLines}"
+                              Margin="8">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:LogLineItem">
+                            <SelectableTextBlock Text="{Binding Text}"
+                                                 Foreground="{Binding Foreground}"
+                                                 FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+                                                 FontSize="12"
+                                                 TextWrapping="Wrap"
+                                                 Margin="0,1"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+    </Grid>
+</UserControl>

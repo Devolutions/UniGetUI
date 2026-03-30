@@ -3,7 +3,9 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Markup.Xaml.Styling;
+using Avalonia.Platform;
 using Avalonia.Styling;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.PackageEngine;
 using CoreSettings = global::UniGetUI.Core.SettingsEngine.Settings;
@@ -31,7 +33,13 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             if (OperatingSystem.IsMacOS())
+            {
                 ExpandMacOSPath();
+                using var stream = AssetLoader.Open(new Uri("avares://UniGetUI.Avalonia/Assets/icon.png"));
+                using var ms = new MemoryStream();
+                stream.CopyTo(ms);
+                MacOsNotificationBridge.SetDockIcon(ms.ToArray());
+            }
             PEInterface.LoadLoaders();
             ApplyTheme(CoreSettings.GetValue(CoreSettings.K.PreferredTheme));
             var mainWindow = new MainWindow();

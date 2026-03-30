@@ -58,6 +58,7 @@
         <AvaloniaResource Include="..\UniGetUI\Assets\Symbols\*.svg" Link="Assets\Symbols\%(Filename)%(Extension)" />
 
         <AvaloniaResource Include="..\UniGetUI\icon.ico" Link="Assets\icon.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\icon.png" Link="Assets\icon.png" />
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\icon_unsquare.png" Link="Assets\icon_unsquare.png" />
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\package_color.png" Link="Assets\package_color.png" />
         <!-- Tray status icon variants -->

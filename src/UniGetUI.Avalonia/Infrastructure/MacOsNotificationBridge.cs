@@ -207,6 +207,40 @@ internal static class MacOsNotificationBridge
 
     private static IntPtr Sel(string name) => sel_registerName(name);
 
+    // ── Dock icon ──────────────────────────────────────────────────────────
+
+    public static void SetDockIcon(byte[] pngBytes)
+    {
+        if (!OperatingSystem.IsMacOS()) return;
+        try
+        {
+            var handle = GCHandle.Alloc(pngBytes, GCHandleType.Pinned);
+            try
+            {
+                IntPtr nsData = MsgSendBytes(
+                    objc_getClass("NSData"), Sel("dataWithBytes:length:"),
+                    handle.AddrOfPinnedObject(), pngBytes.Length);
+
+                IntPtr nsImage = MsgSend(
+                    MsgSend(objc_getClass("NSImage"), Sel("alloc")),
+                    Sel("initWithData:"), nsData);
+
+                IntPtr nsApp = MsgSend(objc_getClass("NSApplication"), Sel("sharedApplication"));
+                MsgSend(nsApp, Sel("setApplicationIconImage:"), nsImage);
+                MsgSend(nsImage, Sel("autorelease"));
+            }
+            finally
+            {
+                handle.Free();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn("Failed to set macOS dock icon");
+            Logger.Warn(ex);
+        }
+    }
+
     // ── ObjC runtime P/Invoke ──────────────────────────────────────────────
 
     [DllImport("/usr/lib/libobjc.A.dylib")]
@@ -220,4 +254,7 @@ internal static class MacOsNotificationBridge
 
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
     private static extern IntPtr MsgSend(IntPtr receiver, IntPtr sel, IntPtr arg);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern IntPtr MsgSendBytes(IntPtr receiver, IntPtr sel, IntPtr bytes, nint length);
 }

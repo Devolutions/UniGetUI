@@ -79,7 +79,7 @@ public class PackageBundlesPage : AbstractPackagesPage
     // ─── Toolbar ──────────────────────────────────────────────────────────────
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {
-        var installAsAdmin = new MenuItem { Header = CoreTools.Translate("Install as administrator") };
+        var installAsAdmin = new MenuItem { Header = CoreTools.Translate("Install as administrator"), IsVisible = OperatingSystem.IsWindows() };
         var installInteractive = new MenuItem { Header = CoreTools.Translate("Interactive installation") };
         var installSkipHash = new MenuItem { Header = CoreTools.Translate("Skip integrity checks") };
         var downloadInstallers = new MenuItem { Header = CoreTools.Translate("Download selected installers") };
@@ -146,7 +146,7 @@ public class PackageBundlesPage : AbstractPackagesPage
             }
         };
 
-        _menuAsAdmin = new MenuItem { Header = CoreTools.AutoTranslated("Install as administrator"), Icon = LoadMenuIcon("uac") };
+        _menuAsAdmin = new MenuItem { Header = CoreTools.AutoTranslated("Install as administrator"), Icon = LoadMenuIcon("uac"), IsVisible = OperatingSystem.IsWindows() };
         _menuAsAdmin.Click += (_, _) => _ = ImportAndInstallPackage(SelectedItem is { } p ? [p] : [], elevated: true);
 
         _menuInteractive = new MenuItem { Header = CoreTools.AutoTranslated("Interactive installation"), Icon = LoadMenuIcon("interactive") };

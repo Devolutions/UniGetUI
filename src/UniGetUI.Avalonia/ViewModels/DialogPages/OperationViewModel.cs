@@ -256,7 +256,7 @@ public sealed partial class OperationViewModel : ViewModelBase
             {
                 var caps = pkgOp.Package.Manager.Capabilities;
 
-                if (!pkgOp.Options.RunAsAdministrator && caps.CanRunAsAdmin)
+                if (OperatingSystem.IsWindows() && !pkgOp.Options.RunAsAdministrator && caps.CanRunAsAdmin)
                     OpMenu.Items.Add(Item("Retry as administrator", "uac.svg", true,
                         () => Operation.Retry(AbstractOperation.RetryMode.Retry_AsAdmin)));
 
@@ -268,7 +268,7 @@ public sealed partial class OperationViewModel : ViewModelBase
                     OpMenu.Items.Add(Item("Retry skipping integrity checks", "checksum.svg", true,
                         () => Operation.Retry(AbstractOperation.RetryMode.Retry_SkipIntegrity)));
             }
-            else if (Operation is SourceOperation srcOp && !srcOp.ForceAsAdministrator)
+            else if (OperatingSystem.IsWindows() && Operation is SourceOperation srcOp && !srcOp.ForceAsAdministrator)
             {
                 OpMenu.Items.Add(Item("Retry as administrator", "uac.svg", true,
                     () => Operation.Retry(AbstractOperation.RetryMode.Retry_AsAdmin)));

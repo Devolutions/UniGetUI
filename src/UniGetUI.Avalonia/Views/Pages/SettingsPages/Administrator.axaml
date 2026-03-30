@@ -48,30 +48,33 @@
                 </Grid>
             </Border>
 
-            <settings:TranslatedTextBlock Text="Change how operations request administrator rights"
-                                          FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+            <!-- Elevation settings (Windows-only) -->
+            <StackPanel Orientation="Vertical" IsVisible="{Binding IsWindows}">
+                <settings:TranslatedTextBlock Text="Change how operations request administrator rights"
+                                              FontWeight="SemiBold"
+                                              Margin="44,32,4,8"/>
 
-            <settings:CheckboxCard SettingName="DoCacheAdminRightsForBatches"
-                                   Text="{t:Translate Ask for administrator privileges once for each batch of operations}"
-                                   StateChangedCommand="{Binding RestartCacheCommand}"
-                                   BorderThickness="1,1,1,0"
-                                   CornerRadius="8,8,0,0"
-                                   IsEnabled="{Binding IsElevationEnabled}"/>
+                <settings:CheckboxCard SettingName="DoCacheAdminRightsForBatches"
+                                       Text="{t:Translate Ask for administrator privileges once for each batch of operations}"
+                                       StateChangedCommand="{Binding RestartCacheCommand}"
+                                       BorderThickness="1,1,1,0"
+                                       CornerRadius="8,8,0,0"
+                                       IsEnabled="{Binding IsElevationEnabled}"/>
 
-            <settings:CheckboxCard SettingName="DoCacheAdminRights"
-                                   Text="{t:Translate Ask only once for administrator privileges}"
-                                   StateChangedCommand="{Binding RestartCacheCommand}"
-                                   CornerRadius="0,0,8,8"
-                                   IsEnabled="{Binding IsElevationEnabled}"/>
+                <settings:CheckboxCard SettingName="DoCacheAdminRights"
+                                       Text="{t:Translate Ask only once for administrator privileges}"
+                                       StateChangedCommand="{Binding RestartCacheCommand}"
+                                       CornerRadius="0,0,8,8"
+                                       IsEnabled="{Binding IsElevationEnabled}"/>
 
-            <UserControl Height="16"/>
+                <UserControl Height="16"/>
 
-            <settings:CheckboxCard SettingName="ProhibitElevation"
-                                   Text="{t:Translate Prohibit any kind of Elevation via UniGetUI Elevator or GSudo}"
-                                   WarningText="{t:Translate Text='This option WILL cause issues. Any operation incapable of elevating itself WILL FAIL. Install/update/uninstall as administrator will NOT WORK.'}"
-                                   StateChangedCommand="{Binding RefreshElevationStateCommand}"
-                                   CornerRadius="8"/>
+                <settings:CheckboxCard SettingName="ProhibitElevation"
+                                       Text="{t:Translate Prohibit any kind of Elevation via UniGetUI Elevator or GSudo}"
+                                       WarningText="{t:Translate Text='This option WILL cause issues. Any operation incapable of elevating itself WILL FAIL. Install/update/uninstall as administrator will NOT WORK.'}"
+                                       StateChangedCommand="{Binding RefreshElevationStateCommand}"
+                                       CornerRadius="8"/>
+            </StackPanel>
 
             <settings:TranslatedTextBlock Text="Restrictions on package operations"
                                           FontWeight="SemiBold"

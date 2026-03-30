@@ -48,7 +48,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {
         // ── Main button dropdown: install variants ──────────────────────────
-        var installAsAdmin = new MenuItem { Header = CoreTools.Translate("Install as administrator") };
+        var installAsAdmin = new MenuItem { Header = CoreTools.Translate("Install as administrator"), IsVisible = OperatingSystem.IsWindows() };
         var installSkipHash = new MenuItem { Header = CoreTools.Translate("Skip integrity checks") };
         var installInteractive = new MenuItem { Header = CoreTools.Translate("Interactive installation") };
         var downloadInstallers = new MenuItem { Header = CoreTools.Translate("Download selected installers") };
@@ -90,6 +90,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         {
             Header = CoreTools.AutoTranslated("Install as administrator"),
             Icon = LoadMenuIcon("uac"),
+            IsVisible = OperatingSystem.IsWindows(),
         };
         _menuAsAdmin.Click += (_, _) => _ = LaunchInstall([SelectedItem!], elevated: true);
 

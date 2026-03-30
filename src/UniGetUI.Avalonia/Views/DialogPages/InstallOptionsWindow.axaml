@@ -67,6 +67,7 @@
                                 <CheckBox Content="{Binding AdminCheckBox_Content, FallbackValue='Run as admin'}"
                                           IsChecked="{Binding AdminChecked}"
                                           IsEnabled="{Binding CanRunAsAdmin}"
+                                          IsVisible="{Binding CanRunAsAdmin}"
                                           Margin="0,0,16,4"/>
                                 <CheckBox Content="{Binding InteractiveCheckBox_Content, FallbackValue='Interactive installation'}"
                                           IsChecked="{Binding InteractiveChecked}"

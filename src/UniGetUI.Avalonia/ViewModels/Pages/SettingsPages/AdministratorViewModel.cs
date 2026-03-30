@@ -22,6 +22,8 @@ public partial class AdministratorViewModel : ViewModelBase
     public string WarningBody2 { get; } =
         CoreTools.Translate("The settings will list, in their descriptions, the potential security issues they may have.");
 
+    public bool IsWindows { get; } = OperatingSystem.IsWindows();
+
     // ── Observable state ─────────────────────────────────────────────────
     /// <summary>True when elevation is NOT prohibited — controls enabled-state of the cache-admin-rights cards.</summary>
     [ObservableProperty] private bool _isElevationEnabled;

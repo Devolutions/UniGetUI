@@ -52,6 +52,7 @@
                     <WrapPanel HorizontalAlignment="Center">
                         <CheckBox IsChecked="{Binding AdminChecked}"
                                   IsEnabled="{Binding AdminEnabled}"
+                                  IsVisible="{Binding AdminEnabled}"
                                   Content="{Binding AdminLabel}"
                                   Margin="8,0"/>
                         <CheckBox IsChecked="{Binding InteractiveChecked}"

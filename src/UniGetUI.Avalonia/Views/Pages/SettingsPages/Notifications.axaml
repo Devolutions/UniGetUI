@@ -16,18 +16,18 @@
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>
 
-            <!-- Warning shown when system tray is disabled -->
+            <!-- Warning shown when system tray is disabled (Windows-only) -->
             <TextBlock Text="{t:Translate The system tray icon must be enabled in order for notifications to work}"
                        Margin="0,0,0,8"
                        HorizontalAlignment="Center"
                        Foreground="OrangeRed"
-                       IsVisible="{Binding !IsSystemTrayEnabled}"/>
+                       IsVisible="{Binding IsSystemTrayWarningVisible}"/>
 
             <settings:CheckboxCard SettingName="DisableNotifications"
                                    Text="{t:Translate Enable WingetUI notifications}"
                                    StateChangedCommand="{Binding UpdateNotificationsEnabledCommand}"
                                    CornerRadius="8"
-                                   IsEnabled="{Binding IsSystemTrayEnabled}"/>
+                                   IsEnabled="{Binding IsSystemTrayWarningVisible, Converter={x:Static BoolConverters.Not}}"/>
 
             <settings:TranslatedTextBlock Text="Notification types"
                                           FontWeight="SemiBold"

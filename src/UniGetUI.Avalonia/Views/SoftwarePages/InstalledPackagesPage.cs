@@ -66,7 +66,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {
         // ── Dropdown: uninstall variants ────────────────────────────────────
-        var uninstallAsAdmin = new MenuItem { Header = CoreTools.Translate("Uninstall as administrator") };
+        var uninstallAsAdmin = new MenuItem { Header = CoreTools.Translate("Uninstall as administrator"), IsVisible = OperatingSystem.IsWindows() };
         var uninstallInteractive = new MenuItem { Header = CoreTools.Translate("Interactive uninstall") };
         var downloadInstallers = new MenuItem { Header = CoreTools.Translate("Download selected installers") };
 
@@ -141,6 +141,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         {
             Header = CoreTools.AutoTranslated("Uninstall as administrator"),
             Icon = LoadMenuIcon("uac"),
+            IsVisible = OperatingSystem.IsWindows(),
         };
         _menuAsAdmin.Click += (_, _) => _ = LaunchUninstall([SelectedItem!], elevated: true);
 

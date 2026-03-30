@@ -198,7 +198,7 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
 
         // Checkboxes — load value, then set enabled per capability
         AdminChecked            = options.RunAsAdministrator;
-        AdminEnabled            = true;
+        AdminEnabled            = OperatingSystem.IsWindows();
 
         InteractiveChecked      = options.InteractiveInstallation;
         InteractiveEnabled      = _manager.Capabilities.CanRunInteractively;

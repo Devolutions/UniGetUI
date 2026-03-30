@@ -5,6 +5,8 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
 public partial class ExperimentalViewModel : ViewModelBase
 {
+    public bool IsWindows { get; } = OperatingSystem.IsWindows();
+
     public event EventHandler? RestartRequired;
 
     [RelayCommand]

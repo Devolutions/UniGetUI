@@ -167,7 +167,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         DialogTitle = CoreTools.Translate("{0} installation options", package.Name);
 
         // Capability flags
-        CanRunAsAdmin = caps.CanRunAsAdmin;
+        CanRunAsAdmin = OperatingSystem.IsWindows() && caps.CanRunAsAdmin;
         CanRunInteractively = caps.CanRunInteractively;
         CanSkipHash = caps.CanSkipIntegrityChecks;
         CanUninstallPrev = caps.CanUninstallPreviousVersionsAfterUpdate;

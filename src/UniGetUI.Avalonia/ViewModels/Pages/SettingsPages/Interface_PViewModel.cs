@@ -11,6 +11,8 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
 public partial class Interface_PViewModel : ViewModelBase
 {
+    public bool IsWindows { get; } = OperatingSystem.IsWindows();
+
     [ObservableProperty] private string _iconCacheSizeText = "";
 
     public event EventHandler? RestartRequired;

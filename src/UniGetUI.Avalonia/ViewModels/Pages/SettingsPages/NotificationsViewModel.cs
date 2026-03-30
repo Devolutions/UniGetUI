@@ -10,6 +10,9 @@ public partial class NotificationsViewModel : ViewModelBase
     [ObservableProperty] private bool _isSystemTrayEnabled;
     [ObservableProperty] private bool _isNotificationsEnabled;
 
+    /// <summary>True when the system-tray-disabled warning should be shown (Windows only).</summary>
+    public bool IsSystemTrayWarningVisible => OperatingSystem.IsWindows() && !IsSystemTrayEnabled;
+
     public NotificationsViewModel()
     {
         _isSystemTrayEnabled = !CoreSettings.Get(CoreSettings.K.DisableSystemTray);

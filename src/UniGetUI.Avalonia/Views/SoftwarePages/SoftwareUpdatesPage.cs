@@ -49,7 +49,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {
         // ── Dropdown: update variants ───────────────────────────────────────
-        var updateAsAdmin = new MenuItem { Header = CoreTools.Translate("Update as administrator") };
+        var updateAsAdmin = new MenuItem { Header = CoreTools.Translate("Update as administrator"), IsVisible = OperatingSystem.IsWindows() };
         var updateSkipHash = new MenuItem { Header = CoreTools.Translate("Skip integrity checks") };
         var updateInteractive = new MenuItem { Header = CoreTools.Translate("Interactive update") };
         var downloadInstallers = new MenuItem { Header = CoreTools.Translate("Download selected installers") };
@@ -130,6 +130,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         {
             Header = CoreTools.AutoTranslated("Update as administrator"),
             Icon = LoadMenuIcon("uac"),
+            IsVisible = OperatingSystem.IsWindows(),
         };
         _menuAsAdmin.Click += (_, _) => _ = LaunchUpdate([SelectedItem!], elevated: true);
 

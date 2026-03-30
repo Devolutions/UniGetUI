@@ -37,12 +37,13 @@
                                    Text="{t:Translate Disable the 1-minute timeout for package-related operations}"
                                    CornerRadius="8"/>
 
-            <UserControl Height="16"/>
+            <UserControl Height="16" IsVisible="{Binding IsWindows}"/>
 
             <settings:SecureCheckboxCard SettingName="ForceUserGSudo"
                                          Text="{t:Translate Use installed GSudo instead of UniGetUI Elevator}"
                                          StateChangedCommand="{Binding ShowRestartRequiredCommand}"
-                                         CornerRadius="8"/>
+                                         CornerRadius="8"
+                                         IsVisible="{Binding IsWindows}"/>
 
             <UserControl Height="16"/>
 

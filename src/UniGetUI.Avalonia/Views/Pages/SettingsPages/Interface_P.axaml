@@ -23,7 +23,7 @@
                                    CornerRadius="0,0,8,8"
                                    BorderThickness="1,0,1,1"/>
 
-            <StackPanel x:Name="SystemTraySection" Orientation="Vertical">
+            <StackPanel x:Name="SystemTraySection" Orientation="Vertical" IsVisible="{Binding IsWindows}">
                 <settings:TranslatedTextBlock Text="UniGetUI on the background and system tray"
                                               FontWeight="SemiBold"
                                               Margin="44,32,4,8"/>

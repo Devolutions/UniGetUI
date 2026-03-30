@@ -26,17 +26,18 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.7" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.7" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.7" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.7" />
+        <PackageReference Include="Avalonia" Version="12.0.0-rc1" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.0.0-rc1" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.0.0-rc1" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.0-rc1" />
         <PackageReference Include="Devolutions.AvaloniaTheme.DevExpress" Version="2026.3.13" />
         <PackageReference Include="Devolutions.AvaloniaTheme.MacOS" Version="2026.3.13" />
         <PackageReference Include="Devolutions.AvaloniaTheme.Linux" Version="2026.3.11" />
-        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta3" Condition="'$(Configuration)' == 'Debug'" />
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.7" Condition="'$(Configuration)' == 'Debug'" />
+        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta3" Condition="'$(EnableAvaloniaDiagnostics)' == 'true'" />
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.7" Condition="'$(EnableAvaloniaDiagnostics)' == 'true'" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
         <PackageReference Include="Octokit" Version="14.0.0" />
+        <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.0-rc1" />
     </ItemGroup>
 
     <ItemGroup>

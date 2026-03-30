@@ -5,16 +5,14 @@ namespace UniGetUI.Avalonia.ViewModels.Pages;
 
 public partial class HelpPageViewModel : ViewModels.ViewModelBase
 {
-    private const string HelpBaseUrl = "https://marticliment.com/unigetui/help/";
-    private string _currentUrl = HelpBaseUrl;
+    public const string HelpBaseUrl = "https://marticliment.com/unigetui/help/";
+
+    // Kept in sync from the WebView's NavigationCompleted event via code-behind
+    public string CurrentUrl { get; set; } = HelpBaseUrl;
 
     [RelayCommand]
-    private void OpenInBrowser() => CoreTools.Launch(_currentUrl);
+    private void OpenInBrowser() => CoreTools.Launch(CurrentUrl);
 
-    public void NavigateTo(string uriAttachment)
-    {
-        _currentUrl = string.IsNullOrEmpty(uriAttachment)
-            ? HelpBaseUrl
-            : HelpBaseUrl + uriAttachment;
-    }
+    public string GetInitialUrl(string uriAttachment) =>
+        string.IsNullOrEmpty(uriAttachment) ? HelpBaseUrl : HelpBaseUrl + uriAttachment;
 }

@@ -1,0 +1,74 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.HelpPage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:wv="using:Avalonia.Controls"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:HelpPageViewModel">
+
+    <Grid RowDefinitions="Auto,2,*" Margin="8,4,8,8">
+
+        <!-- Toolbar -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+
+            <Button Grid.Column="0"
+                    x:Name="BackButton"
+                    Width="35" Height="35" Padding="6"
+                    CornerRadius="4,0,0,4"
+                    Click="BackButton_Click">
+                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/backward.svg"
+                                  Foreground="White" Width="16" Height="16"/>
+            </Button>
+
+            <Button Grid.Column="1"
+                    x:Name="ForwardButton"
+                    Width="35" Height="35" Padding="6"
+                    CornerRadius="0"
+                    Click="ForwardButton_Click">
+                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/forward.svg"
+                                  Foreground="White" Width="16" Height="16"/>
+            </Button>
+
+            <Button Grid.Column="2"
+                    Width="35" Height="35" Padding="6"
+                    CornerRadius="0"
+                    Click="HomeButton_Click">
+                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/home.svg"
+                                  Foreground="White" Width="16" Height="16"/>
+            </Button>
+
+            <Button Grid.Column="3"
+                    Width="35" Height="35" Padding="6"
+                    CornerRadius="0,4,4,0"
+                    Click="ReloadButton_Click">
+                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/reload.svg"
+                                  Foreground="White" Width="16" Height="16"/>
+            </Button>
+
+            <Button Grid.Column="5"
+                    Height="35"
+                    Command="{Binding OpenInBrowserCommand}">
+                <TextBlock Text="{t:Translate View page on browser}"/>
+            </Button>
+
+        </Grid>
+
+        <!-- Progress bar shown while navigating -->
+        <ProgressBar Grid.Row="1"
+                     x:Name="NavProgressBar"
+                     IsIndeterminate="True"
+                     IsVisible="False"
+                     Height="2"
+                     CornerRadius="0"/>
+
+        <!-- WebView -->
+        <Border Grid.Row="2" CornerRadius="6" ClipToBounds="True">
+            <wv:NativeWebView x:Name="WebViewControl"/>
+        </Border>
+
+    </Grid>
+</UserControl>

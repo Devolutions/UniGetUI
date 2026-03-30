@@ -1,9 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels.Pages.LogPages;
-using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.Pages.LogPages;

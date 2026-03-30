@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Styling;
@@ -31,15 +30,12 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
-            // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
-            DisableAvaloniaDataAnnotationValidation();
             if (OperatingSystem.IsMacOS())
                 ExpandMacOSPath();
             PEInterface.LoadLoaders();
             ApplyTheme(CoreSettings.GetValue(CoreSettings.K.PreferredTheme));
             var mainWindow = new MainWindow();
-#if DEBUG
+#if AVALONIA_DIAGNOSTICS_ENABLED
             mainWindow.AttachDevTools();
 #endif
             desktop.MainWindow = mainWindow;
@@ -86,16 +82,4 @@ public partial class App : Application
         };
     }
 
-    private static void DisableAvaloniaDataAnnotationValidation()
-    {
-        // Get an array of plugins to remove
-        var dataValidationPluginsToRemove =
-            BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
-
-        // remove each entry found
-        foreach (var plugin in dataValidationPluginsToRemove)
-        {
-            BindingPlugins.DataValidators.Remove(plugin);
-        }
-    }
 }

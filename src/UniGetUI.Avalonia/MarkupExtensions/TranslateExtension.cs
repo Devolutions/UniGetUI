@@ -1,4 +1,5 @@
 using Avalonia.Markup.Xaml;
+using Avalonia.Metadata;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.MarkupExtensions;

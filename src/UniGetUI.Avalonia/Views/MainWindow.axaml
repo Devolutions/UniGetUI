@@ -13,7 +13,6 @@
         MinWidth="700"
         MinHeight="500"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="PreferSystemChrome"
         ExtendClientAreaTitleBarHeightHint="-1">
 
     <Panel>

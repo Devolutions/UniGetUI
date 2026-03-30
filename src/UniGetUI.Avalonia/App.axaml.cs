@@ -17,6 +17,9 @@ public partial class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+#if AVALONIA_DIAGNOSTICS_ENABLED
+        this.AttachDeveloperTools();
+#endif
 
         string platform = OperatingSystem.IsWindows() ? "Windows"
             : OperatingSystem.IsMacOS() ? "macOS"
@@ -43,9 +46,6 @@ public partial class App : Application
             PEInterface.LoadLoaders();
             ApplyTheme(CoreSettings.GetValue(CoreSettings.K.PreferredTheme));
             var mainWindow = new MainWindow();
-#if AVALONIA_DIAGNOSTICS_ENABLED
-            mainWindow.AttachDevTools();
-#endif
             desktop.MainWindow = mainWindow;
             _ = Task.Run(PEInterface.LoadManagers);
         }

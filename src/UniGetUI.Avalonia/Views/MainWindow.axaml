@@ -152,7 +152,8 @@
             <!-- Drag area fills the whole title bar -->
             <Border Background="{DynamicResource AppTitleBarBackground}"
                     PointerPressed="TitleBar_PointerPressed"/>
-            <!-- Hamburger toggle button + app name -->
+
+            <!-- Left: hamburger toggle button + app name -->
             <StackPanel HorizontalAlignment="Left"
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
@@ -173,31 +174,41 @@
                            FontWeight="SemiBold"
                            VerticalAlignment="Center"/>
             </StackPanel>
-            <StackPanel HorizontalAlignment="Right"
+
+            <!-- Centre: global search box -->
+            <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
-                        Margin="0,0,12,0"
                         Spacing="0">
-                <TextBox Width="200"
+                <TextBox Width="300"
                          MinHeight="20"
-                         Height="22"
-                         FontSize="10"
+                         Height="30"
+                         FontSize="15"
+                         Margin="0,5,0,0"
                          CornerRadius="4,0,0,4"
                          Watermark="{Binding GlobalSearchPlaceholder}"
                          IsEnabled="{Binding GlobalSearchEnabled}"
                          Text="{Binding GlobalSearchText}"
                          KeyDown="SearchBox_KeyDown"/>
-                <Button Height="22"
-                        Width="22"
+                <Button Height="30"
+                        Width="30"
                         Padding="3"
+                        Margin="0,5,0,0"
                         CornerRadius="0,4,4,0"
                         IsEnabled="{Binding GlobalSearchEnabled}"
                         Command="{Binding SubmitGlobalSearchCommand}">
                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg"
-                                      Width="12"
-                                      Height="12"/>
+                                      Width="18"
+                                      Height="18"/>
                 </Button>
             </StackPanel>
+
+            <!-- Right: GitHub account avatar -->
+            <controls:UserAvatarControl HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        Height="50"
+                                        Margin="0,10,350,0"/>
+
         </Panel>
 
     </Panel>

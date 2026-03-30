@@ -1,0 +1,108 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Controls.UserAvatarControl"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Controls"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:UserAvatarViewModel">
+
+    <Button Width="32" Height="32"
+            Padding="0"
+            CornerRadius="100"
+            Background="Transparent"
+            BorderThickness="0"
+            Cursor="Hand"
+            ToolTip.Tip="{t:Translate GitHub account}">
+
+        <Button.Flyout>
+            <Flyout Placement="BottomEdgeAlignedRight">
+                <Flyout.FlyoutPresenterTheme>
+                    <ControlTheme TargetType="FlyoutPresenter">
+                        <Setter Property="Background" Value="{DynamicResource AppWindowBackground}"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+                        <Setter Property="CornerRadius" Value="6"/>
+                        <Setter Property="Padding" Value="12"/>
+                    </ControlTheme>
+                </Flyout.FlyoutPresenterTheme>
+                <StackPanel Width="230" Spacing="8">
+
+                    <!-- Not logged in -->
+                    <StackPanel IsVisible="{Binding !IsAuthenticated}" Spacing="8">
+                        <TextBlock Text="{t:Translate Log in with GitHub to enable cloud package backup.}"
+                                   TextWrapping="Wrap"
+                                   FontSize="12"/>
+                        <Button Content="{t:Translate Text='More details'}"
+                                Command="{Binding MoreDetailsCommand}"
+                                HorizontalAlignment="Center"
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Foreground="{DynamicResource SystemAccentColor}"
+                                FontSize="11"
+                                Cursor="Hand"/>
+                        <Button Content="{t:Translate Log in}"
+                                Command="{Binding LoginCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Logged in -->
+                    <StackPanel IsVisible="{Binding IsAuthenticated}" Spacing="8">
+                        <TextBlock Text="{Binding UserDisplayName}"
+                                   TextWrapping="Wrap"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="{t:Translate Text='If you have cloud backup enabled, it will be saved as a GitHub Gist on this account'}"
+                                   TextWrapping="Wrap"
+                                   FontSize="11"
+                                   Opacity="0.7"/>
+                        <Button Content="{t:Translate Log out}"
+                                Command="{Binding LogoutCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Background="#CC2222"
+                                Foreground="White"
+                                BorderThickness="0"/>
+                        <Button Content="{t:Translate Text='More details'}"
+                                Command="{Binding MoreDetailsCommand}"
+                                HorizontalAlignment="Left"
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Foreground="{DynamicResource SystemAccentColor}"
+                                FontSize="11"
+                                Cursor="Hand"/>
+                    </StackPanel>
+
+                </StackPanel>
+            </Flyout>
+        </Button.Flyout>
+
+        <!-- Avatar / placeholder (reflection bindings: compiled bindings lose scope inside Button content) -->
+        <Panel Width="32" Height="32" ClipToBounds="True" x:CompileBindings="False">
+            <Ellipse Fill="{DynamicResource SettingsCardBackground}"
+                     Width="32" Height="32"/>
+
+            <!-- Placeholder person icon (shown when not logged in) -->
+            <Panel IsVisible="{Binding IsAuthenticated, Converter={x:Static BoolConverters.Not}}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center">
+                <PathIcon Width="18" Height="18"
+                          Data="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v2h20v-2c0-3.3-6.7-5-10-5z"
+                          Foreground="{DynamicResource SystemBaseHighColor}"/>
+            </Panel>
+
+            <!-- Avatar image (shown when logged in) -->
+            <Panel IsVisible="{Binding IsAuthenticated}">
+                <Image Source="{Binding AvatarBitmap}"
+                       Width="32" Height="32"
+                       Stretch="UniformToFill"/>
+            </Panel>
+        </Panel>
+
+    </Button>
+
+</UserControl>

@@ -34,7 +34,6 @@
         <PackageReference Include="Devolutions.AvaloniaTheme.MacOS" Version="2026.3.13" />
         <PackageReference Include="Devolutions.AvaloniaTheme.Linux" Version="2026.3.11" />
         <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta3" Condition="'$(EnableAvaloniaDiagnostics)' == 'true'" />
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.7" Condition="'$(EnableAvaloniaDiagnostics)' == 'true'" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
         <PackageReference Include="Octokit" Version="14.0.0" />
         <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.0-rc1" />
@@ -103,6 +102,10 @@
       <Compile Remove="Models\ShellPageType.cs" />
       <Compile Update="App.axaml.cs">
         <DependentUpon>App.axaml</DependentUpon>
+      </Compile>
+      <Compile Update="Views\Controls\UserAvatarControl.axaml.cs">
+        <DependentUpon>UserAvatarControl.axaml</DependentUpon>
+        <SubType>Code</SubType>
       </Compile>
       <Compile Update="Views\SidebarView.axaml.cs">
         <DependentUpon>SidebarView.axaml</DependentUpon>

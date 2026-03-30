@@ -84,44 +84,75 @@ public partial class InternetViewModel : ViewModelBase
         var yesStr = CoreTools.Translate("Yes");
         var partStr = CoreTools.Translate("Partially");
 
-        var headerRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto,*"), Margin = new Thickness(0, 0, 0, 8) };
-        headerRow.Children.Add(WithCol(new TextBlock { Text = CoreTools.Translate("Package manager"), FontWeight = FontWeight.Bold, TextWrapping = TextWrapping.Wrap }, 1));
-        headerRow.Children.Add(WithCol(new TextBlock { Text = CoreTools.Translate("Compatible with proxy"), FontWeight = FontWeight.Bold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(16, 0, 0, 0) }, 2));
-        headerRow.Children.Add(WithCol(new TextBlock { Text = CoreTools.Translate("Compatible with authentication"), FontWeight = FontWeight.Bold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(16, 0, 0, 0) }, 3));
+        var managers = PEInterface.Managers.ToList();
 
-        var managerCol = new StackPanel { Orientation = Orientation.Vertical, Spacing = 6 };
-        var proxyCol = new StackPanel { Orientation = Orientation.Vertical, Spacing = 6 };
-        var authCol = new StackPanel { Orientation = Orientation.Vertical, Spacing = 6 };
-
-        foreach (var manager in PEInterface.Managers)
+        // Single unified grid: row 0 = column headers, rows 1..N = data rows.
+        // All columns are shared, so widths are consistent throughout.
+        var table = new Grid
         {
-            managerCol.Children.Add(new TextBlock { Text = manager.DisplayName, TextAlignment = TextAlignment.Center });
+            ColumnDefinitions = new ColumnDefinitions("Auto,Auto,Auto"),
+            ColumnSpacing = 24,
+            RowSpacing = 8,
+        };
+        for (int i = 0; i <= managers.Count; i++)
+            table.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+        // Header row (row 0)
+        var h1 = new TextBlock { Text = CoreTools.Translate("Package manager"), FontWeight = FontWeight.Bold, TextWrapping = TextWrapping.Wrap };
+        var h2 = new TextBlock { Text = CoreTools.Translate("Compatible with proxy"), FontWeight = FontWeight.Bold, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Center };
+        var h3 = new TextBlock { Text = CoreTools.Translate("Compatible with authentication"), FontWeight = FontWeight.Bold, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Center };
+        SetCell(h1, 0, 0); SetCell(h2, 0, 1); SetCell(h3, 0, 2);
+        table.Children.Add(h1); table.Children.Add(h2); table.Children.Add(h3);
+
+        // Data rows
+        for (int i = 0; i < managers.Count; i++)
+        {
+            var manager = managers[i];
+            int row = i + 1;
+
+            var name = new TextBlock { Text = manager.DisplayName, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center };
+            SetCell(name, row, 0);
 
             var proxyLevel = manager.Capabilities.SupportsProxy;
-            proxyCol.Children.Add(StatusBadge(
+            var proxyBadge = StatusBadge(
                 proxyLevel is ProxySupport.No ? noStr : (proxyLevel is ProxySupport.Partially ? partStr : yesStr),
-                proxyLevel is ProxySupport.Yes ? Colors.Green : (proxyLevel is ProxySupport.Partially ? Colors.Orange : Colors.Red)));
+                proxyLevel is ProxySupport.Yes ? Colors.Green : (proxyLevel is ProxySupport.Partially ? Colors.Orange : Colors.Red));
+            SetCell(proxyBadge, row, 1);
 
-            authCol.Children.Add(StatusBadge(
+            var authBadge = StatusBadge(
                 manager.Capabilities.SupportsProxyAuth ? yesStr : noStr,
-                manager.Capabilities.SupportsProxyAuth ? Colors.Green : Colors.Red));
+                manager.Capabilities.SupportsProxyAuth ? Colors.Green : Colors.Red);
+            SetCell(authBadge, row, 2);
+
+            table.Children.Add(name);
+            table.Children.Add(proxyBadge);
+            table.Children.Add(authBadge);
         }
 
-        var dataRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto,*"), ColumnSpacing = 16 };
-        dataRow.Children.Add(WithCol(managerCol, 1));
-        dataRow.Children.Add(WithCol(proxyCol, 2));
-        dataRow.Children.Add(WithCol(authCol, 3));
+        var title = new TextBlock
+        {
+            Text = CoreTools.Translate("Proxy compatibility table"),
+            FontWeight = FontWeight.SemiBold,
+            Margin = new Thickness(0, 0, 0, 12),
+        };
 
-        var tableStack = new StackPanel { Orientation = Orientation.Vertical };
-        tableStack.Children.Add(headerRow);
-        tableStack.Children.Add(dataRow);
+        var centerWrapper = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*") };
+        Grid.SetColumn(table, 1);
+        centerWrapper.Children.Add(table);
 
-        return new SettingsCard
+        var stack = new StackPanel { Orientation = Orientation.Vertical };
+        stack.Children.Add(title);
+        stack.Children.Add(centerWrapper);
+
+        var border = new Border
         {
             CornerRadius = new CornerRadius(8),
-            Header = CoreTools.Translate("Proxy compatibility table"),
-            Description = tableStack,
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(16, 12),
+            Child = stack,
         };
+        border.Classes.Add("settings-card");
+        return border;
     }
 
     private static Border StatusBadge(string text, Color color) => new Border
@@ -129,12 +160,13 @@ public partial class InternetViewModel : ViewModelBase
         CornerRadius = new CornerRadius(4),
         Padding = new Thickness(4, 2),
         BorderThickness = new Thickness(1),
+        HorizontalAlignment = HorizontalAlignment.Stretch,
         Background = new SolidColorBrush(Color.FromArgb(60, color.R, color.G, color.B)),
         BorderBrush = new SolidColorBrush(Color.FromArgb(120, color.R, color.G, color.B)),
         Child = new TextBlock { Text = text, TextAlignment = TextAlignment.Center },
     };
 
-    private static Control WithCol(Control c, int col) { Grid.SetColumn(c, col); return c; }
+    private static void SetCell(Control c, int row, int col) { Grid.SetRow(c, row); Grid.SetColumn(c, col); }
 
     private async Task SaveCredentialsAsync()
     {

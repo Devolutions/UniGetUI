@@ -14,9 +14,7 @@
         MinHeight="500"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="-1">
-
     <Panel>
-
         <!-- Main content pushed below the native title bar -->
         <Grid ColumnDefinitions="Auto,*"
               RowDefinitions="*,4,Auto"
@@ -69,18 +67,26 @@
                     <ItemsControl ItemsSource="{Binding Operations}"
                                   Margin="8,4,8,4">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="vm:OperationViewModel">
+                            <DataTemplate x:DataType="vm:OperationViewModel">
                                 <Border Background="{Binding BackgroundBrush}"
                                         CornerRadius="6"
                                         Padding="10,6"
                                         Margin="0,3,0,3">
-                                    <Grid ColumnDefinitions="*,Auto">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
 
-                                        <!-- Left: title, live line, progress, badges -->
-                                        <StackPanel Grid.Column="0"
+                                        <!-- Package icon -->
+                                        <Image Grid.Column="0"
+                                               Source="{Binding PackageIcon}"
+                                               Width="32" Height="24"
+                                               Margin="0,0,10,0"
+                                               VerticalAlignment="Center"
+                                               Stretch="Uniform"/>
+
+                                        <!-- Centre: title, live line, progress, badges -->
+                                        <StackPanel Grid.Column="1"
                                                     Spacing="3"
                                                     VerticalAlignment="Center"
-                                                    Margin="0,0,12,0">
+                                                    Margin="0,0,8,0">
 
                                             <TextBlock Text="{Binding Title}"
                                                        FontWeight="SemiBold"
@@ -105,37 +111,75 @@
                                                          CornerRadius="2"
                                                          Foreground="{Binding ProgressBrush}"/>
 
-                                            <!-- Badge chips -->
-                                            <ItemsControl ItemsSource="{Binding Badges}"
-                                                          IsVisible="{Binding Badges.Count}">
+                                            <!-- Badge icon-buttons (Admin, Interactive, …) -->
+                                            <ItemsControl ItemsSource="{Binding Badges}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
                                                         <StackPanel Orientation="Horizontal" Spacing="4"/>
                                                     </ItemsPanelTemplate>
                                                 </ItemsControl.ItemsPanel>
                                                 <ItemsControl.ItemTemplate>
-                                                    <DataTemplate DataType="x:String">
-                                                        <Border Background="{DynamicResource AppBadgeBackground}"
+                                                    <DataTemplate x:DataType="vm:OperationBadgeVm">
+                                                        <Button Background="{DynamicResource AppBadgeBackground}"
+                                                                BorderThickness="0"
                                                                 CornerRadius="4"
-                                                                Padding="6,2">
-                                                            <TextBlock Text="{Binding}"
-                                                                       FontSize="10"
-                                                                       Opacity="0.8"/>
-                                                        </Border>
+                                                                Padding="5,2"
+                                                                ToolTip.Tip="{Binding Primary}">
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <controls:SvgIcon Path="{Binding IconPath}"
+                                                                                  Width="12" Height="12"
+                                                                                  Foreground="White"/>
+                                                                <TextBlock Text="{Binding Label}"
+                                                                           FontSize="10"
+                                                                           Opacity="0.8"/>
+                                                            </StackPanel>
+                                                            <Button.Flyout>
+                                                                <Flyout>
+                                                                    <StackPanel Spacing="6" MaxWidth="240">
+                                                                        <TextBlock Text="{Binding Label}"
+                                                                                   FontWeight="SemiBold"
+                                                                                   TextWrapping="Wrap"/>
+                                                                        <TextBlock Text="{Binding Primary}"
+                                                                                   Opacity="0.85"
+                                                                                   TextWrapping="Wrap"/>
+                                                                        <TextBlock Text="{Binding Secondary}"
+                                                                                   Opacity="0.7"
+                                                                                   FontSize="11"
+                                                                                   TextWrapping="Wrap"/>
+                                                                    </StackPanel>
+                                                                </Flyout>
+                                                            </Button.Flyout>
+                                                        </Button>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
 
                                         </StackPanel>
 
-                                        <!-- Right: cancel/close button -->
-                                        <Button Grid.Column="1"
-                                                Content="{Binding ButtonText}"
-                                                Command="{Binding ButtonCommand}"
-                                                VerticalAlignment="Center"
-                                                Padding="12,6"
-                                                CornerRadius="4"
-                                                FontSize="12"/>
+                                        <!-- Split-button: Cancel/Close + "…" menu -->
+                                        <Border Grid.Column="2"
+                                                CornerRadius="6"
+                                                ClipToBounds="True"
+                                                VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Button Content="{Binding ButtonText}"
+                                                        Command="{Binding ButtonCommand}"
+                                                        Padding="12,6"
+                                                        CornerRadius="0"
+                                                        FontSize="12"/>
+                                                <Border Width="1"
+                                                        VerticalAlignment="Stretch"
+                                                        Background="{DynamicResource AppBorderBrush}"
+                                                        Opacity="0.3"/>
+                                                <Button Width="32"
+                                                        Padding="4"
+                                                        CornerRadius="0"
+                                                        Flyout="{Binding OpMenu}">
+                                                    <TextBlock Text="⋯" FontSize="14"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </Border>
+
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -208,8 +252,6 @@
                                         VerticalAlignment="Center"
                                         Height="50"
                                         Margin="0,10,350,0"/>
-
         </Panel>
-
     </Panel>
 </Window>

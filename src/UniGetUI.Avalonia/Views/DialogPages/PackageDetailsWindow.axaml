@@ -12,6 +12,12 @@
         WindowStartupLocation="CenterOwner"
         Title="{Binding PackageName}">
 
+    <Window.Styles>
+        <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+        </Style>
+    </Window.Styles>
+
     <Grid RowDefinitions="Auto,*,Auto">
 
         <!-- Loading indicator -->
@@ -71,14 +77,14 @@
                 </ItemsControl>
 
                 <!-- ── Description ── -->
-                <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="8" Padding="14">
+                <Border Background="{DynamicResource SettingsCardBackground}" CornerRadius="8" Padding="14">
                     <TextBlock Text="{Binding Description}"
                                TextWrapping="Wrap"
                                Opacity="0.9"/>
                 </Border>
 
                 <!-- ── Basic info ── -->
-                <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="8" Padding="16">
+                <Border Background="{DynamicResource SettingsCardBackground}" CornerRadius="8" Padding="16">
                     <StackPanel Spacing="10">
 
                         <Grid ColumnDefinitions="160,*">
@@ -149,7 +155,7 @@
                 </Border>
 
                 <!-- ── Actions ── -->
-                <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="8" Padding="16">
+                <Border Background="{DynamicResource SettingsCardBackground}" CornerRadius="8" Padding="16">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
                         <Button x:Name="MainActionButton"
                                 Content="{Binding MainActionLabel}"
@@ -160,7 +166,9 @@
                         <Button x:Name="ActionVariantsButton"
                                 Grid.Column="1"
                                 Content="▾"
-                                Width="36"
+                                Width="30"
+                                Height="30"
+                                FontSize="30"
                                 HorizontalContentAlignment="Center"
                                 Padding="0"/>
                     </Grid>
@@ -171,7 +179,8 @@
                           HorizontalContentAlignment="Stretch"
                           IsExpanded="False"
                           CornerRadius="8"
-                          Padding="4">
+                          Padding="4"
+                          Background="{DynamicResource SettingsCardBackground}">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg"
@@ -280,7 +289,8 @@
                           HorizontalContentAlignment="Stretch"
                           IsExpanded="False"
                           CornerRadius="8"
-                          Padding="4">
+                          Padding="4"
+                          Background="{DynamicResource SettingsCardBackground}">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/id.svg"
@@ -316,7 +326,8 @@
                           HorizontalContentAlignment="Stretch"
                           IsExpanded="False"
                           CornerRadius="8"
-                          Padding="4">
+                          Padding="4"
+                          Background="{DynamicResource SettingsCardBackground}">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/megaphone.svg"

@@ -8,7 +8,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
              x:DataType="vm:InternetViewModel">
-
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Vertical">
 
@@ -54,7 +53,6 @@
                                    Text="{t:Translate Wait for the device to be connected to the internet before attempting to do tasks that require internet connectivity.}"
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    CornerRadius="8"/>
-
         </StackPanel>
     </ScrollViewer>
 

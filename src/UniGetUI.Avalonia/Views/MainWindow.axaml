@@ -41,11 +41,24 @@
                     Opacity="0.2"
                     Background="{DynamicResource SystemBaseMediumColor}"/>
 
-            <!-- ── Page content frame ── -->
-            <ContentControl Grid.Column="1" Grid.Row="0"
-                            Content="{Binding CurrentPageContent}"
-                            HorizontalContentAlignment="Stretch"
-                            VerticalContentAlignment="Stretch"/>
+            <!-- ── Banners + page content ── -->
+            <Grid Grid.Column="1" Grid.Row="0" RowDefinitions="Auto,*" Margin="0,10">
+                <StackPanel Grid.Row="0" Spacing="0">
+                    <StackPanel.DataTemplates>
+                        <DataTemplate DataType="vm:InfoBarViewModel">
+                            <controls:InfoBar/>
+                        </DataTemplate>
+                    </StackPanel.DataTemplates>
+                    <ContentControl Content="{Binding UpdatesBanner}"/>
+                    <ContentControl Content="{Binding ErrorBanner}"/>
+                    <ContentControl Content="{Binding WinGetWarningBanner}"/>
+                    <ContentControl Content="{Binding TelemetryWarner}"/>
+                </StackPanel>
+                <ContentControl Grid.Row="1"
+                                Content="{Binding CurrentPageContent}"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"/>
+            </Grid>
 
             <!-- ── GridSplitter (only visible when operations are present) ── -->
             <GridSplitter Grid.Column="1" Grid.Row="1"

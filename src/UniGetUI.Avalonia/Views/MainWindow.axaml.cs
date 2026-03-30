@@ -99,7 +99,20 @@ public partial class MainWindow : Window
     // ─── Public API (legacy compat) ───────────────────────────────────────────
     public void ShowBanner(string title, string message, RuntimeNotificationLevel level)
     {
-        // TODO: implement in-app notification display
+        if (level == RuntimeNotificationLevel.Progress) return;
+
+        var severity = level switch
+        {
+            RuntimeNotificationLevel.Error   => InfoBarSeverity.Error,
+            RuntimeNotificationLevel.Success => InfoBarSeverity.Success,
+            _                                => InfoBarSeverity.Informational,
+        };
+        ViewModel.ErrorBanner.ActionButtonText    = "";
+        ViewModel.ErrorBanner.ActionButtonCommand = null;
+        ViewModel.ErrorBanner.Title    = title;
+        ViewModel.ErrorBanner.Message  = message;
+        ViewModel.ErrorBanner.Severity = severity;
+        ViewModel.ErrorBanner.IsOpen   = true;
     }
 
     public void UpdateSystemTrayStatus()

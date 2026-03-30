@@ -36,6 +36,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private ManagerLogsPage? ManagerLogPage;
     private OperationHistoryPage? OperationHistoryPage;
     private HelpPage? HelpPage;
+    private ReleaseNotesPage? ReleaseNotesPage;
 
     // ─── Navigation state ────────────────────────────────────────────────────
     private PageType _oldPage = PageType.Null;
@@ -219,6 +220,7 @@ public partial class MainWindowViewModel : ViewModelBase
             PageType.ManagerLog => ManagerLogPage ??= new ManagerLogsPage(),
             PageType.OperationHistory => OperationHistoryPage ??= new OperationHistoryPage(),
             PageType.Help => HelpPage ??= new HelpPage(),
+            PageType.ReleaseNotes => ReleaseNotesPage ??= new ReleaseNotesPage(),
             PageType.Null => throw new InvalidOperationException("Page type is Null"),
             _ => throw new InvalidDataException($"Unknown page type {type}"),
         };
@@ -251,7 +253,6 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (newPage_t is PageType.About) { _ = ShowAboutDialog(); return; }
         if (newPage_t is PageType.Quit) { (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown(); return; }
-        if (newPage_t is PageType.ReleaseNotes) { /* TODO: DialogHelper.ShowReleaseNotes(); */ return; }
 
         Sidebar.SelectNavButtonForPage(newPage_t);
 

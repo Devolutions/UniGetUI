@@ -1,0 +1,39 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.ReleaseNotesPage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
+             xmlns:wv="using:Avalonia.Controls"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:ReleaseNotesPageViewModel">
+
+    <Grid RowDefinitions="Auto,2,*" Margin="8,4,8,8">
+
+        <!-- Toolbar -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+
+            <Button Grid.Column="1"
+                    Height="35"
+                    Command="{Binding OpenInBrowserCommand}">
+                <TextBlock Text="{t:Translate View page on browser}"/>
+            </Button>
+
+        </Grid>
+
+        <!-- Progress bar shown while navigating -->
+        <ProgressBar Grid.Row="1"
+                     x:Name="NavProgressBar"
+                     IsIndeterminate="True"
+                     IsVisible="False"
+                     Height="2"
+                     CornerRadius="0"/>
+
+        <!-- WebView -->
+        <Border Grid.Row="2" CornerRadius="6" ClipToBounds="True">
+            <wv:NativeWebView x:Name="WebViewControl"/>
+        </Border>
+
+    </Grid>
+</UserControl>

@@ -551,7 +551,8 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
                 foreach (string tripletFile in tripletFiles)
                 {
                     string triplet = Path.GetFileNameWithoutExtension(tripletFile);
-                    Triplets.Add(triplet);
+                    if (!Triplets.Contains(triplet))
+                        Triplets.Add(triplet);
                 }
             }
 

@@ -12,10 +12,8 @@ if (-not (Test-Path -Path $generatedDir)) {
 }
 
 $clientId = $env:UNIGETUI_GITHUB_CLIENT_ID
-$clientSecret = $env:UNIGETUI_GITHUB_CLIENT_SECRET
 
 if (-not $clientId) { $clientId = "CLIENT_ID_UNSET" }
-if (-not $clientSecret) { $clientSecret = "CLIENT_SECRET_UNSET" }
 
 @"
 // Auto-generated file - do not modify
@@ -24,7 +22,6 @@ namespace UniGetUI.Avalonia.Infrastructure
     internal static partial class Secrets
     {
         public static partial string GetGitHubClientId() => `"$clientId`";
-        public static partial string GetGitHubClientSecret() => `"$clientSecret`";
     }
 }
 "@ | Set-Content -Encoding UTF8 "Generated Files\Secrets.Generated.cs"

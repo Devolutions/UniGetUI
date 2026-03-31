@@ -204,14 +204,6 @@
         </Grid>
 
         <!-- ── Title bar: drag area + search box ── -->
-        <!--
-            macOS: Height is bound to WindowDecorationMargin.Top (set by the OS,
-                   ~28-38 px). Content extends over the native decoration area.
-                   Traffic lights are on the left → 65 px left margin on HamburgerPanel.
-            Linux: Height is set to 44 px in code-behind. WindowDecorations.None removes
-                   the native bar. Custom min/max/close buttons appear on the right.
-                   HamburgerPanel left margin is 10 px.
-        -->
         <Grid x:Name="TitleBarGrid"
               Height="{Binding $parent[Window].WindowDecorationMargin.Top}"
               VerticalAlignment="Top"
@@ -256,6 +248,7 @@
                          MinHeight="20"
                          Height="30"
                          FontSize="15"
+                         Margin="0,5,0,0"
                          CornerRadius="4,0,0,4"
                          Watermark="{Binding GlobalSearchPlaceholder}"
                          IsEnabled="{Binding GlobalSearchEnabled}"
@@ -264,6 +257,7 @@
                 <Button Height="30"
                         Width="30"
                         Padding="3"
+                        Margin="0,5,0,0"
                         CornerRadius="0,4,4,0"
                         IsEnabled="{Binding GlobalSearchEnabled}"
                         Command="{Binding SubmitGlobalSearchCommand}">
@@ -277,7 +271,9 @@
             <Panel Grid.Column="2">
                 <controls:UserAvatarControl x:Name="AvatarControl"
                                             HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"/>
+                                            VerticalAlignment="Center"
+                                            Height="50"
+                                            Margin="0,10,0,0"/>
 
                 <!-- Linux only: min / max / close (IsVisible set in code-behind) -->
                 <StackPanel x:Name="LinuxWindowButtons"

@@ -1,6 +1,9 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Core.Logging;
@@ -44,6 +47,7 @@ public partial class MainWindow : Window
         Instance = this;
         DataContext = new MainWindowViewModel();
         InitializeComponent();
+        SetupTitleBar();
 
         KeyDown += Window_KeyDown;
     }
@@ -80,6 +84,52 @@ public partial class MainWindow : Window
             (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.SelectAllTriggered();
         }
     }
+
+    private void SetupTitleBar()
+    {
+        if (OperatingSystem.IsMacOS())
+        {
+            // macOS: extend into the native title bar area.
+            // WindowDecorationMargin.Top drives TitleBarGrid.Height via binding.
+            // Traffic lights sit on the left → keep the 65 px HamburgerPanel margin.
+            // Avatar can be a bit taller to fill the deeper title bar.
+            ExtendClientAreaToDecorationsHint = true;
+            ExtendClientAreaTitleBarHeightHint = -1;
+            AvatarControl.Height = 36;
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            // Linux: remove the native title bar entirely; our toolbar is the
+            // only chrome. Custom min/max/close buttons appear on the right.
+            WindowDecorations = WindowDecorations.None;
+            TitleBarGrid.ClearValue(HeightProperty);
+            TitleBarGrid.Height = 44;
+            HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
+            AvatarControl.Height = 32;
+            LinuxWindowButtons.IsVisible = true;
+            MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
+            // Keep maximize icon in sync with window state
+            this.GetObservable(WindowStateProperty).Subscribe(state =>
+            {
+                MaximizeIcon.Data = Geometry.Parse(
+                    state == WindowState.Maximized
+                        ? "M2,0 H10 V8 H2 Z M0,2 H8 V10 H0 Z"  // restore: two overlapping squares
+                        : "M0,0 H10 V10 H0 Z");                  // maximise: single square
+                ToolTip.SetTip(MaximizeButton, state == WindowState.Maximized ? "Restore" : "Maximize");
+            });
+        }
+    }
+
+    private void MinimizeButton_Click(object? sender, RoutedEventArgs e)
+        => WindowState = WindowState.Minimized;
+
+    private void MaximizeButton_Click(object? sender, RoutedEventArgs e)
+        => WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+
+    private void CloseButton_Click(object? sender, RoutedEventArgs e)
+        => Close();
 
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
     {

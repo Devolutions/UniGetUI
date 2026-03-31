@@ -9,14 +9,14 @@
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="750"
         x:Class="UniGetUI.Avalonia.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
+        Title="UniGetUI"
         Width="1450"
         MinWidth="700"
-        MinHeight="500"
-        ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaTitleBarHeightHint="-1">
+        MinHeight="500">
     <Panel>
         <!-- Main content pushed below the native title bar -->
-        <Grid ColumnDefinitions="Auto,*"
+        <Grid x:Name="MainContentGrid"
+              ColumnDefinitions="Auto,*"
               RowDefinitions="*,4,Auto"
               Background="{DynamicResource AppWindowBackground}"
               Margin="{Binding $parent[Window].WindowDecorationMargin}">
@@ -204,17 +204,28 @@
         </Grid>
 
         <!-- ── Title bar: drag area + search box ── -->
-        <Grid Height="{Binding $parent[Window].WindowDecorationMargin.Top}"
+        <!--
+            macOS: Height is bound to WindowDecorationMargin.Top (set by the OS,
+                   ~28-38 px). Content extends over the native decoration area.
+                   Traffic lights are on the left → 65 px left margin on HamburgerPanel.
+            Linux: Height is set to 44 px in code-behind. WindowDecorations.None removes
+                   the native bar. Custom min/max/close buttons appear on the right.
+                   HamburgerPanel left margin is 10 px.
+        -->
+        <Grid x:Name="TitleBarGrid"
+              Height="{Binding $parent[Window].WindowDecorationMargin.Top}"
               VerticalAlignment="Top"
               ColumnDefinitions="*,Auto,*">
 
-            <!-- Drag area fills the whole title bar -->
+            <!-- Drag area — sits behind everything so interactive controls still work -->
             <Border Grid.Column="0" Grid.ColumnSpan="3"
                     Background="{DynamicResource AppTitleBarBackground}"
+                    IsHitTestVisible="True"
                     PointerPressed="TitleBar_PointerPressed"/>
 
-            <!-- Left: hamburger toggle button + app name -->
-            <StackPanel Grid.Column="0"
+            <!-- Left: hamburger + app name -->
+            <StackPanel x:Name="HamburgerPanel"
+                        Grid.Column="0"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
@@ -236,7 +247,7 @@
                            VerticalAlignment="Center"/>
             </StackPanel>
 
-            <!-- Centre: global search box (Auto column → truly centred in the window) -->
+            <!-- Centre: search box — vertically centred, no platform-specific margin -->
             <StackPanel Grid.Column="1"
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
@@ -245,7 +256,6 @@
                          MinHeight="20"
                          Height="30"
                          FontSize="15"
-                         Margin="0,5,0,0"
                          CornerRadius="4,0,0,4"
                          Watermark="{Binding GlobalSearchPlaceholder}"
                          IsEnabled="{Binding GlobalSearchEnabled}"
@@ -254,7 +264,6 @@
                 <Button Height="30"
                         Width="30"
                         Padding="3"
-                        Margin="0,5,0,0"
                         CornerRadius="0,4,4,0"
                         IsEnabled="{Binding GlobalSearchEnabled}"
                         Command="{Binding SubmitGlobalSearchCommand}">
@@ -264,12 +273,61 @@
                 </Button>
             </StackPanel>
 
-            <!-- Right: GitHub account avatar (centred in the right * column) -->
-            <controls:UserAvatarControl Grid.Column="2"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        Height="50"
-                                        Margin="0,10,0,0"/>
+            <!-- Right column: avatar centred + Linux window buttons on the far right -->
+            <Panel Grid.Column="2">
+                <controls:UserAvatarControl x:Name="AvatarControl"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"/>
+
+                <!-- Linux only: min / max / close (IsVisible set in code-behind) -->
+                <StackPanel x:Name="LinuxWindowButtons"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Margin="0,0,4,0"
+                            Spacing="0"
+                            IsVisible="False">
+                    <!-- Minimize: horizontal line -->
+                    <Button Width="46" Height="32" Padding="0"
+                            Background="Transparent" BorderThickness="0" CornerRadius="0"
+                            ToolTip.Tip="Minimize"
+                            Click="MinimizeButton_Click">
+                        <Path Stroke="{DynamicResource SystemBaseHighColor}"
+                              StrokeThickness="1.5"
+                              StrokeLineCap="Round"
+                              Data="M2,0 H10"
+                              Width="12" Height="2"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <!-- Maximize / Restore: square outline, geometry swapped in code-behind -->
+                    <Button x:Name="MaximizeButton"
+                            Width="46" Height="32" Padding="0"
+                            Background="Transparent" BorderThickness="0" CornerRadius="0"
+                            ToolTip.Tip="Maximize"
+                            Click="MaximizeButton_Click">
+                        <Path x:Name="MaximizeIcon"
+                              Stroke="{DynamicResource SystemBaseHighColor}"
+                              StrokeThickness="1.5"
+                              StrokeLineCap="Round"
+
+                              Data="M0,0 H10 V10 H0 Z"
+                              Width="12" Height="12"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <!-- Close: X -->
+                    <Button Width="46" Height="32" Padding="0"
+                            Background="Transparent" BorderThickness="0" CornerRadius="0"
+                            ToolTip.Tip="Close"
+                            Click="CloseButton_Click">
+                        <Path Stroke="{DynamicResource SystemBaseHighColor}"
+                              StrokeThickness="1.5"
+                              StrokeLineCap="Round"
+                              Data="M0,0 L10,10 M10,0 L0,10"
+                              Width="12" Height="12"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+            </Panel>
         </Grid>
     </Panel>
 </Window>

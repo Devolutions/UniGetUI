@@ -286,7 +286,7 @@
                     <!-- Minimize: horizontal line -->
                     <Button Width="46" Height="32" Padding="0"
                             Background="Transparent" BorderThickness="0" CornerRadius="0"
-                            ToolTip.Tip="Minimize"
+                            ToolTip.Tip="{t:Translate Minimize}"
                             Click="MinimizeButton_Click">
                         <Path Stroke="{DynamicResource SystemBaseHighColor}"
                               StrokeThickness="1.5"
@@ -299,7 +299,7 @@
                     <Button x:Name="MaximizeButton"
                             Width="46" Height="32" Padding="0"
                             Background="Transparent" BorderThickness="0" CornerRadius="0"
-                            ToolTip.Tip="Maximize"
+                            ToolTip.Tip="{t:Translate Maximize}"
                             Click="MaximizeButton_Click">
                         <Path x:Name="MaximizeIcon"
                               Stroke="{DynamicResource SystemBaseHighColor}"

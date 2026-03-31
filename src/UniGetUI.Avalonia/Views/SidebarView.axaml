@@ -26,7 +26,7 @@
                          ToolTip.Tip="{t:Translate Discover Packages}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
-                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/ms_store.svg" Width="24" Height="24" VerticalAlignment="Center" />
+                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/DiscoverPackage.svg" Width="24" Height="24" VerticalAlignment="Center" />
                         <TextBlock Text="{t:Translate Discover Packages}"
                                    FontSize="16"
                                    FontWeight="SemiBold"
@@ -94,7 +94,7 @@
                          ToolTip.Tip="{t:Translate Installed Packages}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
-                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/local_pc.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/InstalledPackages.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                         <TextBlock Text="{t:Translate Installed Packages}"
                                    FontSize="16"
                                    FontWeight="SemiBold"
@@ -114,7 +114,7 @@
                          ToolTip.Tip="{t:Translate Package Bundles}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
-                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/save_as.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/PackagesBundle.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                         <TextBlock Text="{t:Translate Package Bundles}"
                                    FontSize="16"
                                    FontWeight="SemiBold"
@@ -192,7 +192,7 @@
                     CornerRadius="6"
                     ToolTip.Tip="{t:Translate More}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                    <TextBlock Text="···" FontSize="20" Width="24" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"/>
                     <TextBlock Text="{t:Translate More}" FontSize="16" VerticalAlignment="Center"
                                IsVisible="{Binding IsPaneOpen}"/>
                 </StackPanel>

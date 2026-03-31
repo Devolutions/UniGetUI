@@ -104,6 +104,20 @@ public class SvgIcon : Control
                     catch { /* skip malformed path data */ }
                 }
             }
+            foreach (XElement el in doc.Descendants(ns + "ellipse"))
+            {
+                if (double.TryParse(el.Attribute("cx")?.Value, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out double cx) &&
+                    double.TryParse(el.Attribute("cy")?.Value, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out double cy) &&
+                    double.TryParse(el.Attribute("rx")?.Value, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out double rx) &&
+                    double.TryParse(el.Attribute("ry")?.Value, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out double ry))
+                {
+                    _geometries.Add(new EllipseGeometry(new Rect(cx - rx, cy - ry, rx * 2, ry * 2)));
+                }
+            }
         }
         catch
         {

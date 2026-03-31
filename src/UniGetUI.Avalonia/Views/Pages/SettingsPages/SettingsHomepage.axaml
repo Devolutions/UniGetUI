@@ -71,7 +71,7 @@
 
             <!-- ── Managers ───────────────────────────────────────────── -->
             <settings:SettingsPageButton CornerRadius="8"
-                Icon="Search"
+                Icon="ClipboardList"
                 Text="{t:Translate Package manager preferences}"
                 UnderText="{t:Translate Text='Enable and disable package managers, change default install options, etc.'}"
                 Command="{Binding NavigateToManagersCommand}"/>

@@ -27,7 +27,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     {
         PageName = "SoftwarePages.DiscoverSoftwarePage",
         PageTitle = CoreTools.Translate("Discover Packages"),
-        IconName = "ms_store",
+        IconName = "DiscoverPackage",
         PageRole = OperationType.Install,
         Loader = DiscoverablePackagesLoader.Instance ?? new DiscoverablePackagesLoader([]),
         MegaQueryBlockEnabled = true,

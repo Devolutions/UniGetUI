@@ -46,6 +46,7 @@ public partial class SettingsPageButton : SettingsCard
         IconType.SaveAs => "save_as",
         IconType.OpenFolder => "open_folder",
         IconType.Experimental => "experimental",
+        IconType.ClipboardList => "clipboard_list",
         _ => icon.ToString().ToLower(),
     };
 }

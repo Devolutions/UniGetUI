@@ -186,7 +186,7 @@
                               CornerRadius="4"
                               IsChecked="{Binding IsFilterPaneOpen, Mode=TwoWay}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg" Width="16" Height="16" VerticalAlignment="Center"/>
+                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/Filter.svg" Width="16" Height="16" VerticalAlignment="Center"/>
                         <TextBlock Text="{t:Translate Filters}" FontSize="12" FontWeight="Medium" VerticalAlignment="Center"/>
                     </StackPanel>
                 </ToggleButton>
@@ -258,7 +258,7 @@
                                   Background="{DynamicResource SettingsCardBackground}">
                             <Expander.Header>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/local_pc.svg" Width="16" Height="16" VerticalAlignment="Center"/>
+                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/Sources.svg" Width="16" Height="16" VerticalAlignment="Center"/>
                                     <TextBlock Text="{t:Translate Sources}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Expander.Header>
@@ -325,7 +325,7 @@
                                   Background="{DynamicResource SettingsCardBackground}">
                             <Expander.Header>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg" Width="16" Height="16" VerticalAlignment="Center"/>
+                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/Filter.svg" Width="16" Height="16" VerticalAlignment="Center"/>
                                     <TextBlock Text="{t:Translate Filters}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Expander.Header>

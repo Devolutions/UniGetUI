@@ -37,7 +37,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
     {
         PageName = "SoftwarePages.InstalledPackagesPage",
         PageTitle = CoreTools.Translate("Installed Packages"),
-        IconName = "local_pc",
+        IconName = "InstalledPackages",
         PageRole = OperationType.Uninstall,
         Loader = InstalledPackagesLoader.Instance ?? new InstalledPackagesLoader([]),
         MegaQueryBlockEnabled = false,

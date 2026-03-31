@@ -55,7 +55,7 @@ public class PackageBundlesPage : AbstractPackagesPage
     {
         PageName = "SoftwarePages.PackageBundlesPage",
         PageTitle = CoreTools.Translate("Package Bundles"),
-        IconName = "save_as",
+        IconName = "PackagesBundle",
         PageRole = OperationType.Install,
         Loader = PackageBundlesLoader.Instance!,
         MegaQueryBlockEnabled = false,

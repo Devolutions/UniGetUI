@@ -166,7 +166,7 @@ public partial class BackupViewModel : ViewModelBase
 
         try
         {
-            using var http = new HttpClient();
+            using var http = new HttpClient(CoreTools.GenericHttpClientParameters);
             var bytes = await http.GetByteArrayAsync(user.AvatarUrl);
             using var ms = new MemoryStream(bytes);
             GitHubAvatarBitmap = new Bitmap(ms);

@@ -67,7 +67,7 @@ public class UserAvatarViewModel : ViewModelBase
 
                     if (!string.IsNullOrEmpty(user.AvatarUrl))
                     {
-                        using var http = new HttpClient();
+                        using var http = new HttpClient(CoreTools.GenericHttpClientParameters);
                         byte[] bytes = await http.GetByteArrayAsync(user.AvatarUrl);
                         using var ms = new MemoryStream(bytes);
                         bitmap = new Bitmap(ms);

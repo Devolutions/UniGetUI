@@ -10,6 +10,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
+using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
@@ -115,10 +116,15 @@ public partial class SourceManagerCardViewModel : ViewModelBase
         SelectedKnownSource = _otherLabel;
 
         var op = new AddSourceOperation(source);
+        op.OperationFinished += OnAddOperationFinished;
         AvaloniaOperationRegistry.Add(op);
         _ = op.MainThread();
+    }
 
-        await Task.Delay(3000);
+    private void OnAddOperationFinished(object? sender, EventArgs e)
+    {
+        if (sender is AbstractOperation op)
+            op.OperationFinished -= OnAddOperationFinished;
         _ = DoLoadSources();
     }
 

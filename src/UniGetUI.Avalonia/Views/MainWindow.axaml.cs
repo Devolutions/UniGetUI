@@ -165,7 +165,7 @@ public partial class MainWindow : Window
                 var creds = Settings.GetProxyCredentials();
                 if (creds is null)
                 {
-                    content = $"--proxy {proxyUri}";
+                    content = proxyUri.ToString();
                 }
                 else
                 {

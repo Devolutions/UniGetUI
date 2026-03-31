@@ -204,17 +204,21 @@
         </Grid>
 
         <!-- ── Title bar: drag area + search box ── -->
-        <Panel Height="{Binding $parent[Window].WindowDecorationMargin.Top}"
-               VerticalAlignment="Top">
+        <Grid Height="{Binding $parent[Window].WindowDecorationMargin.Top}"
+              VerticalAlignment="Top"
+              ColumnDefinitions="*,Auto,*">
+
             <!-- Drag area fills the whole title bar -->
-            <Border Background="{DynamicResource AppTitleBarBackground}"
+            <Border Grid.Column="0" Grid.ColumnSpan="3"
+                    Background="{DynamicResource AppTitleBarBackground}"
                     PointerPressed="TitleBar_PointerPressed"/>
 
             <!-- Left: hamburger toggle button + app name -->
-            <StackPanel HorizontalAlignment="Left"
+            <StackPanel Grid.Column="0"
+                        HorizontalAlignment="Left"
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
-                        Margin="65,0,0,0"
+                        Margin="65,0,8,0"
                         Spacing="8">
                 <Button Width="32" Height="32"
                         Padding="4"
@@ -232,8 +236,8 @@
                            VerticalAlignment="Center"/>
             </StackPanel>
 
-            <!-- Centre: global search box -->
-            <StackPanel HorizontalAlignment="Center"
+            <!-- Centre: global search box (Auto column → truly centred in the window) -->
+            <StackPanel Grid.Column="1"
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
                         Spacing="0">
@@ -260,11 +264,12 @@
                 </Button>
             </StackPanel>
 
-            <!-- Right: GitHub account avatar -->
-            <controls:UserAvatarControl HorizontalAlignment="Right"
+            <!-- Right: GitHub account avatar (centred in the right * column) -->
+            <controls:UserAvatarControl Grid.Column="2"
+                                        HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         Height="50"
-                                        Margin="0,10,350,0"/>
-        </Panel>
+                                        Margin="0,10,0,0"/>
+        </Grid>
     </Panel>
 </Window>

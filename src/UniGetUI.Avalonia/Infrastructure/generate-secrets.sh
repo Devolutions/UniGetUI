@@ -5,10 +5,8 @@ if [ ! -d "Generated Files" ]; then mkdir -p "Generated Files"; fi
 if [ ! -d "${OUTPUT_PATH}Generated Files" ]; then mkdir -p "${OUTPUT_PATH}Generated Files"; fi
 
 CLIENT_ID="${UNIGETUI_GITHUB_CLIENT_ID}"
-CLIENT_SECRET="${UNIGETUI_GITHUB_CLIENT_SECRET}"
 
 if [ -z "$CLIENT_ID" ]; then CLIENT_ID="CLIENT_ID_UNSET"; fi
-if [ -z "$CLIENT_SECRET" ]; then CLIENT_SECRET="CLIENT_SECRET_UNSET"; fi
 
 cat > "Generated Files/Secrets.Generated.cs" << CSEOF
 // Auto-generated file - do not modify
@@ -17,7 +15,6 @@ namespace UniGetUI.Avalonia.Infrastructure
     internal static partial class Secrets
     {
         public static partial string GetGitHubClientId() => "$CLIENT_ID";
-        public static partial string GetGitHubClientSecret() => "$CLIENT_SECRET";
     }
 }
 CSEOF

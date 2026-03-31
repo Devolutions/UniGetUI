@@ -132,7 +132,7 @@ public sealed partial class OperationViewModel : ViewModelBase
 
             if (bmp is not null)
             {
-                PackageIcon = bmp;
+                Dispatcher.UIThread.Post(() => PackageIcon = bmp);
                 return;
             }
         }
@@ -141,7 +141,8 @@ public sealed partial class OperationViewModel : ViewModelBase
         try
         {
             using var stream = AssetLoader.Open(_fallbackIconUri);
-            PackageIcon = new Bitmap(stream);
+            var fallback = new Bitmap(stream);
+            Dispatcher.UIThread.Post(() => PackageIcon = fallback);
         }
         catch { }
     }

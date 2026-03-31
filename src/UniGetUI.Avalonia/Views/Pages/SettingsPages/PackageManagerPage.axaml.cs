@@ -211,9 +211,9 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         {
             ManagerLogs.CornerRadius = new CornerRadius(8, 8, 0, 0);
             AppExecutionAliasWarning.IsVisible = true;
-            AppExecutionAliasLabel.Text =
+            AppExecutionAliasLabel.Text = CoreTools.Translate(
                 "If Python cannot be found or is not listing packages but is installed on the system, " +
-                "you may need to disable the \"python.exe\" App Execution Alias in the settings.";
+                "you may need to disable the \"python.exe\" App Execution Alias in the settings.");
         }
     }
 
@@ -311,7 +311,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                     CornerRadius = new CornerRadius(0, 0, 8, 8),
                     BorderThickness = new Thickness(1, 0, 1, 1),
                     SettingName = CoreSettings.K.EnableScoopCleanup,
-                    Text = "Enable Scoop cleanup on launch",
+                    Text = CoreTools.AutoTranslated("Enable Scoop cleanup on launch"),
                 });
                 break;
 
@@ -361,8 +361,8 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
     {
         var vcpkgRootCard = new ButtonCard
         {
-            Text = "Change vcpkg root location",
-            ButtonText = "Select",
+            Text = CoreTools.AutoTranslated("Change vcpkg root location"),
+            ButtonText = CoreTools.AutoTranslated("Select"),
             CornerRadius = new CornerRadius(0, 0, 8, 8),
             BorderThickness = new Thickness(1, 0, 1, 1),
         };

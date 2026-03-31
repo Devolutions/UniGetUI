@@ -115,7 +115,9 @@ public partial class MainWindow : Window
                     state == WindowState.Maximized
                         ? "M2,0 H10 V8 H2 Z M0,2 H8 V10 H0 Z"  // restore: two overlapping squares
                         : "M0,0 H10 V10 H0 Z");                  // maximise: single square
-                ToolTip.SetTip(MaximizeButton, state == WindowState.Maximized ? "Restore" : "Maximize");
+                ToolTip.SetTip(
+                    MaximizeButton,
+                    CoreTools.Translate(state == WindowState.Maximized ? "Restore" : "Maximize"));
             });
         }
     }

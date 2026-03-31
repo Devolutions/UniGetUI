@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using UniGetUI.Core.Logging;
 using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Interfaces;
@@ -29,12 +29,12 @@ public partial class SourceManagerCardViewModel : ViewModelBase
     [ObservableProperty] private string _newSourceUrl = "";
     [ObservableProperty] private bool _nameUrlEditable = true;
 
-    public string TitleText       => CoreTools.Translate("Manage {0} sources", _manager.DisplayName);
-    public string AddLabel        { get; } = CoreTools.Translate("Add source");
+    public string TitleText => CoreTools.Translate("Manage {0} sources", _manager.DisplayName);
+    public string AddLabel { get; } = CoreTools.Translate("Add source");
     public string AddConfirmLabel { get; } = CoreTools.Translate("Add");
-    public string CancelLabel     { get; } = CoreTools.Translate("Cancel");
-    public string NameHint        { get; } = CoreTools.Translate("Source name");
-    public string UrlHint         { get; } = CoreTools.Translate("Source URL");
+    public string CancelLabel { get; } = CoreTools.Translate("Cancel");
+    public string NameHint { get; } = CoreTools.Translate("Source name");
+    public string UrlHint { get; } = CoreTools.Translate("Source URL");
 
     public SourceManagerCardViewModel(IPackageManager manager)
     {
@@ -68,7 +68,7 @@ public partial class SourceManagerCardViewModel : ViewModelBase
 
         try
         {
-            var loaded = await Task.Run(() => _manager.SourcesHelper.GetSources());
+            var loaded = await Task.Run(_manager.SourcesHelper.GetSources);
             foreach (var s in loaded)
                 Sources.Add(s);
         }

@@ -1,11 +1,11 @@
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
-using MvvmRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 using Octokit;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
+using MvvmRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace UniGetUI.Avalonia.ViewModels.Controls;
 

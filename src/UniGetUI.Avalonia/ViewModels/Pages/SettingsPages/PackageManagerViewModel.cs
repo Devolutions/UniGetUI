@@ -21,9 +21,9 @@ public partial class PackageManagerViewModel : ViewModelBase
     public event EventHandler? NavigateToAdministratorRequested;
 
     // ── Section headings ──────────────────────────────────────────────────────
-    public string PageTitle            => CoreTools.Translate("{0} settings", Manager.DisplayName);
-    public string StatusSectionTitle   => CoreTools.Translate("{0} status", Manager.DisplayName);
-    public string InstallSectionTitle  => CoreTools.Translate("Default installation options for {0} packages", Manager.DisplayName);
+    public string PageTitle => CoreTools.Translate("{0} settings", Manager.DisplayName);
+    public string StatusSectionTitle => CoreTools.Translate("{0} status", Manager.DisplayName);
+    public string InstallSectionTitle => CoreTools.Translate("Default installation options for {0} packages", Manager.DisplayName);
     public string SettingsSectionTitle => CoreTools.Translate("{0} settings", Manager.DisplayName);
 
     // ── Status bar ────────────────────────────────────────────────────────────

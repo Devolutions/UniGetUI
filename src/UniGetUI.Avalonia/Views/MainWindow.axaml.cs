@@ -103,16 +103,16 @@ public partial class MainWindow : Window
 
         var severity = level switch
         {
-            RuntimeNotificationLevel.Error   => InfoBarSeverity.Error,
+            RuntimeNotificationLevel.Error => InfoBarSeverity.Error,
             RuntimeNotificationLevel.Success => InfoBarSeverity.Success,
-            _                                => InfoBarSeverity.Informational,
+            _ => InfoBarSeverity.Informational,
         };
-        ViewModel.ErrorBanner.ActionButtonText    = "";
+        ViewModel.ErrorBanner.ActionButtonText = "";
         ViewModel.ErrorBanner.ActionButtonCommand = null;
-        ViewModel.ErrorBanner.Title    = title;
-        ViewModel.ErrorBanner.Message  = message;
+        ViewModel.ErrorBanner.Title = title;
+        ViewModel.ErrorBanner.Message = message;
         ViewModel.ErrorBanner.Severity = severity;
-        ViewModel.ErrorBanner.IsOpen   = true;
+        ViewModel.ErrorBanner.IsOpen = true;
     }
 
     public void UpdateSystemTrayStatus()

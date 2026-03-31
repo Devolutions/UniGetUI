@@ -34,8 +34,8 @@ public sealed partial class InstallOptionsPanel : UserControl
             _ = ViewModel.SelectLocationCommand.ExecuteAsync(this);
 
         // Mark changed whenever the user edits a CLI textbox
-        CustomInstallBox.TextChanged   += (_, _) => ViewModel.MarkChanged();
-        CustomUpdateBox.TextChanged    += (_, _) => ViewModel.MarkChanged();
+        CustomInstallBox.TextChanged += (_, _) => ViewModel.MarkChanged();
+        CustomUpdateBox.TextChanged += (_, _) => ViewModel.MarkChanged();
         CustomUninstallBox.TextChanged += (_, _) => ViewModel.MarkChanged();
     }
 }

@@ -47,12 +47,12 @@ public abstract partial class BaseLogPageViewModel : ViewModels.ViewModelBase
     {
         var color = severity switch
         {
-            LogEntry.SeverityLevel.Debug   => isDark ? Color.FromRgb(130, 130, 130) : Color.FromRgb(125, 125, 225),
-            LogEntry.SeverityLevel.Info    => isDark ? Color.FromRgb(190, 190, 190) : Color.FromRgb(50,  50,  150),
-            LogEntry.SeverityLevel.Success => isDark ? Color.FromRgb(250, 250, 250) : Color.FromRgb(0,   0,   0),
-            LogEntry.SeverityLevel.Warning => isDark ? Color.FromRgb(255, 255, 90)  : Color.FromRgb(150, 150, 0),
-            LogEntry.SeverityLevel.Error   => isDark ? Color.FromRgb(255, 80,  80)  : Color.FromRgb(205, 0,   0),
-            _                              => isDark ? Color.FromRgb(130, 130, 130) : Color.FromRgb(125, 125, 225),
+            LogEntry.SeverityLevel.Debug => isDark ? Color.FromRgb(130, 130, 130) : Color.FromRgb(125, 125, 225),
+            LogEntry.SeverityLevel.Info => isDark ? Color.FromRgb(190, 190, 190) : Color.FromRgb(50, 50, 150),
+            LogEntry.SeverityLevel.Success => isDark ? Color.FromRgb(250, 250, 250) : Color.FromRgb(0, 0, 0),
+            LogEntry.SeverityLevel.Warning => isDark ? Color.FromRgb(255, 255, 90) : Color.FromRgb(150, 150, 0),
+            LogEntry.SeverityLevel.Error => isDark ? Color.FromRgb(255, 80, 80) : Color.FromRgb(205, 0, 0),
+            _ => isDark ? Color.FromRgb(130, 130, 130) : Color.FromRgb(125, 125, 225),
         };
         return new SolidColorBrush(color);
     }
@@ -61,13 +61,13 @@ public abstract partial class BaseLogPageViewModel : ViewModels.ViewModelBase
     {
         var color = colorCode switch
         {
-            '0' => isDark ? Color.FromRgb(250, 250, 250) : Color.FromRgb(0,   0,   0),
-            '1' => isDark ? Color.FromRgb(190, 190, 190) : Color.FromRgb(50,  50,  150),
-            '2' => isDark ? Color.FromRgb(255, 80,  80)  : Color.FromRgb(205, 0,   0),
-            '3' => isDark ? Color.FromRgb(120, 120, 255) : Color.FromRgb(0,   0,   205),
-            '4' => isDark ? Color.FromRgb(80,  255, 80)  : Color.FromRgb(0,   205, 0),
-            '5' => isDark ? Color.FromRgb(255, 255, 90)  : Color.FromRgb(150, 150, 0),
-            _   => isDark ? Color.FromRgb(255, 255, 90)  : Color.FromRgb(150, 150, 0),
+            '0' => isDark ? Color.FromRgb(250, 250, 250) : Color.FromRgb(0, 0, 0),
+            '1' => isDark ? Color.FromRgb(190, 190, 190) : Color.FromRgb(50, 50, 150),
+            '2' => isDark ? Color.FromRgb(255, 80, 80) : Color.FromRgb(205, 0, 0),
+            '3' => isDark ? Color.FromRgb(120, 120, 255) : Color.FromRgb(0, 0, 205),
+            '4' => isDark ? Color.FromRgb(80, 255, 80) : Color.FromRgb(0, 205, 0),
+            '5' => isDark ? Color.FromRgb(255, 255, 90) : Color.FromRgb(150, 150, 0),
+            _ => isDark ? Color.FromRgb(255, 255, 90) : Color.FromRgb(150, 150, 0),
         };
         return new SolidColorBrush(color);
     }

@@ -237,8 +237,8 @@ public sealed partial class OperationViewModel : ViewModelBase
         // ── Queue management ──────────────────────────────────────────────────
         if (status is OperationStatus.InQueue)
         {
-            OpMenu.Items.Add(Item("Run now",  "forward.svg",  true, Operation.SkipQueue));
-            OpMenu.Items.Add(Item("Run next", "forward.svg",  true, Operation.RunNext));
+            OpMenu.Items.Add(Item("Run now", "forward.svg", true, Operation.SkipQueue));
+            OpMenu.Items.Add(Item("Run next", "forward.svg", true, Operation.RunNext));
             OpMenu.Items.Add(Item("Run last", "backward.svg", true, Operation.BackOfTheQueue));
             OpMenu.Items.Add(new Separator());
         }

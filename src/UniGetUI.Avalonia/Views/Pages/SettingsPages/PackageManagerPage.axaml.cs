@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Layout;
-using UniGetUI.Avalonia.ViewModels;
 using Avalonia.Media;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Avalonia.Views.Controls.Settings;
@@ -12,8 +12,8 @@ using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.VcpkgManager;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
-using Thickness = global::Avalonia.Thickness;
 using CornerRadius = global::Avalonia.CornerRadius;
+using Thickness = global::Avalonia.Thickness;
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
@@ -138,7 +138,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             CornerRadius = new CornerRadius(0),
             Header = CoreTools.Translate("Select the executable to be used. The following list shows the executables found by UniGetUI"),
             Description = execGrid,
-            Margin =  new Thickness(0, 2, 0, 2),
+            Margin = new Thickness(0, 2, 0, 2),
         };
 
         // ── Current path card
@@ -422,8 +422,8 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         {
             ManagerStatusSeverity.Success => "status-success",
             ManagerStatusSeverity.Warning => "status-warning",
-            ManagerStatusSeverity.Error   => "status-error",
-            _                             => "status-info",
+            ManagerStatusSeverity.Error => "status-error",
+            _ => "status-info",
         };
         StatusBar.Classes.Add(cls);
     }

@@ -64,46 +64,46 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
     [ObservableProperty] private string _customUninstall = "";
 
     // ── Translated labels (static) ────────────────────────────────────────────
-    public string AdminLabel         { get; } = CoreTools.Translate("Run as admin");
-    public string InteractiveLabel   { get; } = CoreTools.Translate("Interactive installation");
-    public string SkipHashLabel      { get; } = CoreTools.Translate("Skip hash check");
-    public string PreReleaseLabel    { get; } = CoreTools.Translate("Allow pre-release versions");
+    public string AdminLabel { get; } = CoreTools.Translate("Run as admin");
+    public string InteractiveLabel { get; } = CoreTools.Translate("Interactive installation");
+    public string SkipHashLabel { get; } = CoreTools.Translate("Skip hash check");
+    public string PreReleaseLabel { get; } = CoreTools.Translate("Allow pre-release versions");
     public string UninstallPrevLabel { get; } = CoreTools.Translate("Uninstall previous versions when updated");
-    public string ArchLabel          { get; } = CoreTools.Translate("Architecture to install:");
-    public string ScopeLabel         { get; } = CoreTools.Translate("Installation scope:");
-    public string LocationLabel      { get; } = CoreTools.Translate("Install location:");
-    public string SelectDirLabel     { get; } = CoreTools.Translate("Select");
-    public string ResetDirLabel      { get; } = CoreTools.Translate("Reset");
-    public string InstallArgsLabel   { get; } = CoreTools.Translate("Custom install arguments:");
-    public string UpdateArgsLabel    { get; } = CoreTools.Translate("Custom update arguments:");
+    public string ArchLabel { get; } = CoreTools.Translate("Architecture to install:");
+    public string ScopeLabel { get; } = CoreTools.Translate("Installation scope:");
+    public string LocationLabel { get; } = CoreTools.Translate("Install location:");
+    public string SelectDirLabel { get; } = CoreTools.Translate("Select");
+    public string ResetDirLabel { get; } = CoreTools.Translate("Reset");
+    public string InstallArgsLabel { get; } = CoreTools.Translate("Custom install arguments:");
+    public string UpdateArgsLabel { get; } = CoreTools.Translate("Custom update arguments:");
     public string UninstallArgsLabel { get; } = CoreTools.Translate("Custom uninstall arguments:");
-    public string ResetLabel         { get; } = CoreTools.Translate("Reset");
-    public string ApplyLabel         { get; } = CoreTools.Translate("Apply");
-    public string CliDisabledLabel   { get; } = CoreTools.Translate("For security reasons, custom command-line arguments are disabled by default. Go to UniGetUI security settings to change this.");
-    public string GoToSecurityLabel  { get; } = CoreTools.Translate("Go to UniGetUI security settings");
+    public string ResetLabel { get; } = CoreTools.Translate("Reset");
+    public string ApplyLabel { get; } = CoreTools.Translate("Apply");
+    public string CliDisabledLabel { get; } = CoreTools.Translate("For security reasons, custom command-line arguments are disabled by default. Go to UniGetUI security settings to change this.");
+    public string GoToSecurityLabel { get; } = CoreTools.Translate("Go to UniGetUI security settings");
 
     public string HeaderText => CoreTools.Translate(
         "The following options will be applied by default each time a {0} package is installed, upgraded or uninstalled.",
         _manager.DisplayName);
 
-    public double CliOpacity      => CliSectionEnabled      ? 1.0 : 0.5;
-    public double ArchOpacity     => ArchitectureEnabled    ? 1.0 : 0.5;
-    public double ScopeOpacity    => ScopeEnabled           ? 1.0 : 0.5;
-    public double LocationOpacity => LocationSelectEnabled  ? 1.0 : 0.5;
+    public double CliOpacity => CliSectionEnabled ? 1.0 : 0.5;
+    public double ArchOpacity => ArchitectureEnabled ? 1.0 : 0.5;
+    public double ScopeOpacity => ScopeEnabled ? 1.0 : 0.5;
+    public double LocationOpacity => LocationSelectEnabled ? 1.0 : 0.5;
 
-    partial void OnCliSectionEnabledChanged(bool value)    => OnPropertyChanged(nameof(CliOpacity));
-    partial void OnArchitectureEnabledChanged(bool value)  => OnPropertyChanged(nameof(ArchOpacity));
-    partial void OnScopeEnabledChanged(bool value)         => OnPropertyChanged(nameof(ScopeOpacity));
+    partial void OnCliSectionEnabledChanged(bool value) => OnPropertyChanged(nameof(CliOpacity));
+    partial void OnArchitectureEnabledChanged(bool value) => OnPropertyChanged(nameof(ArchOpacity));
+    partial void OnScopeEnabledChanged(bool value) => OnPropertyChanged(nameof(ScopeOpacity));
     partial void OnLocationSelectEnabledChanged(bool value) => OnPropertyChanged(nameof(LocationOpacity));
 
     // Mark HasChanges when user edits options (guards against firing during load)
-    partial void OnAdminCheckedChanged(bool _)             => HasChanges = !IsLoading;
-    partial void OnInteractiveCheckedChanged(bool _)       => HasChanges = !IsLoading;
-    partial void OnSkipHashCheckedChanged(bool _)          => HasChanges = !IsLoading;
-    partial void OnPreReleaseCheckedChanged(bool _)        => HasChanges = !IsLoading;
+    partial void OnAdminCheckedChanged(bool _) => HasChanges = !IsLoading;
+    partial void OnInteractiveCheckedChanged(bool _) => HasChanges = !IsLoading;
+    partial void OnSkipHashCheckedChanged(bool _) => HasChanges = !IsLoading;
+    partial void OnPreReleaseCheckedChanged(bool _) => HasChanges = !IsLoading;
     partial void OnUninstallPreviousCheckedChanged(bool _) => HasChanges = !IsLoading;
-    partial void OnSelectedArchitectureChanged(string? _)  => HasChanges = !IsLoading;
-    partial void OnSelectedScopeChanged(string? _)         => HasChanges = !IsLoading;
+    partial void OnSelectedArchitectureChanged(string? _) => HasChanges = !IsLoading;
+    partial void OnSelectedScopeChanged(string? _) => HasChanges = !IsLoading;
 
     public InstallOptionsPanelViewModel(IPackageManager manager)
     {
@@ -136,10 +136,10 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
 
         var options = new InstallOptions
         {
-            RunAsAdministrator             = AdminChecked,
-            SkipHashCheck                  = SkipHashChecked,
-            InteractiveInstallation        = InteractiveChecked,
-            PreRelease                     = PreReleaseChecked,
+            RunAsAdministrator = AdminChecked,
+            SkipHashCheck = SkipHashChecked,
+            InteractiveInstallation = InteractiveChecked,
+            PreRelease = PreReleaseChecked,
             UninstallPreviousVersionsOnUpdate = UninstallPreviousChecked,
         };
 
@@ -156,8 +156,8 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
             LocationText != _defaultLocationLabel)
             options.CustomInstallLocation = LocationText;
 
-        options.CustomParameters_Install   = CustomInstall.Split(' ').Where(x => x.Any()).ToList();
-        options.CustomParameters_Update    = CustomUpdate.Split(' ').Where(x => x.Any()).ToList();
+        options.CustomParameters_Install = CustomInstall.Split(' ').Where(x => x.Any()).ToList();
+        options.CustomParameters_Update = CustomUpdate.Split(' ').Where(x => x.Any()).ToList();
         options.CustomParameters_Uninstall = CustomUninstall.Split(' ').Where(x => x.Any()).ToList();
 
         await InstallOptionsFactory.SaveForManagerAsync(options, _manager);
@@ -175,16 +175,16 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
 
     private void DisableAllInput()
     {
-        AdminEnabled            = false;
-        InteractiveEnabled      = false;
-        SkipHashEnabled         = false;
-        PreReleaseEnabled       = false;
+        AdminEnabled = false;
+        InteractiveEnabled = false;
+        SkipHashEnabled = false;
+        PreReleaseEnabled = false;
         UninstallPreviousEnabled = false;
-        ArchitectureEnabled     = false;
-        ScopeEnabled            = false;
-        LocationSelectEnabled   = false;
-        LocationResetEnabled    = false;
-        CliSectionEnabled       = false;
+        ArchitectureEnabled = false;
+        ScopeEnabled = false;
+        LocationSelectEnabled = false;
+        LocationResetEnabled = false;
+        CliSectionEnabled = false;
     }
 
     private async Task DoLoadOptions()
@@ -197,61 +197,61 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
         await Task.Delay(300);
 
         // Checkboxes — load value, then set enabled per capability
-        AdminChecked            = options.RunAsAdministrator;
-        AdminEnabled            = OperatingSystem.IsWindows();
+        AdminChecked = options.RunAsAdministrator;
+        AdminEnabled = OperatingSystem.IsWindows();
 
-        InteractiveChecked      = options.InteractiveInstallation;
-        InteractiveEnabled      = _manager.Capabilities.CanRunInteractively;
+        InteractiveChecked = options.InteractiveInstallation;
+        InteractiveEnabled = _manager.Capabilities.CanRunInteractively;
 
-        SkipHashChecked         = options.SkipHashCheck;
-        SkipHashEnabled         = _manager.Capabilities.CanSkipIntegrityChecks;
+        SkipHashChecked = options.SkipHashCheck;
+        SkipHashEnabled = _manager.Capabilities.CanSkipIntegrityChecks;
 
-        PreReleaseChecked       = options.PreRelease;
-        PreReleaseEnabled       = _manager.Capabilities.SupportsPreRelease;
+        PreReleaseChecked = options.PreRelease;
+        PreReleaseEnabled = _manager.Capabilities.SupportsPreRelease;
 
-        UninstallPreviousChecked  = options.UninstallPreviousVersionsOnUpdate;
-        UninstallPreviousEnabled  = _manager.Capabilities.CanUninstallPreviousVersionsAfterUpdate;
+        UninstallPreviousChecked = options.UninstallPreviousVersionsOnUpdate;
+        UninstallPreviousEnabled = _manager.Capabilities.CanUninstallPreviousVersionsAfterUpdate;
 
         // Architecture
-        ArchitectureEnabled     = _manager.Capabilities.SupportsCustomArchitectures;
+        ArchitectureEnabled = _manager.Capabilities.SupportsCustomArchitectures;
         string? matchedArch = ArchitectureItems.Contains(options.Architecture) ? options.Architecture : null;
-        SelectedArchitecture    = matchedArch ?? ArchitectureItems.FirstOrDefault();
+        SelectedArchitecture = matchedArch ?? ArchitectureItems.FirstOrDefault();
 
         // Scope
-        ScopeEnabled            = _manager.Capabilities.SupportsCustomScopes;
-        string? matchedScope    = null;
+        ScopeEnabled = _manager.Capabilities.SupportsCustomScopes;
+        string? matchedScope = null;
         if (!string.IsNullOrEmpty(options.InstallationScope) &&
             CommonTranslations.ScopeNames.TryGetValue(options.InstallationScope, out string? display))
         {
             string translated = CoreTools.Translate(display);
             if (ScopeItems.Contains(translated)) matchedScope = translated;
         }
-        SelectedScope           = matchedScope ?? ScopeItems.FirstOrDefault();
+        SelectedScope = matchedScope ?? ScopeItems.FirstOrDefault();
 
         // Location
-        LocationSelectEnabled   = _manager.Capabilities.SupportsCustomLocations;
+        LocationSelectEnabled = _manager.Capabilities.SupportsCustomLocations;
         if (!string.IsNullOrEmpty(options.CustomInstallLocation))
         {
-            LocationText        = options.CustomInstallLocation;
+            LocationText = options.CustomInstallLocation;
             LocationResetEnabled = true;
         }
         else
         {
-            LocationText        = _manager.Capabilities.SupportsCustomLocations
+            LocationText = _manager.Capabilities.SupportsCustomLocations
                 ? _defaultLocationLabel
                 : CoreTools.Translate("Install location can't be changed for {0} packages", _manager.DisplayName);
             LocationResetEnabled = false;
         }
 
         // CLI
-        bool isCLI              = SecureSettings.Get(SecureSettings.K.AllowCLIArguments);
-        CliSectionEnabled       = isCLI;
+        bool isCLI = SecureSettings.Get(SecureSettings.K.AllowCLIArguments);
+        CliSectionEnabled = isCLI;
         CliDisabledWarningVisible = !isCLI;
-        CustomInstall           = string.Join(' ', options.CustomParameters_Install);
-        CustomUpdate            = string.Join(' ', options.CustomParameters_Update);
-        CustomUninstall         = string.Join(' ', options.CustomParameters_Uninstall);
+        CustomInstall = string.Join(' ', options.CustomParameters_Install);
+        CustomUpdate = string.Join(' ', options.CustomParameters_Update);
+        CustomUninstall = string.Join(' ', options.CustomParameters_Uninstall);
 
-        IsLoading               = false;
+        IsLoading = false;
     }
 
     // ── Location picker ───────────────────────────────────────────────────────
@@ -265,17 +265,17 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
         if (folders is not [{ } folder]) return;
         var path = folder.TryGetLocalPath();
         if (string.IsNullOrEmpty(path)) return;
-        LocationText         = path.TrimEnd('/').TrimEnd('\\') + "/%PACKAGE%";
+        LocationText = path.TrimEnd('/').TrimEnd('\\') + "/%PACKAGE%";
         LocationResetEnabled = true;
-        HasChanges           = true;
+        HasChanges = true;
     }
 
     [RelayCommand]
     private void ResetLocation()
     {
-        LocationText         = _defaultLocationLabel;
+        LocationText = _defaultLocationLabel;
         LocationResetEnabled = false;
-        HasChanges           = true;
+        HasChanges = true;
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────

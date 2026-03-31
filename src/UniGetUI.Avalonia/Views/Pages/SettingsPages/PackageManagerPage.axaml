@@ -92,7 +92,7 @@
             <!-- Logs link card -->
             <settings:SettingsPageButton x:Name="ManagerLogs" CornerRadius="8,8,0,0"/>
 
-            <!-- Python App Execution Alias warning (Pip only) -->
+            <!-- Python App Execution Alias warning (pip only) -->
             <settings:SettingsCard x:Name="AppExecutionAliasWarning"
                                    BorderThickness="1,0,1,1"
                                    CornerRadius="0,0,8,8"

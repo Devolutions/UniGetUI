@@ -206,7 +206,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 vm.OpenManagerLogs(manager);
         };
 
-        // ── Pip AppExecution Alias warning
+        // ── pip AppExecution Alias warning
         if (manager.Name == "Pip")
         {
             ManagerLogs.CornerRadius = new CornerRadius(8, 8, 0, 0);

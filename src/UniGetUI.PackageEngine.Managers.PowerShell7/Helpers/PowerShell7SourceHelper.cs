@@ -65,8 +65,10 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
                     FileName = Manager.Status.ExecutablePath,
                     Arguments =
                         Manager.Status.ExecutableCallArgs
-                        + " \"Get-PSRepository | Format-Table -Property "
-                        + "Name,@{N='SourceLocation';E={If ($_.Uri) {$_.Uri.AbsoluteUri} Else {$_.SourceLocation}}}\"",
+                        + " \"if (Get-Command Get-PSResourceRepository -ErrorAction SilentlyContinue)"
+                        + " { Get-PSResourceRepository | Format-Table -Property Name,Uri }"
+                        + " else { Get-PSRepository | Format-Table -Property"
+                        + " Name,@{N='SourceLocation';E={If ($_.Uri) {$_.Uri.AbsoluteUri} Else {$_.SourceLocation}}} }\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     RedirectStandardInput = true,

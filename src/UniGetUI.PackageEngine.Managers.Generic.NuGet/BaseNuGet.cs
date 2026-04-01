@@ -14,6 +14,13 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 {
     public abstract class BaseNuGet : PackageManager
     {
+        /// <summary>
+        /// When true, searches use Packages()?$filter=substringof(query,Id) which searches by
+        /// package name only but returns reliable results (e.g. PSGallery's Search() endpoint
+        /// silently omits some packages). When false, the standard Search() endpoint is used
+        /// which supports full-text search across name, description, and tags.
+        /// </summary>
+        protected virtual bool UseSubstringSearch => false;
         public static Dictionary<long, string> Manifests = new();
 
         public sealed override void Initialize()
@@ -71,17 +78,25 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             {
                 try
                 {
-                    Uri? SearchUrl = new(
-                        $"{source.Url}/Search()"
-                            + $"?$filter=IsLatestVersion"
-                            + $"&$orderby=Id&searchTerm='{HttpUtility.UrlEncode(query)}'"
-                            + $"&targetFramework=''"
-                            + $"&includePrerelease={(canPrerelease ? "true" : "false")}"
-                            + $"&$skip=0"
-                            + $"&$top=50"
-                            + $"&semVerLevel=2.0.0"
-                    );
-                    // Uri SearchUrl = new($"{source.Url}/Search()?$filter=IsLatestVersion&searchTerm=%27{HttpUtility.UrlEncode(query)}%27&targetFramework=%27%27&includePrerelease=false");
+                    string versionFilter = canPrerelease ? "IsAbsoluteLatestVersion eq true" : "IsLatestVersion eq true";
+                    Uri? SearchUrl = UseSubstringSearch
+                        ? new Uri(
+                            $"{source.Url}/Packages()"
+                                + $"?$filter=substringof('{HttpUtility.UrlEncode(query)}',Id) and {versionFilter}"
+                                + $"&$orderby=DownloadCount desc"
+                                + $"&$skip=0"
+                                + $"&$top=50"
+                        )
+                        : new Uri(
+                            $"{source.Url}/Search()"
+                                + $"?$filter=IsLatestVersion"
+                                + $"&$orderby=Id&searchTerm='{HttpUtility.UrlEncode(query)}'"
+                                + $"&targetFramework=''"
+                                + $"&includePrerelease={(canPrerelease ? "true" : "false")}"
+                                + $"&$skip=0"
+                                + $"&$top=50"
+                                + $"&semVerLevel=2.0.0"
+                        );
                     logger.Log($"Begin package search with url={SearchUrl} on manager {Name}");
                     Dictionary<string, SearchResult> AlreadyProcessedPackages = [];
 

@@ -80,76 +80,81 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
         protected override IReadOnlyList<Package> _getInstalledPackages_UnSafe()
         {
             List<Package> Packages = [];
-            foreach (var env in new[] { "AllUsers", "CurrentUser" })
+
+            using Process p = new()
             {
-                using Process p = new()
+                StartInfo = new ProcessStartInfo
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = Status.ExecutablePath,
-                        Arguments =
-                            Status.ExecutableCallArgs
-                            + $" \"Get-InstalledPSResource -Scope {env} | Format-Table -Property Name,Version,Repository\"",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        RedirectStandardInput = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        StandardOutputEncoding = Encoding.UTF8,
-                    },
-                };
+                    FileName = Status.ExecutablePath,
+                    Arguments =
+                        Status.ExecutableCallArgs
+                        + " \"Write-Output '##SCOPE:AllUsers##';"
+                        + " Get-InstalledPSResource -Scope AllUsers | Format-Table -Property Name,Version,Repository;"
+                        + " Write-Output '##SCOPE:CurrentUser##';"
+                        + " Get-InstalledPSResource -Scope CurrentUser | Format-Table -Property Name,Version,Repository\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    RedirectStandardInput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = Encoding.UTF8,
+                },
+            };
 
-                IProcessTaskLogger logger = TaskLogger.CreateNew(
-                    LoggableTaskType.ListInstalledPackages,
-                    p
-                );
+            IProcessTaskLogger logger = TaskLogger.CreateNew(
+                LoggableTaskType.ListInstalledPackages,
+                p
+            );
 
-                p.Start();
-                string? line;
-                bool DashesPassed = false;
-                while ((line = p.StandardOutput.ReadLine()) is not null)
+            p.Start();
+            string? line;
+            bool DashesPassed = false;
+            string currentScope = "AllUsers";
+            while ((line = p.StandardOutput.ReadLine()) is not null)
+            {
+                logger.AddToStdOut(line);
+                if (line.StartsWith("##SCOPE:"))
                 {
-                    logger.AddToStdOut(line);
-                    if (!DashesPassed)
-                    {
-                        if (line.Contains("-----"))
-                        {
-                            DashesPassed = true;
-                        }
-                    }
-                    else
-                    {
-                        string[] elements = Regex.Replace(line, " {2,}", " ").Split(' ');
-                        if (elements.Length < 3)
-                        {
-                            continue;
-                        }
-
-                        for (int i = 0; i < elements.Length; i++)
-                        {
-                            elements[i] = elements[i].Trim();
-                        }
-
-                        Packages.Add(
-                            new Package(
-                                CoreTools.FormatAsName(elements[0]),
-                                elements[0],
-                                elements[1],
-                                SourcesHelper.Factory.GetSourceOrDefault(elements[2]),
-                                this,
-                                new(env == "CurrentUser" ? PackageScope.User : PackageScope.Machine)
-                            )
-                        );
-                    }
+                    currentScope = line.Trim('#').Split(':')[1];
+                    DashesPassed = false;
+                    continue;
                 }
 
-                logger.AddToStdErr(p.StandardError.ReadToEnd());
-                p.WaitForExit();
-                logger.Close(p.ExitCode);
+                if (!DashesPassed)
+                {
+                    if (line.Contains("-----"))
+                        DashesPassed = true;
+                }
+                else
+                {
+                    string[] elements = Regex.Replace(line, " {2,}", " ").Split(' ');
+                    if (elements.Length < 3)
+                        continue;
+
+                    for (int i = 0; i < elements.Length; i++)
+                        elements[i] = elements[i].Trim();
+
+                    Packages.Add(
+                        new Package(
+                            CoreTools.FormatAsName(elements[0]),
+                            elements[0],
+                            elements[1],
+                            SourcesHelper.Factory.GetSourceOrDefault(elements[2]),
+                            this,
+                            new(currentScope == "CurrentUser" ? PackageScope.User : PackageScope.Machine)
+                        )
+                    );
+                }
             }
+
+            logger.AddToStdErr(p.StandardError.ReadToEnd());
+            p.WaitForExit();
+            logger.Close(p.ExitCode);
 
             return Packages;
         }
+
+        protected override bool UseSubstringSearch => true;
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
             CoreTools.WhichMultiple(OperatingSystem.IsWindows() ? "pwsh.exe" : "pwsh");

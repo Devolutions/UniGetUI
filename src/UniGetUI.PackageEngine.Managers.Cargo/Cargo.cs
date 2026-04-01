@@ -18,7 +18,7 @@ namespace UniGetUI.PackageEngine.Managers.CargoManager;
 
 public partial class Cargo : PackageManager
 {
-    [GeneratedRegex(@"(\w+)\s=\s""(\d+\.\d+\.\d+)""\s*#\s(.*)")]
+    [GeneratedRegex(@"([\w-]+)\s=\s""(\d+\.\d+\.\d+)""\s*#\s(.*)")]
     private static partial Regex SearchLineRegex();
 
     [GeneratedRegex(@"(.+)v(\d+\.\d+\.\d+)\s*v(\d+\.\d+\.\d+)\s*(Yes|No)")]
@@ -126,19 +126,19 @@ public partial class Cargo : PackageManager
                     package.VersionString
                 );
                 if (versionInfo.bin_names?.Length > 0)
-                {
                     BinPackages.Add(package);
-                }
             }
             catch (Exception ex)
             {
-                logger.AddToStdErr($"{ex.Message}");
+                // On API failure, include the package rather than silently drop it
+                logger.AddToStdErr($"bin_names check failed for {package.Id}: {ex.Message}");
+                BinPackages.Add(package);
             }
 
             if (i + 1 == Packages.Count)
                 break;
-            // Crates.io api requests that we send no more than one request per second
-            Task.Delay(Math.Max(0, 1000 - (int)((DateTime.Now - startTime).TotalMilliseconds)))
+            // Crates.io requires no more than one request per second
+            Task.Delay(Math.Max(0, 1000 - (int)(DateTime.Now - startTime).TotalMilliseconds))
                 .GetAwaiter()
                 .GetResult();
         }
@@ -157,6 +157,9 @@ public partial class Cargo : PackageManager
     {
         return GetPackages(LoggableTaskType.ListInstalledPackages);
     }
+
+    public readonly bool HasBinstall =
+        CoreTools.Which(OperatingSystem.IsWindows() ? "cargo-binstall.exe" : "cargo-binstall").Item1;
 
     public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
         CoreTools.WhichMultiple(OperatingSystem.IsWindows() ? "cargo.exe" : "cargo");

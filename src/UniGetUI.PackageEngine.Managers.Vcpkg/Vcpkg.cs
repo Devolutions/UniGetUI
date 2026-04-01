@@ -380,19 +380,22 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
             };
             process.Start();
             version = process.StandardOutput.ReadLine()?.Trim() ?? "";
-            version += $"\n%VCPKG_ROOT% = {rootPath}";
+            version += RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? $"\n%VCPKG_ROOT% = {rootPath}"
+                : $"\n$VCPKG_ROOT = {rootPath}";
         }
 
         protected override void _performExtraLoadingSteps()
         {
             var (_, rootPath) = GetVcpkgRoot();
+            bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             using Process p2 = new()
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = "cmd.exe",
+                    FileName = isWindows ? "cmd.exe" : "sh",
                     WorkingDirectory = rootPath,
-                    Arguments = "/C .\\bootstrap-vcpkg.bat",
+                    Arguments = isWindows ? "/C .\\bootstrap-vcpkg.bat" : "./bootstrap-vcpkg.sh",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                 },

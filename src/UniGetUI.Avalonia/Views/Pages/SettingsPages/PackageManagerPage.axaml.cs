@@ -221,7 +221,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
     {
         ExtraControls.Children.Clear();
         var manager = ViewModel.Manager;
-        bool managerHasSources = manager.Capabilities.SupportsCustomSources && manager.Name != "Vcpkg";
+        bool managerHasSources = manager.Capabilities.SupportsCustomSources && manager.Name != "vcpkg";
 
         if (managerHasSources)
         {
@@ -330,7 +330,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 ExtraControls.Children.Add(chocoSysChoco);
                 break;
 
-            case "Vcpkg":
+            case "vcpkg":
                 disableNotifsCard.CornerRadius = new CornerRadius(8, 8, 0, 0);
                 disableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);
                 ExtraControls.Children.Add(disableNotifsCard);
@@ -405,7 +405,8 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         descPanel.Children.Add(openBtn);
         vcpkgRootCard.Description = descPanel;
 
-        vcpkgRootCard.Click += (_, _) => ViewModel.PickVcpkgRootCommand.Execute(vcpkgRootCard);
+        vcpkgRootCard.Command = ViewModel.PickVcpkgRootCommand;
+        vcpkgRootCard.CommandParameter = vcpkgRootCard;
         return vcpkgRootCard;
     }
 

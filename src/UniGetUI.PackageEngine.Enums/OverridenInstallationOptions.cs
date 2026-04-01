@@ -6,6 +6,7 @@ public struct OverridenInstallationOptions
     public bool? RunAsAdministrator;
     public bool PowerShell_DoNotSetScopeParameter = false;
     public bool? WinGet_SpecifyVersion = null;
+    public bool Pip_BreakSystemPackages = false;
 
     public OverridenInstallationOptions(string? scope = null, bool? runAsAdministrator = null)
     {

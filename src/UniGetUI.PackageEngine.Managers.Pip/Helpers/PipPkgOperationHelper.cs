@@ -52,6 +52,9 @@ internal sealed class PipPkgOperationHelper : BasePkgOperationHelper
                 parameters.Add("--user");
         }
 
+        if (package.OverridenOptions.Pip_BreakSystemPackages)
+            parameters.Add("--break-system-packages");
+
         parameters.Add(Pip.GetProxyArgument());
 
         parameters.AddRange(
@@ -79,6 +82,12 @@ internal sealed class PipPkgOperationHelper : BasePkgOperationHelper
         }
 
         string output_string = string.Join("\n", processOutput);
+
+        if (output_string.Contains("externally-managed-environment") && !package.OverridenOptions.Pip_BreakSystemPackages)
+        {
+            package.OverridenOptions.Pip_BreakSystemPackages = true;
+            return OperationVeredict.AutoRetry;
+        }
 
         if (output_string.Contains("--user") && package.OverridenOptions.Scope != PackageScope.User)
         {

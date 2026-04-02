@@ -1,5 +1,6 @@
 using UniGetUI.Core.Logging;
 using UniGetUI.Interface.Enums;
+using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
@@ -20,6 +21,8 @@ internal static class AvaloniaPackageOperationHelper
             if (pkg.Tag is PackageTag.BeingProcessed or PackageTag.OnQueue) continue;
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
             var op = new UpdatePackageOperation(pkg, opts);
+            op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
+            op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
             AvaloniaOperationRegistry.Add(op);
             _ = op.MainThread();
         }
@@ -34,6 +37,8 @@ internal static class AvaloniaPackageOperationHelper
             if (pkg.Tag is PackageTag.BeingProcessed or PackageTag.OnQueue) continue;
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
             var op = new UpdatePackageOperation(pkg, opts);
+            op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
+            op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
             AvaloniaOperationRegistry.Add(op);
             _ = op.MainThread();
         }
@@ -50,6 +55,8 @@ internal static class AvaloniaPackageOperationHelper
 
         var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
         var op = new UpdatePackageOperation(pkg, opts);
+        op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
+        op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
         AvaloniaOperationRegistry.Add(op);
         _ = op.MainThread();
     }

@@ -282,6 +282,8 @@ public class PackageBundlesPage : AbstractPackagesPage
             var opts = await InstallOptionsFactory.LoadApplicableAsync(
                 pkg, elevated: elevated, interactive: interactive, no_integrity: skiphash);
             var op = new InstallPackageOperation(pkg, opts);
+            op.OperationSucceeded += (_, _) => TelemetryHandler.InstallPackage(pkg, TEL_OP_RESULT.SUCCESS, TEL_InstallReferral.FROM_BUNDLE);
+            op.OperationFailed += (_, _) => TelemetryHandler.InstallPackage(pkg, TEL_OP_RESULT.FAILED, TEL_InstallReferral.FROM_BUNDLE);
             AvaloniaOperationRegistry.Add(op);
             _ = op.MainThread();
         }

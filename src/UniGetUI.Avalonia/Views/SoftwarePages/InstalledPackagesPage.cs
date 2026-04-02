@@ -10,6 +10,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
@@ -320,6 +321,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
             var opts = await InstallOptionsFactory.LoadApplicableAsync(
                 pkg, elevated: elevated, interactive: interactive, remove_data: remove_data);
             var op = new UninstallPackageOperation(pkg, opts);
+            op.OperationSucceeded += (_, _) => TelemetryHandler.UninstallPackage(pkg, TEL_OP_RESULT.SUCCESS);
+            op.OperationFailed += (_, _) => TelemetryHandler.UninstallPackage(pkg, TEL_OP_RESULT.FAILED);
             AvaloniaOperationRegistry.Add(op);
             _ = op.MainThread();
         }
@@ -330,6 +333,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
         if (package is null || package.Source.IsVirtualManager) return;
         var opts = await InstallOptionsFactory.LoadApplicableAsync(package);
         var op = new InstallPackageOperation(package, opts);
+        op.OperationSucceeded += (_, _) => TelemetryHandler.InstallPackage(package, TEL_OP_RESULT.SUCCESS, TEL_InstallReferral.ALREADY_INSTALLED);
+        op.OperationFailed += (_, _) => TelemetryHandler.InstallPackage(package, TEL_OP_RESULT.FAILED, TEL_InstallReferral.ALREADY_INSTALLED);
         AvaloniaOperationRegistry.Add(op);
         _ = op.MainThread();
     }
@@ -340,7 +345,11 @@ public class InstalledPackagesPage : AbstractPackagesPage
         var uninstallOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
         var reinstallOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
         var uninstallOp = new UninstallPackageOperation(package, uninstallOpts);
+        uninstallOp.OperationSucceeded += (_, _) => TelemetryHandler.UninstallPackage(package, TEL_OP_RESULT.SUCCESS);
+        uninstallOp.OperationFailed += (_, _) => TelemetryHandler.UninstallPackage(package, TEL_OP_RESULT.FAILED);
         var reinstallOp = new InstallPackageOperation(package, reinstallOpts, req: uninstallOp);
+        reinstallOp.OperationSucceeded += (_, _) => TelemetryHandler.InstallPackage(package, TEL_OP_RESULT.SUCCESS, TEL_InstallReferral.ALREADY_INSTALLED);
+        reinstallOp.OperationFailed += (_, _) => TelemetryHandler.InstallPackage(package, TEL_OP_RESULT.FAILED, TEL_InstallReferral.ALREADY_INSTALLED);
         AvaloniaOperationRegistry.Add(uninstallOp);
         AvaloniaOperationRegistry.Add(reinstallOp);
         _ = uninstallOp.MainThread();

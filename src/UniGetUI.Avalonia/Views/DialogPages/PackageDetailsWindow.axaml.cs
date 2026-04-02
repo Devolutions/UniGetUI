@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
@@ -35,6 +36,7 @@ public partial class PackageDetailsWindow : Window
     {
         base.OnOpened(e);
         _ = _vm.LoadDetailsAsync();
+        TelemetryHandler.PackageDetails(_vm.Package, _vm.OperationRole.ToString());
     }
 
     private MenuFlyout BuildActionFlyout()
@@ -109,6 +111,22 @@ public partial class PackageDetailsWindow : Window
             OperationType.Uninstall => new UninstallPackageOperation(pkg, opts),
             _ => throw new ArgumentOutOfRangeException(nameof(role)),
         };
+
+        switch (role)
+        {
+            case OperationType.Install:
+                op.OperationSucceeded += (_, _) => TelemetryHandler.InstallPackage(pkg, TEL_OP_RESULT.SUCCESS, TEL_InstallReferral.DIRECT_SEARCH);
+                op.OperationFailed += (_, _) => TelemetryHandler.InstallPackage(pkg, TEL_OP_RESULT.FAILED, TEL_InstallReferral.DIRECT_SEARCH);
+                break;
+            case OperationType.Update:
+                op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
+                op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
+                break;
+            case OperationType.Uninstall:
+                op.OperationSucceeded += (_, _) => TelemetryHandler.UninstallPackage(pkg, TEL_OP_RESULT.SUCCESS);
+                op.OperationFailed += (_, _) => TelemetryHandler.UninstallPackage(pkg, TEL_OP_RESULT.FAILED);
+                break;
+        }
 
         AvaloniaOperationRegistry.Add(op);
         _ = op.MainThread();

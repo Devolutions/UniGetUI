@@ -9,6 +9,7 @@ using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
@@ -339,6 +340,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             var opts = await InstallOptionsFactory.LoadApplicableAsync(
                 pkg, elevated: elevated, interactive: interactive, no_integrity: no_integrity);
             var op = new UpdatePackageOperation(pkg, opts);
+            op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
+            op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
             AvaloniaOperationRegistry.Add(op);
             _ = op.MainThread();
         }
@@ -350,6 +353,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         {
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
             var op = new UninstallPackageOperation(pkg, opts);
+            op.OperationSucceeded += (_, _) => TelemetryHandler.UninstallPackage(pkg, TEL_OP_RESULT.SUCCESS);
+            op.OperationFailed += (_, _) => TelemetryHandler.UninstallPackage(pkg, TEL_OP_RESULT.FAILED);
             AvaloniaOperationRegistry.Add(op);
             _ = op.MainThread();
         }
@@ -361,7 +366,11 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         var uninstallOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
         var updateOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
         var uninstallOp = new UninstallPackageOperation(package, uninstallOpts);
+        uninstallOp.OperationSucceeded += (_, _) => TelemetryHandler.UninstallPackage(package, TEL_OP_RESULT.SUCCESS);
+        uninstallOp.OperationFailed += (_, _) => TelemetryHandler.UninstallPackage(package, TEL_OP_RESULT.FAILED);
         var updateOp = new UpdatePackageOperation(package, updateOpts, req: uninstallOp);
+        updateOp.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(package, TEL_OP_RESULT.SUCCESS);
+        updateOp.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(package, TEL_OP_RESULT.FAILED);
         AvaloniaOperationRegistry.Add(uninstallOp);
         AvaloniaOperationRegistry.Add(updateOp);
         _ = uninstallOp.MainThread();

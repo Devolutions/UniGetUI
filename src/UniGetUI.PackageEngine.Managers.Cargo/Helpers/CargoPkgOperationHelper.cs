@@ -31,7 +31,7 @@ internal sealed class CargoPkgOperationHelper(Cargo cargo) : BasePkgOperationHel
                 if (hasBinstall)
                     parameters = [Manager.Properties.UpdateVerb, package.Id];
                 else
-                    parameters = ["install", package.Id];
+                    parameters = ["install", package.Id, "--force"];
                 break;
 
             case OperationType.Uninstall:

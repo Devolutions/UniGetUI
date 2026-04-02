@@ -110,44 +110,63 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
         private const int CacheMaxAgeHours = 24;
         private const int MaxSearchResults = 20;
 
+        // Shared HTTP client and bounded concurrency for version fetches
+        private static readonly HttpClient _httpClient = CreateSharedHttpClient();
+        private static readonly SemaphoreSlim _versionFetchSemaphore = new(6, 6);
+
+        private static HttpClient CreateSharedHttpClient()
+        {
+            var client = new HttpClient(CoreTools.GenericHttpClientParameters);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
+            return client;
+        }
+
         protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
         {
             INativeTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
-
-            string[] allNames = GetOrRefreshIndex(logger);
-
-            string queryLower = query.ToLowerInvariant();
-            string[] matches = allNames
-                .Where(n => n.Contains(queryLower, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(n => n.StartsWith(queryLower, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(n => n.Length)
-                .Take(MaxSearchResults)
-                .ToArray();
-
-            logger.Log($"Matched {matches.Length} packages for query '{query}'");
-
-            // Fetch latest version for each match in parallel
-            var versionTasks = matches
-                .Select(name => Task.Run(() => FetchLatestVersion(name)))
-                .ToArray();
-            Task.WhenAll(versionTasks).GetAwaiter().GetResult();
-
-            List<Package> packages = [];
-            for (int i = 0; i < matches.Length; i++)
+            try
             {
-                string version = versionTasks[i].Result ?? "latest";
-                packages.Add(new Package(
-                    CoreTools.FormatAsName(matches[i]),
-                    matches[i],
-                    version,
-                    DefaultSource,
-                    this,
-                    new(PackageScope.Global)
-                ));
-            }
+                string[] allNames = GetOrRefreshIndex(logger);
 
-            logger.Close(0);
-            return packages;
+                string queryLower = query.ToLowerInvariant();
+                string[] matches = allNames
+                    .Where(n => n.Contains(queryLower, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(n => n.StartsWith(queryLower, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                    .ThenBy(n => n.Length)
+                    .Take(MaxSearchResults)
+                    .ToArray();
+
+                logger.Log($"Matched {matches.Length} packages for query '{query}'");
+
+                // Fetch latest version for each match in parallel, bounded to 6 concurrent requests
+                var versionTasks = matches
+                    .Select(FetchLatestVersionAsync)
+                    .ToArray();
+                Task.WhenAll(versionTasks).GetAwaiter().GetResult();
+
+                List<Package> packages = [];
+                for (int i = 0; i < matches.Length; i++)
+                {
+                    string version = versionTasks[i].Result ?? "latest";
+                    packages.Add(new Package(
+                        CoreTools.FormatAsName(matches[i]),
+                        matches[i],
+                        version,
+                        DefaultSource,
+                        this,
+                        new(PackageScope.Global)
+                    ));
+                }
+
+                logger.Close(0);
+                return packages;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e);
+                logger.Close(1);
+                throw;
+            }
         }
 
         private static string[] GetOrRefreshIndex(INativeTaskLogger logger)
@@ -213,21 +232,23 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             return names;
         }
 
-        private static string? FetchLatestVersion(string packageName)
+        private static async Task<string?> FetchLatestVersionAsync(string packageName)
         {
+            await _versionFetchSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
-                using HttpClient client = new(CoreTools.GenericHttpClientParameters);
-                client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-                string json = client
+                string json = await _httpClient
                     .GetStringAsync($"https://pypi.org/pypi/{Uri.EscapeDataString(packageName)}/json")
-                    .GetAwaiter()
-                    .GetResult();
+                    .ConfigureAwait(false);
                 return (JsonNode.Parse(json) as JsonObject)?["info"]?["version"]?.GetValue<string>();
             }
             catch
             {
                 return null;
+            }
+            finally
+            {
+                _versionFetchSemaphore.Release();
             }
         }
 
@@ -489,14 +510,16 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             // need to wait for the ~38 MB download inside the search timeout window.
             Task.Run(() =>
             {
+                var logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
                 try
                 {
-                    var logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
                     GetOrRefreshIndex(logger);
                     logger.Close(0);
                 }
                 catch (Exception e)
                 {
+                    logger.Error(e);
+                    logger.Close(1);
                     Logger.Warn($"Pip: background index pre-warm failed: {e.Message}");
                 }
             });

@@ -16,6 +16,6 @@ public struct OverridenInstallationOptions
 
     public override string ToString()
     {
-        return $"<Scope={Scope};RunAsAdministrator={RunAsAdministrator};WG_SpecifyVersion={WinGet_SpecifyVersion};PS_NoScope={PowerShell_DoNotSetScopeParameter}>";
+        return $"<Scope={Scope};RunAsAdministrator={RunAsAdministrator};WG_SpecifyVersion={WinGet_SpecifyVersion};PS_NoScope={PowerShell_DoNotSetScopeParameter};Pip_BreakSystemPackages={Pip_BreakSystemPackages}>";
     }
 }

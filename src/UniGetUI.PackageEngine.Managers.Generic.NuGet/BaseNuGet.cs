@@ -79,10 +79,11 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 try
                 {
                     string versionFilter = canPrerelease ? "IsAbsoluteLatestVersion eq true" : "IsLatestVersion eq true";
+                    string odataQuery = HttpUtility.UrlEncode(query.Replace("'", "''"));
                     Uri? SearchUrl = UseSubstringSearch
                         ? new Uri(
                             $"{source.Url}/Packages()"
-                                + $"?$filter=substringof('{HttpUtility.UrlEncode(query)}',Id) and {versionFilter}"
+                                + $"?$filter=substringof('{odataQuery}',Id) and {versionFilter}"
                                 + $"&$orderby=DownloadCount desc"
                                 + $"&$skip=0"
                                 + $"&$top=50"
@@ -90,7 +91,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                         : new Uri(
                             $"{source.Url}/Search()"
                                 + $"?$filter=IsLatestVersion"
-                                + $"&$orderby=Id&searchTerm='{HttpUtility.UrlEncode(query)}'"
+                                + $"&$orderby=Id&searchTerm='{odataQuery}'"
                                 + $"&targetFramework=''"
                                 + $"&includePrerelease={(canPrerelease ? "true" : "false")}"
                                 + $"&$skip=0"

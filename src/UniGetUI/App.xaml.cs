@@ -346,6 +346,9 @@ namespace UniGetUI
                 await Task.WhenAll(iniTasks);
 
                 // Load non-essential components
+                TelemetryHandler.Configure(
+                    Secrets.GetOpenSearchUsername(),
+                    Secrets.GetOpenSearchPassword());
                 _ = TelemetryHandler.InitializeAsync();
                 _ = IconDatabase.Instance.LoadIconAndScreenshotsDatabaseAsync();
 

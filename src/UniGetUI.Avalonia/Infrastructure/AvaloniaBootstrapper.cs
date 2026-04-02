@@ -53,6 +53,9 @@ internal static class AvaloniaBootstrapper
                 CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted,
                 TaskScheduler.Default);
+        TelemetryHandler.Configure(
+            Secrets.GetOpenSearchUsername(),
+            Secrets.GetOpenSearchPassword());
         _ = TelemetryHandler.InitializeAsync()
             .ContinueWith(
                 t => Logger.Error(t.Exception!),
@@ -82,7 +85,7 @@ internal static class AvaloniaBootstrapper
 
     private static async Task InitializePackageEngineAsync()
     {
-        await Task.Run(PEInterface.LoadLoaders);
+        // LoadLoaders is called synchronously in App.axaml.cs before MainWindow creation
         await Task.Run(PEInterface.LoadManagers);
     }
 

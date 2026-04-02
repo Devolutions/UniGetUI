@@ -1,3 +1,8 @@
+using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Language;
 using UniGetUI.Core.Logging;
@@ -26,11 +31,44 @@ public enum TEL_OP_RESULT
 
 public static class TelemetryHandler
 {
-#if DEBUG
-    private const string HOST = "http://localhost:3000";
-#else
-    private const string HOST = "https://marticliment.com/unigetui/statistics";
-#endif
+    private const string OpenSearchUrl = "https://telemetry2.devolutions.net:9200";
+    private static string _openSearchUsername = "";
+    private static string _openSearchPassword = "";
+
+    public static void Configure(string username, string password)
+    {
+        _openSearchUsername = username;
+        _openSearchPassword = password;
+    }
+
+    // Index names — to be created on the OpenSearch server
+    private const string IndexActivity = "unigetui_activity_events";
+    private const string IndexPackage = "unigetui_package_events";
+    private const string IndexBundle = "unigetui_bundle_events";
+
+// #if DEBUG
+//     private const string IndexPrefix = "dev-";
+// #else
+//     private const string IndexPrefix = "";
+// #endif
+
+    private const string IndexPrefix = "";
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
+
+    private static readonly HttpClient _httpClient;
+
+    static TelemetryHandler()
+    {
+        _httpClient = new HttpClient(CoreTools.GenericHttpClientParameters)
+        {
+            Timeout = TimeSpan.FromSeconds(30),
+        };
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
+    }
 
     private static readonly Settings.K[] SettingsToSend =
     [
@@ -56,85 +94,67 @@ public static class TelemetryHandler
         {
             if (Settings.Get(Settings.K.DisableTelemetry))
                 return;
+
             await CoreTools.WaitForInternetConnection();
-            string ID = GetRandomizedId();
 
+            string[] enabledManagers = PEInterface.Managers
+                .Where(m => m.IsEnabled())
+                .Select(m => m.Name)
+                .ToArray();
+
+            string[] foundManagers = PEInterface.Managers
+                .Where(m => m.IsEnabled() && m.Status.Found)
+                .Select(m => m.Name)
+                .ToArray();
+
+            int settingsMagicValue = 0;
             int mask = 0x1;
-            int ManagerMagicValue = 0;
-
-            foreach (var manager in PEInterface.Managers)
-            {
-                if (manager.IsEnabled())
-                    ManagerMagicValue |= mask;
-                mask = mask << 1;
-                if (manager.IsEnabled() && manager.Status.Found)
-                    ManagerMagicValue |= mask;
-                mask = mask << 1;
-
-                if (mask == 0x1)
-                    throw new OverflowException();
-            }
-
-            int SettingsMagicValue = 0;
-            mask = 0x1;
             foreach (var setting in SettingsToSend)
             {
                 bool enabled = Settings.Get(
                     key: setting,
-                    invert: Settings.ResolveKey(setting).StartsWith("Disable")
-                );
+                    invert: Settings.ResolveKey(setting).StartsWith("Disable"));
 
                 if (enabled)
-                    SettingsMagicValue |= mask;
-                mask = mask << 1;
+                    settingsMagicValue |= mask;
+                mask <<= 1;
 
                 if (mask == 0x1)
                     throw new OverflowException();
             }
-            foreach (var setting in new[] { "SP1", "SP2" })
+            foreach (var sp in new[] { "SP1", "SP2" })
             {
-                bool enabled;
-                if (setting == "SP1")
-                    enabled = File.Exists("ForceUniGetUIPortable");
-                else if (setting == "SP2")
-                    enabled = CoreData.WasDaemon;
-                else
-                    throw new NotImplementedException();
+                bool enabled = sp switch
+                {
+                    "SP1" => File.Exists("ForceUniGetUIPortable"),
+                    "SP2" => CoreData.WasDaemon,
+                    _ => throw new NotImplementedException(),
+                };
 
                 if (enabled)
-                    SettingsMagicValue |= mask;
-                mask = mask << 1;
+                    settingsMagicValue |= mask;
+                mask <<= 1;
 
                 if (mask == 0x1)
                     throw new OverflowException();
             }
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{HOST}/activity");
-
-            request.Headers.Add("clientId", ID);
-            request.Headers.Add("clientVersion", CoreData.VersionName);
-            request.Headers.Add("activeManagers", ManagerMagicValue.ToString());
-            request.Headers.Add("activeSettings", SettingsMagicValue.ToString());
-            request.Headers.Add("language", LanguageEngine.SelectedLocale);
-
-            HttpClient _httpClient = new(CoreTools.GenericHttpClientParameters);
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            HttpResponseMessage response = await _httpClient.SendAsync(request);
-
-            if (response.IsSuccessStatusCode)
+            var ev = new UniGetUIActivityEvent
             {
-                Logger.Debug("[Telemetry] Call to /activity succeeded");
-            }
-            else
-            {
-                Logger.Warn(
-                    $"[Telemetry] Call to /activity failed with error code {response.StatusCode}"
-                );
-            }
+                InstallID = GetRandomizedId(),
+                Locale = LanguageEngine.SelectedLocale,
+                EnabledManagers = enabledManagers,
+                FoundManagers = foundManagers,
+                ActiveSettings = settingsMagicValue,
+                Application = BuildApplicationInfo(),
+                Platform = BuildPlatformInfo(),
+            };
+
+            await PostToOpenSearchAsync(IndexActivity, ev);
         }
         catch (Exception ex)
         {
-            Logger.Error("[Telemetry] Hard crash when calling /activity");
+            Logger.Error("[Telemetry] Hard crash in InitializeAsync");
             Logger.Error(ex);
         }
     }
@@ -145,32 +165,31 @@ public static class TelemetryHandler
         IPackage package,
         TEL_OP_RESULT status,
         TEL_InstallReferral source
-    ) => PackageEndpoint(package, "install", status, source.ToString());
+    ) => _ = TrackPackageEventAsync(package, "install", status, source.ToString());
 
     public static void UpdatePackage(IPackage package, TEL_OP_RESULT status) =>
-        PackageEndpoint(package, "update", status);
+        _ = TrackPackageEventAsync(package, "update", status);
 
     public static void DownloadPackage(
         IPackage package,
         TEL_OP_RESULT status,
         TEL_InstallReferral source
-    ) => PackageEndpoint(package, "download", status, source.ToString());
+    ) => _ = TrackPackageEventAsync(package, "download", status, source.ToString());
 
     public static void UninstallPackage(IPackage package, TEL_OP_RESULT status) =>
-        PackageEndpoint(package, "uninstall", status);
+        _ = TrackPackageEventAsync(package, "uninstall", status);
 
     public static void PackageDetails(IPackage package, string eventSource) =>
-        PackageEndpoint(package, "details", eventSource: eventSource);
+        _ = TrackPackageEventAsync(package, "details", eventSource: eventSource);
 
     public static void SharedPackage(IPackage package, string eventSource) =>
-        PackageEndpoint(package, "share", eventSource: eventSource);
+        _ = TrackPackageEventAsync(package, "share", eventSource: eventSource);
 
-    private static async void PackageEndpoint(
+    private static async Task TrackPackageEventAsync(
         IPackage package,
-        string endpoint,
+        string operation,
         TEL_OP_RESULT? result = null,
-        string? eventSource = null
-    )
+        string? eventSource = null)
     {
         try
         {
@@ -178,39 +197,28 @@ public static class TelemetryHandler
                 throw new ArgumentException("result and eventSource cannot both be null");
             if (Settings.Get(Settings.K.DisableTelemetry))
                 return;
+
             await CoreTools.WaitForInternetConnection();
-            string ID = GetRandomizedId();
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{HOST}/package/{endpoint}");
-
-            request.Headers.Add("clientId", ID);
-            request.Headers.Add("clientVersion", CoreData.VersionName);
-            request.Headers.Add("packageId", package.Id);
-            request.Headers.Add("managerName", package.Manager.Name);
-            request.Headers.Add("sourceName", package.Source.Name);
-            if (result is not null)
-                request.Headers.Add("operationResult", result.ToString());
-            if (eventSource is not null)
-                request.Headers.Add("eventSource", eventSource);
-
-            HttpClient _httpClient = new(CoreTools.GenericHttpClientParameters);
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            HttpResponseMessage response = await _httpClient.SendAsync(request);
-
-            if (response.IsSuccessStatusCode)
+            var ev = new UniGetUIPackageEvent
             {
-                Logger.Debug($"[Telemetry] Call to /package/{endpoint} succeeded");
-            }
-            else
-            {
-                Logger.Warn(
-                    $"[Telemetry] Call to /package/{endpoint} failed with error code {response.StatusCode}"
-                );
-            }
+                InstallID = GetRandomizedId(),
+                Locale = LanguageEngine.SelectedLocale,
+                Application = BuildApplicationInfo(),
+                Platform = BuildPlatformInfo(),
+                Operation = operation,
+                PackageId = package.Id,
+                ManagerName = package.Manager.Name,
+                SourceName = package.Source.Name,
+                OperationResult = result?.ToString(),
+                EventSource = eventSource,
+            };
+
+            await PostToOpenSearchAsync(IndexPackage, ev);
         }
         catch (Exception ex)
         {
-            Logger.Error($"[Telemetry] Hard crash when calling /package/{endpoint}");
+            Logger.Error($"[Telemetry] Hard crash in TrackPackageEventAsync ({operation})");
             Logger.Error(ex);
         }
     }
@@ -218,59 +226,114 @@ public static class TelemetryHandler
     // -------------------------------------------------------------------------
 
     public static void ImportBundle(BundleFormatType type) =>
-        BundlesEndpoint("import", type.ToString());
+        _ = TrackBundleEventAsync("import", type.ToString());
 
     public static void ExportBundle(BundleFormatType type) =>
-        BundlesEndpoint("export", type.ToString());
+        _ = TrackBundleEventAsync("export", type.ToString());
 
-    public static void ExportBatch() => BundlesEndpoint("export", "PS1_SCRIPT");
+    public static void ExportBatch() =>
+        _ = TrackBundleEventAsync("export", "PS1_SCRIPT");
 
-    private static async void BundlesEndpoint(string endpoint, string type)
+    private static async Task TrackBundleEventAsync(string operation, string bundleType)
     {
         try
         {
             if (Settings.Get(Settings.K.DisableTelemetry))
                 return;
+
             await CoreTools.WaitForInternetConnection();
-            string ID = GetRandomizedId();
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{HOST}/bundles/{endpoint}");
-
-            request.Headers.Add("clientId", ID);
-            request.Headers.Add("clientVersion", CoreData.VersionName);
-            request.Headers.Add("bundleType", type);
-
-            HttpClient _httpClient = new(CoreTools.GenericHttpClientParameters);
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            HttpResponseMessage response = await _httpClient.SendAsync(request);
-
-            if (response.IsSuccessStatusCode)
+            var ev = new UniGetUIBundleEvent
             {
-                Logger.Debug($"[Telemetry] Call to /bundles/{endpoint} succeeded");
-            }
-            else
-            {
-                Logger.Warn(
-                    $"[Telemetry] Call to /bundles/{endpoint} failed with error code {response.StatusCode}"
-                );
-            }
+                InstallID = GetRandomizedId(),
+                Locale = LanguageEngine.SelectedLocale,
+                Application = BuildApplicationInfo(),
+                Platform = BuildPlatformInfo(),
+                Operation = operation,
+                BundleType = bundleType,
+            };
+
+            await PostToOpenSearchAsync(IndexBundle, ev);
         }
         catch (Exception ex)
         {
-            Logger.Error($"[Telemetry] Hard crash when calling /bundles/{endpoint}");
+            Logger.Error($"[Telemetry] Hard crash in TrackBundleEventAsync ({operation})");
             Logger.Error(ex);
         }
     }
 
+    // ─── OpenSearch HTTP ──────────────────────────────────────────────────────
+
+    private static async Task PostToOpenSearchAsync<T>(string indexName, T eventData)
+    {
+        try
+        {
+            string fullIndex = IndexPrefix + indexName;
+            string json = JsonSerializer.Serialize(eventData, JsonOptions);
+
+            string credentials = Convert.ToBase64String(
+                Encoding.UTF8.GetBytes($"{_openSearchUsername}:{_openSearchPassword}"));
+
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{OpenSearchUrl}/{fullIndex}/_doc")
+            {
+                Content = content,
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+                Logger.Debug($"[Telemetry] Sent to {fullIndex}");
+            else
+            {
+                string body = await response.Content.ReadAsStringAsync();
+                Logger.Warn($"[Telemetry] {fullIndex} returned {(int)response.StatusCode}: {body}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"[Telemetry] Hard crash posting to {indexName}");
+            Logger.Error(ex);
+        }
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
     private static string GetRandomizedId()
     {
-        string ID = Settings.GetValue(Settings.K.TelemetryClientToken);
-        if (ID.Length != 64)
+        string id = Settings.GetValue(Settings.K.TelemetryClientToken);
+        if (id.Length != 64)
         {
-            ID = CoreTools.RandomString(64);
-            Settings.SetValue(Settings.K.TelemetryClientToken, ID);
+            id = CoreTools.RandomString(64);
+            Settings.SetValue(Settings.K.TelemetryClientToken, id);
         }
+        return id;
+    }
 
-        return ID;
+    private static TelemetryApplicationInfo BuildApplicationInfo() =>
+        new()
+        {
+            Name = "UniGetUI",
+            Version = CoreData.VersionName,
+            DataSource = "NotApplicable",
+            Pricing = "Free",
+            Language = LanguageEngine.SelectedLocale,
+            ArchitectureType = RuntimeInformation.ProcessArchitecture.ToString(),
+        };
+
+    private static TelemetryPlatformInfo BuildPlatformInfo() =>
+        new()
+        {
+            Name = GetPlatformName(),
+            Version = Environment.OSVersion.VersionString,
+            Architecture = RuntimeInformation.OSArchitecture.ToString(),
+        };
+
+    private static string GetPlatformName()
+    {
+        if (OperatingSystem.IsWindows()) return "Windows";
+        if (OperatingSystem.IsMacOS()) return "Mac";
+        return "Linux";
     }
 }

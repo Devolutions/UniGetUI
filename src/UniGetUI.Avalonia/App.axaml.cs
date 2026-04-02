@@ -47,7 +47,7 @@ public partial class App : Application
             ApplyTheme(CoreSettings.GetValue(CoreSettings.K.PreferredTheme));
             var mainWindow = new MainWindow();
             desktop.MainWindow = mainWindow;
-            _ = Task.Run(PEInterface.LoadManagers);
+            _ = AvaloniaBootstrapper.InitializeAsync();
         }
 
         base.OnFrameworkInitializationCompleted();

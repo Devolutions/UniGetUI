@@ -75,6 +75,11 @@ internal sealed class CargoPkgOperationHelper(Cargo cargo) : BasePkgOperationHel
         int returnCode
     )
     {
-        return returnCode == 0 ? OperationVeredict.Success : OperationVeredict.Failure;
+        if (returnCode == 0)
+        {
+            ((Cargo)Manager).InvalidateInstalledCache();
+            return OperationVeredict.Success;
+        }
+        return OperationVeredict.Failure;
     }
 }

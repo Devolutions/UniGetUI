@@ -20,7 +20,7 @@ internal sealed class VcpkgPkgOperationHelper : BasePkgOperationHelper
         {
             OperationType.Install => [Manager.Properties.InstallVerb, package.Id],
             OperationType.Update => [Manager.Properties.UpdateVerb, package.Id, "--no-dry-run"],
-            OperationType.Uninstall => [Manager.Properties.UninstallVerb, package.Id],
+            OperationType.Uninstall => [Manager.Properties.UninstallVerb, package.Id, "--recurse"],
             _ => throw new InvalidDataException("Invalid package operation"),
         };
 

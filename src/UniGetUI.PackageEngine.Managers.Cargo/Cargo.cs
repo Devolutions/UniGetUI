@@ -24,6 +24,10 @@ public partial class Cargo : PackageManager
     [GeneratedRegex(@"(.+)v(\d+\.\d+\.\d+)\s*v(\d+\.\d+\.\d+)\s*(Yes|No)")]
     private static partial Regex UpdateLineRegex();
 
+    // Matches "ripgrep v15.1.0:" lines from `cargo install --list`
+    [GeneratedRegex(@"^([\w-]+)\s+v(\d+\.\d+\.\d+):")]
+    private static partial Regex InstallListLineRegex();
+
     public Cargo()
     {
         string cargoCommand = OperatingSystem.IsWindows() ? "cargo.exe" : "cargo";
@@ -186,6 +190,9 @@ public partial class Cargo : PackageManager
             Logger.Error("cargo version error: " + error);
     }
 
+    public void InvalidateInstalledCache() =>
+        TaskRecycler<List<Match>>.RemoveFromCache(GetInstalledCommandOutput);
+
     private IReadOnlyList<Package> GetPackages(LoggableTaskType taskType)
     {
         List<Package> Packages = [];
@@ -217,13 +224,35 @@ public partial class Cargo : PackageManager
             logger.AddToStdOut(line);
             var match = UpdateLineRegex().Match(line);
             if (match.Success)
-            {
                 output.Add(match);
-            }
         }
         logger.AddToStdErr(p.StandardError.ReadToEnd());
         p.WaitForExit();
         logger.Close(p.ExitCode);
+
+        if (output.Count > 0)
+            return output;
+
+        // Fallback: cargo-update is not installed, use the built-in `cargo install --list`.
+        // No latest-version info is available, so updates won't be detected, but the installed
+        // packages list will be populated correctly.
+        using Process fallback = GetProcess(Status.ExecutablePath, "install --list");
+        IProcessTaskLogger fallbackLogger = TaskLogger.CreateNew(LoggableTaskType.OtherTask, fallback);
+        fallbackLogger.AddToStdOut("Falling back to `cargo install --list` (cargo-update not available)");
+        fallback.Start();
+        while ((line = fallback.StandardOutput.ReadLine()) is not null)
+        {
+            fallbackLogger.AddToStdOut(line);
+            var m = InstallListLineRegex().Match(line);
+            if (!m.Success) continue;
+            // Synthesise a match compatible with UpdateLineRegex (same installed and latest version → no update)
+            var fake = UpdateLineRegex().Match($"{m.Groups[1].Value} v{m.Groups[2].Value} v{m.Groups[2].Value} No");
+            if (fake.Success)
+                output.Add(fake);
+        }
+        fallbackLogger.AddToStdErr(fallback.StandardError.ReadToEnd());
+        fallback.WaitForExit();
+        fallbackLogger.Close(fallback.ExitCode);
         return output;
     }
 

@@ -431,6 +431,21 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             out string callArguments
         )
         {
+            // On non-Windows, prefer pip3/pip as standalone executables (avoids "No module named pip"
+            // errors on systems where pip is installed as a command but not as a Python module).
+            // Fall back to python/python3 + "-m pip" if no standalone pip is found.
+            if (!OperatingSystem.IsWindows())
+            {
+                var pipPaths = CoreTools.WhichMultiple("pip3").Concat(CoreTools.WhichMultiple("pip")).ToList();
+                if (pipPaths.Count > 0)
+                {
+                    found = true;
+                    path = pipPaths[0];
+                    callArguments = "";
+                    return;
+                }
+            }
+
             var (_found, _path) = GetExecutableFile();
             found = _found;
             path = _path;

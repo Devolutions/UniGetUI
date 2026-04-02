@@ -60,6 +60,7 @@ namespace UniGetUI.Interface
             ExtendsContentIntoTitleBar = true;
             AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
             SetTitleBar(MainContentGrid);
+            MainContentGrid.ActualThemeChanged += (_, _) => ApplyTitleBarButtonColors();
             AppWindow.SetIcon(
                 Path.Join(CoreData.UniGetUIExecutableDirectory, "Assets", "Images", "icon.ico")
             );
@@ -726,6 +727,11 @@ namespace UniGetUI.Interface
                 MainContentGrid.RequestedTheme = ElementTheme.Default;
             }
 
+            ApplyTitleBarButtonColors();
+        }
+
+        private void ApplyTitleBarButtonColors()
+        {
             if (AppWindowTitleBar.IsCustomizationSupported())
             {
                 if (MainApp.Instance.ThemeListener.CurrentTheme == ApplicationTheme.Light)

@@ -70,6 +70,8 @@ internal sealed partial class CustomNavViewItem : NavigationViewItem
 
         _progressRing = new ProgressRing
         {
+            Width = 24,
+            Height = 24,
             Margin = new Thickness(-42, 0, 0, 0),
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Center,

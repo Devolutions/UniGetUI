@@ -489,13 +489,14 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
         createCompositePackageCatalogOptions.CompositeSearchBehavior = CompositeSearchBehavior.RemotePackagesFromAllCatalogs;
         var updateSearchCatalogRef = WinGetManager.CreateCompositePackageCatalog(createCompositePackageCatalogOptions);
+        updateSearchCatalogRef.AcceptSourceAgreements = true;
         var connectResult = updateSearchCatalogRef.Connect();
 
         if (connectResult.Status != ConnectResultStatus.Ok)
         {
-            logger.Error("Failed to connect to update catalog. Returning empty list.");
+            logger.Error("Failed to connect to update catalog. Aborting.");
             logger.Close(1);
-            return [];
+            throw new InvalidOperationException("WinGet: Failed to connect to update catalog.");
         }
 
         FindPackagesOptions findPackagesOptions = Factory.CreateFindPackagesOptions();

@@ -309,8 +309,8 @@ jobs:
           Remove-Item "unigetui_bin" -Recurse -Force -ErrorAction SilentlyContinue
 
   build-avalonia:
-    name: Build Avalonia (${{ matrix.platform }})
-    runs-on: macos-latest
+    name: Build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
     needs: [preflight]
     environment: ${{ needs.preflight.outputs.package-env }}
     permissions:
@@ -322,7 +322,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [arm64, x64]
+        include:
+          - os: macos-latest
+            name: macos-arm64
+            runtime: osx-arm64
+          - os: macos-latest
+            name: macos-x64
+            runtime: osx-x64
+          - os: ubuntu-latest
+            name: linux-x64
+            runtime: linux-x64
+          - os: ubuntu-latest
+            name: linux-arm64
+            runtime: linux-arm64
 
     steps:
       - name: Checkout
@@ -341,6 +353,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      - name: Set version
+        shell: pwsh
+        run: |
+          $PackageVersion = '${{ needs.preflight.outputs.package-version }}'
+          ./scripts/set-version.ps1 -Version $PackageVersion
+
       - name: Restore dependencies
         working-directory: src
         run: dotnet restore UniGetUI.Avalonia/UniGetUI.Avalonia.csproj
@@ -350,15 +368,85 @@ jobs:
         run: |
           dotnet publish UniGetUI.Avalonia/UniGetUI.Avalonia.csproj \
             --configuration Release \
-            --runtime osx-${{ matrix.platform }} \
+            --runtime ${{ matrix.runtime }} \
             --self-contained true \
-            --output ../avalonia_bin/${{ matrix.platform }}
+            --output ../bin/${{ matrix.name }}
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p output
+
+          # .tar.gz
+          tar -czf output/UniGetUI.${{ matrix.name }}.tar.gz -C bin/${{ matrix.name }} .
+
+          # .dmg — create a staging folder, then convert to a compressed read-only image
+          DMG_STAGING=$(mktemp -d)
+          trap "rm -rf '$DMG_STAGING'" EXIT
+          mkdir -p "$DMG_STAGING/UniGetUI"
+          cp -R bin/${{ matrix.name }}/. "$DMG_STAGING/UniGetUI/"
+          hdiutil create \
+            -volname "UniGetUI" \
+            -srcfolder "$DMG_STAGING" \
+            -ov \
+            -format UDZO \
+            output/UniGetUI.${{ matrix.name }}.dmg
+
+      - name: Install Linux packaging tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        shell: pwsh
+        run: |
+          $Version    = '${{ needs.preflight.outputs.package-version }}'
+          $Parts      = $Version -split '-', 2
+          $BaseVersion = $Parts[0]
+          $Prerelease  = if ($Parts.Count -gt 1) { $Parts[1] } else { $null }
+
+          # deb: use tilde notation for pre-releases (Ubuntu 18.04+ compatible)
+          $DebVersion   = if ($Prerelease) { "${BaseVersion}~${Prerelease}" } else { $Version }
+          # rpm: pre-release encoded in Release/Iteration field (RHEL 8+ / RPM 4.14+)
+          $RpmVersion   = $BaseVersion
+          $RpmIteration = if ($Prerelease) { "0.${Prerelease}" } else { '1' }
+
+          # Map .NET RID -> package arch names
+          $DebArch, $RpmArch = switch ('${{ matrix.runtime }}') {
+            'linux-arm64' { 'arm64',  'aarch64' }
+            default       { 'amd64',  'x86_64'  }
+          }
+
+          New-Item -ItemType Directory -Force -Path output | Out-Null
+
+          # .tar.gz
+          & tar -czf "output/UniGetUI.${{ matrix.name }}.tar.gz" -C "bin/${{ matrix.name }}" .
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+          # .deb — Ubuntu 18.04+ (glibc 2.27, Debian policy 3.9.6)
+          & ./scripts/package-linux.ps1 `
+              -PackageType  deb `
+              -SourceDir    "bin/${{ matrix.name }}" `
+              -OutputPath   "output/UniGetUI.${{ matrix.name }}.deb" `
+              -Version      $DebVersion `
+              -Architecture $DebArch
+
+          # .rpm — RHEL 8+ (RPM 4.14, glibc 2.28)
+          & ./scripts/package-linux.ps1 `
+              -PackageType  rpm `
+              -SourceDir    "bin/${{ matrix.name }}" `
+              -OutputPath   "output/UniGetUI.${{ matrix.name }}.rpm" `
+              -Version      $RpmVersion `
+              -Iteration    $RpmIteration `
+              -Architecture $RpmArch
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: UniGetUI-Avalonia-${{ matrix.platform }}
-          path: avalonia_bin/${{ matrix.platform }}/*
+          name: UniGetUI-${{ matrix.name }}
+          path: output/*
 
   publish:
     name: Publish GitHub Release

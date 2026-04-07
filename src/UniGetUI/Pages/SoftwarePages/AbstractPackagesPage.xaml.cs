@@ -1294,7 +1294,14 @@ namespace UniGetUI.Interface
             }
         }
 
-        public void FocusPackageList() => CurrentPackageList.Focus(FocusState.Programmatic);
+        public void FocusPackageList()
+        {
+            if (MEGA_QUERY_BOX_ENABLED)
+                DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low,
+                    () => MegaQueryBlock.Focus(FocusState.Programmatic));
+            else
+                CurrentPackageList.Focus(FocusState.Programmatic);
+        }
 
         public async Task ShowContextMenu(PackageWrapper wrapper)
         {

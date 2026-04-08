@@ -35,11 +35,29 @@ public static class TelemetryHandler
     private const string OpenSearchUrl = "https://telemetry2.devolutions.net:9200";
     private static string _openSearchUsername = "";
     private static string _openSearchPassword = "";
+    private static bool _credentialsWarningLogged;
 
     public static void Configure(string username, string password)
     {
         _openSearchUsername = username;
         _openSearchPassword = password;
+    }
+
+    private static bool CredentialsConfigured()
+    {
+        if (!string.IsNullOrEmpty(_openSearchUsername)
+            && !_openSearchUsername.EndsWith("_UNSET")
+            && !string.IsNullOrEmpty(_openSearchPassword)
+            && !_openSearchPassword.EndsWith("_UNSET"))
+            return true;
+
+        if (!_credentialsWarningLogged)
+        {
+            Logger.Warn("[Telemetry] OpenSearch credentials are not configured — telemetry is disabled for this build.");
+            _credentialsWarningLogged = true;
+        }
+
+        return false;
     }
 
     // Index names — to be created on the OpenSearch server
@@ -261,6 +279,9 @@ public static class TelemetryHandler
 
     private static async Task PostToOpenSearchAsync<T>(string indexName, T eventData, JsonTypeInfo<T> typeInfo)
     {
+        if (!CredentialsConfigured())
+            return;
+
         try
         {
             string fullIndex = IndexPrefix + indexName;
@@ -281,10 +302,7 @@ public static class TelemetryHandler
             if (response.IsSuccessStatusCode)
                 Logger.Debug($"[Telemetry] Sent to {fullIndex}");
             else
-            {
-                string body = await response.Content.ReadAsStringAsync();
-                Logger.Warn($"[Telemetry] {fullIndex} returned {(int)response.StatusCode}: {body}");
-            }
+                Logger.Warn($"[Telemetry] {fullIndex} returned {(int)response.StatusCode}");
         }
         catch (Exception ex)
         {

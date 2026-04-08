@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Language;
 using UniGetUI.Core.Logging;
@@ -54,10 +55,6 @@ public static class TelemetryHandler
 
     private const string IndexPrefix = "";
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
 
     private static readonly HttpClient _httpClient;
 
@@ -150,7 +147,7 @@ public static class TelemetryHandler
                 Platform = BuildPlatformInfo(),
             };
 
-            await PostToOpenSearchAsync(IndexActivity, ev);
+            await PostToOpenSearchAsync(IndexActivity, ev, TelemetrySerializerContext.Default.UniGetUIActivityEvent);
         }
         catch (Exception ex)
         {
@@ -214,7 +211,7 @@ public static class TelemetryHandler
                 EventSource = eventSource,
             };
 
-            await PostToOpenSearchAsync(IndexPackage, ev);
+            await PostToOpenSearchAsync(IndexPackage, ev, TelemetrySerializerContext.Default.UniGetUIPackageEvent);
         }
         catch (Exception ex)
         {
@@ -253,7 +250,7 @@ public static class TelemetryHandler
                 BundleType = bundleType,
             };
 
-            await PostToOpenSearchAsync(IndexBundle, ev);
+            await PostToOpenSearchAsync(IndexBundle, ev, TelemetrySerializerContext.Default.UniGetUIBundleEvent);
         }
         catch (Exception ex)
         {
@@ -264,12 +261,12 @@ public static class TelemetryHandler
 
     // ─── OpenSearch HTTP ──────────────────────────────────────────────────────
 
-    private static async Task PostToOpenSearchAsync<T>(string indexName, T eventData)
+    private static async Task PostToOpenSearchAsync<T>(string indexName, T eventData, JsonTypeInfo<T> typeInfo)
     {
         try
         {
             string fullIndex = IndexPrefix + indexName;
-            string json = JsonSerializer.Serialize(eventData, JsonOptions);
+            string json = JsonSerializer.Serialize(eventData, typeInfo);
 
             string credentials = Convert.ToBase64String(
                 Encoding.UTF8.GetBytes($"{_openSearchUsername}:{_openSearchPassword}"));
@@ -337,3 +334,11 @@ public static class TelemetryHandler
         return "Linux";
     }
 }
+
+// Source-generated JSON context — required for AOT/trimmed builds (WinUI).
+// Reflection-based serialization is disabled in that configuration.
+[JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+[JsonSerializable(typeof(UniGetUIActivityEvent))]
+[JsonSerializable(typeof(UniGetUIPackageEvent))]
+[JsonSerializable(typeof(UniGetUIBundleEvent))]
+internal partial class TelemetrySerializerContext : JsonSerializerContext { }

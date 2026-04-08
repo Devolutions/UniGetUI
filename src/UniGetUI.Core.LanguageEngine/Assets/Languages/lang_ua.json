@@ -82,7 +82,6 @@
   "An unexpected error occurred:": "Сталася неочікувана помилка:",
   "An unexpected issue occurred while attempting to repair WinGet. Please try again later": "Виникла неочікувана проблема при намаганні відновити WinGet. Будь ласка, спробуйте пізніше.",
   "An update was found!": "Знайдено оновлення!",
-  "Android Subsystem": "Android Subsystem",
   "Another source": "Інше джерело",
   "Any new shorcuts created during an install or an update operation will be deleted automatically, instead of showing a confirmation prompt the first time they are detected.": "Для новий ярликів, створених під час операцій встановлення та оновлення, не буде показано діалогу підтвердження: замість цього вони будуть видалені автоматично.",
   "Any shorcuts created or modified outside of UniGetUI will be ignored. You will be able to add them via the {0} button.": "Всі ярлики, створені або змінені не через UniGetUI, будуть проігноровані. Ви зможете додати їх за допомогою кнопки \"{0}\".",

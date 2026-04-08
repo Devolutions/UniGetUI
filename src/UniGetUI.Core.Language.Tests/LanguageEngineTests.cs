@@ -1,3 +1,4 @@
+using UniGetUI.Core.Data;
 using UniGetUI.PackageEngine.Enums;
 
 namespace UniGetUI.Core.Language.Tests
@@ -7,6 +8,7 @@ namespace UniGetUI.Core.Language.Tests
         [Theory]
         [InlineData("ca", "Fes una còpia de seguretat dels paquets instal·lats")]
         [InlineData("es", "Respaldar paquetes instalados")]
+        [InlineData("ua", "Резервне копіювання встановлених пакетів")]
         public void TestLoadingLanguage(string language, string translation)
         {
             LanguageEngine engine = new();
@@ -49,6 +51,50 @@ namespace UniGetUI.Core.Language.Tests
             LanguageEngine engine = new();
             engine.LoadLanguage("random-nonexistent-language");
             Assert.Equal("en", engine.Locale);
+        }
+
+        [Fact]
+        public void TestLoadingUkrainianSpecificTranslation()
+        {
+            LanguageEngine engine = new();
+
+            engine.LoadLanguage("ua");
+            Assert.Equal("Підсистема Android", engine.Translate("Android Subsystem"));
+        }
+
+        [Fact]
+        public void TestLoadingCachedLanguageWithDuplicateKeysKeepsLastValue()
+        {
+            string cachedLangFile = Path.Join(
+                CoreData.UniGetUICacheDirectory_Lang,
+                "lang_duplicate-test.json"
+            );
+            File.WriteAllText(
+                cachedLangFile,
+                """
+                {
+                  "Android Subsystem": "Android Subsystem",
+                  "Android Subsystem": "Підсистема Android",
+                  "Backup installed packages": "Cached duplicate test"
+                }
+                """
+            );
+
+            try
+            {
+                LanguageEngine engine = new();
+
+                Dictionary<string, string> langFile = engine.LoadLanguageFile("duplicate-test");
+                Assert.Equal("Підсистема Android", langFile["Android Subsystem"]);
+                Assert.Equal("Cached duplicate test", langFile["Backup installed packages"]);
+            }
+            finally
+            {
+                if (File.Exists(cachedLangFile))
+                {
+                    File.Delete(cachedLangFile);
+                }
+            }
         }
 
         [Fact]

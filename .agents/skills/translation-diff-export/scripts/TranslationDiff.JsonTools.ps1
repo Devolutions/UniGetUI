@@ -43,6 +43,31 @@ function New-OrderedStringMap {
     return [ordered]@{}
 }
 
+function Assert-NoDuplicateJsonKeys {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Content,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $pattern = [regex]'(?m)^\s*"((?:\\.|[^"])*)"\s*:'
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    $duplicates = New-Object System.Collections.Generic.List[string]
+
+    foreach ($match in $pattern.Matches($Content)) {
+        $key = [regex]::Unescape($match.Groups[1].Value)
+        if (-not $seen.Add($key) -and -not $duplicates.Contains($key)) {
+            $duplicates.Add($key)
+        }
+    }
+
+    if ($duplicates.Count -gt 0) {
+        throw "JSON file contains duplicate key(s): $($duplicates -join ', '). Path: $Path"
+    }
+}
+
 function Read-OrderedJsonMap {
     param(
         [Parameter(Mandatory = $true)]
@@ -58,6 +83,8 @@ function Read-OrderedJsonMap {
     if ([string]::IsNullOrWhiteSpace($content)) {
         return $result
     }
+
+    Assert-NoDuplicateJsonKeys -Content $content -Path $Path
 
     $parsed = $content | ConvertFrom-Json -AsHashtable
     if ($null -eq $parsed) {

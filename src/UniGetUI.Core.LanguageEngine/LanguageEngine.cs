@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Text.Json.Nodes;
+using System.Text;
+using System.Text.Json;
 using Jeffijoe.MessageFormat;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
@@ -88,7 +89,7 @@ namespace UniGetUI.Core.Language
                     "Languages",
                     "lang_" + LangKey + ".json"
                 );
-                JsonObject BundledContents = [];
+                Dictionary<string, string> LangDict = [];
 
                 if (!File.Exists(BundledLangFileToLoad))
                 {
@@ -100,15 +101,10 @@ namespace UniGetUI.Core.Language
                 {
                     try
                     {
-                        if (
-                            JsonNode.Parse(File.ReadAllText(BundledLangFileToLoad))
-                            is JsonObject parsedObject
-                        )
-                            BundledContents = parsedObject;
-                        else
-                            throw new ArgumentException(
-                                $"parsedObject was null for lang file {BundledLangFileToLoad}"
-                            );
+                        LangDict = ParseLanguageEntries(
+                            File.ReadAllText(BundledLangFileToLoad),
+                            BundledLangFileToLoad
+                        );
                     }
                     catch (Exception ex)
                     {
@@ -118,11 +114,6 @@ namespace UniGetUI.Core.Language
                         Logger.Warn(ex);
                     }
                 }
-
-                Dictionary<string, string> LangDict = BundledContents.ToDictionary(
-                    x => x.Key,
-                    x => x.Value?.ToString() ?? ""
-                );
 
                 string CachedLangFileToLoad = Path.Join(
                     CoreData.UniGetUICacheDirectory_Lang,
@@ -143,25 +134,20 @@ namespace UniGetUI.Core.Language
                 {
                     try
                     {
-                        if (
-                            JsonNode.Parse(File.ReadAllText(CachedLangFileToLoad))
-                            is JsonObject parsedObject
-                        )
-                            foreach (
-                                var keyval in parsedObject.ToDictionary(x => x.Key, x => x.Value)
+                        foreach (
+                            var keyval in ParseLanguageEntries(
+                                File.ReadAllText(CachedLangFileToLoad),
+                                CachedLangFileToLoad
                             )
-                            {
-                                LangDict[keyval.Key] = keyval.Value?.ToString() ?? "";
-                            }
-                        else
-                            throw new ArgumentException(
-                                $"parsedObject was null for lang file {CachedLangFileToLoad}"
-                            );
+                        )
+                        {
+                            LangDict[keyval.Key] = keyval.Value;
+                        }
                     }
                     catch (Exception ex)
                     {
                         Logger.Warn(
-                            $"Something went wrong when parsing language file {BundledLangFileToLoad}"
+                            $"Something went wrong when parsing language file {CachedLangFileToLoad}"
                         );
                         Logger.Warn(ex);
                     }
@@ -178,6 +164,69 @@ namespace UniGetUI.Core.Language
                 Logger.Error(e);
                 return [];
             }
+        }
+
+        private static Dictionary<string, string> ParseLanguageEntries(
+            string fileContents,
+            string filePath
+        )
+        {
+            Dictionary<string, string> entries = [];
+            HashSet<string> duplicateKeys = [];
+            Utf8JsonReader reader = new(
+                Encoding.UTF8.GetBytes(fileContents),
+                new JsonReaderOptions
+                {
+                    AllowTrailingCommas = true,
+                    CommentHandling = JsonCommentHandling.Skip,
+                }
+            );
+
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+            {
+                throw new JsonException($"Language file {filePath} does not contain a JSON object");
+            }
+
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                {
+                    break;
+                }
+
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                {
+                    throw new JsonException(
+                        $"Unexpected token {reader.TokenType} in language file {filePath}"
+                    );
+                }
+
+                string key = reader.GetString() ?? throw new JsonException("Translation key is null");
+                if (!reader.Read())
+                {
+                    throw new JsonException($"Missing translation value for key {key}");
+                }
+
+                using JsonDocument value = JsonDocument.ParseValue(ref reader);
+                string parsedValue = value.RootElement.ValueKind == JsonValueKind.Null
+                    ? ""
+                    : value.RootElement.ToString();
+
+                if (!entries.TryAdd(key, parsedValue))
+                {
+                    duplicateKeys.Add(key);
+                    entries[key] = parsedValue;
+                }
+            }
+
+            if (duplicateKeys.Count > 0)
+            {
+                Logger.Warn(
+                    $"Language file {filePath} contains duplicate keys. Keeping the last value for: {string.Join(", ", duplicateKeys)}"
+                );
+            }
+
+            return entries;
         }
 
         /// <summary>

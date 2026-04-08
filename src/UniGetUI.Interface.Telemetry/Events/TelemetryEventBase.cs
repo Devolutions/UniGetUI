@@ -10,7 +10,7 @@ public abstract class TelemetryEventBase
 {
     protected TelemetryEventBase()
     {
-        EventID   = Guid.NewGuid().ToString();
+        EventID = Guid.NewGuid().ToString();
         EventDate = DateTime.UtcNow;
     }
 

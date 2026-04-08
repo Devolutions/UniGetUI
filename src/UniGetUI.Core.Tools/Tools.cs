@@ -110,61 +110,27 @@ namespace UniGetUI.Core.Tools
             command = command.Replace(";", "").Replace("&", "").Trim();
             Logger.Debug($"Begin \"which\" search for command {command}");
 
+            _ = updateEnv;
+
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                Logger.ImportantInfo($"Command {command} was not found on the system");
+                return [];
+            }
+
             string pathValue = GetSearchPath();
 
-            Process process = new()
+            List<string> lines = FindExecutableMatches(command, pathValue);
+            if (lines.Count is 0)
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = OperatingSystem.IsWindows()
-                        ? Path.Join(Environment.SystemDirectory, "where.exe")
-                        : "which",
-                    Arguments = command,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    StandardOutputEncoding = GetCommandOutputEncoding(),
-                    StandardErrorEncoding = GetCommandOutputEncoding(),
-                },
-            };
-            if (updateEnv)
-            {
-                process.StartInfo = UpdateEnvironmentVariables(process.StartInfo);
+                Logger.ImportantInfo($"Command {command} was not found on the system");
+                return [];
             }
-            process.StartInfo.Environment["PATH"] = pathValue;
 
-            try
-            {
-                process.Start();
-                string[] lines = process
-                    .StandardOutput.ReadToEnd()
-                    .Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries);
-
-                process.WaitForExit();
-
-                if (process.ExitCode is not 0)
-                    Logger.Warn(
-                        $"Call to WhichMultiple with file {command} returned non-zero status {process.ExitCode}"
-                    );
-
-                if (lines.Length is 0)
-                {
-                    Logger.ImportantInfo($"Command {command} was not found on the system");
-                    return [];
-                }
-
-                Logger.Debug(
-                    $"Command {command} was found on {lines[0]} (with {lines.Length - 1} more occurrences)"
-                );
-                return lines.ToList();
-            }
-            catch
-            {
-                if (updateEnv)
-                    return WhichMultiple(command, false);
-                throw;
-            }
+            Logger.Debug(
+                $"Command {command} was found on {lines[0]} (with {lines.Count - 1} more occurrences)"
+            );
+            return lines;
         }
 
         public static Tuple<bool, string> Which(string command, bool updateEnv = true)
@@ -884,11 +850,161 @@ namespace UniGetUI.Core.Tools
             }
         }
 
-        private static Encoding GetCommandOutputEncoding() =>
-            OperatingSystem.IsWindows()
-                ? CodePagesEncodingProvider.Instance.GetEncoding(CoreData.CODE_PAGE)
-                    ?? Encoding.UTF8
-                : Encoding.UTF8;
+        private static List<string> FindExecutableMatches(string command, string pathValue)
+        {
+            List<string> matches = [];
+            HashSet<string> seen = new(
+                OperatingSystem.IsWindows()
+                    ? StringComparer.OrdinalIgnoreCase
+                    : StringComparer.Ordinal
+            );
+
+            if (HasDirectoryComponent(command))
+            {
+                AddExecutableMatches(
+                    matches,
+                    seen,
+                    Path.GetDirectoryName(command) ?? string.Empty,
+                    Path.GetFileName(command)
+                );
+                return matches;
+            }
+
+            foreach (string directory in EnumerateSearchDirectories(pathValue))
+            {
+                AddExecutableMatches(matches, seen, directory, command);
+            }
+
+            return matches;
+        }
+
+        private static void AddExecutableMatches(
+            List<string> matches,
+            HashSet<string> seen,
+            string directory,
+            string command
+        )
+        {
+            string searchDirectory = NormalizeSearchDirectory(directory);
+            if (searchDirectory.Length is 0)
+            {
+                return;
+            }
+
+            foreach (string candidateName in EnumerateCandidateFileNames(command))
+            {
+                TryAddExecutablePath(Path.Combine(searchDirectory, candidateName), matches, seen);
+            }
+        }
+
+        private static IEnumerable<string> EnumerateSearchDirectories(string pathValue)
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                yield return Environment.CurrentDirectory;
+            }
+
+            foreach (string pathEntry in pathValue.Split(Path.PathSeparator))
+            {
+                string normalizedEntry = NormalizeSearchDirectory(pathEntry);
+                if (normalizedEntry.Length is not 0)
+                {
+                    yield return normalizedEntry;
+                }
+            }
+        }
+
+        private static string NormalizeSearchDirectory(string? pathEntry)
+        {
+            if (string.IsNullOrWhiteSpace(pathEntry))
+            {
+                return Environment.CurrentDirectory;
+            }
+
+            return pathEntry.Trim().Trim('"');
+        }
+
+        private static IEnumerable<string> EnumerateCandidateFileNames(string command)
+        {
+            if (!OperatingSystem.IsWindows() || Path.HasExtension(command))
+            {
+                yield return command;
+                yield break;
+            }
+
+            foreach (string extension in GetWindowsExecutableExtensions())
+            {
+                yield return command + extension;
+            }
+        }
+
+        private static IReadOnlyList<string> GetWindowsExecutableExtensions()
+        {
+            List<string> extensions = (
+                Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD"
+            )
+                .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                .Select(extension => extension.Trim())
+                .Where(extension => !string.IsNullOrWhiteSpace(extension))
+                .Select(extension => extension.StartsWith('.') ? extension : "." + extension)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return extensions.Count > 0 ? extensions : [".COM", ".EXE", ".BAT", ".CMD"];
+        }
+
+        private static void TryAddExecutablePath(
+            string candidatePath,
+            List<string> matches,
+            HashSet<string> seen
+        )
+        {
+            if (!File.Exists(candidatePath) || !IsExecutablePath(candidatePath))
+            {
+                return;
+            }
+
+            string fullPath = Path.GetFullPath(candidatePath);
+            if (seen.Add(fullPath))
+            {
+                matches.Add(fullPath);
+            }
+        }
+
+        private static bool IsExecutablePath(string candidatePath)
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                return true;
+            }
+
+            try
+            {
+                const UnixFileMode ExecutableBits =
+                    UnixFileMode.UserExecute
+                    | UnixFileMode.GroupExecute
+                    | UnixFileMode.OtherExecute;
+
+                return (File.GetUnixFileMode(candidatePath) & ExecutableBits) is not 0;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+            catch (NotSupportedException)
+            {
+                return false;
+            }
+        }
+
+        private static bool HasDirectoryComponent(string command) =>
+            Path.IsPathRooted(command)
+            || command.Contains(Path.DirectorySeparatorChar)
+            || command.Contains(Path.AltDirectorySeparatorChar);
 
         private static string GetSearchPath()
         {

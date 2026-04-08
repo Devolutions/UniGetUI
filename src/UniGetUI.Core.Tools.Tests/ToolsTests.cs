@@ -50,6 +50,164 @@ namespace UniGetUI.Core.Tools.Tests
             Assert.Equal("", result.Item2);
         }
 
+        [Fact]
+        public void TestWhichFunctionForDirectPath()
+        {
+            string tempDirectory = CreateTemporaryDirectory();
+            string commandPath = Path.Combine(
+                tempDirectory,
+                OperatingSystem.IsWindows() ? "unigetui-direct-path-test.cmd" : "unigetui-direct-path-test"
+            );
+
+            try
+            {
+                CreateCommandFile(commandPath);
+
+                Tuple<bool, string> result = CoreTools.Which(commandPath);
+
+                Assert.True(result.Item1);
+                Assert.Equal(commandPath, result.Item2);
+            }
+            finally
+            {
+                Directory.Delete(tempDirectory, true);
+            }
+        }
+
+        [Fact]
+        public void TestWhichMultipleRespectsProcessPathOrder()
+        {
+            string tempDirectory1 = CreateTemporaryDirectory();
+            string tempDirectory2 = CreateTemporaryDirectory();
+            string commandName = OperatingSystem.IsWindows()
+                ? "unigetui-path-order-test.exe"
+                : "unigetui-path-order-test";
+            string commandPath1 = Path.Combine(tempDirectory1, commandName);
+            string commandPath2 = Path.Combine(tempDirectory2, commandName);
+            string? oldPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process);
+
+            try
+            {
+                CreateCommandFile(commandPath1);
+                CreateCommandFile(commandPath2);
+                Environment.SetEnvironmentVariable(
+                    "PATH",
+                    string.Join(Path.PathSeparator, tempDirectory1, tempDirectory2),
+                    EnvironmentVariableTarget.Process
+                );
+
+                List<string> result = CoreTools.WhichMultiple(commandName);
+
+                Assert.Equal([commandPath1, commandPath2], result);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(
+                    "PATH",
+                    oldPath,
+                    EnvironmentVariableTarget.Process
+                );
+                Directory.Delete(tempDirectory1, true);
+                Directory.Delete(tempDirectory2, true);
+            }
+        }
+
+        [Fact]
+        public void TestWhichFunctionResolvesPathextOnWindows()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return;
+            }
+
+            string tempDirectory = CreateTemporaryDirectory();
+            string commandPath = Path.Combine(tempDirectory, "unigetui-pathext-test.exe");
+            string? oldPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process);
+            string? oldPathExt = Environment.GetEnvironmentVariable(
+                "PATHEXT",
+                EnvironmentVariableTarget.Process
+            );
+
+            try
+            {
+                CreateCommandFile(commandPath);
+                Environment.SetEnvironmentVariable(
+                    "PATH",
+                    tempDirectory,
+                    EnvironmentVariableTarget.Process
+                );
+                Environment.SetEnvironmentVariable(
+                    "PATHEXT",
+                    ".EXE;.CMD",
+                    EnvironmentVariableTarget.Process
+                );
+
+                Tuple<bool, string> result = CoreTools.Which("unigetui-pathext-test");
+
+                Assert.True(result.Item1);
+                Assert.Equal(commandPath, result.Item2, StringComparer.OrdinalIgnoreCase);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(
+                    "PATH",
+                    oldPath,
+                    EnvironmentVariableTarget.Process
+                );
+                Environment.SetEnvironmentVariable(
+                    "PATHEXT",
+                    oldPathExt,
+                    EnvironmentVariableTarget.Process
+                );
+                Directory.Delete(tempDirectory, true);
+            }
+        }
+
+        [Fact]
+        public void TestWhichFunctionRequiresExecutableBitOnUnix()
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                return;
+            }
+
+            string tempDirectory = CreateTemporaryDirectory();
+            string commandName = "unigetui-unix-executable-bit-test";
+            string commandPath = Path.Combine(tempDirectory, commandName);
+            string? oldPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process);
+
+            try
+            {
+                File.WriteAllText(commandPath, string.Empty);
+                File.SetUnixFileMode(
+                    commandPath,
+                    UnixFileMode.UserRead
+                        | UnixFileMode.UserWrite
+                        | UnixFileMode.GroupRead
+                        | UnixFileMode.OtherRead
+                );
+                Environment.SetEnvironmentVariable(
+                    "PATH",
+                    tempDirectory,
+                    EnvironmentVariableTarget.Process
+                );
+
+                Tuple<bool, string> result = CoreTools.Which(commandName);
+
+                Assert.False(result.Item1);
+                Assert.Equal("", result.Item2);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(
+                    "PATH",
+                    oldPath,
+                    EnvironmentVariableTarget.Process
+                );
+                Directory.Delete(tempDirectory, true);
+            }
+        }
+
         [Theory]
         [InlineData("7zip19.00-helpEr", "7zip19.00 HelpEr")]
         [InlineData("packagename", "Packagename")]
@@ -241,6 +399,32 @@ namespace UniGetUI.Core.Tools.Tests
         public void TestFormatSize(long size, int decPlaces, string expected)
         {
             Assert.Equal(CoreTools.FormatAsSize(size, decPlaces).Replace(',', '.'), expected);
+        }
+
+        private static string CreateTemporaryDirectory()
+        {
+            string path = Path.Combine(Path.GetTempPath(), $"UniGetUI-ToolsTests-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(path);
+            return path;
+        }
+
+        private static void CreateCommandFile(string path)
+        {
+            File.WriteAllText(path, string.Empty);
+
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(
+                    path,
+                    UnixFileMode.UserRead
+                        | UnixFileMode.UserWrite
+                        | UnixFileMode.UserExecute
+                        | UnixFileMode.GroupRead
+                        | UnixFileMode.GroupExecute
+                        | UnixFileMode.OtherRead
+                        | UnixFileMode.OtherExecute
+                );
+            }
         }
     }
 }

@@ -162,7 +162,7 @@ public static class TelemetryHandler
                 Platform = BuildPlatformInfo(),
             };
 
-            await PostToOpenSearchAsync(IndexActivity, ev, TelemetrySerializerContext.Default.UniGetUIActivityEvent);
+            await PostToOpenSearchAsync(IndexActivity, ev, TelemetrySerializerContext.Trimming.UniGetUIActivityEvent);
         }
         catch (Exception ex)
         {
@@ -226,7 +226,7 @@ public static class TelemetryHandler
                 EventSource = eventSource,
             };
 
-            await PostToOpenSearchAsync(IndexPackage, ev, TelemetrySerializerContext.Default.UniGetUIPackageEvent);
+            await PostToOpenSearchAsync(IndexPackage, ev, TelemetrySerializerContext.Trimming.UniGetUIPackageEvent);
         }
         catch (Exception ex)
         {
@@ -265,7 +265,7 @@ public static class TelemetryHandler
                 BundleType = bundleType,
             };
 
-            await PostToOpenSearchAsync(IndexBundle, ev, TelemetrySerializerContext.Default.UniGetUIBundleEvent);
+            await PostToOpenSearchAsync(IndexBundle, ev, TelemetrySerializerContext.Trimming.UniGetUIBundleEvent);
         }
         catch (Exception ex)
         {
@@ -356,4 +356,11 @@ public static class TelemetryHandler
 [JsonSerializable(typeof(UniGetUIActivityEvent))]
 [JsonSerializable(typeof(UniGetUIPackageEvent))]
 [JsonSerializable(typeof(UniGetUIBundleEvent))]
-internal partial class TelemetrySerializerContext : JsonSerializerContext { }
+internal partial class TelemetrySerializerContext : JsonSerializerContext
+{
+    internal static readonly TelemetrySerializerContext Trimming =
+        new(new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        });
+}

@@ -71,7 +71,6 @@ public static class TelemetryHandler
     private const string IndexPrefix = "";
 #endif
 
-
     private static readonly HttpClient _httpClient;
 
     static TelemetryHandler()

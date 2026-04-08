@@ -47,13 +47,11 @@ public static class TelemetryHandler
     private const string IndexPackage = "unigetui_package_events";
     private const string IndexBundle = "unigetui_bundle_events";
 
-// #if DEBUG
-//     private const string IndexPrefix = "dev-";
-// #else
-//     private const string IndexPrefix = "";
-// #endif
-
+#if DEBUG
+    private const string IndexPrefix = "dev-";
+#else
     private const string IndexPrefix = "";
+#endif
 
 
     private static readonly HttpClient _httpClient;

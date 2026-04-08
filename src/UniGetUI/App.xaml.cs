@@ -18,8 +18,8 @@ using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.Pages.DialogPages;
-using Windows.ApplicationModel.Activation;
 using UniGetUI.Services;
+using Windows.ApplicationModel.Activation;
 using LaunchActivatedEventArgs = Microsoft.UI.Xaml.LaunchActivatedEventArgs;
 
 namespace UniGetUI

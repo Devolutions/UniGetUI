@@ -365,10 +365,18 @@
             <Pack>false</Pack>
         </Content>
         <Content
-            Update="Assets\Utilities\getfilesiginforedist.dll"
+            Update="Assets\Utilities\x64\getfilesiginforedist.dll"
             Condition="'$(Platform)' == 'x64'"
         >
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>Assets\Utilities\getfilesiginforedist.dll</Link>
+        </Content>
+        <Content
+            Update="Assets\Utilities\arm64\getfilesiginforedist.dll"
+            Condition="'$(Platform)' == 'arm64'"
+        >
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>Assets\Utilities\getfilesiginforedist.dll</Link>
         </Content>
         <Content Update="Assets\Utilities\install_scoop.cmd">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

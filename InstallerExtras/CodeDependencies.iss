@@ -232,20 +232,29 @@ begin
     Dependency_Add('vcredist2022' + Dependency_ArchSuffix + '.exe',
       '/passive /norestart',
       'Visual C++ 2015-2022 Redistributable (x64)' + Dependency_ArchTitle,
-      Dependency_String('https://aka.ms/vs/17/release/vc_redist.x64.exe', 'https://aka.ms/vs/17/release/vc_redist.x64.exe'),
+      Dependency_String('https://aka.ms/vc14/vc_redist.x64.exe', 'https://aka.ms/vc14/vc_redist.x64.exe'),
       '', False, False);
   end;
 end;
 
 
 procedure Dependency_AddWebView2;
+var
+  WebView2URL, WebView2Title: String;
 begin
   // https://developer.microsoft.com/en-us/microsoft-edge/webview2
   if not RegValueExists(HKLM, Dependency_String('SOFTWARE', 'SOFTWARE\WOW6432Node') + '\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv') then begin
+    if IsARM64 then begin
+      WebView2URL := 'https://go.microsoft.com/fwlink/?linkid=2099616';
+      WebView2Title := 'WebView2 Runtime (ARM64)';
+    end else begin
+      WebView2URL := 'https://go.microsoft.com/fwlink/?linkid=2124701';
+      WebView2Title := 'WebView2 Runtime (x64)';
+    end;
     Dependency_Add('MicrosoftEdgeWebview2Setup.exe',
       '/silent /install',
-      'WebView2 Runtime (x64)',
-      'https://go.microsoft.com/fwlink/?linkid=2124701',
+      WebView2Title,
+      WebView2URL,
       '', False, False);
   end;
 end;

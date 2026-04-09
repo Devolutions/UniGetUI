@@ -51,8 +51,6 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
 
         protected override IReadOnlyList<IManagerSource> GetSources_UnSafe()
         {
-            List<ManagerSource> sources = [];
-
             using Process p = new()
             {
                 StartInfo = new()
@@ -78,9 +76,26 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
             p.Start();
 
             string? line;
+            List<string> lines = [];
             while ((line = p.StandardOutput.ReadLine()) is not null)
             {
                 logger.AddToStdOut(line);
+                lines.Add(line);
+            }
+
+            logger.AddToStdErr(p.StandardError.ReadToEnd());
+            p.WaitForExit();
+            logger.Close(p.ExitCode);
+
+            return ParseSources(lines);
+        }
+
+        internal IReadOnlyList<IManagerSource> ParseSources(IEnumerable<string> lines)
+        {
+            List<ManagerSource> sources = [];
+
+            foreach (string line in lines)
+            {
                 try
                 {
                     if (string.IsNullOrEmpty(line))
@@ -116,15 +131,11 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
                         }
                     }
                 }
-                catch (Exception e)
+                catch
                 {
-                    logger.AddToStdErr(e.ToString());
+                    continue;
                 }
             }
-
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
-            p.WaitForExit();
-            logger.Close(p.ExitCode);
 
             return sources;
         }

@@ -1,0 +1,12 @@
+{
+  "projects": [
+    { "name": "requests" },
+    { "name": "req" },
+    { "name": "requests-cache" },
+    { "name": "requestium" },
+    { "name": "django-reqtools" },
+    { "name": "pytest" },
+    { "name": null },
+    {}
+  ]
+}

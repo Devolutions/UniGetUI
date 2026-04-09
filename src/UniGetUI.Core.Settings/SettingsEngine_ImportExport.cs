@@ -77,6 +77,11 @@ public partial class Settings
 
     public static void ResetSettings()
     {
+        booleanSettings.Clear();
+        valueSettings.Clear();
+        listSettings.Clear();
+        _dictionarySettings.Clear();
+
         foreach (
             string entry in Directory.EnumerateFiles(CoreData.UniGetUIUserConfigurationDirectory)
         )

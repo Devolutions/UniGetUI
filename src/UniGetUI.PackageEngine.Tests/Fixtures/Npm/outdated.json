@@ -1,0 +1,11 @@
+{
+  "npm": {
+    "current": "10.9.0",
+    "wanted": "10.9.0",
+    "latest": "11.0.0",
+    "location": "C:\\Users\\tester\\AppData\\Roaming\\npm\\node_modules\\npm"
+  },
+  "missing-current": {
+    "latest": "1.0.0"
+  }
+}

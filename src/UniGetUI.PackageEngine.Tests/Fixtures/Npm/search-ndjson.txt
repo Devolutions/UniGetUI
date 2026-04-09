@@ -1,0 +1,5 @@
+npm warn old lockfile
+{"name":"chalk","version":"5.4.1","description":"Terminal string styling done right"}
+not-json
+{"name":"missing-version"}
+{"name":"npm-check-updates","version":"17.1.1","description":"Find newer package dependencies"}

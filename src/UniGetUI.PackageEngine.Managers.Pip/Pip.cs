@@ -8,6 +8,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.PackageClasses;
@@ -128,13 +129,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             {
                 string[] allNames = GetOrRefreshIndex(logger);
 
-                string queryLower = query.ToLowerInvariant();
-                string[] matches = allNames
-                    .Where(n => n.Contains(queryLower, StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(n => n.StartsWith(queryLower, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                    .ThenBy(n => n.Length)
-                    .Take(MaxSearchResults)
-                    .ToArray();
+                string[] matches = SelectSearchMatches(query, allNames);
 
                 logger.Log($"Matched {matches.Length} packages for query '{query}'");
 
@@ -203,16 +198,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 throw new HttpRequestException($"PyPI simple index returned {(int)response.StatusCode} {response.ReasonPhrase}");
 
             string json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-
-            var projects = (JsonNode.Parse(json) as JsonObject)?["projects"] as JsonArray;
-            string[] names = projects?
-                .Select(p => p?["name"]?.GetValue<string>())
-                .Where(n => !string.IsNullOrEmpty(n))
-                .Select(n => n!)
-                .ToArray() ?? [];
-
-            if (names.Length == 0)
-                throw new InvalidDataException("PyPI simple index returned 0 packages — response may be malformed");
+            string[] names = ParseSimpleIndexProjectNames(json);
 
             logger.Log($"Downloaded {names.Length} package names from PyPI");
 
@@ -230,6 +216,32 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             }
 
             return names;
+        }
+
+        internal static string[] ParseSimpleIndexProjectNames(string json)
+        {
+            var projects = (JsonNode.Parse(json) as JsonObject)?["projects"] as JsonArray;
+            string[] names = projects?
+                .Select(p => p?["name"]?.GetValue<string>())
+                .Where(n => !string.IsNullOrEmpty(n))
+                .Select(n => n!)
+                .ToArray() ?? [];
+
+            if (names.Length == 0)
+                throw new InvalidDataException("PyPI simple index returned 0 packages — response may be malformed");
+
+            return names;
+        }
+
+        internal static string[] SelectSearchMatches(string query, IEnumerable<string> allNames)
+        {
+            string queryLower = query.ToLowerInvariant();
+            return allNames
+                .Where(n => n.Contains(queryLower, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(n => n.StartsWith(queryLower, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                .ThenBy(n => n.Length)
+                .Take(MaxSearchResults)
+                .ToArray();
         }
 
         private static async Task<string?> FetchLatestVersionAsync(string packageName)
@@ -274,58 +286,18 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             p.Start();
 
             string? line;
-            bool DashesPassed = false;
-            List<Package> Packages = [];
+            List<string> outputLines = [];
             while ((line = p.StandardOutput.ReadLine()) is not null)
             {
                 logger.AddToStdOut(line);
-                if (!DashesPassed)
-                {
-                    if (line.Contains("----"))
-                    {
-                        DashesPassed = true;
-                    }
-                }
-                else
-                {
-                    string[] elements = Regex.Replace(line, " {2,}", " ").Split(' ');
-                    if (elements.Length < 3)
-                    {
-                        continue;
-                    }
-
-                    for (int i = 0; i < elements.Length; i++)
-                    {
-                        elements[i] = elements[i].Trim();
-                    }
-
-                    if (
-                        FALSE_PACKAGE_IDS.Contains(elements[0])
-                        || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
-                    )
-                    {
-                        continue;
-                    }
-
-                    Packages.Add(
-                        new Package(
-                            CoreTools.FormatAsName(elements[0]),
-                            elements[0],
-                            elements[1],
-                            elements[2],
-                            DefaultSource,
-                            this,
-                            new(PackageScope.Global)
-                        )
-                    );
-                }
+                outputLines.Add(line);
             }
 
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
             logger.Close(p.ExitCode);
 
-            return Packages;
+            return ParseAvailableUpdates(outputLines, DefaultSource, this);
         }
 
         protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe()
@@ -352,57 +324,99 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             p.Start();
 
             string? line;
-            bool DashesPassed = false;
-            List<Package> Packages = [];
+            List<string> outputLines = [];
             while ((line = p.StandardOutput.ReadLine()) is not null)
             {
                 logger.AddToStdOut(line);
-                if (!DashesPassed)
-                {
-                    if (line.Contains("----"))
-                    {
-                        DashesPassed = true;
-                    }
-                }
-                else
-                {
-                    string[] elements = Regex.Replace(line, " {2,}", " ").Split(' ');
-                    if (elements.Length < 2)
-                    {
-                        continue;
-                    }
-
-                    for (int i = 0; i < elements.Length; i++)
-                    {
-                        elements[i] = elements[i].Trim();
-                    }
-
-                    if (
-                        FALSE_PACKAGE_IDS.Contains(elements[0])
-                        || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
-                    )
-                    {
-                        continue;
-                    }
-
-                    Packages.Add(
-                        new Package(
-                            CoreTools.FormatAsName(elements[0]),
-                            elements[0],
-                            elements[1],
-                            DefaultSource,
-                            this,
-                            new(PackageScope.Global)
-                        )
-                    );
-                }
+                outputLines.Add(line);
             }
 
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
             logger.Close(p.ExitCode);
 
-            return Packages;
+            return ParseInstalledPackages(outputLines, DefaultSource, this);
+        }
+
+        internal static IReadOnlyList<Package> ParseAvailableUpdates(
+            IEnumerable<string> outputLines,
+            IManagerSource source,
+            Pip manager
+        )
+        {
+            return ParsePackages(outputLines, source, manager, expectAvailableVersion: true);
+        }
+
+        internal static IReadOnlyList<Package> ParseInstalledPackages(
+            IEnumerable<string> outputLines,
+            IManagerSource source,
+            Pip manager
+        )
+        {
+            return ParsePackages(outputLines, source, manager, expectAvailableVersion: false);
+        }
+
+        private static IReadOnlyList<Package> ParsePackages(
+            IEnumerable<string> outputLines,
+            IManagerSource source,
+            Pip manager,
+            bool expectAvailableVersion
+        )
+        {
+            bool dashesPassed = false;
+            List<Package> packages = [];
+            int requiredElements = expectAvailableVersion ? 3 : 2;
+
+            foreach (string line in outputLines)
+            {
+                if (!dashesPassed)
+                {
+                    if (line.Contains("----"))
+                    {
+                        dashesPassed = true;
+                    }
+                    continue;
+                }
+
+                string[] elements = Regex
+                    .Replace(line.Trim(), " {2,}", " ")
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (elements.Length < requiredElements)
+                {
+                    continue;
+                }
+
+                if (
+                    FALSE_PACKAGE_IDS.Contains(elements[0])
+                    || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
+                )
+                {
+                    continue;
+                }
+
+                packages.Add(
+                    expectAvailableVersion
+                        ? new Package(
+                            CoreTools.FormatAsName(elements[0]),
+                            elements[0],
+                            elements[1],
+                            elements[2],
+                            source,
+                            manager,
+                            new(PackageScope.Global)
+                        )
+                        : new Package(
+                            CoreTools.FormatAsName(elements[0]),
+                            elements[0],
+                            elements[1],
+                            source,
+                            manager,
+                            new(PackageScope.Global)
+                        )
+                );
+            }
+
+            return packages;
         }
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles()

@@ -159,10 +159,216 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             OperationHelper = new ScoopPkgOperationHelper(this);
         }
 
+        internal IReadOnlyList<Package> ParseSearchOutput(IEnumerable<string> lines)
+        {
+            List<Package> packages = [];
+            IManagerSource source = Properties.DefaultSource;
+
+            foreach (string line in lines)
+            {
+                if (line.StartsWith("'"))
+                {
+                    string sourceName = line.Split(" ")[0].Replace("'", "");
+                    source = SourcesHelper.Factory.GetSourceOrDefault(sourceName);
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                string[] elements = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (elements.Length < 2)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < elements.Length; i++)
+                {
+                    elements[i] = elements[i].Trim();
+                }
+
+                if (
+                    FALSE_PACKAGE_IDS.Contains(elements[0])
+                    || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
+                )
+                {
+                    continue;
+                }
+
+                packages.Add(
+                    new Package(
+                        CoreTools.FormatAsName(elements[0]),
+                        elements[0],
+                        elements[1].Replace("(", "").Replace(")", ""),
+                        source,
+                        this
+                    )
+                );
+            }
+
+            return packages;
+        }
+
+        internal IReadOnlyList<Package> ParseAvailableUpdates(
+            IEnumerable<string> lines,
+            IEnumerable<IPackage> installedPackages
+        )
+        {
+            Dictionary<string, IPackage> installedPackageMap = [];
+            foreach (IPackage installedPackage in installedPackages)
+            {
+                string key = installedPackage.Id + "." + installedPackage.VersionString;
+                if (!installedPackageMap.ContainsKey(key))
+                {
+                    installedPackageMap.Add(key, installedPackage);
+                }
+            }
+
+            List<Package> packages = [];
+            bool dashesPassed = false;
+            foreach (string line in lines)
+            {
+                if (!dashesPassed)
+                {
+                    if (line.Contains("---"))
+                    {
+                        dashesPassed = true;
+                    }
+
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                string[] elements = Regex
+                    .Replace(line, " {2,}", " ")
+                    .Trim()
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (elements.Length < 3)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < elements.Length; i++)
+                {
+                    elements[i] = elements[i].Trim();
+                }
+
+                if (
+                    FALSE_PACKAGE_IDS.Contains(elements[0])
+                    || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
+                    || FALSE_PACKAGE_VERSIONS.Contains(elements[2])
+                )
+                {
+                    continue;
+                }
+
+                if (
+                    installedPackageMap.TryGetValue(
+                        elements[0] + "." + elements[1],
+                        out IPackage? installedPackage
+                    )
+                )
+                {
+                    OverridenInstallationOptions options = new(installedPackage.OverridenOptions.Scope);
+                    packages.Add(
+                        new Package(
+                            CoreTools.FormatAsName(elements[0]),
+                            elements[0],
+                            elements[1],
+                            elements[2],
+                            installedPackage.Source,
+                            this,
+                            options
+                        )
+                    );
+                }
+            }
+
+            return packages;
+        }
+
+        internal IReadOnlyList<Package> ParseInstalledPackages(IEnumerable<string> lines)
+        {
+            List<Package> packages = [];
+            bool dashesPassed = false;
+            foreach (string line in lines)
+            {
+                if (!dashesPassed)
+                {
+                    if (line.Contains("---"))
+                    {
+                        dashesPassed = true;
+                    }
+
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                string[] elements = Regex
+                    .Replace(line, " {2,}", " ")
+                    .Trim()
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (elements.Length < 3)
+                {
+                    continue;
+                }
+
+                if (elements[2].Contains(":\\"))
+                {
+                    var path = Regex.Match(
+                        line,
+                        "[A-Za-z]:(?:[\\\\\\/][^\\\\\\/\\n]+)+(?:.json|…)"
+                    );
+                    if (!string.IsNullOrEmpty(path.Value))
+                    {
+                        elements[2] = path.Value;
+                    }
+                }
+
+                for (int i = 0; i < elements.Length; i++)
+                {
+                    elements[i] = elements[i].Trim();
+                }
+
+                if (
+                    FALSE_PACKAGE_IDS.Contains(elements[0])
+                    || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
+                )
+                {
+                    continue;
+                }
+
+                OverridenInstallationOptions options = new(
+                    line.Contains("Global install") ? PackageScope.Global : PackageScope.User
+                );
+
+                packages.Add(
+                    new Package(
+                        CoreTools.FormatAsName(elements[0]),
+                        elements[0],
+                        elements[1],
+                        SourcesHelper.Factory.GetSourceOrDefault(elements[2]),
+                        this,
+                        options
+                    )
+                );
+            }
+
+            return packages;
+        }
+
         protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
         {
-            List<Package> Packages = [];
-
             var (found, path) = CoreTools.Which("scoop-search.exe");
             if (!found)
             {
@@ -208,73 +414,22 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 
             p.Start();
 
+            List<string> lines = [];
             string? line;
-            IManagerSource source = Properties.DefaultSource;
             while ((line = p.StandardOutput.ReadLine()) is not null)
             {
                 logger.AddToStdOut(line);
-                if (line.StartsWith("'"))
-                {
-                    string sourceName = line.Split(" ")[0].Replace("'", "");
-                    source = SourcesHelper.Factory.GetSourceOrDefault(sourceName);
-                }
-                else if (line.Trim() != "")
-                {
-                    string[] elements = line.Trim().Split(" ");
-                    if (elements.Length < 2)
-                    {
-                        continue;
-                    }
-
-                    for (int i = 0; i < elements.Length; i++)
-                    {
-                        elements[i] = elements[i].Trim();
-                    }
-
-                    if (
-                        FALSE_PACKAGE_IDS.Contains(elements[0])
-                        || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
-                    )
-                    {
-                        continue;
-                    }
-
-                    Packages.Add(
-                        new Package(
-                            CoreTools.FormatAsName(elements[0]),
-                            elements[0],
-                            elements[1].Replace("(", "").Replace(")", ""),
-                            source,
-                            this
-                        )
-                    );
-                }
+                lines.Add(line);
             }
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
             logger.Close(p.ExitCode);
-            return Packages;
+            return ParseSearchOutput(lines);
         }
 
         protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
         {
-            Dictionary<string, IPackage> InstalledPackages = [];
-            foreach (IPackage InstalledPackage in GetInstalledPackages())
-            {
-                if (
-                    !InstalledPackages.ContainsKey(
-                        InstalledPackage.Id + "." + InstalledPackage.VersionString
-                    )
-                )
-                {
-                    InstalledPackages.Add(
-                        InstalledPackage.Id + "." + InstalledPackage.VersionString,
-                        InstalledPackage
-                    );
-                }
-            }
-
-            List<Package> Packages = [];
+            IReadOnlyList<IPackage> installedPackages = GetInstalledPackages();
 
             using Process p = new()
             {
@@ -293,75 +448,17 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 
             p.Start();
 
+            List<string> lines = [];
             string? line;
-            bool DashesPassed = false;
             while ((line = p.StandardOutput.ReadLine()) is not null)
             {
                 logger.AddToStdOut(line);
-                if (!DashesPassed)
-                {
-                    if (line.Contains("---"))
-                    {
-                        DashesPassed = true;
-                    }
-                }
-                else if (line.Trim() != "")
-                {
-                    string[] elements = Regex.Replace(line, " {2,}", " ").Trim().Split(" ");
-                    if (elements.Length < 3)
-                    {
-                        continue;
-                    }
-
-                    for (int i = 0; i < elements.Length; i++)
-                    {
-                        elements[i] = elements[i].Trim();
-                    }
-
-                    if (
-                        FALSE_PACKAGE_IDS.Contains(elements[0])
-                        || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
-                        || FALSE_PACKAGE_VERSIONS.Contains(elements[2])
-                    )
-                    {
-                        continue;
-                    }
-
-                    if (
-                        InstalledPackages.TryGetValue(
-                            elements[0] + "." + elements[1],
-                            out IPackage? InstalledPackage
-                        )
-                    )
-                    {
-                        OverridenInstallationOptions options = new(
-                            InstalledPackage.OverridenOptions.Scope
-                        );
-                        Packages.Add(
-                            new Package(
-                                CoreTools.FormatAsName(elements[0]),
-                                elements[0],
-                                elements[1],
-                                elements[2],
-                                InstalledPackage.Source,
-                                this,
-                                options
-                            )
-                        );
-                    }
-                    else
-                    {
-                        Logger.Warn(
-                            "Upgradable scoop package not listed on installed packages - id="
-                                + elements[0]
-                        );
-                    }
-                }
+                lines.Add(line);
             }
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
             logger.Close(p.ExitCode);
-            return Packages;
+            return ParseAvailableUpdates(lines, installedPackages);
         }
 
         protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe() =>
@@ -369,8 +466,6 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 
         private IReadOnlyList<Package> _getInstalledPackages_UnSafe()
         {
-            List<Package> Packages = [];
-
             using Process p = new()
             {
                 StartInfo = new ProcessStartInfo
@@ -390,66 +485,17 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             );
             p.Start();
 
+            List<string> lines = [];
             string? line;
-            bool DashesPassed = false;
             while ((line = p.StandardOutput.ReadLine()) is not null)
             {
                 logger.AddToStdOut(line);
-                if (!DashesPassed)
-                {
-                    if (line.Contains("---"))
-                    {
-                        DashesPassed = true;
-                    }
-                }
-                else if (line.Trim() != "")
-                {
-                    string[] elements = Regex.Replace(line, " {2,}", " ").Trim().Split(" ");
-                    if (elements.Length < 3)
-                        continue;
-
-                    if (elements[2].Contains(":\\"))
-                    {
-                        var path = Regex.Match(
-                            line,
-                            "[A-Za-z]:(?:[\\\\\\/][^\\\\\\/\\n]+)+(?:.json|…)"
-                        );
-                        elements[2] = path.Value;
-                    }
-
-                    for (int i = 0; i < elements.Length; i++)
-                    {
-                        elements[i] = elements[i].Trim();
-                    }
-
-                    if (
-                        FALSE_PACKAGE_IDS.Contains(elements[0])
-                        || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
-                    )
-                    {
-                        continue;
-                    }
-
-                    OverridenInstallationOptions options = new(
-                        line.Contains("Global install") ? PackageScope.Global : PackageScope.User
-                    );
-
-                    Packages.Add(
-                        new Package(
-                            CoreTools.FormatAsName(elements[0]),
-                            elements[0],
-                            elements[1],
-                            SourcesHelper.Factory.GetSourceOrDefault(elements[2]),
-                            this,
-                            options
-                        )
-                    );
-                }
+                lines.Add(line);
             }
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
             logger.Close(p.ExitCode);
-            return Packages;
+            return ParseInstalledPackages(lines);
         }
 
         public override void RefreshPackageIndexes()

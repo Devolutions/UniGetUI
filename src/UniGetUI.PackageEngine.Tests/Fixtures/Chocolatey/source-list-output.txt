@@ -1,0 +1,5 @@
+Chocolatey v2.4.3
+community - https://community.chocolatey.org/api/v2/ | Priority 0|Bypass Proxy - false|Self-Service - false|Admin Only - false
+legacy community - https://chocolatey.org/api/v2/ | Priority 0|Bypass Proxy - false|Self-Service - false|Admin Only - false
+internal repo - https://packages.example.test/api/v2/ | Priority 10|Bypass Proxy - false|Self-Service - false|Admin Only - false
+invalid source line

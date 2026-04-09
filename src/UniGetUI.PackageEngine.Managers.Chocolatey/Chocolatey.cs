@@ -145,6 +145,94 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
                 + $" --proxy-password={Uri.EscapeDataString(creds.Password)}";
         }
 
+        internal IReadOnlyList<Package> ParseAvailableUpdates(IEnumerable<string> lines)
+        {
+            List<Package> packages = [];
+            foreach (string line in lines)
+            {
+                if (line.StartsWith("Chocolatey"))
+                {
+                    continue;
+                }
+
+                string[] elements = line.Split('|');
+                for (int i = 0; i < elements.Length; i++)
+                {
+                    elements[i] = elements[i].Trim();
+                }
+
+                if (elements.Length <= 2)
+                {
+                    continue;
+                }
+
+                if (
+                    FALSE_PACKAGE_IDS.Contains(elements[0])
+                    || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
+                    || elements[1] == elements[2]
+                )
+                {
+                    continue;
+                }
+
+                packages.Add(
+                    new Package(
+                        CoreTools.FormatAsName(elements[0]),
+                        elements[0],
+                        elements[1],
+                        elements[2],
+                        DefaultSource,
+                        this
+                    )
+                );
+            }
+
+            return packages;
+        }
+
+        internal IReadOnlyList<Package> ParseInstalledPackages(IEnumerable<string> lines)
+        {
+            List<Package> packages = [];
+            foreach (string line in lines)
+            {
+                if (line.StartsWith("Chocolatey"))
+                {
+                    continue;
+                }
+
+                string[] elements = line.Split(' ');
+                for (int i = 0; i < elements.Length; i++)
+                {
+                    elements[i] = elements[i].Trim();
+                }
+
+                if (elements.Length <= 1)
+                {
+                    continue;
+                }
+
+                if (
+                    FALSE_PACKAGE_IDS.Contains(elements[0])
+                    || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
+                )
+                {
+                    continue;
+                }
+
+                packages.Add(
+                    new Package(
+                        CoreTools.FormatAsName(elements[0]),
+                        elements[0],
+                        elements[1],
+                        DefaultSource,
+                        this
+                    )
+                );
+            }
+
+            return packages;
+        }
+
         protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
         {
             using Process p = new()
@@ -166,50 +254,18 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
             p.Start();
 
             string? line;
-            List<Package> Packages = [];
+            List<string> lines = [];
             while ((line = p.StandardOutput.ReadLine()) is not null)
             {
                 logger.AddToStdOut(line);
-                if (!line.StartsWith("Chocolatey"))
-                {
-                    string[] elements = line.Split('|');
-                    for (int i = 0; i < elements.Length; i++)
-                    {
-                        elements[i] = elements[i].Trim();
-                    }
-
-                    if (elements.Length <= 2)
-                    {
-                        continue;
-                    }
-
-                    if (
-                        FALSE_PACKAGE_IDS.Contains(elements[0])
-                        || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
-                        || elements[1] == elements[2]
-                    )
-                    {
-                        continue;
-                    }
-
-                    Packages.Add(
-                        new Package(
-                            CoreTools.FormatAsName(elements[0]),
-                            elements[0],
-                            elements[1],
-                            elements[2],
-                            DefaultSource,
-                            this
-                        )
-                    );
-                }
+                lines.Add(line);
             }
 
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
             logger.Close(p.ExitCode);
 
-            return Packages;
+            return ParseAvailableUpdates(lines);
         }
 
         protected override IReadOnlyList<Package> _getInstalledPackages_UnSafe()
@@ -236,48 +292,18 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
             p.Start();
 
             string? line;
-            List<Package> Packages = [];
+            List<string> lines = [];
             while ((line = p.StandardOutput.ReadLine()) is not null)
             {
                 logger.AddToStdOut(line);
-                if (!line.StartsWith("Chocolatey"))
-                {
-                    string[] elements = line.Split(' ');
-                    for (int i = 0; i < elements.Length; i++)
-                    {
-                        elements[i] = elements[i].Trim();
-                    }
-
-                    if (elements.Length <= 1)
-                    {
-                        continue;
-                    }
-
-                    if (
-                        FALSE_PACKAGE_IDS.Contains(elements[0])
-                        || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
-                    )
-                    {
-                        continue;
-                    }
-
-                    Packages.Add(
-                        new Package(
-                            CoreTools.FormatAsName(elements[0]),
-                            elements[0],
-                            elements[1],
-                            DefaultSource,
-                            this
-                        )
-                    );
-                }
+                lines.Add(line);
             }
 
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
             logger.Close(p.ExitCode);
 
-            return Packages;
+            return ParseInstalledPackages(lines);
         }
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles()

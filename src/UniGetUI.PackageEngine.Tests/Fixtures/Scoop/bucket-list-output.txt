@@ -1,0 +1,5 @@
+Name    Source                                         Updated              Manifests
+----    ------                                         -------              ---------
+main    https://github.com/ScoopInstaller/Main.git     2024-02-01 12:34:56  1234
+extras  C:\Users\fixture\scoop\buckets\extras          2024-02-02 09:08:07  321
+invalid line

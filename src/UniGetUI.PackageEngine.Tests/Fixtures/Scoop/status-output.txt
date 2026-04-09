@@ -1,0 +1,6 @@
+Name      Installed  Latest
+----      ---------  ------
+git       2.47.1     2.48.1
+pwsh      7.4.6      7.5.0
+orphan    0.1.0      0.2.0
+WARN      failed     removed

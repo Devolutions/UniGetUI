@@ -7,6 +7,7 @@ using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.PackageClasses;
@@ -79,49 +80,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
             p.WaitForExit();
             logger.Close(p.ExitCode);
 
-            List<Package> Packages = [];
-
-            void TryAdd(JsonNode? node)
-            {
-                string? id = node?["name"]?.ToString();
-                string? version = node?["version"]?.ToString();
-                if (id is not null && version is not null)
-                    Packages.Add(new Package(CoreTools.FormatAsName(id), id, version, DefaultSource, this));
-            }
-
-            // npm may emit warning lines before the JSON payload (even with --json).
-            // npm v7+ outputs a JSON array; npm v6 and earlier outputs NDJSON (one object per line).
-            // Try JSON array first (find the first '['); fall back to NDJSON if parsing fails.
-            bool parsedAsArray = false;
-            int arrayStart = strContents.IndexOf('[');
-            if (arrayStart >= 0)
-            {
-                try
-                {
-                    JsonArray? results = JsonNode.Parse(strContents[arrayStart..]) as JsonArray;
-                    foreach (JsonNode? entry in results ?? [])
-                        TryAdd(entry);
-                    parsedAsArray = true;
-                }
-                catch (Exception e)
-                {
-                    Logger.Warn($"npm search JSON array parse failed, falling back to NDJSON: {e.Message}");
-                }
-            }
-
-            if (!parsedAsArray)
-            {
-                // NDJSON fallback (npm v6): one complete JSON object per line
-                foreach (string line in strContents.Split('\n'))
-                {
-                    string trimmed = line.Trim();
-                    if (!trimmed.StartsWith("{")) continue;
-                    try { TryAdd(JsonNode.Parse(trimmed)); }
-                    catch (Exception e) { Logger.Warn($"npm search NDJSON line parse failed: {e.Message}"); }
-                }
-            }
-
-            return Packages;
+            return ParseSearchOutput(strContents, DefaultSource, this);
         }
 
         protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
@@ -161,28 +120,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
 
                 string strContents = p.StandardOutput.ReadToEnd();
                 logger.AddToStdOut(strContents);
-                JsonObject? contents = null;
-                if (strContents.Any())
-                    contents = JsonNode.Parse(strContents) as JsonObject;
-                foreach (var (packageId, packageData) in contents?.ToDictionary() ?? [])
-                {
-                    string? version = packageData?["current"]?.ToString();
-                    string? newVersion = packageData?["latest"]?.ToString();
-                    if (version is not null && newVersion is not null)
-                    {
-                        Packages.Add(
-                            new Package(
-                                CoreTools.FormatAsName(packageId),
-                                packageId,
-                                version,
-                                newVersion,
-                                DefaultSource,
-                                this,
-                                options
-                            )
-                        );
-                    }
-                }
+                Packages.AddRange(ParseAvailableUpdatesOutput(strContents, DefaultSource, this, options));
 
                 logger.AddToStdErr(p.StandardError.ReadToEnd());
                 p.WaitForExit();
@@ -231,27 +169,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
 
                 string strContents = p.StandardOutput.ReadToEnd();
                 logger.AddToStdOut(strContents);
-                JsonObject? contents = null;
-                if (strContents.Any())
-                    contents =
-                        (JsonNode.Parse(strContents) as JsonObject)?["dependencies"] as JsonObject;
-                foreach (var (packageId, packageData) in contents?.ToDictionary() ?? [])
-                {
-                    string? version = packageData?["version"]?.ToString();
-                    if (version is not null)
-                    {
-                        Packages.Add(
-                            new Package(
-                                CoreTools.FormatAsName(packageId),
-                                packageId,
-                                version,
-                                DefaultSource,
-                                this,
-                                options
-                            )
-                        );
-                    }
-                }
+                Packages.AddRange(ParseInstalledPackagesOutput(strContents, DefaultSource, this, options));
 
                 logger.AddToStdErr(p.StandardError.ReadToEnd());
                 p.WaitForExit();
@@ -308,6 +226,129 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
             process.Start();
             version = process.StandardOutput.ReadToEnd().Trim();
             process.WaitForExit();
+        }
+
+        internal static IReadOnlyList<Package> ParseSearchOutput(
+            string output,
+            IManagerSource source,
+            IPackageManager manager
+        )
+        {
+            List<Package> packages = [];
+
+            void TryAdd(JsonNode? node)
+            {
+                string? id = node?["name"]?.ToString();
+                string? version = node?["version"]?.ToString();
+                if (id is not null && version is not null)
+                    packages.Add(new Package(CoreTools.FormatAsName(id), id, version, source, manager));
+            }
+
+            bool parsedAsArray = false;
+            int arrayStart = output.IndexOf('[');
+            if (arrayStart >= 0)
+            {
+                try
+                {
+                    JsonArray? results = JsonNode.Parse(output[arrayStart..]) as JsonArray;
+                    foreach (JsonNode? entry in results ?? [])
+                        TryAdd(entry);
+                    parsedAsArray = true;
+                }
+                catch (Exception e)
+                {
+                    Logger.Warn($"npm search JSON array parse failed, falling back to NDJSON: {e.Message}");
+                }
+            }
+
+            if (!parsedAsArray)
+            {
+                foreach (string line in output.Split('\n'))
+                {
+                    string trimmed = line.Trim();
+                    if (!trimmed.StartsWith("{"))
+                        continue;
+
+                    try
+                    {
+                        TryAdd(JsonNode.Parse(trimmed));
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Warn($"npm search NDJSON line parse failed: {e.Message}");
+                    }
+                }
+            }
+
+            return packages;
+        }
+
+        internal static IReadOnlyList<Package> ParseAvailableUpdatesOutput(
+            string output,
+            IManagerSource source,
+            IPackageManager manager,
+            OverridenInstallationOptions options
+        )
+        {
+            List<Package> packages = [];
+            if (!output.Any())
+                return packages;
+
+            JsonObject? contents = JsonNode.Parse(output) as JsonObject;
+            foreach (var (packageId, packageData) in contents?.ToDictionary() ?? [])
+            {
+                string? version = packageData?["current"]?.ToString();
+                string? newVersion = packageData?["latest"]?.ToString();
+                if (version is not null && newVersion is not null)
+                {
+                    packages.Add(
+                        new Package(
+                            CoreTools.FormatAsName(packageId),
+                            packageId,
+                            version,
+                            newVersion,
+                            source,
+                            manager,
+                            options
+                        )
+                    );
+                }
+            }
+
+            return packages;
+        }
+
+        internal static IReadOnlyList<Package> ParseInstalledPackagesOutput(
+            string output,
+            IManagerSource source,
+            IPackageManager manager,
+            OverridenInstallationOptions options
+        )
+        {
+            List<Package> packages = [];
+            if (!output.Any())
+                return packages;
+
+            JsonObject? contents = (JsonNode.Parse(output) as JsonObject)?["dependencies"] as JsonObject;
+            foreach (var (packageId, packageData) in contents?.ToDictionary() ?? [])
+            {
+                string? version = packageData?["version"]?.ToString();
+                if (version is not null)
+                {
+                    packages.Add(
+                        new Package(
+                            CoreTools.FormatAsName(packageId),
+                            packageId,
+                            version,
+                            source,
+                            manager,
+                            options
+                        )
+                    );
+                }
+            }
+
+            return packages;
         }
     }
 }

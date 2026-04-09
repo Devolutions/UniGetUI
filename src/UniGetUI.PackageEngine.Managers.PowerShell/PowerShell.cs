@@ -100,48 +100,18 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
             p.Start();
             string? line;
-            List<Package> Packages = [];
-            bool DashesPassed = false;
+            List<string> outputLines = [];
             while ((line = p.StandardOutput.ReadLine()) is not null)
             {
                 logger.AddToStdOut(line);
-                if (!DashesPassed)
-                {
-                    if (line.Contains("-----"))
-                    {
-                        DashesPassed = true;
-                    }
-                }
-                else
-                {
-                    string[] elements = Regex.Replace(line, " {2,}", " ").Split(' ');
-                    if (elements.Length < 3)
-                    {
-                        continue;
-                    }
-
-                    for (int i = 0; i < elements.Length; i++)
-                    {
-                        elements[i] = elements[i].Trim();
-                    }
-
-                    Packages.Add(
-                        new Package(
-                            CoreTools.FormatAsName(elements[1]),
-                            elements[1],
-                            elements[0],
-                            SourcesHelper.Factory.GetSourceOrDefault(elements[2]),
-                            this
-                        )
-                    );
-                }
+                outputLines.Add(line);
             }
 
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
             logger.Close(p.ExitCode);
 
-            return Packages;
+            return ParseInstalledPackages(outputLines, this);
         }
 
         public override List<string> FindCandidateExecutableFiles()
@@ -181,6 +151,51 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             };
             process.Start();
             version = process.StandardOutput.ReadToEnd().Trim();
+        }
+
+        internal static IReadOnlyList<Package> ParseInstalledPackages(
+            IEnumerable<string> outputLines,
+            PowerShell manager
+        )
+        {
+            List<Package> packages = [];
+            bool dashesPassed = false;
+
+            foreach (string rawLine in outputLines)
+            {
+                if (!dashesPassed)
+                {
+                    if (rawLine.Contains("-----"))
+                    {
+                        dashesPassed = true;
+                    }
+
+                    continue;
+                }
+
+                string[] elements = Regex.Replace(rawLine, " {2,}", " ").Split(' ');
+                if (elements.Length < 3)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < elements.Length; i++)
+                {
+                    elements[i] = elements[i].Trim();
+                }
+
+                packages.Add(
+                    new Package(
+                        CoreTools.FormatAsName(elements[1]),
+                        elements[1],
+                        elements[0],
+                        manager.SourcesHelper.Factory.GetSourceOrDefault(elements[2]),
+                        manager
+                    )
+                );
+            }
+
+            return packages;
         }
     }
 }

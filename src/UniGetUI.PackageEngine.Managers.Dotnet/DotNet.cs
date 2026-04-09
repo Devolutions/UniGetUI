@@ -5,6 +5,7 @@ using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.Managers.Chocolatey;
@@ -105,54 +106,18 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
                 );
                 p.Start();
 
+                List<string> outputLines = [];
                 string? line;
-                bool DashesPassed = false;
                 while ((line = p.StandardOutput.ReadLine()) is not null)
                 {
                     logger.AddToStdOut(line);
-                    if (!DashesPassed)
-                    {
-                        if (line.Contains("----"))
-                        {
-                            DashesPassed = true;
-                        }
-                    }
-                    else
-                    {
-                        string[] elements = Regex.Replace(line, " {2,}", " ").Split(' ');
-                        if (elements.Length < 2)
-                        {
-                            continue;
-                        }
-
-                        for (int i = 0; i < elements.Length; i++)
-                        {
-                            elements[i] = elements[i].Trim();
-                        }
-
-                        if (
-                            FALSE_PACKAGE_IDS.Contains(elements[0])
-                            || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
-                        )
-                        {
-                            continue;
-                        }
-
-                        Packages.Add(
-                            new Package(
-                                CoreTools.FormatAsName(elements[0]),
-                                elements[0],
-                                elements[1],
-                                DefaultSource,
-                                this,
-                                options
-                            )
-                        );
-                    }
+                    outputLines.Add(line);
                 }
                 logger.AddToStdErr(p.StandardError.ReadToEnd());
                 p.WaitForExit();
                 logger.Close(p.ExitCode);
+
+                Packages.AddRange(ParseInstalledPackages(outputLines, DefaultSource, this, options));
             }
             return Packages;
         }
@@ -210,6 +175,62 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
 
             process.Start();
             version = process.StandardOutput.ReadToEnd().Trim();
+        }
+
+        internal static IReadOnlyList<Package> ParseInstalledPackages(
+            IEnumerable<string> outputLines,
+            IManagerSource source,
+            IPackageManager manager,
+            OverridenInstallationOptions options
+        )
+        {
+            List<Package> packages = [];
+            bool dashesPassed = false;
+
+            foreach (string rawLine in outputLines)
+            {
+                if (!dashesPassed)
+                {
+                    if (rawLine.Contains("----"))
+                    {
+                        dashesPassed = true;
+                    }
+
+                    continue;
+                }
+
+                string[] elements = Regex.Replace(rawLine, " {2,}", " ").Split(' ');
+                if (elements.Length < 2)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < elements.Length; i++)
+                {
+                    elements[i] = elements[i].Trim();
+                }
+
+                if (
+                    FALSE_PACKAGE_IDS.Contains(elements[0])
+                    || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
+                )
+                {
+                    continue;
+                }
+
+                packages.Add(
+                    new Package(
+                        CoreTools.FormatAsName(elements[0]),
+                        elements[0],
+                        elements[1],
+                        source,
+                        manager,
+                        options
+                    )
+                );
+            }
+
+            return packages;
         }
     }
 }

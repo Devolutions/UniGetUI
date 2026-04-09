@@ -12,6 +12,20 @@ namespace UniGetUI.PackageEngine.Managers.Choco
         public ChocolateyDetailsHelper(BaseNuGet manager)
             : base(manager) { }
 
+        internal static IReadOnlyList<string> ParseInstallableVersions(IEnumerable<string> lines)
+        {
+            List<string> versions = [];
+            foreach (string line in lines)
+            {
+                if (line.Contains("[Approved]"))
+                {
+                    versions.Add(line.Split(' ')[1].Trim());
+                }
+            }
+
+            return versions;
+        }
+
         protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)
         {
             using Process p = new()
@@ -40,20 +54,17 @@ namespace UniGetUI.PackageEngine.Managers.Choco
             p.Start();
 
             string? line;
-            List<string> versions = [];
+            List<string> lines = [];
             while ((line = p.StandardOutput.ReadLine()) is not null)
             {
                 logger.AddToStdOut(line);
-                if (line.Contains("[Approved]"))
-                {
-                    versions.Add(line.Split(' ')[1].Trim());
-                }
+                lines.Add(line);
             }
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
             logger.Close(p.ExitCode);
 
-            return versions;
+            return ParseInstallableVersions(lines);
         }
 
         protected override string? GetInstallLocation_UnSafe(IPackage package)

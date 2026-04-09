@@ -1,0 +1,6 @@
+Package            Version    Latest     Type
+------------------ ---------- ---------- -----
+requests           2.31.0     2.32.3     wheel
+[notice]           invalid    invalid    wheel
+django-reqtools    1.0.0      1.1.0      wheel
+WARNING:           ignored    ignored    wheel

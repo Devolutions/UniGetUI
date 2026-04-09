@@ -45,16 +45,20 @@ public static class CLIHandler
 
     public static int ImportSettings()
     {
-        var args = Environment.GetCommandLineArgs().ToList();
+        return ImportSettings(Environment.GetCommandLineArgs());
+    }
 
-        var filePos = args.IndexOf(IMPORT_SETTINGS);
+    internal static int ImportSettings(IReadOnlyList<string> args)
+    {
+        var arguments = args.ToList();
+        var filePos = arguments.IndexOf(IMPORT_SETTINGS);
         if (filePos < 0)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The base paramater --import-settings was not found
 
-        if (filePos + 1 >= args.Count)
+        if (filePos + 1 >= arguments.Count)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The file parameter does not exist (import settings requires "--import-settings file")
 
-        var file = args[filePos + 1].Trim('"').Trim('\'');
+        var file = arguments[filePos + 1].Trim('"').Trim('\'');
         if (!File.Exists(file))
             return (int)HRESULT.STATUS_NO_SUCH_FILE; // The given file does not exist
 
@@ -72,16 +76,20 @@ public static class CLIHandler
 
     public static int ExportSettings()
     {
-        var args = Environment.GetCommandLineArgs().ToList();
+        return ExportSettings(Environment.GetCommandLineArgs());
+    }
 
-        var filePos = args.IndexOf(EXPORT_SETTINGS);
+    internal static int ExportSettings(IReadOnlyList<string> args)
+    {
+        var arguments = args.ToList();
+        var filePos = arguments.IndexOf(EXPORT_SETTINGS);
         if (filePos < 0)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The base paramater --export-settings was not found
 
-        if (filePos + 1 >= args.Count)
+        if (filePos + 1 >= arguments.Count)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The file parameter does not exist (export settings requires "--export-settings file")
 
-        var file = args[filePos + 1].Trim('"').Trim('\'');
+        var file = arguments[filePos + 1].Trim('"').Trim('\'');
 
         try
         {
@@ -97,16 +105,20 @@ public static class CLIHandler
 
     public static int EnableSetting()
     {
-        var args = Environment.GetCommandLineArgs().ToList();
+        return EnableSetting(Environment.GetCommandLineArgs());
+    }
 
-        var basePos = args.IndexOf(ENABLE_SETTING);
+    internal static int EnableSetting(IReadOnlyList<string> args)
+    {
+        var arguments = args.ToList();
+        var basePos = arguments.IndexOf(ENABLE_SETTING);
         if (basePos < 0)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The base paramater --export-settings was not found
 
-        if (basePos + 1 >= args.Count)
+        if (basePos + 1 >= arguments.Count)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The file parameter does not exist (export settings requires "--export-settings file")
 
-        var setting = args[basePos + 1].Trim('"').Trim('\'');
+        var setting = arguments[basePos + 1].Trim('"').Trim('\'');
         if (!Enum.TryParse(setting, out Settings.K validKey))
             return (int)HRESULT.STATUS_UNKNOWN__SETTINGS_KEY;
 
@@ -124,16 +136,20 @@ public static class CLIHandler
 
     public static int DisableSetting()
     {
-        var args = Environment.GetCommandLineArgs().ToList();
+        return DisableSetting(Environment.GetCommandLineArgs());
+    }
 
-        var basePos = args.IndexOf(DISABLE_SETTING);
+    internal static int DisableSetting(IReadOnlyList<string> args)
+    {
+        var arguments = args.ToList();
+        var basePos = arguments.IndexOf(DISABLE_SETTING);
         if (basePos < 0)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The base paramater --export-settings was not found
 
-        if (basePos + 1 >= args.Count)
+        if (basePos + 1 >= arguments.Count)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The file parameter does not exist (export settings requires "--export-settings file")
 
-        var setting = args[basePos + 1].Trim('"').Trim('\'');
+        var setting = arguments[basePos + 1].Trim('"').Trim('\'');
         if (!Enum.TryParse(setting, out Settings.K validKey))
             return (int)HRESULT.STATUS_UNKNOWN__SETTINGS_KEY;
         try
@@ -150,17 +166,21 @@ public static class CLIHandler
 
     public static int SetSettingsValue()
     {
-        var args = Environment.GetCommandLineArgs().ToList();
+        return SetSettingsValue(Environment.GetCommandLineArgs());
+    }
 
-        var basePos = args.IndexOf(SET_SETTING_VAL);
+    internal static int SetSettingsValue(IReadOnlyList<string> args)
+    {
+        var arguments = args.ToList();
+        var basePos = arguments.IndexOf(SET_SETTING_VAL);
         if (basePos < 0)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The base paramater --export-settings was not found
 
-        if (basePos + 2 >= args.Count)
+        if (basePos + 2 >= arguments.Count)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The file parameter does not exist (export settings requires "--export-settings file")
 
-        var setting = args[basePos + 1].Trim('"').Trim('\'');
-        var value = args[basePos + 2];
+        var setting = arguments[basePos + 1].Trim('"').Trim('\'');
+        var value = arguments[basePos + 2];
         if (!Enum.TryParse(setting, out Settings.K validKey))
             return (int)HRESULT.STATUS_UNKNOWN__SETTINGS_KEY;
 
@@ -255,16 +275,20 @@ public static class CLIHandler
 
     public static int EnableSecureSetting()
     {
-        var args = Environment.GetCommandLineArgs().ToList();
+        return EnableSecureSetting(Environment.GetCommandLineArgs());
+    }
 
-        var basePos = args.IndexOf(ENABLE_SECURE_SETTING);
+    internal static int EnableSecureSetting(IReadOnlyList<string> args)
+    {
+        var arguments = args.ToList();
+        var basePos = arguments.IndexOf(ENABLE_SECURE_SETTING);
         if (basePos < 0)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The base paramater was not found
 
-        if (basePos + 1 >= args.Count)
+        if (basePos + 1 >= arguments.Count)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The file parameter does not exist (export settings requires "--export-settings file")
 
-        var setting = args[basePos + 1].Trim('"').Trim('\'');
+        var setting = arguments[basePos + 1].Trim('"').Trim('\'');
         if (!Enum.TryParse(setting, out SecureSettings.K validKey))
             return (int)HRESULT.STATUS_UNKNOWN__SETTINGS_KEY;
 
@@ -284,16 +308,20 @@ public static class CLIHandler
 
     public static int DisableSecureSetting()
     {
-        var args = Environment.GetCommandLineArgs().ToList();
+        return DisableSecureSetting(Environment.GetCommandLineArgs());
+    }
 
-        var basePos = args.IndexOf(DISABLE_SECURE_SETTING);
+    internal static int DisableSecureSetting(IReadOnlyList<string> args)
+    {
+        var arguments = args.ToList();
+        var basePos = arguments.IndexOf(DISABLE_SECURE_SETTING);
         if (basePos < 0)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The base paramater was not found
 
-        if (basePos + 1 >= args.Count)
+        if (basePos + 1 >= arguments.Count)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The first positional argument does not exist
 
-        var setting = args[basePos + 1].Trim('"').Trim('\'');
+        var setting = arguments[basePos + 1].Trim('"').Trim('\'');
         if (!Enum.TryParse(setting, out SecureSettings.K validKey))
             return (int)HRESULT.STATUS_UNKNOWN__SETTINGS_KEY;
 
@@ -313,17 +341,21 @@ public static class CLIHandler
 
     public static int EnableSecureSettingForUser()
     {
-        var args = Environment.GetCommandLineArgs().ToList();
+        return EnableSecureSettingForUser(Environment.GetCommandLineArgs());
+    }
 
-        var basePos = args.IndexOf(ENABLE_SECURE_SETTING_FOR_USER);
+    internal static int EnableSecureSettingForUser(IReadOnlyList<string> args)
+    {
+        var arguments = args.ToList();
+        var basePos = arguments.IndexOf(ENABLE_SECURE_SETTING_FOR_USER);
         if (basePos < 0)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The base paramater was not found
 
-        if (basePos + 2 >= args.Count)
+        if (basePos + 2 >= arguments.Count)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The required parameters do not exist
 
-        var user = args[basePos + 1].Trim('"').Trim('\'');
-        var setting = args[basePos + 2].Trim('"').Trim('\'');
+        var user = arguments[basePos + 1].Trim('"').Trim('\'');
+        var setting = arguments[basePos + 2].Trim('"').Trim('\'');
 
         try
         {
@@ -337,17 +369,21 @@ public static class CLIHandler
 
     public static int DisableSecureSettingForUser()
     {
-        var args = Environment.GetCommandLineArgs().ToList();
+        return DisableSecureSettingForUser(Environment.GetCommandLineArgs());
+    }
 
-        var basePos = args.IndexOf(DISABLE_SECURE_SETTING_FOR_USER);
+    internal static int DisableSecureSettingForUser(IReadOnlyList<string> args)
+    {
+        var arguments = args.ToList();
+        var basePos = arguments.IndexOf(DISABLE_SECURE_SETTING_FOR_USER);
         if (basePos < 0)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The base paramater was not found
 
-        if (basePos + 2 >= args.Count)
+        if (basePos + 2 >= arguments.Count)
             return (int)HRESULT.STATUS_INVALID_PARAMETER; // The required parameters do not exist
 
-        var user = args[basePos + 1].Trim('"').Trim('\'');
-        var setting = args[basePos + 2].Trim('"').Trim('\'');
+        var user = arguments[basePos + 1].Trim('"').Trim('\'');
+        var setting = arguments[basePos + 2].Trim('"').Trim('\'');
 
         try
         {

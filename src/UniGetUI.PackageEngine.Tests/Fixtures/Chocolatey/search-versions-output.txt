@@ -1,0 +1,5 @@
+Chocolatey v2.4.3
+git 2.46.0 [Approved]
+git 2.47.0 [Approved]
+not-a-version line
+git 2.48.1 [Approved]

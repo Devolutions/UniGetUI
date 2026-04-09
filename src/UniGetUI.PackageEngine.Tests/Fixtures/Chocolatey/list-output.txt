@@ -1,0 +1,6 @@
+Chocolatey v2.4.3
+git 2.47.0
+Validation Failures:
+7zip 24.9.0
+Output is Id Version
+foo

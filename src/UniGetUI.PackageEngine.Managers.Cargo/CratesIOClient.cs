@@ -63,10 +63,11 @@ internal sealed class CargoManifestPublisher
 internal sealed class CratesIOClient
 {
     public const string ApiUrl = "https://crates.io/api/v1";
+    internal static string? TEST_ApiUrlOverride { private get; set; }
 
     public static Tuple<Uri, CargoManifest> GetManifest(string packageId)
     {
-        var manifestUrl = new Uri($"{ApiUrl}/crates/{packageId}");
+        var manifestUrl = new Uri($"{GetApiUrl()}/crates/{packageId}");
         var manifest = Fetch<CargoManifest>(manifestUrl);
         if (manifest.crate is null)
         {
@@ -77,7 +78,7 @@ internal sealed class CratesIOClient
 
     public static CargoManifestVersion GetManifestVersion(string packageId, string version)
     {
-        var manifestUrl = new Uri($"{ApiUrl}/crates/{packageId}/{version}");
+        var manifestUrl = new Uri($"{GetApiUrl()}/crates/{packageId}/{version}");
         var manifest = Fetch<CargoManifestVersionWrapper>(manifestUrl);
         if (manifest.version is null)
         {
@@ -86,7 +87,9 @@ internal sealed class CratesIOClient
         return manifest.version;
     }
 
-    private static T Fetch<T>(Uri url)
+    private static string GetApiUrl() => TEST_ApiUrlOverride ?? ApiUrl;
+
+    internal static T Fetch<T>(Uri url)
     {
         HttpClient client = new(CoreTools.GenericHttpClientParameters);
         client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);

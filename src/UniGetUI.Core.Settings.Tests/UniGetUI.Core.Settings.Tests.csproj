@@ -24,6 +24,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\UniGetUI.Core.Settings\UniGetUI.Core.Settings.csproj" />
+        <ProjectReference Include="..\UniGetUI.Core.SecureSettings\UniGetUI.Core.SecureSettings.csproj" />
     </ItemGroup>
 
     <ItemGroup>

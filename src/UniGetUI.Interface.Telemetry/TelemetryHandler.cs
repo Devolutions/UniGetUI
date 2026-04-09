@@ -36,6 +36,7 @@ public static class TelemetryHandler
     private static string _openSearchUsername = "";
     private static string _openSearchPassword = "";
     private static bool _credentialsWarningLogged;
+    internal static Func<HttpRequestMessage, Task<HttpResponseMessage>>? TestSendAsyncOverride;
 
     public static void Configure(string username, string password)
     {
@@ -119,45 +120,13 @@ public static class TelemetryHandler
                 .Select(m => m.Name)
                 .ToArray();
 
-            int settingsMagicValue = 0;
-            int mask = 0x1;
-            foreach (var setting in SettingsToSend)
-            {
-                bool enabled = Settings.Get(
-                    key: setting,
-                    invert: Settings.ResolveKey(setting).StartsWith("Disable"));
-
-                if (enabled)
-                    settingsMagicValue |= mask;
-                mask <<= 1;
-
-                if (mask == 0x1)
-                    throw new OverflowException();
-            }
-            foreach (var sp in new[] { "SP1", "SP2" })
-            {
-                bool enabled = sp switch
-                {
-                    "SP1" => File.Exists("ForceUniGetUIPortable"),
-                    "SP2" => CoreData.WasDaemon,
-                    _ => throw new NotImplementedException(),
-                };
-
-                if (enabled)
-                    settingsMagicValue |= mask;
-                mask <<= 1;
-
-                if (mask == 0x1)
-                    throw new OverflowException();
-            }
-
             var ev = new UniGetUIActivityEvent
             {
                 InstallID = GetRandomizedId(),
                 Locale = LanguageEngine.SelectedLocale,
                 EnabledManagers = enabledManagers,
                 FoundManagers = foundManagers,
-                ActiveSettings = settingsMagicValue,
+                ActiveSettings = ComputeActiveSettingsBitmask(),
                 Application = BuildApplicationInfo(),
                 Platform = BuildPlatformInfo(),
             };
@@ -169,6 +138,51 @@ public static class TelemetryHandler
             Logger.Error("[Telemetry] Hard crash in InitializeAsync");
             Logger.Error(ex);
         }
+    }
+
+    internal static int ComputeActiveSettingsBitmask()
+    {
+        int settingsMagicValue = 0;
+        int mask = 0x1;
+        foreach (var setting in SettingsToSend)
+        {
+            bool enabled = Settings.Get(
+                key: setting,
+                invert: Settings.ResolveKey(setting).StartsWith("Disable"));
+
+            if (enabled)
+                settingsMagicValue |= mask;
+            mask <<= 1;
+
+            if (mask == 0x1)
+                throw new OverflowException();
+        }
+        foreach (var sp in new[] { "SP1", "SP2" })
+        {
+            bool enabled = sp switch
+            {
+                "SP1" => File.Exists("ForceUniGetUIPortable"),
+                "SP2" => CoreData.WasDaemon,
+                _ => throw new NotImplementedException(),
+            };
+
+            if (enabled)
+                settingsMagicValue |= mask;
+            mask <<= 1;
+
+            if (mask == 0x1)
+                throw new OverflowException();
+        }
+
+        return settingsMagicValue;
+    }
+
+    internal static void ResetTestState()
+    {
+        _openSearchUsername = "";
+        _openSearchPassword = "";
+        _credentialsWarningLogged = false;
+        TestSendAsyncOverride = null;
     }
 
     // -------------------------------------------------------------------------
@@ -296,7 +310,9 @@ public static class TelemetryHandler
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
 
-            HttpResponseMessage response = await _httpClient.SendAsync(request);
+            HttpResponseMessage response = TestSendAsyncOverride is { } sendAsync
+                ? await sendAsync(request)
+                : await _httpClient.SendAsync(request);
 
             if (response.IsSuccessStatusCode)
                 Logger.Debug($"[Telemetry] Sent to {fullIndex}");

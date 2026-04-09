@@ -6,6 +6,8 @@ namespace UniGetUI.Core.SettingsEngine.SecureSettings;
 
 public static class SecureSettings
 {
+    public static string? TEST_SecureSettingsRootOverride { private get; set; }
+
     // Various predefined secure settings keys
     public enum K
     {
@@ -140,6 +142,11 @@ public static class SecureSettings
 
     private static string GetSecureSettingsRoot()
     {
+        if (TEST_SecureSettingsRootOverride is not null)
+        {
+            return TEST_SecureSettingsRootOverride;
+        }
+
         if (OperatingSystem.IsWindows())
         {
             return Path.Join(

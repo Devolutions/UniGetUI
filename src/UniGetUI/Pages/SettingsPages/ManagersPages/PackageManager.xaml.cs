@@ -34,6 +34,9 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
     /// </summary>
     public sealed partial class PackageManagerPage : Page, ISettingsPage
     {
+        private static readonly HashSet<string> _managersWithoutUpdateDate =
+            new(StringComparer.OrdinalIgnoreCase) { "Homebrew", "Scoop", "vcpkg" };
+
         IPackageManager? Manager;
         public event EventHandler? RestartRequired;
         public event EventHandler<Type>? NavigationRequested
@@ -423,6 +426,118 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 DisableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 1);
                 ExtraControls.Children.Add(DisableNotifsCard);
             }
+
+            // ── Per-manager minimum update age
+            ExtraControls.Children.Add(new TextBlock
+            {
+                Margin = new Thickness(4, 24, 4, 8),
+                FontWeight = new Windows.UI.Text.FontWeight(600),
+                Text = CoreTools.Translate("Update security"),
+            });
+
+            (string Label, string Value)[] ageItems =
+            [
+                (CoreTools.Translate("Use global setting"), ""),
+                (CoreTools.Translate("No minimum age"), "0"),
+                (CoreTools.Translate("1 day"), "1"),
+                (CoreTools.Translate("{0} days", 3), "3"),
+                (CoreTools.Translate("{0} days", 7), "7"),
+                (CoreTools.Translate("{0} days", 14), "14"),
+                (CoreTools.Translate("{0} days", 30), "30"),
+                (CoreTools.Translate("Custom..."), "custom"),
+            ];
+
+            var ageCombo = new ComboBox { MinWidth = 200 };
+            foreach (var (label, _) in ageItems)
+                ageCombo.Items.Add(label);
+
+            string? savedAgeVal = Settings.GetDictionaryItem<string, string>(
+                Settings.K.PerManagerMinimumUpdateAge, Manager.Name);
+            int savedAgeIdx = Array.FindIndex(ageItems, i => i.Value == (savedAgeVal ?? ""));
+            ageCombo.SelectedIndex = savedAgeIdx >= 0 ? savedAgeIdx : 0;
+
+            var customAgeInput = new TextBox
+            {
+                MinWidth = 200,
+                PlaceholderText = CoreTools.Translate("e.g. 10"),
+                Text = Settings.GetDictionaryItem<string, string>(
+                    Settings.K.PerManagerMinimumUpdateAgeCustom, Manager.Name) ?? "",
+            };
+            customAgeInput.TextChanged += (_, _) =>
+            {
+                string current = customAgeInput.Text ?? "";
+                string filtered = new string(current.Where(char.IsDigit).ToArray());
+                if (filtered != current)
+                {
+                    customAgeInput.Text = filtered;
+                    return;
+                }
+                if (filtered.Length > 0)
+                    Settings.SetDictionaryItem(
+                        Settings.K.PerManagerMinimumUpdateAgeCustom, Manager.Name, filtered);
+                else
+                    Settings.RemoveDictionaryKey<string, string>(
+                        Settings.K.PerManagerMinimumUpdateAgeCustom, Manager.Name);
+            };
+
+            bool initiallyCustomAge = savedAgeVal == "custom";
+            bool ageSupported = !_managersWithoutUpdateDate.Contains(Manager.Name);
+
+            object ageCardDescription = !ageSupported
+                ? new TextBlock
+                {
+                    Text = CoreTools.Translate(
+                            "{pm} does not provide release dates for its packages, so this setting will have no effect")
+                        .Replace("{pm}", Manager.DisplayName),
+                    Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                        Windows.UI.Color.FromArgb(255, 224, 82, 82)),
+                    TextWrapping = TextWrapping.Wrap,
+                    FontSize = 12,
+                }
+                : (object)CoreTools.Translate("Override the global minimum update age for this package manager");
+
+            ageCombo.IsEnabled = ageSupported;
+            customAgeInput.IsEnabled = ageSupported;
+
+            var minimumAgeCard = new SettingsCard
+            {
+                Header = CoreTools.Translate("Minimum age for updates"),
+                Description = ageCardDescription,
+                Content = ageCombo,
+                CornerRadius = initiallyCustomAge ? new CornerRadius(8, 8, 0, 0) : new CornerRadius(8),
+                BorderThickness = new Thickness(1),
+            };
+            var customAgeCard = new SettingsCard
+            {
+                Header = CoreTools.Translate("Custom minimum age (days)"),
+                Content = customAgeInput,
+                Visibility = initiallyCustomAge ? Visibility.Visible : Visibility.Collapsed,
+                CornerRadius = new CornerRadius(0, 0, 8, 8),
+                BorderThickness = new Thickness(1, 0, 1, 1),
+            };
+
+            ageCombo.SelectionChanged += (_, _) =>
+            {
+                int idx = ageCombo.SelectedIndex;
+                if (idx < 0) return;
+                string val = ageItems[idx].Value;
+
+                bool isCustom = val == "custom";
+                customAgeCard.Visibility = isCustom ? Visibility.Visible : Visibility.Collapsed;
+                minimumAgeCard.CornerRadius = isCustom
+                    ? new CornerRadius(8, 8, 0, 0)
+                    : new CornerRadius(8);
+
+                if (string.IsNullOrEmpty(val))
+                    Settings.RemoveDictionaryKey<string, string>(
+                        Settings.K.PerManagerMinimumUpdateAge, Manager.Name);
+                else
+                    Settings.SetDictionaryItem(
+                        Settings.K.PerManagerMinimumUpdateAge, Manager.Name, val);
+            };
+
+            ExtraControls.Children.Add(minimumAgeCard);
+            ExtraControls.Children.Add(customAgeCard);
 
             // Hide the AppExecutionAliasWarning element if Manager is not Pip
             if (Manager is Pip)

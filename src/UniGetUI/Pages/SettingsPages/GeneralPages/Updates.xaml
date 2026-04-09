@@ -83,6 +83,40 @@
       <widgets:TranslatedTextBlock
         Margin="4,32,4,8"
         FontWeight="SemiBold"
+        Text="Update security"
+      />
+
+      <widgets:ComboboxCard
+        x:Name="MinimumUpdateAgeSelector"
+        CornerRadius="8"
+        SettingName="MinimumUpdateAge"
+        Text="Minimum age for updates"
+      />
+
+      <controls:SettingsCard
+        x:Name="MinimumUpdateAgeCustomCard"
+        BorderThickness="1,0,1,1"
+        CornerRadius="0,0,8,8"
+        Visibility="Collapsed"
+      >
+        <controls:SettingsCard.Header>
+          <widgets:TranslatedTextBlock Text="Custom minimum age (days)" />
+        </controls:SettingsCard.Header>
+        <controls:SettingsCard.Content>
+          <TextBox x:Name="MinimumUpdateAgeCustomInput" MinWidth="200" />
+        </controls:SettingsCard.Content>
+      </controls:SettingsCard>
+
+      <ContentControl
+        x:Name="ReleaseDateCompatTableHolder"
+        HorizontalAlignment="Stretch"
+        HorizontalContentAlignment="Stretch"
+        Margin="0,8,0,0"
+      />
+
+      <widgets:TranslatedTextBlock
+        Margin="4,32,4,8"
+        FontWeight="SemiBold"
         Text="Related settings"
       />
 

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Interface.Enums;
@@ -50,6 +51,46 @@ namespace UniGetUI.PackageEngine.PackageLoader
             {
                 IgnoredPackages[package.Id] = package;
                 return false;
+            }
+
+            string? perManagerVal = Settings.GetDictionaryItem<string, string>(
+                Settings.K.PerManagerMinimumUpdateAge, package.Manager.Name);
+
+            int minimumAge = 0;
+            if (perManagerVal is { Length: > 0 })
+            {
+                if (perManagerVal == "custom")
+                    int.TryParse(
+                        Settings.GetDictionaryItem<string, string>(
+                            Settings.K.PerManagerMinimumUpdateAgeCustom, package.Manager.Name),
+                        out minimumAge);
+                else
+                    int.TryParse(perManagerVal, out minimumAge);
+            }
+            else
+            {
+                string globalVal = Settings.GetValue(Settings.K.MinimumUpdateAge);
+                if (globalVal == "custom")
+                    int.TryParse(
+                        Settings.GetValue(Settings.K.MinimumUpdateAgeCustom),
+                        out minimumAge);
+                else
+                    int.TryParse(globalVal, out minimumAge);
+            }
+
+            if (minimumAge > 0)
+            {
+                await package.Details.Load();
+                string? dateStr = package.Details.UpdateDate;
+                if (dateStr is { Length: > 0 } &&
+                    DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime releaseDate) &&
+                    (DateTime.UtcNow - releaseDate.ToUniversalTime()).TotalDays < minimumAge)
+                {
+                    Logger.Info(
+                        $"Suppressing update for {package.Id}: released {releaseDate:yyyy-MM-dd}, minimum age is {minimumAge} days"
+                    );
+                    return false;
+                }
             }
 
             return true;

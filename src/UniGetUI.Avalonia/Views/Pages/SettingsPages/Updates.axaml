@@ -58,6 +58,28 @@
                                    CornerRadius="0,0,8,8"
                                    IsEnabled="{Binding IsAutoCheckEnabled}"/>
 
+            <settings:TranslatedTextBlock Text="Update security"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"/>
+
+            <settings:ComboboxCard x:Name="MinimumUpdateAgeSelector"
+                                   SettingName="MinimumUpdateAge"
+                                   Text="{t:Translate Minimum age for updates}"
+                                   Description="{t:Translate Only show updates that are at least the specified number of days old}"
+                                   CornerRadius="8,8,8,8"/>
+
+            <settings:TextboxCard x:Name="MinimumUpdateAgeCustomInput"
+                                  SettingName="MinimumUpdateAgeCustom"
+                                  Text="{t:Translate Custom minimum age (days)}"
+                                  Placeholder="{t:Translate e.g. 10}"
+                                  IsNumericOnly="True"
+                                  IsVisible="{Binding IsCustomAgeSelected}"
+                                  BorderThickness="1,0,1,1"
+                                  CornerRadius="0,0,8,8"/>
+
+            <ContentControl x:Name="ReleaseDateCompatTableHolder"
+                            Margin="0,8,0,0"/>
+
             <settings:TranslatedTextBlock Text="Related settings"
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"/>

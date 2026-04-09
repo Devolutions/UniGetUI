@@ -85,6 +85,10 @@ public static partial class Settings
         DisableIntegrityChecks,
         UseLegacyElevator,
         WinGetForceLocationOnUpdate,
+        MinimumUpdateAge,
+        MinimumUpdateAgeCustom,
+        PerManagerMinimumUpdateAge,
+        PerManagerMinimumUpdateAgeCustom,
 
         Test1,
         Test2,
@@ -181,6 +185,10 @@ public static partial class Settings
             K.DisableIntegrityChecks => "DisableIntegrityChecks",
             K.UseLegacyElevator => "UseLegacyElevator",
             K.WinGetForceLocationOnUpdate => "WinGetForceLocationOnUpdate",
+            K.MinimumUpdateAge => "MinimumUpdateAge",
+            K.MinimumUpdateAgeCustom => "MinimumUpdateAgeCustom",
+            K.PerManagerMinimumUpdateAge => "PerManagerMinimumUpdateAge",
+            K.PerManagerMinimumUpdateAgeCustom => "PerManagerMinimumUpdateAgeCustom",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

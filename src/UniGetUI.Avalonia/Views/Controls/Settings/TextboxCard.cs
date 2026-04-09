@@ -35,6 +35,8 @@ public sealed partial class TextboxCard : SettingsCard
         }
     }
 
+    public bool IsNumericOnly { get; set; }
+
     public string Placeholder
     {
         set => _textbox.Watermark = value;
@@ -82,6 +84,17 @@ public sealed partial class TextboxCard : SettingsCard
     public void SaveValue()
     {
         string sanitizedText = _textbox.Text ?? "";
+
+        if (IsNumericOnly)
+        {
+            string filtered = string.Concat(sanitizedText.Where(char.IsDigit));
+            if (filtered != sanitizedText)
+            {
+                _textbox.Text = filtered; // triggers TextChanged → SaveValue again with clean text
+                return;
+            }
+            sanitizedText = filtered;
+        }
 
         if (CoreSettings.ResolveKey(setting_name).Contains("File"))
             sanitizedText = CoreTools.MakeValidFileName(sanitizedText);

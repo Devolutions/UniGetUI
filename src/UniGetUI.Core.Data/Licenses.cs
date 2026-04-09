@@ -93,7 +93,7 @@ namespace UniGetUI.Core.Data
             { "GSudo", new Uri("https://github.com/gerardog/gsudo/blob/master/LICENSE.txt") },
             {
                 "UniGetUI Elevator",
-                new Uri("https://github.com/marticliment/GSudo-for-UniGetUI/blob/main/LICENSE.txt")
+                new Uri("https://github.com/Devolutions/gsudo-distro/blob/master/LICENSE")
             },
             { "Icons", new Uri("https://icons8.com/license") },
         };
@@ -131,7 +131,7 @@ namespace UniGetUI.Core.Data
             { "vcpkg", new Uri("https://github.com/microsoft/vcpkg") },
             // Other
             { "GSudo", new Uri("https://github.com/gerardog/gsudo/") },
-            { "UniGetUI Elevator", new Uri("https://github.com/marticliment/GSudo-for-UniGetUI/") },
+            { "UniGetUI Elevator", new Uri("https://github.com/Devolutions/gsudo-distro") },
             { "Icons", new Uri("https://icons8.com") },
         };
     }

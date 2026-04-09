@@ -34,7 +34,9 @@
         <ElevatorPackageArchitecture Condition="'$(ElevatorPackageArchitecture)' == ''"
             >x64</ElevatorPackageArchitecture
         >
-        <ElevatorPackageExePath>$(PkgDevolutions_UniGetUI_Elevator)\runtimes\win-$(ElevatorPackageArchitecture)\native\UniGetUI Elevator.exe</ElevatorPackageExePath>
+        <ElevatorPackageNativePath>$(PkgDevolutions_UniGetUI_Elevator)\runtimes\win-$(ElevatorPackageArchitecture)\native</ElevatorPackageNativePath>
+        <ElevatorPackageExePath>$(ElevatorPackageNativePath)\UniGetUI Elevator.exe</ElevatorPackageExePath>
+        <ElevatorPackageDllPath>$(ElevatorPackageNativePath)\getfilesiginforedist.dll</ElevatorPackageDllPath>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -70,6 +72,10 @@
         <Error
             Condition="!Exists('$(ElevatorPackageExePath)')"
             Text="NuGet elevator executable not found at '$(ElevatorPackageExePath)'. Ensure package restore has completed for Devolutions.UniGetUI.Elevator."
+        />
+        <Error
+            Condition="!Exists('$(ElevatorPackageDllPath)')"
+            Text="NuGet elevator dependency DLL not found at '$(ElevatorPackageDllPath)'. Ensure package restore has completed for Devolutions.UniGetUI.Elevator."
         />
     </Target>
 
@@ -365,10 +371,14 @@
             <Pack>false</Pack>
         </Content>
         <Content
-            Update="Assets\Utilities\getfilesiginforedist.dll"
-            Condition="'$(Platform)' == 'x64'"
+            Include="$(ElevatorPackageDllPath)"
+            Link="Assets\Utilities\getfilesiginforedist.dll"
+            Condition="Exists('$(ElevatorPackageDllPath)')"
         >
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <Visible>false</Visible>
+            <Pack>false</Pack>
         </Content>
         <Content Update="Assets\Utilities\install_scoop.cmd">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

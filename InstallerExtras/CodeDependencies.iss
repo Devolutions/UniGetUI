@@ -228,7 +228,7 @@ end;
 procedure Dependency_AddVC2015To2022;
 begin
   // https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist
-  if not IsMsiProductInstalled(Dependency_String('{36F68A90-239C-34DF-B58C-64B30153CE35}', '{36F68A90-239C-34DF-B58C-64B30153CE35}'), PackVersionComponents(14, 30, 30704, 0)) then begin
+  if not IsMsiProductInstalled(Dependency_String('{91EE571B-0E8A-4C65-9EAF-2E2F5FC60C00}', '{91EE571B-0E8A-4C65-9EAF-2E2F5FC60C00}'), PackVersionComponents(14, 30, 30704, 0)) then begin
     Dependency_Add('vcredist2022' + Dependency_ArchSuffix + '.exe',
       '/passive /norestart',
       'Visual C++ 2015-2022 Redistributable (x64)' + Dependency_ArchTitle,

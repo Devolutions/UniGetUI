@@ -20,7 +20,7 @@
             <UserControl Height="16"/>
 
             <settings:CheckboxCard SettingName="DisableApi"
-                                   Text="{t:Translate Text='Enable background api (WingetUI Widgets and Sharing, port 7058)'}"
+                                   Text="{t:Translate Text='Enable background api (UniGetUI Widgets and Sharing, port 7058)'}"
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    BorderThickness="1,1,1,0"
                                    CornerRadius="8,8,0,0"/>

@@ -16,7 +16,7 @@ public class LibraryLicense
 public class ThirdPartyLicensesViewModel : ViewModelBase
 {
     public string LicensesIntro { get; } = CoreTools.Translate(
-        "WingetUI Uses the following libraries. Without them, WingetUI wouldn't have been possible.");
+        "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.");
 
     public ObservableCollection<LibraryLicense> Licenses { get; } = [];
 

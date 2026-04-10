@@ -38,7 +38,7 @@
         x:Name="DisableNotifications"
         CornerRadius="8"
         SettingName="DisableNotifications"
-        Text="Enable WingetUI notifications"
+        Text="Enable UniGetUI notifications"
       />
 
       <widgets:TranslatedTextBlock

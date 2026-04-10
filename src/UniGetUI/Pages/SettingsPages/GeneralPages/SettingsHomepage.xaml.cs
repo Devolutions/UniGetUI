@@ -14,7 +14,7 @@ namespace UniGetUI.Pages.SettingsPages
     public sealed partial class SettingsHomepage : Page, ISettingsPage
     {
         public bool CanGoBack => false;
-        public string ShortTitle => CoreTools.Translate("WingetUI Settings");
+        public string ShortTitle => CoreTools.Translate("UniGetUI Settings");
 
         public event EventHandler? RestartRequired
         {

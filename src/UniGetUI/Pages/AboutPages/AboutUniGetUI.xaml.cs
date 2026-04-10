@@ -16,7 +16,7 @@ namespace UniGetUI.Interface.Pages.AboutPages
         {
             InitializeComponent();
             VersionText.Text = CoreTools.Translate(
-                "You have installed WingetUI Version {0}",
+                "You have installed UniGetUI Version {0}",
                 CoreData.VersionName
             );
             DisclaimerBanner.Title = CoreTools.Translate("Disclaimer");

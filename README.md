@@ -17,7 +17,7 @@ With UniGetUI, you can discover, install, update, and uninstall software from mu
 ![image](https://github.com/user-attachments/assets/7cb447ca-ee8b-4bce-8561-b9332fb0139a)
 View more screenshots [here](#screenshots)
 
-Check out the [Supported Package Managers Table](#supported-package-managers) for more details!
+Check out the [Package Managers](#package-managers) section for more details!
 
 **Disclaimer:** UniGetUI is not affiliated with the package managers it integrates with. Packages are provided by third parties, so review sources and publishers before installation.
 
@@ -44,8 +44,8 @@ Read more in the [Devolutions announcement](https://devolutions.net/blog/2026/03
  - [Update UniGetUI](#update-unigetui)
  - [Project stewardship](#project-stewardship)
  - [Features](#features)
-   - [Supported Package Managers](#supported-package-managers)
- - [Translations](#translations)
+ - [Package Managers](#package-managers)
+ - [Translations](TRANSLATION.md)
  - [Contributors](#contributors)
  - [Screenshots](#screenshots)
  - [Frequently Asked Questions](#frequently-asked-questions)
@@ -102,7 +102,7 @@ UniGetUI has a built-in autoupdater. However, it can also be updated like any ot
  - Export custom lists of packages to then import them to another machine and install those packages with previously specified, custom installation parameters. Setting up machines or configuring a specific software setup has never been easier.
  - Backup your packages to a local file to easily recover your setup in a matter of seconds when migrating to a new machine*
 
-## Supported Package Managers
+## Package Managers
 
 **NOTE:** All package managers do support basic install, update, and uninstall processes, as well as checking for updates, finding new packages, and retrieving details from a package.
 
@@ -114,74 +114,11 @@ UniGetUI has a built-in autoupdater. However, it can also be updated like any ot
 ❌: Not supported by the Package Manager<br>
 <br>
 
-# Translations
+## Translations
 
-UniGetUI translations are maintained directly in this repository. All supported languages are kept at 100% completion with AI instead of shipping partial translations. If you spot a mistake or want to improve a translation, please open a GitHub issue or submit a pull request.
+UniGetUI translations are maintained directly in this repository. For the current language list, completion status, and per-language contributor attributions, see [TRANSLATION.md](TRANSLATION.md). If you spot a translation issue or want to improve a locale, please open an issue or submit a pull request.
 
-- <img src='https://flagcdn.com/za.svg' width=20> [Afrikaans](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_af.json)
-- <img src='https://flagcdn.com/al.svg' width=20> [Albanian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_sq.json)
-- <img src='https://flagcdn.com/sa.svg' width=20> [Arabic](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_ar.json)
-- <img src='https://flagcdn.com/bd.svg' width=20> [Bangla](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_bn.json)
-- <img src='https://flagcdn.com/by.svg' width=20> [Belarusian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_be.json)
-- <img src='https://flagcdn.com/bg.svg' width=20> [Bulgarian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_bg.json)
-- <img src='https://flagcdn.com/ad.svg' width=20> [Catalan](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_ca.json)
-- <img src='https://flagcdn.com/hr.svg' width=20> [Croatian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_hr.json)
-- <img src='https://flagcdn.com/cz.svg' width=20> [Czech](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_cs.json)
-- <img src='https://flagcdn.com/dk.svg' width=20> [Danish](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_da.json)
-- <img src='https://flagcdn.com/nl.svg' width=20> [Dutch](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_nl.json)
-- <img src='https://flagcdn.com/gb.svg' width=20> [English](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_en.json)
-- <img src='https://flagcdn.com/ee.svg' width=20> [Estonian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_et.json)
-- <img src='https://flagcdn.com/fil.svg' width=20> [Filipino](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_fil.json)
-- <img src='https://flagcdn.com/fi.svg' width=20> [Finnish](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_fi.json)
-- <img src='https://flagcdn.com/fr.svg' width=20> [French](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_fr.json)
-- <img src='https://flagcdn.com/ka.svg' width=20> [Georgian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_ka.json)
-- <img src='https://flagcdn.com/de.svg' width=20> [German](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_de.json)
-- <img src='https://flagcdn.com/gr.svg' width=20> [Greek](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_el.json)
-- <img src='https://flagcdn.com/in.svg' width=20> [Gujarati](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_gu.json)
-- <img src='https://flagcdn.com/il.svg' width=20> [Hebrew](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_he.json)
-- <img src='https://flagcdn.com/in.svg' width=20> [Hindi](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_hi.json)
-- <img src='https://flagcdn.com/hu.svg' width=20> [Hungarian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_hu.json)
-- <img src='https://flagcdn.com/id.svg' width=20> [Indonesian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_id.json)
-- <img src='https://flagcdn.com/it.svg' width=20> [Italian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_it.json)
-- <img src='https://flagcdn.com/jp.svg' width=20> [Japanese](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_ja.json)
-- <img src='https://flagcdn.com/in.svg' width=20> [Kannada](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_kn.json)
-- <img src='https://flagcdn.com/kr.svg' width=20> [Korean](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_ko.json)
-- <img src='https://flagcdn.com/lt.svg' width=20> [Lithuanian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_lt.json)
-- <img src='https://flagcdn.com/mk.svg' width=20> [Macedonian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_mk.json)
-- <img src='https://flagcdn.com/no.svg' width=20> [Norwegian (bokmal)](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_nb.json)
-- <img src='https://flagcdn.com/no.svg' width=20> [Norwegian (nynorsk)](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_nn.json)
-- <img src='https://flagcdn.com/ir.svg' width=20> [Persian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_fa.json)
-- <img src='https://flagcdn.com/pl.svg' width=20> [Polish](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_pl.json)
-- <img src='https://flagcdn.com/br.svg' width=20> [Portuguese (Brazil)](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_pt_BR.json)
-- <img src='https://flagcdn.com/pt.svg' width=20> [Portuguese (Portugal)](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_pt_PT.json)
-- <img src='https://flagcdn.com/ro.svg' width=20> [Romanian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_ro.json)
-- <img src='https://flagcdn.com/ru.svg' width=20> [Russian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_ru.json)
-- <img src='https://flagcdn.com/in.svg' width=20> [Sanskrit](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_sa.json)
-- <img src='https://flagcdn.com/rs.svg' width=20> [Serbian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_sr.json)
-- <img src='https://flagcdn.com/lk.svg' width=20> [Sinhala](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_si.json)
-- <img src='https://flagcdn.com/cn.svg' width=20> [Simplified Chinese (China)](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_zh_CN.json)
-- <img src='https://flagcdn.com/sk.svg' width=20> [Slovak](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_sk.json)
-- <img src='https://flagcdn.com/si.svg' width=20> [Slovene](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_sl.json)
-- <img src='https://flagcdn.com/es.svg' width=20> [Spanish](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_es.json)
-- <img src='https://flagcdn.com/se.svg' width=20> [Swedish](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_sv.json)
-- <img src='https://flagcdn.com/ph.svg' width=20> [Tagalog](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_tg.json)
-- <img src='https://flagcdn.com/ta.svg' width=20> [Tamil](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_ta.json)
-- <img src='https://flagcdn.com/th.svg' width=20> [Thai](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_th.json)
-- <img src='https://flagcdn.com/tw.svg' width=20> [Traditional Chinese (Taiwan)](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_zh_TW.json)
-- <img src='https://flagcdn.com/tr.svg' width=20> [Turkish](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_tr.json)
-- <img src='https://flagcdn.com/ua.svg' width=20> [Ukrainian](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_ua.json)
-- <img src='https://flagcdn.com/pk.svg' width=20> [Urdu](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_ur.json)
-- <img src='https://flagcdn.com/vn.svg' width=20> [Vietnamese](src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_vi.json)
-
-
-# Contributions
- UniGetUI wouldn't have been possible without the help of our dear contributors. From the person who fixed a typo to the person who improved half of the code, UniGetUI wouldn't be possible without them! :smile:<br><br>
-
-## Contributors:
- [![My dear contributors](https://contrib.rocks/image?repo=Devolutions/UniGetUI)](https://github.com/Devolutions/UniGetUI/graphs/contributors)<br><br>
- 
-
-# Screenshots
+## Screenshots
  
 ![image](media/UniGetUI_1.png)
 
@@ -204,7 +141,13 @@ UniGetUI translations are maintained directly in this repository. All supported 
 ![image](media/UniGetUI_10.png)
 
 
-# Frequently asked questions
+## Contributions
+UniGetUI continues to grow thanks to its community of contributors. Devolutions is grateful to everyone who contributes code, translations, documentation, testing, and feedback to the project.<br><br>
+
+[![Contributors](https://contrib.rocks/image?repo=Devolutions/UniGetUI)](https://github.com/Devolutions/UniGetUI/graphs/contributors)<br><br>
+
+
+## Frequently asked questions
 
 **Q: I am unable to install or upgrade a specific Winget package! What should I do?**<br>
 

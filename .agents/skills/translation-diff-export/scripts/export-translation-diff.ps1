@@ -12,6 +12,8 @@ param(
 
     [string]$OutputDir = 'generated/translation-diff-export',
 
+    [switch]$ActiveOnly,
+
     [switch]$KeepIntermediate
 )
 
@@ -326,6 +328,34 @@ function Sync-TranslatedWorkingCopy {
     Write-OrderedJsonMap -Path $TranslatedPatchPath -Map $syncedMap
 }
 
+function Get-FilteredPatchMap {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Collections.IDictionary]$Map,
+
+        [Parameter(Mandatory = $true)]
+        [System.Collections.IDictionary]$NeutralMap,
+
+        [Parameter(Mandatory = $true)]
+        [switch]$ActiveOnly
+    )
+
+    if (-not $ActiveOnly.IsPresent) {
+        return $Map
+    }
+
+    $activeKeys = Split-TranslationMapAtBoundary -Map $NeutralMap
+    $filteredMap = New-OrderedStringMap
+    foreach ($entry in $activeKeys.ActiveMap.GetEnumerator()) {
+        $key = [string]$entry.Key
+        if ($Map.Contains($key)) {
+            $filteredMap[$key] = [string]$Map[$key]
+        }
+    }
+
+    return $filteredMap
+}
+
 Assert-Command -Name 'git'
 Assert-Command -Name 'cirup'
 
@@ -431,6 +461,9 @@ foreach ($entry in $neutralMap.GetEnumerator()) {
     }
 }
 
+$sourcePatchMap = Get-FilteredPatchMap -Map $sourcePatchMap -NeutralMap $neutralMap -ActiveOnly:$ActiveOnly
+$referencePatchMap = Get-FilteredPatchMap -Map $referencePatchMap -NeutralMap $neutralMap -ActiveOnly:$ActiveOnly
+
 if (Test-Path -Path $sourcePatchPath -PathType Leaf) {
     $previousSourceMap = Read-OrderedJsonMap -Path $sourcePatchPath
 }
@@ -460,6 +493,9 @@ Write-Output "Created source patch: $sourcePatchPath"
 Write-Output "Refreshed translated working copy: $translatedPatchPath"
 Write-Output "Created reference patch: $referencePatchPath"
 Write-Output "Created translation handoff prompt: $promptPath"
+if ($ActiveOnly.IsPresent) {
+    Write-Output 'Patch scope: active translation keys only'
+}
 if ($KeepIntermediate.IsPresent) {
     Write-Output "Kept intermediate files under: $tmpRoot"
 }

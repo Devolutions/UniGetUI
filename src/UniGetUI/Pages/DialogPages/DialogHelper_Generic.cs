@@ -337,7 +337,7 @@ public static partial class DialogHelper
         AdminDialog.DefaultButton = ContentDialogButton.Primary;
         AdminDialog.Title = CoreTools.Translate("Administrator privileges");
         AdminDialog.Content = CoreTools.Translate(
-            "WingetUI has been ran as administrator, which is not recommended. When running WingetUI as administrator, EVERY operation launched from WingetUI will have administrator privileges. You can still use the program, but we highly recommend not running WingetUI with administrator privileges."
+            "UniGetUI has been ran as administrator, which is not recommended. When running UniGetUI as administrator, EVERY operation launched from UniGetUI will have administrator privileges. You can still use the program, but we highly recommend not running UniGetUI with administrator privileges."
         );
 
         await ShowDialogAsync(AdminDialog);
@@ -721,7 +721,7 @@ public static partial class DialogHelper
         var d = DialogFactory.Create();
         d.Title = CoreTools.Translate("Operation in progress");
         d.Content = CoreTools.Translate(
-            "There are ongoing operations. Quitting WingetUI may cause them to fail. Do you want to continue?"
+            "There are ongoing operations. Quitting UniGetUI may cause them to fail. Do you want to continue?"
         );
         d.PrimaryButtonText = CoreTools.Translate("Quit");
         d.SecondaryButtonText = CoreTools.Translate("Cancel");

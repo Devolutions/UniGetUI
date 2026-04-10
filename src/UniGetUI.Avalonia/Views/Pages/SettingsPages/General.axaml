@@ -24,7 +24,7 @@
                                           Margin="44,32,4,8"/>
 
             <settings:CheckboxButtonCard SettingName="DisableAutoUpdateWingetUI"
-                                         CheckboxText="{t:Translate Update WingetUI automatically}"
+                                         CheckboxText="{t:Translate Update UniGetUI automatically}"
                                          ButtonText="{t:Translate Check for updates}"
                                          ButtonAlwaysOn="True"
                                          CornerRadius="8,8,0,0"/>
@@ -62,7 +62,7 @@
                                  CommandParameter="{Binding $self}"/>
 
             <settings:ButtonCard CornerRadius="0,0,8,8"
-                                 Text="{t:Translate Reset WingetUI}"
+                                 Text="{t:Translate Reset UniGetUI}"
                                  ButtonText="{t:Translate Reset UniGetUI}"
                                  Command="{Binding ResetSettingsCommand}"
                                  CommandParameter="{Binding $self}"/>

@@ -11,11 +11,11 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Vertical" Spacing="4" Margin="16,8">
 
-            <TextBlock Text="{t:Translate About WingetUI}"
+            <TextBlock Text="{t:Translate About UniGetUI}"
                        FontSize="24"
                        FontWeight="Bold"/>
 
-            <TextBlock Text="{t:Translate Text='WingetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.'}"
+            <TextBlock Text="{t:Translate Text='UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.'}"
                        TextWrapping="Wrap"/>
 
             <TextBlock Text="{Binding VersionText}"

@@ -42,7 +42,7 @@ public partial class TranslatorEntry : ObservableObject
 public class TranslatorsViewModel : ViewModelBase
 {
     public string ThanksText { get; } = CoreTools.Translate(
-        "WingetUI has been translated to more than 40 languages thanks to the volunteer translators. Thank you 🤝");
+        "UniGetUI has been translated to more than 40 languages thanks to the volunteer translators. Thank you 🤝");
 
     public ObservableCollection<TranslatorEntry> TranslatorList { get; } = [];
 

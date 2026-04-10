@@ -258,7 +258,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                             "Utilities",
                             "install_scoop.cmd"
                         ),
-                        CoreTools.Translate("Scoop Installer - WingetUI")
+                        CoreTools.Translate("Scoop Installer - UniGetUI")
                     );
                     RestartRequired?.Invoke(this, new());
                 };
@@ -280,7 +280,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                             "Utilities",
                             "uninstall_scoop.cmd"
                         ),
-                        CoreTools.Translate("Scoop Uninstaller - WingetUI")
+                        CoreTools.Translate("Scoop Uninstaller - UniGetUI")
                     );
                     RestartRequired?.Invoke(this, new());
                 };
@@ -301,7 +301,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                             "Utilities",
                             "scoop_cleanup.cmd"
                         ),
-                        CoreTools.Translate("Clearing Scoop cache - WingetUI"),
+                        CoreTools.Translate("Clearing Scoop cache - UniGetUI"),
                         RunAsAdmin: true
                     );
                 };
@@ -642,7 +642,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                     .Translate("{pm} was not found!")
                     .Replace("{pm}", Manager.DisplayName);
                 ManagerStatusBar.Message = CoreTools
-                    .Translate("You may need to install {pm} in order to use it with WingetUI.")
+                    .Translate("You may need to install {pm} in order to use it with UniGetUI.")
                     .Replace("{pm}", Manager.DisplayName);
             }
         }

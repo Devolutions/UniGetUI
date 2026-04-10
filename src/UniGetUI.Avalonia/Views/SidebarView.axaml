@@ -198,7 +198,7 @@
                 </StackPanel>
                 <Button.Flyout>
                     <MenuFlyout Placement="RightEdgeAlignedTop">
-                        <MenuItem Header="{t:Translate WingetUI Log}" Command="{Binding RequestNavigationCommand}" CommandParameter="OwnLog"/>
+                        <MenuItem Header="{t:Translate UniGetUI Log}" Command="{Binding RequestNavigationCommand}" CommandParameter="OwnLog"/>
                         <MenuItem Header="{t:Translate Package Manager logs}" Command="{Binding RequestNavigationCommand}" CommandParameter="ManagerLog"/>
                         <MenuItem Header="{t:Translate Operation history}" Command="{Binding RequestNavigationCommand}" CommandParameter="OperationHistory"/>
                         <Separator/>

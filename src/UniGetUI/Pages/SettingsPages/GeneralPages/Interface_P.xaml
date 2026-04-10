@@ -55,7 +55,7 @@
         ButtonText="Open"
         Click="EditAutostartSettings_Click"
         CornerRadius="0,0,8,8"
-        Text="Manage WingetUI autostart behaviour from the Settings app"
+        Text="Manage UniGetUI autostart behaviour from the Settings app"
       />
 
       <widgets:TranslatedTextBlock Margin="4,32,4,8" FontWeight="SemiBold" Text="Package lists" />

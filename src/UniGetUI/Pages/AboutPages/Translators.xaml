@@ -23,7 +23,7 @@
         FontWeight="Bold"
         Text="Translators"
       />
-      <widgets:TranslatedTextBlock Text="WingetUI has been translated to more than 40 languages thanks to the volunteer translators. Thank you 🤝" />
+      <widgets:TranslatedTextBlock Text="UniGetUI has been translated to more than 40 languages thanks to the volunteer translators. Thank you 🤝" />
       <HyperlinkButton
         Grid.Column="2"
         Margin="0,4,0,4"

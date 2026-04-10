@@ -36,7 +36,7 @@
         CornerRadius="8,8,0,0"
         SettingName="DisableApi"
         StateChanged="ShowRestartBanner"
-        Text="Enable background api (WingetUI Widgets and Sharing, port 7058)"
+        Text="Enable background api (UniGetUI Widgets and Sharing, port 7058)"
       />
 
       <widgets:CheckboxCard

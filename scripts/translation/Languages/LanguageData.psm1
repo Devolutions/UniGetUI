@@ -12,6 +12,7 @@ $script:LanguageRemap = [ordered]@{
 }
 
 $script:LanguageFlagsRemap = [ordered]@{
+    'af' = 'za'
     'ar' = 'sa'
     'bs' = 'ba'
     'ca' = 'ad'
@@ -19,12 +20,19 @@ $script:LanguageFlagsRemap = [ordered]@{
     'da' = 'dk'
     'el' = 'gr'
     'en' = 'gb'
+    'eo' = 'https://upload.wikimedia.org/wikipedia/commons/f/f5/Flag_of_Esperanto.svg'
+    'es-MX' = 'mx'
     'et' = 'ee'
     'fa' = 'ir'
+    'fil' = 'ph'
+    'gl' = 'es'
     'he' = 'il'
     'hi' = 'in'
     'ja' = 'jp'
+    'ka' = 'ge'
     'ko' = 'kr'
+    'ku' = 'iq'
+    'mr' = 'in'
     'nb' = 'no'
     'nn' = 'no'
     'pt_BR' = 'br'
@@ -33,6 +41,7 @@ $script:LanguageFlagsRemap = [ordered]@{
     'sr' = 'rs'
     'sv' = 'se'
     'sl' = 'si'
+    'ta' = 'in'
     'vi' = 'vn'
     'zh_CN' = 'cn'
     'zh_TW' = 'tw'
@@ -227,6 +236,24 @@ function Get-LanguageFilePathMap {
 }
 
 function Get-MarkdownSupportLangs {
+    return Get-MarkdownTranslationsTable
+}
+
+function Get-MarkdownTranslationsTable {
+    param(
+        [switch]$IncludeZeroPercent,
+
+        [switch]$IncludeLanguageCode,
+
+        [switch]$IncludeFileColumn,
+
+        [bool]$IncludeTranslatedColumn = $true,
+
+        [bool]$IncludeCreditsColumn = $true,
+
+        [string]$MissingCreditsText = ''
+    )
+
     $languageReference = Get-LanguageReference
     $translationPercentages = Get-TranslatedPercentages
     $languageCredits = Get-LanguageCredits
@@ -234,8 +261,31 @@ function Get-MarkdownSupportLangs {
     $languagesDirectory = Get-LanguagesDirectoryPath
 
     $lines = New-Object System.Collections.Generic.List[string]
-    $lines.Add('| Language | Translated | Translator(s) |')
-    $lines.Add('| :-- | :-- | --- |')
+    $headers = @('Language')
+    $alignments = @(':--')
+
+    if ($IncludeLanguageCode.IsPresent) {
+        $headers += 'Code'
+        $alignments += ':--'
+    }
+
+    if ($IncludeTranslatedColumn) {
+        $headers += 'Translated'
+        $alignments += ':--'
+    }
+
+    if ($IncludeFileColumn.IsPresent) {
+        $headers += 'File'
+        $alignments += ':--'
+    }
+
+    if ($IncludeCreditsColumn) {
+        $headers += 'Contributor(s)'
+        $alignments += '---'
+    }
+
+    $lines.Add('| ' + ($headers -join ' | ') + ' |')
+    $lines.Add('| ' + ($alignments -join ' | ') + ' |')
 
     foreach ($entry in $languageReference.GetEnumerator()) {
         $languageCode = [string]$entry.Key
@@ -249,24 +299,83 @@ function Get-MarkdownSupportLangs {
         }
 
         $percentage = if ($translationPercentages.Contains($languageCode)) { [string]$translationPercentages[$languageCode] } else { '100%' }
-        if ($percentage -eq '0%') {
+        if ($percentage -eq '0%' -and -not $IncludeZeroPercent.IsPresent) {
             continue
         }
 
         $languageName = [string]$entry.Value
         $flag = if ($flagRemap.Contains($languageCode)) { [string]$flagRemap[$languageCode] } else { $languageCode }
-        $credits = if ($languageCredits.Contains($languageCode)) {
-            ConvertTo-TranslatorMarkdown -Translators $languageCredits[$languageCode]
-        }
-        else {
-            ''
+        $credits = ''
+        if ($IncludeCreditsColumn) {
+            $credits = if ($languageCredits.Contains($languageCode)) {
+                ConvertTo-TranslatorMarkdown -Translators $languageCredits[$languageCode]
+            }
+            else {
+                ''
+            }
+
+            if ([string]::IsNullOrWhiteSpace($credits) -and -not [string]::IsNullOrWhiteSpace($MissingCreditsText)) {
+                $credits = $MissingCreditsText
+            }
         }
 
-        $lines.Add("| <img src='https://flagcdn.com/$flag.svg' width=20> &nbsp; $languageName | $percentage | $credits |")
+        $flagImageSource = if ([string]$flag -match '^[a-z]+://') { [string]$flag } else { "https://flagcdn.com/$flag.svg" }
+
+        $row = New-Object System.Collections.Generic.List[string]
+        $row.Add("<img src='$flagImageSource' width=20> &nbsp; $languageName")
+
+        if ($IncludeLanguageCode.IsPresent) {
+            $row.Add(('`{0}`' -f $languageCode))
+        }
+
+        if ($IncludeTranslatedColumn) {
+            $row.Add($percentage)
+        }
+
+        if ($IncludeFileColumn.IsPresent) {
+            $relativeLanguageFilePath = (Join-Path 'src/UniGetUI.Core.LanguageEngine/Assets/Languages' ("lang_{0}.json" -f $languageCode)) -replace '\\', '/'
+            $row.Add("[lang_$languageCode.json]($relativeLanguageFilePath)")
+        }
+
+        if ($IncludeCreditsColumn) {
+            $row.Add($credits)
+        }
+
+        $lines.Add('| ' + ($row -join ' | ') + ' |')
     }
 
     $lines.Add('')
     return ($lines -join [Environment]::NewLine)
+}
+
+function Get-TranslationDocumentationMarkdown {
+    $coverageTable = Get-MarkdownTranslationsTable -IncludeZeroPercent -IncludeLanguageCode -IncludeFileColumn -IncludeCreditsColumn:$false
+    $contributorsTable = Get-MarkdownTranslationsTable -IncludeZeroPercent -IncludeLanguageCode -IncludeTranslatedColumn:$false
+
+    $sections = @(
+        '# Translations',
+        '',
+        'UniGetUI includes translations for the languages listed below.',
+        '',
+        'This page lists the supported languages, each locale file, current completion status, and the credited contributors for each translation.',
+        '',
+        'If you would like to help improve a translation or report an issue, please open an issue or submit a pull request.',
+        '',
+        'Translation discussion and coordination also happens in [GitHub discussion #4510](https://github.com/Devolutions/UniGetUI/discussions/4510).',
+        '',
+        '## Language Coverage',
+        '',
+        $coverageTable.TrimEnd(),
+        '',
+        '## Contributors',
+        '',
+        'We are grateful to everyone who contributes translations to UniGetUI. Contributor credits are sourced from [Translators.json](src/UniGetUI.Core.LanguageEngine/Assets/Data/Translators.json). If you would like to be added to or removed from the list for a particular language, please open a pull request.',
+        '',
+        $contributorsTable.TrimEnd(),
+        ''
+    )
+
+    return (($sections -join [Environment]::NewLine) + [Environment]::NewLine)
 }
 
 Export-ModuleMember -Function @(
@@ -285,5 +394,7 @@ Export-ModuleMember -Function @(
     'Get-TranslatorsFromCredits',
     'ConvertTo-TranslatorMarkdown',
     'Get-MarkdownSupportLangs',
+    'Get-MarkdownTranslationsTable',
+    'Get-TranslationDocumentationMarkdown',
     'Get-LanguageFilePathMap'
 )

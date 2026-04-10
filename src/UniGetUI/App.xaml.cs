@@ -185,7 +185,7 @@ namespace UniGetUI
                             "An interal error occurred. Please view the log for further details."
                         );
                         MainWindow.ErrorBanner.IsOpen = true;
-                        Button button = new() { Content = CoreTools.Translate("WingetUI Log") };
+                        Button button = new() { Content = CoreTools.Translate("UniGetUI Log") };
                         button.Click += (sender, args) =>
                             MainWindow.NavigationPage.UniGetUILogs_Click(sender, args);
                         MainWindow.ErrorBanner.ActionButton = button;
@@ -233,7 +233,7 @@ namespace UniGetUI
                                 "An interal error occurred. Please view the log for further details."
                             );
                             MainWindow.ErrorBanner.IsOpen = true;
-                            Button button = new() { Content = CoreTools.Translate("WingetUI Log") };
+                            Button button = new() { Content = CoreTools.Translate("UniGetUI Log") };
                             if (MainWindow.NavigationPage is not null)
                             { // MainWindow.NavigationPage could have not been loaded yet
                                 button.Click += (s, a) =>

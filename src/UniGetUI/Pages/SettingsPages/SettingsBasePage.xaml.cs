@@ -46,12 +46,12 @@ namespace UniGetUI.Pages.SettingsPages
             );
 
             RestartRequired.Message = CoreTools.Translate(
-                "Restart WingetUI to fully apply changes"
+                "Restart UniGetUI to fully apply changes"
             );
             var RestartButton = new Button
             {
                 HorizontalAlignment = HorizontalAlignment.Right,
-                Content = CoreTools.Translate("Restart WingetUI"),
+                Content = CoreTools.Translate("Restart UniGetUI"),
             };
             RestartButton.Click += (_, _) => MainApp.Instance.KillAndRestart();
             RestartRequired.ActionButton = RestartButton;

@@ -126,7 +126,7 @@ public partial class PackageManagerViewModel : ViewModelBase
         {
             Severity = ManagerStatusSeverity.Error;
             StatusTitle = CoreTools.Translate("{pm} was not found!").Replace("{pm}", Manager.DisplayName);
-            StatusMessage = CoreTools.Translate("You may need to install {pm} in order to use it with WingetUI.").Replace("{pm}", Manager.DisplayName);
+            StatusMessage = CoreTools.Translate("You may need to install {pm} in order to use it with UniGetUI.").Replace("{pm}", Manager.DisplayName);
         }
 
         StatusMessageVisible = !string.IsNullOrEmpty(StatusMessage);
@@ -138,7 +138,7 @@ public partial class PackageManagerViewModel : ViewModelBase
     {
         _ = CoreTools.LaunchBatchFile(
             Path.Join(CoreData.UniGetUIExecutableDirectory, "Assets", "Utilities", "install_scoop.cmd"),
-            CoreTools.Translate("Scoop Installer - WingetUI"));
+            CoreTools.Translate("Scoop Installer - UniGetUI"));
         RestartRequired?.Invoke(this, EventArgs.Empty);
     }
 
@@ -147,7 +147,7 @@ public partial class PackageManagerViewModel : ViewModelBase
     {
         _ = CoreTools.LaunchBatchFile(
             Path.Join(CoreData.UniGetUIExecutableDirectory, "Assets", "Utilities", "uninstall_scoop.cmd"),
-            CoreTools.Translate("Scoop Uninstaller - WingetUI"));
+            CoreTools.Translate("Scoop Uninstaller - UniGetUI"));
         RestartRequired?.Invoke(this, EventArgs.Empty);
     }
 
@@ -156,7 +156,7 @@ public partial class PackageManagerViewModel : ViewModelBase
     {
         _ = CoreTools.LaunchBatchFile(
             Path.Join(CoreData.UniGetUIExecutableDirectory, "Assets", "Utilities", "scoop_cleanup.cmd"),
-            CoreTools.Translate("Clearing Scoop cache - WingetUI"),
+            CoreTools.Translate("Clearing Scoop cache - UniGetUI"),
             RunAsAdmin: true);
     }
 

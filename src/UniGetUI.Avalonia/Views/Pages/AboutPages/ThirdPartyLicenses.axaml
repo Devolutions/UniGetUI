@@ -11,11 +11,11 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Vertical" Spacing="4" Margin="16,8">
 
-            <TextBlock Text="{t:Translate WingetUI License}"
+            <TextBlock Text="{t:Translate UniGetUI License}"
                        FontSize="24"
                        FontWeight="Bold"/>
 
-            <TextBlock Text="{t:Translate Text='Using WingetUI implies the acceptation of the MIT License'}"
+            <TextBlock Text="{t:Translate Text='Using UniGetUI implies the acceptation of the MIT License'}"
                        TextWrapping="Wrap"/>
 
             <TextBlock Text="{t:Translate Third-party licenses}"

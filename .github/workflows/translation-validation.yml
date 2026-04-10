@@ -1,0 +1,48 @@
+name: Translation Validation
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'scripts/translation/**'
+      - '.agents/skills/translation-*/scripts/**'
+      - 'src/UniGetUI.Core.LanguageEngine/Assets/Languages/**'
+      - 'src/UniGetUI.Core.LanguageEngine/Assets/Data/LanguagesReference.json'
+      - 'src/UniGetUI.Core.LanguageEngine/Assets/Data/TranslatedPercentages.json'
+      - 'src/UniGetUI.Core.LanguageEngine/Assets/Data/Translators.json'
+      - 'src/UniGetUI.Core.Data/Assets/Data/Contributors.list'
+      - '.github/workflows/translation-validation.yml'
+
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'scripts/translation/**'
+      - '.agents/skills/translation-*/scripts/**'
+      - 'src/UniGetUI.Core.LanguageEngine/Assets/Languages/**'
+      - 'src/UniGetUI.Core.LanguageEngine/Assets/Data/LanguagesReference.json'
+      - 'src/UniGetUI.Core.LanguageEngine/Assets/Data/TranslatedPercentages.json'
+      - 'src/UniGetUI.Core.LanguageEngine/Assets/Data/Translators.json'
+      - 'src/UniGetUI.Core.Data/Assets/Data/Contributors.list'
+      - '.github/workflows/translation-validation.yml'
+
+  workflow_dispatch:
+
+jobs:
+  validate-translations:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v6
+
+    - name: Validate translation file structure
+      shell: pwsh
+      run: pwsh ./scripts/translation/Verify-Translations.ps1
+
+    - name: Validate boundary alignment
+      shell: pwsh
+      run: pwsh ./scripts/translation/Set-TranslationBoundaryOrder.ps1 -CheckOnly
+
+    - name: Validate translation metadata drift
+      shell: pwsh
+      run: pwsh ./scripts/translation/Sync-TranslationMetadata.ps1 -AllLanguages -CheckOnly

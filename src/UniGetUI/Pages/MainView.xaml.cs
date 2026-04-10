@@ -528,7 +528,7 @@ namespace UniGetUI.Interface
         )
         {
             (VersionMenuItem as MenuFlyoutItem).Text = CoreTools.Translate(
-                "WingetUI Version {0}",
+                "UniGetUI Version {0}",
                 CoreData.VersionName
             );
             MoreNavButtonMenu.ShowAt(sender as FrameworkElement);

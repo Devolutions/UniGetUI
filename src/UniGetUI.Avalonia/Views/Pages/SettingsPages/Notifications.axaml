@@ -24,7 +24,7 @@
                        IsVisible="{Binding IsSystemTrayWarningVisible}"/>
 
             <settings:CheckboxCard SettingName="DisableNotifications"
-                                   Text="{t:Translate Enable WingetUI notifications}"
+                                   Text="{t:Translate Enable UniGetUI notifications}"
                                    StateChangedCommand="{Binding UpdateNotificationsEnabledCommand}"
                                    CornerRadius="8"
                                    IsEnabled="{Binding IsSystemTrayWarningVisible, Converter={x:Static BoolConverters.Not}}"/>

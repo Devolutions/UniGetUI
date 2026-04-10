@@ -484,9 +484,9 @@ namespace UniGetUI.Interface
                 { InstalledPackages, CoreTools.Translate("Installed Packages") },
                 {
                     AboutUniGetUI,
-                    CoreTools.Translate("WingetUI Version {0}", CoreData.VersionName)
+                    CoreTools.Translate("UniGetUI Version {0}", CoreData.VersionName)
                 },
-                { ShowUniGetUI, CoreTools.Translate("Show WingetUI") },
+                { ShowUniGetUI, CoreTools.Translate("Show UniGetUI") },
                 { QuitUniGetUI, CoreTools.Translate("Quit") },
             };
 
@@ -525,7 +525,7 @@ namespace UniGetUI.Interface
                 NavigationPage.NavigateTo(PageType.Installed);
                 Activate();
             };
-            AboutUniGetUI.Label = CoreTools.Translate("WingetUI Version {0}", CoreData.VersionName);
+            AboutUniGetUI.Label = CoreTools.Translate("UniGetUI Version {0}", CoreData.VersionName);
             ShowUniGetUI.ExecuteRequested += (_, _) =>
             {
                 Activate();

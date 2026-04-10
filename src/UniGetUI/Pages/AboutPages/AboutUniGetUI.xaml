@@ -22,9 +22,9 @@
         FontFamily="Segoe UI Variable Display"
         FontSize="24"
         FontWeight="Bold"
-        Text="About WingetUI"
+        Text="About UniGetUI"
       />
-      <widgets:TranslatedTextBlock Text="WingetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers." />
+      <widgets:TranslatedTextBlock Text="UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers." />
       <TextBlock
         x:Name="VersionText"
         Margin="0,10,0,10"
@@ -50,7 +50,7 @@
         HorizontalAlignment="Stretch"
         NavigateUri="https://devolutions.net/unigetui"
       >
-        <widgets:TranslatedTextBlock Text="WingetUI Homepage" />
+        <widgets:TranslatedTextBlock Text="UniGetUI Homepage" />
       </HyperlinkButton>
       <HyperlinkButton
         HorizontalAlignment="Stretch"
@@ -62,7 +62,7 @@
         HorizontalAlignment="Stretch"
         NavigateUri="https://github.com/Devolutions/UniGetUI/"
       >
-        <widgets:TranslatedTextBlock Text="WingetUI Repository" />
+        <widgets:TranslatedTextBlock Text="UniGetUI Repository" />
       </HyperlinkButton>
     </StackPanel>
   </ScrollView>

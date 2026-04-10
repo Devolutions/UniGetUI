@@ -87,6 +87,15 @@ function Get-CompletionPercentage {
     return [int][Math]::Round(($Completed / $Total) * 100, 0, [MidpointRounding]::AwayFromZero)
 }
 
+function Test-KnownPlaceholderLocale {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$LanguageCode
+    )
+
+    return $false
+}
+
 function Test-IntentionalSourceEqualValue {
     param(
         [Parameter(Mandatory = $true)]
@@ -148,6 +157,17 @@ function Test-IntentionalSourceEqualValue {
         'Local',
         'No',
         'URL'
+    )) {
+        return $true
+    }
+
+    if ($LanguageCode -ceq 'es-MX' -and $SourceValue -ceq $TargetValue -and $SourceValue -in @(
+        'Error',
+        'Global',
+        'Local',
+        'No',
+        'URL',
+        'Url'
     )) {
         return $true
     }
@@ -355,6 +375,19 @@ function Get-TranslationStatusRow {
         }
     }
 
+    $isKnownPlaceholder = Test-KnownPlaceholderLocale -LanguageCode $LanguageCode
+    $sourceEqualThreshold = if ($totalKeys -le 0) {
+        0
+    }
+    else {
+        [int][Math]::Max(
+            [double]($totalKeys - 5),
+            [Math]::Ceiling($totalKeys * 0.98)
+        )
+    }
+
+    $potentialFallbackRegression = $HasFile -and -not $isKnownPlaceholder -and $sourceEqualKeys -ge $sourceEqualThreshold -and $translatedKeys -le 5
+
     $completion = Get-CompletionPercentage -Completed $translatedKeys -Total $totalKeys
     $storedText = if ($null -eq $StoredPercentage) { '' } else { '{0}%' -f $StoredPercentage }
     $delta = if ($null -eq $StoredPercentage) { $null } else { $completion - $StoredPercentage }
@@ -378,6 +411,8 @@ function Get-TranslationStatusRow {
         Stored = $storedText
         StoredValue = $StoredPercentage
         Delta = $delta
+        KnownPlaceholder = $isKnownPlaceholder
+        PotentialFallbackRegression = $potentialFallbackRegression
     }
 }
 
@@ -403,6 +438,7 @@ function Convert-RowsToMarkdown {
 function Write-OutputContent {
     param(
         [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
         [string]$Content
     )
 
@@ -438,13 +474,24 @@ function Get-OverviewLines {
     $totalMissing = ($Rows | Measure-Object -Property Missing -Sum).Sum
     $totalEmpty = ($Rows | Measure-Object -Property Empty -Sum).Sum
     $totalSourceEqual = ($Rows | Measure-Object -Property SourceEqual -Sum).Sum
+    $placeholderRows = @($Rows | Where-Object { $_.KnownPlaceholder })
+    $potentialRegressionRows = @($Rows | Where-Object { $_.PotentialFallbackRegression })
 
-    return @(
-        ('Languages: {0}' -f $Rows.Count),
-        ('Incomplete: {0}' -f $incompleteCount),
-        ('Fully translated: {0}' -f $completeCount),
-        ('Outstanding entries: {0} (missing {1}, empty {2}, source-equal {3})' -f $totalUntranslated, $totalMissing, $totalEmpty, $totalSourceEqual)
-    )
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.Add(('Languages: {0}' -f $Rows.Count))
+    $lines.Add(('Incomplete: {0}' -f $incompleteCount))
+    $lines.Add(('Fully translated: {0}' -f $completeCount))
+    $lines.Add(('Outstanding entries: {0} (missing {1}, empty {2}, source-equal {3})' -f $totalUntranslated, $totalMissing, $totalEmpty, $totalSourceEqual))
+
+    if ($placeholderRows.Count -gt 0) {
+        $lines.Add(('Known placeholders: {0}' -f (($placeholderRows | ForEach-Object { $_.Code }) -join ', ')))
+    }
+
+    if ($potentialRegressionRows.Count -gt 0) {
+        $lines.Add(('Potential fallback regressions: {0}' -f (($potentialRegressionRows | ForEach-Object { $_.Code }) -join ', ')))
+    }
+
+    return $lines.ToArray()
 }
 
 $languagesDirectory = Get-LanguagesDirectoryPath
@@ -490,7 +537,13 @@ $orderedRows = @(
 
 switch ($OutputFormat) {
     'Json' {
-        $json = $orderedRows | ConvertTo-Json -Depth 5
+        $json = if ($orderedRows.Count -eq 0) {
+            '[]'
+        }
+        else {
+            $orderedRows | ConvertTo-Json -Depth 5
+        }
+
         Write-OutputContent -Content $json
     }
     'Markdown' {

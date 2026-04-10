@@ -103,7 +103,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 );
                 string file = picker.Show(
                     ["*.json"],
-                    CoreTools.Translate("WingetUI Settings") + ".json"
+                    CoreTools.Translate("UniGetUI Settings") + ".json"
                 );
 
                 if (file != string.Empty)

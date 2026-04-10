@@ -35,7 +35,7 @@
                 <settings:ButtonCard x:Name="EditAutostartSettings"
                                      CornerRadius="0,0,8,8"
                                      BorderThickness="1,0,1,1"
-                                     Text="{t:Translate Manage WingetUI autostart behaviour}"
+                                     Text="{t:Translate Manage UniGetUI autostart behaviour}"
                                      ButtonText="{t:Translate Open}"
                                      Command="{Binding EditAutostartSettingsCommand}"/>
             </StackPanel>

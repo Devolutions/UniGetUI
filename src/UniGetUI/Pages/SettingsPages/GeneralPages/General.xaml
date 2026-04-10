@@ -28,7 +28,7 @@
         x:Name="LanguageSelector"
         CornerRadius="8"
         SettingName="PreferredLanguage"
-        Text="WingetUI display language:"
+        Text="UniGetUI display language:"
         ValueChanged="ShowRestartBanner"
       >
         <Toolkit:SettingsCard.Description>
@@ -65,7 +65,7 @@
       <widgets:CheckboxButtonCard
         ButtonAlwaysOn="true"
         ButtonText="Check for updates"
-        CheckboxText="Update WingetUI automatically"
+        CheckboxText="Update UniGetUI automatically"
         Click="ForceUpdateUniGetUI_OnClick"
         CornerRadius="8,8,0,0"
         SettingName="DisableAutoUpdateWingetUI"
@@ -109,7 +109,7 @@
         ButtonText="Reset UniGetUI"
         Click="ResetWingetUI"
         CornerRadius="0,0,8,8"
-        Text="Reset WingetUI"
+        Text="Reset UniGetUI"
       />
 
       <widgets:TranslatedTextBlock

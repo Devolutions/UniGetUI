@@ -24,7 +24,7 @@
           Name="WingetUILogs"
           Click="UniGetUILogs_Click"
           IconName="buggy"
-          Text="WingetUI Log"
+          Text="UniGetUI Log"
         />
         <widgets:BetterMenuItem
           Name="ManagerLogsMenu"
@@ -64,7 +64,7 @@
           Name="QuitWingetUI"
           Click="QuitUniGetUI_Click"
           IconName="close_round"
-          Text="Quit WingetUI"
+          Text="Quit UniGetUI"
         />
       </widgets:BetterMenu>
 

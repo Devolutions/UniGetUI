@@ -21,9 +21,9 @@
         FontFamily="Segoe UI Variable Display"
         FontSize="24"
         FontWeight="Bold"
-        Text="WingetUI License"
+        Text="UniGetUI License"
       />
-      <widgets:TranslatedTextBlock Text="Using WingetUI implies the acceptation of the MIT License" />
+      <widgets:TranslatedTextBlock Text="Using UniGetUI implies the acceptation of the MIT License" />
       <TextBlock />
       <widgets:TranslatedTextBlock
         FontFamily="Segoe UI Variable Display"
@@ -31,7 +31,7 @@
         FontWeight="Bold"
         Text="Third-party licenses"
       />
-      <widgets:TranslatedTextBlock Text="WingetUI uses the following libraries. Without them, WingetUI wouldn't have been possible." />
+      <widgets:TranslatedTextBlock Text="UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible." />
       <ListView ItemsSource="{x:Bind Licenses}" SelectionMode="None">
         <ListView.ItemTemplate>
           <DataTemplate x:DataType="local:LibraryLicense">

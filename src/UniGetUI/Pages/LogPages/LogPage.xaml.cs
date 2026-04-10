@@ -82,7 +82,7 @@ namespace UniGetUI.Interface.Pages
                 WinRT.Interop.WindowNative.GetWindowHandle(MainApp.Instance.MainWindow)
             );
             savePicker.FileTypeChoices.Add(CoreTools.Translate("Text"), [".txt"]);
-            savePicker.SuggestedFileName = CoreTools.Translate("WingetUI Log");
+            savePicker.SuggestedFileName = CoreTools.Translate("UniGetUI Log");
 
             StorageFile file = await savePicker.PickSaveFileAsync();
             if (file is not null)

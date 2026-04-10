@@ -263,7 +263,44 @@
       "link": "https://github.com/uKER"
     }
   ],
-  "es-MX": [],
+  "es-MX": [
+    {
+      "name": "apazga",
+      "link": "https://github.com/apazga"
+    },
+    {
+      "name": "dalbitresb12",
+      "link": "https://github.com/dalbitresb12"
+    },
+    {
+      "name": "evaneliasyoung",
+      "link": "https://github.com/evaneliasyoung"
+    },
+    {
+      "name": "guplem",
+      "link": "https://github.com/guplem"
+    },
+    {
+      "name": "JMoreno97",
+      "link": "https://github.com/JMoreno97"
+    },
+    {
+      "name": "marticliment",
+      "link": "https://github.com/marticliment"
+    },
+    {
+      "name": "P10Designs",
+      "link": "https://github.com/P10Designs"
+    },
+    {
+      "name": "rubnium",
+      "link": "https://github.com/rubnium"
+    },
+    {
+      "name": "uKER",
+      "link": "https://github.com/uKER"
+    }
+  ],
   "et": [
     {
       "name": "artjom3729",
@@ -318,7 +355,6 @@
       "link": "https://github.com/W1L7dev"
     }
   ],
-  "gl": [],
   "gu": [],
   "he": [
     {
@@ -480,15 +516,14 @@
       "link": "https://github.com/VenusGirl"
     }
   ],
-  "ku": [],
   "lt": [
-    {
-      "name": "dziugas1959",
-      "link": "https://github.com/dziugas1959"
-    },
     {
       "name": "Džiugas Januševičius",
       "link": ""
+    },
+    {
+      "name": "dziugas1959",
+      "link": "https://github.com/dziugas1959"
     },
     {
       "name": "martyn3z",
@@ -501,7 +536,6 @@
       "link": ""
     }
   ],
-  "mr": [],
   "nb": [
     {
       "name": "DandelionSprout",
@@ -683,7 +717,7 @@
     },
     {
       "name": "sklart",
-      "link": ""
+      "link": "https://github.com/sklart"
     },
     {
       "name": "solarscream",
@@ -692,6 +726,10 @@
     {
       "name": "tapnisu",
       "link": "https://github.com/tapnisu"
+    },
+    {
+      "name": "Vertuhai",
+      "link": "https://github.com/Vertuhai"
     }
   ],
   "sa": [
@@ -808,12 +846,16 @@
       "link": "https://github.com/ahmetozmtn"
     },
     {
+      "name": "anzeralp",
+      "link": "https://github.com/anzeralp"
+    },
+    {
       "name": "BerkeA111",
       "link": "https://github.com/BerkeA111"
     },
     {
-      "name": "dogancanyr @anzeralp",
-      "link": "https://github.com/dogancanyr @anzeralp"
+      "name": "dogancanyr",
+      "link": "https://github.com/dogancanyr"
     },
     {
       "name": "gokberkgs",
@@ -836,6 +878,10 @@
     {
       "name": "Taron-art",
       "link": "https://github.com/Taron-art"
+    },
+    {
+      "name": "Vertuhai",
+      "link": "https://github.com/Vertuhai"
     }
   ],
   "ur": [
@@ -877,7 +923,7 @@
     },
     {
       "name": "adfnekc",
-      "link": ""
+      "link": "https://github.com/adfnekc"
     },
     {
       "name": "Ardenet",
@@ -969,5 +1015,9 @@
       "name": "yrctw",
       "link": "https://github.com/yrctw"
     }
-  ]
+  ],
+  "eo": [],
+  "gl": [],
+  "ku": [],
+  "mr": []
 }

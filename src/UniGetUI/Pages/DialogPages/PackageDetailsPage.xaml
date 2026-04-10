@@ -202,7 +202,7 @@
                   <widgets:TranslatedTextBlock
                     Grid.Column="0"
                     VerticalAlignment="Center"
-                    Text="This package has no screenshots or is missing the icon? Contrbute to WingetUI by adding the missing icons and screenshots to our open, public database."
+                    Text="This package has no screenshots or is missing the icon? Contrbute to UniGetUI by adding the missing icons and screenshots to our open, public database."
                     WrappingMode="WrapWholeWords"
                   />
                   <HyperlinkButton
@@ -234,7 +234,7 @@
             </Grid.ColumnDefinitions>
             <widgets:TranslatedTextBlock
               Grid.Column="0"
-              Text="This package has no screenshots or is missing the icon? Contrbute to WingetUI by adding the missing icons and screenshots to our open, public database."
+              Text="This package has no screenshots or is missing the icon? Contrbute to UniGetUI by adding the missing icons and screenshots to our open, public database."
               WrappingMode="WrapWholeWords"
             />
             <HyperlinkButton

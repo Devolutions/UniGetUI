@@ -23,7 +23,7 @@
         FontWeight="Bold"
         Text="Contributors"
       />
-      <widgets:TranslatedTextBlock Text="WingetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳" />
+      <widgets:TranslatedTextBlock Text="UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳" />
       <TextBlock />
       <ListView ItemsSource="{x:Bind ContributorList}" SelectionMode="None">
         <ListView.ItemTemplate>

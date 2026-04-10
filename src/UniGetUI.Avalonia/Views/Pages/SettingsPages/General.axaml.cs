@@ -37,7 +37,7 @@ public sealed partial class General : UserControl, ISettingsPage
         foreach (var entry in langDict)
             LanguageSelector.AddItem(entry.Value, entry.Key, false);
         LanguageSelector.SettingName = CoreSettings.K.PreferredLanguage;
-        LanguageSelector.Text = CoreTools.Translate("WingetUI display language:");
+        LanguageSelector.Text = CoreTools.Translate("UniGetUI display language:");
         LanguageSelector.ShowAddedItems();
         LanguageSelector.ValueChanged += (s, e) => RestartRequired?.Invoke(s, e);
         LanguageSelector.Description = BuildTranslatorDescription();

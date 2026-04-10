@@ -30,8 +30,8 @@ namespace UniGetUI.Core.Language.Tests
         }
 
         [Theory]
-        [InlineData("en", "UniGetUI Log", "UniGetUI (formerly WingetUI)")]
-        [InlineData("ca", "Registre de l'UniGetUI", "UniGetUI (abans WingetUI)")]
+        [InlineData("en", "UniGetUI Log", "UniGetUI")]
+        [InlineData("ca", "Registre de l'UniGetUI", "UniGetUI")]
         public void TestUniGetUIRefactoring(
             string language,
             string uniGetUILogTranslation,
@@ -41,8 +41,8 @@ namespace UniGetUI.Core.Language.Tests
             LanguageEngine engine = new();
 
             engine.LoadLanguage(language);
-            Assert.Equal(uniGetUILogTranslation, engine.Translate("WingetUI Log"));
-            Assert.Equal(uniGetUITranslation, engine.Translate("WingetUI"));
+            Assert.Equal(uniGetUILogTranslation, engine.Translate("UniGetUI Log"));
+            Assert.Equal(uniGetUITranslation, engine.Translate("UniGetUI"));
         }
 
         [Fact]

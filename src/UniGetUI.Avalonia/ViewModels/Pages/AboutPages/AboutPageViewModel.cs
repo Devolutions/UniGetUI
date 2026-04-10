@@ -7,7 +7,7 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.AboutPages;
 public partial class AboutPageViewModel : ViewModelBase
 {
     public string VersionText { get; } =
-        CoreTools.Translate("You have installed WingetUI Version {0}", CoreData.VersionName);
+        CoreTools.Translate("You have installed UniGetUI Version {0}", CoreData.VersionName);
 
     public string DisclaimerTitle { get; } = CoreTools.Translate("Disclaimer");
 

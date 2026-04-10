@@ -85,15 +85,15 @@ internal sealed class PipPkgOperationHelper : BasePkgOperationHelper
 
         if (output_string.Contains("externally-managed-environment"))
         {
-            if (package.OverridenOptions.Scope != PackageScope.User)
-            {
-                package.OverridenOptions.Scope = PackageScope.User;
-                return OperationVeredict.AutoRetry;
-            }
-
             if (!package.OverridenOptions.Pip_BreakSystemPackages)
             {
                 package.OverridenOptions.Pip_BreakSystemPackages = true;
+                return OperationVeredict.AutoRetry;
+            }
+
+            if (package.OverridenOptions.Scope != PackageScope.User)
+            {
+                package.OverridenOptions.Scope = PackageScope.User;
                 return OperationVeredict.AutoRetry;
             }
         }

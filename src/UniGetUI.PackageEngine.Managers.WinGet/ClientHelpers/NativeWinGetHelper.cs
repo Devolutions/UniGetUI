@@ -24,6 +24,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
     public string ActivationMode { get; private set; } = string.Empty;
     public string ActivationSource { get; private set; } = string.Empty;
+    private bool _isBundledActivation;
 
     public NativeWinGetHelper(WinGet manager)
     {
@@ -61,6 +62,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                 factory.LibraryPath,
                 "Connected to WinGet API using bundled in-proc activation."
             );
+            _isBundledActivation = true;
             return true;
         }
         catch (WinGetComActivationException ex)
@@ -268,11 +270,17 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
     public IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
     {
+        if (_isBundledActivation)
+        {
+            Logger.Info("WinGet is using bundled in-proc COM — falling back to CLI for update detection");
+            return new BundledWinGetHelper(Manager).GetAvailableUpdates_UnSafe();
+        }
+
         var logger = Manager.TaskLogger.CreateNew(LoggableTaskType.ListUpdates);
         List<Package> packages = [];
         foreach (
             var nativePackage in TaskRecycler<IReadOnlyList<CatalogPackage>>.RunOrAttach(
-                GetWinGetPackagesForUpdates
+                GetLocalWinGetPackages
             )
         )
         {
@@ -473,56 +481,6 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
         logger.Close(0);
         return foundPackages;
-    }
-
-    private IReadOnlyList<CatalogPackage> GetWinGetPackagesForUpdates()
-    {
-        var logger = Manager.TaskLogger.CreateNew(LoggableTaskType.OtherTask);
-        logger.Log("OtherTask: GetWinGetPackagesForUpdates");
-
-        try
-        {
-            CreateCompositePackageCatalogOptions createCompositePackageCatalogOptions = Factory.CreateCreateCompositePackageCatalogOptions();
-            foreach (var catalogRef in WinGetManager.GetPackageCatalogs().ToArray())
-            {
-                logger.Log($"Adding catalog {catalogRef.Info.Name} to composite catalog");
-                createCompositePackageCatalogOptions.Catalogs.Add(catalogRef);
-            }
-
-            createCompositePackageCatalogOptions.CompositeSearchBehavior = CompositeSearchBehavior.RemotePackagesFromAllCatalogs;
-            var updateSearchCatalogRef = WinGetManager.CreateCompositePackageCatalog(createCompositePackageCatalogOptions);
-            updateSearchCatalogRef.AcceptSourceAgreements = true;
-            var connectResult = updateSearchCatalogRef.Connect();
-
-            if (connectResult.Status != ConnectResultStatus.Ok)
-            {
-                logger.Error("Failed to connect to update catalog. Aborting.");
-                throw new InvalidOperationException("WinGet: Failed to connect to update catalog.");
-            }
-
-            FindPackagesOptions findPackagesOptions = Factory.CreateFindPackagesOptions();
-            PackageMatchFilter filter = Factory.CreatePackageMatchFilter();
-            filter.Field = PackageMatchField.Id;
-            filter.Option = PackageFieldMatchOption.StartsWithCaseInsensitive;
-            filter.Value = "";
-            findPackagesOptions.Filters.Add(filter);
-
-            var taskResult = connectResult.PackageCatalog.FindPackages(findPackagesOptions);
-            List<CatalogPackage> foundPackages = [];
-            foreach (var match in taskResult.Matches.ToArray())
-            {
-                if (match.CatalogPackage.InstalledVersion is not null)
-                    foundPackages.Add(match.CatalogPackage);
-            }
-
-            logger.Close(0);
-            return foundPackages;
-        }
-        catch
-        {
-            logger.Close(1);
-            throw;
-        }
     }
 
     public IReadOnlyList<IManagerSource> GetSources_UnSafe()

@@ -7,7 +7,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-Import-Module (Join-Path $PSScriptRoot 'LangData.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'LanguageData.psm1') -Force
 
 $languageFileMap = Get-LanguageFilePathMap -AbsolutePaths:$AbsolutePaths.IsPresent
 

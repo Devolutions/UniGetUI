@@ -258,7 +258,7 @@ public abstract partial class AbstractOperation : IDisposable
         {
             i++;
             Line(
-                CoreTools.Translate($"Running PreOperation ({i}/{count})..."),
+                    CoreTools.Translate("Running PreOperation ({0}/{1})...", i, count),
                 LineType.Information
             );
             preReq.Operation.LogLineAdded += (_, line) => Line(line.Item1, line.Item2);
@@ -266,17 +266,22 @@ public abstract partial class AbstractOperation : IDisposable
             if (preReq.Operation.Status is not OperationStatus.Succeeded && preReq.MustSucceed)
             {
                 Line(
-                    CoreTools.Translate(
-                        $"PreOperation {i} out of {count} failed, and was tagged as necessary. Aborting..."
-                    ),
+                        CoreTools.Translate(
+                            "PreOperation {0} out of {1} failed, and was tagged as necessary. Aborting...",
+                            i,
+                            count
+                        ),
                     LineType.Error
                 );
                 return OperationVeredict.Failure;
             }
             Line(
-                CoreTools.Translate(
-                    $"PreOperation {i} out of {count} finished with result {preReq.Operation.Status}"
-                ),
+                    CoreTools.Translate(
+                        "PreOperation {0} out of {1} finished with result {2}",
+                        i,
+                        count,
+                        preReq.Operation.Status
+                    ),
                 LineType.Information
             );
             Line("--------------------------------", LineType.Information);
@@ -333,7 +338,7 @@ public abstract partial class AbstractOperation : IDisposable
             Line("--------------------------------", LineType.Information);
             Line("", LineType.VerboseDetails);
             Line(
-                CoreTools.Translate($"Running PostOperation ({i}/{count})..."),
+                CoreTools.Translate("Running PostOperation ({0}/{1})...", i, count),
                 LineType.Information
             );
             postReq.Operation.LogLineAdded += (_, line) => Line(line.Item1, line.Item2);
@@ -342,7 +347,9 @@ public abstract partial class AbstractOperation : IDisposable
             {
                 Line(
                     CoreTools.Translate(
-                        $"PostOperation {i} out of {count} failed, and was tagged as necessary. Aborting..."
+                        "PostOperation {0} out of {1} failed, and was tagged as necessary. Aborting...",
+                        i,
+                        count
                     ),
                     LineType.Error
                 );
@@ -350,7 +357,10 @@ public abstract partial class AbstractOperation : IDisposable
             }
             Line(
                 CoreTools.Translate(
-                    $"PostOperation {i} out of {count} finished with result {postReq.Operation.Status}"
+                    "PostOperation {0} out of {1} finished with result {2}",
+                    i,
+                    count,
+                    postReq.Operation.Status
                 ),
                 LineType.Information
             );

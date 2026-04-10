@@ -10,7 +10,7 @@ $simplePlaceholderPattern = '^(?<name>[A-Za-z0-9_]+)(?:,[^}:]+)?(?::[^}]+)?$'
 $icuControlPattern = '^(?<name>[A-Za-z0-9_]+)\s*,\s*(?<kind>plural|select|selectordinal)\s*,(?<body>[\s\S]*)$'
 
 function Get-RepositoryRoot {
-    return [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+    return [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 }
 
 function Resolve-LanguagesDirectory {

@@ -8,15 +8,15 @@ param(
 
     [switch]$UpdateReadme,
 
-    [string]$ReadmePath = (Join-Path $PSScriptRoot '..\README.md'),
+    [string]$ReadmePath = (Join-Path $PSScriptRoot '..\..\README.md'),
 
-    [string]$TranslatedPercentagesPath = (Join-Path $PSScriptRoot '..\src\UniGetUI.Core.LanguageEngine\Assets\Data\TranslatedPercentages.json')
+    [string]$TranslatedPercentagesPath = (Join-Path $PSScriptRoot '..\..\src\UniGetUI.Core.LanguageEngine\Assets\Data\TranslatedPercentages.json')
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-Import-Module (Join-Path $PSScriptRoot 'Languages\LangData.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'Languages\LanguageData.psm1') -Force
 
 function Read-JsonObject {
     param(
@@ -72,7 +72,7 @@ function Get-NewLine {
     return "`n"
 }
 
-$statusJson = & (Join-Path $PSScriptRoot 'get_translation_status.ps1') -OutputFormat Json
+$statusJson = & (Join-Path $PSScriptRoot 'Get-TranslationStatus.ps1') -OutputFormat Json
 $statusRows = $statusJson | ConvertFrom-Json -AsHashtable
 if ($null -eq $statusRows) {
     throw 'Could not load translation status data.'

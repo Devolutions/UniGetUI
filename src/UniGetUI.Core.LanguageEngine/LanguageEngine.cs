@@ -115,47 +115,6 @@ namespace UniGetUI.Core.Language
                     }
                 }
 
-                string CachedLangFileToLoad = Path.Join(
-                    CoreData.UniGetUICacheDirectory_Lang,
-                    "lang_" + LangKey + ".json"
-                );
-
-                if (Settings.Get(Settings.K.DisableLangAutoUpdater))
-                {
-                    Logger.Warn("User has updated translations disabled");
-                }
-                else if (!File.Exists(CachedLangFileToLoad))
-                {
-                    Logger.Warn(
-                        $"Tried to access a non-existing cached language file! file={CachedLangFileToLoad}"
-                    );
-                }
-                else
-                {
-                    try
-                    {
-                        foreach (
-                            var keyval in ParseLanguageEntries(
-                                File.ReadAllText(CachedLangFileToLoad),
-                                CachedLangFileToLoad
-                            )
-                        )
-                        {
-                            LangDict[keyval.Key] = keyval.Value;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Warn(
-                            $"Something went wrong when parsing language file {CachedLangFileToLoad}"
-                        );
-                        Logger.Warn(ex);
-                    }
-                }
-
-                if (!Settings.Get(Settings.K.DisableLangAutoUpdater))
-                    _ = DownloadUpdatedLanguageFile(LangKey);
-
                 return LangDict;
             }
             catch (Exception e)

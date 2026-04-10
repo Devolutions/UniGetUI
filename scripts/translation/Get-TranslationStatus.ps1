@@ -13,7 +13,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-Import-Module (Join-Path $PSScriptRoot 'Languages\LangData.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'Languages\LanguageData.psm1') -Force
+. (Join-Path $PSScriptRoot 'Languages\TranslationJsonTools.ps1')
 
 function Read-LanguageMap {
     param(
@@ -22,24 +23,27 @@ function Read-LanguageMap {
     )
 
     if (-not (Test-Path -Path $Path -PathType Leaf)) {
-        return [ordered]@{}
+        return (New-OrderedStringMap)
     }
 
-    $content = [System.IO.File]::ReadAllText($Path)
-    if ([string]::IsNullOrWhiteSpace($content)) {
-        return [ordered]@{}
-    }
+    return (Read-OrderedJsonMap -Path $Path)
+}
 
-    $parsed = $content | ConvertFrom-Json -AsHashtable
-    if ($null -eq $parsed) {
-        return [ordered]@{}
-    }
+function Get-LanguageMapSections {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Collections.IDictionary]$Map
+    )
 
-    if (-not ($parsed -is [System.Collections.IDictionary])) {
-        throw "JSON root must be an object: $Path"
-    }
+    $sections = Split-TranslationMapAtBoundary -Map $Map
+    $fullMap = Join-TranslationMapWithBoundary -ActiveMap $sections.ActiveMap -LegacyMap $sections.LegacyMap
 
-    return $parsed
+    return [pscustomobject]@{
+        HasBoundary = $sections.HasBoundary
+        FullMap = $fullMap
+        ActiveMap = $sections.ActiveMap
+        LegacyMap = $sections.LegacyMap
+    }
 }
 
 function Get-PercentageNumber {
@@ -283,13 +287,22 @@ function Get-TranslationStatusRow {
         [System.Collections.IDictionary]$NeutralMap,
 
         [Parameter(Mandatory = $true)]
+        [System.Collections.IDictionary]$NeutralLegacyMap,
+
+        [Parameter(Mandatory = $true)]
         [System.Collections.IDictionary]$TargetMap,
+
+        [Parameter(Mandatory = $true)]
+        [System.Collections.IDictionary]$TargetLegacyMap,
 
         [AllowNull()]
         [Nullable[int]]$StoredPercentage,
 
         [Parameter(Mandatory = $true)]
-        [bool]$HasFile
+        [bool]$HasFile,
+
+        [Parameter(Mandatory = $true)]
+        [bool]$HasBoundary
     )
 
     $totalKeys = $NeutralMap.Count
@@ -327,8 +340,17 @@ function Get-TranslationStatusRow {
         $translatedKeys += 1
     }
 
+    $knownKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    foreach ($key in $NeutralMap.Keys) {
+        [void]$knownKeys.Add([string]$key)
+    }
+
+    foreach ($key in $NeutralLegacyMap.Keys) {
+        [void]$knownKeys.Add([string]$key)
+    }
+
     foreach ($key in $TargetMap.Keys) {
-        if (-not $NeutralMap.Contains([string]$key)) {
+        if (-not $knownKeys.Contains([string]$key)) {
             $extraKeys += 1
         }
     }
@@ -341,7 +363,10 @@ function Get-TranslationStatusRow {
         Code = $LanguageCode
         Language = $LanguageName
         HasFile = $HasFile
+        HasBoundary = $HasBoundary
         TotalKeys = $totalKeys
+        ActiveKeys = $totalKeys
+        Legacy = $TargetLegacyMap.Count
         Translated = $translatedKeys
         Missing = $missingKeys
         Empty = $emptyKeys
@@ -428,7 +453,9 @@ if (-not (Test-Path -Path $neutralPath -PathType Leaf)) {
     throw "Neutral language file not found: $neutralPath"
 }
 
-$neutralMap = Read-LanguageMap -Path $neutralPath
+$neutralSections = Get-LanguageMapSections -Map (Read-LanguageMap -Path $neutralPath)
+$neutralMap = $neutralSections.ActiveMap
+$neutralLegacyMap = $neutralSections.LegacyMap
 $languageReference = Get-LanguageReference
 $storedPercentages = Get-TranslatedPercentages
 $rows = New-Object System.Collections.Generic.List[object]
@@ -445,10 +472,10 @@ foreach ($entry in $languageReference.GetEnumerator()) {
 
     $languageFilePath = Join-Path $languagesDirectory ("lang_{0}.json" -f $languageCode)
     $hasFile = Test-Path -Path $languageFilePath -PathType Leaf
-    $targetMap = if ($hasFile) { Read-LanguageMap -Path $languageFilePath } else { [ordered]@{} }
+    $targetSections = if ($hasFile) { Get-LanguageMapSections -Map (Read-LanguageMap -Path $languageFilePath) } else { [pscustomobject]@{ HasBoundary = $false; FullMap = (New-OrderedStringMap); ActiveMap = (New-OrderedStringMap); LegacyMap = (New-OrderedStringMap) } }
     $storedPercentage = if ($storedPercentages.Contains($languageCode)) { Get-PercentageNumber -Value $storedPercentages[$languageCode] } elseif ($languageCode -eq 'en') { 100 } else { $null }
 
-    $row = Get-TranslationStatusRow -LanguageCode $languageCode -LanguageName ([string]$entry.Value) -NeutralMap $neutralMap -TargetMap $targetMap -StoredPercentage $storedPercentage -HasFile:$hasFile
+    $row = Get-TranslationStatusRow -LanguageCode $languageCode -LanguageName ([string]$entry.Value) -NeutralMap $neutralMap -NeutralLegacyMap $neutralLegacyMap -TargetMap $targetSections.FullMap -TargetLegacyMap $targetSections.LegacyMap -StoredPercentage $storedPercentage -HasFile:$hasFile -HasBoundary:$targetSections.HasBoundary
     if ($OnlyIncomplete.IsPresent -and $row.Untranslated -eq 0) {
         continue
     }

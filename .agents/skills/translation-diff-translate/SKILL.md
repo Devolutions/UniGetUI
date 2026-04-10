@@ -1,20 +1,13 @@
 ---
 name: translation-diff-translate
-description: Translate a sparse JSON working copy produced by the export skill while preserving UniGetUI placeholders and existing terminology.
+description: Translates a sparse UniGetUI JSON language patch, writes completed entries into the working copy, preserves placeholders and terminology, and prepares the patch for merge-back. Use when the user asks to translate or localize i18n strings, localization JSON, or language-file patches.
 ---
 
 # translation diff translate
 
 Use this skill after `translation-diff-export` produced a `.source.json`, `.translated.json`, and `.reference.json` set and you want to update the sparse translated working copy.
 
-## Scope
-
-- Translate only the keys present in the current source patch.
-- Treat `.translated.json` as the only writable file during the translation pass.
-- Keep the translated working copy sparse by omitting keys that are not translated yet.
-- Reuse terminology and style from `.reference.json`.
-- Preserve placeholders, named tokens, HTML-like fragments, escape sequences, and line breaks.
-- Hand the completed working copy to `translation-diff-import` for merge-back.
+It translates only the active patch keys, keeps `.translated.json` as the sole writable file, preserves placeholders and formatting, and hands the completed working copy to `translation-diff-import` for merge-back.
 
 ## Execution Expectations
 
@@ -22,16 +15,7 @@ Use this skill after `translation-diff-export` produced a `.source.json`, `.tran
 2. Do not install packages or search for external translation services unless the user explicitly asks for automation.
 3. If `.translated.json` is empty, that is expected. Translate from `.source.json` into `.translated.json`.
 4. Use `.reference.json` only as terminology guidance, not as a reason to pause and analyze the rest of the repository.
-5. Start translating immediately. Do not spend time estimating patch size or building import or export helpers.
-6. If the patch is too large to finish reasonably in one pass, report that constraint to the user instead of creating automation on your own.
-
-## Inputs
-
-- `.source.json`: immutable English source patch for the current translation pass.
-- `.translated.json`: sparse working copy that should contain only completed translations.
-- `.reference.json`: already translated destination-language strings outside the current source patch.
-- Full target `lang_{code}.json`: current destination-language file.
-- Neutral `lang_en.json`: current source-language file.
+5. If the patch is too large to finish reasonably in one pass, report that constraint to the user instead of creating automation on your own.
 
 ## Script
 
@@ -65,7 +49,6 @@ pwsh ./.agents/skills/translation-diff-translate/scripts/write-translation-hando
 6. Keep translated entries in the same key order as `.source.json` when adding new entries.
 7. Use `.reference.json` to match existing terminology and tone in the destination language.
 8. Do not introduce keys that are not present in the source patch.
-9. Do not create side files, scripts, or analysis artifacts as part of the translation pass.
 
 ## After Translation
 

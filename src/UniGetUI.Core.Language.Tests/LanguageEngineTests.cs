@@ -63,19 +63,19 @@ namespace UniGetUI.Core.Language.Tests
         }
 
         [Fact]
-        public void TestLoadingCachedLanguageWithDuplicateKeysKeepsLastValue()
+        public void TestLoadingLanguageIgnoresCachedOverrides()
         {
-            string cachedLangFile = Path.Join(
-                CoreData.UniGetUICacheDirectory_Lang,
-                "lang_duplicate-test.json"
-            );
+            string cachedLangFile = Path.Join(CoreData.UniGetUICacheDirectory_Lang, "lang_en.json");
+            string? previousContents = File.Exists(cachedLangFile)
+                ? File.ReadAllText(cachedLangFile)
+                : null;
+
+            Directory.CreateDirectory(CoreData.UniGetUICacheDirectory_Lang);
             File.WriteAllText(
                 cachedLangFile,
                 """
                 {
-                  "Android Subsystem": "Android Subsystem",
-                  "Android Subsystem": "Підсистема Android",
-                  "Backup installed packages": "Cached duplicate test"
+                                    "Starting operation...": "Cached override should be ignored"
                 }
                 """
             );
@@ -84,13 +84,16 @@ namespace UniGetUI.Core.Language.Tests
             {
                 LanguageEngine engine = new();
 
-                Dictionary<string, string> langFile = engine.LoadLanguageFile("duplicate-test");
-                Assert.Equal("Підсистема Android", langFile["Android Subsystem"]);
-                Assert.Equal("Cached duplicate test", langFile["Backup installed packages"]);
+                Dictionary<string, string> langFile = engine.LoadLanguageFile("en");
+                Assert.Equal("Starting operation...", langFile["Starting operation..."]);
             }
             finally
             {
-                if (File.Exists(cachedLangFile))
+                if (previousContents is not null)
+                {
+                    File.WriteAllText(cachedLangFile, previousContents);
+                }
+                else if (File.Exists(cachedLangFile))
                 {
                     File.Delete(cachedLangFile);
                 }

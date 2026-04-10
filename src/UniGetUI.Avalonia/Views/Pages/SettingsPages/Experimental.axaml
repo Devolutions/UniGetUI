@@ -47,19 +47,13 @@
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard SettingName="DisableLangAutoUpdater"
-                                   Text="{t:Translate Download updated language files from GitHub automatically}"
-                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
-                                   BorderThickness="1,1,1,0"
-                                   CornerRadius="8,8,0,0"/>
-
             <settings:TextboxCard x:Name="IconDatabaseURLCard"
                                   SettingName="IconDataBaseURL"
                                   Text="{t:Translate Use a custom icon and screenshot database URL}"
                                   Placeholder="{t:Translate Leave empty for default}"
                                   HelpUrl="https://www.marticliment.com/unigetui/help/icons-and-screenshots#custom-source"
                                   ValueChangedCommand="{Binding ShowRestartRequiredCommand}"
-                                  CornerRadius="0,0,8,8"/>
+                                  CornerRadius="8"/>
 
             <UserControl Height="16"/>
 

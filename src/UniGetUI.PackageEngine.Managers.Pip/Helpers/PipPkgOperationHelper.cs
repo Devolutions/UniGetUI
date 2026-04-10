@@ -83,10 +83,19 @@ internal sealed class PipPkgOperationHelper : BasePkgOperationHelper
 
         string output_string = string.Join("\n", processOutput);
 
-        if (output_string.Contains("externally-managed-environment") && !package.OverridenOptions.Pip_BreakSystemPackages)
+        if (output_string.Contains("externally-managed-environment"))
         {
-            package.OverridenOptions.Pip_BreakSystemPackages = true;
-            return OperationVeredict.AutoRetry;
+            if (package.OverridenOptions.Scope != PackageScope.User)
+            {
+                package.OverridenOptions.Scope = PackageScope.User;
+                return OperationVeredict.AutoRetry;
+            }
+
+            if (!package.OverridenOptions.Pip_BreakSystemPackages)
+            {
+                package.OverridenOptions.Pip_BreakSystemPackages = true;
+                return OperationVeredict.AutoRetry;
+            }
         }
 
         if (output_string.Contains("--user") && package.OverridenOptions.Scope != PackageScope.User)
@@ -94,6 +103,7 @@ internal sealed class PipPkgOperationHelper : BasePkgOperationHelper
             package.OverridenOptions.Scope = PackageScope.User;
             return OperationVeredict.AutoRetry;
         }
+
         return OperationVeredict.Failure;
     }
 }

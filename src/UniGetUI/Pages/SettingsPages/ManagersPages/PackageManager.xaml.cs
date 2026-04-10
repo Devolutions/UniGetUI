@@ -35,7 +35,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
     public sealed partial class PackageManagerPage : Page, ISettingsPage
     {
         private static readonly HashSet<string> _managersWithoutUpdateDate =
-            new(StringComparer.OrdinalIgnoreCase) { "Homebrew", "Scoop", "vcpkg" };
+            new(StringComparer.OrdinalIgnoreCase) { "Homebrew", "Scoop", "vcpkg", "WinGet" };
 
         IPackageManager? Manager;
         public event EventHandler? RestartRequired;

@@ -19,7 +19,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
     public sealed partial class Updates : Page, ISettingsPage
     {
         private static readonly HashSet<string> _managersWithoutUpdateDate =
-            new(StringComparer.OrdinalIgnoreCase) { "Homebrew", "Scoop", "vcpkg" };
+            new(StringComparer.OrdinalIgnoreCase) { "Homebrew", "Scoop", "vcpkg", "WinGet" };
 
         public Updates()
         {
@@ -144,6 +144,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 16, 0, 0),
             };
             centerPanel.Children.Add(table);
 

@@ -7,6 +7,8 @@ public sealed class AutoUpdaterTests
 {
     [Theory]
     [InlineData("https://devolutions.net/productinfo.json", false, true)]
+    [InlineData("https://updates.devolutions.net/productinfo.json", false, true)]
+    [InlineData("https://notdevolutions.net/productinfo.json", false, false)]
     [InlineData("https://github.com/Devolutions/UniGetUI/releases", false, true)]
     [InlineData("http://devolutions.net/productinfo.json", false, false)]
     [InlineData("http://contoso.invalid/file.exe", true, true)]

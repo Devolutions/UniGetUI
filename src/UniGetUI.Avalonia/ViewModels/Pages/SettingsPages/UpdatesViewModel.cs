@@ -3,13 +3,12 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine;
-using CoreSettings = global::UniGetUI.Core.SettingsEngine.Settings;
-using CornerRadius = global::Avalonia.CornerRadius;
-using Thickness = global::Avalonia.Thickness;
+using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
+using CornerRadius = Avalonia.CornerRadius;
+using Thickness = Avalonia.Thickness;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
@@ -62,7 +61,7 @@ public partial class UpdatesViewModel : ViewModelBase
     public Control BuildReleaseDateCompatTable()
     {
         string yesStr = CoreTools.Translate("Yes");
-        string noStr  = CoreTools.Translate("No");
+        string noStr = CoreTools.Translate("No");
 
         var managers = PEInterface.Managers.ToList();
 

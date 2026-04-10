@@ -56,7 +56,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
             string? perManagerVal = Settings.GetDictionaryItem<string, string>(
                 Settings.K.PerManagerMinimumUpdateAge, package.Manager.Name);
 
-            int minimumAge = 0;
+            int minimumAge;
             if (perManagerVal is { Length: > 0 })
             {
                 if (perManagerVal == "custom")

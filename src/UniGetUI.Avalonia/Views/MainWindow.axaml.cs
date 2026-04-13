@@ -1,10 +1,10 @@
+using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using System;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Core.Logging;

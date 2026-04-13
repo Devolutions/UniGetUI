@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Xml.Linq;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Platform;
@@ -16,6 +17,11 @@ namespace UniGetUI.Avalonia.Views.Controls;
 /// </summary>
 public class SvgIcon : Control
 {
+    public SvgIcon()
+    {
+        AutomationProperties.SetAccessibilityView(this, AccessibilityView.Raw);
+    }
+
     public static readonly StyledProperty<string?> PathProperty =
         AvaloniaProperty.Register<SvgIcon, string?>(nameof(Path));
 

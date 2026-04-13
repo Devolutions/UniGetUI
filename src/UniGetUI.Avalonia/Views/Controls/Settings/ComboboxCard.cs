@@ -32,7 +32,11 @@ public sealed partial class ComboboxCard : SettingsCard
 
     public string Text
     {
-        set => Header = value;
+        set
+        {
+            Header = value;
+            ApplyAutomationMetadata(_combobox, value);
+        }
     }
 
     public event EventHandler<EventArgs>? ValueChanged;
@@ -42,6 +46,7 @@ public sealed partial class ComboboxCard : SettingsCard
         _combobox.MinWidth = 200;
         _combobox.ItemsSource = _elements;
         Content = _combobox;
+        ApplyAutomationMetadata(_combobox);
     }
 
     public void AddItem(string name, string value) => AddItem(name, value, true);

@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -36,12 +37,21 @@ public sealed partial class CheckboxButtonCard : SettingsCard
 
     public string CheckboxText
     {
-        set => _textblock.Text = value;
+        set
+        {
+            _textblock.Text = value;
+            ApplyAutomationMetadata(_checkbox, value);
+            ApplyAutomationMetadata(Button, value);
+        }
     }
 
     public string ButtonText
     {
-        set => Button.Content = value;
+        set
+        {
+            Button.Content = value;
+            ApplyAutomationMetadata(Button, _textblock.Text, value);
+        }
     }
 
     private bool _buttonAlwaysOn;
@@ -71,6 +81,7 @@ public sealed partial class CheckboxButtonCard : SettingsCard
             FontWeight = FontWeight.Medium,
         };
         IS_INVERTED = false;
+        AutomationProperties.SetAccessibilityView(Button, AccessibilityView.Control);
 
         Content = _checkbox;
         Header = _textblock;
@@ -84,5 +95,6 @@ public sealed partial class CheckboxButtonCard : SettingsCard
             _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
         };
         Button.Click += (s, e) => Click?.Invoke(s, e);
+        ApplyAutomationMetadata(_checkbox, _textblock.Text);
     }
 }

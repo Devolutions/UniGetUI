@@ -39,12 +39,20 @@ public sealed partial class TextboxCard : SettingsCard
 
     public string Placeholder
     {
-        set => _textbox.Watermark = value;
+        set
+        {
+            _textbox.Watermark = value;
+            ApplyAutomationMetadata(_textbox, GetAutomationNameText() ?? value);
+        }
     }
 
     public string Text
     {
-        set => Header = value;
+        set
+        {
+            Header = value;
+            ApplyAutomationMetadata(_textbox, value);
+        }
     }
 
     public Uri HelpUrl
@@ -54,6 +62,7 @@ public sealed partial class TextboxCard : SettingsCard
             _helpUri = value;
             _helpbutton.IsVisible = true;
             _helpbutton.Content = CoreTools.Translate("More info");
+            ApplyAutomationMetadata(_helpbutton, CoreTools.Translate("More info"), GetAutomationNameText());
         }
     }
 
@@ -79,6 +88,7 @@ public sealed partial class TextboxCard : SettingsCard
         s.Children.Add(_textbox);
 
         Content = s;
+        ApplyAutomationMetadata(_textbox);
     }
 
     public void SaveValue()

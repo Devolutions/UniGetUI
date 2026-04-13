@@ -8,12 +8,20 @@ public partial class SettingsPageButton : SettingsCard
 {
     public string Text
     {
-        set => Header = value;
+        set
+        {
+            Header = value;
+            ApplyAutomationMetadata(this, value, GetAutomationHelpText());
+        }
     }
 
     public string UnderText
     {
-        set => Description = value;
+        set
+        {
+            Description = value;
+            ApplyAutomationMetadata(this, GetAutomationNameText(), value);
+        }
     }
 
     public IconType Icon

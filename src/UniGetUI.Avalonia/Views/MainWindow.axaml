@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:views="using:UniGetUI.Avalonia.Views"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
@@ -25,6 +26,7 @@
             <ContentControl Grid.Column="0" Grid.RowSpan="3"
                             Width="{Binding Sidebar.PaneWidth}"
                             Content="{Binding Sidebar}"
+                            automation:AutomationProperties.AccessibilityView="Control"
                             HorizontalContentAlignment="Stretch"
                             VerticalContentAlignment="Stretch">
                 <ContentControl.DataTemplates>
@@ -38,12 +40,15 @@
             <Border Grid.Column="0" Grid.RowSpan="3"
                     Width="1"
                     HorizontalAlignment="Right"
+                    automation:AutomationProperties.AccessibilityView="Raw"
                     Opacity="0.2"
                     Background="{DynamicResource SystemBaseMediumColor}"/>
 
             <!-- ── Banners + page content ── -->
             <Grid Grid.Column="1" Grid.Row="0" RowDefinitions="Auto,*" Margin="0,10">
-                <StackPanel Grid.Row="0" Spacing="0">
+                <StackPanel Grid.Row="0"
+                            Spacing="0"
+                            automation:AutomationProperties.AccessibilityView="Control">
                     <StackPanel.DataTemplates>
                         <DataTemplate DataType="vm:InfoBarViewModel">
                             <controls:InfoBar/>
@@ -56,6 +61,7 @@
                 </StackPanel>
                 <ContentControl Grid.Row="1"
                                 Content="{Binding CurrentPageContent}"
+                                automation:AutomationProperties.AccessibilityView="Control"
                                 HorizontalContentAlignment="Stretch"
                                 VerticalContentAlignment="Stretch"/>
             </Grid>
@@ -65,6 +71,7 @@
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch"
                           IsVisible="{Binding OperationsPanelVisible}"
+                          automation:AutomationProperties.AccessibilityView="Raw"
                           Background="{DynamicResource AppSplitterBackground}"
                           Opacity="0.8"/>
 
@@ -73,6 +80,7 @@
                     IsVisible="{Binding OperationsPanelVisible}"
                     BorderThickness="0,1,0,0"
                     BorderBrush="{DynamicResource AppBorderBrush}"
+                    automation:AutomationProperties.AccessibilityView="Control"
                     Background="{DynamicResource AppOperationsPanelBackground}">
                 <ScrollViewer MaxHeight="220"
                               HorizontalScrollBarVisibility="Disabled"
@@ -92,6 +100,7 @@
                                                Source="{Binding PackageIcon}"
                                                Width="32" Height="24"
                                                Margin="0,0,10,0"
+                                                 automation:AutomationProperties.AccessibilityView="Raw"
                                                VerticalAlignment="Center"
                                                Stretch="Uniform"/>
 
@@ -108,6 +117,7 @@
 
                                             <Button Content="{Binding LiveLine}"
                                                     Command="{Binding ShowDetailsCommand}"
+                                                    automation:AutomationProperties.HelpText="{Binding Title}"
                                                     FontSize="11"
                                                     Opacity="0.65"
                                                     HorizontalAlignment="Left"
@@ -119,6 +129,8 @@
 
                                             <ProgressBar IsIndeterminate="{Binding ProgressIndeterminate}"
                                                          Value="{Binding ProgressValue}"
+                                                         automation:AutomationProperties.Name="{Binding Title}"
+                                                         automation:AutomationProperties.ItemStatus="{Binding LiveLine}"
                                                          Minimum="0" Maximum="100"
                                                          Height="3"
                                                          CornerRadius="2"
@@ -137,6 +149,8 @@
                                                                 BorderThickness="0"
                                                                 CornerRadius="4"
                                                                 Padding="5,2"
+                                                                automation:AutomationProperties.Name="{Binding Label}"
+                                                                automation:AutomationProperties.HelpText="{Binding Primary}"
                                                                 ToolTip.Tip="{Binding Primary}">
                                                             <StackPanel Orientation="Horizontal" Spacing="4">
                                                                 <controls:SvgIcon Path="{Binding IconPath}"
@@ -182,11 +196,13 @@
                                                         FontSize="12"/>
                                                 <Border Width="1"
                                                         VerticalAlignment="Stretch"
+                                                    automation:AutomationProperties.AccessibilityView="Raw"
                                                         Background="{DynamicResource AppBorderBrush}"
                                                         Opacity="0.3"/>
                                                 <Button Width="32"
                                                         Padding="4"
                                                         CornerRadius="0"
+                                                    automation:AutomationProperties.Name="{t:Translate More}"
                                                         Flyout="{Binding OpMenu}">
                                                     <TextBlock Text="⋯" FontSize="14"/>
                                                 </Button>
@@ -212,6 +228,7 @@
             <!-- Drag area — sits behind everything so interactive controls still work -->
             <Border Grid.Column="0" Grid.ColumnSpan="3"
                     Background="{DynamicResource AppTitleBarBackground}"
+                    automation:AutomationProperties.AccessibilityView="Raw"
                     IsHitTestVisible="True"
                     PointerPressed="TitleBar_PointerPressed"/>
 
@@ -228,9 +245,11 @@
                         Background="Transparent"
                         BorderThickness="0"
                         CornerRadius="4"
+                        automation:AutomationProperties.Name="{t:Translate Toggle navigation panel}"
                         ToolTip.Tip="{t:Translate Toggle navigation panel}"
                         Command="{Binding ToggleSidebarCommand}">
                     <PathIcon Width="14" Height="14"
+                              automation:AutomationProperties.AccessibilityView="Raw"
                               Data="M1,1 H15 V3 H1 Z M1,7 H15 V9 H1 Z M1,13 H15 V15 H1 Z"/>
                 </Button>
                 <TextBlock Text="UniGetUI"
@@ -242,6 +261,7 @@
             <!-- Centre: search box — vertically centred, no platform-specific margin -->
             <StackPanel Grid.Column="1"
                         VerticalAlignment="Center"
+                        automation:AutomationProperties.AccessibilityView="Control"
                         Orientation="Horizontal"
                         Spacing="0">
                 <TextBox Width="300"
@@ -252,6 +272,8 @@
                          CornerRadius="4,0,0,4"
                          Watermark="{Binding GlobalSearchPlaceholder}"
                          IsEnabled="{Binding GlobalSearchEnabled}"
+                         automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
+                         automation:AutomationProperties.AcceleratorKey="Ctrl+F"
                          Text="{Binding GlobalSearchText}"
                          KeyDown="SearchBox_KeyDown"/>
                 <Button Height="30"
@@ -260,6 +282,7 @@
                         Margin="0,5,0,0"
                         CornerRadius="0,4,4,0"
                         IsEnabled="{Binding GlobalSearchEnabled}"
+                        automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
                         Command="{Binding SubmitGlobalSearchCommand}">
                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg"
                                       Width="18"
@@ -286,11 +309,13 @@
                     <!-- Minimize: horizontal line -->
                     <Button Width="46" Height="32" Padding="0"
                             Background="Transparent" BorderThickness="0" CornerRadius="0"
+                                                        automation:AutomationProperties.Name="{t:Translate Minimize}"
                             ToolTip.Tip="{t:Translate Minimize}"
                             Click="MinimizeButton_Click">
                         <Path Stroke="{DynamicResource SystemBaseHighColor}"
                               StrokeThickness="1.5"
                               StrokeLineCap="Round"
+                                                            automation:AutomationProperties.AccessibilityView="Raw"
                               Data="M2,0 H10"
                               Width="12" Height="2"
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -299,12 +324,14 @@
                     <Button x:Name="MaximizeButton"
                             Width="46" Height="32" Padding="0"
                             Background="Transparent" BorderThickness="0" CornerRadius="0"
+                                                        automation:AutomationProperties.Name="{t:Translate Maximize}"
                             ToolTip.Tip="{t:Translate Maximize}"
                             Click="MaximizeButton_Click">
                         <Path x:Name="MaximizeIcon"
                               Stroke="{DynamicResource SystemBaseHighColor}"
                               StrokeThickness="1.5"
                               StrokeLineCap="Round"
+                                                            automation:AutomationProperties.AccessibilityView="Raw"
 
                               Data="M0,0 H10 V10 H0 Z"
                               Width="12" Height="12"
@@ -313,11 +340,13 @@
                     <!-- Close: X -->
                     <Button Width="46" Height="32" Padding="0"
                             Background="Transparent" BorderThickness="0" CornerRadius="0"
+                                                        automation:AutomationProperties.Name="{t:Translate Close}"
                             ToolTip.Tip="{t:Translate Close}"
                             Click="CloseButton_Click">
                         <Path Stroke="{DynamicResource SystemBaseHighColor}"
                               StrokeThickness="1.5"
                               StrokeLineCap="Round"
+                                                            automation:AutomationProperties.AccessibilityView="Raw"
                               Data="M0,0 L10,10 M10,0 L0,10"
                               Width="12" Height="12"
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>

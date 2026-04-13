@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.AbstractPackagesPage"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
              xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
              xmlns:pkg="using:UniGetUI.PackageEngine.PackageClasses"
@@ -62,6 +63,7 @@
                               Width="40"
                               Height="40"
                               Margin="0,0,4,0"
+                              automation:AutomationProperties.AccessibilityView="Raw"
                               VerticalAlignment="Center"
                               HorizontalAlignment="Center"
                               Path="{Binding PageIconPath}"/>
@@ -99,11 +101,15 @@
                             Orientation="Horizontal"
                             Spacing="4"
                             VerticalAlignment="Center">
-                    <TextBlock Text="{t:Translate Order by:}" VerticalAlignment="Center"/>
-                    <Button x:Name="OrderByButton" Padding="8,4" CornerRadius="4">
+                    <TextBlock x:Name="OrderByLabel" Text="{t:Translate Order by:}" VerticalAlignment="Center"/>
+                    <Button x:Name="OrderByButton"
+                            Padding="8,4"
+                            CornerRadius="4"
+                            automation:AutomationProperties.LabeledBy="{Binding #OrderByLabel}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <TextBlock Text="{Binding SortFieldName}" VerticalAlignment="Center" FontSize="12"/>
-                            <TextBlock Text="▾" VerticalAlignment="Center" FontSize="10" Opacity="0.7"/>
+                            <TextBlock Text="▾" VerticalAlignment="Center" FontSize="10" Opacity="0.7"
+                                       automation:AutomationProperties.AccessibilityView="Raw"/>
                         </StackPanel>
                         <Button.Flyout>
                             <MenuFlyout Placement="BottomEdgeAlignedLeft">
@@ -129,6 +135,8 @@
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
                         Command="{Binding ReloadCommand}"
+                        automation:AutomationProperties.Name="{t:Translate Reload}"
+                        automation:AutomationProperties.AcceleratorKey="F5"
                         IsVisible="{Binding ReloadButtonVisible}">
                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/reload.svg" Width="16" Height="16"/>
                 </Button>
@@ -139,13 +147,14 @@
                             Orientation="Horizontal"
                             Spacing="4"
                             VerticalAlignment="Center">
-                    <TextBlock Text="{t:Translate View mode:}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="ViewModeLabel" Text="{t:Translate View mode:}" VerticalAlignment="Center"/>
                     <ListBox x:Name="ViewModeSelector"
                              SelectionMode="Single"
                              SelectedIndex="{Binding ViewModeIndex, Mode=TwoWay}"
                              Background="Transparent"
                              BorderThickness="1"
                              CornerRadius="4"
+                         automation:AutomationProperties.LabeledBy="{Binding #ViewModeLabel}"
                              Padding="0">
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -153,16 +162,19 @@
                             </ItemsPanelTemplate>
                         </ListBox.ItemsPanel>
                         <!-- List -->
-                        <ListBoxItem x:Name="Selector_List" Padding="6,4" ToolTip.Tip="List">
-                            <TextBlock Text="☰" FontSize="16"/>
+                        <ListBoxItem x:Name="Selector_List" Padding="6,4" ToolTip.Tip="List"
+                                     automation:AutomationProperties.Name="List">
+                            <TextBlock Text="☰" FontSize="16" automation:AutomationProperties.AccessibilityView="Raw"/>
                         </ListBoxItem>
                         <!-- Grid -->
-                        <ListBoxItem x:Name="Selector_Grid" Padding="6,4" ToolTip.Tip="Grid">
-                            <TextBlock Text="⊞" FontSize="16"/>
+                        <ListBoxItem x:Name="Selector_Grid" Padding="6,4" ToolTip.Tip="Grid"
+                                     automation:AutomationProperties.Name="Grid">
+                            <TextBlock Text="⊞" FontSize="16" automation:AutomationProperties.AccessibilityView="Raw"/>
                         </ListBoxItem>
                         <!-- Icons -->
-                        <ListBoxItem x:Name="Selector_Icons" Padding="6,4" ToolTip.Tip="Icons">
-                            <TextBlock Text="⊟" FontSize="16"/>
+                        <ListBoxItem x:Name="Selector_Icons" Padding="6,4" ToolTip.Tip="Icons"
+                                     automation:AutomationProperties.Name="Icons">
+                            <TextBlock Text="⊟" FontSize="16" automation:AutomationProperties.AccessibilityView="Raw"/>
                         </ListBoxItem>
                     </ListBox>
                 </StackPanel>
@@ -184,6 +196,7 @@
                               Height="36"
                               Padding="8,4"
                               CornerRadius="4"
+                              automation:AutomationProperties.Name="{t:Translate Filters}"
                               IsChecked="{Binding IsFilterPaneOpen, Mode=TwoWay}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/Filter.svg" Width="16" Height="16" VerticalAlignment="Center"/>
@@ -212,8 +225,10 @@
                         Width="30"
                         Height="36"
                         Padding="4"
+                        automation:AutomationProperties.Name="{t:Translate More}"
                         CornerRadius="0,4,4,0">
-                    <TextBlock Text="▾" FontSize="20" HorizontalAlignment="Center"/>
+                    <TextBlock Text="▾" FontSize="20" HorizontalAlignment="Center"
+                               automation:AutomationProperties.AccessibilityView="Raw"/>
                 </Button>
             </StackPanel>
 
@@ -246,6 +261,8 @@
                 <ScrollViewer x:Name="SidePanel"
                               HorizontalScrollBarVisibility="Disabled"
                               Padding="0,0,4,0"
+                              automation:AutomationProperties.AccessibilityView="Control"
+                              automation:AutomationProperties.Name="{t:Translate Filters}"
                               Background="{DynamicResource AppWindowBackground}">
                     <StackPanel x:Name="SidePanelGrid" Spacing="8" Margin="0,0,0,8">
 
@@ -430,6 +447,9 @@
                                   HorizontalAlignment="Stretch"
                                   VerticalAlignment="Stretch"
                                   ItemsSource="{Binding FilteredPackages}"
+                                  automation:AutomationProperties.AccessibilityView="Control"
+                                  automation:AutomationProperties.Name="{Binding PageTitle}"
+                                  automation:AutomationProperties.HelpText="{Binding Subtitle}"
                                   AutoGenerateColumns="False"
                                   CanUserReorderColumns="True"
                                   CanUserResizeColumns="True"
@@ -441,6 +461,7 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <CheckBox IsChecked="{Binding IsChecked}"
+                                                      automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                       HorizontalAlignment="Center"
                                                       VerticalAlignment="Center"
                                                       Margin="5,0,0,0"/>
@@ -452,7 +473,9 @@
                                                         Width="2*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
-                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0"
+                                                        automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                                        automation:AutomationProperties.ItemType="{t:Translate Package}">
                                                 <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
                                                                   Width="16" Height="16" VerticalAlignment="Center"/>
                                                 <TextBlock Text="{Binding Package.Name}" VerticalAlignment="Center"/>
@@ -520,6 +543,7 @@
                         <CheckBox IsChecked="{Binding AllPackagesChecked, Mode=TwoWay}"
                                   IsVisible="{Binding IsListViewMode}"
                                   Width="40" Height="32"
+                                  automation:AutomationProperties.Name="{t:Translate Select all}"
                                   HorizontalAlignment="Left"
                                   VerticalAlignment="Top"
                                   Margin="8,0,0,0"
@@ -537,6 +561,8 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="pkg:PackageWrapper">
                                         <Border CornerRadius="4" Margin="4" Width="275" Height="56"
+                                            automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                            automation:AutomationProperties.ItemType="{t:Translate Package}"
                                                 Background="{DynamicResource AppBorderBrush}" Padding="4">
                                             <Grid ColumnDefinitions="48,*,24" ColumnSpacing="4">
                                                 <controls:SvgIcon Grid.Column="0"
@@ -557,6 +583,7 @@
                                                 </StackPanel>
                                                 <CheckBox Grid.Column="2"
                                                           IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                          automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                           VerticalAlignment="Center"
                                                           HorizontalAlignment="Center"/>
                                             </Grid>
@@ -578,10 +605,13 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="pkg:PackageWrapper">
                                         <Border CornerRadius="4" Margin="4" Width="128" Height="134"
+                                            automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                            automation:AutomationProperties.ItemType="{t:Translate Package}"
                                                 Background="{DynamicResource AppBorderBrush}" Padding="4">
                                             <Grid RowDefinitions="22,60,30,15">
                                                 <CheckBox Grid.Row="0"
                                                           IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                          automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"
                                                           Padding="0" Margin="-4,0,0,0"/>
@@ -638,6 +668,7 @@
                              FontSize="40"
                              Watermark="{t:Translate Search for packages}"
                              Background="{DynamicResource AppWindowBackground}"
+                             automation:AutomationProperties.Name="{t:Translate Search for packages}"
                              Text="{Binding MegaQueryText, Mode=TwoWay}"
                              KeyDown="MegaQueryBlock_KeyDown"/>
                     <Button x:Name="MegaFindButton"
@@ -646,6 +677,7 @@
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Stretch"
                             CornerRadius="0,8,8,0"
+                            automation:AutomationProperties.Name="{t:Translate Search for packages}"
                             Command="{Binding SubmitSearch}">
                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg" Width="40" Height="40"/>
                     </Button>

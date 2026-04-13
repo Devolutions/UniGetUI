@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -47,7 +48,11 @@ public partial class CheckboxCard : SettingsCard
 
     public string Text
     {
-        set => _textblock.Text = value;
+        set
+        {
+            _textblock.Text = value;
+            ApplyAutomationMetadata(_checkbox, value, _warningBlock.IsVisible ? _warningBlock.Text : null);
+        }
     }
 
     public string WarningText
@@ -56,6 +61,7 @@ public partial class CheckboxCard : SettingsCard
         {
             _warningBlock.Text = value;
             _warningBlock.IsVisible = value.Any();
+            ApplyAutomationMetadata(_checkbox, _textblock.Text, _warningBlock.IsVisible ? value : null);
         }
     }
 
@@ -87,6 +93,7 @@ public partial class CheckboxCard : SettingsCard
         };
         _warningBlock.Classes.Add("setting-warning-text");
         IS_INVERTED = false;
+        AutomationProperties.SetAccessibilityView(_warningBlock, AccessibilityView.Raw);
 
         Content = _checkbox;
         Header = new StackPanel
@@ -97,6 +104,7 @@ public partial class CheckboxCard : SettingsCard
         };
 
         _checkbox.IsCheckedChanged += _checkbox_Toggled;
+        ApplyAutomationMetadata(_checkbox, _textblock.Text);
     }
 
     protected virtual void _checkbox_Toggled(object? sender, RoutedEventArgs e)

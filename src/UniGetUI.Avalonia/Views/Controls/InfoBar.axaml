@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Controls.InfoBar"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
              xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
              x:DataType="vm:InfoBarViewModel">
@@ -8,6 +9,9 @@
     <Border x:Name="BodyBorder"
             IsVisible="{Binding IsOpen}"
             BorderThickness="0,1,0,1"
+            automation:AutomationProperties.AccessibilityView="Control"
+            automation:AutomationProperties.Name="{Binding Title}"
+            automation:AutomationProperties.HelpText="{Binding Message}"
             Padding="0">
         <Grid ColumnDefinitions="5,Auto,*,Auto,Auto">
 
@@ -18,6 +22,7 @@
             <Border Grid.Column="1"
                     Width="20" Height="20"
                     Margin="12,0,4,0"
+                    automation:AutomationProperties.AccessibilityView="Raw"
                     VerticalAlignment="Center">
                 <PathIcon x:Name="SeverityIcon"
                           Width="16" Height="16"
@@ -54,6 +59,7 @@
             <Button Grid.Column="4"
                     IsVisible="{Binding IsClosable}"
                     Command="{Binding CloseCommand}"
+                    automation:AutomationProperties.Name="Close"
                     VerticalAlignment="Center"
                     Margin="4,0,8,0"
                     Padding="6"

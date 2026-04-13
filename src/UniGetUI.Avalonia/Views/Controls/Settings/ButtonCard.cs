@@ -11,12 +11,20 @@ public sealed partial class ButtonCard : SettingsCard
 
     public string ButtonText
     {
-        set => _button.Content = value;
+        set
+        {
+            _button.Content = value;
+            ApplyAutomationMetadata(_button, GetAutomationNameText(), value);
+        }
     }
 
     public string Text
     {
-        set => Header = value;
+        set
+        {
+            Header = value;
+            ApplyAutomationMetadata(_button, value);
+        }
     }
 
     public new event EventHandler<EventArgs>? Click;
@@ -26,6 +34,7 @@ public sealed partial class ButtonCard : SettingsCard
         _button.MinWidth = 200;
         _button.Click += (_, _) => Click?.Invoke(this, EventArgs.Empty);
         Content = _button;
+        ApplyAutomationMetadata(_button);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)

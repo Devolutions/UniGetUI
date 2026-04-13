@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.SidebarView"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
              xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
@@ -19,10 +20,12 @@
                  SelectionChanged="NavListBox_SelectionChanged"
                  Background="Transparent"
                  BorderThickness="0"
+                 automation:AutomationProperties.AccessibilityView="Control"
                  Padding="8,10,8,0">
 
             <!-- Discover Packages -->
             <ListBoxItem x:Name="DiscoverNavBtn" Tag="Discover" Padding="4,2" CornerRadius="6"
+                         automation:AutomationProperties.Name="{t:Translate Discover Packages}"
                          ToolTip.Tip="{t:Translate Discover Packages}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
@@ -43,6 +46,7 @@
 
             <!-- Software Updates -->
             <ListBoxItem x:Name="UpdatesNavBtn" Tag="Updates" Padding="4,2" CornerRadius="6"
+                         automation:AutomationProperties.Name="{t:Translate Software Updates}"
                          ToolTip.Tip="{t:Translate Software Updates}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
@@ -91,6 +95,7 @@
 
             <!-- Installed Packages -->
             <ListBoxItem x:Name="InstalledNavBtn" Tag="Installed" Padding="4,2" CornerRadius="6"
+                         automation:AutomationProperties.Name="{t:Translate Installed Packages}"
                          ToolTip.Tip="{t:Translate Installed Packages}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
@@ -111,6 +116,7 @@
 
             <!-- Package Bundles -->
             <ListBoxItem x:Name="BundlesNavBtn" Tag="Bundles" Padding="4,2" CornerRadius="6"
+                         automation:AutomationProperties.Name="{t:Translate Package Bundles}"
                          ToolTip.Tip="{t:Translate Package Bundles}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
@@ -160,6 +166,7 @@
                     BorderThickness="0"
                     Padding="12,8"
                     CornerRadius="6"
+                    automation:AutomationProperties.Name="{t:Translate Settings}"
                     ToolTip.Tip="{t:Translate Settings}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/settings.svg" Width="24" Height="24" VerticalAlignment="Center"/>
@@ -176,6 +183,7 @@
                     BorderThickness="0"
                     Padding="12,8"
                     CornerRadius="6"
+                    automation:AutomationProperties.Name="{t:Translate Package Managers}"
                     ToolTip.Tip="{t:Translate Package Managers}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/clipboard_list.svg" Width="24" Height="24" VerticalAlignment="Center"/>
@@ -190,9 +198,11 @@
                     BorderThickness="0"
                     Padding="12,8"
                     CornerRadius="6"
+                    automation:AutomationProperties.Name="{t:Translate More}"
                     ToolTip.Tip="{t:Translate More}">
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                    <TextBlock Text="···" FontSize="20" Width="24" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"/>
+                    <TextBlock Text="···" FontSize="20" Width="24" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                               automation:AutomationProperties.AccessibilityView="Raw"/>
                     <TextBlock Text="{t:Translate More}" FontSize="16" VerticalAlignment="Center"
                                IsVisible="{Binding IsPaneOpen}"/>
                 </StackPanel>

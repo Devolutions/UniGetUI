@@ -167,6 +167,9 @@
         <DependentUpon>ManagersHomepage.axaml</DependentUpon>
         <SubType>Code</SubType>
       </Compile>
+      <Compile Update="Views\DialogPages\CrashReportWindow.axaml.cs">
+        <DependentUpon>CrashReportWindow.axaml</DependentUpon>
+      </Compile>
       <Compile Update="Views\DialogPages\OperationOutputWindow.axaml.cs">
         <DependentUpon>OperationOutputWindow.axaml</DependentUpon>
       </Compile>

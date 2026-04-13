@@ -1,8 +1,8 @@
-using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json.Nodes;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
 using UniGetUI.Core.Data;
 using Windows.Graphics;
 
@@ -58,7 +58,7 @@ internal sealed partial class CrashReportWindow : Window
         {
             var node = new JsonObject
             {
-                ["email"]  = email,
+                ["email"] = email,
                 ["message"] = message,
                 ["errorMessage"] = errorBody,
                 ["productInfo"] = $"UniGetUI {CoreData.VersionName} (Build {CoreData.BuildNumber})"

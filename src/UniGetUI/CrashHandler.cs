@@ -10,6 +10,7 @@ public static class CrashHandler
 {
     public static readonly string PendingCrashFile =
         Path.Combine(Path.GetTempPath(), "UniGetUI_pending_crash.txt");
+
     private const uint MB_ICONSTOP = 0x00000010;
     private const uint MB_OKCANCEL = 0x00000001;
     private const uint MB_YESNOCANCEL = 0x00000003;

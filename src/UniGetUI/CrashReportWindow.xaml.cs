@@ -5,6 +5,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using UniGetUI.Core.Data;
 using Windows.Graphics;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI;
 
@@ -64,7 +65,7 @@ internal sealed partial class CrashReportWindow : Window
                 ["productInfo"] = $"UniGetUI {CoreData.VersionName} (Build {CoreData.BuildNumber})"
             };
 
-            using var client = new HttpClient();
+            using var client = new HttpClient(CoreTools.GenericHttpClientParameters);
             client.Timeout = TimeSpan.FromSeconds(10);
             using var content = new StringContent(
                 node.ToJsonString(), Encoding.UTF8, "application/json");

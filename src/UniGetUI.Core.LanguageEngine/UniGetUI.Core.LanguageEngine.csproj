@@ -46,10 +46,10 @@
         <None Remove="Assets\Languages\lang_sr.json" />
         <None Remove="Assets\Languages\lang_sv.json" />
         <None Remove="Assets\Languages\lang_sq.json" />
-        <None Remove="Assets\Languages\lang_tg.json" />
+        <None Remove="Assets\Languages\lang_tl.json" />
         <None Remove="Assets\Languages\lang_th.json" />
         <None Remove="Assets\Languages\lang_tr.json" />
-        <None Remove="Assets\Languages\lang_ua.json" />
+        <None Remove="Assets\Languages\lang_uk.json" />
         <None Remove="Assets\Languages\lang_ur.json" />
         <None Remove="Assets\Languages\lang_vi.json" />
         <None Remove="Assets\Languages\lang_zh_CN.json" />

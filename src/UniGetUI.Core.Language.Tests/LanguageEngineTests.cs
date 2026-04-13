@@ -8,7 +8,7 @@ namespace UniGetUI.Core.Language.Tests
         [Theory]
         [InlineData("ca", "Fes una còpia de seguretat dels paquets instal·lats")]
         [InlineData("es", "Respaldar paquetes instalados")]
-        [InlineData("ua", "Резервне копіювання встановлених пакетів")]
+        [InlineData("uk", "Резервне копіювання встановлених пакетів")]
         public void TestLoadingLanguage(string language, string translation)
         {
             LanguageEngine engine = new();
@@ -58,8 +58,17 @@ namespace UniGetUI.Core.Language.Tests
         {
             LanguageEngine engine = new();
 
-            engine.LoadLanguage("ua");
+            engine.LoadLanguage("uk");
             Assert.Equal("Підсистема Android", engine.Translate("Android Subsystem"));
+        }
+
+        [Fact]
+        public void TestLoadingLegacyUkrainianAlias()
+        {
+            LanguageEngine engine = new();
+
+            engine.LoadLanguage("ua");
+            Assert.Equal("uk", engine.Locale);
         }
 
         [Fact]

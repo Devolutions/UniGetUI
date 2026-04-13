@@ -12,6 +12,13 @@ namespace UniGetUI.Core.Language
 {
     public class LanguageEngine
     {
+        private static readonly Dictionary<string, string> LocaleAliases = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "es_MX", "es-MX" },
+            { "tg", "tl" },
+            { "ua", "uk" },
+        };
+
         private Dictionary<string, string> MainLangDict = [];
         public static string SelectedLocale = "??";
 
@@ -45,18 +52,7 @@ namespace UniGetUI.Core.Language
                 lang = (lang ?? string.Empty).Trim();
 
                 Locale = "en";
-                if (LanguageData.LanguageReference.ContainsKey(lang))
-                {
-                    Locale = lang;
-                }
-                else if (lang.Length >= 2)
-                {
-                    string prefix = lang[0..2].Replace("uk", "ua");
-                    if (LanguageData.LanguageReference.ContainsKey(prefix))
-                    {
-                        Locale = prefix;
-                    }
-                }
+                Locale = ResolveLocale(lang);
 
                 MainLangDict = LoadLanguageFile(Locale);
                 Formatter = new() { Locale = Locale.Replace('_', '-') };
@@ -77,6 +73,64 @@ namespace UniGetUI.Core.Language
                 LoadStaticTranslation();
                 SelectedLocale = Locale;
             }
+        }
+
+        private static string ResolveLocale(string lang)
+        {
+            foreach (string candidate in GetLocaleCandidates(lang))
+            {
+                if (LanguageData.LanguageReference.ContainsKey(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return "en";
+        }
+
+        private static IEnumerable<string> GetLocaleCandidates(string lang)
+        {
+            HashSet<string> candidates = new(StringComparer.OrdinalIgnoreCase);
+
+            void AddCandidate(string? candidate)
+            {
+                if (!string.IsNullOrWhiteSpace(candidate))
+                {
+                    candidates.Add(candidate.Trim());
+                }
+            }
+
+            string requested = (lang ?? string.Empty).Trim();
+            string underscored = requested.Replace('-', '_');
+            string hyphenated = requested.Replace('_', '-');
+
+            AddCandidate(requested);
+            AddCandidate(underscored);
+            AddCandidate(hyphenated);
+
+            if (LocaleAliases.TryGetValue(requested, out string? requestedAlias))
+            {
+                AddCandidate(requestedAlias);
+            }
+
+            if (LocaleAliases.TryGetValue(underscored, out string? underscoredAlias))
+            {
+                AddCandidate(underscoredAlias);
+            }
+
+            string[] localeSegments = underscored.Split('_', StringSplitOptions.RemoveEmptyEntries);
+            if (localeSegments.Length > 0)
+            {
+                string baseLanguage = localeSegments[0];
+                AddCandidate(baseLanguage);
+
+                if (LocaleAliases.TryGetValue(baseLanguage, out string? baseLanguageAlias))
+                {
+                    AddCandidate(baseLanguageAlias);
+                }
+            }
+
+            return candidates;
         }
 
         public Dictionary<string, string> LoadLanguageFile(string LangKey)

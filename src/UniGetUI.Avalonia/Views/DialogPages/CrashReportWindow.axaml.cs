@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
@@ -46,7 +47,7 @@ internal sealed partial class CrashReportWindow : Window
                 ["productInfo"] = $"UniGetUI {CoreData.VersionName} (Build {CoreData.BuildNumber})"
             };
 
-            using var client = new HttpClient();
+            using var client = new HttpClient(CoreTools.GenericHttpClientParameters);
             client.Timeout = TimeSpan.FromSeconds(10);
             using var content = new StringContent(
                 node.ToJsonString(), Encoding.UTF8, "application/json");

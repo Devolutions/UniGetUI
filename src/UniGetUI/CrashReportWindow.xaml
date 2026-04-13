@@ -17,23 +17,21 @@
 
       <!-- Title + description -->
       <StackPanel Spacing="4">
-        <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="UniGetUI has crashed" />
+        <TextBlock x:Name="TitleText" Style="{StaticResource TitleTextBlockStyle}" />
         <TextBlock
+          x:Name="DescriptionText"
           Opacity="0.7"
           Style="{StaticResource BodyTextBlockStyle}"
-          Text="Help us fix this by sending a crash report to Devolutions. All fields below are optional."
           TextWrapping="WrapWholeWords"
         />
       </StackPanel>
 
       <!-- Optional contact fields -->
-      <TextBox x:Name="EmailBox" Header="Email (optional)" PlaceholderText="your@email.com" />
+      <TextBox x:Name="EmailBox" />
       <TextBox
         x:Name="DetailsBox"
         AcceptsReturn="True"
-        Header="Additional details (optional)"
         Height="100"
-        PlaceholderText="Describe what you were doing when the crash occurred…"
         ScrollViewer.VerticalScrollBarVisibility="Auto"
         TextWrapping="Wrap"
       />
@@ -44,7 +42,6 @@
         AcceptsReturn="True"
         FontFamily="Cascadia Code, Consolas"
         FontSize="11"
-        Header="Crash report"
         Height="180"
         IsReadOnly="True"
         ScrollViewer.HorizontalScrollBarVisibility="Auto"
@@ -52,17 +49,16 @@
         TextWrapping="NoWrap"
       />
 
-      <!-- Action buttons -->
+      <!-- Action buttons (content set in code-behind for translation) -->
       <StackPanel
         HorizontalAlignment="Right"
         Orientation="Horizontal"
         Spacing="8"
       >
-        <Button x:Name="DontSendButton" Click="DontSend_Click" Content="Don't Send" />
+        <Button x:Name="DontSendButton" Click="DontSend_Click" />
         <Button
           x:Name="SendButton"
           Click="SendReport_Click"
-          Content="Send Report"
           Style="{StaticResource AccentButtonStyle}"
         />
       </StackPanel>

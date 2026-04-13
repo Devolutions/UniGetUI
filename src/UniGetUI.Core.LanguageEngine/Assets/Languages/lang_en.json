@@ -1129,5 +1129,16 @@
   "{pm} could not be found": "{pm} could not be found",
   "{pm} found: {state}": "{pm} found: {state}",
   "{pm} package manager specific preferences": "{pm} package manager specific preferences",
-  "{pm} preferences": "{pm} preferences"
+  "{pm} preferences": "{pm} preferences",
+  "Additional details (optional)": "Additional details (optional)",
+  "Crash report": "Crash report",
+  "Describe what you were doing when the crash occurred…": "Describe what you were doing when the crash occurred…",
+  "Don't Send": "Don't Send",
+  "Email (optional)": "Email (optional)",
+  "Help us fix this by sending a crash report to Devolutions. All fields below are optional.": "Help us fix this by sending a crash report to Devolutions. All fields below are optional.",
+  "Send Report": "Send Report",
+  "Sending…": "Sending…",
+  "UniGetUI – Crash Report": "UniGetUI – Crash Report",
+  "UniGetUI has crashed": "UniGetUI has crashed",
+  "your@email.com": "your@email.com"
 }

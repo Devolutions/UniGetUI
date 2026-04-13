@@ -17,13 +17,15 @@ internal sealed partial class CrashReportWindow : Window
         _crashReport = crashReport;
         InitializeComponent();
         CrashReportText.Text = crashReport;
+        DontSendButton.Content = CoreTools.Translate("Don't Send");
+        SendButton.Content = CoreTools.Translate("Send Report");
     }
 
     private async void SendReport_Click(object? sender, RoutedEventArgs e)
     {
         SendButton.IsEnabled = false;
         DontSendButton.IsEnabled = false;
-        SendButton.Content = "Sending…";
+        SendButton.Content = CoreTools.Translate("Sending…");
 
         string email = EmailBox.Text?.Trim() ?? string.Empty;
         string details = DetailsBox.Text?.Trim() ?? string.Empty;

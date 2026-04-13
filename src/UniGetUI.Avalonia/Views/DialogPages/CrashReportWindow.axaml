@@ -1,7 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.CrashReportWindow"
-        Title="UniGetUI – Crash Report"
+        Title="{t:Translate UniGetUI – Crash Report}"
         Width="800" MinWidth="500"
         Height="580" MinHeight="380"
         CanResize="True"
@@ -14,34 +15,34 @@
 
             <!-- Title + description -->
             <StackPanel Spacing="4">
-                <TextBlock Text="UniGetUI has crashed"
+                <TextBlock Text="{t:Translate UniGetUI has crashed}"
                            FontSize="22"
                            FontWeight="SemiBold"/>
-                <TextBlock Text="Help us fix this by sending a crash report to Devolutions. All fields below are optional."
+                <TextBlock Text="{t:Translate Text='Help us fix this by sending a crash report to Devolutions. All fields below are optional.'}"
                            Opacity="0.7"
                            TextWrapping="Wrap"/>
             </StackPanel>
 
             <!-- Email field -->
             <StackPanel Spacing="4">
-                <TextBlock Text="Email (optional)" FontSize="12" Opacity="0.7"/>
+                <TextBlock Text="{t:Translate Text='Email (optional)'}" FontSize="12" Opacity="0.7"/>
                 <TextBox x:Name="EmailBox"
-                         Watermark="your@email.com"/>
+                         PlaceholderText="{t:Translate Text='your@email.com'}"/>
             </StackPanel>
 
             <!-- Additional details field -->
             <StackPanel Spacing="4">
-                <TextBlock Text="Additional details (optional)" FontSize="12" Opacity="0.7"/>
+                <TextBlock Text="{t:Translate Text='Additional details (optional)'}" FontSize="12" Opacity="0.7"/>
                 <TextBox x:Name="DetailsBox"
                          AcceptsReturn="True"
                          Height="90"
-                         Watermark="Describe what you were doing when the crash occurred…"
+                         PlaceholderText="{t:Translate Text='Describe what you were doing when the crash occurred…'}"
                          TextWrapping="Wrap"/>
             </StackPanel>
 
             <!-- Crash report (read-only) -->
             <StackPanel Spacing="4">
-                <TextBlock Text="Crash report" FontSize="12" Opacity="0.7"/>
+                <TextBlock Text="{t:Translate Text='Crash report'}" FontSize="12" Opacity="0.7"/>
                 <TextBox x:Name="CrashReportText"
                          AcceptsReturn="True"
                          FontFamily="Cascadia Code,Cascadia Mono,Consolas,Menlo,monospace"
@@ -51,15 +52,13 @@
                          TextWrapping="NoWrap"/>
             </StackPanel>
 
-            <!-- Action buttons -->
+            <!-- Action buttons (content set in code-behind for translation) -->
             <StackPanel HorizontalAlignment="Right"
                         Orientation="Horizontal"
                         Spacing="8">
                 <Button x:Name="DontSendButton"
-                        Content="Don't Send"
                         Click="DontSend_Click"/>
                 <Button x:Name="SendButton"
-                        Content="Send Report"
                         Classes="accent"
                         Click="SendReport_Click"/>
             </StackPanel>

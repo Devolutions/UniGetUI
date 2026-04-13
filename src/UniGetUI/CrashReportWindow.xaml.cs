@@ -3,9 +3,9 @@ using System.Text;
 using System.Text.Json.Nodes;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
-using Windows.Graphics;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Tools;
+using Windows.Graphics;
 
 namespace UniGetUI;
 
@@ -31,14 +31,24 @@ internal sealed partial class CrashReportWindow : Window
             ));
         }
 
+        Title = CoreTools.Translate("UniGetUI – Crash Report");
+        TitleText.Text = CoreTools.Translate("UniGetUI has crashed");
+        DescriptionText.Text = CoreTools.Translate("Help us fix this by sending a crash report to Devolutions. All fields below are optional.");
+        EmailBox.Header = CoreTools.Translate("Email (optional)");
+        EmailBox.PlaceholderText = CoreTools.Translate("your@email.com");
+        DetailsBox.Header = CoreTools.Translate("Additional details (optional)");
+        DetailsBox.PlaceholderText = CoreTools.Translate("Describe what you were doing when the crash occurred…");
+        CrashReportText.Header = CoreTools.Translate("Crash report");
         CrashReportText.Text = crashReport;
+        DontSendButton.Content = CoreTools.Translate("Don't Send");
+        SendButton.Content = CoreTools.Translate("Send Report");
     }
 
     private async void SendReport_Click(object sender, RoutedEventArgs e)
     {
         SendButton.IsEnabled = false;
         DontSendButton.IsEnabled = false;
-        SendButton.Content = "Sending…";
+        SendButton.Content = CoreTools.Translate("Sending…");
 
         string email = EmailBox.Text.Trim();
         string details = DetailsBox.Text.Trim();

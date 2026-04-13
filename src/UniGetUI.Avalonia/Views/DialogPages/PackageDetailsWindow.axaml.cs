@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Threading;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Interface.Telemetry;
@@ -35,6 +36,7 @@ public partial class PackageDetailsWindow : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+        Dispatcher.UIThread.Post(() => MainActionButton.Focus(), DispatcherPriority.Background);
         _ = _vm.LoadDetailsAsync();
         TelemetryHandler.PackageDetails(_vm.Package, _vm.OperationRole.ToString());
     }

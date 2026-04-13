@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
@@ -29,6 +30,7 @@
         <!-- ── Title ── -->
         <TextBlock Grid.Row="0"
                    Text="{Binding Title}"
+                   automation:AutomationProperties.Name="{Binding Title}"
                    FontSize="20"
                    FontWeight="SemiBold"
                    Margin="0,0,0,4"/>
@@ -42,6 +44,11 @@
                        Opacity="0.75"/>
 
             <Button x:Name="ResetButton" Grid.Column="1" VerticalAlignment="Center">
+                <Button.Styles>
+                    <Style Selector="Button">
+                        <Setter Property="automation:AutomationProperties.Name" Value="{Binding ResetLabel}"/>
+                    </Style>
+                </Button.Styles>
                 <TextBlock Text="{Binding ResetLabel}"/>
                 <Button.Flyout>
                     <Flyout Placement="Bottom">
@@ -96,12 +103,15 @@
                            Opacity="0.5"/>
 
                 <DataGrid ItemsSource="{Binding Entries}"
+                          x:Name="IgnoredUpdatesGrid"
                           AutoGenerateColumns="False"
                           CanUserReorderColumns="True"
                           CanUserResizeColumns="True"
                           CanUserSortColumns="True"
                           SelectionMode="Single"
                           GridLinesVisibility="Horizontal"
+                          automation:AutomationProperties.Name="{Binding Title}"
+                          automation:AutomationProperties.HelpText="{Binding Description}"
                           IsVisible="{Binding HasEntries}">
                     <DataGrid.Columns>
 
@@ -110,6 +120,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
                                     <StackPanel Orientation="Horizontal" Spacing="6"
+                                                automation:AutomationProperties.Name="{Binding AutomationName}"
                                                 VerticalAlignment="Center" Margin="0,0,4,0">
                                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
                                                           Width="16" Height="16" VerticalAlignment="Center"/>
@@ -125,6 +136,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
                                     <StackPanel Orientation="Horizontal" Spacing="6"
+                                                automation:AutomationProperties.Name="{Binding AutomationName}"
                                                 VerticalAlignment="Center" Margin="0,0,4,0">
                                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/id.svg"
                                                           Width="16" Height="16" VerticalAlignment="Center"/>
@@ -140,6 +152,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
                                     <StackPanel Orientation="Horizontal" Spacing="6"
+                                                automation:AutomationProperties.Name="{Binding AutomationName}"
                                                 VerticalAlignment="Center" Margin="0,0,4,0">
                                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/version.svg"
                                                           Width="16" Height="16" VerticalAlignment="Center"/>
@@ -155,6 +168,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
                                     <StackPanel Orientation="Horizontal" Spacing="6"
+                                                automation:AutomationProperties.Name="{Binding AutomationName}"
                                                 VerticalAlignment="Center" Margin="0,0,4,0">
                                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/upgradable.svg"
                                                           Width="16" Height="16" VerticalAlignment="Center"/>
@@ -170,6 +184,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
                                     <StackPanel Orientation="Horizontal" Spacing="6"
+                                                automation:AutomationProperties.Name="{Binding AutomationName}"
                                                 VerticalAlignment="Center" Margin="0,0,4,0">
                                         <controls:SvgIcon Path="{Binding ManagerIconPath}"
                                                           Width="16" Height="16"
@@ -191,6 +206,7 @@
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
                                             Command="{Binding RemoveCommand}"
+                                            automation:AutomationProperties.Name="{Binding RemoveAutomationName}"
                                             ToolTip.Tip="{t:Translate Text='Remove from list'}">
                                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/delete.svg"
                                                           Width="16" Height="16"/>

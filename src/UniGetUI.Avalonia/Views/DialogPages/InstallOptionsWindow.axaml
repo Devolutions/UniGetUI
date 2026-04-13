@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         x:Class="UniGetUI.Avalonia.Views.InstallOptionsWindow"
         x:DataType="vm:InstallOptionsViewModel"
@@ -19,19 +20,24 @@
 
                 <Image Source="{Binding PackageIcon}"
                        Width="32" Height="32"
+                       automation:AutomationProperties.AccessibilityView="Raw"
                        VerticalAlignment="Center"/>
 
                 <TextBlock Grid.Column="1"
+                           automation:AutomationProperties.Name="{Binding DialogTitle}"
                            Text="{Binding DialogTitle}"
                            FontSize="18" FontWeight="Bold"
                            TextWrapping="Wrap"
                            VerticalAlignment="Center"/>
 
                 <StackPanel Grid.Column="2" Spacing="3" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding ProfileLabel}"
+                    <TextBlock x:Name="ProfileLabelBlock"
+                               Text="{Binding ProfileLabel}"
                                FontSize="11" Opacity="0.7"/>
-                    <ComboBox ItemsSource="{Binding ProfileOptions}"
+                    <ComboBox x:Name="ProfileSelectorComboBox"
+                              ItemsSource="{Binding ProfileOptions}"
                               SelectedItem="{Binding SelectedProfile}"
+                              automation:AutomationProperties.LabeledBy="{Binding #ProfileLabelBlock}"
                               MinWidth="110"/>
                 </StackPanel>
             </Grid>
@@ -39,11 +45,13 @@
             <!-- ── Follow-global-options card ── -->
             <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="8" Padding="16,8">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                    <TextBlock Text="{Binding FollowGlobalLabel}"
+                    <TextBlock x:Name="FollowGlobalLabelBlock"
+                               Text="{Binding FollowGlobalLabel}"
                                TextWrapping="Wrap"
                                VerticalAlignment="Center"/>
                     <ToggleSwitch Grid.Column="1"
                                   IsChecked="{Binding FollowGlobal}"
+                                  automation:AutomationProperties.LabeledBy="{Binding #FollowGlobalLabelBlock}"
                                   OnContent="" OffContent=""
                                   VerticalAlignment="Center"/>
                 </Grid>
@@ -87,12 +95,14 @@
                             <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
 
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                <TextBlock Text="{Binding VersionLabel}"
+                                <TextBlock x:Name="VersionLabelBlock"
+                                           Text="{Binding VersionLabel}"
                                            VerticalAlignment="Center"/>
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding VersionOptions}"
                                           SelectedItem="{Binding SelectedVersion}"
                                           IsEnabled="{Binding VersionEnabled}"
+                                          automation:AutomationProperties.LabeledBy="{Binding #VersionLabelBlock}"
                                           HorizontalAlignment="Stretch"/>
                             </Grid>
 
@@ -117,36 +127,42 @@
                         <StackPanel Spacing="8">
 
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                <TextBlock Text="{Binding ArchLabel}" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="ArchLabelBlock" Text="{Binding ArchLabel}" VerticalAlignment="Center"/>
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding ArchOptions}"
                                           SelectedItem="{Binding SelectedArch}"
                                           IsEnabled="{Binding ArchEnabled}"
+                                          automation:AutomationProperties.LabeledBy="{Binding #ArchLabelBlock}"
                                           HorizontalAlignment="Stretch"/>
                             </Grid>
 
                             <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
 
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                <TextBlock Text="{Binding ScopeLabel}" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="ScopeLabelBlock" Text="{Binding ScopeLabel}" VerticalAlignment="Center"/>
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding ScopeOptions}"
                                           SelectedItem="{Binding SelectedScope}"
                                           IsEnabled="{Binding ScopeEnabled}"
+                                          automation:AutomationProperties.LabeledBy="{Binding #ScopeLabelBlock}"
                                           HorizontalAlignment="Stretch"/>
                             </Grid>
 
                             <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
 
                             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
-                                <TextBlock Text="{Binding LocationLabel}" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="LocationLabelBlock" Text="{Binding LocationLabel}" VerticalAlignment="Center"/>
                                 <Button Grid.Column="1"
                                         Content="{Binding SelectDirLabel}"
+                                    automation:AutomationProperties.Name="{Binding SelectDirLabel}"
+                                    automation:AutomationProperties.HelpText="{Binding LocationLabel}"
                                         IsEnabled="{Binding HasCustomLocations}"
                                         Padding="8,3" CornerRadius="4"
                                         Click="SelectDir_Click"/>
                                 <Button Grid.Column="2"
                                         Content="{Binding ResetDirLabel}"
+                                    automation:AutomationProperties.Name="{Binding ResetDirLabel}"
+                                    automation:AutomationProperties.HelpText="{Binding LocationLabel}"
                                         IsEnabled="{Binding HasCustomLocations}"
                                         Padding="8,3" CornerRadius="4"
                                         Command="{Binding ResetLocationCommand}"/>
@@ -154,6 +170,7 @@
 
                             <TextBox Text="{Binding LocationText}"
                                      IsEnabled="{Binding LocationEnabled}"
+                                     automation:AutomationProperties.LabeledBy="{Binding #LocationLabelBlock}"
                                      FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
                                      HorizontalAlignment="Stretch"/>
 
@@ -168,24 +185,27 @@
                               RowDefinitions="Auto,Auto,Auto"
                               ColumnSpacing="8" RowSpacing="8">
 
-                            <TextBlock Text="{Binding ParamsInstallLabel}"
+                                                        <TextBlock x:Name="ParamsInstallLabelBlock" Text="{Binding ParamsInstallLabel}"
                                        VerticalAlignment="Center"/>
                             <TextBox Grid.Column="1"
                                      Text="{Binding ParamsInstall}"
+                                                                         automation:AutomationProperties.LabeledBy="{Binding #ParamsInstallLabelBlock}"
                                      FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
 
-                            <TextBlock Grid.Row="1"
-                                       Text="{Binding ParamsUpdateLabel}"
+                                                        <TextBlock x:Name="ParamsUpdateLabelBlock" Grid.Row="1"
+                                                                             Text="{Binding ParamsUpdateLabel}"
                                        VerticalAlignment="Center"/>
                             <TextBox Grid.Row="1" Grid.Column="1"
                                      Text="{Binding ParamsUpdate}"
+                                                                         automation:AutomationProperties.LabeledBy="{Binding #ParamsUpdateLabelBlock}"
                                      FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
 
-                            <TextBlock Grid.Row="2"
-                                       Text="{Binding ParamsUninstallLabel}"
+                                                        <TextBlock x:Name="ParamsUninstallLabelBlock" Grid.Row="2"
+                                                                             Text="{Binding ParamsUninstallLabel}"
                                        VerticalAlignment="Center"/>
                             <TextBox Grid.Row="2" Grid.Column="1"
                                      Text="{Binding ParamsUninstall}"
+                                                                         automation:AutomationProperties.LabeledBy="{Binding #ParamsUninstallLabelBlock}"
                                      FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
 
                         </Grid>
@@ -201,16 +221,18 @@
                             <Grid ColumnDefinitions="*,*"
                                   RowDefinitions="Auto,80,Auto"
                                   ColumnSpacing="8" RowSpacing="4">
-                                <TextBlock Text="{Binding PreInstallLabel}"  FontSize="12"/>
-                                <TextBlock Grid.Column="1"
+                                <TextBlock x:Name="PreInstallLabelBlock" Text="{Binding PreInstallLabel}"  FontSize="12"/>
+                                <TextBlock x:Name="PostInstallLabelBlock" Grid.Column="1"
                                            Text="{Binding PostInstallLabel}" FontSize="12"/>
                                 <TextBox Grid.Row="1"
                                          Text="{Binding PreInstallText}"
                                          AcceptsReturn="True"
+                                         automation:AutomationProperties.LabeledBy="{Binding #PreInstallLabelBlock}"
                                          FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
                                 <TextBox Grid.Row="1" Grid.Column="1"
                                          Text="{Binding PostInstallText}"
                                          AcceptsReturn="True"
+                                         automation:AutomationProperties.LabeledBy="{Binding #PostInstallLabelBlock}"
                                          FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
                                 <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
                                           Content="{Binding AbortInstallLabel}"
@@ -223,16 +245,18 @@
                             <Grid ColumnDefinitions="*,*"
                                   RowDefinitions="Auto,80,Auto"
                                   ColumnSpacing="8" RowSpacing="4">
-                                <TextBlock Text="{Binding PreUpdateLabel}"  FontSize="12"/>
-                                <TextBlock Grid.Column="1"
+                                <TextBlock x:Name="PreUpdateLabelBlock" Text="{Binding PreUpdateLabel}"  FontSize="12"/>
+                                <TextBlock x:Name="PostUpdateLabelBlock" Grid.Column="1"
                                            Text="{Binding PostUpdateLabel}" FontSize="12"/>
                                 <TextBox Grid.Row="1"
                                          Text="{Binding PreUpdateText}"
                                          AcceptsReturn="True"
+                                         automation:AutomationProperties.LabeledBy="{Binding #PreUpdateLabelBlock}"
                                          FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
                                 <TextBox Grid.Row="1" Grid.Column="1"
                                          Text="{Binding PostUpdateText}"
                                          AcceptsReturn="True"
+                                         automation:AutomationProperties.LabeledBy="{Binding #PostUpdateLabelBlock}"
                                          FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
                                 <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
                                           Content="{Binding AbortUpdateLabel}"
@@ -245,16 +269,18 @@
                             <Grid ColumnDefinitions="*,*"
                                   RowDefinitions="Auto,80,Auto"
                                   ColumnSpacing="8" RowSpacing="4">
-                                <TextBlock Text="{Binding PreUninstallLabel}"  FontSize="12"/>
-                                <TextBlock Grid.Column="1"
+                                <TextBlock x:Name="PreUninstallLabelBlock" Text="{Binding PreUninstallLabel}"  FontSize="12"/>
+                                <TextBlock x:Name="PostUninstallLabelBlock" Grid.Column="1"
                                            Text="{Binding PostUninstallLabel}" FontSize="12"/>
                                 <TextBox Grid.Row="1"
                                          Text="{Binding PreUninstallText}"
                                          AcceptsReturn="True"
+                                         automation:AutomationProperties.LabeledBy="{Binding #PreUninstallLabelBlock}"
                                          FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
                                 <TextBox Grid.Row="1" Grid.Column="1"
                                          Text="{Binding PostUninstallText}"
                                          AcceptsReturn="True"
+                                         automation:AutomationProperties.LabeledBy="{Binding #PostUninstallLabelBlock}"
                                          FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
                                 <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
                                           Content="{Binding AbortUninstallLabel}"
@@ -273,6 +299,7 @@
                     <TextBlock Text="{Binding CommandPreviewLabel}" Opacity="0.7"/>
                     <Border Background="{DynamicResource AppDialogDarkBackground}" CornerRadius="4" Padding="8">
                         <TextBlock Text="{Binding CommandPreview}"
+                                   automation:AutomationProperties.Name="{Binding CommandPreviewLabel}"
                                    FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
                                    FontSize="12"
                                    TextWrapping="Wrap"/>
@@ -282,11 +309,14 @@
 
             <!-- ── Buttons ── -->
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <Button Content="{Binding SaveLabel}"
+                <Button x:Name="SaveButton"
+                    Content="{Binding SaveLabel}"
+                    automation:AutomationProperties.AcceleratorKey="Ctrl+S"
                         Padding="12,5" CornerRadius="4"
                         HorizontalAlignment="Left"
                         Command="{Binding SaveCommand}"/>
-                <Button Grid.Column="1"
+                <Button x:Name="ProceedButton"
+                    Grid.Column="1"
                         Content="{Binding ProceedButtonLabel}"
                         Padding="12,5" CornerRadius="4"
                         Command="{Binding ProceedCommand}"/>

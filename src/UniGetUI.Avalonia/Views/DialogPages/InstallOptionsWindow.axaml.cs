@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -19,6 +20,12 @@ public partial class InstallOptionsWindow : Window
         DataContext = vm;
         InitializeComponent();
         vm.CloseRequested += (_, _) => Close();
+    }
+
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        Dispatcher.UIThread.Post(() => ProfileSelectorComboBox.Focus(), DispatcherPriority.Background);
     }
 
     private async void SelectDir_Click(object? sender, RoutedEventArgs e)

@@ -139,6 +139,8 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
     public string ManagerIconPath { get; }
     public string VersionDisplay { get; }
     public string NewVersion { get; }
+    public string AutomationName { get; }
+    public string RemoveAutomationName { get; }
 
     private readonly string _ignoredId;
 
@@ -154,6 +156,10 @@ public partial class IgnoredPackageEntryViewModel : ObservableObject
         ManagerIconPath = managerIconPath;
         VersionDisplay = versionDisplay;
         NewVersion = newVersion;
+        AutomationName = CoreTools.Translate("Package {name} from {manager}")
+            .Replace("{name}", Name)
+            .Replace("{manager}", Manager);
+        RemoveAutomationName = CoreTools.Translate("Remove {0} from ignored updates", Name);
     }
 
     [RelayCommand]

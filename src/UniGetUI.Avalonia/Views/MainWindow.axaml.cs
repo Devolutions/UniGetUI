@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using System;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Core.Logging;
@@ -100,14 +101,15 @@ public partial class MainWindow : Window
         }
         else if (OperatingSystem.IsLinux())
         {
-            // Linux: remove the native title bar entirely; our toolbar is the
-            // only chrome. Custom min/max/close buttons appear on the right.
-            WindowDecorations = WindowDecorations.None;
+            // WSLg can report incorrect maximize/input bounds with frameless windows.
+            // Keep native decorations there and use the in-app toolbar only.
+            bool isWsl = IsRunningUnderWsl();
+            WindowDecorations = isWsl ? WindowDecorations.Full : WindowDecorations.None;
             TitleBarGrid.ClearValue(HeightProperty);
             TitleBarGrid.Height = 44;
             HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
             AvatarControl.Height = 32;
-            LinuxWindowButtons.IsVisible = true;
+            LinuxWindowButtons.IsVisible = !isWsl;
             MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
             // Keep maximize icon in sync with window state
             this.GetObservable(WindowStateProperty).Subscribe(state =>
@@ -121,6 +123,13 @@ public partial class MainWindow : Window
                     CoreTools.Translate(state == WindowState.Maximized ? "Restore" : "Maximize"));
             });
         }
+    }
+
+    private static bool IsRunningUnderWsl()
+    {
+        string? wslDistro = Environment.GetEnvironmentVariable("WSL_DISTRO_NAME");
+        string? wslInterop = Environment.GetEnvironmentVariable("WSL_INTEROP");
+        return !string.IsNullOrWhiteSpace(wslDistro) || !string.IsNullOrWhiteSpace(wslInterop);
     }
 
     private void MinimizeButton_Click(object? sender, RoutedEventArgs e)

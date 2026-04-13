@@ -44,4 +44,12 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             && Enum.TryParse<PageType>(tag, out var pageType))
             ViewModel?.RequestNavigation(pageType.ToString());
     }
+
+    public void FocusSelectedItem()
+    {
+        if (NavListBox.SelectedItem is InputElement item)
+            item.Focus();
+        else
+            NavListBox.Focus();
+    }
 }

@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -49,6 +50,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public event EventHandler<bool>? CanGoBackChanged;
     public event EventHandler<PageType>? CurrentPageChanged;
+
+    [ObservableProperty]
+    private string _announcementText = "";
+
+    [ObservableProperty]
+    private AutomationLiveSetting _announcementLiveSetting = AutomationLiveSetting.Polite;
 
     // ─── Operations panel ─────────────────────────────────────────────────────
     public AvaloniaList<OperationViewModel> Operations => AvaloniaOperationRegistry.OperationViewModels;
@@ -113,6 +120,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel()
     {
+        AccessibilityAnnouncementService.AnnouncementRequested += OnAnnouncementRequested;
+
         DiscoverPage = new DiscoverSoftwarePage();
         UpdatesPage = new SoftwareUpdatesPage();
         InstalledPage = new InstalledPackagesPage();
@@ -201,6 +210,15 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         LoadDefaultPage();
+    }
+
+    private void OnAnnouncementRequested(object? sender, AccessibilityAnnouncement announcement)
+    {
+        AnnouncementLiveSetting = announcement.LiveSetting;
+        AnnouncementText = string.Empty;
+        Dispatcher.UIThread.Post(
+            () => AnnouncementText = announcement.Message,
+            DispatcherPriority.Background);
     }
 
     // ─── Navigation ──────────────────────────────────────────────────────────
@@ -305,8 +323,25 @@ public partial class MainWindowViewModel : ViewModelBase
             GlobalSearchEnabled = false;
         }
 
+        AccessibilityAnnouncementService.Announce(GetPageAnnouncement(newPage_t));
         CurrentPageChanged?.Invoke(this, newPage_t);
     }
+
+    private static string GetPageAnnouncement(PageType pageType) => pageType switch
+    {
+        PageType.Discover => CoreTools.Translate("Discover Packages"),
+        PageType.Updates => CoreTools.Translate("Software Updates"),
+        PageType.Installed => CoreTools.Translate("Installed Packages"),
+        PageType.Bundles => CoreTools.Translate("Package Bundles"),
+        PageType.Settings => CoreTools.Translate("Settings"),
+        PageType.Managers => CoreTools.Translate("Package Managers"),
+        PageType.OwnLog => CoreTools.Translate("UniGetUI Log"),
+        PageType.ManagerLog => CoreTools.Translate("Package Manager logs"),
+        PageType.OperationHistory => CoreTools.Translate("Operation history"),
+        PageType.Help => CoreTools.Translate("Help"),
+        PageType.ReleaseNotes => CoreTools.Translate("Release notes"),
+        _ => CoreTools.Translate("UniGetUI"),
+    };
 
     public void NavigateBack()
     {

@@ -360,11 +360,17 @@ public class InstalledPackagesPage : AbstractPackagesPage
     {
         if (package is null || package.Source.IsVirtualManager) return;
         if (await package.HasUpdatesIgnoredAsync())
+        {
             await package.RemoveFromIgnoredUpdatesAsync();
+            AccessibilityAnnouncementService.Announce(
+                CoreTools.Translate("Updates will no longer be ignored for {0}", package.Name));
+        }
         else
         {
             await package.AddToIgnoredUpdatesAsync();
             UpgradablePackagesLoader.Instance.Remove(package);
+            AccessibilityAnnouncementService.Announce(
+                CoreTools.Translate("Updates are now ignored for {0}", package.Name));
         }
     }
 

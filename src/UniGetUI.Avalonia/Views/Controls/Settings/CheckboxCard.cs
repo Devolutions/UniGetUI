@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Tools;
 using CoreSettings = global::UniGetUI.Core.SettingsEngine.Settings;
 
@@ -112,6 +113,10 @@ public partial class CheckboxCard : SettingsCard
         CoreSettings.Set(setting_name, (_checkbox.IsChecked ?? false) ^ IS_INVERTED ^ ForceInversion);
         StateChanged?.Invoke(this, EventArgs.Empty);
         _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
+        AccessibilityAnnouncementService.Announce(
+            CoreTools.Translate("{0} is now {1}", _textblock.Text, (_checkbox.IsChecked ?? false)
+                ? CoreTools.Translate("Enabled")
+                : CoreTools.Translate("Disabled")));
         var cmd = StateChangedCommand;
         if (cmd?.CanExecute(null) == true)
             cmd.Execute(null);
@@ -173,5 +178,9 @@ public partial class CheckboxCard_Dict : CheckboxCard
         );
         StateChanged?.Invoke(this, EventArgs.Empty);
         _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
+        AccessibilityAnnouncementService.Announce(
+            CoreTools.Translate("{0} is now {1}", _textblock.Text, (_checkbox.IsChecked ?? false)
+                ? CoreTools.Translate("Enabled")
+                : CoreTools.Translate("Disabled")));
     }
 }

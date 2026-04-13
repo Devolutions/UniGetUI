@@ -219,6 +219,18 @@
 
         </Grid>
 
+        <TextBlock x:Name="LiveAnnouncementHost"
+               Width="1"
+               Height="1"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Bottom"
+               Opacity="0"
+               IsHitTestVisible="False"
+               Text="{Binding AnnouncementText}"
+               automation:AutomationProperties.AccessibilityView="Control"
+               automation:AutomationProperties.Name="{Binding AnnouncementText}"
+               automation:AutomationProperties.LiveSetting="{Binding AnnouncementLiveSetting}"/>
+
         <!-- ── Title bar: drag area + search box ── -->
         <Grid x:Name="TitleBarGrid"
               Height="{Binding $parent[Window].WindowDecorationMargin.Top}"

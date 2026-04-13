@@ -5,6 +5,8 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Core.Logging;
@@ -33,6 +35,8 @@ public enum PageType
 
 public partial class MainWindow : Window
 {
+    private bool _focusSidebarSelectionOnNextPageChange;
+
     public enum RuntimeNotificationLevel
     {
         Progress,
@@ -52,6 +56,7 @@ public partial class MainWindow : Window
         SetupTitleBar();
 
         KeyDown += Window_KeyDown;
+        ViewModel.CurrentPageChanged += OnCurrentPageChanged;
     }
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
@@ -61,6 +66,7 @@ public partial class MainWindow : Window
 
         if (e.Key == Key.Tab && isCtrl)
         {
+            _focusSidebarSelectionOnNextPageChange = true;
             ViewModel.NavigateTo(isShift
                 ? MainWindowViewModel.GetPreviousPage(ViewModel.CurrentPage_t)
                 : MainWindowViewModel.GetNextPage(ViewModel.CurrentPage_t));
@@ -85,6 +91,19 @@ public partial class MainWindow : Window
         {
             (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.SelectAllTriggered();
         }
+    }
+
+    private void OnCurrentPageChanged(object? sender, PageType pageType)
+    {
+        if (!_focusSidebarSelectionOnNextPageChange)
+            return;
+
+        _focusSidebarSelectionOnNextPageChange = false;
+        Dispatcher.UIThread.Post(() =>
+        {
+            var sidebar = this.GetVisualDescendants().OfType<SidebarView>().FirstOrDefault();
+            sidebar?.FocusSelectedItem();
+        }, DispatcherPriority.Background);
     }
 
     private void SetupTitleBar()

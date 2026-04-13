@@ -1,8 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Avalonia.Automation;
+using System.IO;
 using global::Avalonia;
 using global::Avalonia.Controls;
 using global::Avalonia.Platform.Storage;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
@@ -37,6 +40,9 @@ public partial class GeneralViewModel : ViewModelBase
         var path = file.TryGetLocalPath();
         if (path is null) return;
         await Task.Run(() => CoreSettings.ImportFromFile_JSON(path));
+        AccessibilityAnnouncementService.Announce(
+            CoreTools.Translate("Settings imported from {0}", Path.GetFileName(path)),
+            AutomationLiveSetting.Polite);
         OnRestartRequired();
     }
 
@@ -52,7 +58,13 @@ public partial class GeneralViewModel : ViewModelBase
         if (file is null) return;
         var path = file.TryGetLocalPath();
         if (path is null) return;
-        try { await Task.Run(() => CoreSettings.ExportToFile_JSON(path)); }
+        try
+        {
+            await Task.Run(() => CoreSettings.ExportToFile_JSON(path));
+            AccessibilityAnnouncementService.Announce(
+                CoreTools.Translate("Settings exported to {0}", Path.GetFileName(path)),
+                AutomationLiveSetting.Polite);
+        }
         catch (Exception ex) { Logger.Error(ex); }
     }
 
@@ -61,6 +73,9 @@ public partial class GeneralViewModel : ViewModelBase
     {
         try { CoreSettings.ResetSettings(); }
         catch (Exception ex) { Logger.Error(ex); }
+        AccessibilityAnnouncementService.Announce(
+            CoreTools.Translate("UniGetUI settings were reset"),
+            AutomationLiveSetting.Assertive);
         OnRestartRequired();
     }
 

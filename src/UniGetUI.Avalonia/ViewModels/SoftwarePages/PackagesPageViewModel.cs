@@ -759,11 +759,15 @@ public partial class PackagesPageViewModel : ViewModelBase
         {
             AllPackagesChecked = true;
             FilteredPackages.SelectAll();
+            AccessibilityAnnouncementService.Announce(
+                CoreTools.Translate("All packages selected"));
         }
         else
         {
             AllPackagesChecked = false;
             FilteredPackages.ClearSelection();
+            AccessibilityAnnouncementService.Announce(
+                CoreTools.Translate("Package selection cleared"));
         }
     }
 

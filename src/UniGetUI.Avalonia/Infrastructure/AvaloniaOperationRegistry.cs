@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -113,6 +114,18 @@ public static class AvaloniaOperationRegistry
         if (Settings.AreProgressNotificationsDisabled())
             return;
 
+        string title = op.Metadata.Title.Length > 0
+            ? op.Metadata.Title
+            : CoreTools.Translate("Operation in progress");
+
+        string message = op.Metadata.Status.Length > 0
+            ? op.Metadata.Status
+            : CoreTools.Translate("Please wait...");
+
+        AccessibilityAnnouncementService.Announce(
+            $"{title}. {message}",
+            AutomationLiveSetting.Polite);
+
         if (WindowsAppNotificationBridge.ShowProgress(op))
             return;
 
@@ -121,14 +134,6 @@ public static class AvaloniaOperationRegistry
 
         if (TryGetMainWindow() is not { } mainWindow)
             return;
-
-        string title = op.Metadata.Title.Length > 0
-            ? op.Metadata.Title
-            : CoreTools.Translate("Operation in progress");
-
-        string message = op.Metadata.Status.Length > 0
-            ? op.Metadata.Status
-            : CoreTools.Translate("Please wait...");
 
         mainWindow.ShowRuntimeNotification(
             title,
@@ -141,6 +146,18 @@ public static class AvaloniaOperationRegistry
         if (Settings.AreSuccessNotificationsDisabled())
             return;
 
+        string title = op.Metadata.SuccessTitle.Length > 0
+            ? op.Metadata.SuccessTitle
+            : CoreTools.Translate("Success!");
+
+        string message = op.Metadata.SuccessMessage.Length > 0
+            ? op.Metadata.SuccessMessage
+            : CoreTools.Translate("Success!");
+
+        AccessibilityAnnouncementService.Announce(
+            $"{title}. {message}",
+            AutomationLiveSetting.Polite);
+
         WindowsAppNotificationBridge.RemoveProgress(op);
 
         if (WindowsAppNotificationBridge.ShowSuccess(op))
@@ -151,14 +168,6 @@ public static class AvaloniaOperationRegistry
 
         if (TryGetMainWindow() is not { } mainWindow)
             return;
-
-        string title = op.Metadata.SuccessTitle.Length > 0
-            ? op.Metadata.SuccessTitle
-            : CoreTools.Translate("Success!");
-
-        string message = op.Metadata.SuccessMessage.Length > 0
-            ? op.Metadata.SuccessMessage
-            : CoreTools.Translate("Success!");
 
         mainWindow.ShowRuntimeNotification(
             title,
@@ -171,6 +180,18 @@ public static class AvaloniaOperationRegistry
         if (Settings.AreErrorNotificationsDisabled())
             return;
 
+        string title = op.Metadata.FailureTitle.Length > 0
+            ? op.Metadata.FailureTitle
+            : CoreTools.Translate("Failed");
+
+        string message = op.Metadata.FailureMessage.Length > 0
+            ? op.Metadata.FailureMessage
+            : CoreTools.Translate("An error occurred while processing this package");
+
+        AccessibilityAnnouncementService.Announce(
+            $"{title}. {message}",
+            AutomationLiveSetting.Assertive);
+
         WindowsAppNotificationBridge.RemoveProgress(op);
 
         if (WindowsAppNotificationBridge.ShowError(op))
@@ -181,14 +202,6 @@ public static class AvaloniaOperationRegistry
 
         if (TryGetMainWindow() is not { } mainWindow)
             return;
-
-        string title = op.Metadata.FailureTitle.Length > 0
-            ? op.Metadata.FailureTitle
-            : CoreTools.Translate("Failed");
-
-        string message = op.Metadata.FailureMessage.Length > 0
-            ? op.Metadata.FailureMessage
-            : CoreTools.Translate("An error occurred while processing this package");
 
         mainWindow.ShowRuntimeNotification(
             title,

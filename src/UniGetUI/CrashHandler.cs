@@ -1,7 +1,6 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices.JavaScript;
+using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.UI.Xaml.Markup;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Tools;
 
@@ -9,6 +8,8 @@ namespace UniGetUI;
 
 public static class CrashHandler
 {
+    public static readonly string PendingCrashFile =
+        Path.Combine(Path.GetTempPath(), "UniGetUI_pending_crash.txt");
     private const uint MB_ICONSTOP = 0x00000010;
     private const uint MB_OKCANCEL = 0x00000001;
     private const uint MB_YESNOCANCEL = 0x00000003;
@@ -16,12 +17,10 @@ public static class CrashHandler
     private const int IDYES = 6;
     private const int IDNO = 7;
 
-    [System.Runtime.InteropServices.DllImport(
-        "user32.dll",
-        CharSet = System.Runtime.InteropServices.CharSet.Unicode
-    )]
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int MessageBox(IntPtr hWnd, string lpText, string lpCaption, uint uType);
 
+    // ── Missing-files handler ─────────────────────────────────────────────────
     private static void _reportMissingFiles(out bool showDetailedReport)
     {
         try
@@ -206,19 +205,16 @@ public static class CrashHandler
 
         Console.WriteLine(Error_String);
 
-        string ErrorUrl =
-            $"https://www.marticliment.com/error-report/"
-            + $"?appName=UniGetUI"
-            + $"&appVersion={Uri.EscapeDataString(CoreData.VersionName)}"
-            + $"&buildNumber={Uri.EscapeDataString(CoreData.BuildNumber.ToString())}"
-            + $"&errorBody={Uri.EscapeDataString(Error_String)}";
-        Console.WriteLine(ErrorUrl);
+        // Persist crash data so the next normal app launch can show the report.
+        try
+        {
+            File.WriteAllText(PendingCrashFile, Error_String, Encoding.UTF8);
+        }
+        catch
+        {
+            // If we can't write the file, nothing more we can do — just exit.
+        }
 
-        using Process p = new();
-        p.StartInfo.FileName = ErrorUrl;
-        p.StartInfo.CreateNoWindow = true;
-        p.StartInfo.UseShellExecute = true;
-        p.Start();
         Environment.Exit(1);
     }
 }

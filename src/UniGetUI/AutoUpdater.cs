@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.AppNotifications;

@@ -332,6 +332,24 @@ namespace UniGetUI
 
                 // Create MainWindow
                 InitializeMainWindow();
+                MainWindow.Activate();
+
+                // Show crash report from the previous session on top of the loading
+                // screen and wait for the user to dismiss it before continuing.
+                if (File.Exists(CrashHandler.PendingCrashFile))
+                {
+                    try
+                    {
+                        string report = File.ReadAllText(CrashHandler.PendingCrashFile);
+                        File.Delete(CrashHandler.PendingCrashFile);
+                        var tcs = new TaskCompletionSource();
+                        var crashWindow = new CrashReportWindow(report);
+                        crashWindow.Closed += (_, _) => tcs.TrySetResult();
+                        crashWindow.Activate();
+                        await tcs.Task;
+                    }
+                    catch { /* must not prevent normal startup */ }
+                }
 
                 IEnumerable<Task> iniTasks =
                 [

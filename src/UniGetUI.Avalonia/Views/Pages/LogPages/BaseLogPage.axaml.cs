@@ -66,4 +66,6 @@ public partial class BaseLogPage : UserControl, IEnterLeaveListener, IKeyboardSh
     public void SelectAllTriggered() { }
 
     public void SearchTriggered() { }
+
+    public void DetailsTriggered() { }
 }

@@ -98,7 +98,22 @@ public abstract partial class AbstractPackagesPage : UserControl,
     public void FocusPackageList()
     {
         if (ViewModel.MegaQueryBoxEnabled)
-            Dispatcher.UIThread.Post(() => MegaQueryBlock.Focus(), DispatcherPriority.Background);
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!ViewModel.MegaQueryVisible) return;
+                MegaQueryBlock.Focus();
+                // One-shot guard: if pointer-release from the sidebar click fires after
+                // this task and steals focus, restore it once the pointer event finishes.
+                void RestoreOnce(object? s, FocusChangedEventArgs e)
+                {
+                    MegaQueryBlock.LostFocus -= RestoreOnce;
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (ViewModel.MegaQueryVisible) MegaQueryBlock.Focus();
+                    }, DispatcherPriority.Input);
+                }
+                MegaQueryBlock.LostFocus += RestoreOnce;
+            }, DispatcherPriority.ApplicationIdle);
         else
             ViewModel.RequestFocusList();
     }
@@ -212,6 +227,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
     public void ReloadTriggered() => ViewModel.TriggerReload();
     public void SelectAllTriggered() => ViewModel.ToggleSelectAll();
+    public void DetailsTriggered() { if (SelectedItem is { } pkg) _ = ShowDetailsForPackage(pkg); }
 
     // ─── IEnterLeaveListener ──────────────────────────────────────────────────
     public virtual void OnEnter() { }

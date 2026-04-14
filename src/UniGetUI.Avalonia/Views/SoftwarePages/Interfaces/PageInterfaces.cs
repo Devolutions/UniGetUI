@@ -9,6 +9,7 @@ public interface IKeyboardShortcutListener
     void SearchTriggered();
     void ReloadTriggered();
     void SelectAllTriggered();
+    void DetailsTriggered();
 }
 
 /// <summary>

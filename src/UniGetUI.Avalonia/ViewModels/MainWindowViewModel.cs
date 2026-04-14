@@ -283,9 +283,14 @@ public partial class MainWindowViewModel : ViewModelBase
         if (newPage_t is PageType.About) { _ = ShowAboutDialog(); return; }
         if (newPage_t is PageType.Quit) { (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown(); return; }
 
-        Sidebar.SelectNavButtonForPage(newPage_t);
+        if (_currentPage == newPage_t)
+        {
+            // Re-focus the primary control even when we're already on the page
+            (CurrentPageContent as AbstractPackagesPage)?.FocusPackageList();
+            return;
+        }
 
-        if (_currentPage == newPage_t) return;
+        Sidebar.SelectNavButtonForPage(newPage_t);
 
         var newPage = GetPageForType(newPage_t);
         var oldPage = CurrentPageContent as Control;
@@ -304,7 +309,6 @@ public partial class MainWindowViewModel : ViewModelBase
             CanGoBackChanged?.Invoke(this, true);
         }
 
-        (newPage as AbstractPackagesPage)?.FocusPackageList();
         (newPage as AbstractPackagesPage)?.FilterPackages();
         (newPage as IEnterLeaveListener)?.OnEnter();
 
@@ -322,6 +326,9 @@ public partial class MainWindowViewModel : ViewModelBase
             GlobalSearchPlaceholder = "";
             GlobalSearchEnabled = false;
         }
+
+        // Focus after search state is restored so MegaQueryVisible is already correct
+        (newPage as AbstractPackagesPage)?.FocusPackageList();
 
         AccessibilityAnnouncementService.Announce(GetPageAnnouncement(newPage_t));
         CurrentPageChanged?.Invoke(this, newPage_t);

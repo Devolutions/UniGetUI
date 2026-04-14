@@ -102,17 +102,6 @@ public abstract partial class AbstractPackagesPage : UserControl,
             {
                 if (!ViewModel.MegaQueryVisible) return;
                 MegaQueryBlock.Focus();
-                // One-shot guard: if pointer-release from the sidebar click fires after
-                // this task and steals focus, restore it once the pointer event finishes.
-                void RestoreOnce(object? s, FocusChangedEventArgs e)
-                {
-                    MegaQueryBlock.LostFocus -= RestoreOnce;
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        if (ViewModel.MegaQueryVisible) MegaQueryBlock.Focus();
-                    }, DispatcherPriority.Input);
-                }
-                MegaQueryBlock.LostFocus += RestoreOnce;
             }, DispatcherPriority.ApplicationIdle);
         else
             ViewModel.RequestFocusList();

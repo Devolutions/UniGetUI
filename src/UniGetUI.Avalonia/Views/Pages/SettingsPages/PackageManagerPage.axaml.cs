@@ -1,3 +1,4 @@
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Layout;
@@ -88,6 +89,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         execGrid.Children.Add(execHint);
 
         var execCombo = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+        AutomationProperties.SetName(execCombo, CoreTools.Translate("Select the executable to be used. The following list shows the executables found by UniGetUI"));
         foreach (var path in manager.FindCandidateExecutableFiles())
             execCombo.Items.Add(path);
 
@@ -159,6 +161,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             Background = Brushes.Transparent,
             BorderThickness = new Thickness(0),
         };
+        AutomationProperties.SetName(copyBtn, CoreTools.Translate("Copy path"));
         var pathCard = new SettingsCard
         {
             BorderThickness = new Thickness(1, 0, 1, 1),
@@ -221,6 +224,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         ];
 
         var ageCombo = new ComboBox { MinWidth = 200 };
+        AutomationProperties.SetName(ageCombo, CoreTools.Translate("Minimum age for updates"));
         foreach (var (label, _) in ageItems)
             ageCombo.Items.Add(label);
 
@@ -233,6 +237,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         {
             MinWidth = 200,
             Watermark = CoreTools.Translate("e.g. 10"),
+            [AutomationProperties.NameProperty] = CoreTools.Translate("Custom minimum age (days)"),
             Text = CoreSettings.GetDictionaryItem<string, string>(
                 CoreSettings.K.PerManagerMinimumUpdateAgeCustom, manager.Name) ?? "",
         };
@@ -488,12 +493,14 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             IsEnabled = ViewModel.IsCustomVcpkgRootSet,
             Margin = new Thickness(4, 0),
         };
+        AutomationProperties.SetName(resetBtn, CoreTools.Translate("Reset vcpkg root location"));
         var openBtn = new Button
         {
             Content = CoreTools.Translate("Open"),
             IsEnabled = ViewModel.IsCustomVcpkgRootSet,
             Margin = new Thickness(4, 0),
         };
+        AutomationProperties.SetName(openBtn, CoreTools.Translate("Open vcpkg root location"));
 
         ViewModel.PropertyChanged += (_, e) =>
         {

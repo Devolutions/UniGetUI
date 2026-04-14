@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.AboutPages.Contributors"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.AboutPages"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -48,9 +49,11 @@
                                     Click="GitHubButton_Click"
                                     Background="Transparent"
                                     BorderThickness="0"
-                                    Padding="4,0">
+                                    Padding="4,0"
+                                    automation:AutomationProperties.Name="{Binding Name}">
                                 <TextBlock Classes="hyperlink"
-                                           Text="{t:Translate View GitHub Profile}"/>
+                                           Text="{t:Translate View GitHub Profile}"
+                                           automation:AutomationProperties.AccessibilityView="Raw"/>
                             </Button>
                         </Grid>
                     </DataTemplate>

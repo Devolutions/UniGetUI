@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Automation;
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -38,6 +39,7 @@ public partial class CheckboxCard : SettingsCard
             _checkbox.IsChecked = CoreSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
             _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
             _checkbox.IsCheckedChanged += _checkbox_Toggled;
+            SyncToggleItemStatus();
         }
     }
 
@@ -79,6 +81,8 @@ public partial class CheckboxCard : SettingsCard
             OnContent = new TextBlock { Text = CoreTools.Translate("Enabled") },
             OffContent = new TextBlock { Text = CoreTools.Translate("Disabled") },
         };
+        // Force CheckBox role so macOS VoiceOver exposes checked/unchecked state
+        AutomationProperties.SetControlTypeOverride(_checkbox, AutomationControlType.CheckBox);
         _textblock = new TextBlock
         {
             VerticalAlignment = VerticalAlignment.Center,
@@ -113,6 +117,7 @@ public partial class CheckboxCard : SettingsCard
         CoreSettings.Set(setting_name, (_checkbox.IsChecked ?? false) ^ IS_INVERTED ^ ForceInversion);
         StateChanged?.Invoke(this, EventArgs.Empty);
         _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
+        SyncToggleItemStatus();
         AccessibilityAnnouncementService.Announce(
             CoreTools.Translate("{0} is now {1}", _textblock.Text, (_checkbox.IsChecked ?? false)
                 ? CoreTools.Translate("Enabled")
@@ -120,6 +125,20 @@ public partial class CheckboxCard : SettingsCard
         var cmd = StateChangedCommand;
         if (cmd?.CanExecute(null) == true)
             cmd.Execute(null);
+    }
+
+    protected void SyncToggleItemStatus()
+    {
+        string state = (_checkbox.IsChecked ?? false)
+            ? CoreTools.Translate("Enabled")
+            : CoreTools.Translate("Disabled");
+        // ItemStatus: some screen readers read this separately
+        AutomationProperties.SetItemStatus(_checkbox, state);
+        // Name with state suffix: guarantees VoiceOver announces state on macOS
+        // where ToggleSwitch AX role may not expose IsChecked natively
+        string baseName = _textblock.Text;
+        if (!string.IsNullOrEmpty(baseName))
+            AutomationProperties.SetName(_checkbox, $"{baseName}, {state}");
     }
 }
 
@@ -145,6 +164,7 @@ public partial class CheckboxCard_Dict : CheckboxCard
                     ^ ForceInversion;
                 _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
                 _disableStateChangedEvent = false;
+                SyncToggleItemStatus();
             }
         }
     }
@@ -162,6 +182,7 @@ public partial class CheckboxCard_Dict : CheckboxCard
                     ^ IS_INVERTED
                     ^ ForceInversion;
                 _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
+                SyncToggleItemStatus();
             }
         }
     }
@@ -178,6 +199,7 @@ public partial class CheckboxCard_Dict : CheckboxCard
         );
         StateChanged?.Invoke(this, EventArgs.Empty);
         _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
+        SyncToggleItemStatus();
         AccessibilityAnnouncementService.Announce(
             CoreTools.Translate("{0} is now {1}", _textblock.Text, (_checkbox.IsChecked ?? false)
                 ? CoreTools.Translate("Enabled")

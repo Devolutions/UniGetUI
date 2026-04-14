@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Controls.UserAvatarControl"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Controls"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -14,7 +15,8 @@
             Background="Transparent"
             BorderThickness="0"
             Cursor="Hand"
-            ToolTip.Tip="{t:Translate GitHub account}">
+            ToolTip.Tip="{t:Translate GitHub account}"
+            automation:AutomationProperties.Name="{t:Translate GitHub account}">
 
         <Button.Flyout>
             <Flyout Placement="BottomEdgeAlignedRight">
@@ -42,11 +44,13 @@
                                 BorderThickness="0"
                                 Foreground="{DynamicResource SystemAccentColor}"
                                 FontSize="11"
-                                Cursor="Hand"/>
+                                Cursor="Hand"
+                                automation:AutomationProperties.Name="{t:Translate More details}"/>
                         <Button Content="{t:Translate Log in}"
                                 Command="{Binding LoginCommand}"
                                 HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center"/>
+                                HorizontalContentAlignment="Center"
+                                automation:AutomationProperties.Name="{t:Translate Log in}"/>
                     </StackPanel>
 
                     <!-- Logged in -->
@@ -65,7 +69,8 @@
                                 HorizontalContentAlignment="Center"
                                 Background="#CC2222"
                                 Foreground="White"
-                                BorderThickness="0"/>
+                                BorderThickness="0"
+                                automation:AutomationProperties.Name="{t:Translate Log out}"/>
                         <Button Content="{t:Translate Text='More details'}"
                                 Command="{Binding MoreDetailsCommand}"
                                 HorizontalAlignment="Left"
@@ -74,7 +79,8 @@
                                 BorderThickness="0"
                                 Foreground="{DynamicResource SystemAccentColor}"
                                 FontSize="11"
-                                Cursor="Hand"/>
+                                Cursor="Hand"
+                                automation:AutomationProperties.Name="{t:Translate More details}"/>
                     </StackPanel>
 
                 </StackPanel>

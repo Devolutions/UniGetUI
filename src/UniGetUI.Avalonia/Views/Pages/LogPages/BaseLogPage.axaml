@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.LogPages.BaseLogPage"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.LogPages"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -14,13 +15,17 @@
         <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto,*,Auto">
             <Button Grid.Column="0"
                     Command="{Binding CopyCommand}"
-                    CornerRadius="6,0,0,6">
-                <TextBlock Text="{t:Translate Copy to clipboard}"/>
+                    CornerRadius="6,0,0,6"
+                    automation:AutomationProperties.Name="{t:Translate Copy to clipboard}">
+                <TextBlock Text="{t:Translate Copy to clipboard}"
+                           automation:AutomationProperties.AccessibilityView="Raw"/>
             </Button>
             <Button Grid.Column="1"
                     Command="{Binding ExportCommand}"
-                    CornerRadius="0,6,6,0">
-                <TextBlock Text="{t:Translate Export to a file}"/>
+                    CornerRadius="0,6,6,0"
+                    automation:AutomationProperties.Name="{t:Translate Export to a file}">
+                <TextBlock Text="{t:Translate Export to a file}"
+                           automation:AutomationProperties.AccessibilityView="Raw"/>
             </Button>
 
             <StackPanel Grid.Column="3"
@@ -28,17 +33,21 @@
                         Spacing="10"
                         IsVisible="{Binding LogLevelVisible}"
                         VerticalAlignment="Center">
-                <TextBlock Text="{t:Translate Log level:}"
+                <TextBlock x:Name="LogLevelLabel"
+                           Text="{t:Translate Log level:}"
                            VerticalAlignment="Center"/>
                 <ComboBox Width="250"
                           CornerRadius="6"
                           ItemsSource="{Binding LogLevelItems}"
-                          SelectedIndex="{Binding SelectedLogLevelIndex}"/>
+                          SelectedIndex="{Binding SelectedLogLevelIndex}"
+                          automation:AutomationProperties.LabeledBy="{Binding #LogLevelLabel}"/>
             </StackPanel>
 
             <Button Grid.Column="5"
-                    Command="{Binding ReloadCommand}">
-                <TextBlock Text="{t:Translate Reload log}"/>
+                    Command="{Binding ReloadCommand}"
+                    automation:AutomationProperties.Name="{t:Translate Reload log}">
+                <TextBlock Text="{t:Translate Reload log}"
+                           automation:AutomationProperties.AccessibilityView="Raw"/>
             </Button>
         </Grid>
 

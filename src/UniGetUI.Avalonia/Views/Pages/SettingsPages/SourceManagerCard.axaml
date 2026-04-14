@@ -1,9 +1,12 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.SourceManagerCard"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:peers="clr-namespace:Avalonia.Automation.Peers;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:interfaces="using:UniGetUI.PackageEngine.Interfaces"
              xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -25,6 +28,7 @@
                        FontSize="15"/>
             <Button Grid.Column="1"
                     Content="{Binding AddLabel}"
+                    automation:AutomationProperties.Name="{Binding AddLabel}"
                     Command="{Binding ShowAddSourceCommand}"
                     IsVisible="{Binding !ShowAddForm}"
                     IsEnabled="{Binding !IsLoading}"
@@ -33,7 +37,8 @@
                     Command="{Binding ReloadSourcesCommand}"
                     IsEnabled="{Binding !IsLoading}"
                     Padding="6"
-                    ToolTip.Tip="Reload">
+                    ToolTip.Tip="{t:Translate Reload sources}"
+                    automation:AutomationProperties.Name="{t:Translate Reload sources}">
                 <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/reload.svg"
                                   Width="16" Height="16"
                                   Foreground="{DynamicResource TextControlForeground}"/>
@@ -89,6 +94,7 @@
                                 VerticalAlignment="Center"
                                 Background="Transparent"
                                 BorderThickness="0"
+                                automation:AutomationProperties.Name="{t:Translate Delete source}"
                                 Command="{Binding #Root.((vm:SourceManagerCardViewModel)DataContext).DeleteSourceCommand}"
                                 CommandParameter="{Binding}">
                             <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/delete.svg"
@@ -105,26 +111,33 @@
         <StackPanel IsVisible="{Binding ShowAddForm}"
                     Orientation="Vertical"
                     Spacing="8"
-                    Margin="0,4,0,0">
+                    Margin="0,4,0,0"
+                    automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Form}"
+                    automation:AutomationProperties.Name="{t:Translate Add source}">
             <ComboBox ItemsSource="{Binding KnownSourceNames}"
                       SelectedItem="{Binding SelectedKnownSource}"
-                      HorizontalAlignment="Stretch"/>
+                      HorizontalAlignment="Stretch"
+                      automation:AutomationProperties.Name="{t:Translate Known sources}"/>
             <Grid ColumnDefinitions="*,2*" ColumnSpacing="8">
                 <TextBox Grid.Column="0"
                          Watermark="{Binding NameHint}"
                          Text="{Binding NewSourceName}"
                          IsEnabled="{Binding NameUrlEditable}"
-                         FontFamily="Courier New"/>
+                         FontFamily="Courier New"
+                         automation:AutomationProperties.Name="{Binding NameHint}"/>
                 <TextBox Grid.Column="1"
                          Watermark="{Binding UrlHint}"
                          Text="{Binding NewSourceUrl}"
                          IsEnabled="{Binding NameUrlEditable}"
-                         FontFamily="Courier New"/>
+                         FontFamily="Courier New"
+                         automation:AutomationProperties.Name="{Binding UrlHint}"/>
             </Grid>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
                 <Button Content="{Binding CancelLabel}"
+                        automation:AutomationProperties.Name="{Binding CancelLabel}"
                         Command="{Binding CancelAddSourceCommand}"/>
                 <Button Content="{Binding AddConfirmLabel}"
+                        automation:AutomationProperties.Name="{Binding AddConfirmLabel}"
                         Command="{Binding ConfirmAddSourceCommand}"
                         Classes="accent"/>
             </StackPanel>

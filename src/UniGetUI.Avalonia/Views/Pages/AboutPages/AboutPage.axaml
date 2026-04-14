@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.AboutPages.AboutPage"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.AboutPages"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -61,27 +62,33 @@
                     Background="Transparent"
                     BorderThickness="0"
                     Padding="0"
-                    HorizontalAlignment="Center">
+                    HorizontalAlignment="Center"
+                    automation:AutomationProperties.Name="{t:Translate UniGetUI Homepage}">
                 <TextBlock Classes="hyperlink"
-                           Text="{t:Translate UniGetUI Homepage}"/>
+                           Text="{t:Translate UniGetUI Homepage}"
+                           automation:AutomationProperties.AccessibilityView="Raw"/>
             </Button>
 
             <Button Command="{Binding OpenIssuesCommand}"
                     Background="Transparent"
                     BorderThickness="0"
                     Padding="0"
-                    HorizontalAlignment="Center">
+                    HorizontalAlignment="Center"
+                    automation:AutomationProperties.Name="{t:Translate Report an issue or submit a feature request}">
                 <TextBlock Classes="hyperlink"
-                           Text="{t:Translate Report an issue or submit a feature request}"/>
+                           Text="{t:Translate Report an issue or submit a feature request}"
+                           automation:AutomationProperties.AccessibilityView="Raw"/>
             </Button>
 
             <Button Command="{Binding OpenRepositoryCommand}"
                     Background="Transparent"
                     BorderThickness="0"
                     Padding="0"
-                    HorizontalAlignment="Center">
+                    HorizontalAlignment="Center"
+                    automation:AutomationProperties.Name="{t:Translate UniGetUI Repository}">
                 <TextBlock Classes="hyperlink"
-                           Text="{t:Translate UniGetUI Repository}"/>
+                           Text="{t:Translate UniGetUI Repository}"
+                           automation:AutomationProperties.AccessibilityView="Raw"/>
             </Button>
 
         </StackPanel>

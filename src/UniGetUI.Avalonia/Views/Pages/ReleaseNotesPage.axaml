@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.ReleaseNotesPage"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
              xmlns:wv="using:Avalonia.Controls"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
@@ -16,8 +17,10 @@
 
             <Button Grid.Column="1"
                     Height="35"
-                    Command="{Binding OpenInBrowserCommand}">
-                <TextBlock Text="{t:Translate View page on browser}"/>
+                    Command="{Binding OpenInBrowserCommand}"
+                    automation:AutomationProperties.Name="{t:Translate View page on browser}">
+                <TextBlock Text="{t:Translate View page on browser}"
+                           automation:AutomationProperties.AccessibilityView="Raw"/>
             </Button>
 
         </Grid>
@@ -28,7 +31,8 @@
                      IsIndeterminate="True"
                      IsVisible="False"
                      Height="2"
-                     CornerRadius="0"/>
+                     CornerRadius="0"
+                     automation:AutomationProperties.AccessibilityView="Raw"/>
 
         <!-- WebView -->
         <Border Grid.Row="2" CornerRadius="6" ClipToBounds="True">

@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -42,19 +43,21 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
                                 : new CornerRadius(0);
             var thickness = isFirst ? new Thickness(1) : new Thickness(1, 0, 1, 1);
 
-            // ── Status badge ─────────────────────────────────────────────────
+            // ── Status badge (decorative — status surfaced via toggle HelpText) ─
             var badgeText = new TextBlock
             {
                 FontSize = 12,
                 FontWeight = FontWeight.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            AutomationProperties.SetAccessibilityView(badgeText, AccessibilityView.Raw);
             var badge = new Border
             {
                 CornerRadius = new CornerRadius(4),
                 Padding = new Thickness(6, 3, 6, 3),
                 Child = badgeText,
             };
+            AutomationProperties.SetAccessibilityView(badge, AccessibilityView.Raw);
 
             // ── Enable/disable toggle ────────────────────────────────────────
             var toggle = new ToggleSwitch
@@ -63,19 +66,20 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
                 OffContent = "",
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            AutomationProperties.SetName(toggle, manager.DisplayName);
             toggle.Loaded += (_, _) =>
             {
                 _isLoadingToggles = true;
                 toggle.IsChecked = manager.IsEnabled();
                 _isLoadingToggles = false;
-                ApplyStatusBadge(manager, badge, badgeText);
+                ApplyStatusBadge(manager, toggle, badge, badgeText);
             };
             toggle.IsCheckedChanged += async (_, _) =>
             {
                 if (_isLoadingToggles) return;
                 CoreSettings.SetDictionaryItem(CoreSettings.K.DisabledManagers, manager.Name, toggle.IsChecked != true);
                 await Task.Run(manager.Initialize);
-                ApplyStatusBadge(manager, badge, badgeText);
+                ApplyStatusBadge(manager, toggle, badge, badgeText);
                 AccessibilityAnnouncementService.Announce(
                     CoreTools.Translate("{0} is now {1}", manager.DisplayName, toggle.IsChecked == true
                         ? CoreTools.Translate("Enabled")
@@ -118,12 +122,12 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
         foreach (var (toggle, manager, badge, badgeText) in _rows)
         {
             toggle.IsChecked = manager.IsEnabled();
-            ApplyStatusBadge(manager, badge, badgeText);
+            ApplyStatusBadge(manager, toggle, badge, badgeText);
         }
         _isLoadingToggles = false;
     }
 
-    private void ApplyStatusBadge(IPackageManager manager, Border badge, TextBlock text)
+    private void ApplyStatusBadge(IPackageManager manager, ToggleSwitch toggle, Border badge, TextBlock text)
     {
         string bgKey, fgKey, label;
         if (!manager.IsEnabled())
@@ -147,6 +151,9 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
         badge.Background = LookupBrush(bgKey);
         text.Foreground = LookupBrush(fgKey);
         text.Text = label;
+        // Bake state into Name so VoiceOver always announces it on macOS
+        AutomationProperties.SetName(toggle, $"{manager.DisplayName}, {label}");
+        AutomationProperties.SetItemStatus(toggle, label);
     }
 
     private IBrush LookupBrush(string key)

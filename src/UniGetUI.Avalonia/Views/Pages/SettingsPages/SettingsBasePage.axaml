@@ -1,11 +1,13 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.SettingsBasePage"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
              xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              x:DataType="vm:SettingsBasePageViewModel">
 
     <Grid RowDefinitions="Auto,Auto,*">
@@ -19,14 +21,16 @@
                     Margin="0,0,12,0"
                     Padding="4"
                     Background="Transparent"
-                    BorderThickness="0">
+                    BorderThickness="0"
+                    automation:AutomationProperties.Name="{t:Translate Go back}">
                 <controls:SvgIcon Width="24" Height="24"
                                   Path="avares://UniGetUI.Avalonia/Assets/Symbols/backward.svg"/>
             </Button>
             <TextBlock Text="{Binding Title}"
                        FontSize="26"
                        FontWeight="SemiBold"
-                       VerticalAlignment="Center"/>
+                       VerticalAlignment="Center"
+                       automation:AutomationProperties.HeadingLevel="1"/>
         </StackPanel>
 
         <!-- Row 1: Restart-required banner -->
@@ -43,6 +47,7 @@
                            VerticalAlignment="Center"
                            Margin="0,0,16,0"/>
                 <Button Content="{Binding RestartButtonText}"
+                        automation:AutomationProperties.Name="{Binding RestartButtonText}"
                         Command="{Binding RestartAppCommand}"
                         HorizontalAlignment="Right"/>
             </StackPanel>

@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -260,6 +261,7 @@ public partial class PackagesPageViewModel : ViewModelBase
             Content = content,
         };
         ToolTip.SetTip(btn, label);
+        AutomationProperties.SetName(btn, label);
         btn.Click += (_, _) => onClick();
         ToolBarItems.Add(btn);
         return btn;
@@ -268,14 +270,16 @@ public partial class PackagesPageViewModel : ViewModelBase
     /// <summary>Adds a thin vertical separator to the toolbar.</summary>
     public void AddToolbarSeparator()
     {
-        ToolBarItems.Add(new Separator
+        var sep = new Separator
         {
             Width = 1,
             Height = 30,
             Margin = new Thickness(4, 4),
             Background = Application.Current?.FindResource("AppBorderBrush") as IBrush
                          ?? new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)),
-        });
+        };
+        AutomationProperties.SetAccessibilityView(sep, AccessibilityView.Raw);
+        ToolBarItems.Add(sep);
     }
 
     public async Task ShowInfoDialog(Window owner, string title, string message)

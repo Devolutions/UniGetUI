@@ -11,7 +11,7 @@
         Background="{DynamicResource AppDialogBackground}"
         WindowStartupLocation="CenterOwner">
 
-    <TabControl Margin="8">
+    <TabControl x:Name="MainTabControl" Margin="8">
 
         <TabItem Header="{t:Translate About}">
             <about:AboutPage/>

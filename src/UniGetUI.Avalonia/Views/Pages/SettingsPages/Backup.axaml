@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.Backup"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
@@ -14,7 +15,8 @@
 
             <settings:TranslatedTextBlock Text="Package backup"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:SettingsCard CornerRadius="8">
                 <settings:SettingsCard.Description>
@@ -32,7 +34,8 @@
             <settings:TranslatedTextBlock Text="Cloud package backup"
                                           FontSize="16"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <!-- GitHub identity card -->
             <Border BorderBrush="{DynamicResource AppBorderBrush}"
@@ -72,6 +75,7 @@
                             IsEnabled="{Binding IsLoginButtonEnabled}"
                             Command="{Binding LoginCommand}"
                             VerticalAlignment="Center"
+                            automation:AutomationProperties.Name="{t:Translate Log in with GitHub}"
                             Content="{t:Translate Log in with GitHub}"/>
 
                     <!-- Log out button (shown when logged in) -->
@@ -80,17 +84,20 @@
                             IsEnabled="{Binding IsLoginButtonEnabled}"
                             Command="{Binding LogoutCommand}"
                             VerticalAlignment="Center"
+                            automation:AutomationProperties.Name="{t:Translate Log out from GitHub}"
                             Content="{t:Translate Log out from GitHub}"/>
 
                     <!-- More details -->
                     <Button Grid.Column="3"
                             Command="{Binding MoreDetailsCommand}"
                             VerticalAlignment="Center"
+                            automation:AutomationProperties.Name="{t:Translate More details}"
                             Background="Transparent"
                             BorderThickness="0"
                             Padding="0">
                         <TextBlock Classes="hyperlink"
-                                   Text="{t:Translate More details}"/>
+                                   Text="{t:Translate More details}"
+                                   automation:AutomationProperties.AccessibilityView="Raw"/>
                     </Button>
 
                 </Grid>
@@ -130,7 +137,8 @@
             <settings:TranslatedTextBlock Text="Local package backup"
                                           FontSize="16"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:CheckboxCard SettingName="EnablePackageBackup_LOCAL"
                                    Text="{t:Translate Periodically perform a local backup of the installed packages}"
@@ -158,7 +166,8 @@
 
             <settings:TranslatedTextBlock Text="Local backup advanced options"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:TextboxCard SettingName="ChangeBackupFileName"
                                   Text="{t:Translate Set a custom backup file name}"

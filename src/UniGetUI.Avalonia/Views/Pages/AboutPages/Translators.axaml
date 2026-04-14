@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.AboutPages.Translators"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.AboutPages"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -23,9 +24,11 @@
                     BorderThickness="0"
                     Padding="0"
                     HorizontalAlignment="Left"
-                    Margin="0,4,0,8">
+                    Margin="0,4,0,8"
+                    automation:AutomationProperties.Name="{t:Translate Become a translator}">
                 <TextBlock Classes="hyperlink"
-                           Text="{t:Translate Become a translator}"/>
+                           Text="{t:Translate Become a translator}"
+                           automation:AutomationProperties.AccessibilityView="Raw"/>
             </Button>
 
             <ItemsControl ItemsSource="{Binding TranslatorList}">
@@ -61,9 +64,11 @@
                                     Click="GitHubButton_Click"
                                     Background="Transparent"
                                     BorderThickness="0"
-                                    Padding="4,0">
+                                    Padding="4,0"
+                                    automation:AutomationProperties.Name="{Binding Name}">
                                 <TextBlock Classes="hyperlink"
-                                           Text="GitHub"/>
+                                           Text="GitHub"
+                                           automation:AutomationProperties.AccessibilityView="Raw"/>
                             </Button>
                         </Grid>
                     </DataTemplate>

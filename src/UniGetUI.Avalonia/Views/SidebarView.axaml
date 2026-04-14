@@ -21,6 +21,7 @@
                  Background="Transparent"
                  BorderThickness="0"
                  automation:AutomationProperties.AccessibilityView="Control"
+                 automation:AutomationProperties.Name="{t:Translate Navigation}"
                  Padding="8,10,8,0">
 
             <!-- Discover Packages -->

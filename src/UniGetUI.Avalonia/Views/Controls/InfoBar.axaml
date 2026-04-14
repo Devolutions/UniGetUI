@@ -51,6 +51,7 @@
                     Content="{Binding ActionButtonText}"
                     Command="{Binding ActionButtonCommand}"
                     IsVisible="{Binding ActionButtonText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                    automation:AutomationProperties.Name="{Binding ActionButtonText}"
                     Margin="8,0"
                     Padding="12,6"
                     VerticalAlignment="Center"/>

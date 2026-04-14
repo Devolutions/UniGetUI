@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using CoreSettings = global::UniGetUI.Core.SettingsEngine.Settings;
@@ -74,14 +75,19 @@ public sealed partial class ComboboxCard : SettingsCard
         {
             try
             {
+                string selectedName = _combobox.SelectedItem?.ToString() ?? "";
                 CoreSettings.SetValue(
                     settings_name,
-                    _values_ref[_combobox.SelectedItem?.ToString() ?? ""]
+                    _values_ref[selectedName]
                 );
                 ValueChanged?.Invoke(this, EventArgs.Empty);
                 var cmd = ValueChangedCommand;
                 if (cmd?.CanExecute(null) == true)
                     cmd.Execute(null);
+                string headerText = Header?.ToString() ?? "";
+                if (!string.IsNullOrEmpty(headerText) && !string.IsNullOrEmpty(selectedName))
+                    AccessibilityAnnouncementService.Announce(
+                        CoreTools.Translate("{0}: {1}", headerText, selectedName));
             }
             catch (Exception ex)
             {

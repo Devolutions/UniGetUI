@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.PackageManagerPage"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -55,8 +56,10 @@
                     <Button IsVisible="{Binding ShowVersionVisible}"
                             Command="{Binding ShowVersionCommand}"
                             HorizontalAlignment="Left"
-                            Padding="0">
-                        <TextBlock Text="{Binding ShowVersionLabel}" Classes="hyperlink"/>
+                            Padding="0"
+                            automation:AutomationProperties.Name="{Binding ShowVersionLabel}">
+                        <TextBlock Text="{Binding ShowVersionLabel}" Classes="hyperlink"
+                                   automation:AutomationProperties.AccessibilityView="Raw"/>
                     </Button>
                     <TextBlock Text="{Binding VersionText}"
                                IsVisible="{Binding VersionTextVisible}"
@@ -87,7 +90,8 @@
             <!-- Related settings -->
             <settings:TranslatedTextBlock Text="Related settings"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <!-- Logs link card -->
             <settings:SettingsPageButton x:Name="ManagerLogs" CornerRadius="8,8,0,0"/>

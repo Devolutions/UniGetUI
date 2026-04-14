@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.Interface_P"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
@@ -14,7 +15,8 @@
 
             <settings:TranslatedTextBlock Text="Appearance"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:ComboboxCard x:Name="ThemeSelector"
                                    CornerRadius="8,8,0,0"/>
@@ -26,7 +28,8 @@
             <StackPanel x:Name="SystemTraySection" Orientation="Vertical" IsVisible="{Binding IsWindows}">
                 <settings:TranslatedTextBlock Text="UniGetUI on the background and system tray"
                                               FontWeight="SemiBold"
-                                              Margin="44,32,4,8"/>
+                                              Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
                 <settings:CheckboxCard SettingName="DisableSystemTray"
                                        Text="{t:Translate Close UniGetUI to the system tray}"
@@ -42,7 +45,8 @@
 
             <settings:TranslatedTextBlock Text="Package lists"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:CheckboxCard SettingName="DisableIconsOnPackageLists"
                                    Text="{t:Translate Show package icons on package lists}"

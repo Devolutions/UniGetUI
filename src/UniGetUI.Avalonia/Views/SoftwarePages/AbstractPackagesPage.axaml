@@ -2,6 +2,7 @@
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:peers="clr-namespace:Avalonia.Automation.Peers;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
              xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
              xmlns:pkg="using:UniGetUI.PackageEngine.PackageClasses"
@@ -263,6 +264,7 @@
                               Padding="0,0,4,0"
                               automation:AutomationProperties.AccessibilityView="Control"
                               automation:AutomationProperties.Name="{t:Translate Filters}"
+                              automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Search}"
                               Background="{DynamicResource AppWindowBackground}">
                     <StackPanel x:Name="SidePanelGrid" Spacing="8" Margin="0,0,0,8">
 
@@ -301,6 +303,7 @@
                                             HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Center"
                                             Command="{Binding SelectAllSources_CmdCommand}"
+                                            automation:AutomationProperties.Name="{t:Translate Select all}"
                                             Padding="2"
                                             Background="Transparent"
                                             BorderThickness="0">
@@ -311,6 +314,7 @@
                                             HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Center"
                                             Command="{Binding ClearSourceSelection_CmdCommand}"
+                                            automation:AutomationProperties.Name="{t:Translate Clear selection}"
                                             Padding="2"
                                             Background="Transparent"
                                             BorderThickness="0">
@@ -348,15 +352,18 @@
                             </Expander.Header>
                             <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical" Spacing="0">
                                 <CheckBox x:Name="InstantSearchCheckbox"
-                                          IsChecked="{Binding InstantSearch, Mode=TwoWay}">
+                                          IsChecked="{Binding InstantSearch, Mode=TwoWay}"
+                                          automation:AutomationProperties.Name="{t:Translate Instant search}">
                                     <TextBlock Text="{t:Translate Instant search}" TextWrapping="Wrap"/>
                                 </CheckBox>
                                 <CheckBox x:Name="UpperLowerCaseCheckbox"
-                                          IsChecked="{Binding UpperLowerCase, Mode=TwoWay}">
+                                          IsChecked="{Binding UpperLowerCase, Mode=TwoWay}"
+                                          automation:AutomationProperties.Name="{t:Translate Distinguish between uppercase and lowercase}">
                                     <TextBlock Text="{t:Translate Distinguish between uppercase and lowercase}" TextWrapping="Wrap"/>
                                 </CheckBox>
                                 <CheckBox x:Name="IgnoreSpecialCharsCheckbox"
-                                          IsChecked="{Binding IgnoreSpecialChars, Mode=TwoWay}">
+                                          IsChecked="{Binding IgnoreSpecialChars, Mode=TwoWay}"
+                                          automation:AutomationProperties.Name="{t:Translate Ignore special characters}">
                                     <TextBlock Text="{t:Translate Ignore special characters}" TextWrapping="Wrap"/>
                                 </CheckBox>
                             </StackPanel>
@@ -378,28 +385,33 @@
                             <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical" Spacing="0">
                                 <RadioButton Height="30"
                                              Margin="0,-2,0,-2"
-                                             IsChecked="{Binding SearchMode_Name, Mode=TwoWay}">
+                                             IsChecked="{Binding SearchMode_Name, Mode=TwoWay}"
+                                             automation:AutomationProperties.Name="{t:Translate Package Name}">
                                     <TextBlock Text="{t:Translate Package Name}" TextWrapping="Wrap"/>
                                 </RadioButton>
                                 <RadioButton Height="30"
                                              Margin="0,-2,0,-2"
-                                             IsChecked="{Binding SearchMode_Id, Mode=TwoWay}">
+                                             IsChecked="{Binding SearchMode_Id, Mode=TwoWay}"
+                                             automation:AutomationProperties.Name="{t:Translate Package ID}">
                                     <TextBlock Text="{t:Translate Package ID}" TextWrapping="Wrap"/>
                                 </RadioButton>
                                 <RadioButton Height="30"
                                              Margin="0,-2,0,-2"
-                                             IsChecked="{Binding SearchMode_Both, Mode=TwoWay}">
+                                             IsChecked="{Binding SearchMode_Both, Mode=TwoWay}"
+                                             automation:AutomationProperties.Name="{t:Translate Both}">
                                     <TextBlock Text="{t:Translate Both}" TextWrapping="Wrap"/>
                                 </RadioButton>
                                 <RadioButton Height="30"
                                              Margin="0,-2,0,-2"
-                                             IsChecked="{Binding SearchMode_Exact, Mode=TwoWay}">
+                                             IsChecked="{Binding SearchMode_Exact, Mode=TwoWay}"
+                                             automation:AutomationProperties.Name="{t:Translate Exact match}">
                                     <TextBlock Text="{t:Translate Exact match}" TextWrapping="Wrap"/>
                                 </RadioButton>
                                 <RadioButton Height="30"
                                              Margin="0,-2,0,-2"
                                              IsChecked="{Binding SearchMode_Similar, Mode=TwoWay}"
-                                             IsEnabled="{Binding SimilarSearchEnabled}">
+                                             IsEnabled="{Binding SimilarSearchEnabled}"
+                                             automation:AutomationProperties.Name="{t:Translate Show similar packages}">
                                     <TextBlock Text="{t:Translate Show similar packages}" TextWrapping="Wrap"/>
                                 </RadioButton>
                             </StackPanel>
@@ -416,6 +428,7 @@
                 <ProgressBar x:Name="LoadingProgressBar"
                              IsIndeterminate="True"
                              IsVisible="{Binding IsLoading}"
+                             automation:AutomationProperties.Name="{t:Translate Loading}"
                              Height="4"
                              VerticalAlignment="Top"
                              HorizontalAlignment="Stretch"

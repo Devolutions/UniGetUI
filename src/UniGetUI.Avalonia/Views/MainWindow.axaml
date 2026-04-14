@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+    xmlns:peers="clr-namespace:Avalonia.Automation.Peers;assembly=Avalonia.Controls"
         xmlns:views="using:UniGetUI.Avalonia.Views"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
@@ -27,6 +28,8 @@
                             Width="{Binding Sidebar.PaneWidth}"
                             Content="{Binding Sidebar}"
                             automation:AutomationProperties.AccessibilityView="Control"
+                            automation:AutomationProperties.Name="{t:Translate Navigation panel}"
+                            automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Navigation}"
                             HorizontalContentAlignment="Stretch"
                             VerticalContentAlignment="Stretch">
                 <ContentControl.DataTemplates>
@@ -62,6 +65,7 @@
                 <ContentControl Grid.Row="1"
                                 Content="{Binding CurrentPageContent}"
                                 automation:AutomationProperties.AccessibilityView="Control"
+                                automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Main}"
                                 HorizontalContentAlignment="Stretch"
                                 VerticalContentAlignment="Stretch"/>
             </Grid>
@@ -81,6 +85,8 @@
                     BorderThickness="0,1,0,0"
                     BorderBrush="{DynamicResource AppBorderBrush}"
                     automation:AutomationProperties.AccessibilityView="Control"
+                    automation:AutomationProperties.Name="{t:Translate Operations}"
+                    automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Region}"
                     Background="{DynamicResource AppOperationsPanelBackground}">
                 <ScrollViewer MaxHeight="220"
                               HorizontalScrollBarVisibility="Disabled"
@@ -191,6 +197,7 @@
                                             <StackPanel Orientation="Horizontal">
                                                 <Button Content="{Binding ButtonText}"
                                                         Command="{Binding ButtonCommand}"
+                                                        automation:AutomationProperties.Name="{Binding ButtonText}"
                                                         Padding="12,6"
                                                         CornerRadius="0"
                                                         FontSize="12"/>
@@ -204,7 +211,8 @@
                                                         CornerRadius="0"
                                                     automation:AutomationProperties.Name="{t:Translate More}"
                                                         Flyout="{Binding OpMenu}">
-                                                    <TextBlock Text="⋯" FontSize="14"/>
+                                                    <TextBlock Text="⋯" FontSize="14"
+                                                               automation:AutomationProperties.AccessibilityView="Raw"/>
                                                 </Button>
                                             </StackPanel>
                                         </Border>

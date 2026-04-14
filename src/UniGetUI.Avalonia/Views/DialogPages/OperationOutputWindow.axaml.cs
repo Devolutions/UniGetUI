@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels.DialogPages;
 using UniGetUI.PackageOperations;
 
@@ -16,5 +17,6 @@ public partial class OperationOutputWindow : Window
     {
         base.OnOpened(e);
         OutputScroll.ScrollToEnd();
+        Dispatcher.UIThread.Post(() => OutputTextBox.Focus(), DispatcherPriority.Background);
     }
 }

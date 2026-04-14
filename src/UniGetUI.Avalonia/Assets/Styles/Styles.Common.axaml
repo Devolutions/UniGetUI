@@ -13,6 +13,10 @@
     <Style Selector="Border.settings-card-clickable:pointerover">
         <Setter Property="Background"   Value="{DynamicResource SettingsCardHoverBackground}"/>
     </Style>
+    <Style Selector="Border.settings-card-focused">
+        <Setter Property="BorderBrush"     Value="{DynamicResource SystemAccentColor}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
 
     <!-- Setting warning subtext (amber, both themes) -->
     <Style Selector="TextBlock.setting-warning-text">

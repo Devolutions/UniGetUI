@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.General"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
@@ -14,14 +15,16 @@
 
             <settings:TranslatedTextBlock Text="Language"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:ComboboxCard x:Name="LanguageSelector"
                                    CornerRadius="8"/>
 
             <settings:TranslatedTextBlock Text="UniGetUI updater"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:CheckboxButtonCard SettingName="DisableAutoUpdateWingetUI"
                                          CheckboxText="{t:Translate Update UniGetUI automatically}"
@@ -36,7 +39,8 @@
 
             <settings:TranslatedTextBlock Text="Telemetry"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:ButtonCard CornerRadius="8"
                                  Text="{t:Translate Manage telemetry settings}"
@@ -46,7 +50,8 @@
 
             <settings:TranslatedTextBlock Text="Manage UniGetUI settings"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:ButtonCard CornerRadius="8,8,0,0"
                                  Text="{t:Translate Import settings from a local file}"
@@ -69,7 +74,8 @@
 
             <settings:TranslatedTextBlock Text="Related settings"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:SettingsPageButton CornerRadius="8"
                                          Margin="0,0,0,20"

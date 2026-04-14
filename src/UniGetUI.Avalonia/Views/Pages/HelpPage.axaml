@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.HelpPage"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
              xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
              xmlns:wv="using:Avalonia.Controls"
@@ -19,6 +20,7 @@
                     x:Name="BackButton"
                     Width="35" Height="35" Padding="6"
                     CornerRadius="4,0,0,4"
+                    automation:AutomationProperties.Name="{t:Translate Go back}"
                     Click="BackButton_Click">
                 <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/backward.svg"
                                   Foreground="White" Width="16" Height="16"/>
@@ -28,6 +30,7 @@
                     x:Name="ForwardButton"
                     Width="35" Height="35" Padding="6"
                     CornerRadius="0"
+                    automation:AutomationProperties.Name="{t:Translate Go forward}"
                     Click="ForwardButton_Click">
                 <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/forward.svg"
                                   Foreground="White" Width="16" Height="16"/>
@@ -36,6 +39,7 @@
             <Button Grid.Column="2"
                     Width="35" Height="35" Padding="6"
                     CornerRadius="0"
+                    automation:AutomationProperties.Name="{t:Translate Go to home page}"
                     Click="HomeButton_Click">
                 <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/home.svg"
                                   Foreground="White" Width="16" Height="16"/>
@@ -44,6 +48,7 @@
             <Button Grid.Column="3"
                     Width="35" Height="35" Padding="6"
                     CornerRadius="0,4,4,0"
+                    automation:AutomationProperties.Name="{t:Translate Reload page}"
                     Click="ReloadButton_Click">
                 <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/reload.svg"
                                   Foreground="White" Width="16" Height="16"/>
@@ -51,8 +56,10 @@
 
             <Button Grid.Column="5"
                     Height="35"
-                    Command="{Binding OpenInBrowserCommand}">
-                <TextBlock Text="{t:Translate View page on browser}"/>
+                    Command="{Binding OpenInBrowserCommand}"
+                    automation:AutomationProperties.Name="{t:Translate View page on browser}">
+                <TextBlock Text="{t:Translate View page on browser}"
+                           automation:AutomationProperties.AccessibilityView="Raw"/>
             </Button>
 
         </Grid>
@@ -63,7 +70,8 @@
                      IsIndeterminate="True"
                      IsVisible="False"
                      Height="2"
-                     CornerRadius="0"/>
+                     CornerRadius="0"
+                     automation:AutomationProperties.AccessibilityView="Raw"/>
 
         <!-- WebView -->
         <Border Grid.Row="2" CornerRadius="6" ClipToBounds="True">

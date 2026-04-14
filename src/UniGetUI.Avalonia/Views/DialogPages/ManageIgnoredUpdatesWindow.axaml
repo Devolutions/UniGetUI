@@ -30,10 +30,10 @@
         <!-- ── Title ── -->
         <TextBlock Grid.Row="0"
                    Text="{Binding Title}"
-                   automation:AutomationProperties.Name="{Binding Title}"
                    FontSize="20"
                    FontWeight="SemiBold"
-                   Margin="0,0,0,4"/>
+                   Margin="0,0,0,4"
+                   automation:AutomationProperties.HeadingLevel="1"/>
 
         <!-- ── Header: description + Reset list button ── -->
         <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
@@ -43,12 +43,8 @@
                        VerticalAlignment="Center"
                        Opacity="0.75"/>
 
-            <Button x:Name="ResetButton" Grid.Column="1" VerticalAlignment="Center">
-                <Button.Styles>
-                    <Style Selector="Button">
-                        <Setter Property="automation:AutomationProperties.Name" Value="{Binding ResetLabel}"/>
-                    </Style>
-                </Button.Styles>
+            <Button x:Name="ResetButton" Grid.Column="1" VerticalAlignment="Center"
+                    automation:AutomationProperties.Name="{Binding ResetLabel}">
                 <TextBlock Text="{Binding ResetLabel}"/>
                 <Button.Flyout>
                     <Flyout Placement="Bottom">
@@ -71,10 +67,12 @@
                                        TextWrapping="Wrap"/>
                             <Button Grid.Row="1" Grid.Column="0"
                                     Content="{Binding ResetYes}"
+                                    automation:AutomationProperties.Name="{Binding ResetYes}"
                                     HorizontalAlignment="Stretch"
                                     Click="ResetYes_Click"/>
                             <Button Grid.Row="1" Grid.Column="1"
                                     Content="{Binding ResetNo}"
+                                    automation:AutomationProperties.Name="{Binding ResetNo}"
                                     HorizontalAlignment="Stretch"
                                     Classes="accent"
                                     Click="ResetNo_Click"/>
@@ -136,7 +134,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
                                     <StackPanel Orientation="Horizontal" Spacing="6"
-                                                automation:AutomationProperties.Name="{Binding AutomationName}"
+                                                automation:AutomationProperties.Name="{Binding Id}"
                                                 VerticalAlignment="Center" Margin="0,0,4,0">
                                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/id.svg"
                                                           Width="16" Height="16" VerticalAlignment="Center"/>
@@ -152,7 +150,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
                                     <StackPanel Orientation="Horizontal" Spacing="6"
-                                                automation:AutomationProperties.Name="{Binding AutomationName}"
+                                                automation:AutomationProperties.Name="{Binding VersionDisplay}"
                                                 VerticalAlignment="Center" Margin="0,0,4,0">
                                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/version.svg"
                                                           Width="16" Height="16" VerticalAlignment="Center"/>
@@ -168,7 +166,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
                                     <StackPanel Orientation="Horizontal" Spacing="6"
-                                                automation:AutomationProperties.Name="{Binding AutomationName}"
+                                                automation:AutomationProperties.Name="{Binding NewVersion}"
                                                 VerticalAlignment="Center" Margin="0,0,4,0">
                                         <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/upgradable.svg"
                                                           Width="16" Height="16" VerticalAlignment="Center"/>
@@ -184,7 +182,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:IgnoredPackageEntryViewModel">
                                     <StackPanel Orientation="Horizontal" Spacing="6"
-                                                automation:AutomationProperties.Name="{Binding AutomationName}"
+                                                automation:AutomationProperties.Name="{Binding Manager}"
                                                 VerticalAlignment="Center" Margin="0,0,4,0">
                                         <controls:SvgIcon Path="{Binding ManagerIconPath}"
                                                           Width="16" Height="16"

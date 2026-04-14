@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Threading;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
@@ -24,5 +25,11 @@ public partial class TelemetryDialog : Window
         Closing += (_, e) => { if (Result is null) e.Cancel = true; };
         DeclineButton.Click += (_, _) => { Result = false; Close(); };
         AcceptButton.Click += (_, _) => { Result = true; Close(); };
+    }
+
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        Dispatcher.UIThread.Post(() => AcceptButton.Focus(), DispatcherPriority.Background);
     }
 }

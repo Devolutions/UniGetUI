@@ -101,6 +101,7 @@ public class SettingsCard : UserControl
         set
         {
             _isClickEnabled = value;
+            Focusable = value;
             Cursor = value ? new Cursor(StandardCursorType.Hand) : Cursor.Default;
             _chevron.IsVisible = value;
             if (value)
@@ -186,6 +187,7 @@ public class SettingsCard : UserControl
             Margin = new Thickness(8, 0, 0, 0),
             IsVisible = false,
         };
+        AutomationProperties.SetAccessibilityView(_chevron, AccessibilityView.Raw);
 
         var grid = new Grid
         {
@@ -212,6 +214,8 @@ public class SettingsCard : UserControl
 
         PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
+        GotFocus += (_, _) => { if (_isClickEnabled) _border.Classes.Add("settings-card-focused"); };
+        LostFocus += (_, _) => _border.Classes.Remove("settings-card-focused");
         SyncAutomationProperties();
     }
 
@@ -282,8 +286,19 @@ public class SettingsCard : UserControl
 
     private void SyncAutomationProperties()
     {
-        ApplyAutomationMetadata(this);
-        AutomationProperties.SetControlTypeOverride(this, IsClickEnabled ? AutomationControlType.Button : null);
+        string? name = GetAutomationNameText();
+        string? help = GetAutomationHelpText();
+        ApplyAutomationMetadata(this, name, help);
+        // Also propagate to _border: on macOS, Avalonia may surface the Border element
+        // rather than the UserControl wrapper, so set the name on both.
+        if (!string.IsNullOrWhiteSpace(name))
+            AutomationProperties.SetName(_border, name);
+        if (!string.IsNullOrWhiteSpace(help))
+            AutomationProperties.SetHelpText(_border, help);
+        var type = IsClickEnabled ? (AutomationControlType?)AutomationControlType.Button : null;
+        AutomationProperties.SetControlTypeOverride(this, type);
+        if (type.HasValue)
+            AutomationProperties.SetControlTypeOverride(_border, type);
     }
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -298,6 +313,7 @@ public class SettingsCard : UserControl
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (!_isClickEnabled) return;
+        if (e.Source != this) return;   // only when the card itself has focus, not a child
         if (e.Key is not (Key.Enter or Key.Space)) return;
 
         InvokeClick();

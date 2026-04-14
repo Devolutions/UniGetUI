@@ -1,6 +1,7 @@
 <UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.Operations"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
              xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
@@ -14,7 +15,8 @@
 
             <settings:TranslatedTextBlock Text="Concurrency and execution"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:ComboboxCard x:Name="ParallelOperationCount"
                                    SettingName="ParallelOperationCount"
@@ -38,7 +40,8 @@
 
             <settings:TranslatedTextBlock Text="Automatic desktop shortcut remover"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:CheckboxButtonCard x:Name="AskToDeleteNewDesktopShortcuts"
                                          SettingName="AskToDeleteNewDesktopShortcuts"
@@ -48,7 +51,8 @@
 
             <settings:TranslatedTextBlock Text="Related settings"
                                           FontWeight="SemiBold"
-                                          Margin="44,32,4,8"/>
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
 
             <settings:SettingsCard CornerRadius="8,8,0,0"
                                    IsClickEnabled="True"

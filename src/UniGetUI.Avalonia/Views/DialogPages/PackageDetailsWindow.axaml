@@ -51,9 +51,9 @@
                                 VerticalAlignment="Center"
                                 Spacing="4">
                         <TextBlock Text="{Binding PackageName}"
-                                   automation:AutomationProperties.Name="{Binding PackageName}"
                                    FontSize="22" FontWeight="Bold"
-                                   TextWrapping="Wrap"/>
+                                   TextWrapping="Wrap"
+                                   automation:AutomationProperties.HeadingLevel="1"/>
                         <TextBlock Text="{Binding SourceDisplay}"
                                    FontSize="13" Opacity="0.65"/>
                     </StackPanel>
@@ -114,6 +114,7 @@
                                     IsVisible="{Binding HasHomepageUrl}"
                                     Command="{Binding OpenUrlCommand}"
                                     CommandParameter="{Binding HomepageText}"
+                                    automation:AutomationProperties.Name="{Binding LabelHomepage}"
                                     Padding="8,3" Margin="8,0,0,0"/>
                         </Grid>
 
@@ -152,6 +153,7 @@
                                     IsVisible="{Binding HasLicenseUrl}"
                                     Command="{Binding OpenUrlCommand}"
                                     CommandParameter="{Binding LicenseText}"
+                                    automation:AutomationProperties.Name="{Binding LabelLicense}"
                                     Padding="8,3" Margin="8,0,0,0"/>
                         </Grid>
 
@@ -163,6 +165,7 @@
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
                         <Button x:Name="MainActionButton"
                                 Content="{Binding MainActionLabel}"
+                                automation:AutomationProperties.Name="{Binding MainActionLabel}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
                                 Classes="accent"

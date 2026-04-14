@@ -10,6 +10,10 @@
         Background="{DynamicResource AppDialogBackground}"
         Title="{Binding DialogTitle}">
 
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}"/>
+    </Window.KeyBindings>
+
     <ScrollViewer MaxHeight="820"
                   VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
@@ -76,23 +80,28 @@
                                           IsChecked="{Binding AdminChecked}"
                                           IsEnabled="{Binding CanRunAsAdmin}"
                                           IsVisible="{Binding CanRunAsAdmin}"
+                                          automation:AutomationProperties.Name="{Binding AdminCheckBox_Content}"
                                           Margin="0,0,16,4"/>
                                 <CheckBox Content="{Binding InteractiveCheckBox_Content, FallbackValue='Interactive installation'}"
                                           IsChecked="{Binding InteractiveChecked}"
                                           IsEnabled="{Binding CanRunInteractively}"
+                                          automation:AutomationProperties.Name="{Binding InteractiveCheckBox_Content}"
                                           Margin="0,0,16,4"/>
                                 <CheckBox Content="{Binding SkipHashCheckBox_Content, FallbackValue='Skip hash check'}"
                                           IsChecked="{Binding SkipHashChecked}"
                                           IsEnabled="{Binding SkipHashEnabled}"
+                                          automation:AutomationProperties.Name="{Binding SkipHashCheckBox_Content}"
                                           Margin="0,0,16,4"/>
                                 <CheckBox Content="{Binding UninstallPrevCheckBox_Content, FallbackValue='Uninstall previous versions when updated'}"
                                           IsChecked="{Binding UninstallPrevChecked}"
                                           IsEnabled="{Binding CanUninstallPrev}"
                                           IsVisible="{Binding CanUninstallPrev}"
+                                          automation:AutomationProperties.Name="{Binding UninstallPrevCheckBox_Content}"
                                           Margin="0,0,16,4"/>
                             </WrapPanel>
 
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"
+                                    automation:AutomationProperties.AccessibilityView="Raw"/>
 
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                                 <TextBlock x:Name="VersionLabelBlock"
@@ -106,14 +115,17 @@
                                           HorizontalAlignment="Stretch"/>
                             </Grid>
 
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"
+                                    automation:AutomationProperties.AccessibilityView="Raw"/>
 
                             <WrapPanel Orientation="Horizontal">
                                 <CheckBox Content="{Binding SkipMinorCheckBox_Content, FallbackValue='Skip minor updates'}"
                                           IsChecked="{Binding SkipMinorChecked}"
+                                          automation:AutomationProperties.Name="{Binding SkipMinorCheckBox_Content}"
                                           Margin="0,0,16,4"/>
                                 <CheckBox Content="{Binding AutoUpdateCheckBox_Content, FallbackValue='Auto-update this package'}"
                                           IsChecked="{Binding AutoUpdateChecked}"
+                                          automation:AutomationProperties.Name="{Binding AutoUpdateCheckBox_Content}"
                                           Margin="0,0,16,4"/>
                             </WrapPanel>
 
@@ -136,7 +148,8 @@
                                           HorizontalAlignment="Stretch"/>
                             </Grid>
 
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"
+                                    automation:AutomationProperties.AccessibilityView="Raw"/>
 
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                                 <TextBlock x:Name="ScopeLabelBlock" Text="{Binding ScopeLabel}" VerticalAlignment="Center"/>
@@ -148,7 +161,8 @@
                                           HorizontalAlignment="Stretch"/>
                             </Grid>
 
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"
+                                    automation:AutomationProperties.AccessibilityView="Raw"/>
 
                             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
                                 <TextBlock x:Name="LocationLabelBlock" Text="{Binding LocationLabel}" VerticalAlignment="Center"/>
@@ -236,10 +250,12 @@
                                          FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
                                 <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
                                           Content="{Binding AbortInstallLabel}"
+                                          automation:AutomationProperties.Name="{Binding AbortInstallLabel}"
                                           IsChecked="{Binding AbortInstall}"/>
                             </Grid>
 
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"
+                                    automation:AutomationProperties.AccessibilityView="Raw"/>
 
                             <!-- Update -->
                             <Grid ColumnDefinitions="*,*"
@@ -260,10 +276,12 @@
                                          FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
                                 <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
                                           Content="{Binding AbortUpdateLabel}"
+                                          automation:AutomationProperties.Name="{Binding AbortUpdateLabel}"
                                           IsChecked="{Binding AbortUpdate}"/>
                             </Grid>
 
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"
+                                    automation:AutomationProperties.AccessibilityView="Raw"/>
 
                             <!-- Uninstall -->
                             <Grid ColumnDefinitions="*,*"
@@ -284,6 +302,7 @@
                                          FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
                                 <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
                                           Content="{Binding AbortUninstallLabel}"
+                                          automation:AutomationProperties.Name="{Binding AbortUninstallLabel}"
                                           IsChecked="{Binding AbortUninstall}"/>
                             </Grid>
 

@@ -1,5 +1,6 @@
 using Avalonia.Automation;
 using Avalonia.Threading;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
@@ -22,5 +23,11 @@ public static class AccessibilityAnnouncementService
             AnnouncementRequested?.Invoke(
                 null,
                 new AccessibilityAnnouncement(message, liveSetting)));
+    }
+
+    public static void AnnounceToggle(string label, bool isEnabled)
+    {
+        Announce(CoreTools.Translate("{0} is now {1}", label,
+            isEnabled ? CoreTools.Translate("Enabled") : CoreTools.Translate("Disabled")));
     }
 }

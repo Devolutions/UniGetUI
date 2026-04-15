@@ -80,10 +80,7 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
                 CoreSettings.SetDictionaryItem(CoreSettings.K.DisabledManagers, manager.Name, toggle.IsChecked != true);
                 await Task.Run(manager.Initialize);
                 ApplyStatusBadge(manager, toggle, badge, badgeText);
-                AccessibilityAnnouncementService.Announce(
-                    CoreTools.Translate("{0} is now {1}", manager.DisplayName, toggle.IsChecked == true
-                        ? CoreTools.Translate("Enabled")
-                        : CoreTools.Translate("Disabled")));
+                AccessibilityAnnouncementService.AnnounceToggle(manager.DisplayName, toggle.IsChecked == true);
             };
 
             var toggleAndBadge = new StackPanel

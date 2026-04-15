@@ -118,10 +118,7 @@ public partial class CheckboxCard : SettingsCard
         StateChanged?.Invoke(this, EventArgs.Empty);
         _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
         SyncToggleItemStatus();
-        AccessibilityAnnouncementService.Announce(
-            CoreTools.Translate("{0} is now {1}", _textblock.Text, (_checkbox.IsChecked ?? false)
-                ? CoreTools.Translate("Enabled")
-                : CoreTools.Translate("Disabled")));
+        AccessibilityAnnouncementService.AnnounceToggle(_textblock.Text, _checkbox.IsChecked ?? false);
         var cmd = StateChangedCommand;
         if (cmd?.CanExecute(null) == true)
             cmd.Execute(null);
@@ -200,9 +197,6 @@ public partial class CheckboxCard_Dict : CheckboxCard
         StateChanged?.Invoke(this, EventArgs.Empty);
         _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
         SyncToggleItemStatus();
-        AccessibilityAnnouncementService.Announce(
-            CoreTools.Translate("{0} is now {1}", _textblock.Text, (_checkbox.IsChecked ?? false)
-                ? CoreTools.Translate("Enabled")
-                : CoreTools.Translate("Disabled")));
+        AccessibilityAnnouncementService.AnnounceToggle(_textblock.Text, _checkbox.IsChecked ?? false);
     }
 }

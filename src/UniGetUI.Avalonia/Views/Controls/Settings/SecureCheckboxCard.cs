@@ -150,10 +150,7 @@ public partial class SecureCheckboxCard : SettingsCard
                 cmd.Execute(null);
             _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
             _checkbox.IsChecked = SecureSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
-            AccessibilityAnnouncementService.Announce(
-                CoreTools.Translate("{0} is now {1}", _textblock.Text, (_checkbox.IsChecked ?? false)
-                    ? CoreTools.Translate("Enabled")
-                    : CoreTools.Translate("Disabled")));
+            AccessibilityAnnouncementService.AnnounceToggle(_textblock.Text, _checkbox.IsChecked ?? false);
             _loading.IsVisible = false;
             _checkbox.IsEnabled = true;
         }

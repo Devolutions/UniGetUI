@@ -12,6 +12,7 @@
 
     <Window.KeyBindings>
         <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}"/>
+        <KeyBinding Gesture="Meta+S" Command="{Binding SaveCommand}"/>
     </Window.KeyBindings>
 
     <ScrollViewer MaxHeight="820"

@@ -23,17 +23,6 @@ public partial class HelpPage : UserControl, IEnterLeaveListener
     private void OnNavigationStarted(object? sender, WebViewNavigationStartingEventArgs e)
     {
         NavProgressBar.IsVisible = true;
-
-        // Add iframe query param so the help site shows the embedded view
-        string url = e.Request?.ToString() ?? "";
-        if (url.Contains("marticliment.com") && !url.Contains("isWingetUIIframe"))
-        {
-            e.Cancel = true;
-            string modified = url.Contains('?')
-                ? url + "&isWingetUIIframe"
-                : url + "?isWingetUIIframe";
-            WebViewControl.Navigate(new Uri(modified));
-        }
     }
 
     private void OnNavigationCompleted(object? sender, WebViewNavigationCompletedEventArgs e)

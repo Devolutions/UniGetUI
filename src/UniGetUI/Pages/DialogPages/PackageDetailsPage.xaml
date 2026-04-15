@@ -208,7 +208,7 @@
                   <HyperlinkButton
                     Grid.Column="1"
                     VerticalAlignment="Stretch"
-                    NavigateUri="https://marticliment.com/unigetui/help/icons-and-screenshots/#about-icons"
+                    NavigateUri="https://github.com/Devolutions/UniGetUI"
                   >
                     <widgets:TranslatedTextBlock
                       VerticalAlignment="Center"
@@ -240,7 +240,7 @@
             <HyperlinkButton
               Grid.Column="1"
               VerticalAlignment="Stretch"
-              NavigateUri="https://marticliment.com/unigetui/help/icons-and-screenshots/#about-icons"
+              NavigateUri="https://github.com/Devolutions/UniGetUI"
             >
               <widgets:TranslatedTextBlock VerticalAlignment="Center" Text="Become a contributor" />
             </HyperlinkButton>

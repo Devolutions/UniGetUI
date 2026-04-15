@@ -51,7 +51,7 @@
                                   SettingName="IconDataBaseURL"
                                   Text="{t:Translate Use a custom icon and screenshot database URL}"
                                   Placeholder="{t:Translate Leave empty for default}"
-                                  HelpUrl="https://www.marticliment.com/unigetui/help/icons-and-screenshots#custom-source"
+                                  HelpUrl="https://github.com/Devolutions/UniGetUI"
                                   ValueChangedCommand="{Binding ShowRestartRequiredCommand}"
                                   CornerRadius="8"/>
 

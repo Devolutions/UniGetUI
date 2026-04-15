@@ -69,7 +69,7 @@
 
       <widgets:TextboxCard
         CornerRadius="8"
-        HelpUrl="https://www.marticliment.com/unigetui/help/icons-and-screenshots#custom-source"
+        HelpUrl="https://github.com/Devolutions/UniGetUI"
         Placeholder="Leave empty for default"
         SettingName="IconDataBaseURL"
         Text="Use a custom icon and screenshot database URL"

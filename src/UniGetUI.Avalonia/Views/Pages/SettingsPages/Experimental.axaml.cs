@@ -21,6 +21,6 @@ public sealed partial class Experimental : UserControl, ISettingsPage
         vm.RestartRequired += (s, e) => RestartRequired?.Invoke(s, e);
 
         ShowVersionNumberOnTitlebar.Text = CoreTools.Translate("Show UniGetUI's version and build number on the titlebar.");
-        IconDatabaseURLCard.HelpUrl = new Uri("https://www.marticliment.com/unigetui/help/icons-and-screenshots#custom-source");
+        IconDatabaseURLCard.HelpUrl = new Uri("https://github.com/Devolutions/UniGetUI");
     }
 }

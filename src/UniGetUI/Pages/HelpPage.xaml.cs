@@ -14,6 +14,7 @@ namespace UniGetUI.Interface.Dialogs
     /// </summary>
     public sealed partial class HelpPage : Page, IDisposable, IEnterLeaveListener
     {
+        private static readonly Uri HelpUri = new("https://github.com/Devolutions/UniGetUI");
         private bool Initialized;
         private WebView2? webView;
         private Uri? lastUri;
@@ -32,21 +33,6 @@ namespace UniGetUI.Interface.Dialogs
             {
                 ProgressBar.Visibility = Visibility.Visible;
                 lastUri = new Uri(e.Uri);
-                if (
-                    e.Uri.ToString().Contains("marticliment.com")
-                    && !e.Uri.ToString().Contains("isWingetUIIframe")
-                )
-                {
-                    e.Cancel = true;
-                    if (e.Uri.ToString().Contains('?'))
-                    {
-                        webView.Source = new Uri(e.Uri.ToString() + "&isWingetUIIframe");
-                    }
-                    else
-                    {
-                        webView.Source = new Uri(e.Uri.ToString() + "?isWingetUIIframe");
-                    }
-                }
             };
             webView.NavigationCompleted += (_, _) =>
             {
@@ -66,7 +52,7 @@ namespace UniGetUI.Interface.Dialogs
             while (!Initialized && !skipWait)
                 await Task.Delay(50);
             ArgumentNullException.ThrowIfNull(webView);
-            webView.Source = new Uri("https://marticliment.com/unigetui/help/" + piece);
+            webView.Source = HelpUri;
         }
 
         private void BackButton_Click(object sender, RoutedEventArgs e)
@@ -90,7 +76,7 @@ namespace UniGetUI.Interface.Dialogs
             if (!Initialized || webView is null)
                 return;
 
-            webView.Source = new Uri("https://marticliment.com/unigetui/help");
+            webView.Source = HelpUri;
         }
 
         private void ReloadButton_Click(object sender, RoutedEventArgs e)
@@ -106,11 +92,7 @@ namespace UniGetUI.Interface.Dialogs
             if (!Initialized || webView is null)
                 return;
 
-            string uri = webView
-                .Source.ToString()
-                .Replace("?isWingetUIIframe", "")
-                .Replace("&isWingetUIIframe", "");
-            CoreTools.Launch(uri);
+            CoreTools.Launch(webView.Source.ToString());
         }
 
         public void Dispose()

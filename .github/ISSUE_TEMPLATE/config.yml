@@ -2,7 +2,7 @@ blank_issues_enabled: false
 
 contact_links:
   - name: 📦 ISSUES INSTALLING/UPDATING A PACKAGE
-    url: https://marticliment.com/unigetui/help/issues-with-packages
+    url: https://github.com/Devolutions/UniGetUI
     about: PLEASE READ THIS BEFORE CREATING AN ISSUE RELATED TO A SPECIFIC PACKAGE
   - name: 🔒 Security issue or vulnerability
     url: https://whitehub.net/programs/unigetui/

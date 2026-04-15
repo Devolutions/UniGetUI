@@ -167,11 +167,6 @@ public partial class PackagesPageViewModel : ViewModelBase
     public event Action? HelpRequested;
     /// <summary>Fired when the ViewModel wants to show the Manage-Ignored-Updates dialog.</summary>
     public event Action? ManageIgnoredRequested;
-    /// <summary>
-    /// Fired when the ViewModel has built a share URL.
-    /// Arguments: (packageName, url). Both null means "nothing to share".
-    /// </summary>
-    public event Action<string?, string?>? SharePackageRequested;
 
     // ─── Constructor ─────────────────────────────────────────────────────────
     public PackagesPageViewModel(PackagesPageData data)
@@ -716,22 +711,6 @@ public partial class PackagesPageViewModel : ViewModelBase
     [RelayCommand] private void ClearSourceSelection_Cmd() { ClearSourceSelection(); FilterPackages(); }
     [RelayCommand] private void RequestHelp() => HelpRequested?.Invoke();
     [RelayCommand] private void RequestManageIgnored() => ManageIgnoredRequested?.Invoke();
-
-    [RelayCommand]
-    public void RequestShare(IPackage? package)
-    {
-        if (package is null || package.Source.IsVirtualManager)
-        {
-            SharePackageRequested?.Invoke(null, null);
-            return;
-        }
-        var url = "https://marticliment.com/unigetui/share?"
-            + "name=" + System.Web.HttpUtility.UrlEncode(package.Name)
-            + "&id=" + System.Web.HttpUtility.UrlEncode(package.Id)
-            + "&sourceName=" + System.Web.HttpUtility.UrlEncode(package.Source.Name)
-            + "&managerName=" + System.Web.HttpUtility.UrlEncode(package.Manager.Name);
-        SharePackageRequested?.Invoke(package.Name, url);
-    }
 
     // ─── Sort commands ────────────────────────────────────────────────────────
     [RelayCommand] private void SortByName() => SortFieldIndex = 0;

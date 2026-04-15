@@ -418,12 +418,6 @@ namespace UniGetUI
                         MainWindow?.Activate();
                     });
 
-                BackgroundApi.OnShowSharedPackage += (_, package) =>
-                    MainWindow.DispatcherQueue.TryEnqueue(() =>
-                    {
-                        DialogHelper.ShowSharedPackage_ThreadSafe(package.Key, package.Value);
-                    });
-
                 BackgroundApi.OnUpgradeAll += (_, _) =>
                     MainWindow.DispatcherQueue.TryEnqueue(() =>
                     {

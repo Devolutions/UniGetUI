@@ -84,8 +84,6 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
-        ViewModel.AddToolbarButton("share", CoreTools.Translate("Share"),
-            () => vm.RequestShareCommand.Execute(SelectedItem), showLabel: false);
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("pin", CoreTools.Translate("Ignore selected packages"), async () =>
         {
@@ -229,13 +227,6 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             menuPause.Items.Add(item);
         }
 
-        var menuShare = new MenuItem
-        {
-            Header = CoreTools.AutoTranslated("Share this package"),
-            Icon = LoadMenuIcon("share"),
-        };
-        menuShare.Click += (_, _) => ViewModel.RequestShareCommand.Execute(SelectedItem);
-
         var menuDetails = new MenuItem
         {
             Header = CoreTools.AutoTranslated("Package details"),
@@ -261,7 +252,6 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         menu.Items.Add(menuSkipVersion);
         menu.Items.Add(menuPause);
         menu.Items.Add(new Separator());
-        menu.Items.Add(menuShare);
         menu.Items.Add(menuDetails);
 
         return menu;

@@ -25,7 +25,6 @@ namespace UniGetUI.Interface
     {
         public event EventHandler<EventArgs>? OnOpenWindow;
         public event EventHandler<EventArgs>? OnOpenUpdatesPage;
-        public event EventHandler<KeyValuePair<string, string>>? OnShowSharedPackage;
         public event EventHandler<EventArgs>? OnUpgradeAll;
         public event EventHandler<string>? OnUpgradeAllForManager;
         public event EventHandler<string>? OnUpgradePackage;
@@ -62,7 +61,6 @@ namespace UniGetUI.Interface
                     app.UseRouting();
                     app.UseEndpoints(endpoints =>
                     {
-                        // Share endpoints
                         endpoints.MapGet("/v2/show-package", V2_ShowPackage);
                         endpoints.MapGet("/is-running", API_IsRunning);
                         // Widgets v1 API
@@ -98,21 +96,10 @@ namespace UniGetUI.Interface
 
         private async Task V2_ShowPackage(HttpContext context)
         {
-            var query = context.Request.Query;
-            if (string.IsNullOrEmpty(query["pid"]) || string.IsNullOrEmpty(query["psource"]))
-            {
-                context.Response.StatusCode = 400;
-                return;
-            }
-
-            string packageId = query["pid"].ToString();
-            string packageSource = query["psource"].ToString();
-            OnShowSharedPackage?.Invoke(
-                null,
-                new KeyValuePair<string, string>(packageId, packageSource)
+            context.Response.StatusCode = StatusCodes.Status410Gone;
+            await context.Response.WriteAsync(
+                "{\"status\": \"removed\", \"message\": \"package sharing has been removed\"}"
             );
-
-            await context.Response.WriteAsync("{\"status\": \"success\"}");
         }
 
         private async Task API_IsRunning(HttpContext context)

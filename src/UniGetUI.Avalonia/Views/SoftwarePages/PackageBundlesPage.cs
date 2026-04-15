@@ -34,7 +34,6 @@ public class PackageBundlesPage : AbstractPackagesPage
     private MenuItem? _menuInteractive;
     private MenuItem? _menuSkipHash;
     private MenuItem? _menuDownloadInstaller;
-    private MenuItem? _menuShare;
     private MenuItem? _menuDetails;
 
     private readonly PackageBundlesLoader _loader;
@@ -113,8 +112,6 @@ public class PackageBundlesPage : AbstractPackagesPage
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
-        ViewModel.AddToolbarButton("share", CoreTools.Translate("Share"),
-            () => vm.RequestShareCommand.Execute(SelectedItem), showLabel: false);
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("help", CoreTools.Translate("Help"),
             () => vm.RequestHelpCommand.Execute(null));
@@ -168,9 +165,6 @@ public class PackageBundlesPage : AbstractPackagesPage
             }
         };
 
-        _menuShare = new MenuItem { Header = CoreTools.AutoTranslated("Share this package"), Icon = LoadMenuIcon("share") };
-        _menuShare.Click += (_, _) => ViewModel.RequestShareCommand.Execute(SelectedItem);
-
         _menuDetails = new MenuItem { Header = CoreTools.AutoTranslated("Package details"), Icon = LoadMenuIcon("info_round") };
         _menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);
 
@@ -186,7 +180,6 @@ public class PackageBundlesPage : AbstractPackagesPage
         menu.Items.Add(new Separator());
         menu.Items.Add(menuRemoveFromList);
         menu.Items.Add(new Separator());
-        menu.Items.Add(_menuShare);
         menu.Items.Add(_menuDetails);
         return menu;
     }
@@ -195,7 +188,7 @@ public class PackageBundlesPage : AbstractPackagesPage
     {
         if (_menuInstall is null || _menuInstallOptions is null || _menuAsAdmin is null
             || _menuInteractive is null || _menuSkipHash is null || _menuDownloadInstaller is null
-            || _menuShare is null || _menuDetails is null)
+            || _menuDetails is null)
         {
             Logger.Warn("Context menu items are null on PackageBundlesPage");
             return;
@@ -210,7 +203,6 @@ public class PackageBundlesPage : AbstractPackagesPage
         _menuInteractive.IsEnabled = isValid && caps.CanRunInteractively;
         _menuSkipHash.IsEnabled = isValid && caps.CanSkipIntegrityChecks;
         _menuDownloadInstaller.IsEnabled = isValid && caps.CanDownloadInstaller;
-        _menuShare.IsEnabled = isValid;
         _menuDetails.IsEnabled = isValid;
     }
 

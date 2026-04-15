@@ -558,11 +558,6 @@ namespace UniGetUI.Interface.Dialogs
             PackageDetailsPage_SizeChanged();
         }
 
-        public void ShareButton_Click(object sender, RoutedEventArgs e)
-        {
-            DialogHelper.SharePackage(Package);
-        }
-
         public void DownloadInstallerButton_Click(object sender, RoutedEventArgs e)
         {
             if (!Package.Manager.Capabilities.CanDownloadInstaller)

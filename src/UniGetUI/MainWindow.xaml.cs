@@ -311,28 +311,7 @@ namespace UniGetUI.Interface
 
             if (baseUrl.StartsWith("showPackage"))
             {
-                string Id = Regex.Match(baseUrl, "id=([^&]+)").Value.Split("=")[^1];
-                string CombinedManagerName = Regex
-                    .Match(baseUrl, "combinedManagerName=([^&]+)")
-                    .Value.Split("=")[^1];
-                string ManagerName = Regex.Match(baseUrl, "managerName=([^&]+)").Value.Split("=")[
-                    ^1
-                ];
-                string SourceName = Regex.Match(baseUrl, "sourceName=([^&]+)").Value.Split("=")[^1];
-
-                if (Id != "" && CombinedManagerName != "" && ManagerName == "" && SourceName == "")
-                {
-                    Logger.Warn($"URI {link} follows old scheme");
-                    DialogHelper.ShowSharedPackage_ThreadSafe(Id, CombinedManagerName);
-                }
-                else if (Id != "" && ManagerName != "" && SourceName != "")
-                {
-                    DialogHelper.ShowSharedPackage_ThreadSafe(Id, ManagerName, SourceName);
-                }
-                else
-                {
-                    Logger.Error(new UriFormatException($"Malformed URL {link}"));
-                }
+                Logger.Warn($"Ignoring unsupported package-share deep link: {link}");
             }
             else if (baseUrl.StartsWith("showUniGetUI"))
             {

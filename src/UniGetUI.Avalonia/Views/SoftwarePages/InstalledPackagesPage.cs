@@ -27,7 +27,6 @@ public class InstalledPackagesPage : AbstractPackagesPage
     private MenuItem? _menuReinstall;
     private MenuItem? _menuUninstallThenReinstall;
     private MenuItem? _menuIgnoreUpdates;
-    private MenuItem? _menuShare;
     private MenuItem? _menuDetails;
     private MenuItem? _menuOpenInstallLocation;
     private MenuItem? _menuDownloadInstaller;
@@ -90,8 +89,6 @@ public class InstalledPackagesPage : AbstractPackagesPage
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
-        ViewModel.AddToolbarButton("share", CoreTools.Translate("Share"),
-            () => vm.RequestShareCommand.Execute(SelectedItem), showLabel: false);
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("pin", CoreTools.Translate("Ignore selected packages"), async () =>
         {
@@ -188,13 +185,6 @@ public class InstalledPackagesPage : AbstractPackagesPage
         };
         _menuIgnoreUpdates.Click += (_, _) => _ = ToggleIgnoreUpdatesAsync(SelectedItem);
 
-        _menuShare = new MenuItem
-        {
-            Header = CoreTools.AutoTranslated("Share this package"),
-            Icon = LoadMenuIcon("share"),
-        };
-        _menuShare.Click += (_, _) => ViewModel.RequestShareCommand.Execute(SelectedItem);
-
         _menuDetails = new MenuItem
         {
             Header = CoreTools.AutoTranslated("Package details"),
@@ -219,7 +209,6 @@ public class InstalledPackagesPage : AbstractPackagesPage
         menu.Items.Add(new Separator());
         menu.Items.Add(_menuIgnoreUpdates);
         menu.Items.Add(new Separator());
-        menu.Items.Add(_menuShare);
         menu.Items.Add(_menuDetails);
 
         return menu;
@@ -230,7 +219,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         if (_menuAsAdmin is null || _menuInteractive is null || _menuRemoveData is null
             || _menuInstallationOptions is null || _menuReinstall is null
             || _menuUninstallThenReinstall is null || _menuIgnoreUpdates is null
-            || _menuShare is null || _menuDetails is null
+            || _menuDetails is null
             || _menuOpenInstallLocation is null || _menuDownloadInstaller is null)
         {
             Logger.Warn("Context menu items are null on InstalledPackagesPage");
@@ -247,7 +236,6 @@ public class InstalledPackagesPage : AbstractPackagesPage
         _menuInstallationOptions.IsEnabled = !isLocal;
         _menuReinstall.IsEnabled = !isLocal;
         _menuUninstallThenReinstall.IsEnabled = !isLocal;
-        _menuShare.IsEnabled = !isLocal;
         _menuDetails.IsEnabled = !isLocal;
         _menuOpenInstallLocation.IsEnabled =
             package.Manager.DetailsHelper.GetInstallLocation(package) is not null;

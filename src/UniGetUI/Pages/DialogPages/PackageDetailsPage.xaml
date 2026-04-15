@@ -118,38 +118,16 @@
           </Paragraph>
         </RichTextBlock>
 
-        <!--  Install and Share button  -->
+        <!--  Main action button  -->
         <Grid Name="ActionsPanel" VerticalAlignment="Top" ColumnSpacing="8" RowSpacing="8">
           <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="10000*" MaxWidth="250" />
-            <ColumnDefinition Width="*" MinWidth="16" />
             <ColumnDefinition Width="10000*" MaxWidth="250" />
           </Grid.ColumnDefinitions>
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
-          <Button
-            Name="ShareButton"
-            Grid.Column="0"
-            Height="40"
-            HorizontalAlignment="Stretch"
-            HorizontalContentAlignment="Center"
-            Click="ShareButton_Click"
-            CornerRadius="8"
-          >
-            <StackPanel
-              HorizontalAlignment="Center"
-              VerticalAlignment="Center"
-              Orientation="Horizontal"
-              Spacing="8"
-            >
-              <widgets:LocalIcon Width="20" Height="20" Icon="share" />
-              <widgets:TranslatedTextBlock VerticalAlignment="Center" Text="Share this package" />
-            </StackPanel>
-          </Button>
-
-          <Grid Grid.Column="2">
+          <Grid Grid.Column="0">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="Auto" />

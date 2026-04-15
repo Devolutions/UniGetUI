@@ -19,7 +19,6 @@ public enum TEL_InstallReferral
 {
     DIRECT_SEARCH,
     FROM_BUNDLE,
-    FROM_WEB_SHARE,
     ALREADY_INSTALLED,
 }
 
@@ -207,9 +206,6 @@ public static class TelemetryHandler
 
     public static void PackageDetails(IPackage package, string eventSource) =>
         _ = TrackPackageEventAsync(package, "details", eventSource: eventSource);
-
-    public static void SharedPackage(IPackage package, string eventSource) =>
-        _ = TrackPackageEventAsync(package, "share", eventSource: eventSource);
 
     private static async Task TrackPackageEventAsync(
         IPackage package,

@@ -1,4 +1,3 @@
-using System.Web;
 using ABI.Microsoft.UI.Text;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
@@ -17,7 +16,6 @@ using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.Pages.SettingsPages.GeneralPages;
-using Windows.ApplicationModel.DataTransfer;
 using Windows.UI.Text;
 
 namespace UniGetUI.Pages.DialogPages;
@@ -181,84 +179,6 @@ public static partial class DialogHelper
         return await ShowDialogAsync(dialog) is ContentDialogResult.Primary;
     }
 
-    public static void ShowSharedPackage_ThreadSafe(string id, string combinedSourceName)
-    {
-        var contents = combinedSourceName.Split(':');
-        string managerName = contents[0];
-        string sourceName = "";
-        if (contents.Length > 1)
-            sourceName = contents[1];
-        _ = GetPackageFromIdAndManager(id, managerName, sourceName, "LEGACY_COMBINEDSOURCE");
-    }
-
-    public static void ShowSharedPackage_ThreadSafe(
-        string id,
-        string managerName,
-        string sourceName
-    )
-    {
-        MainApp.Instance.MainWindow.DispatcherQueue.TryEnqueue(() =>
-        {
-            _ = GetPackageFromIdAndManager(id, managerName, sourceName, "DEFAULT");
-        });
-    }
-
-    private static async Task GetPackageFromIdAndManager(
-        string id,
-        string managerName,
-        string sourceName,
-        string eventSource
-    )
-    {
-        int loadingId = ShowLoadingDialog(CoreTools.Translate("Please wait..."));
-        try
-        {
-            Window.Activate();
-
-            var findResult = await Task.Run(() =>
-                DiscoverablePackagesLoader.Instance.GetPackageFromIdAndManager(
-                    id,
-                    managerName,
-                    sourceName
-                )
-            );
-
-            HideLoadingDialog(loadingId);
-
-            if (findResult.Item1 is null)
-                throw new KeyNotFoundException(findResult.Item2 ?? "Unknown error");
-
-            TelemetryHandler.SharedPackage(findResult.Item1, eventSource);
-            _ = ShowPackageDetails(
-                findResult.Item1,
-                OperationType.Install,
-                TEL_InstallReferral.FROM_WEB_SHARE
-            );
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"An error occurred while attempting to show the package with id {id}");
-            HideLoadingDialog(loadingId);
-
-            var warningDialog = new ContentDialog
-            {
-                Title = CoreTools.Translate("Package not found"),
-                Content =
-                    CoreTools.Translate(
-                        "An error occurred when attempting to show the package with Id {0}",
-                        id
-                    )
-                    + ":\n"
-                    + ex.Message,
-                CloseButtonText = CoreTools.Translate("Ok"),
-                DefaultButton = ContentDialogButton.Close,
-                XamlRoot = MainApp.Instance.MainWindow.Content.XamlRoot, // Ensure the dialog is shown in the correct context
-            };
-
-            await ShowDialogAsync(warningDialog);
-        }
-    }
-
     public static async Task ShowBundleSecurityReport(
         Dictionary<string, List<BundleReportEntry>> packageReport
     )
@@ -388,56 +308,6 @@ public static partial class DialogHelper
         };
         dialog.SecondaryButtonText = CoreTools.Translate("Close");
         await ShowDialogAsync(dialog);
-    }
-
-    public static void SharePackage(IPackage? package)
-    {
-        if (package is null)
-            return;
-
-        if (package.Source.IsVirtualManager || package is InvalidImportedPackage)
-        {
-            DialogHelper.ShowDismissableBalloon(
-                CoreTools.Translate("Something went wrong"),
-                CoreTools.Translate("\"{0}\" is a local package and can't be shared", package.Name)
-            );
-            return;
-        }
-
-        IntPtr hWnd = Window.GetWindowHandle();
-
-        NativeHelpers.IDataTransferManagerInterop interop =
-            DataTransferManager.As<NativeHelpers.IDataTransferManagerInterop>();
-
-        IntPtr result = interop.GetForWindow(hWnd, NativeHelpers._dtm_iid);
-        DataTransferManager dataTransferManager =
-            WinRT.MarshalInterface<DataTransferManager>.FromAbi(result);
-
-        dataTransferManager.DataRequested += (_, args) =>
-        {
-            DataRequest dataPackage = args.Request;
-            Uri ShareUrl = new(
-                "https://marticliment.com/unigetui/share?"
-                    + "name="
-                    + HttpUtility.UrlEncode(package.Name)
-                    + "&id="
-                    + HttpUtility.UrlEncode(package.Id)
-                    + "&sourceName="
-                    + HttpUtility.UrlEncode(package.Source.Name)
-                    + "&managerName="
-                    + HttpUtility.UrlEncode(package.Manager.DisplayName)
-            );
-
-            dataPackage.Data.SetWebLink(ShareUrl);
-            dataPackage.Data.Properties.Title = "Sharing " + package.Name;
-            dataPackage.Data.Properties.ApplicationName = "WingetUI";
-            dataPackage.Data.Properties.ContentSourceWebLink = ShareUrl;
-            dataPackage.Data.Properties.Description =
-                "Share " + package.Name + " with your friends";
-            dataPackage.Data.Properties.PackageFamilyName = "WingetUI";
-        };
-
-        interop.ShowShareUIForWindow(hWnd);
     }
 
     /// <summary>

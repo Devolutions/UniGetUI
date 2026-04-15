@@ -34,22 +34,6 @@ public abstract partial class AbstractPackagesPage : UserControl,
             if (GetMainWindow() is { } win)
                 await new ManageIgnoredUpdatesWindow().ShowDialog(win);
         };
-        ViewModel.SharePackageRequested += async (pkgName, url) =>
-        {
-            if (GetMainWindow() is not { } win) return;
-            if (url is null)
-            {
-                await ViewModel.ShowInfoDialog(win,
-                    CoreTools.Translate("Nothing to share"),
-                    CoreTools.Translate("Please select a package first."));
-                return;
-            }
-            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-            if (clipboard is not null) await clipboard.SetTextAsync(url);
-            await ViewModel.ShowInfoDialog(win,
-                CoreTools.Translate("Share link copied"),
-                CoreTools.Translate("The share link for {0} has been copied to the clipboard.", pkgName ?? ""));
-        };
 
         // "New version" sort option is only relevant on the updates page
         OrderByNewVersion_Menu.IsVisible = ViewModel.RoleIsUpdateLike;

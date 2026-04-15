@@ -1,4 +1,3 @@
-using System.Web;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -73,8 +72,6 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
-        ViewModel.AddToolbarButton("share", CoreTools.Translate("Share"),
-            () => vm.RequestShareCommand.Execute(SelectedItem), showLabel: false);
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
             () => _ = ExportSelectionToBundleAsync(vm));
@@ -121,9 +118,6 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         var menuInstallOptions = new MenuItem { Header = CoreTools.AutoTranslated("Install options"), Icon = LoadMenuIcon("options") };
         menuInstallOptions.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
 
-        var menuShare = new MenuItem { Header = CoreTools.AutoTranslated("Share this package"), Icon = LoadMenuIcon("share") };
-        menuShare.Click += (_, _) => ViewModel.RequestShareCommand.Execute(SelectedItem);
-
         var menuDetails = new MenuItem { Header = CoreTools.AutoTranslated("Package details"), Icon = LoadMenuIcon("info_round") };
         menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);
 
@@ -137,7 +131,6 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         menu.Items.Add(_menuSkipHash);
         menu.Items.Add(_menuDownloadInstaller);
         menu.Items.Add(new Separator());
-        menu.Items.Add(menuShare);
         menu.Items.Add(menuDetails);
 
         return menu;

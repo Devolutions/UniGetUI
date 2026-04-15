@@ -237,13 +237,6 @@ public partial class MainWindow : Window
             as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
     }
 
-    public void OpenSharedPackage(string managerName, string packageId)
-    {
-        // TODO: open package details for the shared package
-        Logger.Info($"OpenSharedPackage: {managerName}/{packageId}");
-        Navigate(PageType.Discover);
-    }
-
     public static void ApplyProxyVariableToProcess()
     {
         try

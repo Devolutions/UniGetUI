@@ -31,7 +31,6 @@ namespace UniGetUI.Interface.SoftwarePages
     {
         private BetterMenuItem? MenuInstallOptions;
         private BetterMenuItem? MenuInstall;
-        private BetterMenuItem? MenuShare;
         private BetterMenuItem? MenuDetails;
         private BetterMenuItem? MenuAsAdmin;
         private BetterMenuItem? MenuInteractive;
@@ -162,14 +161,6 @@ namespace UniGetUI.Interface.SoftwarePages
             menu.Items.Add(menuRemoveFromList);
             menu.Items.Add(new MenuFlyoutSeparator());
 
-            MenuShare = new()
-            {
-                Text = CoreTools.AutoTranslated("Share this package"),
-                IconName = IconType.Share,
-            };
-            MenuShare.Click += MenuShare_Invoked;
-            menu.Items.Add(MenuShare);
-
             MenuDetails = new()
             {
                 Text = CoreTools.AutoTranslated("Package details"),
@@ -212,7 +203,6 @@ namespace UniGetUI.Interface.SoftwarePages
             AppBarButton ToBatchScript = new();
             AppBarButton AddPackagesToBundle = new();
             AppBarButton PackageDetails = new();
-            AppBarButton SharePackage = new();
             AppBarButton HelpButton = new();
 
             ToolBar.PrimaryCommands.Add(new AppBarSeparator());
@@ -226,7 +216,6 @@ namespace UniGetUI.Interface.SoftwarePages
             ToolBar.PrimaryCommands.Add(RemoveSelected);
             ToolBar.PrimaryCommands.Add(new AppBarSeparator());
             ToolBar.PrimaryCommands.Add(PackageDetails);
-            ToolBar.PrimaryCommands.Add(SharePackage);
             ToolBar.PrimaryCommands.Add(new AppBarSeparator());
             ToolBar.PrimaryCommands.Add(HelpButton);
 
@@ -244,7 +233,6 @@ namespace UniGetUI.Interface.SoftwarePages
                 { SaveBundle, CoreTools.Translate("Save as") },
                 { AddPackagesToBundle, CoreTools.Translate("Add packages to bundle") },
                 { PackageDetails, " " + CoreTools.Translate("Package details") },
-                { SharePackage, " " + CoreTools.Translate("Share") },
                 { HelpButton, CoreTools.Translate("Help") },
             };
 
@@ -261,7 +249,6 @@ namespace UniGetUI.Interface.SoftwarePages
                 { SaveBundle, IconType.SaveAs },
                 { AddPackagesToBundle, IconType.AddTo },
                 { PackageDetails, IconType.Info_Round },
-                { SharePackage, IconType.Share },
                 { HelpButton, IconType.Help },
             };
 
@@ -277,7 +264,7 @@ namespace UniGetUI.Interface.SoftwarePages
                     DialogHelper.ShowDismissableBalloon(
                         CoreTools.Translate("Something went wrong"),
                         CoreTools.Translate(
-                            "\"{0}\" is a local package and can't be shared",
+                            "\"{0}\" is a local package and is not compatible with this feature",
                             SelectedItem.Name
                         )
                     );
@@ -330,13 +317,6 @@ namespace UniGetUI.Interface.SoftwarePages
             OpenBundle.Click += async (_, _) => await AskOpenFromFile();
             SaveBundle.Click += async (_, _) => await SaveFile();
             ToBatchScript.Click += (_, _) => _ = CreateBatchScript();
-
-            SharePackage.Click += (_, _) =>
-            {
-                IPackage? package = SelectedItem;
-                if (package is not null)
-                    DialogHelper.SharePackage(package);
-            };
 
             AddPackagesToBundle.Click += (_, _) => _ = DialogHelper.HowToAddPackagesToBundle();
         }
@@ -407,7 +387,6 @@ namespace UniGetUI.Interface.SoftwarePages
                 || MenuInteractive is null
                 || MenuSkipHash is null
                 || MenuDetails is null
-                || MenuShare is null
                 || MenuInstall is null
                 || MenuInstallOptions is null
                 || MenuDownloadInstaller is null
@@ -425,7 +404,6 @@ namespace UniGetUI.Interface.SoftwarePages
             MenuSkipHash.IsEnabled =
                 IS_VALID && package.Manager.Capabilities.CanSkipIntegrityChecks;
             MenuDetails.IsEnabled = IS_VALID;
-            MenuShare.IsEnabled = IS_VALID;
             MenuInstall.IsEnabled = IS_VALID;
             MenuInstallOptions.IsEnabled = IS_VALID;
             MenuDownloadInstaller.IsEnabled =
@@ -458,13 +436,6 @@ namespace UniGetUI.Interface.SoftwarePages
             if (SelectedItem is null)
                 return;
             _ = ImportAndInstallPackage([SelectedItem], skiphash: true);
-        }
-
-        private void MenuShare_Invoked(object sender, RoutedEventArgs args)
-        {
-            if (SelectedItem is null)
-                return;
-            DialogHelper.SharePackage(SelectedItem);
         }
 
         private void MenuDetails_Invoked(object sender, RoutedEventArgs args)

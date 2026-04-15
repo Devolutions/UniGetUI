@@ -5,11 +5,11 @@ contact_links:
     url: https://github.com/Devolutions/UniGetUI
     about: PLEASE READ THIS BEFORE CREATING AN ISSUE RELATED TO A SPECIFIC PACKAGE
   - name: 🔒 Security issue or vulnerability
-    url: https://whitehub.net/programs/unigetui/
-    about: Found a security issue? Please report it via our disclosure program
-  - name: 📧 Contact me privately by email
-    url: https://marticliment.com/contact
-    about: Please use only if the issue (for example, a vulnerability) cannot be posted publicly
+    url: https://devolutions.net/security/
+    about: Found a security issue? Please report it via the Devolutions security page
+  - name: 📧 Contact us directly, in private
+    url: https://devolutions.net/contact/
+    about: Please use only for private inquiries that should not be posted publicly
   - name: 💬 Having doubts or questions?
     url: https://github.com/Devolutions/UniGetUI/discussions/new/choose
     about: Create a discussion and get help from other members of the community

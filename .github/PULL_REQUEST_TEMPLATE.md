@@ -2,8 +2,8 @@
 - [ ] **I have read the [contributing guidelines](https://github.com/Devolutions/UniGetUI/blob/main/CONTRIBUTING.md#coding), and I agree with the [Code of Conduct](https://github.com/Devolutions/UniGetUI/blob/main/CODE_OF_CONDUCT.md)**.
 - [ ] **Have you checked that there aren't other open [pull requests](https://github.com/Devolutions/UniGetUI/pulls) for the same changes?**
 - [ ] **Have you tested that the committed code can be executed without errors?**
-- [ ] **This PR is not composed of garbage changes used to farm GitHub activity to enter potential Crypto AirDrops.**
-Any user suspected of farming GitHub activity with crypto purposes will get banned. Submitting broken code wastes the contributors' time, who have to spend their free time reviewing, fixing, and testing code that does not even compile breaks other features, or does not introduce any useful changes. I appreciate your understanding.
+- [ ] **Have you confirmed that this issue is caused by UniGetUI itself, and not by the package manager or the package involved?**
+If the same issue can be reproduced outside UniGetUI with the relevant package manager or with the package itself, please report it there first. UniGetUI should only be used to track issues that are specific to UniGetUI's behavior or integration.
 -----
 
 <!-- optionally, explain here about the committed code -->

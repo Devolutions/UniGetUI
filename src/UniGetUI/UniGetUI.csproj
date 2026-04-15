@@ -157,7 +157,7 @@
         <PackageReference Include="Octokit" Version="14.0.0" />
         <PackageReference
             Include="Devolutions.UniGetUI.Elevator"
-            Version="2.6.1.1"
+            Version="2.6.1.2"
             GeneratePathProperty="true"
             ExcludeAssets="build;buildTransitive"
         />

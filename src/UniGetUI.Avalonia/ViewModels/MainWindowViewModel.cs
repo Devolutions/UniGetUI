@@ -212,7 +212,7 @@ public partial class MainWindowViewModel : ViewModelBase
         LoadDefaultPage();
     }
 
-    private void OnAnnouncementRequested(object? sender, AccessibilityAnnouncement announcement)
+    private void OnAnnouncementRequested(object? _, AccessibilityAnnouncement announcement)
     {
         AnnouncementLiveSetting = announcement.LiveSetting;
         AnnouncementText = string.Empty;

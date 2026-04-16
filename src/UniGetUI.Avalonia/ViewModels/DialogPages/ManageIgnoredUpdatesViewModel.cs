@@ -124,7 +124,9 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
             "steam" => "steam",
             "gog" => "gog",
             "uplay" => "uplay",
+            "apt" => "apt",
             "dnf" => "dnf",
+            "pacman" => "pacman",
             _ => "ms_store",
         };
         return $"avares://UniGetUI.Avalonia/Assets/Symbols/{name}.svg";

@@ -87,6 +87,7 @@ namespace UniGetUI.Interface.Enums
         Homebrew = '\uE943',
         Apt = '\uE944',
         Dnf = '\uE945',
+        Pacman = '\uE946',
     }
 
     public class NotificationArguments

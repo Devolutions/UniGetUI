@@ -18,6 +18,7 @@ using UniGetUI.PackageEngine.Managers.WingetManager;
 using UniGetUI.PackageEngine.Managers.AptManager;
 using UniGetUI.PackageEngine.Managers.DnfManager;
 using UniGetUI.PackageEngine.Managers.HomebrewManager;
+using UniGetUI.PackageEngine.Managers.PacmanManager;
 #endif
 
 namespace UniGetUI.PackageEngine
@@ -45,6 +46,7 @@ namespace UniGetUI.PackageEngine
 #if !WINDOWS
         public static readonly Apt Apt = new();
         public static readonly Dnf Dnf = new();
+        public static readonly Pacman Pacman = new();
         public static readonly Homebrew Homebrew = new();
 #endif
 
@@ -67,6 +69,8 @@ namespace UniGetUI.PackageEngine
                     managers.Add(Apt);
                 if (unknown || families.Contains("fedora") || families.Contains("rhel") || families.Contains("centos"))
                     managers.Add(Dnf);
+                if (unknown || families.Contains("arch"))
+                    managers.Add(Pacman);
             }
 #endif
             return [.. managers];

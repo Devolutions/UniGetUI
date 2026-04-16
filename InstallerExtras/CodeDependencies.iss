@@ -225,16 +225,58 @@ begin
   Result := ShellExec('', ExpandConstant('{tmp}{\}') + 'netcorecheck' + Dependency_ArchSuffix + '.exe', Version, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
 end;
 
+function Dependency_IsVCRuntimeInstalled(const Arch: String; const Major, Minor, Bld: Cardinal): Boolean;
+var
+  InstalledFlag, InstMajor, InstMinor, InstBld: Cardinal;
+  Key: String;
+begin
+  // Canonical VC++ runtime detection per Microsoft docs:
+  // https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files
+  // The redistributable installer writes these values to both registry views,
+  // so a plain HKLM read is correct from Inno Setup's 32-bit process.
+  Key := 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\' + Arch;
+  Result :=
+    RegQueryDWordValue(HKLM, Key, 'Installed', InstalledFlag) and (InstalledFlag = 1) and
+    RegQueryDWordValue(HKLM, Key, 'Major', InstMajor) and
+    RegQueryDWordValue(HKLM, Key, 'Minor', InstMinor) and
+    RegQueryDWordValue(HKLM, Key, 'Bld',   InstBld) and
+    ((InstMajor > Major) or
+     ((InstMajor = Major) and (InstMinor > Minor)) or
+     ((InstMajor = Major) and (InstMinor = Minor) and (InstBld >= Bld)));
+end;
+
 procedure Dependency_AddVC2015To2022;
+var
+  Arch, Url: String;
+  MinMajor, MinMinor, MinBld: Cardinal;
 begin
   // https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist
-  if not IsMsiProductInstalled(Dependency_String('{91EE571B-0E8A-4C65-9EAF-2E2F5FC60C00}', '{91EE571B-0E8A-4C65-9EAF-2E2F5FC60C00}'), PackVersionComponents(14, 30, 30704, 0)) then begin
-    Dependency_Add('vcredist2022' + Dependency_ArchSuffix + '.exe',
-      '/passive /norestart',
-      'Visual C++ 2015-2022 Redistributable (x64)' + Dependency_ArchTitle,
-      Dependency_String('https://aka.ms/vc14/vc_redist.x64.exe', 'https://aka.ms/vc14/vc_redist.x64.exe'),
-      '', False, False);
+  MinMajor := 14;
+  MinMinor := 30;
+  MinBld   := 30704;
+
+  if IsARM64 then begin
+    Arch := 'arm64';
+    Url  := 'https://aka.ms/vc14/vc_redist.arm64.exe';
+  end else begin
+    Arch := 'x64';
+    Url  := 'https://aka.ms/vc14/vc_redist.x64.exe';
   end;
+
+  // Primary: registry-based detection (Microsoft's documented method, stable
+  // across installer builds). Fallback: MSI UpgradeCode lookup for x64 only
+  // (the x64 UpgradeCode {36F68A90-...} is verified; keeping a fallback helps
+  // on unusual install states). See issue #4596 for the regression this
+  // replaces, where a ProductCode was mistakenly used with IsMsiProductInstalled.
+  if Dependency_IsVCRuntimeInstalled(Arch, MinMajor, MinMinor, MinBld) then Exit;
+  if (Arch = 'x64') and IsMsiProductInstalled('{36F68A90-239C-34DF-B58C-64B30153CE35}',
+       PackVersionComponents(MinMajor, MinMinor, MinBld, 0)) then Exit;
+
+  Dependency_Add('vcredist2022_' + Arch + '.exe',
+    '/passive /norestart',
+    'Visual C++ 2015-2022 Redistributable (' + Arch + ')',
+    Url,
+    '', False, False);
 end;
 
 

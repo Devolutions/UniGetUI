@@ -31,6 +31,8 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Apt\UniGetUI.PackageEngine.Managers.Apt.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Dnf\UniGetUI.PackageEngine.Managers.Dnf.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Homebrew\UniGetUI.PackageEngine.Managers.Homebrew.csproj" />
     </ItemGroup>
 

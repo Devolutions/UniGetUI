@@ -85,6 +85,8 @@ namespace UniGetUI.Interface.Enums
         Rust = '\uE941',
         Vcpkg = '\uE942',
         Homebrew = '\uE943',
+        Apt = '\uE944',
+        Dnf = '\uE945',
     }
 
     public class NotificationArguments

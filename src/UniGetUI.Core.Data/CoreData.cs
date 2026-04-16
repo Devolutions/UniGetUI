@@ -371,6 +371,12 @@ namespace UniGetUI.Core.Data
         public static string ElevatorPath = "";
 
         /// <summary>
+        /// Extra arguments to insert between the elevator binary and the elevated command.
+        /// For example, "-A" when using sudo with an askpass helper on Linux.
+        /// </summary>
+        public static string ElevatorArgs = "";
+
+        /// <summary>
         /// This method will return the most appropriate data directory.
         /// If the new directory exists, it will be used.
         /// If the new directory does not exist, but the old directory does, it will be moved to the new location, and the new location will be used.

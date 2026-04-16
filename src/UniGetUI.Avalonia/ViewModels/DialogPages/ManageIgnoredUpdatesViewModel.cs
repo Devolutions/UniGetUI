@@ -108,8 +108,9 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
             await entry.RemoveAsync();
     }
 
-    private static string ResolveManagerIcon(string managerKey) =>
-        (managerKey switch
+    private static string ResolveManagerIcon(string managerKey)
+    {
+        string name = managerKey switch
         {
             "winget" => "winget",
             "scoop" => "scoop",
@@ -123,10 +124,11 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
             "steam" => "steam",
             "gog" => "gog",
             "uplay" => "uplay",
+            "dnf" => "dnf",
             _ => "ms_store",
-        }) is var name
-            ? $"avares://UniGetUI.Avalonia/Assets/Symbols/{name}.svg"
-            : $"avares://UniGetUI.Avalonia/Assets/Symbols/ms_store.svg";
+        };
+        return $"avares://UniGetUI.Avalonia/Assets/Symbols/{name}.svg";
+    }
 }
 
 public partial class IgnoredPackageEntryViewModel : ObservableObject

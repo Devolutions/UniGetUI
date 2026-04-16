@@ -114,7 +114,8 @@ namespace UniGetUI.PackageEngine.Operations
             {
                 IsAdmin = true;
                 if (
-                    Settings.Get(Settings.K.DoCacheAdminRights)
+                    OperatingSystem.IsLinux()
+                    || Settings.Get(Settings.K.DoCacheAdminRights)
                     || Settings.Get(Settings.K.DoCacheAdminRightsForBatches)
                 )
                 {
@@ -123,7 +124,7 @@ namespace UniGetUI.PackageEngine.Operations
 
                 FileName = CoreData.ElevatorPath;
                 Arguments =
-                    $"\"{Package.Manager.Status.ExecutablePath}\" {Package.Manager.Status.ExecutableCallArgs} {operation_args}";
+                    $"{CoreData.ElevatorArgs} \"{Package.Manager.Status.ExecutablePath}\" {Package.Manager.Status.ExecutableCallArgs} {operation_args}".TrimStart();
             }
             else
             {

@@ -122,7 +122,8 @@ namespace UniGetUI.PackageEngine.Operations
             if (RequiresAdminRights())
             {
                 if (
-                    Settings.Get(Settings.K.DoCacheAdminRights)
+                    OperatingSystem.IsLinux()
+                    || Settings.Get(Settings.K.DoCacheAdminRights)
                     || Settings.Get(Settings.K.DoCacheAdminRightsForBatches)
                 )
                     RequestCachingOfUACPrompt();
@@ -133,10 +134,10 @@ namespace UniGetUI.PackageEngine.Operations
                 admin = true;
                 process.StartInfo.FileName = CoreData.ElevatorPath;
                 process.StartInfo.Arguments =
-                    $"\"{exePath}\" "
+                    ($"{CoreData.ElevatorArgs} \"{exePath}\" "
                     + Source.Manager.Status.ExecutableCallArgs
                     + " "
-                    + string.Join(" ", Source.Manager.SourcesHelper.GetAddSourceParameters(Source));
+                    + string.Join(" ", Source.Manager.SourcesHelper.GetAddSourceParameters(Source))).TrimStart();
             }
             else
             {
@@ -227,7 +228,8 @@ namespace UniGetUI.PackageEngine.Operations
             if (RequiresAdminRights())
             {
                 if (
-                    Settings.Get(Settings.K.DoCacheAdminRights)
+                    OperatingSystem.IsLinux()
+                    || Settings.Get(Settings.K.DoCacheAdminRights)
                     || Settings.Get(Settings.K.DoCacheAdminRightsForBatches)
                 )
                     RequestCachingOfUACPrompt();
@@ -238,13 +240,13 @@ namespace UniGetUI.PackageEngine.Operations
                 admin = true;
                 process.StartInfo.FileName = CoreData.ElevatorPath;
                 process.StartInfo.Arguments =
-                    $"\"{exePath}\" "
+                    ($"{CoreData.ElevatorArgs} \"{exePath}\" "
                     + Source.Manager.Status.ExecutableCallArgs
                     + " "
                     + string.Join(
                         " ",
                         Source.Manager.SourcesHelper.GetRemoveSourceParameters(Source)
-                    );
+                    )).TrimStart();
             }
             else
             {

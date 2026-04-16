@@ -505,12 +505,20 @@ namespace UniGetUI.Core.Tools
             {
                 _isCaching = true;
                 Logger.Info("Caching admin rights for process id " + Environment.ProcessId);
+
+                // When using sudo on Linux, "-Av" validates/extends the timestamp via the
+                // askpass helper — prompts once then caches for the sudo timeout (~15 min).
+                // For gsudo on Windows (or pkexec fallback) use the gsudo cache protocol.
+                string cacheArgs = Path.GetFileName(CoreData.ElevatorPath) == "sudo"
+                    ? "-Av"
+                    : "cache on --pid " + Environment.ProcessId + " -d 1";
+
                 using Process p = new()
                 {
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = CoreData.ElevatorPath,
-                        Arguments = "cache on --pid " + Environment.ProcessId + " -d 1",
+                        Arguments = cacheArgs,
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
@@ -546,12 +554,19 @@ namespace UniGetUI.Core.Tools
             Logger.Info(
                 "Resetting administrator rights cache for process id " + Environment.ProcessId
             );
+
+            // When using sudo on Linux, "-K" removes all cached timestamps.
+            // For gsudo on Windows (or pkexec fallback) use the gsudo cache protocol.
+            string resetArgs = Path.GetFileName(CoreData.ElevatorPath) == "sudo"
+                ? "-K"
+                : "cache off --pid " + Environment.ProcessId;
+
             using Process p = new()
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = CoreData.ElevatorPath,
-                    Arguments = "cache off --pid " + Environment.ProcessId,
+                    Arguments = resetArgs,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,

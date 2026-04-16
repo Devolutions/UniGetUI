@@ -15,6 +15,8 @@ using UniGetUI.PackageEngine.Managers.PowerShellManager;
 using UniGetUI.PackageEngine.Managers.ScoopManager;
 using UniGetUI.PackageEngine.Managers.WingetManager;
 #else
+using UniGetUI.PackageEngine.Managers.AptManager;
+using UniGetUI.PackageEngine.Managers.DnfManager;
 using UniGetUI.PackageEngine.Managers.HomebrewManager;
 #endif
 
@@ -41,6 +43,8 @@ namespace UniGetUI.PackageEngine
         public static readonly Cargo Cargo = new();
         public static readonly Vcpkg Vcpkg = new();
 #if !WINDOWS
+        public static readonly Apt Apt = new();
+        public static readonly Dnf Dnf = new();
         public static readonly Homebrew Homebrew = new();
 #endif
 
@@ -54,6 +58,16 @@ namespace UniGetUI.PackageEngine
             managers.Add(PowerShell);
 #else
             managers.Insert(0, Homebrew);
+            if (OperatingSystem.IsLinux())
+            {
+                var families = ReadLinuxDistroFamilies();
+                // If /etc/os-release is unreadable, include both as a safe fallback.
+                bool unknown = families.Count == 0;
+                if (unknown || families.Contains("debian") || families.Contains("ubuntu"))
+                    managers.Add(Apt);
+                if (unknown || families.Contains("fedora") || families.Contains("rhel") || families.Contains("centos"))
+                    managers.Add(Dnf);
+            }
 #endif
             return [.. managers];
         }
@@ -96,6 +110,30 @@ namespace UniGetUI.PackageEngine
             {
                 Logger.Error(ex);
             }
+        }
+
+        /// <summary>
+        /// Reads ID and ID_LIKE tokens from /etc/os-release to determine the Linux distro family.
+        /// Returns an empty set when the file cannot be read (caller should treat that as "unknown").
+        /// </summary>
+        [System.Runtime.Versioning.SupportedOSPlatform("linux")]
+        private static HashSet<string> ReadLinuxDistroFamilies()
+        {
+            var families = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var line in File.ReadLines("/etc/os-release"))
+                {
+                    if (!line.StartsWith("ID=", StringComparison.Ordinal) &&
+                        !line.StartsWith("ID_LIKE=", StringComparison.Ordinal))
+                        continue;
+                    var value = line[(line.IndexOf('=') + 1)..].Trim('"');
+                    foreach (var token in value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                        families.Add(token);
+                }
+            }
+            catch { /* /etc/os-release not readable — caller will use fallback */ }
+            return families;
         }
     }
 

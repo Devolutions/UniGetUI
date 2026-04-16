@@ -42,10 +42,11 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             }
 
             string packageId;
-            // If source is ellpised or source is a local path, omit source argument
+            // If source is ellipsed, a local path, or a URL manifest, omit source argument
             if (
                 details.Package.Source.Name.Contains("...")
                 || details.Package.Source.Name.Contains(":\\")
+                || details.Package.Source.Name.StartsWith("http")
             )
                 packageId = $"{details.Package.Id}";
             else

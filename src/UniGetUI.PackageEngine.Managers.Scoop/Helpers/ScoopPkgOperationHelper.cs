@@ -28,8 +28,8 @@ internal sealed class ScoopPkgOperationHelper : BasePkgOperationHelper
             },
         ];
 
-        // If source is ellpised or source is a local path, omit source argument
-        if (package.Source.Name.Contains("...") || package.Source.Name.Contains(":\\"))
+        // If source is ellipsed, a local path, or a URL manifest, omit source argument
+        if (package.Source.Name.Contains("...") || package.Source.Name.Contains(":\\") || package.Source.Name.StartsWith("http"))
             parameters.Add($"{package.Id}");
         else
             parameters.Add($"{package.Source.Name}/{package.Id}");

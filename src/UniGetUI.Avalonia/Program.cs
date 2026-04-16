@@ -1,5 +1,6 @@
 using System;
 using Avalonia;
+using UniGetUI.Core.Data;
 
 namespace UniGetUI.Avalonia;
 
@@ -13,6 +14,8 @@ sealed class Program
     {
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             CrashHandler.ReportFatalException((Exception)e.ExceptionObject);
+
+        CoreData.WasDaemon = CoreData.IsDaemon = args.Contains("--daemon");
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }

@@ -332,7 +332,8 @@ namespace UniGetUI
 
                 // Create MainWindow
                 InitializeMainWindow();
-                MainWindow.Activate();
+                if (!CoreData.WasDaemon)
+                    MainWindow.Activate();
 
                 // Show crash report from the previous session on top of the loading
                 // screen and wait for the user to dismiss it before continuing.
@@ -340,6 +341,15 @@ namespace UniGetUI
                 {
                     try
                     {
+                        // In daemon mode the DWM/XAML threads are suspended; resume them
+                        // temporarily so the crash window can render, then re-suspend.
+                        bool resumedForCrash = CoreData.WasDaemon;
+                        if (resumedForCrash)
+                        {
+                            DWMThreadHelper.ChangeState_DWM(false);
+                            DWMThreadHelper.ChangeState_XAML(false);
+                        }
+
                         string report = File.ReadAllText(CrashHandler.PendingCrashFile);
                         File.Delete(CrashHandler.PendingCrashFile);
                         var tcs = new TaskCompletionSource();
@@ -347,6 +357,12 @@ namespace UniGetUI
                         crashWindow.Closed += (_, _) => tcs.TrySetResult();
                         crashWindow.Activate();
                         await tcs.Task;
+
+                        if (resumedForCrash)
+                        {
+                            DWMThreadHelper.ChangeState_DWM(true);
+                            DWMThreadHelper.ChangeState_XAML(true);
+                        }
                     }
                     catch { /* must not prevent normal startup */ }
                 }
@@ -505,7 +521,8 @@ namespace UniGetUI
 
         protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
-            MainWindow?.Activate();
+            if (!CoreData.WasDaemon)
+                MainWindow?.Activate();
         }
 
         public async Task ShowMainWindowFromRedirectAsync(AppActivationArguments rawArgs)

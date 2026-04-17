@@ -116,10 +116,7 @@ namespace UniGetUI.PackageEngine
             }
         }
 
-        /// <summary>
-        /// Reads ID and ID_LIKE tokens from /etc/os-release to determine the Linux distro family.
-        /// Returns an empty set when the file cannot be read (caller should treat that as "unknown").
-        /// </summary>
+#if !WINDOWS
         [System.Runtime.Versioning.SupportedOSPlatform("linux")]
         private static HashSet<string> ReadLinuxDistroFamilies()
         {
@@ -139,6 +136,7 @@ namespace UniGetUI.PackageEngine
             catch { /* /etc/os-release not readable — caller will use fallback */ }
             return families;
         }
+#endif
     }
 
     public class PackageBundlesLoader_I : PackageBundlesLoader

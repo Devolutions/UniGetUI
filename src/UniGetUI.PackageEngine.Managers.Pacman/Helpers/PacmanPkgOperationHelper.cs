@@ -36,9 +36,9 @@ internal sealed class PacmanPkgOperationHelper : BasePkgOperationHelper
         parameters.AddRange(
             operation switch
             {
-                OperationType.Update    => options.CustomParameters_Update,
+                OperationType.Update => options.CustomParameters_Update,
                 OperationType.Uninstall => options.CustomParameters_Uninstall,
-                _                       => options.CustomParameters_Install,
+                _ => options.CustomParameters_Install,
             });
 
         return parameters;

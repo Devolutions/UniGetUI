@@ -196,7 +196,7 @@ internal static class AvaloniaBootstrapper
             CoreTools.WhichAsync("sudo"),
             CoreTools.WhichAsync("pkexec"),
             CoreTools.WhichAsync("zenity"));
-        var (sudoFound,   sudoPath)   = results[0];
+        var (sudoFound, sudoPath) = results[0];
         var (pkexecFound, pkexecPath) = results[1];
         var (zenityFound, zenityPath) = results[2];
 

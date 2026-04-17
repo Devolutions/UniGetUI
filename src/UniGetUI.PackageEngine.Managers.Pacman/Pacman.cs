@@ -164,7 +164,8 @@ public class Pacman : PackageManager
 
         logger.AddToStdErr(p.StandardError.ReadToEnd());
         p.WaitForExit();
-        logger.Close(p.ExitCode);
+        // pacman -Ss exits 1 when no packages match the query — not an error
+        logger.Close(p.ExitCode == 1 && packages.Count == 0 ? 0 : p.ExitCode);
         return packages;
     }
 

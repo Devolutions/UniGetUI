@@ -32,8 +32,11 @@ internal sealed class PacmanPkgDetailsHelper : BasePkgDetailsHelper
         p.Start();
 
         // "pacman -Si" outputs "Key      : value" pairs (key padded with spaces).
-        // Descriptions are always single-line for pacman.
+        // Multi-dep fields (Depends On, Optional Deps) wrap onto continuation lines:
+        //   "                : next-dep  another-dep"
+        // Continuation lines have an empty key (all spaces before " : ").
         string? line;
+        string lastKey = "";
         while ((line = p.StandardOutput.ReadLine()) is not null)
         {
             logger.AddToStdOut(line);
@@ -46,6 +49,32 @@ internal sealed class PacmanPkgDetailsHelper : BasePkgDetailsHelper
             var value = line[(colonIdx + 3)..].Trim();
             if (value == "None" || value.Length == 0) continue;
 
+            if (key.Length == 0)
+            {
+                // Continuation line — append to whatever field was active
+                switch (lastKey)
+                {
+                    case "Depends On":
+                        foreach (var dep in value.Split("  ", StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            var depName = dep.Split(new[] { '>', '<', '=', ':' })[0].Trim();
+                            if (depName.Length > 0)
+                                details.Dependencies.Add(new() { Name = depName, Version = "", Mandatory = true });
+                        }
+                        break;
+                    case "Optional Deps":
+                        foreach (var dep in value.Split("  ", StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            var depName = dep.Split(':')[0].Trim();
+                            if (depName.Length > 0)
+                                details.Dependencies.Add(new() { Name = depName, Version = "", Mandatory = false });
+                        }
+                        break;
+                }
+                continue;
+            }
+
+            lastKey = key;
             switch (key)
             {
                 case "URL":

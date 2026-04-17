@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using UniGetUI.Core.IconEngine;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 
@@ -27,7 +28,7 @@ internal sealed class DnfPkgDetailsHelper : BasePkgDetailsHelper
         };
 
         IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(
-            Enums.LoggableTaskType.LoadPackageDetails, p);
+            LoggableTaskType.LoadPackageDetails, p);
         p.Start();
 
         // dnf info outputs "Key         : value" pairs.
@@ -40,11 +41,10 @@ internal sealed class DnfPkgDetailsHelper : BasePkgDetailsHelper
         {
             logger.AddToStdOut(line);
 
-            if (line.Length == 0)
-            {
-                if (inDescription) break;
-                continue;
-            }
+            // Blank line marks the end of a package block. dnf info can output multiple
+            // blocks (e.g. "Installed Packages" then "Available Packages") — stop after
+            // the first so the second block doesn't silently overwrite parsed fields.
+            if (line.Length == 0) break;
 
             // Continuation lines for Description are indented with " : " prefix:
             //   "             : second line of the description"
@@ -118,13 +118,22 @@ internal sealed class DnfPkgDetailsHelper : BasePkgDetailsHelper
             },
         };
         p.Start();
-        var firstPath = p.StandardOutput.ReadLine()?.Trim();
+
+        // Must drain all stdout before WaitForExit — packages like glibc have thousands
+        // of file entries and will fill the pipe buffer, causing a deadlock.
+        string? result = null;
+        string? line;
+        while ((line = p.StandardOutput.ReadLine()) is not null)
+        {
+            if (result is not null) continue;
+            var path = line.Trim();
+            if (Directory.Exists(path))
+                result = path;
+        }
+
+        p.StandardError.ReadToEnd();
         p.WaitForExit();
-
-        if (firstPath is not null && Directory.Exists(firstPath))
-            return firstPath;
-
-        return null;
+        return result;
     }
 
     protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)
@@ -133,8 +142,10 @@ internal sealed class DnfPkgDetailsHelper : BasePkgDetailsHelper
     private static long ParseDnfSize(string value)
     {
         // Format: "1.5 M", "234 k", "56 G"
-        var parts = value.Split(' ');
-        if (parts.Length < 2 || !double.TryParse(parts[0], out var num))
+        var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2 || !double.TryParse(parts[0],
+                System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var num))
             return 0;
 
         return parts[1].ToUpperInvariant() switch
@@ -142,7 +153,7 @@ internal sealed class DnfPkgDetailsHelper : BasePkgDetailsHelper
             "K" => (long)(num * 1024),
             "M" => (long)(num * 1024 * 1024),
             "G" => (long)(num * 1024 * 1024 * 1024),
-            _   => (long)num,
+            _ => (long)num,
         };
     }
 }

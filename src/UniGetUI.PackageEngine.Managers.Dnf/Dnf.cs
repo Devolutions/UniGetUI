@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.RegularExpressions;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
@@ -56,8 +55,13 @@ public class Dnf : PackageManager
 
     public override IReadOnlyList<string> FindCandidateExecutableFiles()
     {
-        var candidates = new List<string>(CoreTools.WhichMultiple("dnf"));
-        foreach (var path in new[] { "/usr/bin/dnf", "/usr/local/bin/dnf" })
+        var candidates = new List<string>(CoreTools.WhichMultiple("dnf5"));
+        foreach (var path in CoreTools.WhichMultiple("dnf"))
+        {
+            if (!candidates.Contains(path))
+                candidates.Add(path);
+        }
+        foreach (var path in new[] { "/usr/bin/dnf5", "/usr/bin/dnf", "/usr/local/bin/dnf" })
         {
             if (File.Exists(path) && !candidates.Contains(path))
                 candidates.Add(path);
@@ -91,6 +95,8 @@ public class Dnf : PackageManager
         p.Start();
         // First line is the version number: "X.Y.Z"
         version = p.StandardOutput.ReadLine()?.Trim() ?? "";
+        p.StandardOutput.ReadToEnd();
+        p.StandardError.ReadToEnd();
         p.WaitForExit();
     }
 
@@ -165,7 +171,8 @@ public class Dnf : PackageManager
 
         logger.AddToStdErr(p.StandardError.ReadToEnd());
         p.WaitForExit();
-        logger.Close(p.ExitCode);
+        // dnf search exits 1 when no packages match the query — not an error
+        logger.Close(p.ExitCode == 1 && packages.Count == 0 ? 0 : p.ExitCode);
         return packages;
     }
 
@@ -230,13 +237,14 @@ public class Dnf : PackageManager
                 CreateNoWindow = true,
             },
         };
+        // Build lookup before starting the process — reading from its pipe
+        // while a second process runs risks filling the pipe buffer and deadlocking.
+        Dictionary<string, string> installed = [];
+        foreach (var pkg in GetInstalledPackages_UnSafe())
+            installed.TryAdd(pkg.Id, pkg.VersionString);
+
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates, p);
         p.Start();
-
-        // Build a lookup of currently installed versions
-        Dictionary<string, string> installed = [];
-        foreach (var pkg in GetInstalledPackages())
-            installed.TryAdd(pkg.Id, pkg.VersionString);
 
         // Output: "<name>.<arch>   <version>-<release>   <repo>"
         // Skip header/metadata lines (e.g. "Available Upgrades",

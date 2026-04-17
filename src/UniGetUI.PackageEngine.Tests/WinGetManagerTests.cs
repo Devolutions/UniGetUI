@@ -130,6 +130,41 @@ public sealed class WinGetManagerTests : IDisposable
         PackageAssert.Matches(Assert.Single(packages), "Contoso Tool", "Contoso.Tool", "1.2.3");
     }
 
+    [Fact]
+    public void NativeWinGetHelperPrefersSystemComBeforeBundledActivation()
+    {
+        Assert.Equal(
+            ["packaged COM registration", "lower-trust COM registration", "bundled in-proc COM"],
+            NativeWinGetHelper.PreferredActivationModes
+        );
+    }
+
+    [Fact]
+    public void NativeWinGetHelperUsesBundledFallbackForInstalledPackagesWhenBundledActivationIsSelected()
+    {
+        var manager = new TestableWinGet();
+        var expectedPackage = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Contoso Tool")
+            .WithId("Contoso.Tool")
+            .WithVersion("1.2.3")
+            .Build();
+        var bundledFallbackHelper = new TestWinGetManagerHelper
+        {
+            GetInstalledPackagesHandler = () => [expectedPackage],
+        };
+        var helper = new NativeWinGetHelper(
+            manager,
+            bundledHelperFactory: _ => bundledFallbackHelper,
+            skipInitialization: true
+        );
+        helper.UseBundledActivationForTesting();
+
+        var packages = helper.GetInstalledPackages_UnSafe();
+
+        PackageAssert.Matches(Assert.Single(packages), "Contoso Tool", "Contoso.Tool", "1.2.3");
+    }
+
     private sealed class TestableWinGet : WinGet
     {
         public IReadOnlyList<Package> InvokeGetInstalledPackages() => base.GetInstalledPackages_UnSafe();

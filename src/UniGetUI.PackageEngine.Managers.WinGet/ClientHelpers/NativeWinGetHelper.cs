@@ -21,14 +21,31 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
     public PackageManager WinGetManager = null!;
     public static PackageManager? ExternalWinGetManager;
     private readonly WinGet Manager;
+    private readonly Func<WinGet, IWinGetManagerHelper> _bundledHelperFactory;
 
     public string ActivationMode { get; private set; } = string.Empty;
     public string ActivationSource { get; private set; } = string.Empty;
     private bool _isBundledActivation;
 
+    internal static IReadOnlyList<string> PreferredActivationModes =>
+    [
+        "packaged COM registration",
+        "lower-trust COM registration",
+        "bundled in-proc COM",
+    ];
+
     public NativeWinGetHelper(WinGet manager)
+        : this(manager, bundledHelperFactory: null, skipInitialization: false) { }
+
+    internal NativeWinGetHelper(
+        WinGet manager,
+        Func<WinGet, IWinGetManagerHelper>? bundledHelperFactory,
+        bool skipInitialization
+    )
     {
         Manager = manager;
+        _bundledHelperFactory =
+            bundledHelperFactory ?? (static manager => new BundledWinGetHelper(manager));
         if (CoreTools.IsAdministrator())
         {
             Logger.Info(
@@ -36,7 +53,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             );
         }
 
-        if (TryInitializeBundledFactory())
+        if (skipInitialization)
         {
             return;
         }
@@ -46,36 +63,47 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             return;
         }
 
-        InitializeLowerTrustFactory();
+        if (TryInitializeLowerTrustFactory())
+        {
+            return;
+        }
+
+        InitializeBundledFactory();
     }
 
-    private bool TryInitializeBundledFactory()
+    internal void UseBundledActivationForTesting()
+    {
+        _isBundledActivation = true;
+        ActivationMode = "bundled in-proc COM";
+        ActivationSource = "test";
+    }
+
+    private bool TryInitializeLowerTrustFactory()
     {
         try
         {
-            var factory = new WindowsPackageManagerBundledFactory();
+            var factory = new WindowsPackageManagerStandardFactory(allowLowerTrustRegistration: true);
             var winGetManager = factory.CreatePackageManager();
             ApplyFactory(
                 factory,
                 winGetManager,
-                "bundled in-proc COM",
-                factory.LibraryPath,
-                "Connected to WinGet API using bundled in-proc activation."
+                "lower-trust COM registration",
+                "system COM registration (allow lower trust)",
+                "Connected to WinGet API using lower-trust COM activation."
             );
-            _isBundledActivation = true;
             return true;
         }
         catch (WinGetComActivationException ex)
         {
             Logger.Warn(
-                $"Bundled WinGet in-proc activation failed ({ex.HResultHex}: {ex.Reason}), attempting packaged COM activation..."
+                $"Lower-trust WinGet COM activation failed ({ex.HResultHex}: {ex.Reason}), attempting bundled in-proc activation..."
             );
             return false;
         }
         catch (Exception ex)
         {
             Logger.Warn(
-                $"Bundled WinGet in-proc activation failed ({ex.Message}), attempting packaged COM activation..."
+                $"Lower-trust WinGet COM activation failed ({ex.Message}), attempting bundled in-proc activation..."
             );
             return false;
         }
@@ -112,17 +140,18 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         }
     }
 
-    private void InitializeLowerTrustFactory()
+    private void InitializeBundledFactory()
     {
-        var factory = new WindowsPackageManagerStandardFactory(allowLowerTrustRegistration: true);
+        var factory = new WindowsPackageManagerBundledFactory();
         var winGetManager = factory.CreatePackageManager();
         ApplyFactory(
             factory,
             winGetManager,
-            "lower-trust COM registration",
-            "system COM registration (allow lower trust)",
-            "Connected to WinGet API using lower-trust COM activation."
+            "bundled in-proc COM",
+            factory.LibraryPath,
+            "Connected to WinGet API using bundled in-proc activation."
         );
+        _isBundledActivation = true;
     }
 
     private void ApplyFactory(
@@ -273,7 +302,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         if (_isBundledActivation)
         {
             Logger.Info("WinGet is using bundled in-proc COM — falling back to CLI for update detection");
-            return new BundledWinGetHelper(Manager).GetAvailableUpdates_UnSafe();
+            return _bundledHelperFactory(Manager).GetAvailableUpdates_UnSafe();
         }
 
         var logger = Manager.TaskLogger.CreateNew(LoggableTaskType.ListUpdates);
@@ -344,6 +373,12 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
     public IReadOnlyList<Package> GetInstalledPackages_UnSafe()
     {
+        if (_isBundledActivation)
+        {
+            Logger.Info("WinGet is using bundled in-proc COM — falling back to CLI for installed package detection");
+            return _bundledHelperFactory(Manager).GetInstalledPackages_UnSafe();
+        }
+
         var logger = Manager.TaskLogger.CreateNew(LoggableTaskType.ListInstalledPackages);
         List<Package> packages = [];
         foreach (

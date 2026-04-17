@@ -309,12 +309,12 @@ namespace UniGetUI.Interface.SoftwarePages
                 }
             }
 
+            var infoBar = MainApp.Instance.MainWindow.WinGetWarningBanner;
             if (
                 WinGet.NO_PACKAGES_HAVE_BEEN_LOADED
                 && !Settings.Get(Settings.K.DisableWinGetMalfunctionDetector)
             )
             {
-                var infoBar = MainApp.Instance.MainWindow.WinGetWarningBanner;
                 infoBar.IsOpen = true;
                 infoBar.Title = CoreTools.Translate("WinGet malfunction detected");
                 infoBar.Message = CoreTools.Translate(
@@ -323,6 +323,11 @@ namespace UniGetUI.Interface.SoftwarePages
                 var button = new Button { Content = CoreTools.Translate("Repair WinGet") };
                 infoBar.ActionButton = button;
                 button.Click += (_, _) => _ = DialogHelper.HandleBrokenWinGet();
+            }
+            else
+            {
+                infoBar.IsOpen = false;
+                infoBar.ActionButton = null;
             }
         }
 

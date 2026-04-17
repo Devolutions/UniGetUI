@@ -130,6 +130,116 @@ public sealed class WinGetManagerTests : IDisposable
         PackageAssert.Matches(Assert.Single(packages), "Contoso Tool", "Contoso.Tool", "1.2.3");
     }
 
+    [Fact]
+    public void NativeWinGetHelperPrefersSystemComBeforeBundledActivation()
+    {
+        Assert.Equal(
+            ["packaged COM registration", "lower-trust COM registration"],
+            NativeWinGetHelper.PreferredActivationModes
+        );
+    }
+
+    [Fact]
+    public void NativeWinGetHelperUsesSystemCliFallbackForInstalledPackagesWhenCompositeCatalogFails()
+    {
+        var manager = new TestableWinGet();
+        var expectedPackage = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Contoso Tool")
+            .WithId("Contoso.Tool")
+            .WithVersion("1.2.3")
+            .Build();
+        var systemCliFallbackHelper = new TestWinGetManagerHelper
+        {
+            GetInstalledPackagesHandler = () => [expectedPackage],
+        };
+        var helper = new NativeWinGetHelper(
+            manager,
+            systemCliHelperFactory: _ => systemCliFallbackHelper,
+            skipInitialization: true,
+            localPackagesProvider: () =>
+                throw new InvalidOperationException("WinGet: Failed to connect to composite catalog.")
+        );
+
+        var packages = helper.GetInstalledPackages_UnSafe();
+
+        PackageAssert.Matches(Assert.Single(packages), "Contoso Tool", "Contoso.Tool", "1.2.3");
+    }
+
+    [Fact]
+    public void NativeWinGetHelperUsesSystemCliFallbackForUpdatesWhenCompositeCatalogFails()
+    {
+        var manager = new TestableWinGet();
+        var expectedPackage = new PackageBuilder()
+            .WithManager(manager)
+            .WithName("Contoso Tool")
+            .WithId("Contoso.Tool")
+            .WithVersion("1.2.3")
+            .WithNewVersion("2.0.0")
+            .Build();
+        var systemCliFallbackHelper = new TestWinGetManagerHelper
+        {
+            GetAvailableUpdatesHandler = () => [expectedPackage],
+        };
+        var helper = new NativeWinGetHelper(
+            manager,
+            systemCliHelperFactory: _ => systemCliFallbackHelper,
+            skipInitialization: true,
+            localPackagesProvider: () =>
+                throw new InvalidOperationException("WinGet: Failed to connect to composite catalog.")
+        );
+
+        var packages = helper.GetAvailableUpdates_UnSafe();
+
+        var package = Assert.Single(packages);
+        Assert.Equal("Contoso.Tool", package.Id);
+        Assert.Equal("2.0.0", package.NewVersionString);
+    }
+
+    [Fact]
+    public void NativeWinGetHelperSelectReachableCatalogsSkipsUnavailableSources()
+    {
+        var reachableCatalogs = NativeWinGetHelper.SelectReachableCatalogs(
+            ["winget", "offline", "msstore"],
+            static catalog => catalog,
+            static catalog => catalog != "offline"
+        );
+
+        Assert.Equal(["winget", "msstore"], reachableCatalogs);
+    }
+
+    [Fact]
+    public void NativeWinGetHelperSelectReachableCatalogsThrowsWhenAllSourcesAreUnavailable()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            NativeWinGetHelper.SelectReachableCatalogs(
+                ["offline-a", "offline-b"],
+                static catalog => catalog,
+                static _ => false
+            )
+        );
+
+        Assert.Equal("WinGet: Failed to connect to composite catalog.", exception.Message);
+    }
+
+    [Fact]
+    public void AttemptFastRepairKeepsNativeHelperWhileLocalPackageEnumerationIsStillRunning()
+    {
+        var manager = new TestableWinGet();
+        var helper = new NativeWinGetHelper(
+            manager,
+            systemCliHelperFactory: null,
+            skipInitialization: true,
+            localPackagesProvider: null
+        );
+        helper.SetLocalPackageQueryInProgressForTesting(true);
+        WinGetHelper.Instance = helper;
+
+        manager.AttemptFastRepair();
+
+        Assert.Same(helper, WinGetHelper.Instance);
+    }
+
     private sealed class TestableWinGet : WinGet
     {
         public IReadOnlyList<Package> InvokeGetInstalledPackages() => base.GetInstalledPackages_UnSafe();

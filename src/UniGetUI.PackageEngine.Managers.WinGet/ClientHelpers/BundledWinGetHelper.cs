@@ -14,10 +14,14 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager;
 internal sealed class BundledWinGetHelper : IWinGetManagerHelper
 {
     private readonly WinGet Manager;
+    private readonly string _cliExecutablePath;
 
-    public BundledWinGetHelper(WinGet manager)
+    public BundledWinGetHelper(WinGet manager, string? cliExecutablePath = null)
     {
         Manager = manager;
+        _cliExecutablePath = string.IsNullOrWhiteSpace(cliExecutablePath)
+            ? WinGet.BundledWinGetPath
+            : cliExecutablePath;
     }
 
     public IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
@@ -27,7 +31,7 @@ internal sealed class BundledWinGetHelper : IWinGetManagerHelper
         {
             StartInfo = new()
             {
-                FileName = WinGet.BundledWinGetPath,
+                FileName = _cliExecutablePath,
                 Arguments =
                     Manager.Status.ExecutableCallArgs
                     + " update --include-unknown  --accept-source-agreements "
@@ -162,7 +166,7 @@ internal sealed class BundledWinGetHelper : IWinGetManagerHelper
         {
             StartInfo = new()
             {
-                FileName = WinGet.BundledWinGetPath,
+                FileName = _cliExecutablePath,
                 Arguments =
                     Manager.Status.ExecutableCallArgs
                     + " list  --accept-source-agreements "
@@ -294,7 +298,7 @@ internal sealed class BundledWinGetHelper : IWinGetManagerHelper
         {
             StartInfo = new()
             {
-                FileName = WinGet.BundledWinGetPath,
+                FileName = _cliExecutablePath,
                 Arguments =
                     Manager.Status.ExecutableCallArgs
                     + " search \""
@@ -417,7 +421,7 @@ internal sealed class BundledWinGetHelper : IWinGetManagerHelper
         bool LocaleFound = true;
         ProcessStartInfo startInfo = new()
         {
-            FileName = WinGet.BundledWinGetPath,
+            FileName = _cliExecutablePath,
             Arguments =
                 Manager.Status.ExecutableCallArgs
                 + " show "
@@ -481,7 +485,7 @@ internal sealed class BundledWinGetHelper : IWinGetManagerHelper
             LocaleFound = true;
             startInfo = new()
             {
-                FileName = WinGet.BundledWinGetPath,
+                FileName = _cliExecutablePath,
                 Arguments =
                     Manager.Status.ExecutableCallArgs
                     + " show "
@@ -539,7 +543,7 @@ internal sealed class BundledWinGetHelper : IWinGetManagerHelper
             process = new Process();
             startInfo = new()
             {
-                FileName = WinGet.BundledWinGetPath,
+                FileName = _cliExecutablePath,
                 Arguments =
                     Manager.Status.ExecutableCallArgs
                     + " show "
@@ -714,7 +718,7 @@ internal sealed class BundledWinGetHelper : IWinGetManagerHelper
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName = WinGet.BundledWinGetPath,
+                FileName = _cliExecutablePath,
                 Arguments =
                     Manager.Status.ExecutableCallArgs
                     + " show "

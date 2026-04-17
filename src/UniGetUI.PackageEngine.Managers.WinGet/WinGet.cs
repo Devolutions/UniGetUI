@@ -409,6 +409,17 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 TryRepairTempFolderPermissions();
                 if (WinGetHelper.Instance is NativeWinGetHelper)
                 {
+                    if (
+                        WinGetHelper.Instance is NativeWinGetHelper nativeHelper
+                        && nativeHelper.HasActiveLocalPackageQuery
+                    )
+                    {
+                        Logger.Warn(
+                            "WinGet local package enumeration is still running; skipping COM reconnection so the retry can attach to the in-flight task."
+                        );
+                        return;
+                    }
+
                     Logger.ImportantInfo("Attempting to reconnect to WinGet COM Server...");
                     ReRegisterCOMServer();
                     NO_PACKAGES_HAVE_BEEN_LOADED = false;

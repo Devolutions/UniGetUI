@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using Microsoft.Management.Deployment;
 using UniGetUI.Core.Classes;
 using UniGetUI.Core.Logging;
@@ -21,14 +22,40 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
     public PackageManager WinGetManager = null!;
     public static PackageManager? ExternalWinGetManager;
     private readonly WinGet Manager;
+    private readonly Func<WinGet, IWinGetManagerHelper> _systemCliHelperFactory;
+    private readonly Func<IReadOnlyList<CatalogPackage>>? _localPackagesProvider;
+    private int _activeLocalPackageQueries;
+    private ExceptionDispatchInfo? _lastActivationException;
 
     public string ActivationMode { get; private set; } = string.Empty;
     public string ActivationSource { get; private set; } = string.Empty;
-    private bool _isBundledActivation;
+
+    internal static IReadOnlyList<string> PreferredActivationModes =>
+    [
+        "packaged COM registration",
+        "lower-trust COM registration",
+    ];
 
     public NativeWinGetHelper(WinGet manager)
+        : this(
+            manager,
+            systemCliHelperFactory: null,
+            skipInitialization: false,
+            localPackagesProvider: null
+        ) { }
+
+    internal NativeWinGetHelper(
+        WinGet manager,
+        Func<WinGet, IWinGetManagerHelper>? systemCliHelperFactory,
+        bool skipInitialization,
+        Func<IReadOnlyList<CatalogPackage>>? localPackagesProvider
+    )
     {
         Manager = manager;
+        _systemCliHelperFactory =
+            systemCliHelperFactory
+            ?? (static manager => new BundledWinGetHelper(manager, manager.Status.ExecutablePath));
+        _localPackagesProvider = localPackagesProvider;
         if (CoreTools.IsAdministrator())
         {
             Logger.Info(
@@ -36,7 +63,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             );
         }
 
-        if (TryInitializeBundledFactory())
+        if (skipInitialization)
         {
             return;
         }
@@ -46,36 +73,51 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             return;
         }
 
-        InitializeLowerTrustFactory();
+        if (TryInitializeLowerTrustFactory())
+        {
+            return;
+        }
+
+        _lastActivationException?.Throw();
+
+        throw new InvalidOperationException("WinGet: Failed to initialize system COM activation.");
     }
 
-    private bool TryInitializeBundledFactory()
+    internal bool HasActiveLocalPackageQuery => Volatile.Read(ref _activeLocalPackageQueries) > 0;
+
+    internal void SetLocalPackageQueryInProgressForTesting(bool value)
+    {
+        Interlocked.Exchange(ref _activeLocalPackageQueries, value ? 1 : 0);
+    }
+
+    private bool TryInitializeLowerTrustFactory()
     {
         try
         {
-            var factory = new WindowsPackageManagerBundledFactory();
+            var factory = new WindowsPackageManagerStandardFactory(allowLowerTrustRegistration: true);
             var winGetManager = factory.CreatePackageManager();
             ApplyFactory(
                 factory,
                 winGetManager,
-                "bundled in-proc COM",
-                factory.LibraryPath,
-                "Connected to WinGet API using bundled in-proc activation."
+                "lower-trust COM registration",
+                "system COM registration (allow lower trust)",
+                "Connected to WinGet API using lower-trust COM activation."
             );
-            _isBundledActivation = true;
             return true;
         }
         catch (WinGetComActivationException ex)
         {
+            _lastActivationException = ExceptionDispatchInfo.Capture(ex);
             Logger.Warn(
-                $"Bundled WinGet in-proc activation failed ({ex.HResultHex}: {ex.Reason}), attempting packaged COM activation..."
+                $"Lower-trust WinGet COM activation failed ({ex.HResultHex}: {ex.Reason})."
             );
             return false;
         }
         catch (Exception ex)
         {
+            _lastActivationException = ExceptionDispatchInfo.Capture(ex);
             Logger.Warn(
-                $"Bundled WinGet in-proc activation failed ({ex.Message}), attempting packaged COM activation..."
+                $"Lower-trust WinGet COM activation failed ({ex.Message})."
             );
             return false;
         }
@@ -98,6 +140,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         }
         catch (WinGetComActivationException ex)
         {
+            _lastActivationException = ExceptionDispatchInfo.Capture(ex);
             Logger.Warn(
                 $"Packaged WinGet COM activation failed ({ex.HResultHex}: {ex.Reason}), attempting lower-trust activation..."
             );
@@ -105,24 +148,12 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         }
         catch (Exception ex)
         {
+            _lastActivationException = ExceptionDispatchInfo.Capture(ex);
             Logger.Warn(
                 $"Packaged WinGet COM activation failed ({ex.Message}), attempting lower-trust activation..."
             );
             return false;
         }
-    }
-
-    private void InitializeLowerTrustFactory()
-    {
-        var factory = new WindowsPackageManagerStandardFactory(allowLowerTrustRegistration: true);
-        var winGetManager = factory.CreatePackageManager();
-        ApplyFactory(
-            factory,
-            winGetManager,
-            "lower-trust COM registration",
-            "system COM registration (allow lower trust)",
-            "Connected to WinGet API using lower-trust COM activation."
-        );
     }
 
     private void ApplyFactory(
@@ -270,19 +301,19 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
     public IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
     {
-        if (_isBundledActivation)
+        var logger = Manager.TaskLogger.CreateNew(LoggableTaskType.ListUpdates);
+        IReadOnlyList<CatalogPackage> nativePackages;
+        try
         {
-            Logger.Info("WinGet is using bundled in-proc COM — falling back to CLI for update detection");
-            return new BundledWinGetHelper(Manager).GetAvailableUpdates_UnSafe();
+            nativePackages = GetCachedLocalWinGetPackages(15);
+        }
+        catch (Exception ex) when (ShouldFallbackToCli(ex))
+        {
+            return GetAvailableUpdatesFromSystemCli(ex);
         }
 
-        var logger = Manager.TaskLogger.CreateNew(LoggableTaskType.ListUpdates);
         List<Package> packages = [];
-        foreach (
-            var nativePackage in TaskRecycler<IReadOnlyList<CatalogPackage>>.RunOrAttach(
-                GetLocalWinGetPackages
-            )
-        )
+        foreach (var nativePackage in nativePackages)
         {
             try
             {
@@ -345,13 +376,18 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
     public IReadOnlyList<Package> GetInstalledPackages_UnSafe()
     {
         var logger = Manager.TaskLogger.CreateNew(LoggableTaskType.ListInstalledPackages);
+        IReadOnlyList<CatalogPackage> nativePackages;
+        try
+        {
+            nativePackages = GetCachedLocalWinGetPackages(15);
+        }
+        catch (Exception ex) when (ShouldFallbackToCli(ex))
+        {
+            return GetInstalledPackagesFromSystemCli(ex);
+        }
+
         List<Package> packages = [];
-        foreach (
-            var nativePackage in TaskRecycler<IReadOnlyList<CatalogPackage>>.RunOrAttach(
-                GetLocalWinGetPackages,
-                15
-            )
-        )
+        foreach (var nativePackage in nativePackages)
         {
             try
             {
@@ -393,6 +429,61 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         }
         logger.Close(0);
         return packages;
+    }
+
+    private IReadOnlyList<CatalogPackage> GetCachedLocalWinGetPackages(int? cacheSeconds = null)
+    {
+        if (_localPackagesProvider is not null)
+        {
+            return _localPackagesProvider();
+        }
+
+        return cacheSeconds is null
+            ? TaskRecycler<IReadOnlyList<CatalogPackage>>.RunOrAttach(GetLocalWinGetPackages)
+            : TaskRecycler<IReadOnlyList<CatalogPackage>>.RunOrAttach(
+                GetLocalWinGetPackages,
+                cacheSeconds.Value
+            );
+    }
+
+    private IReadOnlyList<Package> GetAvailableUpdatesFromSystemCli(Exception ex)
+    {
+        var unwrappedException = UnwrapException(ex);
+        Logger.Warn(
+            $"Native WinGet update enumeration failed with {unwrappedException.GetType().Name}: {unwrappedException.Message}. Falling back to system WinGet CLI."
+        );
+        return _systemCliHelperFactory(Manager).GetAvailableUpdates_UnSafe();
+    }
+
+    private IReadOnlyList<Package> GetInstalledPackagesFromSystemCli(Exception ex)
+    {
+        var unwrappedException = UnwrapException(ex);
+        Logger.Warn(
+            $"Native WinGet installed-package enumeration failed with {unwrappedException.GetType().Name}: {unwrappedException.Message}. Falling back to system WinGet CLI."
+        );
+        return _systemCliHelperFactory(Manager).GetInstalledPackages_UnSafe();
+    }
+
+    private static bool ShouldFallbackToCli(Exception ex)
+    {
+        var unwrappedException = UnwrapException(ex);
+        return
+            unwrappedException is InvalidOperationException
+            && string.Equals(
+                unwrappedException.Message,
+                "WinGet: Failed to connect to composite catalog.",
+                StringComparison.Ordinal
+            );
+    }
+
+    private static Exception UnwrapException(Exception ex)
+    {
+        while (ex is AggregateException aggregateException && aggregateException.InnerException is not null)
+        {
+            ex = aggregateException.InnerException;
+        }
+
+        return ex;
     }
 
     private static void LogSkippedPackage(
@@ -441,46 +532,133 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
     private IReadOnlyList<CatalogPackage> GetLocalWinGetPackages()
     {
+        Interlocked.Increment(ref _activeLocalPackageQueries);
         var logger = Manager.TaskLogger.CreateNew(LoggableTaskType.OtherTask);
-        logger.Log("OtherTask: GetWinGetLocalPackages");
-        PackageCatalogReference installedSearchCatalogRef;
-        CreateCompositePackageCatalogOptions createCompositePackageCatalogOptions =
-            Factory.CreateCreateCompositePackageCatalogOptions();
-        foreach (var catalogRef in WinGetManager.GetPackageCatalogs().ToArray())
+        try
         {
-            logger.Log($"Adding catalog {catalogRef.Info.Name} to composite catalog");
-            createCompositePackageCatalogOptions.Catalogs.Add(catalogRef);
-        }
-        createCompositePackageCatalogOptions.CompositeSearchBehavior =
-            CompositeSearchBehavior.LocalCatalogs;
-        installedSearchCatalogRef = WinGetManager.CreateCompositePackageCatalog(
-            createCompositePackageCatalogOptions
-        );
+            logger.Log("OtherTask: GetWinGetLocalPackages");
+            var availableCatalogs = GetReachableLocalCatalogReferences(logger);
+            PackageCatalogReference installedSearchCatalogRef = CreateLocalCompositeCatalog(
+                availableCatalogs,
+                logger
+            );
 
-        var ConnectResult = installedSearchCatalogRef.Connect();
-        if (ConnectResult.Status != ConnectResultStatus.Ok)
+            var ConnectResult = installedSearchCatalogRef.Connect();
+            if (ConnectResult.Status != ConnectResultStatus.Ok)
+            {
+                logger.Error("Failed to connect to installedSearchCatalogRef. Aborting.");
+                logger.Close(1);
+                throw new InvalidOperationException("WinGet: Failed to connect to composite catalog.");
+            }
+
+            FindPackagesOptions findPackagesOptions = Factory.CreateFindPackagesOptions();
+            PackageMatchFilter filter = Factory.CreatePackageMatchFilter();
+            filter.Field = PackageMatchField.Id;
+            filter.Option = PackageFieldMatchOption.StartsWithCaseInsensitive;
+            filter.Value = "";
+            findPackagesOptions.Filters.Add(filter);
+
+            var TaskResult = ConnectResult.PackageCatalog.FindPackages(findPackagesOptions);
+            List<CatalogPackage> foundPackages = [];
+            foreach (var match in TaskResult.Matches.ToArray())
+            {
+                foundPackages.Add(match.CatalogPackage);
+            }
+
+            logger.Close(0);
+            return foundPackages;
+        }
+        finally
         {
-            logger.Error("Failed to connect to installedSearchCatalogRef. Aborting.");
-            logger.Close(1);
+            Interlocked.Decrement(ref _activeLocalPackageQueries);
+        }
+    }
+
+    private IReadOnlyList<PackageCatalogReference> GetReachableLocalCatalogReferences(
+        INativeTaskLogger logger
+    )
+    {
+        return SelectReachableCatalogs(
+            WinGetManager.GetPackageCatalogs().ToArray(),
+            static catalogRef => catalogRef.Info.Name,
+            catalogRef => TryConnectLocalCatalog(catalogRef, logger),
+            catalogName =>
+            {
+                logger.Log($"Catalog {catalogName} is reachable for local package enumeration");
+            },
+            catalogName =>
+            {
+                string message =
+                    $"Skipping unavailable WinGet catalog {catalogName} while loading local packages";
+                logger.Error(message);
+                Logger.Warn(message);
+            }
+        );
+    }
+
+    internal static IReadOnlyList<TCatalog> SelectReachableCatalogs<TCatalog>(
+        IEnumerable<TCatalog> catalogs,
+        Func<TCatalog, string> describeCatalog,
+        Func<TCatalog, bool> isReachable,
+        Action<string>? onReachable = null,
+        Action<string>? onSkipped = null
+    )
+    {
+        List<TCatalog> reachableCatalogs = [];
+        foreach (var catalog in catalogs)
+        {
+            string catalogName = describeCatalog(catalog);
+            if (isReachable(catalog))
+            {
+                onReachable?.Invoke(catalogName);
+                reachableCatalogs.Add(catalog);
+            }
+            else
+            {
+                onSkipped?.Invoke(catalogName);
+            }
+        }
+
+        if (reachableCatalogs.Count == 0)
+        {
             throw new InvalidOperationException("WinGet: Failed to connect to composite catalog.");
         }
 
-        FindPackagesOptions findPackagesOptions = Factory.CreateFindPackagesOptions();
-        PackageMatchFilter filter = Factory.CreatePackageMatchFilter();
-        filter.Field = PackageMatchField.Id;
-        filter.Option = PackageFieldMatchOption.StartsWithCaseInsensitive;
-        filter.Value = "";
-        findPackagesOptions.Filters.Add(filter);
+        return reachableCatalogs;
+    }
 
-        var TaskResult = ConnectResult.PackageCatalog.FindPackages(findPackagesOptions);
-        List<CatalogPackage> foundPackages = [];
-        foreach (var match in TaskResult.Matches.ToArray())
+    private bool TryConnectLocalCatalog(PackageCatalogReference catalogRef, INativeTaskLogger logger)
+    {
+        var localCatalogRef = CreateLocalCompositeCatalog([catalogRef], logger);
+        var connectResult = localCatalogRef.Connect();
+        if (connectResult.Status == ConnectResultStatus.Ok)
         {
-            foundPackages.Add(match.CatalogPackage);
+            return true;
         }
 
-        logger.Close(0);
-        return foundPackages;
+        logger.Error(
+            $"WinGet: Catalog {catalogRef.Info.Name} failed local catalog connection with status {connectResult.Status}."
+        );
+        return false;
+    }
+
+    private PackageCatalogReference CreateLocalCompositeCatalog(
+        IEnumerable<PackageCatalogReference> catalogs,
+        INativeTaskLogger logger
+    )
+    {
+        CreateCompositePackageCatalogOptions createCompositePackageCatalogOptions =
+            Factory.CreateCreateCompositePackageCatalogOptions();
+        foreach (var catalogRef in catalogs)
+        {
+            catalogRef.AcceptSourceAgreements = true;
+            logger.Log($"Adding catalog {catalogRef.Info.Name} to composite catalog");
+            createCompositePackageCatalogOptions.Catalogs.Add(catalogRef);
+        }
+
+        createCompositePackageCatalogOptions.CompositeSearchBehavior =
+            CompositeSearchBehavior.LocalCatalogs;
+        return WinGetManager.CreateCompositePackageCatalog(createCompositePackageCatalogOptions);
     }
 
     public IReadOnlyList<IManagerSource> GetSources_UnSafe()

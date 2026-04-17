@@ -193,17 +193,18 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                     Text =
                         $"{CoreTools.Translate("Use bundled WinGet instead of system WinGet")} ({CoreTools.Translate("This may help if WinGet packages are not shown")})",
                     SettingName = Settings.K.ForceLegacyBundledWinGet,
-                    CornerRadius = new CornerRadius(0, 0, 8, 8),
-                    BorderThickness = new Thickness(1, 0, 1, 1),
+                    CornerRadius = new CornerRadius(0),
+                    BorderThickness = new Thickness(1, 0, 1, 0),
                 };
                 WinGet_UseBundled.StateChanged += (_, _) => _ = ReloadPackageManager();
                 ExtraControls.Children.Add(WinGet_UseBundled);
 
-                /*CheckboxCard WinGet_EnableTroubleshooter = new()
+                CheckboxCard WinGet_EnableTroubleshooter = new()
                 {
                     Text = CoreTools.Translate("Enable the automatic WinGet troubleshooter"),
                     SettingName = Settings.K.DisableWinGetMalfunctionDetector,
-                    CornerRadius = new CornerRadius(0),
+                    CornerRadius = new CornerRadius(0, 0, 8, 8),
+                    BorderThickness = new Thickness(1, 0, 1, 1),
                 };
                 WinGet_EnableTroubleshooter.StateChanged += (_, _) =>
                 {
@@ -211,21 +212,6 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                     _ = InstalledPackagesLoader.Instance.ReloadPackages();
                 };
                 ExtraControls.Children.Add(WinGet_EnableTroubleshooter);
-
-                CheckboxCard WinGet_EnableTroubleshooter_v2 = new()
-                {
-                    Text = CoreTools.Translate("Enable an [experimental] improved WinGet troubleshooter"),
-                    SettingName = Settings.K.DisableNewWinGetTroubleshooter,
-                    // CornerRadius = new CornerRadius(0),
-                    CornerRadius = new CornerRadius(0, 0, 8, 8),
-                    BorderThickness = new Thickness(1, 0, 1, 0),
-                };
-                WinGet_EnableTroubleshooter_v2.StateChanged += (_, _) =>
-                {
-                    MainApp.Instance.MainWindow.WinGetWarningBanner.IsOpen = false;
-                    _ = InstalledPackagesLoader.Instance.ReloadPackages();
-                };
-                ExtraControls.Children.Add(WinGet_EnableTroubleshooter_v2);*/
 
                 /*CheckboxCard WinGet_HideNonApplicableUpdates = new()
                 {

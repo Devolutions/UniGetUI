@@ -1,4 +1,3 @@
-using UniGetUI.Core.Logging;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -18,7 +17,6 @@ internal sealed class AptPkgOperationHelper : BasePkgOperationHelper
     {
         // apt always requires root — force elevation via InstallOptions (reference type, persists)
         options.RunAsAdministrator = true;
-        Logger.Warn($"[Apt] Set RunAsAdministrator=true on options for package {package.Id}");
 
         List<string> parameters =
         [

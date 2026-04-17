@@ -506,11 +506,20 @@ namespace UniGetUI.Core.Tools
                 _isCaching = true;
                 Logger.Info("Caching admin rights for process id " + Environment.ProcessId);
 
-                // When using sudo on Linux, "-Av" validates/extends the timestamp via the
-                // askpass helper — prompts once then caches for the sudo timeout (~15 min).
-                // For gsudo on Windows (or pkexec fallback) use the gsudo cache protocol.
-                string cacheArgs = Path.GetFileName(CoreData.ElevatorPath) == "sudo"
-                    ? "-Av"
+                var elevatorName = Path.GetFileName(CoreData.ElevatorPath);
+
+                // pkexec prompts on every invocation and has no caching protocol.
+                if (elevatorName == "pkexec")
+                {
+                    _isCaching = false;
+                    return;
+                }
+
+                // sudo: -v validates/extends the cached timestamp.
+                // Prepend -A only when the SUDO_ASKPASS helper is configured.
+                // gsudo / UniGetUI Elevator.exe: use the gsudo cache protocol.
+                string cacheArgs = elevatorName == "sudo"
+                    ? (CoreData.ElevatorArgs.Contains("-A") ? "-Av" : "-v")
                     : "cache on --pid " + Environment.ProcessId + " -d 1";
 
                 using Process p = new()
@@ -555,9 +564,17 @@ namespace UniGetUI.Core.Tools
                 "Resetting administrator rights cache for process id " + Environment.ProcessId
             );
 
-            // When using sudo on Linux, "-K" removes all cached timestamps.
-            // For gsudo on Windows (or pkexec fallback) use the gsudo cache protocol.
-            string resetArgs = Path.GetFileName(CoreData.ElevatorPath) == "sudo"
+            var elevatorName = Path.GetFileName(CoreData.ElevatorPath);
+
+            // pkexec prompts on every invocation and has no caching protocol.
+            if (elevatorName == "pkexec")
+            {
+                return;
+            }
+
+            // sudo: -K removes all cached timestamps.
+            // gsudo / UniGetUI Elevator.exe: use the gsudo cache protocol.
+            string resetArgs = elevatorName == "sudo"
                 ? "-K"
                 : "cache off --pid " + Environment.ProcessId;
 

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using UniGetUI.Core.IconEngine;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 
@@ -27,7 +28,7 @@ internal sealed class AptPkgDetailsHelper : BasePkgDetailsHelper
         };
 
         IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(
-            Enums.LoggableTaskType.LoadPackageDetails, p);
+            LoggableTaskType.LoadPackageDetails, p);
         p.Start();
 
         // apt-cache show outputs key: value pairs, one per line.
@@ -138,13 +139,22 @@ internal sealed class AptPkgDetailsHelper : BasePkgDetailsHelper
             },
         };
         p.Start();
-        var firstPath = p.StandardOutput.ReadLine()?.Trim();
+
+        // Must drain all stdout before WaitForExit — packages with many files
+        // will fill the pipe buffer and deadlock if we stop reading early.
+        string? result = null;
+        string? line;
+        while ((line = p.StandardOutput.ReadLine()) is not null)
+        {
+            if (result is not null) continue;
+            var path = line.Trim();
+            if (Directory.Exists(path))
+                result = path;
+        }
+
+        p.StandardError.ReadToEnd();
         p.WaitForExit();
-
-        if (firstPath is not null && Directory.Exists(firstPath))
-            return firstPath;
-
-        return null;
+        return result;
     }
 
     protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)

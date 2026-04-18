@@ -527,6 +527,10 @@ namespace UniGetUI.Interface
             LoadingProgressBar.Visibility = Visibility.Collapsed;
             // Required to update UI labels
             LastPackageLoadTime = DateTime.Now;
+            ToolTipService.SetToolTip(
+                ReloadButton,
+                CoreTools.Translate("Last checked: {0}", LastPackageLoadTime.ToString(CultureInfo.CurrentCulture))
+            );
             UpdatePackageCount();
             WhenPackagesLoaded(ReloadReason.External);
         }

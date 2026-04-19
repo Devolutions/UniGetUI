@@ -213,6 +213,7 @@
   "OK": "OK",
   "{0} packages were found, {1} of which match the specified filters.": "{0} packages were found, {1} of which match the specified filters.",
   "{0} selected": "{0} selected",
+  "Last checked: {0}": "Last checked: {0}",
   "(Last checked: {0})": "(Last checked: {0})",
   "Enabled": "Enabled",
   "Disabled": "Disabled",

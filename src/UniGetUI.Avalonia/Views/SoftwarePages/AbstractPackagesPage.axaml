@@ -136,6 +136,7 @@
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
                         Command="{Binding ReloadCommand}"
+                        ToolTip.Tip="{Binding ReloadButtonTooltip}"
                         automation:AutomationProperties.Name="{t:Translate Reload}"
                         automation:AutomationProperties.AcceleratorKey="F5"
                         IsVisible="{Binding ReloadButtonVisible}">

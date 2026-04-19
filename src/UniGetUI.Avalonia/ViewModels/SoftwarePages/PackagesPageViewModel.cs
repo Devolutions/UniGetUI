@@ -125,6 +125,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private string _globalQueryText = "";
     [ObservableProperty] private bool _newVersionHeaderVisible;
     [ObservableProperty] private bool _reloadButtonVisible;
+    [ObservableProperty] private string _reloadButtonTooltip = "";
     [ObservableProperty] private bool _isFilterPaneOpen;
     [ObservableProperty] private PackageViewMode _viewMode;
     [ObservableProperty] private int _sortFieldIndex;
@@ -374,6 +375,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         }
         IsLoading = false;
         _lastLoadTime = DateTime.Now;
+        ReloadButtonTooltip = CoreTools.Translate("Last checked: {0}", _lastLoadTime.ToString(CultureInfo.CurrentCulture));
         FilterPackages();
         PackagesLoaded?.Invoke(ReloadReason.External);
     }

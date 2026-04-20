@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using UniGetUI.Core.Tools;
 using SecureSettingsStore = UniGetUI.Core.SettingsEngine.SecureSettings.SecureSettings;
@@ -87,6 +88,40 @@ public sealed class SecureSettingsTests : IDisposable
         Assert.False(SecureSettingsStore.Get(SecureSettingsStore.K.AllowCLIArguments));
     }
 
+    [Fact]
+    public async Task Get_AllowsConcurrentCacheMisses()
+    {
+        string username = Environment.UserName;
+        string setting = SecureSettingsStore.ResolveKey(
+            SecureSettingsStore.K.AllowCustomManagerPaths
+        );
+        Assert.Equal(0, SecureSettingsStore.ApplyForUser(username, setting, true));
+
+        for (int iteration = 0; iteration < 25; iteration++)
+        {
+            ClearSecureSettingsCache();
+            using ManualResetEventSlim startGate = new(false);
+
+            Task<bool>[] tasks = Enumerable
+                .Range(0, 64)
+                .Select(_ =>
+                    Task.Run(() =>
+                    {
+                        startGate.Wait();
+                        return SecureSettingsStore.Get(
+                            SecureSettingsStore.K.AllowCustomManagerPaths
+                        );
+                    })
+                )
+                .ToArray();
+
+            startGate.Set();
+            bool[] results = await Task.WhenAll(tasks);
+
+            Assert.All(results, Assert.True);
+        }
+    }
+
     private string GetCurrentUserSettingsDirectory() =>
         Path.Combine(_testRoot, CoreTools.MakeValidFileName(Environment.UserName));
 
@@ -97,7 +132,7 @@ public sealed class SecureSettingsTests : IDisposable
             CoreTools.MakeValidFileName(setting)
         );
 
-    private static void ClearSecureSettingsCache()
+    private static ConcurrentDictionary<string, bool> GetCache()
     {
         FieldInfo? cacheField = typeof(SecureSettingsStore).GetField(
             "_cache",
@@ -105,7 +140,8 @@ public sealed class SecureSettingsTests : IDisposable
         );
         Assert.NotNull(cacheField);
 
-        var cache = Assert.IsType<Dictionary<string, bool>>(cacheField.GetValue(null));
-        cache.Clear();
+        return Assert.IsType<ConcurrentDictionary<string, bool>>(cacheField.GetValue(null));
     }
+
+    private static void ClearSecureSettingsCache() => GetCache().Clear();
 }

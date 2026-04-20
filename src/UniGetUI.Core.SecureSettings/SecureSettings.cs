@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Tools;
@@ -38,7 +39,7 @@ public static class SecureSettings
         };
     }
 
-    private static readonly Dictionary<string, bool> _cache = new();
+    private static readonly ConcurrentDictionary<string, bool> _cache = new();
 
     public static class Args
     {
@@ -49,31 +50,13 @@ public static class SecureSettings
     public static bool Get(K key)
     {
         string purifiedSetting = CoreTools.MakeValidFileName(ResolveKey(key));
-        if (_cache.TryGetValue(purifiedSetting, out var value))
-        {
-            return value;
-        }
-
-        string purifiedUser = CoreTools.MakeValidFileName(Environment.UserName);
-
-        var settingsLocation = Path.Join(GetSecureSettingsRoot(), purifiedUser);
-        var settingFile = Path.Join(settingsLocation, purifiedSetting);
-
-        if (!Directory.Exists(settingsLocation))
-        {
-            _cache[purifiedSetting] = false;
-            return false;
-        }
-
-        bool exists = File.Exists(settingFile);
-        _cache[purifiedSetting] = exists;
-        return exists;
+        return _cache.GetOrAdd(purifiedSetting, ResolveSettingValue);
     }
 
     public static async Task<bool> TrySet(K key, bool enabled)
     {
         string purifiedSetting = CoreTools.MakeValidFileName(ResolveKey(key));
-        _cache.Remove(purifiedSetting);
+        _cache.TryRemove(purifiedSetting, out _);
 
         string purifiedUser = CoreTools.MakeValidFileName(Environment.UserName);
 
@@ -107,7 +90,7 @@ public static class SecureSettings
         try
         {
             string purifiedSetting = CoreTools.MakeValidFileName(setting);
-            _cache.Remove(purifiedSetting);
+            _cache.TryRemove(purifiedSetting, out _);
 
             string purifiedUser = CoreTools.MakeValidFileName(username);
 
@@ -157,5 +140,18 @@ public static class SecureSettings
         }
 
         return Path.Join(CoreData.UniGetUIDataDirectory, "SecureSettings");
+    }
+
+    private static bool ResolveSettingValue(string purifiedSetting)
+    {
+        string purifiedUser = CoreTools.MakeValidFileName(Environment.UserName);
+        var settingsLocation = Path.Join(GetSecureSettingsRoot(), purifiedUser);
+        if (!Directory.Exists(settingsLocation))
+        {
+            return false;
+        }
+
+        var settingFile = Path.Join(settingsLocation, purifiedSetting);
+        return File.Exists(settingFile);
     }
 }

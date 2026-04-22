@@ -135,11 +135,22 @@ public static class CrashHandler
             }
         }
 
+        // Run the integrity check on a background thread with a tight timeout.
+        // Running it synchronously on the UI thread can block for 20-30 s on slow
+        // disks, and calling Environment.Exit while the UI thread holds WinRT locks
+        // causes a native crash in coreclr!ProcessCLRException (null read @ 0x0).
         string iReport;
         try
         {
-            var integrityReport = IntegrityTester.CheckIntegrity(false);
-            iReport = IntegrityTester.GetReadableReport(integrityReport);
+            var integrityTask = Task.Run(() => IntegrityTester.CheckIntegrity(false));
+            if (integrityTask.Wait(TimeSpan.FromSeconds(5)))
+            {
+                iReport = IntegrityTester.GetReadableReport(integrityTask.Result);
+            }
+            else
+            {
+                iReport = "Integrity check timed out (> 5 s) — skipped in crash report";
+            }
         }
         catch (Exception ex)
         {

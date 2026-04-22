@@ -426,7 +426,8 @@ public partial class AutoUpdater
         // Check if the user has disabled updates
         if (!ManualCheck && Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
         {
-            Banner.IsOpen = false;
+            // Banner is a UI element; always touch it from the UI thread.
+            Window.DispatcherQueue.TryEnqueue(() => Banner.IsOpen = false);
             Logger.Warn("User disabled updates!");
             return true;
         }

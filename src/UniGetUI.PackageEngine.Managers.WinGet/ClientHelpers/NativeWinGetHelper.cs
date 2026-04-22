@@ -42,7 +42,8 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             systemCliHelperFactory: null,
             skipInitialization: false,
             localPackagesProvider: null
-        ) { }
+        )
+    { }
 
     internal NativeWinGetHelper(
         WinGet manager,

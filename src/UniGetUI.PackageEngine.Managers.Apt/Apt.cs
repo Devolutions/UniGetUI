@@ -223,6 +223,8 @@ public class Apt : PackageManager
                 CreateNoWindow = true,
             },
         };
+        p.StartInfo.EnvironmentVariables["LANG"] = "C";
+        p.StartInfo.EnvironmentVariables["LC_ALL"] = "C";
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates, p);
         p.Start();
 

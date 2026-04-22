@@ -21,15 +21,7 @@ internal sealed class HomebrewSourceHelper : BaseSourceHelper
 
         using var p = new Process
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = Manager.Status.ExecutablePath,
-                Arguments = "tap",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            },
+            StartInfo = ((Homebrew)Manager).MakeBrewStartInfo("tap"),
         };
         IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(LoggableTaskType.ListSources, p);
         p.Start();

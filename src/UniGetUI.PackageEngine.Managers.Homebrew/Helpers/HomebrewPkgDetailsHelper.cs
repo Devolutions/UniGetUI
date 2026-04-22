@@ -17,15 +17,7 @@ internal sealed class HomebrewPkgDetailsHelper : BasePkgDetailsHelper
     {
         using var p = new Process
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = Manager.Status.ExecutablePath,
-                Arguments = $"info --json=v2 {details.Package.Id}",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            },
+            StartInfo = ((Homebrew)Manager).MakeBrewStartInfo($"info --json=v2 {details.Package.Id}"),
         };
 
         IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(

@@ -51,8 +51,8 @@ public class Pacman : PackageManager
 
     public override IReadOnlyList<string> FindCandidateExecutableFiles()
     {
-        var candidates = new List<string>();
-        foreach (var path in new[] { "/usr/bin/pacman", "/bin/pacman" })
+        var candidates = new List<string>(CoreTools.WhichMultiple("pacman"));
+        foreach (var path in new[] { "/usr/bin/pacman", "/usr/local/bin/pacman" })
         {
             if (File.Exists(path) && !candidates.Contains(path))
                 candidates.Add(path);

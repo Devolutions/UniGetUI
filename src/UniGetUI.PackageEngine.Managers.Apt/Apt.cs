@@ -52,8 +52,8 @@ public class Apt : PackageManager
 
     public override IReadOnlyList<string> FindCandidateExecutableFiles()
     {
-        var candidates = new List<string>();
-        foreach (var path in new[] { "/usr/bin/apt", "/bin/apt" })
+        var candidates = new List<string>(CoreTools.WhichMultiple("apt"));
+        foreach (var path in new[] { "/usr/bin/apt", "/usr/local/bin/apt" })
         {
             if (File.Exists(path) && !candidates.Contains(path))
                 candidates.Add(path);

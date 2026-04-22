@@ -27,8 +27,8 @@ internal sealed class PacmanPkgDetailsHelper : BasePkgDetailsHelper
             },
         };
 
-        p.StartInfo.EnvironmentVariables["LANG"] = "C";
-        p.StartInfo.EnvironmentVariables["LC_ALL"] = "C";
+        p.StartInfo.Environment["LANG"] = "C";
+        p.StartInfo.Environment["LC_ALL"] = "C";
         IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(
             LoggableTaskType.LoadPackageDetails, p);
         p.Start();

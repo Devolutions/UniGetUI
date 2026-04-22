@@ -223,13 +223,16 @@ public class Apt : PackageManager
                 CreateNoWindow = true,
             },
         };
-        p.StartInfo.EnvironmentVariables["LANG"] = "C";
-        p.StartInfo.EnvironmentVariables["LC_ALL"] = "C";
+        p.StartInfo.Environment["LANG"] = "C";
+        p.StartInfo.Environment["LC_ALL"] = "C";
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates, p);
         p.Start();
 
-        // Output format: "<id>/<source>,... <new-ver> <arch> [upgradable from: <old-ver>]"
-        var pattern = new Regex(@"^([^/\s]+)/\S+\s+(\S+)\s+\S+\s+\[upgradable from: ([^\]]+)\]");
+        // Output format: "<id>/<source>,... <new-ver> <arch> [<localized-text> <old-ver>]"
+        // The bracketed suffix is locale-dependent (e.g. "upgradable from:" in English,
+        // "pouvant être mis à jour depuis :" in French). Match it by capturing the last
+        // whitespace-delimited token inside the brackets as the old version.
+        var pattern = new Regex(@"^([^/\s]+)/\S+\s+(\S+)\s+\S+\s+\[.*\s(\S+)\]");
         string? line;
         while ((line = p.StandardOutput.ReadLine()) is not null)
         {

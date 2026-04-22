@@ -27,6 +27,8 @@ internal sealed class DnfPkgDetailsHelper : BasePkgDetailsHelper
             },
         };
 
+        p.StartInfo.EnvironmentVariables["LANG"] = "C";
+        p.StartInfo.EnvironmentVariables["LC_ALL"] = "C";
         IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(
             LoggableTaskType.LoadPackageDetails, p);
         p.Start();

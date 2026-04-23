@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using Microsoft.Management.Deployment;
 using UniGetUI.Core.Classes;
 using UniGetUI.Core.Logging;
@@ -10,7 +11,6 @@ using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Structs;
-using Windows.Media.Capture;
 using WindowsPackageManager.Interop;
 
 namespace UniGetUI.PackageEngine.Managers.WingetManager;
@@ -468,6 +468,13 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
     private static bool ShouldFallbackToCli(Exception ex)
     {
         var unwrappedException = UnwrapException(ex);
+
+        // Native COM/SEH exceptions from the WinGet COM server or its interop layer
+        if (unwrappedException is SEHException or COMException or AccessViolationException)
+        {
+            return true;
+        }
+
         return
             unwrappedException is InvalidOperationException
             && string.Equals(
@@ -559,7 +566,18 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
             filter.Value = "";
             findPackagesOptions.Filters.Add(filter);
 
-            var TaskResult = ConnectResult.PackageCatalog.FindPackages(findPackagesOptions);
+            FindPackagesResult TaskResult;
+            try
+            {
+                TaskResult = ConnectResult.PackageCatalog.FindPackages(findPackagesOptions);
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"FindPackages native call failed: {ex.GetType().Name}: {ex.Message}");
+                logger.Close(1);
+                throw new InvalidOperationException("WinGet: Failed to connect to composite catalog.", ex);
+            }
+
             List<CatalogPackage> foundPackages = [];
             foreach (var match in TaskResult.Matches.ToArray())
             {

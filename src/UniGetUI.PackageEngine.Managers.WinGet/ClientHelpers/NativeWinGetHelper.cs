@@ -273,7 +273,8 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         if (_isBundledActivation)
         {
             Logger.Info("WinGet is using bundled in-proc COM — falling back to CLI for update detection");
-            return new BundledWinGetHelper(Manager).GetAvailableUpdates_UnSafe();
+            var cliPackages = new BundledWinGetHelper(Manager).GetAvailableUpdates_UnSafe();
+            return EnrichTruncatedNamesFromCom(cliPackages);
         }
 
         var logger = Manager.TaskLogger.CreateNew(LoggableTaskType.ListUpdates);
@@ -437,6 +438,48 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         }
 
         return "<unknown package>";
+    }
+
+    private IReadOnlyList<Package> EnrichTruncatedNamesFromCom(IReadOnlyList<Package> cliPackages)
+    {
+        if (!cliPackages.Any(p => p.Name.EndsWith('…') || p.Id.EndsWith('…')))
+            return cliPackages;
+
+        Dictionary<string, string> comNames = [];
+        try
+        {
+            foreach (var comPkg in TaskRecycler<IReadOnlyList<CatalogPackage>>.RunOrAttach(GetLocalWinGetPackages))
+                comNames[comPkg.Id] = comPkg.Name;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"COM name enrichment failed, truncated names will remain: {ex.Message}");
+            return cliPackages;
+        }
+
+        List<Package> enriched = [];
+        foreach (var pkg in cliPackages)
+        {
+            string name = pkg.Name;
+            string id = pkg.Id;
+
+            if (id.EndsWith('…'))
+            {
+                string prefix = id.TrimEnd('…');
+                var match = comNames.FirstOrDefault(kv =>
+                    kv.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+                if (match.Key is not null) { id = match.Key; name = match.Value; }
+            }
+            else if (name.EndsWith('…') && comNames.TryGetValue(id, out var fullName))
+            {
+                name = fullName;
+            }
+
+            enriched.Add(name == pkg.Name && id == pkg.Id
+                ? pkg
+                : new Package(name, id, pkg.VersionString, pkg.NewVersionString, pkg.Source, Manager));
+        }
+        return enriched;
     }
 
     private IReadOnlyList<CatalogPackage> GetLocalWinGetPackages()

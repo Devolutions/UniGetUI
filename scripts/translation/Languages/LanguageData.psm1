@@ -372,6 +372,22 @@ function Get-TranslationDocumentationMarkdown {
         'We are grateful to everyone who contributes translations to UniGetUI. Contributor credits are sourced from [Translators.json](src/UniGetUI.Core.LanguageEngine/Assets/Data/Translators.json). If you would like to be added to or removed from the list for a particular language, please open a pull request.',
         '',
         $contributorsTable.TrimEnd(),
+        '',
+        '## Maintaining Translation Data',
+        '',
+        'The tables in this document are generated from the checked-in translation metadata. Completion is computed against the active English keys in `lang_en.json`; keys below the legacy boundary marker are excluded from the percentage.',
+        '',
+        'To refresh translated percentages, contributor metadata, and this document after locale changes, run:',
+        '',
+        '```powershell',
+        'pwsh ./scripts/translation/Sync-TranslationMetadata.ps1 -AllLanguages -UpdateTranslationDoc',
+        '```',
+        '',
+        'To inspect the current status without modifying files, run:',
+        '',
+        '```powershell',
+        'pwsh ./scripts/translation/Get-TranslationStatus.ps1 -OutputFormat Markdown -OnlyIncomplete',
+        '```',
         ''
     )
 

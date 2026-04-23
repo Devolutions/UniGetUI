@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
@@ -98,10 +99,13 @@ public class Homebrew : PackageManager
         out string callArguments)
     {
         (found, path) = GetExecutableFile();
-        // Force ARM64 when brew is at the Apple Silicon prefix. Without this, a
-        // Rosetta-translated UniGetUI process spawns the x86_64 slice of the fat
-        // brew binary, which then refuses to operate against /opt/homebrew.
-        if (path == "/opt/homebrew/bin/brew")
+        // Force ARM64 when brew is at the Apple Silicon prefix. Without this,
+        // .NET's posix_spawn may select the x86_64 slice of universal binaries
+        // (bash, ruby) in the brew script chain, causing Homebrew to detect a
+        // Rosetta 2 context even when UniGetUI itself is ARM64-native.
+        if (path == BREW_PATHS[0]
+            && OperatingSystem.IsMacOS()
+            && RuntimeInformation.OSArchitecture == System.Runtime.InteropServices.Architecture.Arm64)
         {
             callArguments = $"-arm64 {path}";
             path = "/usr/bin/arch";

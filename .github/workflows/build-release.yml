@@ -379,16 +379,25 @@ jobs:
       - name: Package (macOS)
         if: runner.os == 'macOS'
         run: |
+          VERSION='${{ needs.preflight.outputs.package-version }}'
           mkdir -p output
 
-          # .tar.gz
-          tar -czf output/UniGetUI.${{ matrix.name }}.tar.gz -C bin/${{ matrix.name }} .
+          # Build .app bundle — macOS requires Contents/MacOS/<executable> + Info.plist
+          APP_BUNDLE="UniGetUI.app"
+          mkdir -p "${APP_BUNDLE}/Contents/MacOS"
+          cp -R bin/${{ matrix.name }}/. "${APP_BUNDLE}/Contents/MacOS/"
+          chmod +x "${APP_BUNDLE}/Contents/MacOS/UniGetUI.Avalonia"
+          sed "s/@VERSION@/${VERSION}/g" \
+            src/UniGetUI.Avalonia/Info.plist \
+            > "${APP_BUNDLE}/Contents/Info.plist"
 
-          # .dmg — create a staging folder, then convert to a compressed read-only image
+          # .tar.gz — archive the .app bundle
+          tar -czf output/UniGetUI.${{ matrix.name }}.tar.gz "${APP_BUNDLE}"
+
+          # .dmg — stage the .app bundle, then convert to a compressed read-only image
           DMG_STAGING=$(mktemp -d)
           trap "rm -rf '$DMG_STAGING'" EXIT
-          mkdir -p "$DMG_STAGING/UniGetUI"
-          cp -R bin/${{ matrix.name }}/. "$DMG_STAGING/UniGetUI/"
+          cp -R "${APP_BUNDLE}" "$DMG_STAGING/"
           hdiutil create \
             -volname "UniGetUI" \
             -srcfolder "$DMG_STAGING" \

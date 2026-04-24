@@ -390,6 +390,16 @@ jobs:
           sed "s/@VERSION@/${VERSION}/g" \
             scripts/macos/Info.plist \
             > "${APP_BUNDLE}/Contents/Info.plist"
+          mkdir -p "${APP_BUNDLE}/Contents/Resources"
+          cp scripts/macos/UniGetUI.icns "${APP_BUNDLE}/Contents/Resources/"
+
+          # Ad-hoc sign — macOS 13+ refuses to open unsigned downloaded apps with a "damaged"
+          # error that has no user bypass. Ad-hoc signing (-s -) requires no Apple account and
+          # satisfies the minimum Gatekeeper requirement, downgrading the block to a dismissible
+          # "unidentified developer" prompt. Inner dylibs must be signed before the outer bundle.
+          find "${APP_BUNDLE}/Contents/MacOS" -name "*.dylib" \
+            -exec codesign --force --sign - {} \;
+          codesign --force --sign - "${APP_BUNDLE}"
 
           # .tar.gz — archive the .app bundle
           tar -czf output/UniGetUI.${{ matrix.name }}.tar.gz "${APP_BUNDLE}"
@@ -398,6 +408,7 @@ jobs:
           DMG_STAGING=$(mktemp -d)
           trap "rm -rf '$DMG_STAGING'" EXIT
           cp -R "${APP_BUNDLE}" "$DMG_STAGING/"
+          ln -s /Applications "$DMG_STAGING/Applications"
           hdiutil create \
             -volname "UniGetUI" \
             -srcfolder "$DMG_STAGING" \

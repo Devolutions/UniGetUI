@@ -10,6 +10,8 @@
     <string>UniGetUI</string>
     <key>CFBundleExecutable</key>
     <string>UniGetUI.Avalonia</string>
+    <key>CFBundleIconFile</key>
+    <string>UniGetUI</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>

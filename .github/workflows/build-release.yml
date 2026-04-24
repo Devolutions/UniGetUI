@@ -393,10 +393,8 @@ jobs:
           mkdir -p "${APP_BUNDLE}/Contents/Resources"
           cp scripts/macos/UniGetUI.icns "${APP_BUNDLE}/Contents/Resources/"
 
-          find "${APP_BUNDLE}/Contents" -type f | while IFS= read -r f; do
-            if file "$f" | grep -q "Mach-O"; then
-              codesign --force --sign - "$f"
-            fi
+          find "${APP_BUNDLE}/Contents/MacOS" -type f | while IFS= read -r f; do
+            codesign --force --sign - "$f" 2>/dev/null || true
           done
           codesign --force --sign - "${APP_BUNDLE}"
 

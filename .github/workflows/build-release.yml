@@ -365,7 +365,7 @@ jobs:
 
       - name: Restore dependencies
         working-directory: src
-        run: dotnet restore UniGetUI.Avalonia/UniGetUI.Avalonia.csproj
+        run: dotnet restore UniGetUI.Avalonia/UniGetUI.Avalonia.csproj --runtime ${{ matrix.runtime }}
 
       - name: Publish
         working-directory: src
@@ -387,7 +387,7 @@ jobs:
           mkdir -p "${APP_BUNDLE}/Contents/MacOS"
           cp -R bin/${{ matrix.name }}/. "${APP_BUNDLE}/Contents/MacOS/"
           chmod +x "${APP_BUNDLE}/Contents/MacOS/UniGetUI.Avalonia"
-          sed "s/@VERSION@/${VERSION}/g" \
+          sed "s|@VERSION@|${VERSION}|g" \
             scripts/macos/Info.plist \
             > "${APP_BUNDLE}/Contents/Info.plist"
           mkdir -p "${APP_BUNDLE}/Contents/Resources"

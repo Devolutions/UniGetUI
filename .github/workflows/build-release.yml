@@ -376,42 +376,52 @@ jobs:
             --self-contained true \
             --output ../bin/${{ matrix.name }}
 
+      - name: Install macOS packaging tools
+        if: runner.os == 'macOS'
+        run: brew install create-dmg
+
       - name: Package (macOS)
         if: runner.os == 'macOS'
         run: |
+          set -euo pipefail
           VERSION='${{ needs.preflight.outputs.package-version }}'
-          mkdir -p output
-
-          # Build .app bundle — macOS requires Contents/MacOS/<executable> + Info.plist
           APP_BUNDLE="UniGetUI.app"
+          APP_EXECUTABLE="UniGetUI.Avalonia"
+
+          rm -rf "${APP_BUNDLE}" output
+          mkdir -p output
           mkdir -p "${APP_BUNDLE}/Contents/MacOS"
-          cp -R bin/${{ matrix.name }}/. "${APP_BUNDLE}/Contents/MacOS/"
-          chmod +x "${APP_BUNDLE}/Contents/MacOS/UniGetUI.Avalonia"
+          mkdir -p "${APP_BUNDLE}/Contents/Resources"
+
+          cp -R "bin/${{ matrix.name }}/." "${APP_BUNDLE}/Contents/MacOS/"
+          chmod +x "${APP_BUNDLE}/Contents/MacOS/${APP_EXECUTABLE}"
           sed "s|@VERSION@|${VERSION}|g" \
             scripts/macos/Info.plist \
             > "${APP_BUNDLE}/Contents/Info.plist"
-          mkdir -p "${APP_BUNDLE}/Contents/Resources"
           cp scripts/macos/UniGetUI.icns "${APP_BUNDLE}/Contents/Resources/"
 
+          # Temporary ad-hoc signing only; proper Developer ID signing/notarization comes later.
           find "${APP_BUNDLE}/Contents/MacOS" -type f | while IFS= read -r f; do
             codesign --force --sign - "$f" 2>/dev/null || true
           done
           codesign --force --sign - "${APP_BUNDLE}"
 
-          # .tar.gz — archive the .app bundle
-          tar -czf output/UniGetUI.${{ matrix.name }}.tar.gz "${APP_BUNDLE}"
+          COPYFILE_DISABLE=1 tar -czf "output/UniGetUI.${{ matrix.name }}.tar.gz" "${APP_BUNDLE}"
 
-          # .dmg — stage the .app bundle, then convert to a compressed read-only image
-          DMG_STAGING=$(mktemp -d)
-          trap "rm -rf '$DMG_STAGING'" EXIT
-          cp -R "${APP_BUNDLE}" "$DMG_STAGING/"
-          ln -s /Applications "$DMG_STAGING/Applications"
-          hdiutil create \
-            -volname "UniGetUI" \
-            -srcfolder "$DMG_STAGING" \
-            -ov \
-            -format UDZO \
-            output/UniGetUI.${{ matrix.name }}.dmg
+          create-dmg \
+            --volname "UniGetUI" \
+            --volicon "scripts/macos/UniGetUI.icns" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 128 \
+            --icon "UniGetUI.app" 150 185 \
+            --hide-extension "UniGetUI.app" \
+            --app-drop-link 450 185 \
+            "output/UniGetUI.${{ matrix.name }}.dmg" \
+            "${APP_BUNDLE}"
+
+          test -f "output/UniGetUI.${{ matrix.name }}.tar.gz"
+          test -f "output/UniGetUI.${{ matrix.name }}.dmg"
 
       - name: Install Linux packaging tools
         if: runner.os == 'Linux'

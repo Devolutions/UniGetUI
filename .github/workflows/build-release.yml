@@ -388,7 +388,7 @@ jobs:
           cp -R bin/${{ matrix.name }}/. "${APP_BUNDLE}/Contents/MacOS/"
           chmod +x "${APP_BUNDLE}/Contents/MacOS/UniGetUI.Avalonia"
           sed "s/@VERSION@/${VERSION}/g" \
-            src/UniGetUI.Avalonia/Info.plist \
+            scripts/macos/Info.plist \
             > "${APP_BUNDLE}/Contents/Info.plist"
 
           # .tar.gz — archive the .app bundle

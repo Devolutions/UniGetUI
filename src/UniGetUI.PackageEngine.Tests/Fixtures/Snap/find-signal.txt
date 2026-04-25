@@ -1,0 +1,2 @@
+Name            Version  Publisher      Notes  Summary
+signal-desktop  8.5.0    snapcrafters✪  -      Speak Freely - Private Messenger

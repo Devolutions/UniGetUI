@@ -28,6 +28,7 @@
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Dotnet\UniGetUI.PackageEngine.Managers.Dotnet.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Pip\UniGetUI.PackageEngine.Managers.Pip.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Npm\UniGetUI.PackageEngine.Managers.Npm.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Snap\UniGetUI.PackageEngine.Managers.Snap.csproj" />
         <ProjectReference Include="..\UniGetUI.PAckageEngine.Interfaces\UniGetUI.PackageEngine.Interfaces.csproj" />
         <ProjectReference Include="..\UniGetUI.Interface.Enums\UniGetUI.Interface.Enums.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Enums\UniGetUI.PackageEngine.Structs.csproj" />

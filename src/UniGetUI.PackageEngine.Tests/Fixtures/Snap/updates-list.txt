@@ -1,0 +1,3 @@
+Name     Version  Rev   Size   Publisher      Notes
+discord  0.0.134  277   122MB  snapcrafters✪  -
+firefox  150.0-1  8191  288MB  mozilla✓       -

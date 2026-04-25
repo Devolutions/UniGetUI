@@ -88,6 +88,7 @@ namespace UniGetUI.Interface.Enums
         Apt = '\uE944',
         Dnf = '\uE945',
         Pacman = '\uE946',
+        Snap = '\uE947',
     }
 
     public class NotificationArguments

@@ -1,0 +1,57 @@
+name:      signal-desktop
+summary:   Speak Freely - Private Messenger
+publisher: Snapcrafters✪
+store-url: https://snapcraft.io/signal-desktop
+contact:   https://github.com//snapcrafters/signal-desktop/issues
+license:   AGPL-3.0-only
+description: |
+  **Note: To use the Signal desktop app, you must first install Signal on your phone.**
+
+  Millions of people use Signal every day for free and instantaneous communication anywhere in the
+  world. Send and receive high-fidelity messages, participate in HD voice/video calls, and explore a
+  growing set of new features that help you stay connected. Signal's advanced privacy-preserving
+  technology is always enabled, so you can focus on sharing the moments that matter with the people
+  who matter to you.
+
+  - Say anything - State-of-the-art end-to-end encryption (powered by the open source Signal
+  Protocol™) keeps your conversations secure. Privacy isn't an optional mode; it's just the way that
+  Signal works. Every message, every call, every time.
+  - Go fast - Messages are delivered quickly and reliably, even on slow networks. Signal is
+  optimized to operate in the most constrained environment possible.
+  - Feel free - Signal is a completely independent 501c3 nonprofit. Development is supported by
+  users like you. No advertisements. No trackers. No kidding.
+  - Be yourself - You can use your existing phone number and address book to securely communicate
+  with your friends.
+  - Speak up - Whether they live across town or across the ocean, Signal's enhanced audio and video
+  quality will make your friends and family feel closer.
+  - Whisper in the shadows - Switch to the dark theme if you refuse to see the light.
+
+  **Minimize to tray**
+
+  Per the request of the Signal developers, this snap does not use the system tray by default. This
+  is disabled by default per the request of the Signal developers, because system tray support is
+  not stable. Set to `false`, Signal will stop when you close it and will not have a system tray
+  icon. You can enable it by running the following command.
+
+      snap set signal-desktop tray-icon=true
+
+
+  **Are you having issues?**
+
+  Let us know by creating a new issue here: https://github.com/snapcrafters/signal-desktop/issues
+
+  **Authors**
+
+  This snap is maintained by the Snapcrafters community, and is not necessarily endorsed or
+  officially maintained by the upstream developers.
+commands:
+  - signal-desktop
+snap-id:      r4LxMVp7zWramXsJQAKdamxy6TAWlaDD
+tracking:     latest/stable
+refresh-date: 22 days ago, at 16:32 EDT
+channels:
+  latest/stable:    8.5.0 2026-04-02 (894) 189MB -
+  latest/candidate: 8.5.0 2026-04-02 (894) 189MB -
+  latest/beta:      ↑
+  latest/edge:      ↑
+installed:          8.5.0            (894) 189MB -

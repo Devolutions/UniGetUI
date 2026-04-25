@@ -1,0 +1,7 @@
+Name                       Version                         Rev    Tracking            Publisher      Notes
+aspnetcore-runtime-100     10.0.7                          27     latest/stable       canonical✓     -
+bare                       1.0                             5      latest/stable       canonical✓     base
+code                       10c8e557                        235    latest/stable       vscode✓        classic
+core18                     20260204                        2999   latest/stable       canonical✓     base
+core20                     20260211                        2769   latest/stable       canonical✓     base
+core22                     20260225                        2411   latest/stable       canonical✓     base

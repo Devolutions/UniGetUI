@@ -65,15 +65,15 @@ function Get-ContributorsListPath {
 }
 
 function Get-TranslatorsJsonPath {
-    return Join-Path (Get-ProjectRoot) 'src\UniGetUI.Core.LanguageEngine\Assets\Data\Translators.json'
+    return Join-Path (Get-ProjectRoot) 'src\Languages\Data\Translators.json'
 }
 
 function Get-TranslatedPercentagesJsonPath {
-    return Join-Path (Get-ProjectRoot) 'src\UniGetUI.Core.LanguageEngine\Assets\Data\TranslatedPercentages.json'
+    return Join-Path (Get-ProjectRoot) 'src\Languages\Data\TranslatedPercentages.json'
 }
 
 function Get-LanguagesReferenceJsonPath {
-    return Join-Path (Get-ProjectRoot) 'src\UniGetUI.Core.LanguageEngine\Assets\Data\LanguagesReference.json'
+    return Join-Path (Get-ProjectRoot) 'src\Languages\Data\LanguagesReference.json'
 }
 
 function Get-LanguagesDirectoryPath {
@@ -369,7 +369,7 @@ function Get-TranslationDocumentationMarkdown {
         '',
         '## Contributors',
         '',
-        'We are grateful to everyone who contributes translations to UniGetUI. Contributor credits are sourced from [Translators.json](src/UniGetUI.Core.LanguageEngine/Assets/Data/Translators.json). If you would like to be added to or removed from the list for a particular language, please open a pull request.',
+        'We are grateful to everyone who contributes translations to UniGetUI. Contributor credits are sourced from [Translators.json](src/Languages/Data/Translators.json). If you would like to be added to or removed from the list for a particular language, please open a pull request.',
         '',
         $contributorsTable.TrimEnd(),
         '',

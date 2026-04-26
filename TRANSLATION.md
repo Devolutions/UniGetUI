@@ -74,7 +74,7 @@ Translation discussion and coordination also happens in [GitHub discussion #4510
 
 ## Contributors
 
-We are grateful to everyone who contributes translations to UniGetUI. Contributor credits are sourced from [Translators.json](src/UniGetUI.Core.LanguageEngine/Assets/Data/Translators.json). If you would like to be added to or removed from the list for a particular language, please open a pull request.
+We are grateful to everyone who contributes translations to UniGetUI. Contributor credits are sourced from [Translators.json](src/Languages/Data/Translators.json). If you would like to be added to or removed from the list for a particular language, please open a pull request.
 
 | Language | Code | Contributor(s) |
 | :-- | :-- | --- |

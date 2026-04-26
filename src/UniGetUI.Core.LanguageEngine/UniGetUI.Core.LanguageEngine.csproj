@@ -8,19 +8,16 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Remove="Assets\Data\LanguagesReference.json" />
-        <None Remove="Assets\Data\TranslatedPercentages.json" />
-        <None Remove="Assets\Data\Translators.json" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <Content Include="Assets\Data\LanguagesReference.json">
+        <Content Include="..\Languages\Data\LanguagesReference.json">
+            <Link>Assets\Data\LanguagesReference.json</Link>
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
-        <Content Include="Assets\Data\TranslatedPercentages.json">
+        <Content Include="..\Languages\Data\TranslatedPercentages.json">
+            <Link>Assets\Data\TranslatedPercentages.json</Link>
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
-        <Content Include="Assets\Data\Translators.json">
+        <Content Include="..\Languages\Data\Translators.json">
+            <Link>Assets\Data\Translators.json</Link>
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
         <Content Include="..\Languages\lang_*.json">

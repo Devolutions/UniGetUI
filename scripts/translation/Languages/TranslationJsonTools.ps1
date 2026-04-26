@@ -385,8 +385,7 @@ function Get-LanguagesReferencePath {
     )
 
     $languagesDirectory = Split-Path -Path (Get-FullPath -Path $NeutralJsonPath) -Parent
-    $assetsDirectory = Split-Path -Path $languagesDirectory -Parent
-    return Join-Path $assetsDirectory 'Data\LanguagesReference.json'
+    return Join-Path $languagesDirectory 'Data\LanguagesReference.json'
 }
 
 function Assert-LanguageCodeKnown {

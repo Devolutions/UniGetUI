@@ -14,7 +14,7 @@ param(
 
     [string]$TranslationDocPath = (Join-Path $PSScriptRoot '..\..\TRANSLATION.md'),
 
-    [string]$TranslatedPercentagesPath = (Join-Path $PSScriptRoot '..\..\src\UniGetUI.Core.LanguageEngine\Assets\Data\TranslatedPercentages.json')
+    [string]$TranslatedPercentagesPath = (Join-Path $PSScriptRoot '..\..\src\Languages\Data\TranslatedPercentages.json')
 )
 
 Set-StrictMode -Version Latest

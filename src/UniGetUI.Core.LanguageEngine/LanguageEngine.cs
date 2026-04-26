@@ -242,44 +242,7 @@ namespace UniGetUI.Core.Language
             return entries;
         }
 
-        /// <summary>
-        /// Downloads and saves an updated version of the translations for the specified language.
-        /// </summary>
-        /// <param name="LangKey">The Id of the language to download</param>
-        public async Task DownloadUpdatedLanguageFile(string LangKey)
-        {
-            try
-            {
-                Uri NewFile = new(
-                    "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/src/Languages/lang_"
-                        + LangKey
-                        + ".json"
-                );
-
-                HttpClient client = new();
-                client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-                string fileContents = await client.GetStringAsync(NewFile);
-
-                if (!Directory.Exists(CoreData.UniGetUICacheDirectory_Lang))
-                {
-                    Directory.CreateDirectory(CoreData.UniGetUICacheDirectory_Lang);
-                }
-
-                File.WriteAllText(
-                    Path.Join(CoreData.UniGetUICacheDirectory_Lang, "lang_" + LangKey + ".json"),
-                    fileContents
-                );
-
-                Logger.ImportantInfo("Lang files were updated successfully from GitHub");
-            }
-            catch (Exception e)
-            {
-                Logger.Warn("Could not download updated translations from GitHub");
-                Logger.Warn(e);
-            }
-        }
-
-        public void LoadStaticTranslation()
+        publicvoid LoadStaticTranslation()
         {
             CommonTranslations.ScopeNames[PackageScope.Local] = Translate("User | Local");
             CommonTranslations.ScopeNames[PackageScope.Global] = Translate("Machine | Global");

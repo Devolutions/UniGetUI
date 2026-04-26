@@ -12,65 +12,65 @@ Translation discussion and coordination also happens in [GitHub discussion #4510
 
 | Language | Code | Translated | File |
 | :-- | :-- | :-- | :-- |
-| <img src='https://flagcdn.com/za.svg' width=20> &nbsp; Afrikaans - Afrikaans | `af` | 99% | [lang_af.json](src/Languages/lang_af.json) |
-| <img src='https://flagcdn.com/sa.svg' width=20> &nbsp; Arabic - عربي‎ | `ar` | 99% | [lang_ar.json](src/Languages/lang_ar.json) |
-| <img src='https://flagcdn.com/by.svg' width=20> &nbsp; Belarusian - беларуская | `be` | 99% | [lang_be.json](src/Languages/lang_be.json) |
-| <img src='https://flagcdn.com/bg.svg' width=20> &nbsp; Bulgarian - български | `bg` | 99% | [lang_bg.json](src/Languages/lang_bg.json) |
-| <img src='https://flagcdn.com/bd.svg' width=20> &nbsp; Bangla - বাংলা | `bn` | 99% | [lang_bn.json](src/Languages/lang_bn.json) |
-| <img src='https://flagcdn.com/ad.svg' width=20> &nbsp; Catalan - Català | `ca` | 99% | [lang_ca.json](src/Languages/lang_ca.json) |
-| <img src='https://flagcdn.com/cz.svg' width=20> &nbsp; Czech - Čeština | `cs` | 99% | [lang_cs.json](src/Languages/lang_cs.json) |
-| <img src='https://flagcdn.com/dk.svg' width=20> &nbsp; Danish - Dansk | `da` | 99% | [lang_da.json](src/Languages/lang_da.json) |
-| <img src='https://flagcdn.com/de.svg' width=20> &nbsp; German - Deutsch | `de` | 99% | [lang_de.json](src/Languages/lang_de.json) |
-| <img src='https://flagcdn.com/gr.svg' width=20> &nbsp; Greek - Ελληνικά | `el` | 99% | [lang_el.json](src/Languages/lang_el.json) |
-| <img src='https://flagcdn.com/ee.svg' width=20> &nbsp; Estonian - Eesti | `et` | 99% | [lang_et.json](src/Languages/lang_et.json) |
+| <img src='https://flagcdn.com/za.svg' width=20> &nbsp; Afrikaans - Afrikaans | `af` | 93% | [lang_af.json](src/Languages/lang_af.json) |
+| <img src='https://flagcdn.com/sa.svg' width=20> &nbsp; Arabic - عربي‎ | `ar` | 93% | [lang_ar.json](src/Languages/lang_ar.json) |
+| <img src='https://flagcdn.com/by.svg' width=20> &nbsp; Belarusian - беларуская | `be` | 93% | [lang_be.json](src/Languages/lang_be.json) |
+| <img src='https://flagcdn.com/bg.svg' width=20> &nbsp; Bulgarian - български | `bg` | 93% | [lang_bg.json](src/Languages/lang_bg.json) |
+| <img src='https://flagcdn.com/bd.svg' width=20> &nbsp; Bangla - বাংলা | `bn` | 93% | [lang_bn.json](src/Languages/lang_bn.json) |
+| <img src='https://flagcdn.com/ad.svg' width=20> &nbsp; Catalan - Català | `ca` | 93% | [lang_ca.json](src/Languages/lang_ca.json) |
+| <img src='https://flagcdn.com/cz.svg' width=20> &nbsp; Czech - Čeština | `cs` | 93% | [lang_cs.json](src/Languages/lang_cs.json) |
+| <img src='https://flagcdn.com/dk.svg' width=20> &nbsp; Danish - Dansk | `da` | 93% | [lang_da.json](src/Languages/lang_da.json) |
+| <img src='https://flagcdn.com/de.svg' width=20> &nbsp; German - Deutsch | `de` | 93% | [lang_de.json](src/Languages/lang_de.json) |
+| <img src='https://flagcdn.com/gr.svg' width=20> &nbsp; Greek - Ελληνικά | `el` | 93% | [lang_el.json](src/Languages/lang_el.json) |
+| <img src='https://flagcdn.com/ee.svg' width=20> &nbsp; Estonian - Eesti | `et` | 93% | [lang_et.json](src/Languages/lang_et.json) |
 | <img src='https://flagcdn.com/gb.svg' width=20> &nbsp; English - English | `en` | 100% | [lang_en.json](src/Languages/lang_en.json) |
-| <img src='https://upload.wikimedia.org/wikipedia/commons/f/f5/Flag_of_Esperanto.svg' width=20> &nbsp; Esperanto - Esperanto | `eo` | 99% | [lang_eo.json](src/Languages/lang_eo.json) |
-| <img src='https://flagcdn.com/es.svg' width=20> &nbsp; Spanish - Castellano | `es` | 99% | [lang_es.json](src/Languages/lang_es.json) |
-| <img src='https://flagcdn.com/mx.svg' width=20> &nbsp; Spanish (Mexico) | `es-MX` | 99% | [lang_es-MX.json](src/Languages/lang_es-MX.json) |
-| <img src='https://flagcdn.com/ir.svg' width=20> &nbsp; Persian - فارسی‎ | `fa` | 99% | [lang_fa.json](src/Languages/lang_fa.json) |
-| <img src='https://flagcdn.com/fi.svg' width=20> &nbsp; Finnish - Suomi | `fi` | 99% | [lang_fi.json](src/Languages/lang_fi.json) |
-| <img src='https://flagcdn.com/ph.svg' width=20> &nbsp; Filipino - Filipino | `fil` | 99% | [lang_fil.json](src/Languages/lang_fil.json) |
-| <img src='https://flagcdn.com/fr.svg' width=20> &nbsp; French - Français | `fr` | 99% | [lang_fr.json](src/Languages/lang_fr.json) |
-| <img src='https://flagcdn.com/es.svg' width=20> &nbsp; Galician - Galego | `gl` | 99% | [lang_gl.json](src/Languages/lang_gl.json) |
-| <img src='https://flagcdn.com/in.svg' width=20> &nbsp; Gujarati - ગુજરાતી | `gu` | 99% | [lang_gu.json](src/Languages/lang_gu.json) |
-| <img src='https://flagcdn.com/in.svg' width=20> &nbsp; Hindi - हिंदी | `hi` | 99% | [lang_hi.json](src/Languages/lang_hi.json) |
-| <img src='https://flagcdn.com/hr.svg' width=20> &nbsp; Croatian - Hrvatski | `hr` | 99% | [lang_hr.json](src/Languages/lang_hr.json) |
-| <img src='https://flagcdn.com/il.svg' width=20> &nbsp; Hebrew - עִבְרִית‎ | `he` | 99% | [lang_he.json](src/Languages/lang_he.json) |
-| <img src='https://flagcdn.com/hu.svg' width=20> &nbsp; Hungarian - Magyar | `hu` | 99% | [lang_hu.json](src/Languages/lang_hu.json) |
-| <img src='https://flagcdn.com/it.svg' width=20> &nbsp; Italian - Italiano | `it` | 99% | [lang_it.json](src/Languages/lang_it.json) |
-| <img src='https://flagcdn.com/id.svg' width=20> &nbsp; Indonesian - Bahasa Indonesia | `id` | 99% | [lang_id.json](src/Languages/lang_id.json) |
-| <img src='https://flagcdn.com/jp.svg' width=20> &nbsp; Japanese - 日本語 | `ja` | 99% | [lang_ja.json](src/Languages/lang_ja.json) |
-| <img src='https://flagcdn.com/ge.svg' width=20> &nbsp; Georgian - ქართული | `ka` | 99% | [lang_ka.json](src/Languages/lang_ka.json) |
-| <img src='https://flagcdn.com/in.svg' width=20> &nbsp; Kannada - ಕನ್ನಡ | `kn` | 99% | [lang_kn.json](src/Languages/lang_kn.json) |
-| <img src='https://flagcdn.com/kr.svg' width=20> &nbsp; Korean - 한국어 | `ko` | 99% | [lang_ko.json](src/Languages/lang_ko.json) |
-| <img src='https://flagcdn.com/iq.svg' width=20> &nbsp; Kurdish - کوردی | `ku` | 99% | [lang_ku.json](src/Languages/lang_ku.json) |
-| <img src='https://flagcdn.com/lt.svg' width=20> &nbsp; Lithuanian - Lietuvių | `lt` | 99% | [lang_lt.json](src/Languages/lang_lt.json) |
-| <img src='https://flagcdn.com/mk.svg' width=20> &nbsp; Macedonian - Македонски | `mk` | 99% | [lang_mk.json](src/Languages/lang_mk.json) |
-| <img src='https://flagcdn.com/in.svg' width=20> &nbsp; Marathi - मराठी | `mr` | 99% | [lang_mr.json](src/Languages/lang_mr.json) |
-| <img src='https://flagcdn.com/no.svg' width=20> &nbsp; Norwegian (bokmål) | `nb` | 99% | [lang_nb.json](src/Languages/lang_nb.json) |
-| <img src='https://flagcdn.com/no.svg' width=20> &nbsp; Norwegian (nynorsk) | `nn` | 99% | [lang_nn.json](src/Languages/lang_nn.json) |
-| <img src='https://flagcdn.com/nl.svg' width=20> &nbsp; Dutch - Nederlands | `nl` | 99% | [lang_nl.json](src/Languages/lang_nl.json) |
-| <img src='https://flagcdn.com/pl.svg' width=20> &nbsp; Polish - Polski | `pl` | 99% | [lang_pl.json](src/Languages/lang_pl.json) |
-| <img src='https://flagcdn.com/br.svg' width=20> &nbsp; Portuguese (Brazil) | `pt_BR` | 99% | [lang_pt_BR.json](src/Languages/lang_pt_BR.json) |
-| <img src='https://flagcdn.com/pt.svg' width=20> &nbsp; Portuguese (Portugal) | `pt_PT` | 99% | [lang_pt_PT.json](src/Languages/lang_pt_PT.json) |
-| <img src='https://flagcdn.com/ro.svg' width=20> &nbsp; Romanian - Română | `ro` | 99% | [lang_ro.json](src/Languages/lang_ro.json) |
-| <img src='https://flagcdn.com/ru.svg' width=20> &nbsp; Russian - Русский | `ru` | 99% | [lang_ru.json](src/Languages/lang_ru.json) |
-| <img src='https://flagcdn.com/in.svg' width=20> &nbsp; Sanskrit - संस्कृत भाषा | `sa` | 99% | [lang_sa.json](src/Languages/lang_sa.json) |
-| <img src='https://flagcdn.com/sk.svg' width=20> &nbsp; Slovak - Slovenčina | `sk` | 99% | [lang_sk.json](src/Languages/lang_sk.json) |
-| <img src='https://flagcdn.com/rs.svg' width=20> &nbsp; Serbian - Srpski | `sr` | 99% | [lang_sr.json](src/Languages/lang_sr.json) |
-| <img src='https://flagcdn.com/al.svg' width=20> &nbsp; Albanian - Shqip | `sq` | 99% | [lang_sq.json](src/Languages/lang_sq.json) |
-| <img src='https://flagcdn.com/lk.svg' width=20> &nbsp; Sinhala - සිංහල | `si` | 99% | [lang_si.json](src/Languages/lang_si.json) |
-| <img src='https://flagcdn.com/si.svg' width=20> &nbsp; Slovene - Slovenščina | `sl` | 99% | [lang_sl.json](src/Languages/lang_sl.json) |
-| <img src='https://flagcdn.com/se.svg' width=20> &nbsp; Swedish - Svenska | `sv` | 99% | [lang_sv.json](src/Languages/lang_sv.json) |
-| <img src='https://flagcdn.com/in.svg' width=20> &nbsp; Tamil - தமிழ் | `ta` | 99% | [lang_ta.json](src/Languages/lang_ta.json) |
-| <img src='https://flagcdn.com/tl.svg' width=20> &nbsp; Tagalog - Tagalog | `tl` | 99% | [lang_tl.json](src/Languages/lang_tl.json) |
-| <img src='https://flagcdn.com/th.svg' width=20> &nbsp; Thai - ภาษาไทย | `th` | 99% | [lang_th.json](src/Languages/lang_th.json) |
-| <img src='https://flagcdn.com/tr.svg' width=20> &nbsp; Turkish - Türkçe | `tr` | 99% | [lang_tr.json](src/Languages/lang_tr.json) |
-| <img src='https://flagcdn.com/uk.svg' width=20> &nbsp; Ukrainian - Українська | `uk` | 99% | [lang_uk.json](src/Languages/lang_uk.json) |
-| <img src='https://flagcdn.com/pk.svg' width=20> &nbsp; Urdu - اردو | `ur` | 99% | [lang_ur.json](src/Languages/lang_ur.json) |
-| <img src='https://flagcdn.com/vn.svg' width=20> &nbsp; Vietnamese - Tiếng Việt | `vi` | 99% | [lang_vi.json](src/Languages/lang_vi.json) |
-| <img src='https://flagcdn.com/cn.svg' width=20> &nbsp; Simplified Chinese (China) | `zh_CN` | 99% | [lang_zh_CN.json](src/Languages/lang_zh_CN.json) |
-| <img src='https://flagcdn.com/tw.svg' width=20> &nbsp; Traditional Chinese (Taiwan) | `zh_TW` | 99% | [lang_zh_TW.json](src/Languages/lang_zh_TW.json) |
+| <img src='https://upload.wikimedia.org/wikipedia/commons/f/f5/Flag_of_Esperanto.svg' width=20> &nbsp; Esperanto - Esperanto | `eo` | 93% | [lang_eo.json](src/Languages/lang_eo.json) |
+| <img src='https://flagcdn.com/es.svg' width=20> &nbsp; Spanish - Castellano | `es` | 93% | [lang_es.json](src/Languages/lang_es.json) |
+| <img src='https://flagcdn.com/mx.svg' width=20> &nbsp; Spanish (Mexico) | `es-MX` | 93% | [lang_es-MX.json](src/Languages/lang_es-MX.json) |
+| <img src='https://flagcdn.com/ir.svg' width=20> &nbsp; Persian - فارسی‎ | `fa` | 93% | [lang_fa.json](src/Languages/lang_fa.json) |
+| <img src='https://flagcdn.com/fi.svg' width=20> &nbsp; Finnish - Suomi | `fi` | 93% | [lang_fi.json](src/Languages/lang_fi.json) |
+| <img src='https://flagcdn.com/ph.svg' width=20> &nbsp; Filipino - Filipino | `fil` | 93% | [lang_fil.json](src/Languages/lang_fil.json) |
+| <img src='https://flagcdn.com/fr.svg' width=20> &nbsp; French - Français | `fr` | 93% | [lang_fr.json](src/Languages/lang_fr.json) |
+| <img src='https://flagcdn.com/es.svg' width=20> &nbsp; Galician - Galego | `gl` | 93% | [lang_gl.json](src/Languages/lang_gl.json) |
+| <img src='https://flagcdn.com/in.svg' width=20> &nbsp; Gujarati - ગુજરાતી | `gu` | 93% | [lang_gu.json](src/Languages/lang_gu.json) |
+| <img src='https://flagcdn.com/in.svg' width=20> &nbsp; Hindi - हिंदी | `hi` | 93% | [lang_hi.json](src/Languages/lang_hi.json) |
+| <img src='https://flagcdn.com/hr.svg' width=20> &nbsp; Croatian - Hrvatski | `hr` | 93% | [lang_hr.json](src/Languages/lang_hr.json) |
+| <img src='https://flagcdn.com/il.svg' width=20> &nbsp; Hebrew - עִבְרִית‎ | `he` | 93% | [lang_he.json](src/Languages/lang_he.json) |
+| <img src='https://flagcdn.com/hu.svg' width=20> &nbsp; Hungarian - Magyar | `hu` | 93% | [lang_hu.json](src/Languages/lang_hu.json) |
+| <img src='https://flagcdn.com/it.svg' width=20> &nbsp; Italian - Italiano | `it` | 93% | [lang_it.json](src/Languages/lang_it.json) |
+| <img src='https://flagcdn.com/id.svg' width=20> &nbsp; Indonesian - Bahasa Indonesia | `id` | 93% | [lang_id.json](src/Languages/lang_id.json) |
+| <img src='https://flagcdn.com/jp.svg' width=20> &nbsp; Japanese - 日本語 | `ja` | 93% | [lang_ja.json](src/Languages/lang_ja.json) |
+| <img src='https://flagcdn.com/ge.svg' width=20> &nbsp; Georgian - ქართული | `ka` | 93% | [lang_ka.json](src/Languages/lang_ka.json) |
+| <img src='https://flagcdn.com/in.svg' width=20> &nbsp; Kannada - ಕನ್ನಡ | `kn` | 93% | [lang_kn.json](src/Languages/lang_kn.json) |
+| <img src='https://flagcdn.com/kr.svg' width=20> &nbsp; Korean - 한국어 | `ko` | 93% | [lang_ko.json](src/Languages/lang_ko.json) |
+| <img src='https://flagcdn.com/iq.svg' width=20> &nbsp; Kurdish - کوردی | `ku` | 93% | [lang_ku.json](src/Languages/lang_ku.json) |
+| <img src='https://flagcdn.com/lt.svg' width=20> &nbsp; Lithuanian - Lietuvių | `lt` | 93% | [lang_lt.json](src/Languages/lang_lt.json) |
+| <img src='https://flagcdn.com/mk.svg' width=20> &nbsp; Macedonian - Македонски | `mk` | 93% | [lang_mk.json](src/Languages/lang_mk.json) |
+| <img src='https://flagcdn.com/in.svg' width=20> &nbsp; Marathi - मराठी | `mr` | 93% | [lang_mr.json](src/Languages/lang_mr.json) |
+| <img src='https://flagcdn.com/no.svg' width=20> &nbsp; Norwegian (bokmål) | `nb` | 93% | [lang_nb.json](src/Languages/lang_nb.json) |
+| <img src='https://flagcdn.com/no.svg' width=20> &nbsp; Norwegian (nynorsk) | `nn` | 93% | [lang_nn.json](src/Languages/lang_nn.json) |
+| <img src='https://flagcdn.com/nl.svg' width=20> &nbsp; Dutch - Nederlands | `nl` | 93% | [lang_nl.json](src/Languages/lang_nl.json) |
+| <img src='https://flagcdn.com/pl.svg' width=20> &nbsp; Polish - Polski | `pl` | 93% | [lang_pl.json](src/Languages/lang_pl.json) |
+| <img src='https://flagcdn.com/br.svg' width=20> &nbsp; Portuguese (Brazil) | `pt_BR` | 93% | [lang_pt_BR.json](src/Languages/lang_pt_BR.json) |
+| <img src='https://flagcdn.com/pt.svg' width=20> &nbsp; Portuguese (Portugal) | `pt_PT` | 93% | [lang_pt_PT.json](src/Languages/lang_pt_PT.json) |
+| <img src='https://flagcdn.com/ro.svg' width=20> &nbsp; Romanian - Română | `ro` | 93% | [lang_ro.json](src/Languages/lang_ro.json) |
+| <img src='https://flagcdn.com/ru.svg' width=20> &nbsp; Russian - Русский | `ru` | 93% | [lang_ru.json](src/Languages/lang_ru.json) |
+| <img src='https://flagcdn.com/in.svg' width=20> &nbsp; Sanskrit - संस्कृत भाषा | `sa` | 93% | [lang_sa.json](src/Languages/lang_sa.json) |
+| <img src='https://flagcdn.com/sk.svg' width=20> &nbsp; Slovak - Slovenčina | `sk` | 93% | [lang_sk.json](src/Languages/lang_sk.json) |
+| <img src='https://flagcdn.com/rs.svg' width=20> &nbsp; Serbian - Srpski | `sr` | 93% | [lang_sr.json](src/Languages/lang_sr.json) |
+| <img src='https://flagcdn.com/al.svg' width=20> &nbsp; Albanian - Shqip | `sq` | 93% | [lang_sq.json](src/Languages/lang_sq.json) |
+| <img src='https://flagcdn.com/lk.svg' width=20> &nbsp; Sinhala - සිංහල | `si` | 93% | [lang_si.json](src/Languages/lang_si.json) |
+| <img src='https://flagcdn.com/si.svg' width=20> &nbsp; Slovene - Slovenščina | `sl` | 93% | [lang_sl.json](src/Languages/lang_sl.json) |
+| <img src='https://flagcdn.com/se.svg' width=20> &nbsp; Swedish - Svenska | `sv` | 93% | [lang_sv.json](src/Languages/lang_sv.json) |
+| <img src='https://flagcdn.com/in.svg' width=20> &nbsp; Tamil - தமிழ் | `ta` | 93% | [lang_ta.json](src/Languages/lang_ta.json) |
+| <img src='https://flagcdn.com/tl.svg' width=20> &nbsp; Tagalog - Tagalog | `tl` | 93% | [lang_tl.json](src/Languages/lang_tl.json) |
+| <img src='https://flagcdn.com/th.svg' width=20> &nbsp; Thai - ภาษาไทย | `th` | 93% | [lang_th.json](src/Languages/lang_th.json) |
+| <img src='https://flagcdn.com/tr.svg' width=20> &nbsp; Turkish - Türkçe | `tr` | 93% | [lang_tr.json](src/Languages/lang_tr.json) |
+| <img src='https://flagcdn.com/uk.svg' width=20> &nbsp; Ukrainian - Українська | `uk` | 93% | [lang_uk.json](src/Languages/lang_uk.json) |
+| <img src='https://flagcdn.com/pk.svg' width=20> &nbsp; Urdu - اردو | `ur` | 93% | [lang_ur.json](src/Languages/lang_ur.json) |
+| <img src='https://flagcdn.com/vn.svg' width=20> &nbsp; Vietnamese - Tiếng Việt | `vi` | 93% | [lang_vi.json](src/Languages/lang_vi.json) |
+| <img src='https://flagcdn.com/cn.svg' width=20> &nbsp; Simplified Chinese (China) | `zh_CN` | 93% | [lang_zh_CN.json](src/Languages/lang_zh_CN.json) |
+| <img src='https://flagcdn.com/tw.svg' width=20> &nbsp; Traditional Chinese (Taiwan) | `zh_TW` | 93% | [lang_zh_TW.json](src/Languages/lang_zh_TW.json) |
 
 ## Contributors
 

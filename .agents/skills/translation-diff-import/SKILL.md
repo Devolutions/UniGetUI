@@ -27,17 +27,17 @@ Import the translated French working copy from the export skill into the full Fr
 pwsh ./.agents/skills/translation-diff-import/scripts/import-translation-diff.ps1 \
   -TranslatedPatch ./generated/translation-diff-export/lang.diff.fr.translated.json \
   -SourcePatch ./generated/translation-diff-export/lang.diff.fr.source.json \
-  -TargetJson ./src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_fr.json \
-  -NeutralJson ./src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_en.json \
-  -OutputJson ./src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_fr.merged.json
+  -TargetJson ./src/Languages/lang_fr.json \
+  -NeutralJson ./src/Languages/lang_en.json \
+  -OutputJson ./src/Languages/lang_fr.merged.json
 ```
 
 Validate the merged output:
 
 ```powershell
 pwsh ./.agents/skills/translation-diff-import/scripts/validate-language-file.ps1 \
-  -NeutralJson ./src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_en.json \
-  -TargetJson ./src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_fr.merged.json \
+  -NeutralJson ./src/Languages/lang_en.json \
+  -TargetJson ./src/Languages/lang_fr.merged.json \
   -PatchJson ./generated/translation-diff-export/lang.diff.fr.source.json
 ```
 

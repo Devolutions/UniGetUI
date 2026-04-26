@@ -27,7 +27,7 @@ function Get-TranslationReviewLanguageReferencePath {
 }
 
 function Get-TranslationReviewLanguagesDirectory {
-    return Join-Path $repoRoot 'src\UniGetUI.Core.LanguageEngine\Assets\Languages'
+    return Join-Path $repoRoot 'src\Languages'
 }
 
 function Get-TranslationReviewLanguageReference {

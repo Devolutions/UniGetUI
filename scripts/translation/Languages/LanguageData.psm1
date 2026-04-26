@@ -77,7 +77,7 @@ function Get-LanguagesReferenceJsonPath {
 }
 
 function Get-LanguagesDirectoryPath {
-    return Join-Path (Get-ProjectRoot) 'src\UniGetUI.Core.LanguageEngine\Assets\Languages'
+    return Join-Path (Get-ProjectRoot) 'src\Languages'
 }
 
 function Read-JsonDictionary {
@@ -333,7 +333,7 @@ function Get-MarkdownTranslationsTable {
         }
 
         if ($IncludeFileColumn.IsPresent) {
-            $relativeLanguageFilePath = (Join-Path 'src/UniGetUI.Core.LanguageEngine/Assets/Languages' ("lang_{0}.json" -f $languageCode)) -replace '\\', '/'
+            $relativeLanguageFilePath = (Join-Path 'src/Languages' ("lang_{0}.json" -f $languageCode)) -replace '\\', '/'
             $row.Add("[lang_$languageCode.json]($relativeLanguageFilePath)")
         }
 

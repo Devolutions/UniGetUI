@@ -11,49 +11,6 @@
         <None Remove="Assets\Data\LanguagesReference.json" />
         <None Remove="Assets\Data\TranslatedPercentages.json" />
         <None Remove="Assets\Data\Translators.json" />
-        <None Remove="Assets\Languages\lang_ar.json" />
-        <None Remove="Assets\Languages\lang_bg.json" />
-        <None Remove="Assets\Languages\lang_bn.json" />
-        <None Remove="Assets\Languages\lang_ca.json" />
-        <None Remove="Assets\Languages\lang_cs.json" />
-        <None Remove="Assets\Languages\lang_da.json" />
-        <None Remove="Assets\Languages\lang_de.json" />
-        <None Remove="Assets\Languages\lang_el.json" />
-        <None Remove="Assets\Languages\lang_en.json" />
-        <None Remove="Assets\Languages\lang_es.json" />
-        <None Remove="Assets\Languages\lang_fa.json" />
-        <None Remove="Assets\Languages\lang_fi.json" />
-        <None Remove="Assets\Languages\lang_fr.json" />
-        <None Remove="Assets\Languages\lang_he.json" />
-        <None Remove="Assets\Languages\lang_hi.json" />
-        <None Remove="Assets\Languages\lang_hr.json" />
-        <None Remove="Assets\Languages\lang_hu.json" />
-        <None Remove="Assets\Languages\lang_id.json" />
-        <None Remove="Assets\Languages\lang_it.json" />
-        <None Remove="Assets\Languages\lang_ja.json" />
-        <None Remove="Assets\Languages\lang_ko.json" />
-        <None Remove="Assets\Languages\lang_mk.json" />
-        <None Remove="Assets\Languages\lang_nb.json" />
-        <None Remove="Assets\Languages\lang_nl.json" />
-        <None Remove="Assets\Languages\lang_nn.json" />
-        <None Remove="Assets\Languages\lang_pl.json" />
-        <None Remove="Assets\Languages\lang_pt_BR.json" />
-        <None Remove="Assets\Languages\lang_pt_PT.json" />
-        <None Remove="Assets\Languages\lang_ro.json" />
-        <None Remove="Assets\Languages\lang_ru.json" />
-        <None Remove="Assets\Languages\lang_si.json" />
-        <None Remove="Assets\Languages\lang_sl.json" />
-        <None Remove="Assets\Languages\lang_sr.json" />
-        <None Remove="Assets\Languages\lang_sv.json" />
-        <None Remove="Assets\Languages\lang_sq.json" />
-        <None Remove="Assets\Languages\lang_tl.json" />
-        <None Remove="Assets\Languages\lang_th.json" />
-        <None Remove="Assets\Languages\lang_tr.json" />
-        <None Remove="Assets\Languages\lang_uk.json" />
-        <None Remove="Assets\Languages\lang_ur.json" />
-        <None Remove="Assets\Languages\lang_vi.json" />
-        <None Remove="Assets\Languages\lang_zh_CN.json" />
-        <None Remove="Assets\Languages\lang_zh_TW.json" />
     </ItemGroup>
 
     <ItemGroup>
@@ -66,7 +23,8 @@
         <Content Include="Assets\Data\Translators.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
-        <Content Include="Assets\Languages\lang_*.json">
+        <Content Include="..\Languages\lang_*.json">
+            <Link>Assets\Languages\%(Filename)%(Extension)</Link>
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
     </ItemGroup>

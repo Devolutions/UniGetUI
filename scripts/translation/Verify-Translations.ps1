@@ -18,7 +18,7 @@ function Resolve-LanguagesDirectory {
         return [System.IO.Path]::GetFullPath($LanguagesDirectory)
     }
 
-    return Join-Path (Get-RepositoryRoot) 'src\UniGetUI.Core.LanguageEngine\Assets\Languages'
+    return Join-Path (Get-RepositoryRoot) 'src\Languages'
 }
 
 function Read-JsonObject {

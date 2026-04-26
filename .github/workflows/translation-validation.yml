@@ -6,7 +6,7 @@ on:
     paths:
       - 'scripts/translation/**'
       - '.agents/skills/translation-*/scripts/**'
-      - 'src/UniGetUI.Core.LanguageEngine/Assets/Languages/**'
+      - 'src/Languages/**'
       - 'src/UniGetUI.Core.LanguageEngine/Assets/Data/LanguagesReference.json'
       - 'src/UniGetUI.Core.LanguageEngine/Assets/Data/TranslatedPercentages.json'
       - 'src/UniGetUI.Core.LanguageEngine/Assets/Data/Translators.json'
@@ -18,7 +18,7 @@ on:
     paths:
       - 'scripts/translation/**'
       - '.agents/skills/translation-*/scripts/**'
-      - 'src/UniGetUI.Core.LanguageEngine/Assets/Languages/**'
+      - 'src/Languages/**'
       - 'src/UniGetUI.Core.LanguageEngine/Assets/Data/LanguagesReference.json'
       - 'src/UniGetUI.Core.LanguageEngine/Assets/Data/TranslatedPercentages.json'
       - 'src/UniGetUI.Core.LanguageEngine/Assets/Data/Translators.json'

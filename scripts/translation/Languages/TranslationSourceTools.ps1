@@ -36,7 +36,7 @@ function Resolve-EnglishLanguageFilePath {
         return Get-FullPath -Path $EnglishFilePath
     }
 
-    return Join-Path $ResolvedRepositoryRoot 'src\UniGetUI.Core.LanguageEngine\Assets\Languages\lang_en.json'
+    return Join-Path $ResolvedRepositoryRoot 'src\Languages\lang_en.json'
 }
 
 function Test-TranslationSourceFileIncluded {
@@ -59,7 +59,7 @@ function Test-TranslationSourceFileIncluded {
         }
     }
 
-    if ($relativePath -like 'src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_*.json') {
+    if ($relativePath -like 'src/Languages/lang_*.json') {
         return $false
     }
 

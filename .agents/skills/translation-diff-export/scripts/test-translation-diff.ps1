@@ -10,8 +10,8 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'TranslationDiff.JsonTools.ps1')
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..\..'))
-$neutralPath = Join-Path $repoRoot 'src\UniGetUI.Core.LanguageEngine\Assets\Languages\lang_en.json'
-$targetPath = Join-Path $repoRoot ('src\UniGetUI.Core.LanguageEngine\Assets\Languages\lang_{0}.json' -f $Language)
+$neutralPath = Join-Path $repoRoot 'src\Languages\lang_en.json'
+$targetPath = Join-Path $repoRoot ('src\Languages\lang_{0}.json' -f $Language)
 $exportScript = Join-Path $PSScriptRoot 'export-translation-diff.ps1'
 $importScript = Join-Path $repoRoot '.agents\skills\translation-diff-import\scripts\import-translation-diff.ps1'
 $validateScript = Join-Path $repoRoot '.agents\skills\translation-diff-import\scripts\validate-language-file.ps1'

@@ -30,7 +30,8 @@ if (-not (Test-Path -Path $resolvedLanguagesDirectory -PathType Container)) {
 $englishMap = Read-OrderedJsonMap -Path $resolvedEnglishFilePath
 $englishSections = Split-TranslationMapAtBoundary -Map $englishMap
 if (-not $englishSections.HasBoundary) {
-    throw 'The English translation file must contain the legacy boundary marker before locale files can be reordered.'
+    Write-Output 'The English translation file does not contain a legacy boundary marker. No reordering needed.'
+    return
 }
 
 $englishActiveOrder = @($englishSections.ActiveMap.Keys)

@@ -251,7 +251,7 @@ namespace UniGetUI.Core.Language
             try
             {
                 Uri NewFile = new(
-                    "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_"
+                    "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/src/Languages/lang_"
                         + LangKey
                         + ".json"
                 );

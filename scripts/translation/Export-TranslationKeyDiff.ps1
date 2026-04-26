@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 
 $resolvedRepositoryRoot = Resolve-TranslationSyncRepositoryRoot -RepositoryRoot $RepositoryRoot
 $resolvedTranslationFilePath = if ([string]::IsNullOrWhiteSpace($TranslationFilePath)) {
-    Join-Path $resolvedRepositoryRoot 'src\UniGetUI.Core.LanguageEngine\Assets\Languages\lang_en.json'
+    Join-Path $resolvedRepositoryRoot 'src\Languages\lang_en.json'
 }
 else {
     Get-FullPath -Path $TranslationFilePath

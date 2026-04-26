@@ -76,7 +76,7 @@ File-based settings via `Settings.Get(Settings.K.*)` / `Settings.Set(Settings.K.
 Use `Logger.Info()`, `Logger.Warn()`, `Logger.Error()`, `Logger.Debug()`, `Logger.ImportantInfo()` from `UniGetUI.Core.Logging`. Accepts both `string` and `Exception` parameters.
 
 ### Localization
-Use `CoreTools.Translate("text")` for all user-facing strings. Parameterized: `CoreTools.Translate("{0} packages found", count)`. In XAML, use the `TranslatedTextBlock` control. Translation assets live under `src/UniGetUI.Core.LanguageEngine/Assets/`; do not assume Tolgee-based automation exists in this repository.
+Use `CoreTools.Translate("text")` for all user-facing strings. Parameterized: `CoreTools.Translate("{0} packages found", count)`. In XAML, use the `TranslatedTextBlock` control. Translation assets live under `src/Languages/`; do not assume Tolgee-based automation exists in this repository.
 
 ### Naming
 - Types, methods, properties: **PascalCase**

@@ -40,7 +40,7 @@ Generate a Markdown review report for French:
 
 ```powershell
 pwsh ./.agents/skills/translation-review/scripts/review-translation-json.ps1 \
-  -TargetJson ./src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_fr.json \
+  -TargetJson ./src/Languages/lang_fr.json \
   -Language fr
 ```
 
@@ -48,7 +48,7 @@ Generate a report for Ukrainian and include script-detection checks:
 
 ```powershell
 pwsh ./.agents/skills/translation-review/scripts/review-translation-json.ps1 \
-  -TargetJson ./src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_ua.json \
+  -TargetJson ./src/Languages/lang_ua.json \
   -Language ua
 ```
 
@@ -56,7 +56,7 @@ Generate a flagged-only JSON report with no cross-language table:
 
 ```powershell
 pwsh ./.agents/skills/translation-review/scripts/review-translation-json.ps1 \
-  -TargetJson ./src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_de.json \
+  -TargetJson ./src/Languages/lang_de.json \
   -Language de \
   -OutputFormat Json \
   -FlaggedOnly
@@ -64,7 +64,7 @@ pwsh ./.agents/skills/translation-review/scripts/review-translation-json.ps1 \
 
 Optional parameters:
 
-- `-NeutralJson` — defaults to `src/UniGetUI.Core.LanguageEngine/Assets/Languages/lang_en.json`
+- `-NeutralJson` — defaults to `src/Languages/lang_en.json`
 - `-ComparisonLanguages` — languages to include in the comparison table; defaults to other checked-in `lang_*.json` files
 - `-OutputPath` — defaults to `generated/translation-review/review.<lang>.md`
 - `-OutputFormat` — `Markdown` (default) or `Json`

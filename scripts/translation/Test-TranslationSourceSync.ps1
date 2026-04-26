@@ -15,7 +15,7 @@ $tempRoot = Join-Path $env:TEMP ('translation-source-sync-{0}' -f [System.Guid]:
 
 try {
     $sourceDir = Join-Path $tempRoot 'src\Sample'
-    $languageDir = Join-Path $tempRoot 'src\UniGetUI.Core.LanguageEngine\Assets\Languages'
+    $languageDir = Join-Path $tempRoot 'src\Languages'
     New-Item -Path $sourceDir -ItemType Directory -Force | Out-Null
     New-Item -Path $languageDir -ItemType Directory -Force | Out-Null
 

@@ -45,20 +45,9 @@ pwsh ./.agents/skills/translation-diff-export/scripts/export-translation-diff.ps
   -BaseRef origin/main
 ```
 
-Export only the active section above the legacy boundary marker:
-
-```powershell
-pwsh ./.agents/skills/translation-diff-export/scripts/export-translation-diff.ps1 \
-  -NeutralJson ./src/Languages/lang_en.json \
-  -TargetJson ./src/Languages/lang_fr.json \
-  -Language fr \
-  -ActiveOnly
-```
-
 Optional parameters:
 
 - `-OutputDir` (default: `generated/translation-diff-export`)
-- `-ActiveOnly` (limits `.source.json` and `.reference.json` to keys above `__LEGACY_TRANSLATION_KEYS_BELOW__`)
 - `-KeepIntermediate`
 
 Run the built-in smoke test:

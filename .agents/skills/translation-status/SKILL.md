@@ -1,6 +1,6 @@
 ---
 name: translation-status
-description: Analyzes checked-in UniGetUI language files to calculate translation percentages, surface untranslated coverage data, and generate localization status reports. Boundary-aware: completion is computed from the active English section above the legacy marker.
+description: Analyzes checked-in UniGetUI language files to calculate translation percentages, surface untranslated coverage data, and generate localization status reports.
 ---
 
 # translation status
@@ -45,15 +45,13 @@ pwsh ./.agents/skills/translation-status/scripts/get-translation-status.ps1 \
 - `Code`: language code
 - `Language`: display name
 - `Completion`: computed completion percentage using English active keys only
-- `Translated`, `Missing`, `Empty`, `SourceEqual`, `Extra`: per-language entry counts for the active baseline
-- `Legacy`: count of locale keys stored below the legacy boundary marker
+- `Translated`, `Missing`, `Empty`, `SourceEqual`, `Extra`: per-language entry counts
 - `Stored` and `Delta`: stored percentage metadata and difference from the computed result
 
 ## Notes
 
 - The script treats source-equal values as untranslated for non-English languages.
-- When `lang_en.json` contains the legacy boundary marker, completion excludes legacy compatibility keys below the marker.
-- `Extra` excludes shared English legacy keys and only counts locale-only keys not present in English active or legacy sections.
+- `Extra` counts locale-only keys not present in the English file.
 - Use `-IncludeEnglish` if you want the `en` row included in the report.
 - Use `-OnlyIncomplete` to focus on languages that still need work.
 - For the full parameter surface, inspect `../../../../scripts/translation/Get-TranslationStatus.ps1`.

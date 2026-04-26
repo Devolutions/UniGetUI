@@ -1,21 +1,20 @@
 ---
 name: translation-source-sync
-description: Synchronizes the UniGetUI English language file with source-code usage, identifies missing translation keys, removes unused entries, reports localization drift, and can reorder locale files to the English legacy-boundary layout. Use when the user asks to sync language files, missing translations, i18n drift, or align locale file ordering with English.
+description: Synchronizes the UniGetUI English language file with source-code usage, identifies missing translation keys, removes unused entries, reports localization drift, and can reorder locale files to match the English key ordering. Use when the user asks to sync language files, missing translations, i18n drift, or align locale file ordering with English.
 ---
 
 # translation source sync
 
-Use this skill when UniGetUI source code changed and you need to keep [src/Languages/lang_en.json](src/Languages/lang_en.json) aligned with the strings actually used by the application, or when you need downstream locale files reordered to match the English active and legacy sections.
+Use this skill when UniGetUI source code changed and you need to keep [src/Languages/lang_en.json](src/Languages/lang_en.json) aligned with the strings actually used by the application, or when you need downstream locale files reordered to match the English key ordering.
 
-It scans supported C#, WinUI XAML, and Avalonia AXAML patterns, finds missing English keys, removes unused entries, reports translation-source warnings that still need manual cleanup, and can align locale file ordering to the English legacy-boundary layout.
+It scans supported C#, WinUI XAML, and Avalonia AXAML patterns, finds missing English keys, removes unused entries, reports translation-source warnings that still need manual cleanup, and can align locale file ordering to the English layout.
 
 ## Scope
 
 - Extract literal translation keys from supported UniGetUI source patterns.
 - Add new English keys missing from `lang_en.json`.
 - Remove English keys that are no longer used.
-- Preserve legacy English keys below the reserved boundary marker when the boundary workflow is enabled.
-- Reorder non-English locale files to match the English active and legacy key ordering.
+- Reorder non-English locale files to match the English key ordering.
 - Warn about interpolated `CoreTools.Translate($"...")` calls that are not synchronized automatically.
 - Leave downstream language propagation to the existing translation diff workflow.
 
@@ -56,7 +55,7 @@ Check whether the English file is out of sync without writing changes:
 pwsh ./.agents/skills/translation-source-sync/scripts/sync-translation-sources.ps1 -CheckOnly
 ```
 
-Reorder locale files to match the English active section and legacy-boundary tail:
+Reorder locale files to match the English key ordering:
 
 ```powershell
 pwsh ./.agents/skills/translation-source-sync/scripts/set-translation-boundary-order.ps1
@@ -79,7 +78,7 @@ pwsh ./.agents/skills/translation-source-sync/scripts/test-translation-source-sy
 1. Run translation source sync after changing any translatable source string.
 2. If `-CheckOnly` reports drift, run the full sync to rewrite `lang_en.json`.
 3. Review warnings for interpolated translation calls and convert them to stable literals or add the missing English keys manually when needed.
-4. If you are using the legacy-boundary workflow, run `pwsh ./.agents/skills/translation-source-sync/scripts/set-translation-boundary-order.ps1` to align locale ordering with English.
+4. Run `pwsh ./.agents/skills/translation-source-sync/scripts/set-translation-boundary-order.ps1` to align locale ordering with English.
 5. Run `pwsh ./scripts/translation/Verify-Translations.ps1` to confirm the language files still validate cleanly.
 6. Run `pwsh ./.agents/skills/translation-source-sync/scripts/test-translation-source-sync.ps1` if you changed the sync workflow itself.
 7. Export changed work for translators with [translation-diff-export](../translation-diff-export/SKILL.md).
@@ -88,5 +87,5 @@ pwsh ./.agents/skills/translation-source-sync/scripts/test-translation-source-sy
 
 - Existing English values are preserved for retained keys; newly added English entries default to `key == value`.
 - The sync script preserves current key order for retained entries and appends newly discovered keys deterministically.
-- The locale reorder script follows English as the canonical order and moves unmapped locale-only keys to the legacy section after the reserved boundary marker.
+- The locale reorder script follows English as the canonical order and appends unmapped locale-only keys at the end.
 - The smoke test uses a temporary synthetic repo so it does not mutate the checked-in language files.

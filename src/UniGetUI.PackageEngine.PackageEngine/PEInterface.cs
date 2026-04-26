@@ -71,11 +71,11 @@ namespace UniGetUI.PackageEngine
                     managers.Add(Apt);
                 if (unknown || families.Contains("fedora") || families.Contains("rhel") || families.Contains("centos"))
                     managers.Add(Dnf);
-            if (unknown || families.Contains("arch"))
-                managers.Add(Pacman);
-            if (unknown || families.Contains("ubuntu") || families.Contains("debian") || families.Contains("fedora") || families.Contains("arch"))
-                managers.Add(Snap);
-        }
+                if (unknown || families.Contains("arch"))
+                    managers.Add(Pacman);
+                if (unknown || families.Contains("ubuntu") || families.Contains("debian") || families.Contains("fedora") || families.Contains("arch"))
+                    managers.Add(Snap);
+            }
 #endif
             return [.. managers];
         }

@@ -12,7 +12,7 @@ public partial class AboutPageViewModel : ViewModelBase
     public string DisclaimerTitle { get; } = CoreTools.Translate("Disclaimer");
 
     public string DisclaimerMessage { get; } = CoreTools.Translate(
-        "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.");
+        "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.");
 
     [RelayCommand]
     private static void OpenHomepage() =>

@@ -24,6 +24,13 @@
         FontWeight="Bold"
         Text="About UniGetUI"
       />
+      <widgets:TranslatedTextBlock
+        Margin="0,-4,0,4"
+        FontSize="14"
+        FontWeight="SemiBold"
+        Opacity="0.75"
+        Text="UniGetUI by Devolutions"
+      />
       <widgets:TranslatedTextBlock Text="UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers." />
       <TextBlock
         x:Name="VersionText"

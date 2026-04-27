@@ -73,7 +73,8 @@ public partial class SidebarViewModel : ViewModelBase
     // ─── Navigation ──────────────────────────────────────────────────────────
     public event EventHandler<PageType>? NavigationRequested;
 
-    public string VersionLabel { get; } = CoreTools.Translate("UniGetUI Version {0}", CoreData.VersionName);
+    public string VersionLabel { get; } =
+        CoreTools.Translate("UniGetUI Version {0} by Devolutions", CoreData.VersionName);
 
     [RelayCommand]
     public void RequestNavigation(string? pageName)

@@ -16,6 +16,12 @@
                        FontSize="24"
                        FontWeight="Bold"/>
 
+            <TextBlock Text="{t:Translate UniGetUI by Devolutions}"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       Opacity="0.75"
+                       Margin="0,-4,0,4"/>
+
             <TextBlock Text="{t:Translate Text='UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.'}"
                        TextWrapping="Wrap"/>
 

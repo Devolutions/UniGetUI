@@ -21,7 +21,7 @@ namespace UniGetUI.Interface.Pages.AboutPages
             );
             DisclaimerBanner.Title = CoreTools.Translate("Disclaimer");
             DisclaimerBanner.Message = CoreTools.Translate(
-                "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project."
+                "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers."
             );
         }
     }

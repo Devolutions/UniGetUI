@@ -7,6 +7,7 @@ using System.Runtime.Versioning;
 [assembly: AssemblyDescription("UniGetUI")]
 [assembly: AssemblyTitle("UniGetUI")]
 [assembly: AssemblyDefaultAlias("UniGetUI")]
+[assembly: AssemblyCompany("Devolutions Inc.")]
 [assembly: AssemblyCopyright("Copyright 2021-2026 Devolutions Inc.")]
 [assembly: AssemblyVersion("3.3.7.0")]
 [assembly: AssemblyFileVersion("3.3.7.0")]

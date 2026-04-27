@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Automation;
@@ -27,6 +28,12 @@ public static class AvaloniaOperationRegistry
     /// <summary>Bindable view-models shown in the operations panel.</summary>
     public static readonly AvaloniaList<OperationViewModel> OperationViewModels = new();
 
+    // Mirrors WinUI's MainApp.Tooltip.ErrorsOccurred / RestartRequired
+    private static readonly ConcurrentDictionary<AbstractOperation, int> _errorCounts = new();
+    private static int _errorsOccurred;
+    public static int ErrorsOccurred => _errorsOccurred;
+    public static bool RestartRequired { get; set; }
+
     /// <summary>
     /// Register an operation and create its UI view-model.
     /// Must be called before <c>operation.MainThread()</c>.
@@ -51,6 +58,9 @@ public static class AvaloniaOperationRegistry
 
         op.OperationSucceeded += (_, _) =>
         {
+            if (_errorCounts.TryRemove(op, out int errCount) && errCount > 0)
+                Interlocked.Add(ref _errorsOccurred, -errCount);
+
             if (!Settings.Get(Settings.K.MaintainSuccessfulInstalls))
                 _ = RemoveAfterDelayAsync(op, milliseconds: 4000);
 
@@ -64,6 +74,9 @@ public static class AvaloniaOperationRegistry
 
         op.OperationFailed += (_, _) =>
         {
+            _errorCounts.AddOrUpdate(op, 1, (_, n) => n + 1);
+            Interlocked.Increment(ref _errorsOccurred);
+
             _ = Task.Run(() => AppendOperationHistory(op));
             Dispatcher.UIThread.Post(() => ShowOperationFailureNotification(op));
             Dispatcher.UIThread.Post(UpdateTrayStatus);
@@ -83,10 +96,14 @@ public static class AvaloniaOperationRegistry
     /// <summary>Remove a view-model (and its backing operation) from the panel. Called by the Close button.</summary>
     public static void Remove(OperationViewModel vm)
     {
+        if (_errorCounts.TryRemove(vm.Operation, out int errCount) && errCount > 0)
+            Interlocked.Add(ref _errorsOccurred, -errCount);
+
         Dispatcher.UIThread.Post(() =>
         {
             OperationViewModels.Remove(vm);
             Operations.Remove(vm.Operation);
+            UpdateTrayStatus();
         });
         while (AbstractOperation.OperationQueue.Remove(vm.Operation)) ;
     }
@@ -94,11 +111,16 @@ public static class AvaloniaOperationRegistry
     private static async Task RemoveAfterDelayAsync(AbstractOperation op, int milliseconds)
     {
         await Task.Delay(milliseconds);
+
+        if (_errorCounts.TryRemove(op, out int errCount) && errCount > 0)
+            Interlocked.Add(ref _errorsOccurred, -errCount);
+
         Dispatcher.UIThread.Post(() =>
         {
             var vm = OperationViewModels.FirstOrDefault(v => v.Operation == op);
             if (vm is not null) OperationViewModels.Remove(vm);
             Operations.Remove(op);
+            UpdateTrayStatus();
         });
     }
 

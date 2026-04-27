@@ -149,7 +149,10 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             upgLoader.PackagesChanged += (_, _) =>
                 Dispatcher.UIThread.Post(() =>
-                    Sidebar.UpdatesBadgeCount = upgLoader.Count());
+                {
+                    Sidebar.UpdatesBadgeCount = upgLoader.Count();
+                    MainWindow.Instance?.UpdateSystemTrayStatus();
+                });
             Sidebar.UpdatesBadgeCount = upgLoader.Count();
             // Notifications and auto-update logic are handled by SoftwareUpdatesPage.WhenPackagesLoaded
         }

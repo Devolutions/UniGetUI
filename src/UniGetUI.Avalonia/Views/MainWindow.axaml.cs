@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Core.Logging;
@@ -36,6 +37,8 @@ public enum PageType
 public partial class MainWindow : Window
 {
     private bool _focusSidebarSelectionOnNextPageChange;
+    private WindowsTrayService? _trayService;
+    private bool _allowClose;
 
     public enum RuntimeNotificationLevel
     {
@@ -57,6 +60,30 @@ public partial class MainWindow : Window
 
         KeyDown += Window_KeyDown;
         ViewModel.CurrentPageChanged += OnCurrentPageChanged;
+
+        if (OperatingSystem.IsWindows())
+        {
+            _trayService = new WindowsTrayService(this);
+            _trayService.UpdateStatus();
+        }
+    }
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        if (!_allowClose && OperatingSystem.IsWindows() && !Settings.Get(Settings.K.DisableSystemTray))
+        {
+            e.Cancel = true;
+            Hide();
+            return;
+        }
+
+        AvaloniaAutoUpdater.ReleaseLockForAutoupdate_Window = true;
+        if (OperatingSystem.IsWindows())
+        {
+            _trayService?.Dispose();
+            _trayService = null;
+        }
+        base.OnClosing(e);
     }
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
@@ -217,7 +244,8 @@ public partial class MainWindow : Window
 
     public void UpdateSystemTrayStatus()
     {
-        // TODO: implement tray status update
+        if (OperatingSystem.IsWindows())
+            _trayService?.UpdateStatus();
     }
 
     public void ShowRuntimeNotification(string title, string message, RuntimeNotificationLevel level) =>
@@ -233,6 +261,7 @@ public partial class MainWindow : Window
 
     public void QuitApplication()
     {
+        _allowClose = true;
         (global::Avalonia.Application.Current?.ApplicationLifetime
             as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
     }

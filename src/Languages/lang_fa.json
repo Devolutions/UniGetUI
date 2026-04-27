@@ -550,6 +550,7 @@
   "extracted": "استخراج شده",
   "Scoop package": "بسته Scoop",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "مخزن عالی از ابزارهای ناشناخته اما کاربردی و بسته‌های جالب دیگر.<br> شامل: <b> ابزارها، برنامه‌های خط فرمان، نرم‌افزارهای عمومی (نیازمند extras bucket) </b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "مدیر بسته جهانی لینوکس توسط Canonical.<br>شامل: <b>بسته‌های Snap از فروشگاه Snapcraft</b>",
   "library": "کتابخانه",
   "feature": "ویژگی",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "یک برنامه مدیریتی محبوب برای کتابخانه‌های C/C++. پر از کتابخانه‌ها و ابزارهای مرتبط با C/C++<br> شامل می‌شود: <b> کتابخانه‌ها و ابزارهای C/C++</b> ",

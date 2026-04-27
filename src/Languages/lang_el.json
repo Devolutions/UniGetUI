@@ -550,6 +550,7 @@
   "extracted": "αποσυμπιεσμένο",
   "Scoop package": "Πακέτο Scoop",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "Εξαιρετικό αποθετήριο άγνωστων αλλά χρήσιμων βοηθητικών προγραμμάτων και άλλων ενδιαφερόντων πακέτων.<br>Περιέχει: <b>Βοηθητικά προγράμματα, Προγράμματα γραμμής εντολών, Γενικό λογισμικό (απαιτείται επιπλέον πακέτο)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Ο καθολικός διαχειριστής πακέτων Linux από την Canonical.<br>Περιέχει: <b>πακέτα Snap από το κατάστημα Snapcraft</b>",
   "library": "βιβλιοθήκη",
   "feature": "χαρακτηριστικό",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "Ενας δημοφιλής διαχειριστής βιβλιοθήκης C/C++. Πλήρεις βιβλιοθήκες C/C++ και άλλα βοηθητικά προγράμματα που σχετίζονται με C/C++<br>Περιέχει: <b>Βιβλιοθήκες C/C++ και σχετικά βοηθητικά προγράμματα</b>",

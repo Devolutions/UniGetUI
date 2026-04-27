@@ -550,6 +550,7 @@
   "extracted": "מחולץ",
   "Scoop package": "חבילת Scoop",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "מאגר נהדר של כלי עזר לא ידועים אך שימושיים וחבילות מעניינות אחרות.<br>מכיל: <b>כלי עזר, תוכניות שורת פקודה, תוכנה כללית (נדרשת דלי תוספות)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "מנהל החבילות האוניברסלי של Linux מבית Canonical.<br>מכיל: <b>חבילות Snap מחנות Snapcraft</b>",
   "library": "ספרייה",
   "feature": "תכונה",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "מנהל חבילות פופולרי עבור ספריות C/C++. כולל ספריות C/C++ וכלים נוספים הקשורים ל-C/C++<br>מכיל: <b>ספריות C/C++ וכלים נלווים</b>",

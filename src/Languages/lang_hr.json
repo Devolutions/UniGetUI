@@ -550,6 +550,7 @@
   "extracted": "izvučeno",
   "Scoop package": "Scoop paket",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "Sjajno skladište nepoznatih, ali korisnih uslužnih programa i drugih zanimljivih paketa.<br>Sadrži: <b>Uslužne programe, programe naredbenog retka, opći softver (potrebno je dodatno spremište)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Univerzalni upravitelj paketa za Linux od Canonicala.<br>Sadrži: <b>Snap pakete iz Snapcraft trgovine</b>",
   "library": "biblioteka",
   "feature": "značajka",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "Popularni upravitelj biblioteka za C/C++. Puni C/C++ biblioteka i drugih alata povezanih s C/C++.\nSadrži: C/C++ biblioteke i povezane alate.",

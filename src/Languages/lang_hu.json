@@ -550,6 +550,7 @@
   "extracted": "kivont",
   "Scoop package": "Scoop csomag",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "Ismeretlen, de hasznos segédprogramok és más érdekes csomagok nagyszerű tárháza.<br>Tartalma: <b>Segédprogramok, Parancssoros programok, Általános szoftverek (extra bucket szükséges)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "A Canonical univerzális Linux csomagkezelője.<br>Tartalmaz: <b>Snap csomagok a Snapcraft áruházból</b>",
   "library": "könyvtár",
   "feature": "funkció",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "Egy népszerű C/C++ könyvtár kezelő. Tele van C/C++ könyvtárakkal és egyéb C/C++hoz kapcsolódó segésprogramokkal<br>Tartalma: <b>C/C++ könyvtárak és kapcsolódó segépdprogramok</b>",

@@ -550,6 +550,7 @@
   "extracted": "निकाला गया",
   "Scoop package": "स्कूप पैकेज",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "अनजान लेकिन काम की यूटिलिटीज़ और दूसरे दिलचस्प पैकेज का शानदार रिपॉजिटरी। <br>रोकना: <b>यूटिलिटीज़, कमांड-लाइन प्रोग्राम, जनरल सॉफ्टवेयर (एक्स्ट्रा बकेट ज़रूरी है) </b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Canonical द्वारा सार्वभौमिक Linux पैकेज प्रबंधक।<br>शामिल हैं: <b>Snapcraft store से Snap पैकेज</b>",
   "library": "लाइब्रेरी",
   "feature": "सुविधा",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "एक लोकप्रिय C/C++ लाइब्रेरी मैनेजर। C/C++ लाइब्रेरी और अन्य C/C++-संबंधित उपयोगिताओं से भरपूर।\nइसमें शामिल हैं:\nC/C++ लाइब्रेरी और संबंधित उपयोगिताएँ",

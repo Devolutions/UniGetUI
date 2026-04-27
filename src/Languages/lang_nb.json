@@ -550,6 +550,7 @@
   "extracted": "utpakket",
   "Scoop package": "Scoop-pakke",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "Flott pakkehåndterer med ukjente men nyttige verktøy og andre interessante pakker.<br>Inneholder:<b>Verktøy, kommandolinjeprogrammer, generell programvare (ekstra buckets trengs)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Den universelle Linux-pakkebehandleren fra Canonical.<br>Inneholder: <b>Snap-pakker fra Snapcraft-butikken</b>",
   "library": "bibliotek",
   "feature": "funksjon",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "En populær C/C++-bibliotekhåndterer. Full av C/C++-biblioteker og andre relaterte verktøy.<br>Inneholder: <b>C/C++-biblioteker og relaterte verktøy</b>",

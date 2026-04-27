@@ -550,6 +550,7 @@
   "extracted": "extrahováno",
   "Scoop package": "Scoop balíček",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "Obsáhlý repozitář neznámých, ale přesto užitečných nástrojů a dalších zajímavých balíčků.<br>Obsahuje: <b>Nástroje, programy příkazové řádky a obecný software (nuné extra repozitáře)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Univerzální správce balíčků pro Linux od Canonical.<br>Obsahuje: <b>balíčky Snap z obchodu Snapcraft</b>",
   "library": "knihovna",
   "feature": "funkce",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "Oblíbený správce knihoven v jazyce C/C++. Plný knihoven a dalších nástrojů souvisejících s C/C++.<br>Obsahuje: <b>C/C++ knihovny a související nástroje</b>",

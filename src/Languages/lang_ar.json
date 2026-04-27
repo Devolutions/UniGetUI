@@ -550,6 +550,7 @@
   "extracted": "تم استخراجه",
   "Scoop package": "حزم Scoop",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "حزمة عظيمة من الأدوات المجهولة ولكن مفيدة، بالإضافة إلى حزمات مثيرة للإهتمام.<br>تحتوي: </br>أدوات، سطور أوامر، برامج، وبرمجيات عامة (بحاجة لحاوية إضافية",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "مدير الحزم العالمي لنظام Linux من Canonical.<br>يحتوي على: <b>حزم Snap من متجر Snapcraft</b>",
   "library": "مكتبة",
   "feature": "ميزة",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "مدير مكتبات ++C/C شائع الاستخدام. مليء بمكتبات ++C/C وأدوات مساعدة أخرى متعلقة بـ ++C/C<br>يحتوي على: <b>مكتبات ++C/C وأدوات مساعدة ذات صلة</b>",

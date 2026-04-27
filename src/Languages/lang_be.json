@@ -547,6 +547,7 @@
   "extracted": "распакавана",
   "Scoop package": "Пакет Scoop",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "Выдатны рэпазітарый карысных утыліт і цікавых пакетаў.<br>Змяшчае: <b>Утыліты, камандныя праграмы, праграмнае забеспячэнне (патрабуецца extras bucket)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Універсальны мэнэджар пакетаў Linux ад Canonical.<br>Змяшчае: <b>Пакеты Snap з крамы Snapcraft</b>",
   "library": "бібліятэка",
   "feature": "функцыя",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "Папулярны мэнэджар бібліятэк C/C++. Мноства бібліятэк і ўтыліт C/C++<br>Змяшчае: <b>Бібліятэкі і ўтыліты C/C++</b>",

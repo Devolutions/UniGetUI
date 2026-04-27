@@ -6,15 +6,15 @@ namespace UniGetUI.Core.Language.Tests
     public class LanguageEngineTests
     {
         [Theory]
-        [InlineData("ca", "Fes una còpia de seguretat dels paquets instal·lats")]
-        [InlineData("es", "Respaldar paquetes instalados")]
-        [InlineData("uk", "Резервне копіювання встановлених пакетів")]
+        [InlineData("ca", "Subsistema Android")]
+        [InlineData("es", "Subsistema de Android")]
+        [InlineData("uk", "Підсистема Android")]
         public void TestLoadingLanguage(string language, string translation)
         {
             LanguageEngine engine = new();
 
             engine.LoadLanguage(language);
-            Assert.Equal(translation, engine.Translate("Backup installed packages"));
+            Assert.Equal(translation, engine.Translate("Android Subsystem"));
         }
 
         [Fact]

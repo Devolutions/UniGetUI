@@ -774,5 +774,7 @@
   "Error": "Error",
   "Log in failed: ": "Ha fallat l'inici de sessió:",
   "Log out failed: ": "Ha fallat el tancament de sessió:",
-  "Package backup settings": "Configuració de la còpia de seguretat"
+  "Machine | Global": "Màquina | Global",
+  "Package backup settings": "Configuració de la còpia de seguretat",
+  "User | Local": "Usuari | Local"
 }

@@ -10,8 +10,8 @@ namespace UniGetUI.Core.Tools.Tests
         [InlineData(" ", false)]
         [InlineData("", false)]
         [InlineData("@@", false)]
-        [InlineData("0 packages found", true)]
-        [InlineData("Add packages or open an existing bundle", true)]
+        [InlineData("No packages were found", true)]
+        [InlineData("Add packages or open an existing package bundle", true)]
         public void TranslateFunctionTester(string textEntry, bool TranslationExists)
         {
             LanguageEngine langEngine = new("fr");

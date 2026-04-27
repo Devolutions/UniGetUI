@@ -550,6 +550,7 @@
   "extracted": "đã giải nén",
   "Scoop package": "Gói Scoop",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "Kho lưu trữ lớn chưa biết nhưng có các tiện ích hữu ích và các gói thú vị khác.<br>Bao gồm: <b>Tiện ích, Chương trình dòng lệnh, Phần mềm chung (yêu cầu bộ chứa bổ sung)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Trình quản lý gói Linux phổ quát của Canonical.<br>Bao gồm: <b>Các gói Snap từ cửa hàng Snapcraft</b>",
   "library": "thư viện",
   "feature": "tính năng",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "Một trình quản lý thư viện C/C++ phổ biến. Đầy đủ các thư viện C/C++ và các tiện ích liên quan đến C/C++ khác. <br>Bao gồm: <b>Các thư viện C/C++ và các tiện ích liên quan.</b>",

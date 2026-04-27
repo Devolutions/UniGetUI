@@ -640,6 +640,7 @@
   "The source {source} was added to {manager} successfully": "來源 {source} 已成功的新增到 {manager}",
   "The source {source} was removed from {manager} successfully": "來源 {source} 已成功的從 {manager} 移除",
   "The system tray icon must be enabled in order for notifications to work": "必須啟用系統匣圖示，通知功能才能正常運作",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Canonical 推出的通用 Linux 套件管理工具。<br>包含：<b>來自 Snapcraft 商店的 Snap 套件</b>",
   "The update process has been aborted.": "更新過程已被中止。",
   "The update process will start after closing UniGetUI": "更新過程將在關閉 UniGetUI 後開始",
   "There are no new UniGetUI versions to be installed": "目前沒有新版的 UniGetUI 可供安裝",

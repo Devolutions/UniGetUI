@@ -550,6 +550,7 @@
   "extracted": "已提取",
   "Scoop package": "Scoop 软件包",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "包含不知名但有用的实用程序和其它有趣软件包的重要存储库。<br>包括：<b>实用工具、命令行程序、通用软件（需要 extras bucket）</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Canonical 推出的通用 Linux 软件包管理器。<br>包括：<b>来自 Snapcraft 商店的 Snap 软件包</b>",
   "library": "库",
   "feature": "功能",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "一个流行的 C/C++ 库管理器。包含 C/C++ 库和其它与 C/C++ 相关的实用程序<br>包括：<b>C/C++ 库和相关的实用程序</b>",

@@ -550,6 +550,7 @@
   "extracted": "แตกไฟล์แล้ว",
   "Scoop package": "แพ็กเกจ Scoop",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "คลังข้อมูลที่ยอดเยี่ยมของโปรแกรมอรรถประโยชน์ที่ไม่เป็นที่รู้จักแต่มีประโยชน์ และแพ็กเกจอื่น ๆ ที่น่าสนใจ<br>ประกอบด้วย: <b>โปรแกรมอรรถประโยชน์ โปรแกรมบรรทัดคำสั่ง ซอฟต์แวร์ทั่วไป (ต้องมีบักเก็ตเพิ่มเติม)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "ตัวจัดการแพ็กเกจ Linux สากลโดย Canonical<br>ประกอบด้วย: <b>แพ็กเกจ Snap จากร้านค้า Snapcraft</b>",
   "library": "ไลบรารี",
   "feature": "คุณสมบัติ",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "ตัวจัดการไลบรารี C/C++ ยอดนิยม มีไลบรารี C/C++ และเครื่องมืออื่น ๆ ที่เกี่ยวข้องกับ C/C++ มากมาย<br>ประกอบด้วย: <b>ไลบรารี C/C++ และเครื่องมือที่เกี่ยวข้อง</b>",

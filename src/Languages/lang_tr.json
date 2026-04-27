@@ -550,6 +550,7 @@
   "extracted": "Çıkarıldı",
   "Scoop package": "Scoop paketi",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "Bilinmeyen ama kullanışlı yardımcı programlar ve diğer ilginç paketlerden oluşan harika bir depo.<br>İçerik: <b>Yardımcı Programlar, Komut Satırı Programları, Genel Yazılım (Ekstra olarak Bucket gerekir)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Canonical tarafından geliştirilen evrensel Linux paket yöneticisi.<br>İçerik: <b>Snapcraft mağazasından Snap paketleri</b>",
   "library": "kütüphane",
   "feature": "özellik",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "Popüler bir C/C++ kütüphane yöneticisi. C/C++ kitaplıkları ve diğer C/C++ ile ilgili yardımcı programlarla dolu<br>İçerikler: <b>C/C++ kitaplıkları ve ilgili yardımcı programlar</b>",

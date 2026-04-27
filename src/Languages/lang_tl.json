@@ -550,6 +550,7 @@
   "extracted": "na-extract",
   "Scoop package": "Package ng Scoop",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "Napakagandang repository ng mga hindi gaanong kilala ngunit kapaki-pakinabang na utility at iba pang interesanteng package.<br>Naglalaman ng: <b>Mga utility, command-line program, pangkalahatang software (kailangan ang extras bucket)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Ang pangkalahatang Linux package manager mula sa Canonical.<br>Naglalaman ng: <b>Mga Snap package mula sa Snapcraft store</b>",
   "library": "aklatan ng software",
   "feature": "tampok",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "Isang sikat na C/C++ library manager. Puno ito ng mga C/C++ library at iba pang utility na may kaugnayan sa C/C++<br>Naglalaman ng: <b>Mga C/C++ library at kaugnay na utility</b>",

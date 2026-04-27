@@ -71,15 +71,16 @@ public static class TelemetryHandler
     private const string IndexPrefix = "";
 #endif
 
-    private static readonly HttpClient _httpClient;
+    private static readonly HttpClient _httpClient = CreateHttpClient();
 
-    static TelemetryHandler()
+    private static HttpClient CreateHttpClient()
     {
-        _httpClient = new HttpClient(CoreTools.GenericHttpClientParameters)
+        var httpClient = new HttpClient(CoreTools.GenericHttpClientParameters)
         {
             Timeout = TimeSpan.FromSeconds(30),
         };
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
+        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
+        return httpClient;
     }
 
     private static readonly Settings.K[] SettingsToSend =
@@ -94,7 +95,6 @@ public static class TelemetryHandler
         Settings.K.EnablePackageBackup_LOCAL,
         Settings.K.DoCacheAdminRights,
         Settings.K.DoCacheAdminRightsForBatches,
-        Settings.K.ForceLegacyBundledWinGet,
     ];
 
     // -------------------------------------------------------------------------

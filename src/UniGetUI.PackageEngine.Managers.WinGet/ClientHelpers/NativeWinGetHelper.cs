@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Microsoft.Management.Deployment;
@@ -24,6 +23,7 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
     private readonly WinGet Manager;
     private readonly Func<WinGet, IWinGetManagerHelper> _systemCliHelperFactory;
     private readonly Func<IReadOnlyList<CatalogPackage>>? _localPackagesProvider;
+    private readonly IPingetPackageDetailsProvider _pingetPackageDetailsProvider;
     private int _activeLocalPackageQueries;
     private ExceptionDispatchInfo? _lastActivationException;
 
@@ -49,14 +49,17 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         WinGet manager,
         Func<WinGet, IWinGetManagerHelper>? systemCliHelperFactory,
         bool skipInitialization,
-        Func<IReadOnlyList<CatalogPackage>>? localPackagesProvider
+        Func<IReadOnlyList<CatalogPackage>>? localPackagesProvider,
+        IPingetPackageDetailsProvider? pingetPackageDetailsProvider = null
     )
     {
         Manager = manager;
         _systemCliHelperFactory =
             systemCliHelperFactory
-            ?? (static manager => new BundledWinGetHelper(manager, manager.Status.ExecutablePath));
+            ?? (static manager => manager.CreateCliHelperForSelectedCliTool());
         _localPackagesProvider = localPackagesProvider;
+        _pingetPackageDetailsProvider =
+            pingetPackageDetailsProvider ?? new PingetPackageDetailsProvider();
         if (CoreTools.IsAdministrator())
         {
             Logger.Info(
@@ -766,7 +769,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
 
         CatalogPackageMetadata? NativeDetails = NativePackageHandler.GetDetails(details.Package);
         if (NativeDetails is null)
+        {
+            logger.Close(1);
             return;
+        }
 
         // Extract data from NativeDetails
         if (NativeDetails.Author != "")
@@ -796,105 +802,8 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
         if (NativeDetails.Tags is not null)
             details.Tags = NativeDetails.Tags.ToArray();
 
-        // There is no way yet to retrieve installer URLs right now so this part will be console-parsed.
-        // TODO: Replace this code with native code when available on the COM api
-        Process process = new();
-        List<string> output = [];
-        ProcessStartInfo startInfo = new()
-        {
-            FileName = WinGet.BundledWinGetPath,
-            Arguments =
-                Manager.Status.ExecutableCallArgs
-                + " show "
-                + WinGetPkgOperationHelper.GetIdNamePiece(details.Package)
-                + " --disable-interactivity --accept-source-agreements --source "
-                + details.Package.Source.Name,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            RedirectStandardInput = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            StandardOutputEncoding = System.Text.Encoding.UTF8,
-        };
-        process.StartInfo = startInfo;
-        if (CoreTools.IsAdministrator())
-        {
-            string WinGetTemp = Path.Join(Path.GetTempPath(), "UniGetUI", "ElevatedWinGetTemp");
-            Logger.Warn(
-                $"[WARN] Redirecting %TEMP% folder to {WinGetTemp}, since UniGetUI was run as admin"
-            );
-            process.StartInfo.Environment["TEMP"] = WinGetTemp;
-            process.StartInfo.Environment["TMP"] = WinGetTemp;
-        }
-        process.Start();
+        bool metadataLoaded = _pingetPackageDetailsProvider.LoadPackageDetails(details, logger);
 
-        logger.Log("Begin loading installers:");
-        logger.Log(" Executable: " + startInfo.FileName);
-        logger.Log(" Arguments: " + startInfo.Arguments);
-
-        // Retrieve the output
-        string? _line;
-        while ((_line = process.StandardOutput.ReadLine()) is not null)
-        {
-            if (_line.Trim() != "")
-            {
-                logger.Log(_line);
-                output.Add(_line);
-            }
-        }
-
-        logger.Error(process.StandardError.ReadToEnd());
-
-        bool capturingDependencies = false;
-        details.Dependencies.Clear();
-        // Parse the output
-        foreach (string __line in output)
-        {
-            try
-            {
-                string line = __line.Trim();
-                if (line.Contains("Installer SHA256:"))
-                {
-                    details.InstallerHash = line.Split(":")[1].Trim();
-                }
-                else if (line.Contains("Installer Url:"))
-                {
-                    details.InstallerUrl = new Uri(line.Replace("Installer Url:", "").Trim());
-                    details.InstallerSize = CoreTools.GetFileSizeAsLong(details.InstallerUrl);
-                }
-                else if (line.Contains("Release Date:"))
-                {
-                    details.UpdateDate = line.Split(":")[1].Trim();
-                }
-                else if (line.Contains("Installer Type:"))
-                {
-                    details.InstallerType = line.Split(":")[1].Trim();
-                }
-                else if (line.Contains("- Package Dependencies"))
-                {
-                    capturingDependencies = true;
-                }
-                else if (__line.Contains("        ") && capturingDependencies)
-                {
-                    details.Dependencies.Add(
-                        new()
-                        {
-                            Name = line.Split(' ')[0],
-                            Version = line.Contains('[') ? line.Split('[')[1].TrimEnd(']') : "",
-                            Mandatory = true,
-                        }
-                    );
-                }
-                else if (!__line.Contains("        "))
-                    capturingDependencies = false;
-            }
-            catch (Exception e)
-            {
-                Logger.Warn("Error occurred while parsing line value=\"" + __line + "\"");
-                Logger.Warn(e.Message);
-            }
-        }
-
-        logger.Close(0);
+        logger.Close(metadataLoaded ? 0 : 1);
     }
 }

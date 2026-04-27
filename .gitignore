@@ -41,12 +41,13 @@ src/UniGetU*/obj
 src/UniGetU*/out
 src/UniGetU*/outpublish
 
+src/UniGetUI.Pinget.Cli/bin
+src/UniGetUI.Pinget.Cli/obj
+
 src/ExternalLibraries.*/bin
 src/ExternalLibraries.*/obj
 src/ExternalLibraries.*/out
 src/ExternalLibraries.*/outpublish
-
-src/UniGetUI.PackageEngine.Managers.WinGet/winget-cli_*/
 
 src/.vs
 src/.vscode

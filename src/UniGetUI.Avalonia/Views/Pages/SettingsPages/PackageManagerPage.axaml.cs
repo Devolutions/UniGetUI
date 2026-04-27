@@ -365,7 +365,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                     Text = CoreTools.Translate("Reset WinGet")
                         + $" ({CoreTools.Translate("This may help if no packages are listed")})",
                     ButtonText = CoreTools.AutoTranslated("Reset"),
-                    CornerRadius = new CornerRadius(0),
+                    CornerRadius = new CornerRadius(0, 0, 8, 8),
                 };
                 wingetResetBtn.Click += (_, _) => _ = AvaloniaPackageOperationHelper.HandleBrokenWinGetAsync();
                 ExtraControls.Children.Add(wingetResetBtn);
@@ -378,15 +378,6 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                     BorderThickness = new Thickness(1, 0, 1, 1),
                 });
 
-                var wingetUseBundled = new CheckboxCard
-                {
-                    Text = $"{CoreTools.Translate("Use bundled WinGet instead of system WinGet")} ({CoreTools.Translate("This may help if WinGet packages are not shown")})",
-                    SettingName = CoreSettings.K.ForceLegacyBundledWinGet,
-                    CornerRadius = new CornerRadius(0, 0, 8, 8),
-                    BorderThickness = new Thickness(1, 0, 1, 1),
-                };
-                wingetUseBundled.StateChanged += (_, _) => _ = ViewModel.ReloadManagerCommand.ExecuteAsync(null);
-                ExtraControls.Children.Add(wingetUseBundled);
                 break;
 
             case "Scoop":

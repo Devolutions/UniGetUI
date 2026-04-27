@@ -55,28 +55,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-nuget-
 
-    - name: Restore WinGet CLI cache
-      id: winget-cache
-      uses: actions/cache/restore@v5
-      with:
-        path: src/UniGetUI.PackageEngine.Managers.WinGet/winget-cli_x64
-        key: winget-cli-${{ runner.os }}-x64-${{ hashFiles('scripts/fetch-winget-cli.ps1') }}
-
-    - name: Fetch WinGet CLI bundle
-      if: steps.winget-cache.outputs.cache-hit != 'true'
-      shell: pwsh
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      run: |
-        .\scripts\fetch-winget-cli.ps1 -Architectures @('x64') -Force
-
-    - name: Save WinGet CLI cache
-      if: steps.winget-cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v5
-      with:
-        path: src/UniGetUI.PackageEngine.Managers.WinGet/winget-cli_x64
-        key: ${{ steps.winget-cache.outputs.cache-primary-key }}
-
     - name: Install dependencies
       working-directory: src
       run: |

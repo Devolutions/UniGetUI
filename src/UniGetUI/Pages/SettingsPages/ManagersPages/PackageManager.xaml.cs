@@ -165,6 +165,40 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 DisableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);
                 ExtraControls.Children.Add(DisableNotifsCard);
 
+                ComboboxCard WinGet_CliToolPreference = new()
+                {
+                    Text = "WinGet command-line tool",
+                    Description = CoreTools.Translate(
+                        "Choose which command-line tool UniGetUI uses for WinGet operations when the COM API is not used"
+                    ),
+                    SettingName = Settings.K.WinGetCliToolPreference,
+                    CornerRadius = new CornerRadius(0),
+                    BorderThickness = new Thickness(1, 0, 1, 1),
+                };
+                WinGet_CliToolPreference.AddItem("Default", "default");
+                WinGet_CliToolPreference.AddItem("WinGet", "winget", false);
+                WinGet_CliToolPreference.AddItem("Pinget", "pinget", false);
+                WinGet_CliToolPreference.ShowAddedItems();
+                WinGet_CliToolPreference.ValueChanged += (_, _) => _ = ReloadPackageManager();
+                ExtraControls.Children.Add(WinGet_CliToolPreference);
+
+                ComboboxCard WinGet_ComApiPolicy = new()
+                {
+                    Text = "WinGet COM API",
+                    Description = CoreTools.Translate(
+                        "Choose whether UniGetUI can use the WinGet COM API before falling back to the command-line tool"
+                    ),
+                    SettingName = Settings.K.WinGetComApiPolicy,
+                    CornerRadius = new CornerRadius(0),
+                    BorderThickness = new Thickness(1, 0, 1, 1),
+                };
+                WinGet_ComApiPolicy.AddItem("Default", "default");
+                WinGet_ComApiPolicy.AddItem("Enabled", "enabled");
+                WinGet_ComApiPolicy.AddItem("Disabled", "disabled");
+                WinGet_ComApiPolicy.ShowAddedItems();
+                WinGet_ComApiPolicy.ValueChanged += (_, _) => _ = ReloadPackageManager();
+                ExtraControls.Children.Add(WinGet_ComApiPolicy);
+
                 ButtonCard WinGet_ResetWindowsIPackageManager = new()
                 {
                     Text =
@@ -187,17 +221,6 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                     BorderThickness = new Thickness(1, 0, 1, 1),
                 };
                 ExtraControls.Children.Add(WinGet_ForceLocationWhenUpdating);
-
-                CheckboxCard WinGet_UseBundled = new()
-                {
-                    Text =
-                        $"{CoreTools.Translate("Use bundled WinGet instead of system WinGet")} ({CoreTools.Translate("This may help if WinGet packages are not shown")})",
-                    SettingName = Settings.K.ForceLegacyBundledWinGet,
-                    CornerRadius = new CornerRadius(0),
-                    BorderThickness = new Thickness(1, 0, 1, 0),
-                };
-                WinGet_UseBundled.StateChanged += (_, _) => _ = ReloadPackageManager();
-                ExtraControls.Children.Add(WinGet_UseBundled);
 
                 CheckboxCard WinGet_EnableTroubleshooter = new()
                 {

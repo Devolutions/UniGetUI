@@ -188,8 +188,13 @@ internal static class AvaloniaPackageOperationHelper
             p.Start();
             await p.WaitForExitAsync();
 
-            if (Settings.Get(Settings.K.ForceLegacyBundledWinGet))
-                Settings.Set(Settings.K.ForceLegacyBundledWinGet, false);
+            if (string.Equals(
+                Settings.GetValue(Settings.K.WinGetCliToolPreference),
+                "pinget",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                Settings.SetValue(Settings.K.WinGetCliToolPreference, "default");
+            }
 
             MainWindow.Instance?.ShowBanner(
                 CoreTools.Translate("WinGet was repaired successfully"),

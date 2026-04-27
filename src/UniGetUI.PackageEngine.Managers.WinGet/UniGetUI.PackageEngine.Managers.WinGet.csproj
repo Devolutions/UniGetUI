@@ -2,32 +2,7 @@
     <PropertyGroup>
         <TargetFramework>$(WindowsTargetFramework)</TargetFramework>
         <TargetFrameworks />
-        <WingetCliArchitecture
-            Condition="'$(Platform)' == 'x64' or '$(Platform)' == 'arm64' or '$(Platform)' == 'x86'"
-            >$(Platform)</WingetCliArchitecture
-        >
-        <WingetCliArchitecture Condition="'$(WingetCliArchitecture)' == ''"
-            >x64</WingetCliArchitecture
-        >
-        <WingetCliDirectory>$(MSBuildProjectDirectory)\winget-cli_$(WingetCliArchitecture)</WingetCliDirectory>
-        <WingetCliExePath>$(WingetCliDirectory)\winget.exe</WingetCliExePath>
-        <WingetFetchScriptPath>$(MSBuildProjectDirectory)\..\..\scripts\fetch-winget-cli.ps1</WingetFetchScriptPath>
     </PropertyGroup>
-
-    <Target
-        Name="EnsureBundledWingetCli"
-        BeforeTargets="PrepareForBuild"
-        Condition="'$(DesignTimeBuild)' != 'true' and '$(OS)' == 'Windows_NT' and !Exists('$(WingetCliExePath)')"
-    >
-        <Message
-            Importance="High"
-            Text="Bundled WinGet payload missing for $(WingetCliArchitecture). Fetching it now..."
-        />
-        <Exec
-            Command="pwsh -NoProfile -ExecutionPolicy Bypass -File &quot;$(WingetFetchScriptPath)&quot; -Architectures &quot;$(WingetCliArchitecture)&quot; -Force"
-            WorkingDirectory="$(MSBuildProjectDirectory)\..\.."
-        />
-    </Target>
 
     <ItemGroup>
         <ProjectReference Include="..\UniGetUI.Core.Classes\UniGetUI.Core.Classes.csproj" />
@@ -45,16 +20,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="winget-cli_$(Platform)\**\*">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-    </ItemGroup>
-
-    <ItemGroup>
         <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Devolutions.Pinget.Core" Version="0.3.0" />
         <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
     </ItemGroup>
 </Project>

@@ -242,7 +242,7 @@ namespace UniGetUI.Core.Language
             return entries;
         }
 
-        publicvoid LoadStaticTranslation()
+        public void LoadStaticTranslation()
         {
             CommonTranslations.ScopeNames[PackageScope.Local] = Translate("User | Local");
             CommonTranslations.ScopeNames[PackageScope.Global] = Translate("Machine | Global");

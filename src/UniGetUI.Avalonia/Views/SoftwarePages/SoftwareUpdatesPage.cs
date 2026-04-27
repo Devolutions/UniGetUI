@@ -1,10 +1,13 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface.Enums;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
@@ -45,7 +48,9 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         MainSubtitle_StillLoading = CoreTools.Translate("Loading packages"),
         NoMatches_BackgroundText = CoreTools.Translate("No results were found matching the input criteria"),
     })
-    { }
+    {
+        ViewModel.PackagesLoaded += reason => { _ = WhenPackagesLoaded(); };
+    }
 
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {
@@ -365,5 +370,105 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         AvaloniaOperationRegistry.Add(updateOp);
         _ = uninstallOp.MainThread();
         _ = updateOp.MainThread();
+    }
+
+    // ─── Auto-update on load ──────────────────────────────────────────────────
+
+    private static async Task WhenPackagesLoaded()
+    {
+        try
+        {
+            var upgradable = UpgradablePackagesLoader.Instance.Packages
+                .Where(p => p.Tag is not PackageTag.OnQueue and not PackageTag.BeingProcessed)
+                .ToList();
+
+            if (upgradable.Count == 0) return;
+
+            if (Settings.Get(Settings.K.DisableAUPOnBattery) && IsOnBattery())
+            {
+                Logger.Warn("Updates will not be installed automatically because the device is on battery.");
+                ShowAvailableUpdatesNotification(upgradable);
+            }
+            else if (Settings.Get(Settings.K.DisableAUPOnBatterySaver) && IsBatterySaverOn())
+            {
+                Logger.Warn("Updates will not be installed automatically because battery saver is enabled.");
+                ShowAvailableUpdatesNotification(upgradable);
+            }
+            else if (Settings.Get(Settings.K.AutomaticallyUpdatePackages))
+            {
+                _ = AvaloniaPackageOperationHelper.UpdateAllAsync();
+                ShowUpgradingPackagesNotification(upgradable);
+            }
+            else if (Environment.GetCommandLineArgs().Contains("--updateapps"))
+            {
+                _ = AvaloniaPackageOperationHelper.UpdateAllAsync();
+                ShowUpgradingPackagesNotification(upgradable);
+                Logger.Warn("Automatic install of updates has been enabled via Command Line (user settings have been overriden)");
+            }
+            else
+            {
+                foreach (var package in upgradable)
+                {
+                    var opts = await InstallOptionsFactory.LoadApplicableAsync(package);
+                    if (opts.AutoUpdatePackage)
+                        await LaunchUpdate([package]);
+                }
+                ShowAvailableUpdatesNotification(upgradable);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex);
+        }
+    }
+
+    private static void ShowAvailableUpdatesNotification(IReadOnlyList<IPackage> upgradable)
+    {
+        if (OperatingSystem.IsWindows())
+            WindowsAppNotificationBridge.ShowUpdatesAvailableNotification(upgradable);
+        else if (OperatingSystem.IsMacOS())
+            MacOsNotificationBridge.ShowUpdatesAvailableNotification(upgradable);
+    }
+
+    private static void ShowUpgradingPackagesNotification(IReadOnlyList<IPackage> upgradable)
+    {
+        if (OperatingSystem.IsWindows())
+            WindowsAppNotificationBridge.ShowUpgradingPackagesNotification(upgradable);
+        else if (OperatingSystem.IsMacOS())
+            MacOsNotificationBridge.ShowUpgradingPackagesNotification(upgradable);
+    }
+
+    // ─── Battery / power helpers (Windows P/Invoke) ───────────────────────────
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SYSTEM_POWER_STATUS
+    {
+        public byte ACLineStatus;     // 0 = battery, 1 = AC, 255 = unknown
+        public byte BatteryFlag;
+        public byte BatteryLifePercent;
+        public byte SystemStatusFlag; // bit 0: battery saver active
+        public uint BatteryLifeTime;
+        public uint BatteryFullLifeTime;
+    }
+
+#pragma warning disable CA1416
+    [DllImport("kernel32.dll")]
+    private static extern bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS status);
+#pragma warning restore CA1416
+
+    private static bool IsOnBattery()
+    {
+        if (!OperatingSystem.IsWindows()) return false;
+#pragma warning disable CA1416
+        return GetSystemPowerStatus(out var s) && s.ACLineStatus == 0;
+#pragma warning restore CA1416
+    }
+
+    private static bool IsBatterySaverOn()
+    {
+        if (!OperatingSystem.IsWindows()) return false;
+#pragma warning disable CA1416
+        return GetSystemPowerStatus(out var s) && (s.SystemStatusFlag & 0x01) != 0;
+#pragma warning restore CA1416
     }
 }

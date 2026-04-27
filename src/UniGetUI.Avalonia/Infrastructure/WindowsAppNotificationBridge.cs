@@ -212,6 +212,58 @@ internal static class WindowsAppNotificationBridge
     }
 
     /// <summary>
+    /// Shows a Windows toast notification when packages are actively being updated (auto-update triggered).
+    /// </summary>
+    public static void ShowUpgradingPackagesNotification(IReadOnlyList<IPackage> upgradable)
+    {
+        if (!EnsureRegistered()) return;
+        if (Settings.AreUpdatesNotificationsDisabled()) return;
+
+        bool sendNotification = upgradable.Any(p =>
+            !Settings.GetDictionaryItem<string, bool>(
+                Settings.K.DisabledPackageManagerNotifications, p.Manager.Name));
+        if (!sendNotification) return;
+
+        try
+        {
+            _removeByTagAsyncMethod?.Invoke(_managerDefault,
+                [CoreData.UpdatesAvailableNotificationTag.ToString()]);
+
+            if (upgradable.Count == 1)
+            {
+                ShowTextToast(
+                    tag: CoreData.UpdatesAvailableNotificationTag.ToString(),
+                    scenario: ScenarioDefault,
+                    title: CoreTools.Translate("An update was found!"),
+                    message: CoreTools.Translate("{0} is being updated to version {1}",
+                        upgradable[0].Name, upgradable[0].NewVersionString),
+                    suppressDisplay: false,
+                    defaultAction: NotificationArguments.ShowOnUpdatesTab);
+            }
+            else
+            {
+                string attribution = string.Join(", ", upgradable
+                    .Where(p => !Settings.GetDictionaryItem<string, bool>(
+                        Settings.K.DisabledPackageManagerNotifications, p.Manager.Name))
+                    .Select(p => p.Name));
+
+                ShowTextToast(
+                    tag: CoreData.UpdatesAvailableNotificationTag.ToString(),
+                    scenario: ScenarioDefault,
+                    title: CoreTools.Translate("{0} packages are being updated", upgradable.Count),
+                    message: attribution,
+                    suppressDisplay: false,
+                    defaultAction: NotificationArguments.ShowOnUpdatesTab);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn("Could not show upgrading-packages notification");
+            Logger.Warn(ex);
+        }
+    }
+
+    /// <summary>
     /// Shows a Windows toast offering a UniGetUI self-update with an "Update now" button.
     /// </summary>
     public static void ShowSelfUpdateAvailableNotification(string newVersion)

@@ -17,6 +17,7 @@ using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -150,15 +151,11 @@ public partial class MainWindowViewModel : ViewModelBase
                 Dispatcher.UIThread.Post(() =>
                     Sidebar.UpdatesBadgeCount = upgLoader.Count());
             Sidebar.UpdatesBadgeCount = upgLoader.Count();
-
-            upgLoader.FinishedLoading += (_, _) =>
-            {
-                var upgradable = upgLoader.Packages.ToList();
-                if (upgradable.Count == 0) return;
-                WindowsAppNotificationBridge.ShowUpdatesAvailableNotification(upgradable);
-                MacOsNotificationBridge.ShowUpdatesAvailableNotification(upgradable);
-            };
+            // Notifications and auto-update logic are handled by SoftwareUpdatesPage.WhenPackagesLoaded
         }
+
+        WindowsAppNotificationBridge.NotificationActivated += action =>
+            Dispatcher.UIThread.Post(() => HandleNotificationActivation(action));
 
         BundlesPage.UnsavedChangesStateChanged += (_, _) =>
             Dispatcher.UIThread.Post(() =>
@@ -403,6 +400,28 @@ public partial class MainWindowViewModel : ViewModelBase
         if (owner is not null)
             await new AboutWindow().ShowDialog(owner);
         Sidebar.SelectNavButtonForPage(_currentPage);
+    }
+
+    // ─── Notification activation ─────────────────────────────────────────────
+    private void HandleNotificationActivation(string action)
+    {
+        if (action == NotificationArguments.UpdateAllPackages)
+        {
+            _ = AvaloniaPackageOperationHelper.UpdateAllAsync();
+        }
+        else if (action == NotificationArguments.ShowOnUpdatesTab)
+        {
+            NavigateTo(PageType.Updates);
+            MainWindow.Instance?.ShowFromTray();
+        }
+        else if (action == NotificationArguments.Show)
+        {
+            MainWindow.Instance?.ShowFromTray();
+        }
+        else if (action == NotificationArguments.ReleaseSelfUpdateLock)
+        {
+            AvaloniaAutoUpdater.ReleaseLockForAutoupdate_Notification = true;
+        }
     }
 
     // ─── Search box ──────────────────────────────────────────────────────────

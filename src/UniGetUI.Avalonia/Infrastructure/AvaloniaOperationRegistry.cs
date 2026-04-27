@@ -126,10 +126,10 @@ public static class AvaloniaOperationRegistry
             $"{title}. {message}",
             AutomationLiveSetting.Polite);
 
-        if (WindowsAppNotificationBridge.ShowProgress(op))
+        if (OperatingSystem.IsWindows() && WindowsAppNotificationBridge.ShowProgress(op))
             return;
 
-        if (MacOsNotificationBridge.ShowProgress(op))
+        if (OperatingSystem.IsMacOS() && MacOsNotificationBridge.ShowProgress(op))
             return;
 
         if (TryGetMainWindow() is not { } mainWindow)
@@ -160,10 +160,10 @@ public static class AvaloniaOperationRegistry
 
         WindowsAppNotificationBridge.RemoveProgress(op);
 
-        if (WindowsAppNotificationBridge.ShowSuccess(op))
+        if (OperatingSystem.IsWindows() && WindowsAppNotificationBridge.ShowSuccess(op))
             return;
 
-        if (MacOsNotificationBridge.ShowSuccess(op))
+        if (OperatingSystem.IsMacOS() && MacOsNotificationBridge.ShowSuccess(op))
             return;
 
         if (TryGetMainWindow() is not { } mainWindow)
@@ -194,10 +194,10 @@ public static class AvaloniaOperationRegistry
 
         WindowsAppNotificationBridge.RemoveProgress(op);
 
-        if (WindowsAppNotificationBridge.ShowError(op))
+        if (OperatingSystem.IsWindows() && WindowsAppNotificationBridge.ShowError(op))
             return;
 
-        if (MacOsNotificationBridge.ShowError(op))
+        if (OperatingSystem.IsMacOS() && MacOsNotificationBridge.ShowError(op))
             return;
 
         if (TryGetMainWindow() is not { } mainWindow)

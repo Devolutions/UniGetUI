@@ -181,7 +181,10 @@ internal static partial class AvaloniaAutoUpdater
 
         // Notify UI (update banner + toast)
         Dispatcher.UIThread.Post(() => UpdateAvailable?.Invoke(versionName));
-        WindowsAppNotificationBridge.ShowSelfUpdateAvailableNotification(versionName);
+        if (OperatingSystem.IsWindows())
+            WindowsAppNotificationBridge.ShowSelfUpdateAvailableNotification(versionName);
+        else if (OperatingSystem.IsMacOS())
+            MacOsNotificationBridge.ShowSelfUpdateAvailableNotification(versionName);
 
         if (autoLaunch)
         {

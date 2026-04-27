@@ -680,7 +680,7 @@
                              VerticalContentAlignment="Center"
                              CornerRadius="8,0,0,8"
                              FontSize="40"
-                             Watermark="{t:Translate Search for packages}"
+                             PlaceholderText="{t:Translate Search for packages}"
                              Background="{DynamicResource AppWindowBackground}"
                              automation:AutomationProperties.Name="{t:Translate Search for packages}"
                              Text="{Binding MegaQueryText, Mode=TwoWay}"

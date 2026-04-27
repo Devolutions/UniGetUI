@@ -48,7 +48,7 @@ public class UserAvatarViewModel : ViewModelBase
     private async Task RefreshAsync()
     {
         var service = new GitHubAuthService();
-        bool authenticated = service.IsAuthenticated();
+        bool authenticated = GitHubAuthService.IsAuthenticated();
 
         string displayName = "";
         Bitmap? bitmap = null;
@@ -57,7 +57,7 @@ public class UserAvatarViewModel : ViewModelBase
         {
             try
             {
-                var client = service.CreateGitHubClient();
+                var client = GitHubAuthService.CreateGitHubClient();
                 if (client is not null)
                 {
                     User user = await client.User.Current();

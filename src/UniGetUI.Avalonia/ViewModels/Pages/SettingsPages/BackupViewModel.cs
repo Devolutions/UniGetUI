@@ -129,7 +129,7 @@ public partial class BackupViewModel : ViewModelBase
 
     private async Task UpdateGitHubLoginStatus()
     {
-        if (_authService.IsAuthenticated())
+        if (GitHubAuthService.IsAuthenticated())
         {
             try { await GenerateLogoutState(); }
             catch (Exception ex)
@@ -156,7 +156,7 @@ public partial class BackupViewModel : ViewModelBase
 
     private async Task GenerateLogoutState()
     {
-        var client = _authService.CreateGitHubClient()
+        var client = GitHubAuthService.CreateGitHubClient()
             ?? throw new InvalidOperationException("Authenticated but cannot create GitHub client.");
         var user = await client.User.Current();
 

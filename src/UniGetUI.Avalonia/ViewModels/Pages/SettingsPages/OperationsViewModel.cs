@@ -16,7 +16,7 @@ public partial class OperationsViewModel : ViewModelBase
         [.. Enumerable.Range(1, 10).Select(i => i.ToString()), "15", "20", "30", "50", "75", "100"];
 
     [RelayCommand]
-    private void UpdateMaxOperations()
+    private static void UpdateMaxOperations()
     {
         if (int.TryParse(CoreSettings.GetValue(CoreSettings.K.ParallelOperationCount), out int value))
             AbstractOperation.MAX_OPERATIONS = value;

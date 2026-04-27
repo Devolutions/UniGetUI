@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "Hai installato la versione {0} di UniGetUI",
   "Disclaimer": "Esclusione di responsabilità",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI non è correlato a nessuno dei gestori di pacchetti compatibili. UniGetUI è un progetto indipendente.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI è sviluppato da Devolutions e non è affiliato ad alcuno dei gestori di pacchetti compatibili.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI non sarebbe stato possibile senza l'aiuto dei collaboratori. Grazie a tutti 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI si avvale delle seguenti librerie. Senza di esse, UniGetUI non sarebbe stato realizzabile.",
   "{0} homepage": "Sito web di {0}",
@@ -226,7 +226,7 @@
   "1 week": "1 settimana",
   "Supports release dates": "Supporta le date di rilascio",
   "Release date support per package manager": "Supporto delle date di rilascio per ogni gestore di pacchetti",
-  "UniGetUI Version {0}": "UniGetUI versione {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI Versione {0} di Devolutions",
   "Search for packages": "Ricerca pacchetti",
   "Local": "Locale",
   "OK": "OK",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Mostra/nascondi pannello di navigazione",
   "Minimize": "Minimizza",
   "Maximize": "Massimizza",
+  "UniGetUI by Devolutions": "UniGetUI di Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI è un'applicazione che semplifica la gestione del software, fornendo un'unica interfaccia grafica per i gestori di pacchetti da riga di comando.",
   "Useful links": "Link utili",
   "UniGetUI Homepage": "Sito web di UniGetUI",
@@ -737,6 +738,7 @@
   "Reinstall": "Reinstalla",
   "Installer not available": "Programma di installazione non disponibile",
   "Version:": "Versione:",
+  "UniGetUI Version {0}": "UniGetUI versione {0}",
   "Performing backup, please wait...": "Esecuzione del backup, attendi...",
   "An error occurred while logging in: ": "Si è verificato un errore durante l'accesso:",
   "Fetching available backups...": "Recupero dei backup disponibili...",
@@ -774,5 +776,6 @@
   "Error": "Errore",
   "Log in failed: ": "Accesso non riuscito:",
   "Log out failed: ": "Disconnessione non riuscita:",
-  "Package backup settings": "Impostazioni di backup del pacchetto"
+  "Package backup settings": "Impostazioni di backup del pacchetto",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI non è correlato a nessuno dei gestori di pacchetti compatibili. UniGetUI è un progetto indipendente."
 }

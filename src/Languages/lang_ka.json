@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "თქვენ დააყენეთ UniGetUI-ის {0} ვერსია",
   "Disclaimer": "პასუხისმგებლობის უარყოფა",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI არ არის დაკავშირებული რომელიმე თავსებად პაკეტის მენეჯერთან. UniGetUI არის დამოუკიდებელი პროექტი.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI შემუშავებულია Devolutions-ის მიერ და არ არის დაკავშირებული რომელიმე თავსებად პაკეტების მენეჯერთან.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI-ის არსებობა შეუძლებელი იქნებოდა შემომწირველების დახმარების გარეშე. მადლობა თქვენ 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI იყენებს შემდეგ ბიბლიოთეკებს. მათ გარეშე UniGetUI-ს არსებობა შეუძლებელი იქნებოდა.",
   "{0} homepage": "{0} მთავარი გვერდი",
@@ -226,7 +226,7 @@
   "1 week": "1 კვირა",
   "Supports release dates": "მხარს უჭერს რელიზის თარიღებს",
   "Release date support per package manager": "რელიზის თარიღების მხარდაჭერა პაკეტების მენეჯერების მიხედვით",
-  "UniGetUI Version {0}": "UniGetUI ვერსია {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI ვერსია {0} Devolutions-ისგან",
   "Search for packages": "პაკეტების ძიება",
   "Local": "ლოკალური",
   "OK": "OK",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "ნავიგაციის პანელის გადართვა",
   "Minimize": "ჩაკეცვა",
   "Maximize": "გადიდება",
+  "UniGetUI by Devolutions": "UniGetUI Devolutions-ისგან",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI არის აპლიკაცია, რომელიც გიადვილებთ პროგრამული უზრუნველყოფის მათვას, ეს მიიღწევა ყველა-ერთში გრაფიკული ინფტერფეისის საშუალებით თქვენი ბრძანების ზოლის პაკეტების მენეჯერებისთვის.",
   "Useful links": "სასარგებლო ბმულები",
   "UniGetUI Homepage": "UniGetUI ვებ-საიტი",
@@ -737,6 +738,7 @@
   "Reinstall": "ხელახალი ინსტალაცია",
   "Installer not available": "ინსტალატორი არ არის ხელმისაწვდომი",
   "Version:": "ვერსია:",
+  "UniGetUI Version {0}": "UniGetUI ვერსია {0}",
   "Performing backup, please wait...": "ბექაფის შექმნა, გთხოვთ მოიცადოთ...",
   "An error occurred while logging in: ": "შეცდომა შესვლისას:",
   "Fetching available backups...": "ხელმისაწვდომი ბექაფების ჩამოტვირთვა...",
@@ -774,5 +776,6 @@
   "Error": "შეცდომა",
   "Log in failed: ": "შესვლა ჩაიშალა:",
   "Log out failed: ": "გამოსვლა ჩაიშალა:",
-  "Package backup settings": "პაკეტის ბექაფის პარამეტრები"
+  "Package backup settings": "პაკეტის ბექაფის პარამეტრები",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI არ არის დაკავშირებული რომელიმე თავსებად პაკეტის მენეჯერთან. UniGetUI არის დამოუკიდებელი პროექტი."
 }

@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "நீங்கள் UniGetUI Version {0} ஐ install செய்துள்ளீர்கள்",
   "Disclaimer": "பொறுப்புத்துறப்பு",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "compatible package managers எதனுடனும் UniGetUI சம்பந்தப்படவில்லை. UniGetUI ஒரு சுயாதீன project ஆகும்.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI, Devolutions மூலம் உருவாக்கப்பட்டது; இது எந்த இணக்கமான தொகுப்பு மேலாளர்களுடனும் இணைக்கப்படவில்லை.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "contributors இன் உதவியில்லாமல் UniGetUI சாத்தியமாகியிருக்காது. அனைவருக்கும் நன்றி 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI பின்வரும் libraries ஐப் பயன்படுத்துகிறது. அவற்றில்லாமல் UniGetUI சாத்தியமாகியிருக்காது.",
   "{0} homepage": "{0} முகப்புப்பக்கம்",
@@ -226,7 +226,7 @@
   "1 week": "ஒரு வாரம்",
   "Supports release dates": "வெளியீட்டு தேதிகளை ஆதரிக்கிறது",
   "Release date support per package manager": "ஒவ்வொரு package manager-க்குமான வெளியீட்டு தேதி ஆதரவு",
-  "UniGetUI Version {0}": "UniGetUI பதிப்பு {0}",
+  "UniGetUI Version {0} by Devolutions": "Devolutions வழங்கும் UniGetUI பதிப்பு {0}",
   "Search for packages": "தொகுப்புகளைத் தேடு",
   "Local": "உள்ளூர்",
   "OK": "சரி",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "வழிசெலுத்தல் பலகையை மாற்றிக் காட்டு",
   "Minimize": "சுருக்கு",
   "Maximize": "பெரிதாக்கு",
+  "UniGetUI by Devolutions": "Devolutions வழங்கும் UniGetUI",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "உங்கள் command-line package managers க்காக all-in-one graphical interface ஒன்றை வழங்கி software நிர்வகிப்பதை எளிதாக்கும் application தான் UniGetUI.",
   "Useful links": "பயனுள்ள links",
   "UniGetUI Homepage": "UniGetUI முகப்புப்பக்கம்",
@@ -737,6 +738,7 @@
   "Reinstall": "மறுபடியும் install செய்",
   "Installer not available": "installer கிடைக்கவில்லை",
   "Version:": "பதிப்பு:",
+  "UniGetUI Version {0}": "UniGetUI பதிப்பு {0}",
   "Performing backup, please wait...": "backup செய்யப்படுகிறது, தயவுசெய்து காத்திருக்கவும்...",
   "An error occurred while logging in: ": "உள்நுழையும்போது பிழை ஏற்பட்டது: ",
   "Fetching available backups...": "கிடைக்கக்கூடிய backups ஐப் பெறுகிறது...",
@@ -774,5 +776,6 @@
   "Error": "பிழை",
   "Log in failed: ": "உள்நுழைவு தோல்வியடைந்தது: ",
   "Log out failed: ": "வெளியேறல் தோல்வியடைந்தது: ",
-  "Package backup settings": "தொகுப்பு காப்புப்பிரதி அமைப்புகள்"
+  "Package backup settings": "தொகுப்பு காப்புப்பிரதி அமைப்புகள்",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "compatible package managers எதனுடனும் UniGetUI சம்பந்தப்படவில்லை. UniGetUI ஒரு சுயாதீன project ஆகும்."
 }

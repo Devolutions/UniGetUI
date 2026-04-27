@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "У вас встановлена UniGetUI версії {0}",
   "Disclaimer": "Відмова від відповідальності",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI не має відношення до жодного з сумісних менеджерів пакетів. UniGetUI — це незалежний проект.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI розробляється Devolutions і не пов'язаний з жодним із сумісних менеджерів пакетів.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI було б неможливо створити без допомоги учасників. Дякую вам всім 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI використовує наступні бібліотеки. Без них UniGetUI було б неможливо створити.",
   "{0} homepage": "Cторінка {0}",
@@ -226,7 +226,7 @@
   "1 week": "1 тиждень",
   "Supports release dates": "Підтримує дати випуску",
   "Release date support per package manager": "Підтримка дат випуску для кожного менеджера пакетів",
-  "UniGetUI Version {0}": "UniGetUI версія {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI версії {0} від Devolutions",
   "Search for packages": "Пошук пакетів",
   "Local": "Локально",
   "OK": "ОК",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Перемкнути панель навігації",
   "Minimize": "Згорнути",
   "Maximize": "Розгорнути",
+  "UniGetUI by Devolutions": "UniGetUI від Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI — це застосунок, який робить керування вашим програмним забезпеченням простіше: він надає графічний інтерфейс \"все в одному\" для ваших менеджерів пакетів.",
   "Useful links": "Корисні посилання",
   "UniGetUI Homepage": "Домашня сторінка UniGetUI",
@@ -737,6 +738,7 @@
   "Reinstall": "Перевстановити",
   "Installer not available": "Інсталятор не доступний",
   "Version:": "Версія:",
+  "UniGetUI Version {0}": "UniGetUI версія {0}",
   "Performing backup, please wait...": "Створюється резервна копія, зачекайте, будь ласка…",
   "An error occurred while logging in: ": "Виникла помилка при вході:",
   "Fetching available backups...": "Завантажуємо список резервних копій…",
@@ -774,5 +776,6 @@
   "Error": "Помилка",
   "Log in failed: ": "Вхід не вдався:",
   "Log out failed: ": "Вихід не вдався:",
-  "Package backup settings": "Налаштування резервного копіювання"
+  "Package backup settings": "Налаштування резервного копіювання",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI не має відношення до жодного з сумісних менеджерів пакетів. UniGetUI — це незалежний проект."
 }

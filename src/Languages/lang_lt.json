@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "Jūs esate įdiegę „UniGetUI“ versiją – {0}",
   "Disclaimer": "Atsakomýbės ribójimas",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "„UniGetUI“ nėra susijęs su jokiais/-omis palaikomais/-omis paketų tvarkytuvais/-ėmis. „UniGetUI“ yra nepriklausomas projektas.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "„UniGetUI“ kuria „Devolutions“ ir ji nėra susijusi su jokiais suderinamais paketų tvarkytuvais.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI nebūtų galima sukurti be visų prisidėjusių pagalbos. Ačiū Jums visiems! 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "„UniGetUI“ naudoja šias bibliotekas. Be jų, „UniGetUI“ nebūtų įmanomas.",
   "{0} homepage": "Pagrindinis tinklalapio puslapis – {0}",
@@ -226,7 +226,7 @@
   "1 week": "1-ai savaitei",
   "Supports release dates": "Palaiko išleidimo datas",
   "Release date support per package manager": "Išleidimo datų palaikymas pagal paketų tvarkytuvę",
-  "UniGetUI Version {0}": "„UniGetUI“ versija – {0}",
+  "UniGetUI Version {0} by Devolutions": "„UniGetUI“ versija {0}, „Devolutions“",
   "Search for packages": "Ieškoti paketų",
   "Local": "Vietinis",
   "OK": "Gerai",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Rodyti / slėpti naršymo skydelį",
   "Minimize": "Sumažinti",
   "Maximize": "Išdidinti",
+  "UniGetUI by Devolutions": "„UniGetUI“, „Devolutions“",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "„UniGetUI“ yra programa, kuri padeda tvarkyti/valdyti taikomąsias programas paprasčiau, pateikdama paprastą „viskas viename“ grafinę sąsają, skirtą komandines eilutes vykdantiems paketų tvarkytuvams/-ėms.",
   "Useful links": "Naudingos nuorodos",
   "UniGetUI Homepage": "„UniGetUI“ pradinis puslapis",
@@ -737,6 +738,7 @@
   "Reinstall": "Perdiegti",
   "Installer not available": "Įdiegiklis nepasiekiamas",
   "Version:": "Versija:",
+  "UniGetUI Version {0}": "„UniGetUI“ versija – {0}",
   "Performing backup, please wait...": "Atliekamas atsarginės kopijos sukūrimas, prašome palaukti...",
   "An error occurred while logging in: ": "Bandant prisijungti, įvyko klaida:",
   "Fetching available backups...": "Gaunamos galimos atsarginės kopijos...",
@@ -774,5 +776,6 @@
   "Error": "Klaida",
   "Log in failed: ": "Prisijungimas nepavyko:",
   "Log out failed: ": "Nepavyko atsijungti:",
-  "Package backup settings": "Paketų atsarginės kopijos nustatymai"
+  "Package backup settings": "Paketų atsarginės kopijos nustatymai",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "„UniGetUI“ nėra susijęs su jokiais/-omis palaikomais/-omis paketų tvarkytuvais/-ėmis. „UniGetUI“ yra nepriklausomas projektas."
 }

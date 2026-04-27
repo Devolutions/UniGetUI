@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "UniGetUI وەشانی {0}ت دامەزراندووە",
   "Disclaimer": "ئاگادارکردنەوە",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI هیچ پەیوەندییەکی بە هیچ کام لە بەڕێوەبەرانی پاکێجی گونجاوەوە نییە. UniGetUI پڕۆژەیەکی سەربەخۆیە.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI لەلایەن Devolutions پەرەپێدراوە و پەیوەندیی بە هیچ یەکێک لە بەڕێوەبەرانی پاکێجی هاوگونجاوەوە نییە.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI بەبێ یارمەتی بەشداران بوونی نەدەبوو. سوپاسی هەمووتان 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI ئەم کتێبخانانەی خوارەوە بەکاردەهێنێت. بەبێ ئەوان، UniGetUI نەدەکرا.",
   "{0} homepage": "ماڵپەڕی سەرەکی {0}",
@@ -226,7 +226,7 @@
   "1 week": "1 هەفتە",
   "Supports release dates": "پشتیوانی لە بەرواری بڵاوکردنەوە دەکات",
   "Release date support per package manager": "پشتیوانی بەرواری بڵاوکردنەوە بەپێی بەڕێوەبەری پاکێج",
-  "UniGetUI Version {0}": "وەشانی UniGetUI {0}",
+  "UniGetUI Version {0} by Devolutions": "وەشانی UniGetUI {0} لەلایەن Devolutions",
   "Search for packages": "بگەڕێ بۆ پاکێجەکان",
   "Local": "ناوخۆیی",
   "OK": "OK",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "پانێڵی گەشتکردن بگۆڕە",
   "Minimize": "بچووککردنەوە",
   "Maximize": "گەورەکردنەوە",
+  "UniGetUI by Devolutions": "UniGetUI لەلایەن Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI بەرنامەیەکە کە بەڕێوەبردنی نەرمەکاڵاکەت ئاسانتر دەکات، بە دابینکردنی ڕووکارێکی گرافیکی هەمووی لە یەکدا بۆ بەڕێوەبەرانی پاکێجی هێڵی فەرمانەکەت.",
   "Useful links": "بەستەرە بەسوودەکان",
   "UniGetUI Homepage": "ماڵپەڕی سەرەکی UniGetUI",
@@ -737,6 +738,7 @@
   "Reinstall": "دووبارە دابمەزرێنە",
   "Installer not available": "دامەزرێنەر بەردەست نییە",
   "Version:": "وەشان:",
+  "UniGetUI Version {0}": "وەشانی UniGetUI {0}",
   "Performing backup, please wait...": "پاشەکەوتکردن ئەنجام دەدرێت، تکایە چاوەڕێ بکە...",
   "An error occurred while logging in: ": "کاتێک چوونەژوورەوە ئەنجام دەدرا هەڵەیەک ڕوویدا: ",
   "Fetching available backups...": "پاشەکەوتە بەردەستەکان هێنراون...",
@@ -774,5 +776,6 @@
   "Error": "هەڵە",
   "Log in failed: ": "چوونەژوورەوە سەرکەوتوو نەبوو: ",
   "Log out failed: ": "چوونەدەرەوە سەرکەوتوو نەبوو: ",
-  "Package backup settings": "ڕێکخستنەکانی باکاپی پەکەج"
+  "Package backup settings": "ڕێکخستنەکانی باکاپی پەکەج",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI هیچ پەیوەندییەکی بە هیچ کام لە بەڕێوەبەرانی پاکێجی گونجاوەوە نییە. UniGetUI پڕۆژەیەکی سەربەخۆیە."
 }

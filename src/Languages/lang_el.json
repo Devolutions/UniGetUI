@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "Έχετε εγκατεστημένη την έκδοση {0} του UniGetUI",
   "Disclaimer": "Δήλωση αποποίησης ευθυνών",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "Το UniGetUI δε σχετίζεται με κανέναν από τους συμβατούς διαχειριστές πακέτων. Το UniGetUI είναι ένα ανεξάρτητο έργο.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "Το UniGetUI αναπτύσσεται από τη Devolutions και δεν συνδέεται με κανέναν από τους συμβατούς διαχειριστές πακέτων.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "Το UniGetUI δε θα ήταν δυνατό χωρίς τη βοήθεια των συνεισφερόντων. Σας ευχαριστώ όλους 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "Το UniGetUI χρησιμοποιεί τις ακόλουθες βιβλιοθήκες. Χωρίς αυτές, το UniGetUI δε θα υπήρχε.",
   "{0} homepage": "Αρχική σελίδα {0}",
@@ -226,7 +226,7 @@
   "1 week": "1 εβδομάδα",
   "Supports release dates": "Υποστηρίζει ημερομηνίες έκδοσης",
   "Release date support per package manager": "Υποστήριξη ημερομηνιών έκδοσης ανά διαχειριστή πακέτων",
-  "UniGetUI Version {0}": "UniGetUI Εκδοση {0}",
+  "UniGetUI Version {0} by Devolutions": "Έκδοση UniGetUI {0} από τη Devolutions",
   "Search for packages": "Αναζήτηση πακέτων",
   "Local": "Τοπικό",
   "OK": "ΕΝΤΆΞΕΙ",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Εναλλαγή πίνακα περιήγησης",
   "Minimize": "Ελαχιστοποίηση",
   "Maximize": "Μεγιστοποίηση",
+  "UniGetUI by Devolutions": "UniGetUI από τη Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "Το UniGetUI είναι μια εφαρμογή που διευκολύνει τη διαχείριση του λογισμικού σας, παρέχοντας ένα γραφικό περιβάλλον χρήστη όλα σε ένα για τους διαχειριστές πακέτων γραμμής εντολών σας.",
   "Useful links": "Χρήσιμοι σύνδεσμοι",
   "UniGetUI Homepage": "Αρχική σελίδα του UniGetUI",
@@ -737,6 +738,7 @@
   "Reinstall": "Επανεγκατάσταση",
   "Installer not available": "Το πρόγραμμα εγκατάστασης δεν είναι διαθέσιμο",
   "Version:": "Εκδοση:",
+  "UniGetUI Version {0}": "UniGetUI Εκδοση {0}",
   "Performing backup, please wait...": "Δημιουργία αντιγράφου ασφαλείας, παρακαλώ περιμένετε...",
   "An error occurred while logging in: ": "Παρουσιάστηκε σφάλμα κατά τη σύνδεση:",
   "Fetching available backups...": "Ανάκτηση διαθέσιμων αντιγράφων ασφαλείας...",
@@ -774,5 +776,6 @@
   "Error": "Σφάλμα",
   "Log in failed: ": "Η σύνδεση απέτυχε:",
   "Log out failed: ": "Η αποσύνδεση απέτυχε:",
-  "Package backup settings": "Ρυθμίσεις αντιγράφου ασφαλείας πακέτου"
+  "Package backup settings": "Ρυθμίσεις αντιγράφου ασφαλείας πακέτου",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "Το UniGetUI δε σχετίζεται με κανέναν από τους συμβατούς διαχειριστές πακέτων. Το UniGetUI είναι ένα ανεξάρτητο έργο."
 }

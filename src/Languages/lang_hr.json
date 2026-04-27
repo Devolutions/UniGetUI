@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "Instalirali ste UniGetUI verziju {0}",
   "Disclaimer": "Izjava o odgovornosti",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI nije povezan ni s jednim kompatibilnim upraviteljem paketa. UniGetUI je neovisni projekt.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI razvija Devolutions i nije povezan ni s jednim od kompatibilnih upravitelja paketa.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI ne bi bio moguć bez pomoći suradnika. Hvala svima 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI koristi sljedeće biblioteke. Bez njih, UniGetUI ne bi bio moguć.",
   "{0} homepage": "{0} početna stranica",
@@ -226,7 +226,7 @@
   "1 week": "1 tjedan",
   "Supports release dates": "Podržava datume izdanja",
   "Release date support per package manager": "Podrška za datume izdanja po upravitelju paketa",
-  "UniGetUI Version {0}": "UniGetUI verzija {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI verzija {0} tvrtke Devolutions",
   "Search for packages": "Traži pakete",
   "Local": "Lokalno",
   "OK": "U redu",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Prikaži/sakrij navigacijsku ploču",
   "Minimize": "Minimiziraj",
   "Maximize": "Maksimiziraj",
+  "UniGetUI by Devolutions": "UniGetUI tvrtke Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI je aplikacija koja olakšava upravljanje vašim softverom pružajući sveobuhvatno grafičko sučelje za vaše upravitelje paketa iz naredbenog retka.",
   "Useful links": "Korisni linkovi",
   "UniGetUI Homepage": "Početna stranica UniGetUI-ja",
@@ -737,6 +738,7 @@
   "Reinstall": "Ponovna instalacija",
   "Installer not available": "Instalacijski program nedostupan",
   "Version:": "Verzija:",
+  "UniGetUI Version {0}": "UniGetUI verzija {0}",
   "Performing backup, please wait...": "Izvodi se sigurnosna kopija, pričekajte...",
   "An error occurred while logging in: ": "Došlo je do pogreške prilikom prijave:",
   "Fetching available backups...": "Dohvaćanje dostupnih sigurnosnih kopija...",
@@ -774,5 +776,6 @@
   "Error": "Greška",
   "Log in failed: ": "Prijava neuspješna:",
   "Log out failed: ": "Odjava neuspješna: ",
-  "Package backup settings": "Postavke sigurnosne kopije paketa"
+  "Package backup settings": "Postavke sigurnosne kopije paketa",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI nije povezan ni s jednim kompatibilnim upraviteljem paketa. UniGetUI je neovisni projekt."
 }

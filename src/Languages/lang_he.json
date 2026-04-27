@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "התקנת את גירסת UniGetUI {0}",
   "Disclaimer": "כתב ויתור",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI אינו קשור לאף אחד ממנהלי החבילות התואמות. UniGetUI הוא פרויקט עצמאי.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI פותח על ידי Devolutions ואינו משויך לאף אחד ממנהלי החבילות התואמים.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI לא היה קורה ללא עזרת התורמים. תודה לכולכם 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI משתמש בספריות הבאות. בלעדיהם, UniGetUI לא היה אפשרי.",
   "{0} homepage": "דף הבית של {0}",
@@ -226,7 +226,7 @@
   "1 week": "שבוע אחד",
   "Supports release dates": "תומך בתאריכי שחרור",
   "Release date support per package manager": "תמיכה בתאריכי שחרור לפי מנהל חבילות",
-  "UniGetUI Version {0}": "UniGetUI גרסה {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI גרסה {0} מאת Devolutions",
   "Search for packages": "חפש חבילות",
   "Local": "מקומי",
   "OK": "אישור",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "הצג או הסתר את חלונית הניווט",
   "Minimize": "מזער",
   "Maximize": "הגדל",
+  "UniGetUI by Devolutions": "UniGetUI מאת Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI הוא יישום שמקל על ניהול התוכנה שלך, על ידי מתן ממשק גרפי הכל-באחד עבור מנהלי חבילות שורת הפקודה שלך.",
   "Useful links": "קישורים שימושיים",
   "UniGetUI Homepage": "דף הבית של UniGetUI",
@@ -737,6 +738,7 @@
   "Reinstall": "התקן מחדש",
   "Installer not available": "תוכנית ההתקנה אינה זמינה",
   "Version:": "גרסה:",
+  "UniGetUI Version {0}": "UniGetUI גרסה {0}",
   "Performing backup, please wait...": "מבצע גיבוי, אנא המתן...",
   "An error occurred while logging in: ": "אירעה שגיאה במהלך הכניסה:",
   "Fetching available backups...": "מושך גיבויים זמינים...",
@@ -774,5 +776,6 @@
   "Error": "שגיאה",
   "Log in failed: ": "הכניסה נכשלה:",
   "Log out failed: ": "היציאה נכשלה:",
-  "Package backup settings": "הגדרות גיבוי חבילות"
+  "Package backup settings": "הגדרות גיבוי חבילות",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI אינו קשור לאף אחד ממנהלי החבילות התואמות. UniGetUI הוא פרויקט עצמאי."
 }

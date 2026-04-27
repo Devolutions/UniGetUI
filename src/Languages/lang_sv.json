@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "Du har installerat UniGetUI version {0}",
   "Disclaimer": "Ansvarsfriskrivning",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI har inget att göra med de kompatibla pakethanterarna. UniGetUI är en självständigt projekt.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI utvecklas av Devolutions och är inte anslutet till någon av de kompatibla pakethanterarna.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI skulle inte finns utan all hjälp från våra medarbetare. Ett stort tack! 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI använder följande bibliotek. Utan dessa hade inte UniGetUI funnits.",
   "{0} homepage": "{0} websida",
@@ -226,7 +226,7 @@
   "1 week": "1 vecka",
   "Supports release dates": "Stöder utgivningsdatum",
   "Release date support per package manager": "Stöd för utgivningsdatum per pakethanterare",
-  "UniGetUI Version {0}": "UniGetUI version {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI version {0} av Devolutions",
   "Search for packages": "Sök efter paket",
   "Local": "Lokal",
   "OK": "OK",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Växla navigeringspanelen",
   "Minimize": "Minimera",
   "Maximize": "Maximera",
+  "UniGetUI by Devolutions": "UniGetUI av Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI är ett program som mjukvaruhanteringen enklare genom att erbjuda ett tilltalande grafiskt gränssnitt för dina kommandorads pakethanterare.",
   "Useful links": "Användbara länkar",
   "UniGetUI Homepage": "UniGetUI:s hemsida",
@@ -737,6 +738,7 @@
   "Reinstall": "Ominstallera",
   "Installer not available": "Installeraren inte tillgänglig",
   "Version:": "Version:",
+  "UniGetUI Version {0}": "UniGetUI version {0}",
   "Performing backup, please wait...": "Säkerhetskopiering utförs, vänligen vänta...",
   "An error occurred while logging in: ": "Ett fel inträffade i samband med inloggning:",
   "Fetching available backups...": "Hämtar tillgängliga säkerhetskopior...",
@@ -774,5 +776,6 @@
   "Error": "Fel",
   "Log in failed: ": "Inloggning misslyckades:",
   "Log out failed: ": "Utloggning misslyckades",
-  "Package backup settings": "Inställningar för paketets säkerhetskopia"
+  "Package backup settings": "Inställningar för paketets säkerhetskopia",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI har inget att göra med de kompatibla pakethanterarna. UniGetUI är en självständigt projekt."
 }

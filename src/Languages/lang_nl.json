@@ -1,4 +1,4 @@
-﻿{
+{
   "{0} is now {1}": "{0} is nu {1}",
   "Enabled": "Ingeschakeld",
   "Disabled": "Uitgeschakeld",
@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "Je hebt UniGetUI versie {0} geïnstalleerd",
   "Disclaimer": "Clausule",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI is niet gebonden aan een van de compatibele pakketbeheerders. UniGetUI is een onafhankelijk project.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI is ontwikkeld door Devolutions en is niet verbonden aan een van de compatibele pakketbeheerders.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI zou niet mogelijk zijn geweest zonder de bijdragen van deze personen. \nBedankt allemaal 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI maakt gebruik van de volgende bibliotheken, zonder welke UniGetUI niet mogelijk zou zijn geweest.",
   "{0} homepage": "{0} website",
@@ -195,7 +195,7 @@
   "Compatible with authentication": "Compatibel met authenticatie",
   "Proxy compatibility table": "Proxy compatibiliteitstabel",
   "{0} settings": "{0} instellingen",
-  "{0} status": "{0} status",
+  "{0} status": "{0}-status",
   "Default installation options for {0} packages": "Standaard installatie-opties voor {0} pakketten",
   "Expand version": "Uitgebreide versie-informatie",
   "The executable file for {0} was not found": "Het uitvoerbare bestand voor {0} is niet gevonden",
@@ -226,7 +226,7 @@
   "1 week": "1 week",
   "Supports release dates": "Ondersteunt releasedatums",
   "Release date support per package manager": "Ondersteuning voor releasedatums per pakketbeheerder",
-  "UniGetUI Version {0}": "UniGetUI-versie {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI versie {0} door Devolutions",
   "Search for packages": "Pakketten zoeken",
   "Local": "Lokaal",
   "OK": "OK",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Navigatiepaneel wisselen",
   "Minimize": "Minimaliseren",
   "Maximize": "Maximaliseren",
+  "UniGetUI by Devolutions": "UniGetUI door Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI is een applicatie die het beheer van jouw software eenvoudiger maakt door een alles-in-één grafische interface te bieden voor je opdrachtregelpakketbeheerders.",
   "Useful links": "Nuttige links",
   "UniGetUI Homepage": "UniGetUI-homepage",
@@ -653,7 +654,7 @@
   "Package management made easy": "Pakketbeheer eenvoudig gemaakt",
   "version {0}": "versie {0}",
   "[RAN AS ADMINISTRATOR]": "[UITGEVOERD ALS ADMINISTRATOR]",
-  "Portable mode": "Portable modus",
+  "Portable mode": "Portable modus\n",
   "DEBUG BUILD": "TESTVERSIE",
   "Available Updates": "Beschikbare updates",
   "Show UniGetUI": "UniGetUI openen",
@@ -737,6 +738,7 @@
   "Reinstall": "Opnieuw installeren",
   "Installer not available": "Installatieprogramma niet beschikbaar",
   "Version:": "Versie:",
+  "UniGetUI Version {0}": "UniGetUI-versie {0}",
   "Performing backup, please wait...": "Back-up uitvoeren, even geduld…",
   "An error occurred while logging in: ": "Er is een fout opgetreden bij het inloggen:",
   "Fetching available backups...": "Beschikbare back-ups ophalen...",
@@ -774,5 +776,6 @@
   "Error": "Foutmeldingen",
   "Log in failed: ": "Inloggen mislukt:",
   "Log out failed: ": "Uitloggen mislukt:",
-  "Package backup settings": "Back-up instellingen van het pakket"
+  "Package backup settings": "Back-up instellingen van het pakket",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI is niet gebonden aan een van de compatibele pakketbeheerders. UniGetUI is een onafhankelijk project."
 }

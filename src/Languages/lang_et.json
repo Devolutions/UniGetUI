@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "Te olete paigaldanud UniGetUI versiooni {0}",
   "Disclaimer": "Lahtiütlus",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI ei ole seotud ühegi ühilduva paketihalduriga. UniGetUI on iseseisev projekt.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI-d arendab Devolutions ja see ei ole seotud ühegi ühilduva paketihalduriga.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI poleks olnud võimalik ilma panustajate abita. Tänan teid kõiki 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI kasutab järgmisi teeke. Ilma nendeta ei oleks UniGetUI võimalik.",
   "{0} homepage": "{0} kodulehekülg",
@@ -226,7 +226,7 @@
   "1 week": "Üks nädal",
   "Supports release dates": "Toetab väljalaskekuupäevi",
   "Release date support per package manager": "Väljalaskekuupäevade tugi paketihalduri kaupa",
-  "UniGetUI Version {0}": "UniGetUI versioon {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI versioon {0}, autor Devolutions",
   "Search for packages": "Otsi paketid",
   "Local": "Lokaalne",
   "OK": "Okei",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Lülita navigeerimispaneel sisse või välja",
   "Minimize": "Minimeeri",
   "Maximize": "Maksimeeri",
+  "UniGetUI by Devolutions": "UniGetUI autor Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI on rakendus, mis muudab teie tarkvara haldamise lihtsamaks, pakkudes ühte graafilist kasutajaliidest teie käsurea packagemanageritele.",
   "Useful links": "Kasulikud lingid",
   "UniGetUI Homepage": "UniGetUI koduleht",
@@ -737,6 +738,7 @@
   "Reinstall": "Paigalda uuesti",
   "Installer not available": "Paigaldaja pole saadaval",
   "Version:": "Versioon:",
+  "UniGetUI Version {0}": "UniGetUI versioon {0}",
   "Performing backup, please wait...": "Toimub varundamine, palun oodake...",
   "An error occurred while logging in: ": "Sisselogimise ajal tekkis viga:",
   "Fetching available backups...": "Saadaolevate varukoopiafailide herimine...",
@@ -774,5 +776,6 @@
   "Error": "Viga",
   "Log in failed: ": "Sisselogimine nurjus:",
   "Log out failed: ": "Väljalogimine nurjus:",
-  "Package backup settings": "Paketi varundamise seaded"
+  "Package backup settings": "Paketi varundamise seaded",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI ei ole seotud ühegi ühilduva paketihalduriga. UniGetUI on iseseisev projekt."
 }

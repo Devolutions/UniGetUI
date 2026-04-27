@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "Vi instalis UniGetUI-version {0}",
   "Disclaimer": "Malgarantio",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI ne rilatas al iu ajn el la kongruaj pakaĵadministriloj. UniGetUI estas sendependa projekto.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI estas disvolvita de Devolutions kaj ne estas aligita kun iu ajn el la kongruaj pakaĵadministriloj.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI uzas la jenajn bibliotekojn. Sen ili, UniGetUI ne estus ebla.",
   "{0} homepage": "Hejmpaĝo de {0}",
@@ -226,7 +226,7 @@
   "1 week": "1 semajno",
   "Supports release dates": "Subtenas eldondatojn",
   "Release date support per package manager": "Subteno de eldondatoj laŭ pakadministrilo",
-  "UniGetUI Version {0}": "UniGetUI versio {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI Versio {0} de Devolutions",
   "Search for packages": "Serĉi pakaĵojn",
   "Local": "Loka",
   "OK": "OK",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Montri aŭ kaŝi la navigan panelon",
   "Minimize": "Minimumigi",
   "Maximize": "Maksimumigi",
+  "UniGetUI by Devolutions": "UniGetUI de Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI estas aplikaĵo, kiu faciligas la administradon de via programaro, provizante tute-en-unu grafikan interfacon por viaj komandliniaj pakadministriloj.",
   "Useful links": "Utilaj ligiloj",
   "UniGetUI Homepage": "Hejmpaĝo de UniGetUI",
@@ -737,6 +738,7 @@
   "Reinstall": "Reinstali",
   "Installer not available": "Instalilo ne disponeblas",
   "Version:": "Versio:",
+  "UniGetUI Version {0}": "UniGetUI versio {0}",
   "Performing backup, please wait...": "Sekurkopiado okazas, bonvolu atendi...",
   "An error occurred while logging in: ": "Okazis eraro dum ensaluto: ",
   "Fetching available backups...": "Ŝargante disponeblajn sekurkopiojn...",
@@ -774,5 +776,6 @@
   "Error": "Eraro",
   "Log in failed: ": "Ensaluto malsukcesis: ",
   "Log out failed: ": "Elsaluto malsukcesis: ",
-  "Package backup settings": "Agordoj de sekurkopio de pakaĵoj"
+  "Package backup settings": "Agordoj de sekurkopio de pakaĵoj",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI ne rilatas al iu ajn el la kongruaj pakaĵadministriloj. UniGetUI estas sendependa projekto."
 }

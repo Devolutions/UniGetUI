@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "ನೀವು UniGetUI Version {0} install ಮಾಡಿದ್ದಾರೆ",
   "Disclaimer": "ಘೋಷಣೆ",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI ಯಾವುದೇ ಹೊಂದಾಣಿಕೆಯ package managers ಗಳಿಗೆ ಸಂಬಂಧಿಸಿದುದಲ್ಲ. UniGetUI ಒಂದು ಸ್ವತಂತ್ರ ಯೋಜನೆ.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI ಅನ್ನು Devolutions ಅಭಿವೃದ್ಧಿಪಡಿಸಿದೆ ಮತ್ತು ಇದು ಯಾವುದೇ ಹೊಂದಾಣಿಕೆಯ ಪ್ಯಾಕೇಜ್ ಮ್ಯಾನೇಜರ್‌ಗಳೊಂದಿಗೆ ಸಂಯೋಜಿತವಾಗಿಲ್ಲ.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "contributors ಗಳ ಸಹಾಯವಿಲ್ಲದೆ UniGetUI ಸಾಧ್ಯವಾಗುತ್ತಿರಲಿಲ್ಲ. ಎಲ್ಲರಿಗೂ ಧನ್ಯವಾದಗಳು 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI ಕೆಳಗಿನ libraries ಗಳನ್ನು ಬಳಸುತ್ತದೆ. ಅವುಗಳಿಲ್ಲದೆ UniGetUI ಸಾಧ್ಯವಾಗುತ್ತಿರಲಿಲ್ಲ.",
   "{0} homepage": "{0} ಮುಖಪುಟ",
@@ -226,7 +226,7 @@
   "1 week": "1 ವಾರ",
   "Supports release dates": "ಬಿಡುಗಡೆ ದಿನಾಂಕಗಳನ್ನು ಬೆಂಬಲಿಸುತ್ತದೆ",
   "Release date support per package manager": "ಪ್ರತಿ package manager ಗೆ ಬಿಡುಗಡೆ ದಿನಾಂಕ ಬೆಂಬಲ",
-  "UniGetUI Version {0}": "UniGetUI ಆವೃತ್ತಿ {0}",
+  "UniGetUI Version {0} by Devolutions": "Devolutions ನಿಂದ UniGetUI ಆವೃತ್ತಿ {0}",
   "Search for packages": "ಪ್ಯಾಕೇಜ್‌ಗಳನ್ನು ಹುಡುಕಿ",
   "Local": "ಸ್ಥಳೀಯ",
   "OK": "ಸರಿ",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "ಸಂಚಲನ ಪ್ಯಾನೆಲ್ ಅನ್ನು ಟಾಗಲ್ ಮಾಡಿ",
   "Minimize": "ಸಣ್ಣಗೊಳಿಸಿ",
   "Maximize": "ದೊಡ್ಡಗೊಳಿಸಿ",
+  "UniGetUI by Devolutions": "Devolutions ನಿಂದ UniGetUI",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "ನಿಮ್ಮ command-line package managers ಗಾಗಿ all-in-one graphical interface ಒದಗಿಸುವ ಮೂಲಕ ನಿಮ್ಮ software ನಿರ್ವಹಣೆಯನ್ನು ಸುಲಭಗೊಳಿಸುವ application UniGetUI ಆಗಿದೆ.",
   "Useful links": "ಉಪಯುಕ್ತ links",
   "UniGetUI Homepage": "UniGetUI ಮುಖಪುಟ",
@@ -737,6 +738,7 @@
   "Reinstall": "ಮರುಸ್ಥಾಪಿಸಿ",
   "Installer not available": "Installer ಲಭ್ಯವಿಲ್ಲ",
   "Version:": "ಆವೃತ್ತಿ:",
+  "UniGetUI Version {0}": "UniGetUI ಆವೃತ್ತಿ {0}",
   "Performing backup, please wait...": "backup ನಡೆಸಲಾಗುತ್ತಿದೆ, ದಯವಿಟ್ಟು ನಿರೀಕ್ಷಿಸಿ...",
   "An error occurred while logging in: ": "ಲಾಗಿನ್ ಮಾಡುವಾಗ ದೋಷ ಸಂಭವಿಸಿದೆ: ",
   "Fetching available backups...": "ಲಭ್ಯವಿರುವ backups ಅನ್ನು ಪಡೆದುಕೊಳ್ಳುತ್ತಿದೆ...",
@@ -774,5 +776,6 @@
   "Error": "ದೋಷ",
   "Log in failed: ": "ಲಾಗಿನ್ ವಿಫಲವಾಗಿದೆ: ",
   "Log out failed: ": "ಲಾಗ್ ಔಟ್ ವಿಫಲವಾಗಿದೆ: ",
-  "Package backup settings": "ಪ್ಯಾಕೇಜ್ backup settings"
+  "Package backup settings": "ಪ್ಯಾಕೇಜ್ backup settings",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI ಯಾವುದೇ ಹೊಂದಾಣಿಕೆಯ package managers ಗಳಿಗೆ ಸಂಬಂಧಿಸಿದುದಲ್ಲ. UniGetUI ಒಂದು ಸ್ವತಂತ್ರ ಯೋಜನೆ."
 }

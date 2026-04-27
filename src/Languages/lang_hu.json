@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "Ön telepítette a UniGetUI {0} verzióját.",
   "Disclaimer": "Nyilatkozat",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "Az UniGetUI nem kapcsolódik egyik kompatibilis csomagkezelőhöz sem. Az UniGetUI egy független projekt.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "A UniGetUI-t a Devolutions fejleszti, és nem áll kapcsolatban egyik kompatibilis csomagkezelővel sem.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "A UniGetUI nem jöhetett volna létre a közreműködők segítsége nélkül. Köszönjük mindenkinek 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "A UniGetUI a következő könyvtárakat használja. Ezek nélkül a UniGetUI nem jöhetett volna létre.",
   "{0} homepage": "{0} honlap",
@@ -226,7 +226,7 @@
   "1 week": "1 hét",
   "Supports release dates": "Támogatja a kiadási dátumokat",
   "Release date support per package manager": "Kiadási dátum támogatása csomagkezelőnként",
-  "UniGetUI Version {0}": "UniGetUI verzió {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI {0} verzió – Devolutions",
   "Search for packages": "Csomagok keresése",
   "Local": "Helyi",
   "OK": "OK",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Navigációs panel váltása",
   "Minimize": "Kis méretre állítás",
   "Maximize": "Maximalizálás",
+  "UniGetUI by Devolutions": "UniGetUI – Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "A UniGetUI egy olyan alkalmazás, amely megkönnyíti a szoftverek kezelését, mivel egy minden egyben grafikus felületet biztosít a parancssori csomagkezelők számára.\n",
   "Useful links": "Hasznos linkek",
   "UniGetUI Homepage": "UniGetUI honlapja",
@@ -737,6 +738,7 @@
   "Reinstall": "Újratelepítés",
   "Installer not available": "Telepítő nem érhető el",
   "Version:": "Verzió:",
+  "UniGetUI Version {0}": "UniGetUI verzió {0}",
   "Performing backup, please wait...": "Biztonsági mentés végrehajtása, kis türelmet...",
   "An error occurred while logging in: ": "Hiba történt a bejelentkezés során:",
   "Fetching available backups...": "Elérhető biztonsági mentések lekérése...",
@@ -774,5 +776,6 @@
   "Error": "Hiba",
   "Log in failed: ": "Sikertelen bejelentkezés:",
   "Log out failed: ": "A kijelentkezés sikertelen:",
-  "Package backup settings": "Csomag bizt. mentés beállításai"
+  "Package backup settings": "Csomag bizt. mentés beállításai",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "Az UniGetUI nem kapcsolódik egyik kompatibilis csomagkezelőhöz sem. Az UniGetUI egy független projekt."
 }

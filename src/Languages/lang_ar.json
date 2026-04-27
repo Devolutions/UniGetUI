@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "لقد قمت بتثبيت UniGetUI  الإصدار {0}",
   "Disclaimer": "تنصل (للتوضيح)",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI ليس مرتبطًا بأي من مديري الحزم المتوافقين. UniGetUI هو مشروع مستقل.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "تم تطوير UniGetUI بواسطة Devolutions، وهو غير تابع لأي من مديري الحزم المتوافقين.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "لم يكن من الممكن إنشاء UniGetUI بدون مساعدة المساهمين. شكرًا لكم جميعًا 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "يستخدم UniGetUI المكتبات التالية. بدونها، لم يكن UniGetUI ممكنًا.",
   "{0} homepage": "{0} الصفحة الرئيسية",
@@ -226,7 +226,7 @@
   "1 week": "أسبوع واحد",
   "Supports release dates": "يدعم تواريخ الإصدار",
   "Release date support per package manager": "دعم تاريخ الإصدار لكل مدير حزم",
-  "UniGetUI Version {0}": "إصدار UniGetUI  {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI الإصدار {0} بواسطة Devolutions",
   "Search for packages": "البحث عن حزم",
   "Local": "محلي",
   "OK": "حسنًا",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "تبديل لوحة التنقل",
   "Minimize": "تصغير",
   "Maximize": "تكبير",
+  "UniGetUI by Devolutions": "UniGetUI بواسطة Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI هو تطبيق يجعل إدارة البرامج الخاصة بك أسهل، من خلال توفير واجهة رسومية شاملة لمديري حزم سطر الأوامر لديك.",
   "Useful links": "روابط مفيدة",
   "UniGetUI Homepage": "الصفحة الرئيسية لـ UniGetUI",
@@ -737,6 +738,7 @@
   "Reinstall": "إعادة التثبيت",
   "Installer not available": "المثبت غير متوفر",
   "Version:": "الإصدار:",
+  "UniGetUI Version {0}": "إصدار UniGetUI  {0}",
   "Performing backup, please wait...": "يتم النسخ الإحتياطي الآن, يرجى الإنتظار...",
   "An error occurred while logging in: ": "حدث خطأ عند تسجيل الدخول",
   "Fetching available backups...": "إسترداد النسخ الاحتياطية المتوفرة...",
@@ -774,5 +776,6 @@
   "Error": "خطأ",
   "Log in failed: ": "فشل تسجيل الدخول:",
   "Log out failed: ": "فشل تسجيل الخروج:",
-  "Package backup settings": "إعدادات النسخ الاحتياطي للحزم"
+  "Package backup settings": "إعدادات النسخ الاحتياطي للحزم",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI ليس مرتبطًا بأي من مديري الحزم المتوافقين. UniGetUI هو مشروع مستقل."
 }

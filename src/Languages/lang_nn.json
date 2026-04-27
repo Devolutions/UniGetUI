@@ -1,4 +1,4 @@
-﻿{
+{
   "{0} is now {1}": "{0} er no {1}",
   "Enabled": "Aktivert",
   "Disabled": "Deaktivert",
@@ -149,11 +149,11 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "Du har installert UniGetUI versjon {0}",
   "Disclaimer": "Ansvarsfråskriving",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGet UI er ikkje knytta til nokon av dei kompatible pakkehandterarne. UniGetUI er eit uavhengig prosjekt.",
-  "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all \uD83E\uDD73": "UniGetUI ville ikkje vore mogleg uten hjelp frå alle bidragsytarane. Takk alle saman\uD83E\uDD73",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI er utvikla av Devolutions og er ikkje knytt til nokon av dei kompatible pakkehandsamarane.",
+  "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI ville ikkje vore mogleg uten hjelp frå alle bidragsytarane. Takk alle saman🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI brukar føljande bibliotek. Utan dei ville ikkje UniGetUI ha vore mogleg.",
   "{0} homepage": "{0} si heimeside",
-  "UniGetUI has been translated to more than 40 languages thanks to the volunteer translators. Thank you \uD83E\uDD1D": "UniGetUI har blitt omsett til meir enn 40 språk takka vere frivillige omsetjare. Takk \uD83E\uDD1D",
+  "UniGetUI has been translated to more than 40 languages thanks to the volunteer translators. Thank you 🤝": "UniGetUI har blitt omsett til meir enn 40 språk takka vere frivillige omsetjare. Takk 🤝",
   "Verbose": "Uttømmande",
   "1 - Errors": "1 - Feilmeldingar",
   "2 - Warnings": "2 - Åtvaringar",
@@ -226,7 +226,7 @@
   "1 week": "1 veke",
   "Supports release dates": "Støttar utgivingsdatoar",
   "Release date support per package manager": "Støtte for utgivingsdatoar per pakkehandterar",
-  "UniGetUI Version {0}": "UniGetUI versjon {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI versjon {0} av Devolutions",
   "Search for packages": "Søk etter pakkar",
   "Local": "Lokal",
   "OK": "Ok",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Vis/skjul navigasjonspanelet",
   "Minimize": "Minimer",
   "Maximize": "Maksimer",
+  "UniGetUI by Devolutions": "UniGetUI av Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI er ein applikasjon som forenklar handtering av programvare, ved å tilby eit alt-i-eitt grafisk grensesnitt for kommandolinjepakkehandterarane dine.",
   "Useful links": "Nyttige lenkar",
   "UniGetUI Homepage": "UniGetUI-heimeside",
@@ -737,6 +738,7 @@
   "Reinstall": "Installer på nytt",
   "Installer not available": "Installerar ikkje tilgjengeleg",
   "Version:": "Versjon:",
+  "UniGetUI Version {0}": "UniGetUI versjon {0}",
   "Performing backup, please wait...": "Utførar sikkerheitskopi, venlegst vent...",
   "An error occurred while logging in: ": "Ein feil oppstod under innlogging: ",
   "Fetching available backups...": "Hentar tilgjengelege sikkerheitskopiar...",
@@ -774,5 +776,6 @@
   "Error": "Feil",
   "Log in failed: ": "Innlogging feilet: ",
   "Log out failed: ": "Utlogging feilet: ",
-  "Package backup settings": "Innstillingar for pakke-sikkerheitskopi"
+  "Package backup settings": "Innstillingar for pakke-sikkerheitskopi",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGet UI er ikkje knytta til nokon av dei kompatible pakkehandterarne. UniGetUI er eit uavhengig prosjekt."
 }

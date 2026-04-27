@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "Anda telah menginstal UniGetUI Versi {0}",
   "Disclaimer": "Penafian",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI tidak terkait dengan manajer paket yang kompatibel manapun. UniGetUI adalah proyek independen.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI dikembangkan oleh Devolutions dan tidak berafiliasi dengan manajer paket kompatibel mana pun.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI tidak akan mungkin ada tanpa bantuan kontributor. Terima kasih semua 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI menggunakan pustaka berikut. Tanpa pustaka ini, UniGetUI tidak akan mungkin ada.",
   "{0} homepage": "{0} halaman utama",
@@ -226,7 +226,7 @@
   "1 week": "1 minggu",
   "Supports release dates": "Mendukung tanggal rilis",
   "Release date support per package manager": "Dukungan tanggal rilis per manajer paket",
-  "UniGetUI Version {0}": "UniGetUI Versi {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI Versi {0} oleh Devolutions",
   "Search for packages": "Cari paket",
   "Local": "Lokal",
   "OK": "OK",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Tampilkan/sembunyikan panel navigasi",
   "Minimize": "Minimalkan",
   "Maximize": "Maksimalkan",
+  "UniGetUI by Devolutions": "UniGetUI oleh Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI adalah aplikasi yang memudahkan pengelolaan perangkat lunak Anda, dengan menyediakan antarmuka grafis serba ada untuk pengelola paket baris perintah Anda.",
   "Useful links": "Tautan berguna",
   "UniGetUI Homepage": "Beranda UniGetUI",
@@ -737,6 +738,7 @@
   "Reinstall": "Pasang ulang",
   "Installer not available": "Pemasang tidak tersedia",
   "Version:": "Versi:",
+  "UniGetUI Version {0}": "UniGetUI Versi {0}",
   "Performing backup, please wait...": "Sedang melakukan cadangan, harap tunggu...",
   "An error occurred while logging in: ": "Terjadi kesalahan saat masuk:",
   "Fetching available backups...": "Mengambil cadangan yang tersedia...",
@@ -774,5 +776,6 @@
   "Error": "Kesalahan",
   "Log in failed: ": "Gagal masuk:",
   "Log out failed: ": "Logout gagal:",
-  "Package backup settings": "Pengaturan pencadangan paket"
+  "Package backup settings": "Pengaturan pencadangan paket",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI tidak terkait dengan manajer paket yang kompatibel manapun. UniGetUI adalah proyek independen."
 }

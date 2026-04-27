@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "UniGetUI {0} 버전을 설치했습니다.",
   "Disclaimer": "면책 조항",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI는 호환되는 패키지 관리자와 관련이 없습니다. UniGetUI는 독립적인 프로젝트입니다.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI는 Devolutions에서 개발하며, 호환되는 어떤 패키지 관리자와도 제휴 관계가 없습니다.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI는 기여자들의 도움 없이는 불가능했을 것입니다. 모두들 감사합니다🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI는 다음 라이브러리를 사용합니다. 그것들 없이는 UniGetUI가 존재할 수 없습니다.",
   "{0} homepage": "{0} 홈페이지",
@@ -226,7 +226,7 @@
   "1 week": "1주",
   "Supports release dates": "릴리스 날짜 지원",
   "Release date support per package manager": "패키지 관리자별 릴리스 날짜 지원",
-  "UniGetUI Version {0}": "UniGetUI 버전 {0}",
+  "UniGetUI Version {0} by Devolutions": "Devolutions 제공 UniGetUI 버전 {0}",
   "Search for packages": "패키지 검색",
   "Local": "로컬",
   "OK": "확인",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "탐색 패널 전환",
   "Minimize": "최소화",
   "Maximize": "최대화",
+  "UniGetUI by Devolutions": "Devolutions 제공 UniGetUI",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI는 명령줄 패키지 관리자에게 올인원 그래픽 인터페이스를 제공하여 소프트웨어 관리를 더 쉽게 해주는 응용 프로그램입니다.",
   "Useful links": "유용한 링크",
   "UniGetUI Homepage": "UniGetUI 홈페이지",
@@ -737,6 +738,7 @@
   "Reinstall": "재설치",
   "Installer not available": "설치 프로그램을 사용할 수 없음",
   "Version:": "버전:",
+  "UniGetUI Version {0}": "UniGetUI 버전 {0}",
   "Performing backup, please wait...": "백업을 수행하는 중. 잠시만 기다려주세요...",
   "An error occurred while logging in: ": "로그인하는 동안 오류가 발생했습니다: ",
   "Fetching available backups...": "사용 가능한 백업을 가져오는 중...",
@@ -774,5 +776,6 @@
   "Error": "오류",
   "Log in failed: ": "로그인 실패: ",
   "Log out failed: ": "로그아웃 실패: ",
-  "Package backup settings": "패키지 백업 설정"
+  "Package backup settings": "패키지 백업 설정",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI는 호환되는 패키지 관리자와 관련이 없습니다. UniGetUI는 독립적인 프로젝트입니다."
 }

@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "तुम्ही UniGetUI आवृत्ती {0} स्थापित केली आहे",
   "Disclaimer": "अस्वीकरण",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI कोणत्याही सुसंगत पॅकेज व्यवस्थापकाशी संबंधित नाही. UniGetUI हा स्वतंत्र प्रकल्प आहे.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI हे Devolutions द्वारे विकसित केले गेले आहे आणि ते कोणत्याही सुसंगत पॅकेज व्यवस्थापकांशी संलग्न नाही.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "योगदानकर्त्यांच्या मदतीशिवाय UniGetUI शक्य झाले नसते. तुम्हा सर्वांचे आभार 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI खालील ग्रंथालये वापरते. त्यांच्याशिवाय UniGetUI शक्य झाले नसते.",
   "{0} homepage": "{0} मुख्यपृष्ठ",
@@ -226,7 +226,7 @@
   "1 week": "एक आठवडा",
   "Supports release dates": "प्रकाशन दिनांकांना समर्थन",
   "Release date support per package manager": "प्रत्येक पॅकेज व्यवस्थापकानुसार प्रकाशन दिनांक समर्थन",
-  "UniGetUI Version {0}": "UniGetUI आवृत्ती {0}",
+  "UniGetUI Version {0} by Devolutions": "Devolutions कडून UniGetUI आवृत्ती {0}",
   "Search for packages": "पॅकेजेस शोधा",
   "Local": "स्थानिक",
   "OK": "OK",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "नेव्हिगेशन पॅनल टॉगल करा",
   "Minimize": "लहान करा",
   "Maximize": "मोठे करा",
+  "UniGetUI by Devolutions": "Devolutions कडून UniGetUI",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI हे एक अनुप्रयोग आहे जे तुमचे सॉफ्टवेअर व्यवस्थापित करणे सोपे करते, कारण ते तुमच्या कमांड-लाइन पॅकेज व्यवस्थापकांसाठी सर्व-समावेशक ग्राफिकल इंटरफेस प्रदान करते.",
   "Useful links": "उपयुक्त दुवे",
   "UniGetUI Homepage": "UniGetUI मुख्यपृष्ठ",
@@ -737,6 +738,7 @@
   "Reinstall": "पुन्हा स्थापित करा",
   "Installer not available": "इंस्टॉलर उपलब्ध नाही",
   "Version:": "आवृत्ती:",
+  "UniGetUI Version {0}": "UniGetUI आवृत्ती {0}",
   "Performing backup, please wait...": "बॅकअप घेत आहे, कृपया प्रतीक्षा करा...",
   "An error occurred while logging in: ": "लॉग इन करताना एक त्रुटी आली: ",
   "Fetching available backups...": "उपलब्ध बॅकअप्स आणत आहे...",
@@ -774,5 +776,6 @@
   "Error": "त्रुटी",
   "Log in failed: ": "लॉग इन अयशस्वी झाले: ",
   "Log out failed: ": "लॉग आउट अयशस्वी झाले: ",
-  "Package backup settings": "पॅकेज बॅकअप सेटिंग्ज"
+  "Package backup settings": "पॅकेज बॅकअप सेटिंग्ज",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI कोणत्याही सुसंगत पॅकेज व्यवस्थापकाशी संबंधित नाही. UniGetUI हा स्वतंत्र प्रकल्प आहे."
 }

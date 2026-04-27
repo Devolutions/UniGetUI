@@ -149,7 +149,7 @@
   "UniGetUI": "UniGetUI",
   "You have installed UniGetUI Version {0}": "Bạn đã cài đặt Phiên bản UniGetUI {0}",
   "Disclaimer": "Tuyên bố miễn trừ trách nhiệm",
-  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI không liên quan đến bất kỳ trình quản lý gói tương thích nào. UniGetUI là một dự án độc lập.",
+  "UniGetUI is developed by Devolutions and is not affiliated with any of the compatible package managers.": "UniGetUI được phát triển bởi Devolutions và không liên kết với bất kỳ trình quản lý gói tương thích nào.",
   "UniGetUI wouldn't have been possible without the help of the contributors. Thank you all 🥳": "UniGetUI sẽ không thể thực hiện được nếu không có sự giúp đỡ của những người đóng góp. Cảm ơn tất cả các bạn 🥳",
   "UniGetUI uses the following libraries. Without them, UniGetUI wouldn't have been possible.": "UniGetUI sử dụng các thư viện sau. Nếu không có họ, UniGetUI sẽ không thể tồn tại được.",
   "{0} homepage": "Trang chủ {0}",
@@ -226,7 +226,7 @@
   "1 week": "1 tuần",
   "Supports release dates": "Hỗ trợ ngày phát hành",
   "Release date support per package manager": "Mức hỗ trợ ngày phát hành theo từng trình quản lý gói",
-  "UniGetUI Version {0}": "UniGetUI Phiên bản {0}",
+  "UniGetUI Version {0} by Devolutions": "UniGetUI phiên bản {0} của Devolutions",
   "Search for packages": "Tìm kiếm gói",
   "Local": "Cục bộ",
   "OK": "OK ",
@@ -278,6 +278,7 @@
   "Toggle navigation panel": "Bật/tắt ngăn điều hướng",
   "Minimize": "Thu nhỏ",
   "Maximize": "Phóng to",
+  "UniGetUI by Devolutions": "UniGetUI của Devolutions",
   "UniGetUI is an application that makes managing your software easier, by providing an all-in-one graphical interface for your command-line package managers.": "UniGetUI là một ứng dụng giúp việc quản lý phần mềm của bạn dễ dàng hơn bằng cách cung cấp giao diện đồ họa tất cả trong một cho trình quản lý gói dòng lệnh của bạn.",
   "Useful links": "Liên kết hữu ích",
   "UniGetUI Homepage": "Trang chủ UniGetUI",
@@ -737,6 +738,7 @@
   "Reinstall": "Cài đặt lại",
   "Installer not available": "Trình cài đặt không có sẵn",
   "Version:": "Phiên bản:",
+  "UniGetUI Version {0}": "UniGetUI Phiên bản {0}",
   "Performing backup, please wait...": "Đang thực hiện sao lưu, vui lòng đợi...",
   "An error occurred while logging in: ": "Đã xảy ra lỗi khi đăng nhập: ",
   "Fetching available backups...": "Đang tìm các bản sao lưu có sẵn...",
@@ -774,5 +776,6 @@
   "Error": "Lỗi",
   "Log in failed: ": "Đăng nhập thất bại:",
   "Log out failed: ": "Đăng xuất thất bại:",
-  "Package backup settings": "Cài đặt sao lưu gói"
+  "Package backup settings": "Cài đặt sao lưu gói",
+  "UniGetUI is not related to any of the compatible package managers. UniGetUI is an independent project.": "UniGetUI không liên quan đến bất kỳ trình quản lý gói tương thích nào. UniGetUI là một dự án độc lập."
 }

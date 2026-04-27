@@ -550,6 +550,7 @@
   "extracted": "išskleista/-s",
   "Scoop package": "„Scoop“ paketas",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "Gera saugykla nežinomų, bet naudingų įrankių ir kitų įdomių paketų. <br>Sudaro: <b>Įrankiai, komandinės eilutės programos, bendrosios taikomosios programos (papildomiems „bucket“ reikalingas)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Universali „Linux“ paketų tvarkytuvė, sukurta „Canonical“.<br>Sudaro: <b>„Snap“ paketai iš „Snapcraft“ parduotuvės</b>",
   "library": "biblioteka",
   "feature": "funkcija",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "Populiari „C“/„C++“ bibliotekų tvarkyklė/-uvė. Pilna „C“/„C++“ bibliotekų ir kitokių susijusių įrankių<br>Sudaro: <b>„C“/„C++“ bibliotekas ir susijusius įrankius</b>",

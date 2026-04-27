@@ -550,6 +550,7 @@
   "extracted": "압축 해제됨",
   "Scoop package": "Scoop 패키지",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "알려지지 않았지만 유용한 유틸리티 및 기타 흥미로운 패키지의 훌륭한 저장소입니다.<br>포함: <b>유틸리티, 명령줄 프로그램, 일반 소프트웨어 (추가 버킷 필요)/b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Canonical의 범용 Linux 패키지 관리자입니다.<br>포함: <b>Snapcraft 스토어의 Snap 패키지</b>",
   "library": "라이브러리",
   "feature": "기능",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "인기 있는 C/C++ 라이브러리 관리자입니다. C/C++ 라이브러리 및 기타 C/C++ 관련 유틸리티로 가득합니다.<br>포함 내용: <b>C/C++ 라이브러리 및 관련 유틸리티<b>",

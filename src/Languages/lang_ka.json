@@ -550,6 +550,7 @@
   "extracted": "გამოარქივდა",
   "Scoop package": "Scoop-ის პაკეტი",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "მშვენიერი რეპოზიტორია უცნობი მაგრამ სასარგებლო უტილიტებითა და სხვა საინტერესო პაკეტებით. <br>შეიცავს: <b>უტილიტებს, ბრძანების ზოლის პროგრამებს, ზოგად პროგრამებს (საჭიროა extras კრებული)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "უნივერსალური Linux პაკეტების მენეჯერი Canonical-ისგან.<br>შეიცავს: <b>Snap პაკეტებს Snapcraft მაღაზიიდან</b>",
   "library": "ბიბლიოთეკა",
   "feature": "ფუნქცია",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "პოპულარული C/C++ ბიბლიოთეკების მმართველი. სავსეა C/C++ ბიბლიოთეკებით და სხვა მასთან დაკავშირებული უტილიტებით.<br> შეიცავს: <b>C/C++ ბიბლიოთეკებს და შესაბამის უტილიტებს</b>",

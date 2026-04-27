@@ -550,6 +550,7 @@
   "extracted": "دەرهێنراو",
   "Scoop package": "پاکێجی Scoop",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "کۆگایەکی باش لە ئامرازی نەناسراو بەڵام بەسوود و پاکێجە سەرنجڕاکێشەکانی تر.<br>لەخۆدەگرێت: <b>ئامرازەکان، بەرنامەکانی هێڵی فرمان، نەرمەکاڵای گشتی (بوکتی extras پێویستە)</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "بەڕێوەبەری پاکێجی گشتیی Linux لەلایەن Canonical.<br>لەخۆدەگرێت: <b>پاکێجەکانی Snap لە فرۆشگای Snapcraft</b>",
   "library": "کتێبخانە",
   "feature": "تایبەتمەندی",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "بەڕێوەبەری کتێبخانەیەکی بەناوبانگی C/C++. پڕە لە کتێبخانەکانی C/C++ و ئامرازە پەیوەندیدارەکانی تر<br>لەخۆدەگرێت: <b>کتێبخانەکانی C/C++ و ئامرازە پەیوەندیدارەکان</b>",

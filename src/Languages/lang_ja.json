@@ -550,6 +550,7 @@
   "extracted": "抽出された ",
   "Scoop package": "Scoop パッケージ",
   "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>": "知られていないが便利なユーティリティやその他の興味深いパッケージの素晴らしいリポジトリです。<br>含まれるもの: <b>ユーティリティ、コマンドラインプログラム、一般ソフトウェア（追加バケットが必要）</b>",
+  "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>": "Canonical による汎用 Linux パッケージ マネージャーです。<br>含まれるもの: <b>Snapcraft ストアからの Snap パッケージ</b>",
   "library": "ライブラリー",
   "feature": "機能",
   "A popular C/C++ library manager. Full of C/C++ libraries and other C/C++-related utilities<br>Contains: <b>C/C++ libraries and related utilities</b>": "人気のある C/C++ のライブラリ マネージャー。C/C++ ライブラリとその他の C/C++ 関連のユーティリティーが満載。<br>含まれるもの: <b>C/C++ ライブラリと関連ユーティリティー</b>",

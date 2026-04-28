@@ -80,7 +80,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
 
         uninstallAsAdmin.Click += (_, _) => _ = LaunchUninstall(vm.FilteredPackages.GetCheckedPackages(), elevated: true);
         uninstallInteractive.Click += (_, _) => _ = LaunchUninstall(vm.FilteredPackages.GetCheckedPackages(), interactive: true);
-        downloadInstallers.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
+        downloadInstallers.Click += (_, _) => _ = AvaloniaPackageOperationHelper.DownloadSelectedAsync(
+            vm.FilteredPackages.GetCheckedPackages(), TEL_InstallReferral.ALREADY_INSTALLED);
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
         ViewModel.AddToolbarSeparator();
@@ -162,7 +163,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
             Header = CoreTools.AutoTranslated("Download installer"),
             Icon = LoadMenuIcon("download"),
         };
-        _menuDownloadInstaller.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
+        _menuDownloadInstaller.Click += (_, _) => _ = AvaloniaPackageOperationHelper.AskLocationAndDownloadAsync(
+            SelectedItem, TEL_InstallReferral.ALREADY_INSTALLED);
 
         _menuReinstall = new MenuItem
         {

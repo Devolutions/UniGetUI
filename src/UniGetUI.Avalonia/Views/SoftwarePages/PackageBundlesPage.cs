@@ -94,7 +94,8 @@ public class PackageBundlesPage : AbstractPackagesPage
         installAsAdmin.Click += (_, _) => _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm), elevated: true);
         installInteractive.Click += (_, _) => _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm), interactive: true);
         installSkipHash.Click += (_, _) => _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm), skiphash: true);
-        downloadInstallers.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
+        downloadInstallers.Click += (_, _) => _ = AvaloniaPackageOperationHelper.DownloadSelectedAsync(
+            GetCheckedNonInstalledPackages(vm), TEL_InstallReferral.FROM_BUNDLE);
 
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("add_to", CoreTools.Translate("New"),
@@ -153,7 +154,8 @@ public class PackageBundlesPage : AbstractPackagesPage
         _menuSkipHash.Click += (_, _) => _ = ImportAndInstallPackage(SelectedItem is { } p ? [p] : [], skiphash: true);
 
         _menuDownloadInstaller = new MenuItem { Header = CoreTools.AutoTranslated("Download installer"), Icon = LoadMenuIcon("download") };
-        _menuDownloadInstaller.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
+        _menuDownloadInstaller.Click += (_, _) => _ = AvaloniaPackageOperationHelper.AskLocationAndDownloadAsync(
+            SelectedItem, TEL_InstallReferral.FROM_BUNDLE);
 
         var menuRemoveFromList = new MenuItem { Header = CoreTools.AutoTranslated("Remove from list"), Icon = LoadMenuIcon("delete") };
         menuRemoveFromList.Click += (_, _) =>

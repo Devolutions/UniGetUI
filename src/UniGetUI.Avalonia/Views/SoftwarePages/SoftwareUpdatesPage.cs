@@ -79,7 +79,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         updateAsAdmin.Click += (_, _) => _ = LaunchUpdate(vm.FilteredPackages.GetCheckedPackages(), elevated: true);
         updateSkipHash.Click += (_, _) => _ = LaunchUpdate(vm.FilteredPackages.GetCheckedPackages(), no_integrity: true);
         updateInteractive.Click += (_, _) => _ = LaunchUpdate(vm.FilteredPackages.GetCheckedPackages(), interactive: true);
-        downloadInstallers.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
+        downloadInstallers.Click += (_, _) => _ = AvaloniaPackageOperationHelper.DownloadSelectedAsync(
+            vm.FilteredPackages.GetCheckedPackages(), TEL_InstallReferral.ALREADY_INSTALLED);
         uninstallSelected.Click += (_, _) => _ = LaunchUninstallFromUpdates(vm.FilteredPackages.GetCheckedPackages());
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
@@ -157,7 +158,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             Header = CoreTools.AutoTranslated("Download installer"),
             Icon = LoadMenuIcon("download"),
         };
-        _menuDownloadInstaller.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
+        _menuDownloadInstaller.Click += (_, _) => _ = AvaloniaPackageOperationHelper.AskLocationAndDownloadAsync(
+            SelectedItem, TEL_InstallReferral.ALREADY_INSTALLED);
 
         var menuUninstallThenUpdate = new MenuItem
         {

@@ -1,5 +1,7 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.Models;
 using UniGetUI.Avalonia.Views;
@@ -49,7 +51,7 @@ internal static class AvaloniaBootstrapper
             if (!result.Passed)
             {
                 Logger.Warn("Integrity check failed; showing integrity violation dialog.");
-                await Dispatcher.UIThread.InvokeAsync(ShowIntegrityViolationDialogAsync).Unwrap();
+                await Dispatcher.UIThread.InvokeAsync(ShowIntegrityViolationDialogAsync);
             }
         }
     }
@@ -74,21 +76,21 @@ internal static class AvaloniaBootstrapper
         {
             Text = CoreTools.Translate("UniGetUI or some of its components are missing or corrupt.")
                 + " " + CoreTools.Translate("It is strongly recommended to reinstall UniGetUI to adress the situation."),
-            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-            FontWeight = Avalonia.Media.FontWeight.SemiBold,
+            TextWrapping = TextWrapping.Wrap,
+            FontWeight = FontWeight.SemiBold,
         };
 
         var hint1 = new TextBlock
         {
             Text = " • " + CoreTools.Translate("Refer to the UniGetUI Logs to get more details regarding the affected file(s)"),
-            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            TextWrapping = TextWrapping.Wrap,
             Opacity = 0.8,
         };
 
         var hint2 = new TextBlock
         {
             Text = " • " + CoreTools.Translate("Integrity checks can be disabled from the Experimental Settings"),
-            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            TextWrapping = TextWrapping.Wrap,
             Opacity = 0.8,
         };
 
@@ -103,7 +105,7 @@ internal static class AvaloniaBootstrapper
 
         var root = new StackPanel
         {
-            Margin = new Avalonia.Thickness(20),
+            Margin = new Thickness(20),
             Spacing = 10,
             Children = { bodyText, hint1, hint2, closeButton },
         };

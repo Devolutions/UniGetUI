@@ -1,13 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Layout;
-using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
+using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
@@ -667,151 +664,15 @@ public class PackageBundlesPage : AbstractPackagesPage
     // ─── Dialog helpers ───────────────────────────────────────────────────────
     private static async Task<bool> AskLoseChanges()
     {
-        bool result = false;
-        var win = new Window
-        {
-            Width = 460,
-            Height = 200,
-            CanResize = false,
-            ShowInTaskbar = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Title = CoreTools.Translate("Unsaved changes"),
-        };
-
-        var yesBtn = new Button { Content = CoreTools.Translate("Discard changes"), MinWidth = 140 };
-        var noBtn = new Button { Content = CoreTools.Translate("Cancel"), MinWidth = 80 };
-        yesBtn.Classes.Add("accent");
-        yesBtn.Click += (_, _) => { result = true; win.Close(); };
-        noBtn.Click += (_, _) => { result = false; win.Close(); };
-
-        var btnRow = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            HorizontalAlignment = HorizontalAlignment.Right,
-        };
-        btnRow.Children.Add(noBtn);
-        btnRow.Children.Add(yesBtn);
-
-        var root = new Grid
-        {
-            Margin = new Thickness(20),
-            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
-            RowSpacing = 12,
-        };
-        var titleBlock = new TextBlock
-        {
-            Text = CoreTools.Translate("Unsaved changes"),
-            FontSize = 16,
-            FontWeight = FontWeight.SemiBold,
-        };
-        var msgBlock = new TextBlock
-        {
-            Text = CoreTools.Translate("You have unsaved changes in the current bundle. Do you want to discard them?"),
-            TextWrapping = TextWrapping.Wrap,
-            Opacity = 0.85,
-        };
-        Grid.SetRow(titleBlock, 0); Grid.SetRow(msgBlock, 1); Grid.SetRow(btnRow, 2);
-        root.Children.Add(titleBlock); root.Children.Add(msgBlock); root.Children.Add(btnRow);
-        win.Content = root;
-
-        if (Application.Current?.ApplicationLifetime
-            is IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
-            await win.ShowDialog(owner);
-
-        return result;
+        if (GetMainWindow() is not { } owner) return false;
+        var dialog = new DiscardBundleChangesDialog();
+        await dialog.ShowDialog(owner);
+        return dialog.Confirmed;
     }
 
     private static async Task ShowBundleSecurityReport(Window owner, BundleReport report)
-    {
-        var sb = new System.Text.StringBuilder();
-        foreach (var (pkgId, entries) in report.Contents)
-        {
-            sb.AppendLine($"• {pkgId}:");
-            foreach (var entry in entries)
-                sb.AppendLine($"    {(entry.Allowed ? "[allowed]" : "[stripped]")} {entry.Line}");
-        }
-
-        var win = new Window
-        {
-            Width = 580,
-            Height = 420,
-            CanResize = true,
-            ShowInTaskbar = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Title = CoreTools.Translate("Bundle security report"),
-        };
-        var okBtn = new Button
-        {
-            Content = CoreTools.Translate("OK"),
-            MinWidth = 80,
-            HorizontalAlignment = HorizontalAlignment.Right,
-        };
-        okBtn.Classes.Add("accent");
-        okBtn.Click += (_, _) => win.Close();
-
-        var root = new Grid
-        {
-            Margin = new Thickness(20),
-            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
-            RowSpacing = 12,
-        };
-        var title = new TextBlock
-        {
-            Text = CoreTools.Translate("The bundle contained restricted content"),
-            FontSize = 16,
-            FontWeight = FontWeight.SemiBold,
-        };
-        var scroll = new ScrollViewer
-        {
-            Content = new TextBlock
-            {
-                Text = sb.ToString(),
-                TextWrapping = TextWrapping.Wrap,
-                FontFamily = new FontFamily("Monospace"),
-                FontSize = 12,
-                Opacity = 0.85,
-            },
-        };
-        Grid.SetRow(title, 0); Grid.SetRow(scroll, 1); Grid.SetRow(okBtn, 2);
-        root.Children.Add(title); root.Children.Add(scroll); root.Children.Add(okBtn);
-        win.Content = root;
-
-        await win.ShowDialog(owner);
-    }
+        => await new BundleSecurityReportDialog(report).ShowDialog(owner);
 
     private static async Task ShowErrorDialog(Window owner, string title, string message)
-    {
-        var win = new Window
-        {
-            Width = 480,
-            Height = 200,
-            CanResize = false,
-            ShowInTaskbar = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Title = title,
-        };
-        var okBtn = new Button
-        {
-            Content = CoreTools.Translate("OK"),
-            MinWidth = 80,
-            HorizontalAlignment = HorizontalAlignment.Right,
-        };
-        okBtn.Classes.Add("accent");
-        okBtn.Click += (_, _) => win.Close();
-
-        var root = new Grid
-        {
-            Margin = new Thickness(20),
-            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
-            RowSpacing = 12,
-        };
-        var titleBlock = new TextBlock { Text = title, FontSize = 16, FontWeight = FontWeight.SemiBold };
-        var msgBlock = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, Opacity = 0.85 };
-        Grid.SetRow(titleBlock, 0); Grid.SetRow(msgBlock, 1); Grid.SetRow(okBtn, 2);
-        root.Children.Add(titleBlock); root.Children.Add(msgBlock); root.Children.Add(okBtn);
-        win.Content = root;
-
-        await win.ShowDialog(owner);
-    }
+        => await new SimpleErrorDialog(title, message).ShowDialog(owner);
 }

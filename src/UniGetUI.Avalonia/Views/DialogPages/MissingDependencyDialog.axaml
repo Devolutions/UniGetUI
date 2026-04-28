@@ -24,15 +24,22 @@
 
         <StackPanel Grid.Row="1" Spacing="8">
             <TextBlock x:Name="DescBlock"
-                       TextWrapping="Wrap"/>
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,5"/>
             <TextBlock x:Name="InfoBlock"
                        TextWrapping="Wrap"
-                       Opacity="0.8"/>
-            <TextBlock x:Name="CommandBlock"
+                       Margin="0,0,0,10"
+                       FontStyle="Italic"
+                       Opacity="0.7"/>
+            <TextBlock x:Name="CommandInfoBlock"
                        TextWrapping="Wrap"
-                       FontFamily="Monospace"
-                       FontSize="12"
-                       Opacity="0.75"/>
+                       Margin="0,0,0,4"
+                       Opacity="0.7"/>
+            <SelectableTextBlock x:Name="CommandBlock"
+                                 TextWrapping="Wrap"
+                                 Margin="0,0,0,4"
+                                 FontFamily="Consolas"
+                                 Opacity="0.7"/>
             <CheckBox x:Name="DontShowCheck"
                       IsVisible="False"/>
             <ProgressBar x:Name="ProgressBar"

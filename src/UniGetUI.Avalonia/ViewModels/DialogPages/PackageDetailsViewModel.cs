@@ -118,7 +118,9 @@ public partial class PackageDetailsViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasScreenshots))]
+    [NotifyPropertyChangedFor(nameof(SelectedScreenshot))]
     [NotifyPropertyChangedFor(nameof(ScreenshotPageLabel))]
+    [NotifyPropertyChangedFor(nameof(CanGoNextScreenshot))]
     private int _screenshotCount;
 
     public bool HasScreenshots => ScreenshotCount > 0;

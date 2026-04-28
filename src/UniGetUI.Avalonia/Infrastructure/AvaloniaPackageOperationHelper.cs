@@ -1,9 +1,16 @@
+using System.Diagnostics;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
+using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views;
+using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.Interface.Telemetry;
+using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
@@ -142,5 +149,80 @@ internal static class AvaloniaPackageOperationHelper
             AvaloniaOperationRegistry.Add(op);
             _ = op.MainThread();
         }
+    }
+
+    /// <summary>
+    /// Runs the WinGet self-repair sequence elevated and shows a result notification.
+    /// Only meaningful on Windows; no-ops on other platforms.
+    /// </summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    public static async Task HandleBrokenWinGetAsync()
+    {
+        var banner = (MainWindow.Instance?.DataContext as MainWindowViewModel)?.WinGetWarningBanner;
+        if (banner is not null) banner.IsOpen = false;
+
+        try
+        {
+            using var p = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = CoreData.PowerShell5,
+                    Arguments =
+                        "-ExecutionPolicy Bypass -NoLogo -NoProfile -Command \"& {"
+                        + "cmd.exe /C \"rmdir /Q /S `\"%temp%\\WinGet`\"\"; "
+                        + "cmd.exe /C \"`\"%localappdata%\\Microsoft\\WindowsApps\\winget.exe`\" source reset --force\"; "
+                        + "taskkill /im winget.exe /f; "
+                        + "taskkill /im WindowsPackageManagerServer.exe /f; "
+                        + "Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force; "
+                        + "Install-Module Microsoft.WinGet.Client -Force -AllowClobber; "
+                        + "Import-Module Microsoft.WinGet.Client; "
+                        + "Repair-WinGetPackageManager -Force -Latest; "
+                        + "Get-AppxPackage -Name 'Microsoft.DesktopAppInstaller' | Reset-AppxPackage; "
+                        + "}\"",
+                    UseShellExecute = true,
+                    Verb = "runas",
+                },
+            };
+
+            p.Start();
+            await p.WaitForExitAsync();
+
+            if (Settings.Get(Settings.K.ForceLegacyBundledWinGet))
+                Settings.Set(Settings.K.ForceLegacyBundledWinGet, false);
+
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("WinGet was repaired successfully"),
+                CoreTools.Translate("It is recommended to restart UniGetUI after WinGet has been repaired"),
+                MainWindow.RuntimeNotificationLevel.Success);
+
+            _ = UpgradablePackagesLoader.Instance.ReloadPackages();
+            _ = InstalledPackagesLoader.Instance.ReloadPackages();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("An error occurred while trying to repair WinGet");
+            Logger.Error(ex);
+
+            if (banner is not null) banner.IsOpen = true;
+
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("WinGet could not be repaired"),
+                CoreTools.Translate("An unexpected issue occurred while attempting to repair WinGet. Please try again later")
+                    + " — " + ex.Message,
+                MainWindow.RuntimeNotificationLevel.Error);
+        }
+    }
+
+    /// <summary>
+    /// Returns true when the WinGet manager is ready but loaded zero installed packages,
+    /// which is a strong signal that WinGet has malfunctioned.
+    /// </summary>
+    public static bool IsWinGetMalfunctioning()
+    {
+        var winget = PEInterface.Managers.FirstOrDefault(m => m.Name == "WinGet");
+        return winget is not null
+            && winget.IsReady()
+            && !InstalledPackagesLoader.Instance.Packages.Any(p => p.Manager == winget);
     }
 }

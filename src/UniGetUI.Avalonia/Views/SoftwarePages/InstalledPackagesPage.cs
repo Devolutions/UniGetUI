@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Avalonia.Controls;
+using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Avalonia.Views;
@@ -56,10 +58,23 @@ public class InstalledPackagesPage : AbstractPackagesPage
     {
         ViewModel.PackagesLoaded += reason =>
         {
-            if (_hasBackedUp) return;
-            _hasBackedUp = true;
-            if (Settings.Get(Settings.K.EnablePackageBackup_LOCAL))
-                _ = BackupViewModel.DoLocalBackupStatic();
+            if (!_hasBackedUp)
+            {
+                _hasBackedUp = true;
+                if (Settings.Get(Settings.K.EnablePackageBackup_LOCAL))
+                    _ = BackupViewModel.DoLocalBackupStatic();
+            }
+
+            if (OperatingSystem.IsWindows()
+                && !Settings.Get(Settings.K.DisableWinGetMalfunctionDetector)
+                && AvaloniaPackageOperationHelper.IsWinGetMalfunctioning())
+            {
+                UpdateWinGetMalfunctionBanner(malfunction: true);
+            }
+            else
+            {
+                UpdateWinGetMalfunctionBanner(malfunction: false);
+            }
         };
     }
 
@@ -277,6 +292,30 @@ public class InstalledPackagesPage : AbstractPackagesPage
 
         if (dialog.ShouldProceedWithOperation)
             await LaunchUninstall([package]);
+    }
+
+    // ─── WinGet malfunction banner ────────────────────────────────────────────
+
+    private static void UpdateWinGetMalfunctionBanner(bool malfunction)
+    {
+        if (MainWindow.Instance?.DataContext is not MainWindowViewModel vm) return;
+        var banner = vm.WinGetWarningBanner;
+        if (malfunction)
+        {
+            banner.Title = CoreTools.Translate("WinGet malfunction detected");
+            banner.Message = CoreTools.Translate(
+                "It looks like WinGet is not working properly. Do you want to attempt to repair WinGet?");
+            banner.ActionButtonText = CoreTools.Translate("Repair WinGet");
+            banner.ActionButtonCommand = new AsyncRelayCommand(AvaloniaPackageOperationHelper.HandleBrokenWinGetAsync);
+            banner.IsClosable = true;
+            banner.IsOpen = true;
+        }
+        else
+        {
+            banner.IsOpen = false;
+            banner.ActionButtonText = "";
+            banner.ActionButtonCommand = null;
+        }
     }
 
     // ─── Page-specific actions ────────────────────────────────────────────────

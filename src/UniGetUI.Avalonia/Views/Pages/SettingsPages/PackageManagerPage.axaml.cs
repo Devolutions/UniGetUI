@@ -237,7 +237,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         var customAgeInput = new TextBox
         {
             MinWidth = 200,
-            PlaceholderText =CoreTools.Translate("e.g. 10"),
+            PlaceholderText = CoreTools.Translate("e.g. 10"),
             [AutomationProperties.NameProperty] = CoreTools.Translate("Custom minimum age (days)"),
             Text = CoreSettings.GetDictionaryItem<string, string>(
                 CoreSettings.K.PerManagerMinimumUpdateAgeCustom, manager.Name) ?? "",

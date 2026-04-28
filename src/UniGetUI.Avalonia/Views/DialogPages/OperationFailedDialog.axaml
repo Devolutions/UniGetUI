@@ -1,0 +1,60 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+        xmlns:local="using:UniGetUI.Avalonia.Views.DialogPages"
+        x:Class="UniGetUI.Avalonia.Views.DialogPages.OperationFailedDialog"
+        Width="800" MinWidth="500"
+        Height="550" MinHeight="300"
+        MaxWidth="800"
+        CanResize="True"
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppDialogBackground}"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- ── Header ── -->
+        <Border Grid.Row="0" Padding="16,14,16,10">
+            <TextBlock x:Name="HeaderContent"
+                       TextWrapping="WrapWithOverflow"
+                       FontSize="14"/>
+        </Border>
+
+        <!-- ── Colored output log ── -->
+        <ScrollViewer Grid.Row="1"
+                      x:Name="OutputScroll"
+                      Margin="8,0,8,8"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto"
+                      Background="{DynamicResource AppDialogDarkBackground}"
+                      CornerRadius="6">
+            <ItemsControl x:Name="OutputLines"
+                          Padding="8"
+                          automation:AutomationProperties.AccessibilityView="Raw">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="local:OutputLineVm">
+                        <TextBlock Text="{Binding Text}"
+                                   Foreground="{Binding Foreground}"
+                                   FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- ── Footer buttons ── -->
+        <Border Grid.Row="2"
+                BorderThickness="0,1,0,0"
+                Padding="16,10">
+            <Grid x:Name="ButtonsLayout"
+                  ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+            </Grid>
+        </Border>
+
+    </Grid>
+</Window>

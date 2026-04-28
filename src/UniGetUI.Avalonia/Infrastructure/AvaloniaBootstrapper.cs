@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -52,6 +54,18 @@ internal static class AvaloniaBootstrapper
             {
                 Logger.Warn("Integrity check failed; showing integrity violation dialog.");
                 await Dispatcher.UIThread.InvokeAsync(ShowIntegrityViolationDialogAsync);
+            }
+        }
+
+        var missing = await GetMissingDependenciesAsync();
+        if (missing.Count > 0)
+        {
+            Logger.Info($"Found {missing.Count} missing dependencies; showing install dialogs.");
+            for (int i = 0; i < missing.Count; i++)
+            {
+                int idx = i;
+                await Dispatcher.UIThread.InvokeAsync(
+                    () => ShowMissingDependencyDialogAsync(missing[idx], idx + 1, missing.Count));
             }
         }
     }
@@ -111,6 +125,216 @@ internal static class AvaloniaBootstrapper
         };
 
         dialog.Content = root;
+        await dialog.ShowDialog(owner);
+    }
+
+    private static async Task ShowMissingDependencyDialogAsync(
+        ManagerDependency dep, int current, int total)
+    {
+        if (MainWindow.Instance is not { } owner) return;
+
+        bool notFirstTime =
+            Settings.GetDictionaryItem<string, string>(Settings.K.DependencyManagement, dep.Name)
+            == "attempted";
+        Settings.SetDictionaryItem(Settings.K.DependencyManagement, dep.Name, "attempted");
+
+        bool hasInstalled = false;
+        bool blockClose = false;
+
+        string title = CoreTools.Translate("Missing dependency")
+            + (total > 1 ? $" ({current}/{total})" : "");
+
+        var dialog = new Window
+        {
+            Width = 560,
+            Height = 310,
+            MinHeight = 230,
+            CanResize = false,
+            ShowInTaskbar = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Title = title,
+        };
+
+        var titleBlock = new TextBlock
+        {
+            Text = title,
+            FontSize = 16,
+            FontWeight = FontWeight.SemiBold,
+        };
+
+        var descBlock = new TextBlock
+        {
+            Text = CoreTools.Translate(
+                "UniGetUI requires {0} to operate, but it was not found on your system.", dep.Name),
+            TextWrapping = TextWrapping.Wrap,
+        };
+
+        var infoBlock = new TextBlock
+        {
+            Text = CoreTools.Translate(
+                "Click on Install to begin the installation process. If you skip the installation, UniGetUI may not work as expected."),
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.75,
+        };
+
+        var cmdBlock = new TextBlock
+        {
+            Text = dep.FancyInstallCommand,
+            TextWrapping = TextWrapping.Wrap,
+            FontFamily = new FontFamily("Monospace"),
+            FontSize = 12,
+            Opacity = 0.75,
+        };
+
+        var skipCheck = notFirstTime
+            ? new CheckBox { Content = CoreTools.Translate("Do not show this dialog again for {0}", dep.Name) }
+            : null;
+
+        if (skipCheck is not null)
+        {
+            skipCheck.IsCheckedChanged += (_, _) =>
+            {
+                var val = skipCheck.IsChecked == true ? "skipped" : "attempted";
+                Settings.SetDictionaryItem(Settings.K.DependencyManagement, dep.Name, val);
+            };
+        }
+
+        var progressBar = new ProgressBar
+        {
+            IsIndeterminate = false,
+            IsVisible = false,
+        };
+
+        var installBtn = new Button
+        {
+            Content = CoreTools.Translate("Install {0}", dep.Name),
+            MinWidth = 140,
+        };
+        installBtn.Classes.Add("accent");
+
+        var skipBtn = new Button
+        {
+            Content = CoreTools.Translate("Not right now"),
+            MinWidth = 100,
+        };
+        skipBtn.Click += (_, _) => { if (!blockClose) dialog.Close(); };
+
+        installBtn.Click += async (_, _) =>
+        {
+            if (!hasInstalled)
+            {
+                try
+                {
+                    installBtn.IsEnabled = false;
+                    skipBtn.IsEnabled = false;
+                    if (skipCheck is not null) skipCheck.IsEnabled = false;
+                    progressBar.IsIndeterminate = true;
+                    progressBar.IsVisible = true;
+                    blockClose = true;
+                    infoBlock.Text = CoreTools.Translate(
+                        "Please wait while {0} is being installed. A black window may show up. Please wait until it closes.",
+                        dep.Name);
+
+                    using var p = new Process
+                    {
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = dep.InstallFileName,
+                            Arguments = dep.InstallArguments,
+                        },
+                    };
+                    p.Start();
+                    await p.WaitForExitAsync();
+
+                    hasInstalled = true;
+                    progressBar.IsIndeterminate = false;
+                    progressBar.IsVisible = false;
+                    installBtn.IsEnabled = true;
+                    skipBtn.IsEnabled = true;
+                    blockClose = false;
+
+                    if (current < total)
+                    {
+                        infoBlock.Text =
+                            CoreTools.Translate("{0} has been installed successfully.", dep.Name)
+                            + " "
+                            + CoreTools.Translate("Please click on \"Continue\" to continue", dep.Name);
+                        installBtn.Content = CoreTools.Translate("Continue");
+                        skipBtn.Content = "";
+                        skipBtn.IsVisible = false;
+                    }
+                    else
+                    {
+                        infoBlock.Text = CoreTools.Translate(
+                            "{0} has been installed successfully. It is recommended to restart UniGetUI to finish the installation",
+                            dep.Name);
+                        installBtn.Content = CoreTools.Translate("Restart UniGetUI");
+                        skipBtn.Content = CoreTools.Translate("Restart later");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex);
+                    hasInstalled = true;
+                    progressBar.IsIndeterminate = false;
+                    progressBar.IsVisible = false;
+                    installBtn.IsEnabled = true;
+                    skipBtn.IsEnabled = true;
+                    blockClose = false;
+                    infoBlock.Text =
+                        CoreTools.Translate("An error occurred:") + " " + ex.Message + "\n"
+                        + CoreTools.Translate("Please click on \"Continue\" to continue");
+                    installBtn.Content = current < total
+                        ? CoreTools.Translate("Continue")
+                        : CoreTools.Translate("Close");
+                    skipBtn.IsVisible = false;
+                }
+            }
+            else if (current == total)
+            {
+                var exe = Environment.ProcessPath;
+                if (exe is not null)
+                    Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
+                (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
+                    ?.Shutdown();
+            }
+            else
+            {
+                dialog.Close();
+            }
+        };
+
+        var btnRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Right,
+        };
+        btnRow.Children.Add(skipBtn);
+        btnRow.Children.Add(installBtn);
+
+        var contentStack = new StackPanel { Spacing = 8 };
+        contentStack.Children.Add(descBlock);
+        contentStack.Children.Add(infoBlock);
+        contentStack.Children.Add(cmdBlock);
+        if (skipCheck is not null) contentStack.Children.Add(skipCheck);
+        contentStack.Children.Add(progressBar);
+
+        var root = new Grid
+        {
+            Margin = new Thickness(20),
+            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
+            RowSpacing = 12,
+        };
+        Grid.SetRow(titleBlock, 0);
+        Grid.SetRow(contentStack, 1);
+        Grid.SetRow(btnRow, 2);
+        root.Children.Add(titleBlock);
+        root.Children.Add(contentStack);
+        root.Children.Add(btnRow);
+
+        dialog.Content = root;
+        dialog.Closing += (_, e) => e.Cancel = blockClose;
         await dialog.ShowDialog(owner);
     }
 

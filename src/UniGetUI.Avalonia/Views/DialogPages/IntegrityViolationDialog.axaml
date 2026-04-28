@@ -25,7 +25,8 @@
         <StackPanel Grid.Row="1" Spacing="8">
             <TextBlock Text="{t:Translate UniGetUI or some of its components are missing or corrupt. It is strongly recommended to reinstall UniGetUI to adress the situation.}"
                        TextWrapping="Wrap"
-                       FontWeight="SemiBold"/>
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource StatusWarningForeground}"/>
             <TextBlock Text="{t:Translate Text='• Refer to the UniGetUI Logs to get more details regarding the affected file(s)'}"
                        TextWrapping="Wrap"
                        Opacity="0.8"/>

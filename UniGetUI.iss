@@ -105,16 +105,10 @@ begin
      ewWaitUntilTerminated, ResultCode);
 end;
 
-procedure TripleKill(FileName1: String; FileName2: String; FileName3: String);
-var
-  ResultCode: Integer;
+procedure KillRunningApps;
 begin
-    Exec('taskkill.exe', '/f /im ' + '"' + FileName1 + '"', '', SW_HIDE,
-     ewWaitUntilTerminated, ResultCode);
-    Exec('taskkill.exe', '/f /im ' + '"' + FileName2 + '"', '', SW_HIDE,
-     ewWaitUntilTerminated, ResultCode);     
-    Exec('taskkill.exe', '/f /im ' + '"' + FileName3 + '"', '', SW_HIDE,
-     ewWaitUntilTerminated, ResultCode);
+    TaskKill('WingetUI.exe');
+    TaskKill('UniGetUI.exe');
 end;
 
 function CmdLineParamExists(const Value: string): Boolean;
@@ -221,7 +215,7 @@ Source: "{srcexe}"; DestDir: "{app}"; DestName: "UniGetUI.Installer.exe"; Flags:
 ; Deploy integrity tree
 Source: "unigetui_bin\IntegrityTree.json"; DestDir: "{app}"; Flags: createallsubdirs ignoreversion recursesubdirs;
 ; Deploy executable files
-Source: "unigetui_bin\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion; BeforeInstall: TripleKill('WingetUI.exe', 'UniGetUI.exe', 'choco.exe');
+Source: "unigetui_bin\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion; BeforeInstall: KillRunningApps;
 Source: "unigetui_bin\*"; DestDir: "{app}"; Flags: createallsubdirs ignoreversion recursesubdirs;
 ; Make installation portable (if required)
 Source: "InstallerExtras\ForceUniGetUIPortable"; DestDir: "{app}"; Tasks: portableinstall

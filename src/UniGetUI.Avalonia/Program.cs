@@ -15,7 +15,15 @@ sealed class Program
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             CrashHandler.ReportFatalException((Exception)e.ExceptionObject);
 
-        CoreData.WasDaemon = CoreData.IsDaemon = args.Contains("--daemon");
+        // Handle pre-UI CLI arguments (settings manipulation, help, etc.) without
+        // launching the Avalonia UI. Mirrors WinUI's EntryPoint.cs dispatch logic.
+        if (AvaloniaCliHandler.HandlePreUiArgs(args) is { } exitCode)
+        {
+            Environment.Exit(exitCode);
+            return;
+        }
+
+        CoreData.WasDaemon = CoreData.IsDaemon = args.Contains(AvaloniaCliHandler.DAEMON);
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }

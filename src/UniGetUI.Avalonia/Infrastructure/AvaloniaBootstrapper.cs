@@ -1,3 +1,5 @@
+using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.Models;
 using UniGetUI.Avalonia.Views;
@@ -34,7 +36,80 @@ internal static class AvaloniaBootstrapper
             InitializePackageEngineAsync()
         );
 
+        await RunPostLoadChecksAsync();
+
         Logger.Info("Avalonia shell bootstrap completed");
+    }
+
+    private static async Task RunPostLoadChecksAsync()
+    {
+        if (!Settings.Get(Settings.K.DisableIntegrityChecks))
+        {
+            var result = await Task.Run(() => IntegrityTester.CheckIntegrity(allowRetry: true));
+            if (!result.Passed)
+            {
+                Logger.Warn("Integrity check failed; showing integrity violation dialog.");
+                await Dispatcher.UIThread.InvokeAsync(ShowIntegrityViolationDialogAsync).Unwrap();
+            }
+        }
+    }
+
+    private static async Task ShowIntegrityViolationDialogAsync()
+    {
+        if (MainWindow.Instance is not { } owner) return;
+
+        var dialog = new Window
+        {
+            Width = 520,
+            Height = 230,
+            MinWidth = 400,
+            MinHeight = 180,
+            CanResize = false,
+            ShowInTaskbar = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Title = CoreTools.Translate("Integrity violation"),
+        };
+
+        var bodyText = new TextBlock
+        {
+            Text = CoreTools.Translate("UniGetUI or some of its components are missing or corrupt.")
+                + " " + CoreTools.Translate("It is strongly recommended to reinstall UniGetUI to adress the situation."),
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            FontWeight = Avalonia.Media.FontWeight.SemiBold,
+        };
+
+        var hint1 = new TextBlock
+        {
+            Text = " • " + CoreTools.Translate("Refer to the UniGetUI Logs to get more details regarding the affected file(s)"),
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Opacity = 0.8,
+        };
+
+        var hint2 = new TextBlock
+        {
+            Text = " • " + CoreTools.Translate("Integrity checks can be disabled from the Experimental Settings"),
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Opacity = 0.8,
+        };
+
+        var closeButton = new Button
+        {
+            Content = CoreTools.Translate("Close"),
+            MinWidth = 90,
+            HorizontalAlignment = HorizontalAlignment.Right,
+        };
+        closeButton.Click += (_, _) => dialog.Close();
+        closeButton.Classes.Add("accent");
+
+        var root = new StackPanel
+        {
+            Margin = new Avalonia.Thickness(20),
+            Spacing = 10,
+            Children = { bodyText, hint1, hint2, closeButton },
+        };
+
+        dialog.Content = root;
+        await dialog.ShowDialog(owner);
     }
 
     private static Task InitializeSharedServicesAsync()

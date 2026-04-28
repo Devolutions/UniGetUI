@@ -47,8 +47,23 @@ internal static class AvaloniaBootstrapper
             var result = await Task.Run(() => IntegrityTester.CheckIntegrity(allowRetry: true));
             if (!result.Passed)
             {
-                Logger.Warn("Integrity check failed; showing integrity violation dialog.");
-                await Dispatcher.UIThread.InvokeAsync(ShowIntegrityViolationDialogAsync);
+                // When IntegrityTree.json is absent (debug / CI builds, tree is only generated
+                // during `dotnet publish`), the tester returns Passed=false with a single
+                // missing-file entry for the tree itself.  That is not a real integrity failure —
+                // skip the dialog so it does not fire on every dev launch.
+                bool onlyTreeMissing = result.MissingFiles.Count == 1
+                    && result.MissingFiles[0] == "/IntegrityTree.json"
+                    && result.CorruptedFiles.Count == 0;
+
+                if (!onlyTreeMissing)
+                {
+                    Logger.Warn("Integrity check failed; showing integrity violation dialog.");
+                    await Dispatcher.UIThread.InvokeAsync(ShowIntegrityViolationDialogAsync);
+                }
+                else
+                {
+                    Logger.Info("IntegrityTree.json not found (dev/CI build) — skipping integrity dialog.");
+                }
             }
         }
 

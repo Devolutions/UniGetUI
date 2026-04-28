@@ -196,6 +196,9 @@
         <DependentUpon>SourceManagerCard.axaml</DependentUpon>
         <SubType>Code</SubType>
       </Compile>
+      <Compile Update="Views\DialogPages\BundleSecurityReportDialog.axaml.cs">
+        <DependentUpon>BundleSecurityReportDialog.axaml</DependentUpon>
+      </Compile>
     </ItemGroup>
 
     <ItemGroup>

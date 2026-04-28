@@ -164,6 +164,29 @@ public partial class MainWindow : Window
             ExtendClientAreaTitleBarHeightHint = -1;
             AvatarControl.Height = 36;
         }
+        else if (OperatingSystem.IsWindows())
+        {
+            WindowDecorations = WindowDecorations.BorderOnly;
+            ExtendClientAreaToDecorationsHint = true;
+            ExtendClientAreaTitleBarHeightHint = -1;
+            TitleBarGrid.ClearValue(HeightProperty);
+            TitleBarGrid.Height = 44;
+            HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
+            AvatarControl.Height = 28;
+            AvatarControl.Margin = new Thickness(0);
+            LinuxWindowButtons.IsVisible = true;
+            MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
+            this.GetObservable(WindowStateProperty).Subscribe(state =>
+            {
+                MaximizeIcon.Data = Geometry.Parse(
+                    state == WindowState.Maximized
+                        ? "M2,0 H10 V8 H2 Z M0,2 H8 V10 H0 Z"
+                        : "M0,0 H10 V10 H0 Z");
+                ToolTip.SetTip(
+                    MaximizeButton,
+                    CoreTools.Translate(state == WindowState.Maximized ? "Restore" : "Maximize"));
+            });
+        }
         else if (OperatingSystem.IsLinux())
         {
             // WSLg can report incorrect maximize/input bounds with frameless windows.

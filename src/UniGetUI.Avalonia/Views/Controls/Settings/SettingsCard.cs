@@ -1,4 +1,4 @@
-using System.Windows.Input;
+using ICommand = System.Windows.Input.ICommand;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Automation.Peers;

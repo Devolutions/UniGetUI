@@ -183,6 +183,37 @@
                     </Grid>
                 </Border>
 
+                <!-- ── Screenshots ── -->
+                <Border Background="{DynamicResource SettingsCardBackground}"
+                        CornerRadius="8" Padding="8"
+                        IsVisible="{Binding HasScreenshots}">
+                    <StackPanel Spacing="6">
+                        <Border CornerRadius="4" ClipToBounds="True"
+                                Height="225"
+                                Background="#000000">
+                            <Image Source="{Binding SelectedScreenshot}"
+                                   Stretch="Uniform"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                        </Border>
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                            <Button Content="◀"
+                                    Command="{Binding PreviousScreenshotCommand}"
+                                    IsEnabled="{Binding CanGoPrevScreenshot}"
+                                    Padding="10,4"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ScreenshotPageLabel}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                            <Button Grid.Column="2"
+                                    Content="▶"
+                                    Command="{Binding NextScreenshotCommand}"
+                                    IsEnabled="{Binding CanGoNextScreenshot}"
+                                    Padding="10,4"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- ── Details expander ── -->
                 <Expander HorizontalAlignment="Stretch"
                           HorizontalContentAlignment="Stretch"

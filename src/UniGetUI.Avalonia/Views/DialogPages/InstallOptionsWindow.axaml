@@ -237,17 +237,11 @@
                                        TextWrapping="Wrap"
                                        Opacity="0.7"/>
 
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <TextBox x:Name="KillProcessNewEntryBox"
-                                         Text="{Binding KillProcessNewEntry}"
-                                         Watermark="{Binding KillProcessesPlaceholderLabel}"
-                                         HorizontalAlignment="Stretch"
-                                         KeyDown="KillProcessBox_KeyDown"/>
-                                <Button Grid.Column="1"
-                                        Content="{Binding KillProcessesAddLabel}"
-                                        Command="{Binding AddKillProcessCommand}"
-                                        Padding="8,4"/>
-                            </Grid>
+                            <TextBox x:Name="KillProcessNewEntryBox"
+                                     Text="{Binding KillProcessNewEntry}"
+                                     Watermark="{Binding KillProcessesPlaceholderLabel}"
+                                     HorizontalAlignment="Stretch"
+                                     KeyDown="KillProcessBox_KeyDown"/>
 
                             <ItemsControl ItemsSource="{Binding KillProcessEntries}">
                                 <ItemsControl.ItemTemplate>

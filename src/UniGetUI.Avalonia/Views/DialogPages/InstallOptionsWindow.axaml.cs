@@ -40,7 +40,7 @@ public partial class InstallOptionsWindow : Window
 
     private void KillProcessBox_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key is Key.Return or Key.Enter)
+        if (e.Key is Key.Return or Key.Enter or Key.OemComma)
             ((InstallOptionsViewModel)DataContext!).AddKillProcessCommand.Execute(null);
     }
 }

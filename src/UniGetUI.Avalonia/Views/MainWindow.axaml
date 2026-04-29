@@ -88,9 +88,65 @@
                     automation:AutomationProperties.Name="{t:Translate Operations}"
                     automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Region}"
                     Background="{DynamicResource AppOperationsPanelBackground}">
-                <ScrollViewer MaxHeight="220"
-                              HorizontalScrollBarVisibility="Disabled"
-                              VerticalScrollBarVisibility="Auto">
+                <Grid RowDefinitions="Auto,Auto">
+
+                    <!-- Toolbar: expand/collapse + bulk-ops menu -->
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto"
+                          Height="28" Margin="4,2,4,2">
+
+                        <!-- Expand/collapse chevron -->
+                        <Button Grid.Column="0"
+                                Width="28" Height="24" Padding="4"
+                                Background="Transparent" BorderThickness="0" CornerRadius="4"
+                                Command="{Binding ToggleOperationsPanelCommand}"
+                                automation:AutomationProperties.Name="{t:Translate Toggle operations panel}"
+                                ToolTip.Tip="{t:Translate Toggle operations panel}">
+                            <Panel Width="10" Height="10">
+                                <PathIcon Width="10" Height="10"
+                                          automation:AutomationProperties.AccessibilityView="Raw"
+                                          IsVisible="{Binding OperationsPanelExpanded}"
+                                          Data="M0,0 L5,6 L10,0"/>
+                                <PathIcon Width="10" Height="10"
+                                          automation:AutomationProperties.AccessibilityView="Raw"
+                                          IsVisible="{Binding !OperationsPanelExpanded}"
+                                          Data="M0,6 L5,0 L10,6"/>
+                            </Panel>
+                        </Button>
+
+                        <TextBlock Grid.Column="1"
+                                   Text="{t:Translate Operations}"
+                                   FontSize="11" Opacity="0.6"
+                                   VerticalAlignment="Center"
+                                   Margin="4,0,0,0"/>
+
+                        <!-- Bulk-ops menu -->
+                        <Button Grid.Column="2"
+                                Width="28" Height="24" Padding="4"
+                                Background="Transparent" BorderThickness="0" CornerRadius="4"
+                                automation:AutomationProperties.Name="{t:Translate Bulk operations}"
+                                ToolTip.Tip="{t:Translate Bulk operations}">
+                            <TextBlock Text="⋯" FontSize="13"
+                                       automation:AutomationProperties.AccessibilityView="Raw"/>
+                            <Button.Flyout>
+                                <MenuFlyout>
+                                    <MenuItem Header="{t:Translate Retry failed}"
+                                              Command="{Binding RetryFailedOperationsCommand}"/>
+                                    <MenuItem Header="{t:Translate Clear finished}"
+                                              Command="{Binding ClearFinishedOperationsCommand}"/>
+                                    <Separator/>
+                                    <MenuItem Header="{t:Translate Cancel all}"
+                                              Command="{Binding CancelAllOperationsCommand}"/>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                    </Grid>
+
+                    <!-- Operations list (hidden when panel is collapsed) -->
+                    <ScrollViewer Grid.Row="1"
+                                  IsVisible="{Binding OperationsPanelExpanded}"
+                                  MaxHeight="220"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding Operations}"
                                   Margin="8,4,8,4">
                         <ItemsControl.ItemTemplate>
@@ -223,6 +279,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+                </Grid>
             </Border>
 
         </Grid>

@@ -93,6 +93,34 @@ public static class AvaloniaOperationRegistry
         };
     }
 
+    public static void RetryFailed()
+    {
+        var failed = OperationViewModels
+            .Where(vm => vm.Operation.Status is OperationStatus.Failed)
+            .ToList();
+        foreach (var vm in failed)
+            vm.Operation.Retry(AbstractOperation.RetryMode.Retry);
+    }
+
+    public static void ClearFinished()
+    {
+        var finished = OperationViewModels
+            .Where(vm => vm.Operation.Status
+                is OperationStatus.Succeeded or OperationStatus.Failed or OperationStatus.Canceled)
+            .ToList();
+        foreach (var vm in finished)
+            Remove(vm);
+    }
+
+    public static void CancelAll()
+    {
+        var active = OperationViewModels
+            .Where(vm => vm.Operation.Status is OperationStatus.Running or OperationStatus.InQueue)
+            .ToList();
+        foreach (var vm in active)
+            vm.Operation.Cancel();
+    }
+
     /// <summary>Remove a view-model (and its backing operation) from the panel. Called by the Close button.</summary>
     public static void Remove(OperationViewModel vm)
     {

@@ -495,6 +495,11 @@
                                                            Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
                                                                       Width="16" Height="16" IsVisible="{Binding !HasCustomIcon}"/>
+                                                    <controls:SvgIcon Path="{Binding TagIconPath}"
+                                                                      Width="8" Height="8"
+                                                                      IsVisible="{Binding TagIconVisible}"
+                                                                      HorizontalAlignment="Right"
+                                                                      VerticalAlignment="Bottom"/>
                                                 </Panel>
                                                 <TextBlock Text="{Binding Package.Name}" VerticalAlignment="Center"/>
                                             </StackPanel>
@@ -589,6 +594,11 @@
                                                            Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
                                                                       Width="36" Height="36" IsVisible="{Binding !HasCustomIcon}"/>
+                                                    <controls:SvgIcon Path="{Binding TagIconPath}"
+                                                                      Width="14" Height="14"
+                                                                      IsVisible="{Binding TagIconVisible}"
+                                                                      HorizontalAlignment="Right"
+                                                                      VerticalAlignment="Bottom"/>
                                                 </Panel>
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                                                     <TextBlock Text="{Binding Package.Name}"
@@ -641,6 +651,11 @@
                                                            Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
                                                                       Width="48" Height="48" IsVisible="{Binding !HasCustomIcon}"/>
+                                                    <controls:SvgIcon Path="{Binding TagIconPath}"
+                                                                      Width="18" Height="18"
+                                                                      IsVisible="{Binding TagIconVisible}"
+                                                                      HorizontalAlignment="Right"
+                                                                      VerticalAlignment="Bottom"/>
                                                 </Panel>
                                                 <TextBlock Grid.Row="2"
                                                            Text="{Binding Package.Name}"

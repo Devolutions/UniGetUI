@@ -60,6 +60,8 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     public string VersionComboString { get; }
     public string ListedNameTooltip { get; private set; } = "";
     public float ListedOpacity { get; private set; } = 1.0f;
+    public string TagIconPath { get; private set; } = "";
+    public bool TagIconVisible { get; private set; }
 
     public string SourceIconPath => IconTypeToSvgPath(Package.Source.IconId);
 
@@ -134,6 +136,8 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
             UpdateDisplayState();
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ListedOpacity)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ListedNameTooltip)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TagIconPath)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TagIconVisible)));
         }
         else if (e.PropertyName == nameof(Package.IsChecked))
         {
@@ -153,6 +157,21 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
             _ => 1.0f,
         };
         ListedNameTooltip = Package.Name;
+
+        string tagName = Package.Tag switch
+        {
+            PackageTag.AlreadyInstalled => "installed_filled",
+            PackageTag.IsUpgradable     => "upgradable_filled",
+            PackageTag.Pinned           => "pin_filled",
+            PackageTag.OnQueue          => "sandclock",
+            PackageTag.BeingProcessed   => "loading_filled",
+            PackageTag.Failed           => "warning_filled",
+            _                           => "",
+        };
+        TagIconVisible = tagName.Length > 0;
+        TagIconPath = TagIconVisible
+            ? $"avares://UniGetUI.Avalonia/Assets/Symbols/{tagName}.svg"
+            : "";
     }
 
     public void Dispose()

@@ -248,19 +248,15 @@
 
         </Grid>
 
-        <!-- ==================== MAIN CONTENT (SplitView: filter pane + package list) ==================== -->
-        <SplitView x:Name="FilteringPanel"
-                   Grid.Row="2"
-                   DisplayMode="Inline"
-                   PanePlacement="Left"
-                   IsPaneOpen="{Binding IsFilterPaneOpen, Mode=TwoWay}"
-                   OpenPaneLength="220"
-                   BorderThickness="0"
-                   Background="{DynamicResource AppWindowBackground}">
+        <!-- ==================== MAIN CONTENT (filter pane + package list) ==================== -->
+        <Grid x:Name="FilteringPanel"
+              Grid.Row="2"
+              ColumnDefinitions="220,4,*">
 
             <!-- ===== FILTER PANE ===== -->
-            <SplitView.Pane>
                 <ScrollViewer x:Name="SidePanel"
+                              Grid.Column="0"
+                              IsVisible="{Binding IsFilterPaneOpen}"
                               HorizontalScrollBarVisibility="Disabled"
                               Padding="0,0,4,0"
                               automation:AutomationProperties.AccessibilityView="Control"
@@ -420,10 +416,16 @@
 
                     </StackPanel>
                 </ScrollViewer>
-            </SplitView.Pane>
+            <!-- ===== DRAG SPLITTER ===== -->
+            <GridSplitter Grid.Column="1"
+                          IsVisible="{Binding IsFilterPaneOpen}"
+                          HorizontalAlignment="Stretch"
+                          ResizeDirection="Columns"
+                          Background="{DynamicResource AppBorderBrush}"
+                          Opacity="0.4"/>
 
             <!-- ===== PACKAGE LIST ===== -->
-            <Grid x:Name="PackagesListGrid" Margin="0">
+            <Grid x:Name="PackagesListGrid" Grid.Column="2" Margin="0">
 
                 <!-- Loading indicator -->
                 <ProgressBar x:Name="LoadingProgressBar"
@@ -721,7 +723,7 @@
                 </Grid>
 
             </Grid>
-        </SplitView>
+        </Grid>
 
     </Grid>
 </UserControl>

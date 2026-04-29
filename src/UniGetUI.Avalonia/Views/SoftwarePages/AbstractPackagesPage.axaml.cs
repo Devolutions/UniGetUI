@@ -49,7 +49,10 @@ public abstract partial class AbstractPackagesPage : UserControl,
                 SyncOrderByButtonName();
             }
             if (args.PropertyName is nameof(PackagesPageViewModel.IsFilterPaneOpen))
+            {
                 SyncFiltersButtonName();
+                UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
+            }
         };
         SyncFiltersButtonName();
         SyncOrderByButtonName();
@@ -240,6 +243,25 @@ public abstract partial class AbstractPackagesPage : UserControl,
             else
                 _ = ShowDetailsForPackage(pkg);
             e.Handled = true;
+        }
+    }
+
+    // ─── Filter pane column width management ─────────────────────────────────
+    private GridLength _savedFilterPaneWidth = new GridLength(220);
+
+    private void UpdateFilterPaneColumn(bool open)
+    {
+        if (FilteringPanel.ColumnDefinitions.Count < 2) return;
+        if (open)
+        {
+            FilteringPanel.ColumnDefinitions[0].Width = _savedFilterPaneWidth;
+            FilteringPanel.ColumnDefinitions[1].Width = new GridLength(4);
+        }
+        else
+        {
+            _savedFilterPaneWidth = FilteringPanel.ColumnDefinitions[0].Width;
+            FilteringPanel.ColumnDefinitions[0].Width = new GridLength(0);
+            FilteringPanel.ColumnDefinitions[1].Width = new GridLength(0);
         }
     }
 

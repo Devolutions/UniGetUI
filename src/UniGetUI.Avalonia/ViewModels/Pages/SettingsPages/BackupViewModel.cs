@@ -224,6 +224,16 @@ public partial class BackupViewModel : ViewModelBase
     {
         _isLoading = true;
         UpdateCloudControlsEnabled();
+        try { await DoCloudBackupStatic(); }
+        finally
+        {
+            _isLoading = false;
+            UpdateCloudControlsEnabled();
+        }
+    }
+
+    public static async Task DoCloudBackupStatic()
+    {
         try
         {
             var packages = InstalledPackagesLoader.Instance?.Packages.ToList() ?? [];
@@ -235,11 +245,6 @@ public partial class BackupViewModel : ViewModelBase
         {
             Logger.Error("An error occurred while performing a CLOUD backup:");
             Logger.Error(ex);
-        }
-        finally
-        {
-            _isLoading = false;
-            UpdateCloudControlsEnabled();
         }
     }
 

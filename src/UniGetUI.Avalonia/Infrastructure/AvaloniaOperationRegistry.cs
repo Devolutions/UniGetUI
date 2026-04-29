@@ -102,6 +102,15 @@ public static class AvaloniaOperationRegistry
             vm.Operation.Retry(AbstractOperation.RetryMode.Retry);
     }
 
+    public static void ClearSuccessful()
+    {
+        var succeeded = OperationViewModels
+            .Where(vm => vm.Operation.Status is OperationStatus.Succeeded)
+            .ToList();
+        foreach (var vm in succeeded)
+            Remove(vm);
+    }
+
     public static void ClearFinished()
     {
         var finished = OperationViewModels

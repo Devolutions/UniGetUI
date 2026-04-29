@@ -63,6 +63,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
                 _hasBackedUp = true;
                 if (Settings.Get(Settings.K.EnablePackageBackup_LOCAL))
                     _ = BackupViewModel.DoLocalBackupStatic();
+                if (Settings.Get(Settings.K.EnablePackageBackup_CLOUD))
+                    _ = BackupViewModel.DoCloudBackupStatic();
             }
 
             if (OperatingSystem.IsWindows()

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Windows.Networking.Connectivity;
 using Avalonia.Controls;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
@@ -396,6 +397,11 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
                 Logger.Warn("Updates will not be installed automatically because battery saver is enabled.");
                 ShowAvailableUpdatesNotification(upgradable);
             }
+            else if (Settings.Get(Settings.K.DisableAUPOnMeteredConnections) && IsOnMeteredConnection())
+            {
+                Logger.Warn("Updates will not be installed automatically because the current internet connection is metered.");
+                ShowAvailableUpdatesNotification(upgradable);
+            }
             else if (Settings.Get(Settings.K.AutomaticallyUpdatePackages))
             {
                 _ = AvaloniaPackageOperationHelper.UpdateAllAsync();
@@ -471,6 +477,18 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         if (!OperatingSystem.IsWindows()) return false;
 #pragma warning disable CA1416
         return GetSystemPowerStatus(out var s) && (s.SystemStatusFlag & 0x01) != 0;
+#pragma warning restore CA1416
+    }
+
+    private static bool IsOnMeteredConnection()
+    {
+        if (!OperatingSystem.IsWindows()) return false;
+#pragma warning disable CA1416
+        var costType = NetworkInformation
+            .GetInternetConnectionProfile()
+            ?.GetConnectionCost()
+            .NetworkCostType;
+        return costType is NetworkCostType.Fixed or NetworkCostType.Variable;
 #pragma warning restore CA1416
     }
 }

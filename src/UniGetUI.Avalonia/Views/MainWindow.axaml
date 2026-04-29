@@ -131,6 +131,8 @@
                                 <MenuFlyout>
                                     <MenuItem Header="{t:Translate Retry failed}"
                                               Command="{Binding RetryFailedOperationsCommand}"/>
+                                    <MenuItem Header="{t:Translate Clear successful}"
+                                              Command="{Binding ClearSuccessfulOperationsCommand}"/>
                                     <MenuItem Header="{t:Translate Clear finished}"
                                               Command="{Binding ClearFinishedOperationsCommand}"/>
                                     <Separator/>

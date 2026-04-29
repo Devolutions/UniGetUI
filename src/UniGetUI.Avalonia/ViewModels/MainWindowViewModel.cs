@@ -74,6 +74,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private void RetryFailedOperations() => AvaloniaOperationRegistry.RetryFailed();
 
     [RelayCommand]
+    private void ClearSuccessfulOperations() => AvaloniaOperationRegistry.ClearSuccessful();
+
+    [RelayCommand]
     private void ClearFinishedOperations() => AvaloniaOperationRegistry.ClearFinished();
 
     [RelayCommand]

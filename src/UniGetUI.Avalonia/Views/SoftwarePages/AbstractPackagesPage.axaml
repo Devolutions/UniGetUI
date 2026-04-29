@@ -434,8 +434,7 @@
                           IsVisible="{Binding IsFilterPaneOpen}"
                           HorizontalAlignment="Stretch"
                           ResizeDirection="Columns"
-                          Background="{DynamicResource AppBorderBrush}"
-                          Opacity="0.4"/>
+                          Background="{DynamicResource AppWindowBackground}"/>
 
             <!-- ===== PACKAGE LIST ===== -->
             <Grid x:Name="PackagesListGrid" Grid.Column="2" Margin="0">

@@ -19,6 +19,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
 {
     public PackagesPageViewModel ViewModel => (PackagesPageViewModel)DataContext!;
     private ContextMenu? _contextMenu;
+    private double _savedFilterPaneWidth = 220;
 
     protected AbstractPackagesPage(PackagesPageData data)
     {
@@ -72,6 +73,23 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // redirect focus + the typed character to the global search box.
         PackageList.TextInput += PackageList_TextInput;
 
+        // Close the filter pane when the splitter is dragged below the minimum width.
+        // Observe ColumnDefinition.Width so the snap fires during the drag, not just
+        // on pointer-release (pointer capture prevents PointerReleased on the splitter).
+        FilteringPanel.ColumnDefinitions[0]
+            .GetObservable(ColumnDefinition.WidthProperty)
+            .Subscribe(width =>
+            {
+                if (!ViewModel.IsFilterPaneOpen) return;
+                if (width.IsAbsolute && width.Value >= 100)
+                    _savedFilterPaneWidth = width.Value;   // remember last good drag width
+                else if (width.IsAbsolute && width.Value < 100)
+                {
+                    _savedFilterPaneWidth = 220;           // reset to default on snap-close
+                    ViewModel.IsFilterPaneOpen = false;
+                }
+            });
+
         // Wire context menu (built by subclass)
         _contextMenu = GenerateContextMenu();
         if (_contextMenu is not null)
@@ -83,6 +101,9 @@ public abstract partial class AbstractPackagesPage : UserControl,
                 if (pkg is not null) WhenShowingContextMenu(pkg);
             };
         }
+
+        // Apply the initial filter-pane state (AXAML defaults to 220px open)
+        UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
     }
 
     // ─── UI-only: focus the package list ─────────────────────────────────────
@@ -259,19 +280,16 @@ public abstract partial class AbstractPackagesPage : UserControl,
     }
 
     // ─── Filter pane column width management ─────────────────────────────────
-    private GridLength _savedFilterPaneWidth = new GridLength(220);
-
     private void UpdateFilterPaneColumn(bool open)
     {
         if (FilteringPanel.ColumnDefinitions.Count < 2) return;
         if (open)
         {
-            FilteringPanel.ColumnDefinitions[0].Width = _savedFilterPaneWidth;
+            FilteringPanel.ColumnDefinitions[0].Width = new GridLength(_savedFilterPaneWidth);
             FilteringPanel.ColumnDefinitions[1].Width = new GridLength(4);
         }
         else
         {
-            _savedFilterPaneWidth = FilteringPanel.ColumnDefinitions[0].Width;
             FilteringPanel.ColumnDefinitions[0].Width = new GridLength(0);
             FilteringPanel.ColumnDefinitions[1].Width = new GridLength(0);
         }

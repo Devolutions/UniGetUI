@@ -5,9 +5,12 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.PackageClasses;
@@ -20,6 +23,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
     public PackagesPageViewModel ViewModel => (PackagesPageViewModel)DataContext!;
     private ContextMenu? _contextMenu;
     private double _savedFilterPaneWidth = 220;
+    private bool _isOverlayMode;
 
     protected AbstractPackagesPage(PackagesPageData data)
     {
@@ -73,22 +77,31 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // redirect focus + the typed character to the global search box.
         PackageList.TextInput += PackageList_TextInput;
 
-        // Close the filter pane when the splitter is dragged below the minimum width.
-        // Observe ColumnDefinition.Width so the snap fires during the drag, not just
-        // on pointer-release (pointer capture prevents PointerReleased on the splitter).
+        // Snap-close when splitter is dragged below the minimum (inline mode only).
+        // Using ColumnDefinition.WidthProperty fires every drag step, not just on release.
         FilteringPanel.ColumnDefinitions[0]
             .GetObservable(ColumnDefinition.WidthProperty)
             .Subscribe(width =>
             {
-                if (!ViewModel.IsFilterPaneOpen) return;
+                if (_isOverlayMode || !ViewModel.IsFilterPaneOpen) return;
                 if (width.IsAbsolute && width.Value >= 100)
-                    _savedFilterPaneWidth = width.Value;   // remember last good drag width
+                {
+                    _savedFilterPaneWidth = width.Value;
+                    Settings.SetDictionaryItem(Settings.K.SidepanelWidths, ViewModel.PageName, (int)width.Value);
+                }
                 else if (width.IsAbsolute && width.Value < 100)
                 {
-                    _savedFilterPaneWidth = 220;           // reset to default on snap-close
+                    _savedFilterPaneWidth = 220;
                     ViewModel.IsFilterPaneOpen = false;
                 }
             });
+
+        // Responsive: switch between inline and overlay modes based on content width.
+        FilteringPanel.GetObservable(BoundsProperty)
+            .Subscribe(bounds => OnFilteringPanelWidthChanged(bounds.Width));
+
+        // Overlay backdrop dismisses the filter pane when tapped.
+        FilterOverlayBackdrop.PointerPressed += (_, _) => ViewModel.IsFilterPaneOpen = false;
 
         // Wire context menu (built by subclass)
         _contextMenu = GenerateContextMenu();
@@ -102,7 +115,11 @@ public abstract partial class AbstractPackagesPage : UserControl,
             };
         }
 
-        // Apply the initial filter-pane state (AXAML defaults to 220px open)
+        // Restore per-page filter pane width from settings.
+        var savedWidth = Settings.GetDictionaryItem<string, int>(Settings.K.SidepanelWidths, ViewModel.PageName);
+        if (savedWidth >= 100) _savedFilterPaneWidth = savedWidth;
+
+        // Apply the initial filter-pane state (AXAML defaults to 220px open).
         UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
     }
 
@@ -280,18 +297,55 @@ public abstract partial class AbstractPackagesPage : UserControl,
     }
 
     // ─── Filter pane column width management ─────────────────────────────────
+
+    private void OnFilteringPanelWidthChanged(double width)
+    {
+        if (width <= 0) return; // layout not complete yet
+        bool shouldBeOverlay = width < 1000;
+        if (shouldBeOverlay == _isOverlayMode) return;
+
+        _isOverlayMode = shouldBeOverlay;
+
+        if (_isOverlayMode && ViewModel.IsFilterPaneOpen)
+            ViewModel.IsFilterPaneOpen = false; // collapse pane when entering overlay
+        else
+            UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
+    }
+
     private void UpdateFilterPaneColumn(bool open)
     {
         if (FilteringPanel.ColumnDefinitions.Count < 2) return;
-        if (open)
+
+        if (_isOverlayMode)
         {
-            FilteringPanel.ColumnDefinitions[0].Width = new GridLength(_savedFilterPaneWidth);
-            FilteringPanel.ColumnDefinitions[1].Width = new GridLength(4);
+            // Package list fills full width; filter pane and splitter take no space.
+            FilteringPanel.ColumnDefinitions[0].Width = new GridLength(0);
+            FilteringPanel.ColumnDefinitions[1].Width = new GridLength(0);
+
+            // Float the filter pane on top of the content when open.
+            Grid.SetColumnSpan(SidePanel, 3);
+            SidePanel.ZIndex = 10;
+            SidePanel.Width = _savedFilterPaneWidth;
+            SidePanel.HorizontalAlignment = HorizontalAlignment.Left;
+
+            // Semi-transparent backdrop covers the package list behind the pane.
+            FilterOverlayBackdrop.IsVisible = open;
         }
         else
         {
-            FilteringPanel.ColumnDefinitions[0].Width = new GridLength(0);
-            FilteringPanel.ColumnDefinitions[1].Width = new GridLength(0);
+            // Inline mode: pane sits beside the package list.
+            Grid.SetColumnSpan(SidePanel, 1);
+            SidePanel.ZIndex = 0;
+            SidePanel.Width = double.NaN;
+            SidePanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+            FilterOverlayBackdrop.IsVisible = false;
+
+            FilteringPanel.ColumnDefinitions[0].Width = open
+                ? new GridLength(_savedFilterPaneWidth)
+                : new GridLength(0);
+            FilteringPanel.ColumnDefinitions[1].Width = open
+                ? new GridLength(4)
+                : new GridLength(0);
         }
     }
 

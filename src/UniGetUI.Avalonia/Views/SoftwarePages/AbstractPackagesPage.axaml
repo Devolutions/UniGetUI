@@ -430,11 +430,21 @@
                     </StackPanel>
                 </ScrollViewer>
             <!-- ===== DRAG SPLITTER ===== -->
-            <GridSplitter Grid.Column="1"
+            <GridSplitter x:Name="FilterSplitter"
+                          Grid.Column="1"
                           IsVisible="{Binding IsFilterPaneOpen}"
                           HorizontalAlignment="Stretch"
                           ResizeDirection="Columns"
                           Background="{DynamicResource AppWindowBackground}"/>
+
+            <!-- ===== OVERLAY BACKDROP (overlay mode only, dismisses pane on click) ===== -->
+            <Border x:Name="FilterOverlayBackdrop"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="3"
+                    ZIndex="9"
+                    Background="#60000000"
+                    IsVisible="False"
+                    IsHitTestVisible="True"/>
 
             <!-- ===== PACKAGE LIST ===== -->
             <Grid x:Name="PackagesListGrid" Grid.Column="2" Margin="0">

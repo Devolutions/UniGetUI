@@ -92,7 +92,11 @@ public class SourceTreeNode : INotifyPropertyChanged
 public partial class PackagesPageViewModel : ViewModelBase
 {
     public double FilterPaneColumnWidth => IsFilterPaneOpen ? 220.0 : 0.0;
-    partial void OnIsFilterPaneOpenChanged(bool _) => OnPropertyChanged(nameof(FilterPaneColumnWidth));
+    partial void OnIsFilterPaneOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(FilterPaneColumnWidth));
+        Settings.SetDictionaryItem(Settings.K.HideToggleFilters, PageName, !value);
+    }
 
     // ─── Static config (set once in constructor) ──────────────────────────────
     public readonly string PageName;
@@ -204,6 +208,10 @@ public partial class PackagesPageViewModel : ViewModelBase
         ViewMode = Enum.IsDefined(typeof(PackageViewMode), savedMode)
             ? (PackageViewMode)savedMode
             : PackageViewMode.List;
+
+        // Restore per-page filter pane open/closed state (default: open).
+        // Use backing field to avoid writing to settings during construction.
+        _isFilterPaneOpen = !Settings.GetDictionaryItem<string, bool>(Settings.K.HideToggleFilters, PageName);
 
         _localPackagesNode.PackageName = CoreTools.Translate("Local");
 

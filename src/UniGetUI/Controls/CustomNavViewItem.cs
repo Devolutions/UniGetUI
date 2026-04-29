@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface;
@@ -47,6 +48,7 @@ internal sealed partial class CustomNavViewItem : NavigationViewItem
             string text = CoreTools.Translate(value);
             _textBlock.Text = text;
             ToolTipService.SetToolTip(this, text);
+            AutomationProperties.SetName(this, text);
         }
     }
 

@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Avalonia;
 using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,15 +12,12 @@ public partial class OperationOutputViewModel : ObservableObject
     [ObservableProperty] private string _title = "";
     public ObservableCollection<LogLineItem> OutputLines { get; } = new();
 
-    private readonly IBrush _errorBrush = new SolidColorBrush(Color.Parse("#FF6B6B"));
-    private readonly IBrush _debugBrush = new SolidColorBrush(Color.Parse("#888888"));
-    private readonly IBrush _normalBrush;
+    private static readonly IBrush _errorBrush = new SolidColorBrush(Color.Parse("#FF6B6B"));
+    private static readonly IBrush _debugBrush = new SolidColorBrush(Color.Parse("#888888"));
+    private static readonly IBrush _normalBrush = Brushes.White;
 
     public OperationOutputViewModel(AbstractOperation operation)
     {
-        _normalBrush = Application.Current?.FindResource("SystemControlForegroundBaseHighBrush") as IBrush
-                       ?? Brushes.White;
-
         Title = operation.Metadata.Title;
 
         foreach (var (text, type) in operation.GetOutput())

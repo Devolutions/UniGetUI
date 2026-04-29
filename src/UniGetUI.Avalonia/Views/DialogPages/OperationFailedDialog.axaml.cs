@@ -60,7 +60,7 @@ public partial class OperationFailedDialog : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
-        Dispatcher.UIThread.Post(() => OutputScroll.ScrollToEnd(), DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(OutputScroll.ScrollToEnd, DispatcherPriority.Background);
     }
 
     private Control BuildRetryButton(AbstractOperation operation)

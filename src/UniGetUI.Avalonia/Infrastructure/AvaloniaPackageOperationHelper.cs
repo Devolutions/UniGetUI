@@ -159,7 +159,7 @@ internal static class AvaloniaPackageOperationHelper
     public static async Task HandleBrokenWinGetAsync()
     {
         var banner = (MainWindow.Instance?.DataContext as MainWindowViewModel)?.WinGetWarningBanner;
-        if (banner is not null) banner.IsOpen = false;
+        banner?.IsOpen = false;
 
         try
         {
@@ -204,7 +204,7 @@ internal static class AvaloniaPackageOperationHelper
             Logger.Error("An error occurred while trying to repair WinGet");
             Logger.Error(ex);
 
-            if (banner is not null) banner.IsOpen = true;
+            banner?.IsOpen = true;
 
             MainWindow.Instance?.ShowBanner(
                 CoreTools.Translate("WinGet could not be repaired"),

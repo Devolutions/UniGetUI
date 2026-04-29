@@ -162,25 +162,37 @@
 
                 <!-- ── Actions ── -->
                 <Border Background="{DynamicResource SettingsCardBackground}" CornerRadius="8" Padding="16">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                        <Button x:Name="MainActionButton"
-                                Content="{Binding MainActionLabel}"
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                            <Button x:Name="MainActionButton"
+                                    Content="{Binding MainActionLabel}"
+                                    automation:AutomationProperties.Name="{Binding MainActionLabel}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Classes="accent"
+                                    Padding="16,8"/>
+                            <Button x:Name="ActionVariantsButton"
+                                    Grid.Column="1"
+                                    Content="▾"
                                 automation:AutomationProperties.Name="{Binding MainActionLabel}"
+                                automation:AutomationProperties.HelpText="{Binding HeaderDetails}"
+                                    Width="30"
+                                    Height="30"
+                                    FontSize="30"
+                                    HorizontalContentAlignment="Center"
+                                    Padding="0"/>
+                        </Grid>
+                        <Button x:Name="InstallOptionsButton"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
-                                Classes="accent"
-                                Padding="16,8"/>
-                        <Button x:Name="ActionVariantsButton"
-                                Grid.Column="1"
-                                Content="▾"
-                            automation:AutomationProperties.Name="{Binding MainActionLabel}"
-                            automation:AutomationProperties.HelpText="{Binding HeaderDetails}"
-                                Width="30"
-                                Height="30"
-                                FontSize="30"
-                                HorizontalContentAlignment="Center"
-                                Padding="0"/>
-                    </Grid>
+                                Padding="16,6">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg"
+                                                  Width="14" Height="14" VerticalAlignment="Center"/>
+                                <TextBlock Text="{t:Translate Installation options}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </Border>
 
                 <!-- ── Screenshots ── -->

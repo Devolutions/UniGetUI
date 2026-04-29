@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -31,6 +32,7 @@ public partial class PackageDetailsWindow : Window
 
         MainActionButton.Click += (_, _) => OnMainAction();
         ActionVariantsButton.Flyout = BuildActionFlyout();
+        InstallOptionsButton.Click += (_, _) => _ = OnInstallOptionsAsync();
     }
 
     protected override void OnOpened(EventArgs e)
@@ -82,6 +84,14 @@ public partial class PackageDetailsWindow : Window
     }
 
     // ── Action handlers ────────────────────────────────────────────────────────
+
+    private async Task OnInstallOptionsAsync()
+    {
+        var opts = await InstallOptionsFactory.LoadForPackageAsync(_vm.Package);
+        var dialog = new InstallOptionsWindow(_vm.Package, _vm.OperationRole, opts);
+        await dialog.ShowDialog(this);
+        await InstallOptionsFactory.SaveForPackageAsync(opts, _vm.Package);
+    }
 
     private void OnMainAction()
     {

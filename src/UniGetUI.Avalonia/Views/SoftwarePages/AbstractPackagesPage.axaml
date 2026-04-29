@@ -490,8 +490,12 @@
                                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0"
                                                         automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                         automation:AutomationProperties.ItemType="{t:Translate Package}">
-                                                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
-                                                                  Width="16" Height="16" VerticalAlignment="Center"/>
+                                                <Panel Width="16" Height="16" VerticalAlignment="Center">
+                                                    <Image Source="{Binding IconBitmap}" Width="16" Height="16"
+                                                           Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
+                                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
+                                                                      Width="16" Height="16" IsVisible="{Binding !HasCustomIcon}"/>
+                                                </Panel>
                                                 <TextBlock Text="{Binding Package.Name}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </DataTemplate>
@@ -579,11 +583,13 @@
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
                                                 Background="{DynamicResource AppBorderBrush}" Padding="4">
                                             <Grid ColumnDefinitions="48,*,24" ColumnSpacing="4">
-                                                <controls:SvgIcon Grid.Column="0"
-                                                                  Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
-                                                                  Width="36" Height="36"
-                                                                  VerticalAlignment="Center"
-                                                                  HorizontalAlignment="Center"/>
+                                                <Panel Grid.Column="0" Width="36" Height="36"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                    <Image Source="{Binding IconBitmap}" Width="36" Height="36"
+                                                           Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
+                                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
+                                                                      Width="36" Height="36" IsVisible="{Binding !HasCustomIcon}"/>
+                                                </Panel>
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                                                     <TextBlock Text="{Binding Package.Name}"
                                                                FontWeight="SemiBold" FontSize="13"
@@ -629,11 +635,13 @@
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"
                                                           Padding="0" Margin="-4,0,0,0"/>
-                                                <controls:SvgIcon Grid.Row="1"
-                                                                  Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
-                                                                  Width="48" Height="48"
-                                                                  VerticalAlignment="Center"
-                                                                  HorizontalAlignment="Center"/>
+                                                <Panel Grid.Row="1" Width="48" Height="48"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                    <Image Source="{Binding IconBitmap}" Width="48" Height="48"
+                                                           Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
+                                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
+                                                                      Width="48" Height="48" IsVisible="{Binding !HasCustomIcon}"/>
+                                                </Panel>
                                                 <TextBlock Grid.Row="2"
                                                            Text="{Binding Package.Name}"
                                                            FontWeight="SemiBold" FontSize="12"

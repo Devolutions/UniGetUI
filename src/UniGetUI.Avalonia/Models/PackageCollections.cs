@@ -1,7 +1,13 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Net.Http;
 using Avalonia.Collections;
+using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels.Pages;
+using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 
@@ -13,6 +19,12 @@ namespace UniGetUI.PackageEngine.PackageClasses;
 /// </summary>
 public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
 {
+    private static readonly HttpClient _iconHttpClient = new(CoreTools.GenericHttpClientParameters)
+    {
+        Timeout = TimeSpan.FromSeconds(8),
+    };
+    private static readonly ConcurrentDictionary<long, Bitmap?> _iconCache = new();
+
     public IPackage Package { get; }
     public PackageWrapper Self => this;
     public int Index { get; set; }
@@ -20,6 +32,19 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private readonly PackagesPageViewModel _page;
+
+    private Bitmap? _iconBitmap;
+    public Bitmap? IconBitmap
+    {
+        get => _iconBitmap;
+        private set
+        {
+            _iconBitmap = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IconBitmap)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasCustomIcon)));
+        }
+    }
+    public bool HasCustomIcon => _iconBitmap is not null;
 
     public bool IsChecked
     {
@@ -63,6 +88,43 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
 
         Package.PropertyChanged += Package_PropertyChanged;
         UpdateDisplayState();
+
+        if (!Settings.Get(Settings.K.DisableIconsOnPackageLists))
+            _ = LoadIconAsync();
+    }
+
+    private async Task LoadIconAsync()
+    {
+        long hash = Package.GetHash();
+        if (_iconCache.TryGetValue(hash, out Bitmap? cached))
+        {
+            if (cached is not null)
+                IconBitmap = cached;
+            return;
+        }
+
+        try
+        {
+            var uri = Package.GetIconUrlIfAny();
+            if (uri is null) { _iconCache[hash] = null; return; }
+
+            Bitmap bitmap;
+            if (uri.IsFile)
+            {
+                bitmap = new Bitmap(uri.LocalPath);
+            }
+            else if (uri.Scheme is "http" or "https")
+            {
+                var bytes = await _iconHttpClient.GetByteArrayAsync(uri);
+                using var ms = new MemoryStream(bytes);
+                bitmap = new Bitmap(ms);
+            }
+            else { _iconCache[hash] = null; return; }
+
+            _iconCache[hash] = bitmap;
+            await Dispatcher.UIThread.InvokeAsync(() => IconBitmap = bitmap);
+        }
+        catch { _iconCache[hash] = null; }
     }
 
     private void Package_PropertyChanged(object? sender, PropertyChangedEventArgs e)

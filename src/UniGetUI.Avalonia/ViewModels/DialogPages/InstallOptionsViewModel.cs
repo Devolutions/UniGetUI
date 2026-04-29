@@ -305,6 +305,10 @@ public partial class InstallOptionsViewModel : ObservableObject
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────
+
+    /// <summary>Captures the current UI state into the options object without closing.</summary>
+    public void ApplyChanges() => ApplyToOptions();
+
     [RelayCommand]
     private void Save()
     {

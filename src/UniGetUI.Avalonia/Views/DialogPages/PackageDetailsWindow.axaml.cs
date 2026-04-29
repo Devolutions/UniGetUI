@@ -8,6 +8,7 @@ using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Views;
@@ -21,6 +22,8 @@ public partial class PackageDetailsWindow : Window
     public bool ShouldProceedWithOperation { get; private set; }
 
     private readonly PackageDetailsViewModel _vm;
+    private InstallOptionsViewModel? _installVm;
+    private InstallOptions? _installOpts;
 
     public PackageDetailsWindow(IPackage package, OperationType operation)
     {
@@ -32,15 +35,28 @@ public partial class PackageDetailsWindow : Window
 
         MainActionButton.Click += (_, _) => OnMainAction();
         ActionVariantsButton.Flyout = BuildActionFlyout();
-        InstallOptionsButton.Click += (_, _) => _ = OnInstallOptionsAsync();
+        InstallOptionsSaveButton.Click += (_, _) => _ = SaveInstallOptionsAsync();
     }
 
-    protected override void OnOpened(EventArgs e)
+    protected override async void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
         Dispatcher.UIThread.Post(() => MainActionButton.Focus(), DispatcherPriority.Background);
         _ = _vm.LoadDetailsAsync();
         TelemetryHandler.PackageDetails(_vm.Package, _vm.OperationRole.ToString());
+
+        _installOpts = await InstallOptionsFactory.LoadForPackageAsync(_vm.Package);
+        _installVm = new InstallOptionsViewModel(_vm.Package, _vm.OperationRole, _installOpts);
+        var embed = new InstallOptionsControl();
+        embed.DataContext = _installVm;
+        InstallOptionsHolder.Content = embed;
+    }
+
+    private async Task SaveInstallOptionsAsync()
+    {
+        if (_installVm is null || _installOpts is null) return;
+        _installVm.ApplyChanges();
+        await InstallOptionsFactory.SaveForPackageAsync(_installOpts, _vm.Package);
     }
 
     private MenuFlyout BuildActionFlyout()
@@ -84,14 +100,6 @@ public partial class PackageDetailsWindow : Window
     }
 
     // ── Action handlers ────────────────────────────────────────────────────────
-
-    private async Task OnInstallOptionsAsync()
-    {
-        var opts = await InstallOptionsFactory.LoadForPackageAsync(_vm.Package);
-        var dialog = new InstallOptionsWindow(_vm.Package, _vm.OperationRole, opts);
-        await dialog.ShowDialog(this);
-        await InstallOptionsFactory.SaveForPackageAsync(opts, _vm.Package);
-    }
 
     private void OnMainAction()
     {

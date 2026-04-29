@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;
@@ -17,6 +18,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
     IKeyboardShortcutListener, IEnterLeaveListener, ISearchBoxPage
 {
     public PackagesPageViewModel ViewModel => (PackagesPageViewModel)DataContext!;
+    private ContextMenu? _contextMenu;
 
     protected AbstractPackagesPage(PackagesPageData data)
     {
@@ -71,11 +73,11 @@ public abstract partial class AbstractPackagesPage : UserControl,
         PackageList.TextInput += PackageList_TextInput;
 
         // Wire context menu (built by subclass)
-        var contextMenu = GenerateContextMenu();
-        if (contextMenu is not null)
+        _contextMenu = GenerateContextMenu();
+        if (_contextMenu is not null)
         {
-            PackageList.ContextMenu = contextMenu;
-            contextMenu.Opening += (_, _) =>
+            PackageList.ContextMenu = _contextMenu;
+            _contextMenu.Opening += (_, _) =>
             {
                 var pkg = SelectedItem;
                 if (pkg is not null) WhenShowingContextMenu(pkg);
@@ -273,6 +275,17 @@ public abstract partial class AbstractPackagesPage : UserControl,
             FilteringPanel.ColumnDefinitions[0].Width = new GridLength(0);
             FilteringPanel.ColumnDefinitions[1].Width = new GridLength(0);
         }
+    }
+
+    // ─── Card overflow button (Grid / Icons view) ─────────────────────────────
+    private void CardOverflowButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: PackageWrapper wrapper }) return;
+        PackageList.SelectedItem = wrapper;
+        if (_contextMenu is null) return;
+        WhenShowingContextMenu(wrapper.Package);
+        _contextMenu.Open(sender as Control);
+        e.Handled = true;
     }
 
     // ─── Shared cross-page helpers ────────────────────────────────────────────

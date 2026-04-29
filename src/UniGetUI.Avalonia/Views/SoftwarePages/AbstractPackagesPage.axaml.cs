@@ -66,6 +66,10 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // Keyboard shortcuts on the package list
         PackageList.KeyDown += PackageList_KeyDown;
 
+        // Type-to-search: printable characters typed while the list is focused
+        // redirect focus + the typed character to the global search box.
+        PackageList.TextInput += PackageList_TextInput;
+
         // Wire context menu (built by subclass)
         var contextMenu = GenerateContextMenu();
         if (contextMenu is not null)
@@ -196,10 +200,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
     }
 
     // ─── IKeyboardShortcutListener ────────────────────────────────────────────
-    public void SearchTriggered()
-    {
-        // TODO: focus global search box
-    }
+    public void SearchTriggered() => GetMainWindow()?.FocusGlobalSearch();
 
     public void ReloadTriggered() => ViewModel.TriggerReload();
     public void SelectAllTriggered() => ViewModel.ToggleSelectAll();
@@ -244,6 +245,15 @@ public abstract partial class AbstractPackagesPage : UserControl,
                 _ = ShowDetailsForPackage(pkg);
             e.Handled = true;
         }
+    }
+
+    private void PackageList_TextInput(object? sender, TextInputEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.Text)) return;
+
+        // Append the typed character to the current query and move focus to the search box
+        GetMainWindow()?.FocusGlobalSearch(ViewModel.GlobalQueryText + e.Text);
+        e.Handled = true;
     }
 
     // ─── Filter pane column width management ─────────────────────────────────

@@ -246,6 +246,21 @@ public partial class MainWindow : Window
     // ─── Public navigation API ────────────────────────────────────────────────
     public void Navigate(PageType type) => ViewModel.NavigateTo(type);
 
+    /// <summary>
+    /// Focuses the global search box and optionally pre-fills a character typed
+    /// while the package list had focus (type-to-search).
+    /// </summary>
+    public void FocusGlobalSearch(string prefill = "")
+    {
+        if (!string.IsNullOrEmpty(prefill))
+        {
+            ViewModel.GlobalSearchText = prefill;
+            // Place cursor at end so the user can keep typing
+            GlobalSearchBox.CaretIndex = prefill.Length;
+        }
+        GlobalSearchBox.Focus();
+    }
+
     // ─── Public API (legacy compat) ───────────────────────────────────────────
     public void ShowBanner(string title, string message, RuntimeNotificationLevel level)
     {

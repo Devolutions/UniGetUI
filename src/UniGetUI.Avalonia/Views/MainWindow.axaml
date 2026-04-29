@@ -343,7 +343,8 @@
                         automation:AutomationProperties.AccessibilityView="Control"
                         Orientation="Horizontal"
                         Spacing="0">
-                <TextBox Width="300"
+                <TextBox x:Name="GlobalSearchBox"
+                         Width="300"
                          MinHeight="20"
                          Height="30"
                          FontSize="15"

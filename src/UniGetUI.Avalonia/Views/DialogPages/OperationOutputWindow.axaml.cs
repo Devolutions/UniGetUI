@@ -11,12 +11,14 @@ public partial class OperationOutputWindow : Window
     {
         DataContext = new OperationOutputViewModel(operation);
         InitializeComponent();
+
+        ((OperationOutputViewModel)DataContext).OutputLines.CollectionChanged +=
+            (_, _) => Dispatcher.UIThread.Post(OutputScroll.ScrollToEnd, DispatcherPriority.Background);
     }
 
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
         OutputScroll.ScrollToEnd();
-        Dispatcher.UIThread.Post(() => OutputTextBox.Focus(), DispatcherPriority.Background);
     }
 }

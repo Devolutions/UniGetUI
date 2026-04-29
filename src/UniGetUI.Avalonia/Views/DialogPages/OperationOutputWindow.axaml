@@ -1,7 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+        xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels.DialogPages"
+        xmlns:logVm="using:UniGetUI.Avalonia.ViewModels.Pages.LogPages"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.OperationOutputWindow"
         x:DataType="vm:OperationOutputViewModel"
         Width="700" MinWidth="400"
@@ -15,18 +16,23 @@
     <ScrollViewer x:Name="OutputScroll"
                   Margin="8"
                   HorizontalScrollBarVisibility="Auto"
-                  VerticalScrollBarVisibility="Auto">
-        <TextBox x:Name="OutputTextBox"
-                 Text="{Binding OutputText}"
-                 IsReadOnly="True"
-                 AcceptsReturn="True"
-                 TextWrapping="Wrap"
-                 FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
-                 FontSize="12"
-                 Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                 Background="Transparent"
-                 BorderThickness="0"
-                 automation:AutomationProperties.Name="{Binding Title}"/>
+                  VerticalScrollBarVisibility="Auto"
+                  Background="{DynamicResource AppDialogDarkBackground}"
+                  CornerRadius="6">
+        <ItemsControl ItemsSource="{Binding OutputLines}"
+                      Padding="8"
+                      automation:AutomationProperties.Name="{Binding Title}"
+                      automation:AutomationProperties.AccessibilityView="Raw">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="logVm:LogLineItem">
+                    <TextBlock Text="{Binding Text}"
+                               Foreground="{Binding Foreground}"
+                               FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+                               FontSize="12"
+                               TextWrapping="Wrap"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </ScrollViewer>
 
 </Window>

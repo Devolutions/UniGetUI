@@ -325,8 +325,21 @@
                                               ItemsSource="{Binding SourceNodes}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="vm:SourceTreeNode">
-                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                          Content="{Binding PackageName}"/>
+                                                <StackPanel>
+                                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                              Content="{Binding PackageName}"/>
+                                                    <!-- Child sources, indented, shown when manager has custom sources -->
+                                                    <ItemsControl ItemsSource="{Binding Children}"
+                                                                  Margin="20,0,0,0">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:SourceTreeNode">
+                                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                                          Content="{Binding PackageName}"
+                                                                          FontSize="12"/>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>

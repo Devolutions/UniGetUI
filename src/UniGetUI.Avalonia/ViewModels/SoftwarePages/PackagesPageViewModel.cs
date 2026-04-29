@@ -70,7 +70,7 @@ public class SourceTreeNode : INotifyPropertyChanged
     public string? PackageID { get; init; }
     public string? Version { get; init; }
     public string? Source { get; init; }
-    public List<SourceTreeNode> Children { get; } = [];
+    public AvaloniaList<SourceTreeNode> Children { get; } = new();
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -584,11 +584,12 @@ public partial class PackagesPageViewModel : ViewModelBase
             UsedSourcesForManager[source.Manager].Add(source);
             var item = new SourceTreeNode
             {
-                PackageName = source.Manager.DisplayName,
+                PackageName = source.Name,
                 PackageID = package.Id,
                 Version = package.VersionString,
                 Source = package.Source.Name
             };
+            item.PropertyChanged += OnRootSourceNodePropertyChanged;
             NodesForSources.TryAdd(source, item);
 
             if (source.IsVirtualManager)
@@ -610,7 +611,11 @@ public partial class PackagesPageViewModel : ViewModelBase
     public void ClearSourcesList()
     {
         foreach (var node in SourceNodes)
+        {
             node.PropertyChanged -= OnRootSourceNodePropertyChanged;
+            foreach (var child in node.Children)
+                child.PropertyChanged -= OnRootSourceNodePropertyChanged;
+        }
         UsedManagers.Clear();
         SourceNodes.Clear();
         UsedSourcesForManager.Clear();
@@ -631,11 +636,37 @@ public partial class PackagesPageViewModel : ViewModelBase
             FilterPackages();
     }
     private List<SourceTreeNode> GetAllSourceNodes() => SourceNodes.ToList();
-    private List<SourceTreeNode> GetSelectedSourceNodes() => SourceNodes.Where(n => n.IsSelected).ToList();
+
+    private List<SourceTreeNode> GetSelectedSourceNodes()
+    {
+        var result = new List<SourceTreeNode>();
+        foreach (var root in SourceNodes)
+        {
+            if (root.IsSelected) result.Add(root);
+            result.AddRange(root.Children.Where(c => c.IsSelected));
+        }
+        return result;
+    }
 
     public void SetSourceNodeSelected(SourceTreeNode node, bool selected) => node.IsSelected = selected;
-    public void ClearSourceSelection() { foreach (var n in SourceNodes) n.IsSelected = false; }
-    public void SelectAllSources() { foreach (var n in SourceNodes) n.IsSelected = true; }
+
+    public void ClearSourceSelection()
+    {
+        foreach (var n in SourceNodes)
+        {
+            n.IsSelected = false;
+            foreach (var c in n.Children) c.IsSelected = false;
+        }
+    }
+
+    public void SelectAllSources()
+    {
+        foreach (var n in SourceNodes)
+        {
+            n.IsSelected = true;
+            foreach (var c in n.Children) c.IsSelected = true;
+        }
+    }
 
     // ─── Header texts ─────────────────────────────────────────────────────────
     public void UpdateHeaderTexts()

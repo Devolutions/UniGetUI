@@ -2,6 +2,7 @@ using System.Runtime.Versioning;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using Microsoft.Win32;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
@@ -27,7 +28,7 @@ internal sealed class WindowsTrayService : IDisposable
             Menu = BuildMenu(owner),
         };
 
-        _trayIcon.Clicked += (_, _) => owner.ShowFromTray();
+        _trayIcon.Clicked += (_, _) => Dispatcher.UIThread.Post(() => owner.ShowFromTray());
 
         var app = Application.Current!;
         var icons = TrayIcon.GetIcons(app) ?? new TrayIcons();
@@ -115,13 +116,13 @@ internal sealed class WindowsTrayService : IDisposable
         var menu = new NativeMenu();
 
         var discover = new NativeMenuItem(CoreTools.Translate("Discover Packages"));
-        discover.Click += (_, _) => { owner.Navigate(PageType.Discover); owner.ShowFromTray(); };
+        discover.Click += (_, _) => Dispatcher.UIThread.Post(() => { owner.Navigate(PageType.Discover); owner.ShowFromTray(); });
 
         var updates = new NativeMenuItem(CoreTools.Translate("Available Updates"));
-        updates.Click += (_, _) => { owner.Navigate(PageType.Updates); owner.ShowFromTray(); };
+        updates.Click += (_, _) => Dispatcher.UIThread.Post(() => { owner.Navigate(PageType.Updates); owner.ShowFromTray(); });
 
         var installed = new NativeMenuItem(CoreTools.Translate("Installed Packages"));
-        installed.Click += (_, _) => { owner.Navigate(PageType.Installed); owner.ShowFromTray(); };
+        installed.Click += (_, _) => Dispatcher.UIThread.Post(() => { owner.Navigate(PageType.Installed); owner.ShowFromTray(); });
 
         menu.Add(discover);
         menu.Add(updates);
@@ -136,11 +137,11 @@ internal sealed class WindowsTrayService : IDisposable
         menu.Add(new NativeMenuItemSeparator());
 
         var show = new NativeMenuItem(CoreTools.Translate("Show UniGetUI"));
-        show.Click += (_, _) => owner.ShowFromTray();
+        show.Click += (_, _) => Dispatcher.UIThread.Post(() => owner.ShowFromTray());
         menu.Add(show);
 
         var quit = new NativeMenuItem(CoreTools.Translate("Quit"));
-        quit.Click += (_, _) => owner.QuitApplication();
+        quit.Click += (_, _) => Dispatcher.UIThread.Post(() => owner.QuitApplication());
         menu.Add(quit);
 
         return menu;

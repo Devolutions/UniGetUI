@@ -277,8 +277,10 @@ public partial class MainWindow : Window
     // ─── BackgroundAPI integration ────────────────────────────────────────────
     public void ShowFromTray()
     {
-        Show();
-        WindowState = WindowState.Normal;
+        if (!IsVisible)
+            Show();
+        if (WindowState == WindowState.Minimized)
+            WindowState = WindowState.Normal;
         Activate();
     }
 

@@ -31,9 +31,12 @@ namespace UniGetUI.PackageEngine.PackageClasses
             {
                 Package.IsChecked = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsChecked)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CheckedStatus)));
                 _page.UpdatePackageCount();
             }
         }
+
+        public string CheckedStatus => IsChecked ? CoreTools.Translate("Checked") : CoreTools.Translate("Unchecked");
 
         public bool IconWasLoaded;
         public bool AlternateIdIconVisible;

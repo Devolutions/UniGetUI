@@ -381,6 +381,7 @@
 
       <controls:GridSplitter
         x:Name="OperationSplitter"
+        AutomationProperties.Name="Operation list resizer"
         Grid.Row="1"
         Grid.Column="0"
         Height="12"
@@ -398,6 +399,7 @@
         </Grid.ColumnDefinitions>
         <HyperlinkButton
           Name="ExpandCollapseOpList"
+          AutomationProperties.Name="Expand or collapse operation list"
           Grid.Column="1"
           Height="12"
           Padding="12,0,12,0"

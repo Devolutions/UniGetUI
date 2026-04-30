@@ -98,7 +98,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 : new CornerRadius(8);
         }
 
-        private UIElement BuildReleaseDateCompatTable()
+        private static UIElement BuildReleaseDateCompatTable()
         {
             string yesStr = CoreTools.Translate("Yes");
             string noStr = CoreTools.Translate("No");

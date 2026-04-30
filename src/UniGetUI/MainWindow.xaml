@@ -36,6 +36,7 @@
       PaneToggleRequested="TitleBar_PaneToggleRequested"
       SizeChanged="TitleBar_SizeChanged"
       Visibility="Collapsed"
+      IsTabStop="False"
     >
       <!--TitleBar.IconSource>
                 <ImageIconSource ImageSource="ms-appx:///Assets/Images/icon.png" />
@@ -97,7 +98,7 @@
       />
     </StackPanel>
     <Frame Name="MainContentFrame" Grid.Row="2">
-      <Grid Background="{StaticResource ProgressBarBorderThemeBrush}" Visibility="Visible">
+      <Grid Background="{StaticResource ProgressBarBorderThemeBrush}" Visibility="Visible" AutomationProperties.Name="Loading UniGetUI">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*" />
           <ColumnDefinition Width="Auto" />

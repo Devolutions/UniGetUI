@@ -48,6 +48,8 @@
             Grid.Column="0"
             VerticalAlignment="Center"
             IsChecked="{x:Bind IsChecked, Mode=TwoWay}"
+            IsTabStop="False"
+            AutomationProperties.AccessibilityView="Raw"
           />
 
           <!--  Regular or package icon  -->
@@ -285,6 +287,8 @@
             HorizontalAlignment="Left"
             VerticalAlignment="Top"
             IsChecked="{x:Bind IsChecked, Mode=TwoWay}"
+            IsTabStop="False"
+            AutomationProperties.AccessibilityView="Raw"
           />
 
           <Button
@@ -418,6 +422,8 @@
             HorizontalAlignment="Left"
             VerticalAlignment="Top"
             IsChecked="{x:Bind IsChecked, Mode=TwoWay}"
+            IsTabStop="False"
+            AutomationProperties.AccessibilityView="Raw"
           />
           <Button
             Grid.Row="0"
@@ -591,6 +597,8 @@
           VerticalAlignment="Center"
           Orientation="Horizontal"
           Spacing="4"
+          AutomationProperties.Name="View modes"
+          AutomationProperties.LocalizedControlType="grouping"
         >
           <widgets:TranslatedTextBlock VerticalAlignment="Center" Text="View mode:" />
           <Toolkit:Segmented
@@ -598,17 +606,17 @@
             SelectionChanged="ViewModeSelector_SelectionChanged"
             SelectionMode="Single"
           >
-            <Toolkit:SegmentedItem x:Name="Selector_List">
+            <Toolkit:SegmentedItem x:Name="Selector_List" AutomationProperties.Name="List view">
               <Toolkit:SegmentedItem.Icon>
                 <FontIcon Glyph="&#xE8FD;" />
               </Toolkit:SegmentedItem.Icon>
             </Toolkit:SegmentedItem>
-            <Toolkit:SegmentedItem x:Name="Selector_Grid">
+            <Toolkit:SegmentedItem x:Name="Selector_Grid" AutomationProperties.Name="Grid view">
               <Toolkit:SegmentedItem.Icon>
                 <FontIcon Glyph="&#xF168;" />
               </Toolkit:SegmentedItem.Icon>
             </Toolkit:SegmentedItem>
-            <Toolkit:SegmentedItem x:Name="Selector_Icons">
+            <Toolkit:SegmentedItem x:Name="Selector_Icons" AutomationProperties.Name="Icons view">
               <Toolkit:SegmentedItem.Icon>
                 <FontIcon Glyph="&#xF0E2;" />
               </Toolkit:SegmentedItem.Icon>
@@ -641,6 +649,7 @@
         <StackPanel x:Name="ToggleFiltersButtonWidth" Margin="0,0,13,0" Orientation="Horizontal">
           <ToggleButton
             x:Name="ToggleFiltersButton"
+            AutomationProperties.Name="Toggle filters panel"
             Grid.Column="0"
             Height="36"
             Margin="1,4"
@@ -688,6 +697,7 @@
         <StackPanel Grid.Column="1" Orientation="Horizontal">
           <Button
             x:Name="MainToolbarButton"
+            AutomationProperties.Name="{x:Bind MainToolbarButtonText.Text, Mode=OneWay}"
             Height="36"
             Margin="0,0,1,0"
             x:FieldModifier="protected"
@@ -711,6 +721,7 @@
           </Button>
           <Button
             x:Name="MainToolbarButtonDropdown"
+            AutomationProperties.Name="More actions"
             Width="30"
             Height="36"
             Padding="4"
@@ -728,6 +739,8 @@
           HorizontalAlignment="Left"
           x:FieldModifier="protected"
           DefaultLabelPosition="Right"
+          IsDynamicOverflowEnabled="False"
+          OverflowButtonVisibility="Collapsed"
         />
       </Grid>
     </Grid>
@@ -747,6 +760,7 @@
       PaneClosing="FilteringPanel_PaneClosing"
       PanePlacement="Left"
       SizeChanged="FilteringPanel_SizeChanged"
+      IsTabStop="False"
     >
       <SplitView.Pane>
         <ScrollViewer
@@ -759,6 +773,7 @@
           CornerRadius="0,8,8,0"
           HorizontalScrollMode="Disabled"
           SizeChanged="SidepanelWidth_SizeChanged"
+          IsTabStop="False"
         >
           <Grid Name="SidePanelGrid" RowSpacing="8">
             <Grid.RowDefinitions>
@@ -887,7 +902,7 @@
                 </StackPanel>
               </Expander.Header>
               <Expander.Content>
-                <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical" Spacing="0">
+                <StackPanel HorizontalAlignment="Stretch" Orientation="Vertical" Spacing="0" AutomationProperties.Name="Filter options" AutomationProperties.LocalizedControlType="grouping">
                   <CheckBox
                     x:Name="InstantSearchCheckbox"
                     x:FieldModifier="protected"
@@ -959,6 +974,7 @@
                   >
                     <RadioButton
                       x:Name="QueryNameRadio"
+                      AutomationProperties.Name="Package Name"
                       Height="30"
                       Margin="0,-2,0,-2"
                       x:FieldModifier="protected"
@@ -969,6 +985,7 @@
                     </RadioButton>
                     <RadioButton
                       x:Name="QueryIdRadio"
+                      AutomationProperties.Name="Package ID"
                       Height="30"
                       Margin="0,-2,0,-2"
                       x:FieldModifier="protected"
@@ -979,6 +996,7 @@
                     </RadioButton>
                     <RadioButton
                       x:Name="QueryBothRadio"
+                      AutomationProperties.Name="Both"
                       Height="30"
                       Margin="0,-2,0,-2"
                       x:FieldModifier="protected"
@@ -990,6 +1008,7 @@
                     </RadioButton>
                     <RadioButton
                       x:Name="QueryExactMatch"
+                      AutomationProperties.Name="Exact match"
                       Height="30"
                       Margin="0,-2,0,-2"
                       x:FieldModifier="protected"
@@ -1000,6 +1019,7 @@
                     </RadioButton>
                     <RadioButton
                       x:Name="QuerySimilarResultsRadio"
+                      AutomationProperties.Name="Show similar packages"
                       Height="30"
                       Margin="0,-2,0,-2"
                       x:FieldModifier="protected"
@@ -1070,9 +1090,12 @@
               HorizontalAlignment="Stretch"
               BorderThickness="0"
               CornerRadius="4,0,0,4"
+              IsTabStop="False"
+              AutomationProperties.AccessibilityView="Raw"
             >
               <CheckBox
                 Name="SelectAllCheckBox"
+                AutomationProperties.Name="Select all packages"
                 Margin="12,4,4,4"
                 Checked="SelectAllCheckBox_ValueChanged"
                 Unchecked="SelectAllCheckBox_ValueChanged"

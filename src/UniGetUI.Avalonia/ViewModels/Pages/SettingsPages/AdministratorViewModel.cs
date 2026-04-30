@@ -44,7 +44,7 @@ public partial class AdministratorViewModel : ViewModelBase
     // ── Commands ─────────────────────────────────────────────────────────
 
     [RelayCommand]
-    private void RestartCache() => _ = CoreTools.ResetUACForCurrentProcess();
+    private static void RestartCache() => _ = CoreTools.ResetUACForCurrentProcess();
 
     [RelayCommand]
     private void ShowRestartRequired() => RestartRequired?.Invoke(this, EventArgs.Empty);

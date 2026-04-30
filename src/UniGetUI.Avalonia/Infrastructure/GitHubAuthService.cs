@@ -7,7 +7,7 @@ using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
-internal class GitHubAuthService
+internal sealed class GitHubAuthService
 {
     private readonly string _gitHubClientId = Secrets.GetGitHubClientId();
     private readonly GitHubClient _client;
@@ -25,7 +25,7 @@ internal class GitHubAuthService
         _client = new GitHubClient(new ProductHeaderValue("UniGetUI", CoreData.VersionName));
     }
 
-    public GitHubClient? CreateGitHubClient()
+    public static GitHubClient? CreateGitHubClient()
     {
         var token = SecureGHTokenManager.GetToken();
         if (string.IsNullOrEmpty(token))
@@ -105,5 +105,5 @@ internal class GitHubAuthService
         SecureGHTokenManager.DeleteToken();
     }
 
-    public bool IsAuthenticated() => !string.IsNullOrEmpty(SecureGHTokenManager.GetToken());
+    public static bool IsAuthenticated() => !string.IsNullOrEmpty(SecureGHTokenManager.GetToken());
 }

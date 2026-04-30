@@ -76,10 +76,6 @@ if (-not $SkipTests) {
 Write-Host "`n=== Publishing $Configuration|$Platform ===" -ForegroundColor Cyan
 dotnet clean (Join-Path $SrcDir "UniGetUI.sln") -v m --nologo
 
-# --- Fetch winget-cli payload ---
-Write-Host "`n=== Fetching winget-cli ($Platform) ===" -ForegroundColor Cyan
-& (Join-Path $PSScriptRoot "fetch-winget-cli.ps1") -Architectures @($Platform) -Force
-
 dotnet publish $PublishProject /noLogo /p:Configuration=$Configuration /p:Platform=$Platform --ignore-failed-sources -v m
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE"

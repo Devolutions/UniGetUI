@@ -120,13 +120,13 @@
                       automation:AutomationProperties.Name="{t:Translate Known sources}"/>
             <Grid ColumnDefinitions="*,2*" ColumnSpacing="8">
                 <TextBox Grid.Column="0"
-                         Watermark="{Binding NameHint}"
+                         PlaceholderText="{Binding NameHint}"
                          Text="{Binding NewSourceName}"
                          IsEnabled="{Binding NameUrlEditable}"
                          FontFamily="Courier New"
                          automation:AutomationProperties.Name="{Binding NameHint}"/>
                 <TextBox Grid.Column="1"
-                         Watermark="{Binding UrlHint}"
+                         PlaceholderText="{Binding UrlHint}"
                          Text="{Binding NewSourceUrl}"
                          IsEnabled="{Binding NameUrlEditable}"
                          FontFamily="Courier New"

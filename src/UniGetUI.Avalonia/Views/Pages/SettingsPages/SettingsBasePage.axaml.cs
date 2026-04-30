@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.PackageEngine.Interfaces;
@@ -99,8 +100,12 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
             NavigateToPage(target);
     }
 
-    private void Page_RestartRequired(object? sender, EventArgs e) =>
+    private void Page_RestartRequired(object? sender, EventArgs e)
+    {
         VM.IsRestartBannerVisible = true;
+        AvaloniaOperationRegistry.RestartRequired = true;
+        MainWindow.Instance?.UpdateSystemTrayStatus();
+    }
 
     private static UserControl? CreatePageForType(Type t)
     {

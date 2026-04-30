@@ -41,14 +41,14 @@ public partial class InternetViewModel : ViewModelBase
 
         _usernameBox = new TextBox
         {
-            Watermark = CoreTools.Translate("Username"),
+            PlaceholderText = CoreTools.Translate("Username"),
             MinWidth = 200,
             Margin = new Thickness(0, 0, 0, 4),
         };
 
         _passwordBox = new TextBox
         {
-            Watermark = CoreTools.Translate("Password"),
+            PlaceholderText = CoreTools.Translate("Password"),
             MinWidth = 200,
             PasswordChar = '●',
         };

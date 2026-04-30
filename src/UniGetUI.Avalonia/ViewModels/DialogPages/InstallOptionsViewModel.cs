@@ -1,11 +1,13 @@
 using System.Collections.ObjectModel;
 using System.Net.Http;
+using System.Windows.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Core.Language;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -52,7 +54,16 @@ public partial class InstallOptionsViewModel : ObservableObject
     public string TabGeneralLabel { get; } = CoreTools.Translate("General");
     public string TabLocationLabel { get; } = CoreTools.Translate("Architecture & Location");
     public string TabCLILabel { get; } = CoreTools.Translate("Command-line");
+    public string TabCloseAppsLabel { get; } = CoreTools.Translate("Close apps");
     public string TabPrePostLabel { get; } = CoreTools.Translate("Pre/Post install");
+
+    // Close-apps tab labels
+    public string KillProcessesDescriptionLabel { get; } = CoreTools.Translate(
+        "Select the processes that should be closed before this package is installed, updated or uninstalled.");
+    public string KillProcessesPlaceholderLabel { get; } = CoreTools.Translate(
+        "Write here the process names here, separated by commas (,)");
+    public string ForceKillLabelText { get; } = CoreTools.Translate(
+        "Try to kill the processes that refuse to close when requested to");
 
     // Checkbox content labels
     public string AdminCheckBox_Content { get; } = CoreTools.Translate("Run as admin");
@@ -153,6 +164,22 @@ public partial class InstallOptionsViewModel : ObservableObject
     [ObservableProperty] private string _preUninstallText = "";
     [ObservableProperty] private string _postUninstallText = "";
     [ObservableProperty] private bool _abortUninstall;
+
+    // ── Close apps tab ────────────────────────────────────────────────────────
+    public ObservableCollection<KillProcessEntry> KillProcessEntries { get; } = [];
+
+    [ObservableProperty] private string _killProcessNewEntry = "";
+    [ObservableProperty] private bool _forceKillChecked;
+
+    [RelayCommand]
+    private void AddKillProcess()
+    {
+        var name = KillProcessNewEntry.Trim();
+        if (string.IsNullOrEmpty(name)) return;
+        if (!KillProcessEntries.Any(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            KillProcessEntries.Add(new KillProcessEntry(name, e => KillProcessEntries.Remove(e)));
+        KillProcessNewEntry = "";
+    }
 
     // ── Command preview ───────────────────────────────────────────────────────
     [ObservableProperty] private string _commandPreview = "";
@@ -259,6 +286,11 @@ public partial class InstallOptionsViewModel : ObservableObject
         PreUninstallText = options.PreUninstallCommand;
         PostUninstallText = options.PostUninstallCommand;
         AbortUninstall = options.AbortOnPreUninstallFail;
+
+        // Close apps
+        foreach (var proc in options.KillBeforeOperation)
+            KillProcessEntries.Add(new KillProcessEntry(proc, e => KillProcessEntries.Remove(e)));
+        ForceKillChecked = Settings.Get(Settings.K.KillProcessesThatRefuseToDie);
 
         // Show fallback immediately, then replace with real icon if available
         using var fallback = AssetLoader.Open(_fallbackIconUri);
@@ -432,6 +464,8 @@ public partial class InstallOptionsViewModel : ObservableObject
         _options.PreUninstallCommand = s.PreUninstallCommand;
         _options.PostUninstallCommand = s.PostUninstallCommand;
         _options.AbortOnPreUninstallFail = s.AbortOnPreUninstallFail;
+        _options.KillBeforeOperation = KillProcessEntries.Select(e => e.Name).ToList();
+        Settings.Set(Settings.K.KillProcessesThatRefuseToDie, ForceKillChecked);
     }
 
     private static string ScopeToString(string? selected)
@@ -443,4 +477,24 @@ public partial class InstallOptionsViewModel : ObservableObject
 
     private static List<string> Split(string text)
         => text.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+}
+
+/// <summary>A single entry in the "close apps before installing" list.</summary>
+public sealed class KillProcessEntry
+{
+    public string Name { get; }
+    public ICommand RemoveCommand { get; }
+
+    public KillProcessEntry(string name, Action<KillProcessEntry> remove)
+    {
+        Name = name;
+        RemoveCommand = new SyncCommand(() => remove(this));
+    }
+
+    private sealed class SyncCommand(Action action) : ICommand
+    {
+        public event EventHandler? CanExecuteChanged { add { } remove { } }
+        public bool CanExecute(object? _) => true;
+        public void Execute(object? _) => action();
+    }
 }

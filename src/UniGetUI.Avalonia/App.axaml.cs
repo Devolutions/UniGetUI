@@ -52,8 +52,15 @@ public partial class App : Application
 
             if (CoreData.WasDaemon)
             {
-                // Start silently: hide the window as soon as Avalonia opens it.
-                mainWindow.Opened += (_, _) => mainWindow.Hide();
+                // Start silently: hide the window on first open only.
+                // Opened fires on every Show() in Avalonia, so we must unsubscribe
+                // immediately or every ShowFromTray() call would hide the window again.
+                void HideOnce(object? s, EventArgs e)
+                {
+                    mainWindow.Opened -= HideOnce;
+                    mainWindow.Hide();
+                }
+                mainWindow.Opened += HideOnce;
             }
 
             _ = StartupAsync(mainWindow);

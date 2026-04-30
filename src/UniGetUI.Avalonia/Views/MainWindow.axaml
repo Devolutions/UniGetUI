@@ -290,7 +290,7 @@
                          FontSize="15"
                          Margin="0,5,0,0"
                          CornerRadius="4,0,0,4"
-                         Watermark="{Binding GlobalSearchPlaceholder}"
+                         PlaceholderText="{Binding GlobalSearchPlaceholder}"
                          IsEnabled="{Binding GlobalSearchEnabled}"
                          automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
                          automation:AutomationProperties.AcceleratorKey="Ctrl+F"

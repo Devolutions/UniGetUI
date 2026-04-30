@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -35,5 +36,11 @@ public partial class InstallOptionsWindow : Window
         if (results is [{ } folder])
             ((InstallOptionsViewModel)DataContext!).LocationText =
                 folder.TryGetLocalPath() ?? folder.Name;
+    }
+
+    private void KillProcessBox_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Return or Key.Enter or Key.OemComma)
+            ((InstallOptionsViewModel)DataContext!).AddKillProcessCommand.Execute(null);
     }
 }

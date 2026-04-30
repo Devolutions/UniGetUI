@@ -27,17 +27,6 @@ public sealed class SourceOperationsTests
     }
 
     [Fact]
-    public void CreateInstallAndUninstallPreOpsSkipNonWingetManagers()
-    {
-        var source = CreateSource();
-
-        Assert.Empty(SourceOperation.CreateInstallPreOps(source, forceLocalWinGet: false));
-        Assert.Empty(SourceOperation.CreateInstallPreOps(source, forceLocalWinGet: true));
-        Assert.Empty(SourceOperation.CreateUninstallPreOps(source, forceLocalWinGet: false));
-        Assert.Empty(SourceOperation.CreateUninstallPreOps(source, forceLocalWinGet: true));
-    }
-
-    [Fact]
     public void AddSourcePrepareProcessStartInfoUsesManagerExecutableWithoutAdmin()
     {
         var manager = new PackageManagerBuilder()
@@ -102,8 +91,8 @@ public sealed class SourceOperationsTests
 
     private sealed class InspectableAddSourceOperation : AddSourceOperation
     {
-        public InspectableAddSourceOperation(IManagerSource source, bool forceLocalWinGet = false)
-            : base(source, forceLocalWinGet) { }
+        public InspectableAddSourceOperation(IManagerSource source)
+            : base(source) { }
 
         public ProcessStartInfo PrepareProcessStartInfoForTests()
         {
@@ -132,8 +121,8 @@ public sealed class SourceOperationsTests
 
     private sealed class InspectableRemoveSourceOperation : RemoveSourceOperation
     {
-        public InspectableRemoveSourceOperation(IManagerSource source, bool forceLocalWinGet = false)
-            : base(source, forceLocalWinGet) { }
+        public InspectableRemoveSourceOperation(IManagerSource source)
+            : base(source) { }
 
         public ProcessStartInfo PrepareProcessStartInfoForTests()
         {

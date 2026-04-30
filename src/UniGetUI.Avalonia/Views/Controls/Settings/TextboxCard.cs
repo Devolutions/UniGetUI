@@ -41,7 +41,7 @@ public sealed partial class TextboxCard : SettingsCard
     {
         set
         {
-            _textbox.Watermark = value;
+            _textbox.PlaceholderText = value;
             ApplyAutomationMetadata(_textbox, GetAutomationNameText() ?? value);
         }
     }

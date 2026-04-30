@@ -4,6 +4,7 @@
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         x:Class="UniGetUI.Avalonia.Views.InstallOptionsWindow"
         x:DataType="vm:InstallOptionsViewModel"
+        xmlns:vmd="using:UniGetUI.Avalonia.ViewModels"
         Width="680" MinWidth="500"
         SizeToContent="Height"
         CanResize="False"
@@ -227,7 +228,50 @@
                     </Border>
                 </TabItem>
 
-                <!-- Tab 3: Pre/Post commands -->
+                <!-- Tab 3: Close apps before installing -->
+                <TabItem Header="{Binding TabCloseAppsLabel}" FontSize="18">
+                    <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="0,8,8,8" Padding="16">
+                        <StackPanel Spacing="8">
+
+                            <TextBlock Text="{Binding KillProcessesDescriptionLabel}"
+                                       TextWrapping="Wrap"
+                                       Opacity="0.7"/>
+
+                            <TextBox x:Name="KillProcessNewEntryBox"
+                                     Text="{Binding KillProcessNewEntry}"
+                                     Watermark="{Binding KillProcessesPlaceholderLabel}"
+                                     HorizontalAlignment="Stretch"
+                                     KeyDown="KillProcessBox_KeyDown"/>
+
+                            <ItemsControl ItemsSource="{Binding KillProcessEntries}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vmd:KillProcessEntry">
+                                        <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                                            <TextBlock Text="{Binding Name}"
+                                                       VerticalAlignment="Center"
+                                                       FontFamily="Cascadia Mono,Consolas,Menlo,monospace"/>
+                                            <Button Grid.Column="1"
+                                                    Content="✕"
+                                                    Command="{Binding RemoveCommand}"
+                                                    Padding="6,2" Margin="8,0,0,0"
+                                                    VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"
+                                    automation:AutomationProperties.AccessibilityView="Raw"/>
+
+                            <CheckBox Content="{Binding ForceKillLabelText}"
+                                      IsChecked="{Binding ForceKillChecked}"
+                                      automation:AutomationProperties.Name="{Binding ForceKillLabelText}"/>
+
+                        </StackPanel>
+                    </Border>
+                </TabItem>
+
+                <!-- Tab 4: Pre/Post commands -->
                 <TabItem Header="{Binding TabPrePostLabel}" FontSize="18">
                     <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="0,8,8,8" Padding="16">
                         <StackPanel Spacing="10">

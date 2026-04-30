@@ -424,10 +424,6 @@ public static partial class DialogHelper
             await p.WaitForExitAsync();
             HideLoadingDialog(loadingId);
 
-            // Toggle bundled WinGet
-            if (Settings.Get(Settings.K.ForceLegacyBundledWinGet))
-                Settings.Set(Settings.K.ForceLegacyBundledWinGet, false);
-
             var c = DialogFactory.Create();
             c.Title = CoreTools.Translate("WinGet was repaired successfully");
             c.Content =

@@ -40,6 +40,15 @@
     </PropertyGroup>
 
     <PropertyGroup>
+        <PingetCliProject>$(MSBuildThisFileDirectory)..\UniGetUI.Pinget.Cli\UniGetUI.Pinget.Cli.csproj</PingetCliProject>
+        <PingetCliRuntimeIdentifier Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</PingetCliRuntimeIdentifier>
+        <PingetCliRuntimeIdentifier Condition="'$(PingetCliRuntimeIdentifier)' == '' and '$(Platform)' == 'arm64'">win-arm64</PingetCliRuntimeIdentifier>
+        <PingetCliRuntimeIdentifier Condition="'$(PingetCliRuntimeIdentifier)' == ''">win-x64</PingetCliRuntimeIdentifier>
+        <PingetCliPublishDir>$(MSBuildProjectDirectory)\obj\$(Platform)\$(Configuration)\BundledPinget\$(PingetCliRuntimeIdentifier)\</PingetCliPublishDir>
+        <PingetCliExecutablePath>$(PingetCliPublishDir)pinget.exe</PingetCliExecutablePath>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <GeneratedBuildInfoFile>$(IntermediateOutputPath)\Generated Files\Secrets.Generated.cs</GeneratedBuildInfoFile>
     </PropertyGroup>
 
@@ -61,6 +70,30 @@
         <Exec
             Command="pwsh -NoProfile -File ../../scripts/generate-integrity-tree.ps1 -Path $(PublishDir) -MinOutput"
             Condition="'$(PublishDir)' != '' and Exists('$(PublishDir)')"
+        />
+    </Target>
+
+    <Target
+        Name="PublishBundledPingetCli"
+        BeforeTargets="PostBuildGenerateIntegrityTree;PostPublishGenerateIntegrityTree"
+        Condition="'$(DesignTimeBuild)' != 'true'"
+    >
+        <MSBuild
+            Projects="$(PingetCliProject)"
+            Targets="Restore;Publish"
+            Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=net10.0;RuntimeIdentifier=$(PingetCliRuntimeIdentifier);SelfContained=true;PublishSingleFile=true;PublishTrimmed=false;PublishDir=$(PingetCliPublishDir);AppendRuntimeIdentifierToOutputPath=false"
+        />
+        <Copy
+            SourceFiles="$(PingetCliExecutablePath)"
+            DestinationFolder="$(TargetDir)"
+            SkipUnchangedFiles="true"
+            Condition="Exists('$(PingetCliExecutablePath)') and '$(TargetDir)' != ''"
+        />
+        <Copy
+            SourceFiles="$(PingetCliExecutablePath)"
+            DestinationFolder="$(PublishDir)"
+            SkipUnchangedFiles="true"
+            Condition="Exists('$(PingetCliExecutablePath)') and '$(PublishDir)' != '' and Exists('$(PublishDir)')"
         />
     </Target>
 
@@ -152,7 +185,7 @@
         <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4948" />
         <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
         <PackageReference Include="System.Drawing.Common" Version="9.0.8" Aliases="DrawingCommon" />
-        <PackageReference Include="YamlDotNet" Version="16.3.0" />
+        <PackageReference Include="YamlDotNet" Version="17.0.1" />
         <PackageReference Include="IdentityModel.OidcClient" Version="6.0.0" />
         <PackageReference Include="Octokit" Version="14.0.0" />
         <PackageReference

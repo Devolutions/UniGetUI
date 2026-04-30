@@ -1,6 +1,7 @@
 using Avalonia.Threading;
 using UniGetUI.Avalonia.Models;
 using UniGetUI.Avalonia.Views;
+using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.IconEngine;
 using UniGetUI.Core.Logging;
@@ -34,7 +35,62 @@ internal static class AvaloniaBootstrapper
             InitializePackageEngineAsync()
         );
 
+        await RunPostLoadChecksAsync();
+
         Logger.Info("Avalonia shell bootstrap completed");
+    }
+
+    private static async Task RunPostLoadChecksAsync()
+    {
+        if (!Settings.Get(Settings.K.DisableIntegrityChecks))
+        {
+            var result = await Task.Run(() => IntegrityTester.CheckIntegrity(allowRetry: true));
+            if (!result.Passed)
+            {
+                // When IntegrityTree.json is absent (debug / CI builds, tree is only generated
+                // during `dotnet publish`), the tester returns Passed=false with a single
+                // missing-file entry for the tree itself.  That is not a real integrity failure —
+                // skip the dialog so it does not fire on every dev launch.
+                bool onlyTreeMissing = result.MissingFiles.Count == 1
+                    && result.MissingFiles[0] == "/IntegrityTree.json"
+                    && result.CorruptedFiles.Count == 0;
+
+                if (!onlyTreeMissing)
+                {
+                    Logger.Warn("Integrity check failed; showing integrity violation dialog.");
+                    await Dispatcher.UIThread.InvokeAsync(ShowIntegrityViolationDialogAsync);
+                }
+                else
+                {
+                    Logger.Info("IntegrityTree.json not found (dev/CI build) — skipping integrity dialog.");
+                }
+            }
+        }
+
+        var missing = await GetMissingDependenciesAsync();
+        if (missing.Count > 0)
+        {
+            Logger.Info($"Found {missing.Count} missing dependencies; showing install dialogs.");
+            for (int i = 0; i < missing.Count; i++)
+            {
+                int idx = i;
+                await Dispatcher.UIThread.InvokeAsync(
+                    () => ShowMissingDependencyDialogAsync(missing[idx], idx + 1, missing.Count));
+            }
+        }
+    }
+
+    private static async Task ShowIntegrityViolationDialogAsync()
+    {
+        if (MainWindow.Instance is not { } owner) return;
+        await new IntegrityViolationDialog().ShowDialog(owner);
+    }
+
+    private static async Task ShowMissingDependencyDialogAsync(
+        ManagerDependency dep, int current, int total)
+    {
+        if (MainWindow.Instance is not { } owner) return;
+        await new MissingDependencyDialog(dep, current, total).ShowDialog(owner);
     }
 
     private static Task InitializeSharedServicesAsync()

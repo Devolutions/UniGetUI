@@ -1,0 +1,64 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+        x:Class="UniGetUI.Avalonia.Views.DialogPages.MissingDependencyDialog"
+        Width="560"
+        SizeToContent="Height"
+        MinHeight="230"
+        CanResize="False"
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppDialogBackground}"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="20"
+          RowDefinitions="Auto,Auto,Auto"
+          RowSpacing="12">
+
+        <TextBlock x:Name="TitleBlock"
+                   Grid.Row="0"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap"
+                   automation:AutomationProperties.HeadingLevel="1"/>
+
+        <StackPanel Grid.Row="1" Spacing="8">
+            <TextBlock x:Name="DescBlock"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,5"/>
+            <TextBlock x:Name="InfoBlock"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,10"
+                       FontStyle="Italic"
+                       Opacity="0.7"/>
+            <TextBlock x:Name="CommandInfoBlock"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,4"
+                       Opacity="0.7"/>
+            <SelectableTextBlock x:Name="CommandBlock"
+                                 TextWrapping="Wrap"
+                                 Margin="0,0,0,4"
+                                 FontFamily="Consolas"
+                                 Opacity="0.7"/>
+            <CheckBox x:Name="DontShowCheck"
+                      IsVisible="False"/>
+            <ProgressBar x:Name="ProgressBar"
+                         IsIndeterminate="False"
+                         IsVisible="False"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8">
+            <Button x:Name="SkipButton"
+                    MinWidth="110"
+                    automation:AutomationProperties.Name="{t:Translate Not right now}"/>
+            <Button x:Name="InstallButton"
+                    MinWidth="140"
+                    Classes="accent"/>
+        </StackPanel>
+
+    </Grid>
+
+</Window>

@@ -152,7 +152,7 @@ public partial class PackageManagerViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ScoopCleanup()
+    private static void ScoopCleanup()
     {
         _ = CoreTools.LaunchBatchFile(
             Path.Join(CoreData.UniGetUIExecutableDirectory, "Assets", "Utilities", "scoop_cleanup.cmd"),
@@ -170,7 +170,7 @@ public partial class PackageManagerViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void OpenVcpkgRoot()
+    private static void OpenVcpkgRoot()
     {
         string directory = CoreSettings.GetValue(CoreSettings.K.CustomVcpkgRoot);
         if (!string.IsNullOrEmpty(directory))

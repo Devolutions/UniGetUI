@@ -1,13 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Layout;
-using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
+using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
@@ -94,7 +91,8 @@ public class PackageBundlesPage : AbstractPackagesPage
         installAsAdmin.Click += (_, _) => _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm), elevated: true);
         installInteractive.Click += (_, _) => _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm), interactive: true);
         installSkipHash.Click += (_, _) => _ = ImportAndInstallPackage(GetCheckedNonInstalledPackages(vm), skiphash: true);
-        downloadInstallers.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
+        downloadInstallers.Click += (_, _) => _ = AvaloniaPackageOperationHelper.DownloadSelectedAsync(
+            GetCheckedNonInstalledPackages(vm), TEL_InstallReferral.FROM_BUNDLE);
 
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("add_to", CoreTools.Translate("New"),
@@ -103,6 +101,8 @@ public class PackageBundlesPage : AbstractPackagesPage
             () => _ = AskOpenFromFile());
         ViewModel.AddToolbarButton("save_as", CoreTools.Translate("Save as"),
             () => _ = SaveFile());
+        ViewModel.AddToolbarButton("console", CoreTools.Translate("Create .ps1 script"),
+            () => _ = CreateBatchScriptAsync());
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("delete", CoreTools.Translate("Remove selection from bundle"), () =>
         {
@@ -153,7 +153,8 @@ public class PackageBundlesPage : AbstractPackagesPage
         _menuSkipHash.Click += (_, _) => _ = ImportAndInstallPackage(SelectedItem is { } p ? [p] : [], skiphash: true);
 
         _menuDownloadInstaller = new MenuItem { Header = CoreTools.AutoTranslated("Download installer"), Icon = LoadMenuIcon("download") };
-        _menuDownloadInstaller.Click += (_, _) => { /* TODO: download-only operation not yet ported */ };
+        _menuDownloadInstaller.Click += (_, _) => _ = AvaloniaPackageOperationHelper.AskLocationAndDownloadAsync(
+            SelectedItem, TEL_InstallReferral.FROM_BUNDLE);
 
         var menuRemoveFromList = new MenuItem { Header = CoreTools.AutoTranslated("Remove from list"), Icon = LoadMenuIcon("delete") };
         menuRemoveFromList.Click += (_, _) =>
@@ -510,154 +511,168 @@ public class PackageBundlesPage : AbstractPackagesPage
         return allowed ? value : "";
     }
 
+    // ─── Batch script export ──────────────────────────────────────────────────
+    private async Task CreateBatchScriptAsync()
+    {
+        try
+        {
+            if (GetMainWindow() is not { } win) return;
+
+            string defaultName = CoreTools.Translate("Install script") + ".ps1";
+            var file = await win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                SuggestedFileName = defaultName,
+                FileTypeChoices =
+                [
+                    new FilePickerFileType(CoreTools.Translate("PowerShell script")) { Patterns = ["*.ps1"] },
+                ],
+            });
+
+            var path = file?.TryGetLocalPath();
+            if (path is null) return;
+
+            var packages = new List<string>();
+            var commands = new List<string>();
+
+            bool forceKill = Settings.Get(Settings.K.KillProcessesThatRefuseToDie);
+            foreach (var p in _loader.Packages)
+            {
+                if (p is not ImportedPackage pkg) continue;
+
+                packages.Add(pkg.Name + " from " + pkg.Manager.DisplayName);
+
+                foreach (var process in pkg.installation_options.KillBeforeOperation)
+                    commands.Add($"taskkill /im \"{process}\"" + (forceKill ? " /f" : ""));
+
+                if (pkg.installation_options.PreInstallCommand != "")
+                    commands.Add(pkg.installation_options.PreInstallCommand);
+
+                var param = pkg.Manager.OperationHelper.GetParameters(
+                    pkg, pkg.installation_options, OperationType.Install);
+                commands.Add($"{pkg.Manager.Properties.ExecutableFriendlyName} {string.Join(' ', param)}");
+
+                if (pkg.installation_options.PostInstallCommand != "")
+                    commands.Add(pkg.installation_options.PostInstallCommand);
+            }
+
+            await File.WriteAllTextAsync(path, GenerateCommandString(packages, commands));
+
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("Success!"),
+                CoreTools.Translate("The installation script saved to {0}", path),
+                MainWindow.RuntimeNotificationLevel.Success);
+
+            TelemetryHandler.ExportBatch();
+            await CoreTools.ShowFileOnExplorer(path);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("An error occurred while attempting to export an installation script");
+            Logger.Error(ex);
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("An error occurred"),
+                CoreTools.Translate("An error occurred while attempting to create an installation script:") + " " + ex.Message,
+                MainWindow.RuntimeNotificationLevel.Error);
+        }
+    }
+
+    private static string GenerateCommandString(IReadOnlyList<string> names, IReadOnlyList<string> commands)
+    {
+        return $$"""
+            Clear-Host
+            Write-Host ""
+            Write-Host "========================================================"
+            Write-Host ""
+            Write-Host "        __  __      _ ______     __  __  ______" -ForegroundColor Cyan
+            Write-Host "       / / / /___  (_) ____/__  / _// / / /  _/" -ForegroundColor Cyan
+            Write-Host "      / / / / __ \/ / / __/ _ \/ __/ / / // /" -ForegroundColor Cyan
+            Write-Host "     / /_/ / / / / / /_/ /  __/ /_/ /_/ // /" -ForegroundColor Cyan
+            Write-Host "     \____/_/ /_/_/\____/\___/\__/\____/___/" -ForegroundColor Cyan
+            Write-Host "          UniGetUI Package Installer Script"
+            Write-Host "        Created with UniGetUI Version {{CoreData.VersionName}}"
+            Write-Host ""
+            Write-Host "========================================================"
+            Write-Host ""
+            Write-Host "NOTES:" -ForegroundColor Yellow
+            Write-Host "  - The install process will not be as reliable as importing a bundle with UniGetUI. Expect issues and errors." -ForegroundColor Yellow
+            Write-Host "  - Packages will be installed with the install options specified at the time of creation of this script." -ForegroundColor Yellow
+            Write-Host "  - Error/Success detection may not be 100% accurate." -ForegroundColor Yellow
+            Write-Host "  - Some of the packages may require elevation. Some of them may ask for permission, but others may fail. Consider running this script elevated." -ForegroundColor Yellow
+            Write-Host "  - You can skip confirmation prompts by running this script with the parameter `/DisablePausePrompts` " -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host ""
+            if ($args[0] -ne "/DisablePausePrompts") { pause }
+            Write-Host ""
+            Write-Host "This script will attempt to install the following packages:"
+            {{string.Join('\n', names.Select(x => $"Write-Host \"  - {x}\""))}}
+            Write-Host ""
+            if ($args[0] -ne "/DisablePausePrompts") { pause }
+            Clear-Host
+
+            $success_count=0
+            $failure_count=0
+            $commands_run=0
+            $results=""
+
+            $commands= @(
+                {{string.Join(
+                    ",\n    ",
+                    commands.Select(x => $"'cmd.exe /C {x.Replace("'", "''")}'")
+                )}}
+            )
+
+            foreach ($command in $commands) {
+                Write-Host "Running: $command" -ForegroundColor Yellow
+                cmd.exe /C $command
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "[  OK  ] $command" -ForegroundColor Green
+                    $success_count++
+                    $results += "$([char]0x1b)[32m[  OK  ] $command`n"
+                }
+                else {
+                    Write-Host "[ FAIL ] $command" -ForegroundColor Red
+                    $failure_count++
+                    $results += "$([char]0x1b)[31m[ FAIL ] $command`n"
+                }
+                $commands_run++
+                Write-Host ""
+            }
+
+            Write-Host "========================================================"
+            Write-Host "                  OPERATION SUMMARY"
+            Write-Host "========================================================"
+            Write-Host "Total commands run: $commands_run"
+            Write-Host "Successful: $success_count"
+            Write-Host "Failed: $failure_count"
+            Write-Host ""
+            Write-Host "Details:"
+            Write-Host "$results$([char]0x1b)[37m"
+            Write-Host "========================================================"
+
+            if ($failure_count -gt 0) {
+                Write-Host "Some commands failed. Please check the log above." -ForegroundColor Yellow
+            }
+            else {
+                Write-Host "All commands executed successfully!" -ForegroundColor Green
+            }
+            Write-Host ""
+            if ($args[0] -ne "/DisablePausePrompts") { pause }
+            exit $failure_count
+            """;
+    }
+
     // ─── Dialog helpers ───────────────────────────────────────────────────────
     private static async Task<bool> AskLoseChanges()
     {
-        bool result = false;
-        var win = new Window
-        {
-            Width = 460,
-            Height = 200,
-            CanResize = false,
-            ShowInTaskbar = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Title = CoreTools.Translate("Unsaved changes"),
-        };
-
-        var yesBtn = new Button { Content = CoreTools.Translate("Discard changes"), MinWidth = 140 };
-        var noBtn = new Button { Content = CoreTools.Translate("Cancel"), MinWidth = 80 };
-        yesBtn.Classes.Add("accent");
-        yesBtn.Click += (_, _) => { result = true; win.Close(); };
-        noBtn.Click += (_, _) => { result = false; win.Close(); };
-
-        var btnRow = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            HorizontalAlignment = HorizontalAlignment.Right,
-        };
-        btnRow.Children.Add(noBtn);
-        btnRow.Children.Add(yesBtn);
-
-        var root = new Grid
-        {
-            Margin = new Thickness(20),
-            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
-            RowSpacing = 12,
-        };
-        var titleBlock = new TextBlock
-        {
-            Text = CoreTools.Translate("Unsaved changes"),
-            FontSize = 16,
-            FontWeight = FontWeight.SemiBold,
-        };
-        var msgBlock = new TextBlock
-        {
-            Text = CoreTools.Translate("You have unsaved changes in the current bundle. Do you want to discard them?"),
-            TextWrapping = TextWrapping.Wrap,
-            Opacity = 0.85,
-        };
-        Grid.SetRow(titleBlock, 0); Grid.SetRow(msgBlock, 1); Grid.SetRow(btnRow, 2);
-        root.Children.Add(titleBlock); root.Children.Add(msgBlock); root.Children.Add(btnRow);
-        win.Content = root;
-
-        if (Application.Current?.ApplicationLifetime
-            is IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
-            await win.ShowDialog(owner);
-
-        return result;
+        if (GetMainWindow() is not { } owner) return false;
+        var dialog = new DiscardBundleChangesDialog();
+        await dialog.ShowDialog(owner);
+        return dialog.Confirmed;
     }
 
     private static async Task ShowBundleSecurityReport(Window owner, BundleReport report)
-    {
-        var sb = new System.Text.StringBuilder();
-        foreach (var (pkgId, entries) in report.Contents)
-        {
-            sb.AppendLine($"• {pkgId}:");
-            foreach (var entry in entries)
-                sb.AppendLine($"    {(entry.Allowed ? "[allowed]" : "[stripped]")} {entry.Line}");
-        }
-
-        var win = new Window
-        {
-            Width = 580,
-            Height = 420,
-            CanResize = true,
-            ShowInTaskbar = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Title = CoreTools.Translate("Bundle security report"),
-        };
-        var okBtn = new Button
-        {
-            Content = CoreTools.Translate("OK"),
-            MinWidth = 80,
-            HorizontalAlignment = HorizontalAlignment.Right,
-        };
-        okBtn.Classes.Add("accent");
-        okBtn.Click += (_, _) => win.Close();
-
-        var root = new Grid
-        {
-            Margin = new Thickness(20),
-            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
-            RowSpacing = 12,
-        };
-        var title = new TextBlock
-        {
-            Text = CoreTools.Translate("The bundle contained restricted content"),
-            FontSize = 16,
-            FontWeight = FontWeight.SemiBold,
-        };
-        var scroll = new ScrollViewer
-        {
-            Content = new TextBlock
-            {
-                Text = sb.ToString(),
-                TextWrapping = TextWrapping.Wrap,
-                FontFamily = new FontFamily("Monospace"),
-                FontSize = 12,
-                Opacity = 0.85,
-            },
-        };
-        Grid.SetRow(title, 0); Grid.SetRow(scroll, 1); Grid.SetRow(okBtn, 2);
-        root.Children.Add(title); root.Children.Add(scroll); root.Children.Add(okBtn);
-        win.Content = root;
-
-        await win.ShowDialog(owner);
-    }
+        => await new BundleSecurityReportDialog(report).ShowDialog(owner);
 
     private static async Task ShowErrorDialog(Window owner, string title, string message)
-    {
-        var win = new Window
-        {
-            Width = 480,
-            Height = 200,
-            CanResize = false,
-            ShowInTaskbar = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Title = title,
-        };
-        var okBtn = new Button
-        {
-            Content = CoreTools.Translate("OK"),
-            MinWidth = 80,
-            HorizontalAlignment = HorizontalAlignment.Right,
-        };
-        okBtn.Classes.Add("accent");
-        okBtn.Click += (_, _) => win.Close();
-
-        var root = new Grid
-        {
-            Margin = new Thickness(20),
-            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
-            RowSpacing = 12,
-        };
-        var titleBlock = new TextBlock { Text = title, FontSize = 16, FontWeight = FontWeight.SemiBold };
-        var msgBlock = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, Opacity = 0.85 };
-        Grid.SetRow(titleBlock, 0); Grid.SetRow(msgBlock, 1); Grid.SetRow(okBtn, 2);
-        root.Children.Add(titleBlock); root.Children.Add(msgBlock); root.Children.Add(okBtn);
-        win.Content = root;
-
-        await win.ShowDialog(owner);
-    }
+        => await new SimpleErrorDialog(title, message).ShowDialog(owner);
 }

@@ -12,7 +12,8 @@
     </Target>
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WindowsTargetFramework)</TargetFramework>
+        <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">$(PortableTargetFramework)</TargetFramework>
         <TargetFrameworks />
         <OutputType>WinExe</OutputType>
         <RootNamespace>UniGetUI.Avalonia</RootNamespace>
@@ -86,6 +87,7 @@
       <Compile Remove="Infrastructure\**" />
       <Compile Include="Infrastructure\AvaloniaOperationRegistry.cs" />
       <Compile Include="Infrastructure\WindowsAppNotificationBridge.cs" />
+      <Compile Include="Infrastructure\WindowsTrayService.cs" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
       <Compile Include="Infrastructure\MacOsNotificationBridge.cs" />
       <Compile Include="Infrastructure\Secrets.cs" />
       <Compile Include="Infrastructure\AsyncCommand.cs" />
@@ -195,6 +197,9 @@
       <Compile Update="Views\Pages\SettingsPages\SourceManagerCard.axaml.cs">
         <DependentUpon>SourceManagerCard.axaml</DependentUpon>
         <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\DialogPages\BundleSecurityReportDialog.axaml.cs">
+        <DependentUpon>BundleSecurityReportDialog.axaml</DependentUpon>
       </Compile>
     </ItemGroup>
 

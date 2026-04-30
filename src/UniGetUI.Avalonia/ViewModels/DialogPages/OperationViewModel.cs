@@ -326,8 +326,16 @@ public sealed partial class OperationViewModel : ViewModelBase
     private void ShowDetails()
     {
         if (GetMainWindow() is not { } mainWindow) return;
-        var win = new OperationOutputWindow(Operation);
-        _ = win.ShowDialog(mainWindow);
+        if (Operation.Status is OperationStatus.Failed)
+        {
+            var win = new OperationFailedDialog(Operation);
+            _ = win.ShowDialog(mainWindow);
+        }
+        else
+        {
+            var win = new OperationOutputWindow(Operation);
+            _ = win.ShowDialog(mainWindow);
+        }
     }
 
     // ── Minimal ICommand implementation ───────────────────────────────────────

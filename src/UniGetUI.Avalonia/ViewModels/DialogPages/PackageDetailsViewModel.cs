@@ -3,8 +3,10 @@ using System.Diagnostics;
 using System.Net.Http;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -111,6 +113,36 @@ public partial class PackageDetailsViewModel : ObservableObject
     [ObservableProperty]
     private string _dependencyNote = "";
 
+    // ── Screenshots ────────────────────────────────────────────────────────────
+    public ObservableCollection<Bitmap> Screenshots { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasScreenshots))]
+    [NotifyPropertyChangedFor(nameof(SelectedScreenshot))]
+    [NotifyPropertyChangedFor(nameof(ScreenshotPageLabel))]
+    [NotifyPropertyChangedFor(nameof(CanGoNextScreenshot))]
+    private int _screenshotCount;
+
+    public bool HasScreenshots => ScreenshotCount > 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedScreenshot))]
+    [NotifyPropertyChangedFor(nameof(ScreenshotPageLabel))]
+    [NotifyPropertyChangedFor(nameof(CanGoPrevScreenshot))]
+    [NotifyPropertyChangedFor(nameof(CanGoNextScreenshot))]
+    private int _selectedScreenshotIndex;
+
+    public Bitmap? SelectedScreenshot =>
+        ScreenshotCount > 0 && SelectedScreenshotIndex < Screenshots.Count
+            ? Screenshots[SelectedScreenshotIndex]
+            : null;
+
+    public string ScreenshotPageLabel =>
+        ScreenshotCount > 0 ? $"{SelectedScreenshotIndex + 1} / {ScreenshotCount}" : "";
+
+    public bool CanGoPrevScreenshot => SelectedScreenshotIndex > 0;
+    public bool CanGoNextScreenshot => SelectedScreenshotIndex < ScreenshotCount - 1;
+
     // ── Release notes ──────────────────────────────────────────────────────────
     [ObservableProperty]
     private string _releaseNotes = CoreTools.Translate("Loading...");
@@ -137,6 +169,9 @@ public partial class PackageDetailsViewModel : ObservableObject
     public string HeaderDetails { get; } = CoreTools.Translate("Package details");
     public string HeaderDeps { get; } = CoreTools.Translate("Dependencies:");
     public string HeaderReleaseNotes { get; } = CoreTools.Translate("Release notes");
+    public string HeaderScreenshots { get; } = CoreTools.Translate("Screenshots");
+    public string LabelScreenshotContribute { get; } = CoreTools.Translate(
+        "This package has no screenshots or is missing the icon? Contribute to UniGetUI by adding the missing icons and screenshots to our open, public database.");
 
     public PackageDetailsViewModel(IPackage package, OperationType role)
     {
@@ -194,9 +229,26 @@ public partial class PackageDetailsViewModel : ObservableObject
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanGoPrevScreenshot))]
+    private void PreviousScreenshot()
+    {
+        SelectedScreenshotIndex = Math.Max(0, SelectedScreenshotIndex - 1);
+        PreviousScreenshotCommand.NotifyCanExecuteChanged();
+        NextScreenshotCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoNextScreenshot))]
+    private void NextScreenshot()
+    {
+        SelectedScreenshotIndex = Math.Min(ScreenshotCount - 1, SelectedScreenshotIndex + 1);
+        PreviousScreenshotCommand.NotifyCanExecuteChanged();
+        NextScreenshotCommand.NotifyCanExecuteChanged();
+    }
+
     public async Task LoadDetailsAsync()
     {
         _ = LoadIconAsync();
+        _ = LoadScreenshotsAsync();
 
         var details = Package.Details;
         if (!details.IsPopulated)
@@ -286,6 +338,38 @@ public partial class PackageDetailsViewModel : ObservableObject
             PackageIcon = new Bitmap(stream);
         }
         catch { }
+    }
+
+    private async Task LoadScreenshotsAsync()
+    {
+        try
+        {
+            var uris = await Task.Run(Package.GetScreenshots);
+            if (!uris.Any()) return;
+
+            using var http = new HttpClient(CoreTools.GenericHttpClientParameters);
+            foreach (var uri in uris)
+            {
+                try
+                {
+                    var bytes = await http.GetByteArrayAsync(uri);
+                    using var ms = new MemoryStream(bytes);
+                    var bmp = new Bitmap(ms);
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        Screenshots.Add(bmp);
+                        ScreenshotCount = Screenshots.Count;
+                        PreviousScreenshotCommand.NotifyCanExecuteChanged();
+                        NextScreenshotCommand.NotifyCanExecuteChanged();
+                    });
+                }
+                catch { /* skip failed screenshots */ }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[PackageDetailsViewModel] Failed to load screenshots: {ex.Message}");
+        }
     }
 
     [RelayCommand]

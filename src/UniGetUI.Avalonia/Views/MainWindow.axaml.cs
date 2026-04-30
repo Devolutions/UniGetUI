@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Core.Logging;
@@ -36,6 +37,8 @@ public enum PageType
 public partial class MainWindow : Window
 {
     private bool _focusSidebarSelectionOnNextPageChange;
+    private WindowsTrayService? _trayService;
+    private bool _allowClose;
 
     public enum RuntimeNotificationLevel
     {
@@ -57,6 +60,30 @@ public partial class MainWindow : Window
 
         KeyDown += Window_KeyDown;
         ViewModel.CurrentPageChanged += OnCurrentPageChanged;
+
+        if (OperatingSystem.IsWindows())
+        {
+            _trayService = new WindowsTrayService(this);
+            _trayService.UpdateStatus();
+        }
+    }
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        if (!_allowClose && OperatingSystem.IsWindows() && !Settings.Get(Settings.K.DisableSystemTray))
+        {
+            e.Cancel = true;
+            Hide();
+            return;
+        }
+
+        AvaloniaAutoUpdater.ReleaseLockForAutoupdate_Window = true;
+        if (OperatingSystem.IsWindows())
+        {
+            _trayService?.Dispose();
+            _trayService = null;
+        }
+        base.OnClosing(e);
     }
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
@@ -136,6 +163,29 @@ public partial class MainWindow : Window
             ExtendClientAreaToDecorationsHint = true;
             ExtendClientAreaTitleBarHeightHint = -1;
             AvatarControl.Height = 36;
+        }
+        else if (OperatingSystem.IsWindows())
+        {
+            WindowDecorations = WindowDecorations.BorderOnly;
+            ExtendClientAreaToDecorationsHint = true;
+            ExtendClientAreaTitleBarHeightHint = -1;
+            TitleBarGrid.ClearValue(HeightProperty);
+            TitleBarGrid.Height = 44;
+            HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
+            AvatarControl.Height = 28;
+            AvatarControl.Margin = new Thickness(0);
+            LinuxWindowButtons.IsVisible = true;
+            MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
+            this.GetObservable(WindowStateProperty).Subscribe(state =>
+            {
+                MaximizeIcon.Data = Geometry.Parse(
+                    state == WindowState.Maximized
+                        ? "M2,0 H10 V8 H2 Z M0,2 H8 V10 H0 Z"
+                        : "M0,0 H10 V10 H0 Z");
+                ToolTip.SetTip(
+                    MaximizeButton,
+                    CoreTools.Translate(state == WindowState.Maximized ? "Restore" : "Maximize"));
+            });
         }
         else if (OperatingSystem.IsLinux())
         {
@@ -217,7 +267,8 @@ public partial class MainWindow : Window
 
     public void UpdateSystemTrayStatus()
     {
-        // TODO: implement tray status update
+        if (OperatingSystem.IsWindows())
+            _trayService?.UpdateStatus();
     }
 
     public void ShowRuntimeNotification(string title, string message, RuntimeNotificationLevel level) =>
@@ -226,13 +277,16 @@ public partial class MainWindow : Window
     // ─── BackgroundAPI integration ────────────────────────────────────────────
     public void ShowFromTray()
     {
-        Show();
-        WindowState = WindowState.Normal;
+        if (!IsVisible)
+            Show();
+        if (WindowState == WindowState.Minimized)
+            WindowState = WindowState.Normal;
         Activate();
     }
 
     public void QuitApplication()
     {
+        _allowClose = true;
         (global::Avalonia.Application.Current?.ApplicationLifetime
             as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
     }

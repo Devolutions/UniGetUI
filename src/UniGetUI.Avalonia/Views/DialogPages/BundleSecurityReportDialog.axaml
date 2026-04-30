@@ -1,0 +1,45 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+        x:Class="UniGetUI.Avalonia.Views.DialogPages.BundleSecurityReportDialog"
+        Title="{t:Translate Bundle security report}"
+        Width="580"
+        Height="420"
+        MinWidth="400"
+        MinHeight="300"
+        CanResize="True"
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppDialogBackground}"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="20"
+          RowDefinitions="Auto,*,Auto"
+          RowSpacing="12">
+
+        <TextBlock Grid.Row="0"
+                   Text="{t:Translate The bundle contained restricted content}"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap"
+                   automation:AutomationProperties.HeadingLevel="1"/>
+
+        <ScrollViewer Grid.Row="1">
+            <TextBlock x:Name="ReportText"
+                       TextWrapping="Wrap"
+                       FontFamily="Monospace"
+                       FontSize="12"
+                       Opacity="0.85"/>
+        </ScrollViewer>
+
+        <Button x:Name="OkButton"
+                Grid.Row="2"
+                Content="{t:Translate OK}"
+                MinWidth="80"
+                HorizontalAlignment="Right"
+                Classes="accent"
+                automation:AutomationProperties.Name="{t:Translate OK}"/>
+
+    </Grid>
+
+</Window>

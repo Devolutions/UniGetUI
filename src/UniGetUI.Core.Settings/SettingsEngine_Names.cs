@@ -15,7 +15,6 @@ public static partial class Settings
         RemoveAllDesktopShortcuts,
         EnableScoopCleanup,
         IgnoreUpdatesNotApplicable,
-        ForceLegacyBundledWinGet,
         DisableNewWinGetTroubleshooter,
         DisableUpdateVcpkgGitPorts,
         DisableSelectingUpdatesByDefault,
@@ -88,6 +87,8 @@ public static partial class Settings
         MinimumUpdateAgeCustom,
         PerManagerMinimumUpdateAge,
         PerManagerMinimumUpdateAgeCustom,
+        WinGetCliToolPreference,
+        WinGetComApiPolicy,
 
         Test1,
         Test2,
@@ -114,7 +115,6 @@ public static partial class Settings
             K.RemoveAllDesktopShortcuts => "RemoveAllDesktopShortcuts",
             K.EnableScoopCleanup => "EnableScoopCleanup",
             K.IgnoreUpdatesNotApplicable => "IgnoreUpdatesNotApplicable",
-            K.ForceLegacyBundledWinGet => "ForceLegacyBundledWinGet",
             K.DisableNewWinGetTroubleshooter => "DisableNewWinGetTroubleshooter",
             K.DisableUpdateVcpkgGitPorts => "DisableUpdateVcpkgGitPorts",
             K.DisableSelectingUpdatesByDefault => "DisableSelectingUpdatesByDefault",
@@ -187,6 +187,8 @@ public static partial class Settings
             K.MinimumUpdateAgeCustom => "MinimumUpdateAgeCustom",
             K.PerManagerMinimumUpdateAge => "PerManagerMinimumUpdateAge",
             K.PerManagerMinimumUpdateAgeCustom => "PerManagerMinimumUpdateAgeCustom",
+            K.WinGetCliToolPreference => "WinGetCliToolPreference",
+            K.WinGetComApiPolicy => "WinGetComApiPolicy",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

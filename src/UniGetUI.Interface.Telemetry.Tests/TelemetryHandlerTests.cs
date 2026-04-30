@@ -102,13 +102,12 @@ public sealed class TelemetryHandlerTests : IDisposable
         Settings.Set(Settings.K.EnablePackageBackup_LOCAL, false);
         Settings.Set(Settings.K.DoCacheAdminRights, false);
         Settings.Set(Settings.K.DoCacheAdminRightsForBatches, false);
-        Settings.Set(Settings.K.ForceLegacyBundledWinGet, false);
         File.WriteAllText(_portableMarkerPath, string.Empty);
         CoreData.WasDaemon = true;
 
         int activeSettings = TelemetryHandler.ComputeActiveSettingsBitmask();
 
-        Assert.Equal(6195, activeSettings);
+        Assert.Equal(3123, activeSettings);
     }
 
     [Fact]
@@ -135,16 +134,18 @@ public sealed class TelemetryHandlerTests : IDisposable
             Convert.ToBase64String(Encoding.UTF8.GetBytes("telemetry-user:telemetry-pass")),
             captured.Authorization?.Parameter
         );
-        Assert.NotEmpty(root.GetProperty("eventID").GetString());
+        Assert.False(string.IsNullOrEmpty(root.GetProperty("eventID").GetString()));
         Assert.NotEqual(default, root.GetProperty("eventDate").GetDateTime());
         Assert.Equal(KnownInstallId, root.GetProperty("installID").GetString());
         Assert.True(root.TryGetProperty("enabledManagers", out _));
         Assert.True(root.TryGetProperty("foundManagers", out _));
-        Assert.Equal(6195, root.GetProperty("activeSettings").GetInt32());
+        Assert.Equal(3123, root.GetProperty("activeSettings").GetInt32());
         Assert.Equal("UniGetUI", root.GetProperty("application").GetProperty("name").GetString());
         Assert.Equal("NotApplicable", root.GetProperty("application").GetProperty("dataSource").GetString());
         Assert.Equal("Free", root.GetProperty("application").GetProperty("pricing").GetString());
-        Assert.NotEmpty(root.GetProperty("platform").GetProperty("name").GetString());
+        Assert.False(
+            string.IsNullOrEmpty(root.GetProperty("platform").GetProperty("name").GetString())
+        );
     }
 
     [Fact]

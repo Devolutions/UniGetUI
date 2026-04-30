@@ -371,8 +371,10 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         private static string GenerateIconId(Package p)
         {
-            return (
-                p.Manager.Name switch
+            string iconId;
+            try
+            {
+                iconId = p.Manager.Name switch
                 {
                     "Winget" => p.Source.Name switch
                     {
@@ -399,8 +401,14 @@ namespace UniGetUI.PackageEngine.PackageClasses
                     "Chocolatey" => p.Id.Replace(".install", "").Replace(".portable", ""),
                     "vcpkg" => p.Id.Split(":")[0].Split("[")[0],
                     _ => p.Id,
-                }
-            )
+                };
+            }
+            catch
+            {
+                iconId = p.Id;
+            }
+
+            return iconId
                 .ToLower()
                 .Replace('_', '-')
                 .Replace('.', '-')

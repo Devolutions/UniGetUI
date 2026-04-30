@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using Windows.Networking.Connectivity;
 using Avalonia.Controls;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
@@ -482,13 +481,15 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
     private static bool IsOnMeteredConnection()
     {
-        if (!OperatingSystem.IsWindows()) return false;
-#pragma warning disable CA1416
-        var costType = NetworkInformation
+#if WINDOWS
+        var costType = Windows.Networking.Connectivity.NetworkInformation
             .GetInternetConnectionProfile()
             ?.GetConnectionCost()
             .NetworkCostType;
-        return costType is NetworkCostType.Fixed or NetworkCostType.Variable;
-#pragma warning restore CA1416
+        return costType is Windows.Networking.Connectivity.NetworkCostType.Fixed
+            or Windows.Networking.Connectivity.NetworkCostType.Variable;
+#else
+        return false;
+#endif
     }
 }

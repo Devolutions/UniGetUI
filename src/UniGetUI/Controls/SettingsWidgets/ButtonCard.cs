@@ -16,9 +16,16 @@ namespace UniGetUI.Interface.Widgets
             set => _button.Content = CoreTools.Translate(value);
         }
 
+        private string _text = "";
         public string Text
         {
-            set => Header = CoreTools.Translate(value);
+            set 
+            {
+                _text = CoreTools.Translate(value);
+                Header = _text;
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(this, _text);
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetLocalizedControlType(this, "grouping");
+            }
         }
 
         public new event EventHandler<EventArgs>? Click;

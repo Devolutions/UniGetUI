@@ -43,7 +43,13 @@ namespace UniGetUI.Interface.Widgets
 
         public string CheckboxText
         {
-            set => _textblock.Text = CoreTools.Translate(value);
+            set
+            {
+                _textblock.Text = CoreTools.Translate(value);
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(this, _textblock.Text);
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetLocalizedControlType(this, "grouping");
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_checkbox, _textblock.Text);
+            }
         }
 
         public string ButtonText

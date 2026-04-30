@@ -43,6 +43,13 @@ namespace UniGetUI.Interface.Widgets
         public TranslatedTextBlock()
         {
             InitializeComponent();
+            Loaded += (s, e) =>
+            {
+                if (Parent is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase parentBtn && string.IsNullOrEmpty(Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(parentBtn)))
+                {
+                    Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(parentBtn, _textBlock.Text);
+                }
+            };
         }
 
         public void ApplyText(string? text)
@@ -51,7 +58,13 @@ namespace UniGetUI.Interface.Widgets
             {
                 if (text is not null)
                     __text = CoreTools.Translate(text);
-                _textBlock?.Text = __prefix + __text + __suffix;
+                _textBlock.Text = __prefix + __text + __suffix;
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(this, _textBlock.Text);
+
+                if (IsLoaded && Parent is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase parentBtn)
+                {
+                    Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(parentBtn, _textBlock.Text);
+                }
             }
             catch (Exception ex)
             {

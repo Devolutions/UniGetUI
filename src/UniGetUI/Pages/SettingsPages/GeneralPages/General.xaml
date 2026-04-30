@@ -41,6 +41,7 @@
             <HyperlinkButton
               Padding="0"
               NavigateUri="https://github.com/Devolutions/UniGetUI/wiki#translating-wingetui"
+              AutomationProperties.Name="Is your language missing or incomplete? Become a translator"
             >
               <widgets:TranslatedTextBlock Text="Become a translator" />
             </HyperlinkButton>
@@ -112,27 +113,31 @@
         Text="Reset UniGetUI"
       />
 
-      <widgets:TranslatedTextBlock
-        Margin="4,32,4,8"
-        FontWeight="SemiBold"
-        Text="Related settings"
-      />
+      <StackPanel AutomationProperties.Name="Related settings" AutomationProperties.LocalizedControlType="grouping">
+        <widgets:TranslatedTextBlock
+          Margin="4,32,4,8"
+          FontWeight="SemiBold"
+          Text="Related settings"
+        />
 
-      <controls:SettingsCard
-        Click="InterfaceSettingsButton_Click"
-        CornerRadius="8"
-        IsClickEnabled="True"
-      >
-        <controls:SettingsCard.Header>
-          <widgets:TranslatedTextBlock Text="User interface preferences" />
-        </controls:SettingsCard.Header>
-        <controls:SettingsCard.Description>
-          <widgets:TranslatedTextBlock Text="Application theme, startup page, package icons, clear successful installs automatically" />
-        </controls:SettingsCard.Description>
-        <controls:SettingsCard.HeaderIcon>
-          <widgets:LocalIcon Icon="Interactive" />
-        </controls:SettingsCard.HeaderIcon>
-      </controls:SettingsCard>
+        <controls:SettingsCard
+          Click="InterfaceSettingsButton_Click"
+          CornerRadius="8"
+          IsClickEnabled="True"
+          AutomationProperties.Name="User interface preferences"
+          AutomationProperties.HelpText="Application theme, startup page, package icons, clear successful installs automatically"
+        >
+          <controls:SettingsCard.Header>
+            <widgets:TranslatedTextBlock Text="User interface preferences" />
+          </controls:SettingsCard.Header>
+          <controls:SettingsCard.Description>
+            <widgets:TranslatedTextBlock Text="Application theme, startup page, package icons, clear successful installs automatically" />
+          </controls:SettingsCard.Description>
+          <controls:SettingsCard.HeaderIcon>
+            <widgets:LocalIcon Icon="Interactive" />
+          </controls:SettingsCard.HeaderIcon>
+        </controls:SettingsCard>
+      </StackPanel>
     </StackPanel>
   </ScrollViewer>
 </Page>

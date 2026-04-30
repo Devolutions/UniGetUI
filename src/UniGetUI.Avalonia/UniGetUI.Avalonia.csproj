@@ -20,6 +20,7 @@
         <AssemblyName>UniGetUI.Avalonia</AssemblyName>
         <ApplicationIcon>..\UniGetUI\icon.ico</ApplicationIcon>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <ApplicationManifest Condition="$([MSBuild]::IsOSPlatform('Windows'))">app.manifest</ApplicationManifest>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(EnableAvaloniaDiagnostics)' == 'true'">

@@ -5,6 +5,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Platform;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.DialogPages;
@@ -35,6 +36,21 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        if (OperatingSystem.IsWindows())
+        {
+            // Safety net for NativeWebView (WebView2) initialization failures thrown
+            // asynchronously on the dispatcher. Without this the app crashes; with it
+            // the Help page shows a fallback "Open in browser" button.
+            Dispatcher.UIThread.UnhandledException += (_, e) =>
+            {
+                if (e.Exception is InvalidOperationException { Message: var msg }
+                    && msg.Contains("child window for native control host"))
+                {
+                    e.Handled = true;
+                }
+            };
+        }
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             if (OperatingSystem.IsMacOS())

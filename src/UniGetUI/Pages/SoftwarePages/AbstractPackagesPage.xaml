@@ -1233,6 +1233,8 @@
           Binding="{x:Bind FilteringPanel.OpenPaneLength, Mode=TwoWay}"
           CornerRadius="2"
           Visibility="{x:Bind FilteringPanel.IsPaneOpen, Mode=OneWay}"
+          IsTabStop="False"
+          AutomationProperties.AccessibilityView="Raw"
         >
           <Toolkit:PropertySizer.RenderTransform>
             <TranslateTransform X="0" />

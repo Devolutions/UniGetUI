@@ -78,9 +78,6 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
             () => _ = ExportSelectionToBundleAsync(vm));
-        ViewModel.AddToolbarSeparator();
-        ViewModel.AddToolbarButton("help", CoreTools.Translate("Help"),
-            () => vm.RequestHelpCommand.Execute(null));
     }
 
     // ─── Context menu ─────────────────────────────────────────────────────────

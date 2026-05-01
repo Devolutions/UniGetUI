@@ -40,12 +40,12 @@
             </ContentControl>
 
             <!-- Vertical separator (spans all rows) -->
-            <Border Grid.Column="0" Grid.RowSpan="3"
-                    Width="1"
-                    HorizontalAlignment="Right"
-                    automation:AutomationProperties.AccessibilityView="Raw"
-                    Opacity="0.2"
-                    Background="{DynamicResource SystemBaseMediumColor}"/>
+            <!-- <Border Grid.Column="0" Grid.RowSpan="3" -->
+            <!--         Width="1" -->
+            <!--         HorizontalAlignment="Right" -->
+            <!--         automation:AutomationProperties.AccessibilityView="Raw" -->
+            <!--         Opacity="0.2" -->
+            <!--         Background="{DynamicResource SystemBaseMediumColor}"/> -->
 
             <!-- ── Banners + page content ── -->
             <Grid Grid.Column="1" Grid.Row="0" RowDefinitions="Auto,*" Margin="0,10">
@@ -370,13 +370,8 @@
                 </Button>
             </StackPanel>
 
-            <!-- Right column: avatar centred + Linux window buttons on the far right -->
+            <!-- Right column: Linux window buttons on the far right -->
             <Panel Grid.Column="2">
-                <controls:UserAvatarControl x:Name="AvatarControl"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            Height="50"
-                                            Margin="0,10,0,0"/>
 
                 <!-- Linux only: min / max / close (IsVisible set in code-behind) -->
                 <StackPanel x:Name="LinuxWindowButtons"

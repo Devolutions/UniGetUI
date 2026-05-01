@@ -112,9 +112,6 @@ public class PackageBundlesPage : AbstractPackagesPage
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
-        ViewModel.AddToolbarSeparator();
-        ViewModel.AddToolbarButton("help", CoreTools.Translate("Help"),
-            () => vm.RequestHelpCommand.Execute(null));
     }
 
     private static IReadOnlyList<IPackage> GetCheckedNonInstalledPackages(PackagesPageViewModel vm)

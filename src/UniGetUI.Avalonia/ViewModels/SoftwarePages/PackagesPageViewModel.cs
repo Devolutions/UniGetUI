@@ -191,6 +191,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         RoleIsUpdateLike = data.PageRole == OperationType.Update;
         NewVersionHeaderVisible = RoleIsUpdateLike;
         ReloadButtonVisible = !DisableReload;
+        ReloadButtonTooltip = CoreTools.Translate("Reload");
         SearchBoxPlaceholder = CoreTools.Translate("Search for packages");
 
         AllPackagesChecked = data.PackagesAreCheckedByDefault;

@@ -102,11 +102,14 @@
             </Panel>
 
             <!-- Avatar image (shown when logged in) -->
-            <Panel IsVisible="{Binding IsAuthenticated}">
+            <Border IsVisible="{Binding IsAuthenticated}"
+                    Width="32" Height="32"
+                    CornerRadius="100"
+                    ClipToBounds="True">
                 <Image Source="{Binding AvatarBitmap}"
                        Width="32" Height="32"
                        Stretch="UniformToFill"/>
-            </Panel>
+            </Border>
         </Panel>
 
     </Button>

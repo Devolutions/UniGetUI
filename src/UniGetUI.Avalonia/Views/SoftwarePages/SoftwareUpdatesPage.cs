@@ -102,9 +102,6 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         });
         ViewModel.AddToolbarButton("clipboard_list", CoreTools.Translate("Manage ignored updates"),
             () => vm.RequestManageIgnoredCommand.Execute(null));
-        ViewModel.AddToolbarSeparator();
-        ViewModel.AddToolbarButton("help", CoreTools.Translate("Help"),
-            () => vm.RequestHelpCommand.Execute(null));
     }
 
     // ─── Context menu ─────────────────────────────────────────────────────────

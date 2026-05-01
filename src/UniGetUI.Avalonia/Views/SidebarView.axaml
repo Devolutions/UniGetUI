@@ -161,7 +161,7 @@
 
         <!-- Footer items -->
         <StackPanel Grid.Row="1" Margin="8,0,8,12" Spacing="2">
-            <Separator Margin="8,4"/>
+            <controls:UserAvatarControl HorizontalAlignment="Left" Margin="8,4,0,4"/>
 
             <Button Command="{Binding RequestNavigationCommand}"
                     CommandParameter="Settings"

@@ -159,10 +159,8 @@ public partial class MainWindow : Window
             // macOS: extend into the native title bar area.
             // WindowDecorationMargin.Top drives TitleBarGrid.Height via binding.
             // Traffic lights sit on the left → keep the 65 px HamburgerPanel margin.
-            // Avatar can be a bit taller to fill the deeper title bar.
             ExtendClientAreaToDecorationsHint = true;
             ExtendClientAreaTitleBarHeightHint = -1;
-            AvatarControl.Height = 36;
         }
         else if (OperatingSystem.IsWindows())
         {
@@ -172,8 +170,6 @@ public partial class MainWindow : Window
             TitleBarGrid.ClearValue(HeightProperty);
             TitleBarGrid.Height = 44;
             HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
-            AvatarControl.Height = 28;
-            AvatarControl.Margin = new Thickness(0);
             LinuxWindowButtons.IsVisible = true;
             MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
             this.GetObservable(WindowStateProperty).Subscribe(state =>
@@ -196,7 +192,6 @@ public partial class MainWindow : Window
             TitleBarGrid.ClearValue(HeightProperty);
             TitleBarGrid.Height = 44;
             HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
-            AvatarControl.Height = 32;
             LinuxWindowButtons.IsVisible = !isWsl;
             MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
             // Keep maximize icon in sync with window state

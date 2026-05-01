@@ -64,6 +64,16 @@ public abstract partial class AbstractPackagesPage : UserControl,
         SyncFiltersButtonName();
         SyncOrderByButtonName();
 
+        // Reload button added before subclass toolbar items (mirrors WinUI AbstractPackagesPage)
+        if (!ViewModel.DisableReload)
+        {
+            var reloadBtn = ViewModel.AddToolbarButton("reload", CoreTools.Translate("Reload"),
+                () => ViewModel.TriggerReload());
+            reloadBtn.Bind(ToolTip.TipProperty,
+                new global::Avalonia.Data.Binding(nameof(PackagesPageViewModel.ReloadButtonTooltip)) { Source = ViewModel });
+            ViewModel.AddToolbarSeparator();
+        }
+
         // Build the toolbar now that both AXAML controls and the ViewModel are ready
         GenerateToolBar(ViewModel);
 

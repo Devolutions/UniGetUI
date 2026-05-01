@@ -118,6 +118,12 @@ namespace UniGetUI.Interface.Widgets
 
             _checkbox.HorizontalAlignment = HorizontalAlignment.Stretch;
             _checkbox.Toggled += (s, e) => _ = _checkbox_Toggled();
+
+            Loaded += (s, e) => 
+            {
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(this, _textblock.Text);
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetLocalizedControlType(this, "grouping");
+            };
         }
 
         protected virtual async Task _checkbox_Toggled()

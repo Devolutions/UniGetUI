@@ -38,6 +38,12 @@ namespace UniGetUI.Interface.Widgets
                 Click?.Invoke(this, EventArgs.Empty);
             };
             Content = _button;
+
+            Loaded += (s, e) => 
+            {
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(this, _text);
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetLocalizedControlType(this, "grouping");
+            };
         }
     }
 }

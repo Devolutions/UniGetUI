@@ -21,7 +21,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
     IKeyboardShortcutListener, IEnterLeaveListener, ISearchBoxPage
 {
     public PackagesPageViewModel ViewModel => (PackagesPageViewModel)DataContext!;
-    private ContextMenu? _contextMenu;
+    private readonly ContextMenu? _contextMenu;
     private double _savedFilterPaneWidth = 220;
     private bool _isOverlayMode;
 

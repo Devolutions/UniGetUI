@@ -23,6 +23,6 @@ public partial class InstallOptionsWindow : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
-        Dispatcher.UIThread.Post(() => OptionsControl.FocusProfileSelector(), DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(OptionsControl.FocusProfileSelector, DispatcherPriority.Background);
     }
 }

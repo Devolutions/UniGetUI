@@ -161,12 +161,12 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         string tagName = Package.Tag switch
         {
             PackageTag.AlreadyInstalled => "installed_filled",
-            PackageTag.IsUpgradable     => "upgradable_filled",
-            PackageTag.Pinned           => "pin_filled",
-            PackageTag.OnQueue          => "sandclock",
-            PackageTag.BeingProcessed   => "loading_filled",
-            PackageTag.Failed           => "warning_filled",
-            _                           => "",
+            PackageTag.IsUpgradable => "upgradable_filled",
+            PackageTag.Pinned => "pin_filled",
+            PackageTag.OnQueue => "sandclock",
+            PackageTag.BeingProcessed => "loading_filled",
+            PackageTag.Failed => "warning_filled",
+            _ => "",
         };
         TagIconVisible = tagName.Length > 0;
         TagIconPath = TagIconVisible

@@ -15,7 +15,16 @@ public partial class ReleaseNotesPage : UserControl, IEnterLeaveListener
         DataContext = _viewModel;
         InitializeComponent();
 
-        WebViewControl.NavigationStarted += (_, _) => NavProgressBar.IsVisible = true;
+        if (OperatingSystem.IsLinux())
+        {
+            WebViewBorder.IsVisible = false;
+            LinuxFallbackPanel.IsVisible = true;
+            return;
+        }
+
+        WebViewControl.NavigationStarted += (_, _) =>
+            NavProgressBar.IsVisible = true;
+
         WebViewControl.NavigationCompleted += (_, e) =>
         {
             NavProgressBar.IsVisible = false;

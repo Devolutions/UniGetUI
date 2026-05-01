@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using UniGetUI.Avalonia.ViewModels.Pages;
-using UniGetUI.Avalonia.Views.Pages;
 
 namespace UniGetUI.Avalonia.Views.Pages;
 
@@ -17,8 +16,17 @@ public partial class HelpPage : UserControl, IEnterLeaveListener
         DataContext = _viewModel;
         InitializeComponent();
 
-        WebViewControl.NavigationStarted += (_, _) => NavProgressBar.IsVisible = true;
-        WebViewControl.NavigationCompleted += (_, _) =>
+        if (OperatingSystem.IsLinux())
+        {
+            WebViewBorder.IsVisible = false;
+            LinuxFallbackPanel.IsVisible = true;
+            return;
+        }
+
+        WebViewControl.NavigationStarted += (_, _) =>
+            NavProgressBar.IsVisible = true;
+
+        WebViewControl.NavigationCompleted += (_, e) =>
         {
             NavProgressBar.IsVisible = false;
             _viewModel.CurrentUrl = WebViewControl.Source?.ToString() ?? HelpPageViewModel.HelpBaseUrl;

@@ -35,9 +35,21 @@
                      automation:AutomationProperties.AccessibilityView="Raw"/>
 
         <!-- WebView -->
-        <Border Grid.Row="2" CornerRadius="6" ClipToBounds="True">
+        <Border x:Name="WebViewBorder" Grid.Row="2" CornerRadius="6" ClipToBounds="True">
             <wv:NativeWebView x:Name="WebViewControl"/>
         </Border>
+
+        <!-- Linux fallback -->
+        <StackPanel x:Name="LinuxFallbackPanel" Grid.Row="2"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Spacing="12" IsVisible="False">
+            <TextBlock Text="{t:Translate The built-in browser is not supported on Linux yet.}"
+                       TextAlignment="Center" TextWrapping="Wrap" MaxWidth="400"/>
+            <Button HorizontalAlignment="Center" Command="{Binding OpenInBrowserCommand}">
+                <TextBlock Text="{t:Translate Open in browser}"
+                           automation:AutomationProperties.AccessibilityView="Raw"/>
+            </Button>
+        </StackPanel>
 
     </Grid>
 </UserControl>

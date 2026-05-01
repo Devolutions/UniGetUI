@@ -68,7 +68,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         if (!ViewModel.DisableReload)
         {
             var reloadBtn = ViewModel.AddToolbarButton("reload", CoreTools.Translate("Reload"),
-                () => ViewModel.TriggerReload());
+                ViewModel.TriggerReload);
             reloadBtn.Bind(ToolTip.TipProperty,
                 new global::Avalonia.Data.Binding(nameof(PackagesPageViewModel.ReloadButtonTooltip)) { Source = ViewModel });
             ViewModel.AddToolbarSeparator();

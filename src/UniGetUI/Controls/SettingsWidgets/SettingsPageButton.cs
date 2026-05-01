@@ -10,14 +10,26 @@ namespace UniGetUI.Interface.Widgets
 {
     public partial class SettingsPageButton : SettingsCard
     {
+        private string _text = "";
         public string Text
         {
-            set => Header = CoreTools.Translate(value);
+            set
+            {
+                _text = CoreTools.Translate(value);
+                Header = _text;
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(this, _text);
+            }
         }
 
+        private string _underText = "";
         public string UnderText
         {
-            set => Description = CoreTools.Translate(value);
+            set
+            {
+                _underText = CoreTools.Translate(value);
+                Description = _underText;
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(this, _underText);
+            }
         }
 
         public IconType Icon
@@ -30,6 +42,14 @@ namespace UniGetUI.Interface.Widgets
             CornerRadius = new CornerRadius(8);
             HorizontalAlignment = HorizontalAlignment.Stretch;
             IsClickEnabled = true;
+
+            Loaded += (s, e) =>
+            {
+                if (!string.IsNullOrEmpty(_text))
+                    Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(this, _text);
+                if (!string.IsNullOrEmpty(_underText))
+                    Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(this, _underText);
+            };
         }
     }
 }

@@ -1,6 +1,6 @@
-using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Core.Tools;
 
@@ -22,12 +22,6 @@ public partial class SettingsBasePageViewModel : ViewModelBase
     [RelayCommand]
     private static void RestartApp()
     {
-        var exe = Environment.ProcessPath;
-        if (exe is not null)
-            System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = true });
-        (global::Avalonia.Application.Current?.ApplicationLifetime
-            as IClassicDesktopStyleApplicationLifetime)
-            ?.Shutdown();
+        AppRestartHelper.Restart();
     }
 }

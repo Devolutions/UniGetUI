@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -78,11 +78,7 @@ public partial class MissingDependencyDialog : Window
         }
         else if (_current == _total)
         {
-            var exe = Environment.ProcessPath;
-            if (exe is not null)
-                Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
-            (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
-                ?.Shutdown();
+            AppRestartHelper.Restart();
         }
         else
         {

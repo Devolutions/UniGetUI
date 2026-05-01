@@ -87,6 +87,7 @@
     <ItemGroup>
       <Compile Remove="Infrastructure\**" />
       <Compile Include="Infrastructure\AvaloniaOperationRegistry.cs" />
+      <Compile Include="Infrastructure\AppRestartHelper.cs" />
       <Compile Include="Infrastructure\WindowsAppNotificationBridge.cs" />
       <Compile Include="Infrastructure\WindowsTrayService.cs" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
       <Compile Include="Infrastructure\MacOsNotificationBridge.cs" />

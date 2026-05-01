@@ -6,7 +6,6 @@
   xmlns:animations="using:CommunityToolkit.WinUI.Animations"
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-  xmlns:services="using:UniGetUI.Services"
   xmlns:widgets="using:UniGetUI.Interface.Widgets"
   Title="UniGetUI"
   mc:Ignorable="d"
@@ -52,9 +51,6 @@
           QueryIcon="Find"
         />
       </TitleBar.Content>
-      <TitleBar.RightHeader>
-        <services:UserAvatar Margin="0,0,0,0" />
-      </TitleBar.RightHeader>
     </TitleBar>
     <StackPanel Grid.Row="1" Margin="0" Padding="0" BorderThickness="0" Spacing="0">
       <InfoBar

@@ -203,7 +203,6 @@ namespace UniGetUI.Interface.SoftwarePages
             AppBarButton ToBatchScript = new();
             AppBarButton AddPackagesToBundle = new();
             AppBarButton PackageDetails = new();
-            AppBarButton HelpButton = new();
 
             ToolBar.PrimaryCommands.Add(new AppBarSeparator());
             ToolBar.PrimaryCommands.Add(NewBundle);
@@ -216,8 +215,6 @@ namespace UniGetUI.Interface.SoftwarePages
             ToolBar.PrimaryCommands.Add(RemoveSelected);
             ToolBar.PrimaryCommands.Add(new AppBarSeparator());
             ToolBar.PrimaryCommands.Add(PackageDetails);
-            ToolBar.PrimaryCommands.Add(new AppBarSeparator());
-            ToolBar.PrimaryCommands.Add(HelpButton);
 
             Dictionary<DependencyObject, string> Labels = new()
             { // Entries with a trailing space are collapsed
@@ -233,7 +230,6 @@ namespace UniGetUI.Interface.SoftwarePages
                 { SaveBundle, CoreTools.Translate("Save as") },
                 { AddPackagesToBundle, CoreTools.Translate("Add packages to bundle") },
                 { PackageDetails, " " + CoreTools.Translate("Package details") },
-                { HelpButton, CoreTools.Translate("Help") },
             };
 
             Dictionary<DependencyObject, IconType> Icons = new()
@@ -249,7 +245,6 @@ namespace UniGetUI.Interface.SoftwarePages
                 { SaveBundle, IconType.SaveAs },
                 { AddPackagesToBundle, IconType.AddTo },
                 { PackageDetails, IconType.Info_Round },
-                { HelpButton, IconType.Help },
             };
 
             ApplyTextAndIconsToToolbar(Labels, Icons);
@@ -278,10 +273,6 @@ namespace UniGetUI.Interface.SoftwarePages
                 );
             };
 
-            HelpButton.Click += (_, _) =>
-            {
-                MainApp.Instance.MainWindow.NavigationPage.ShowHelp();
-            };
             NewBundle.Click += async (s, e) => await AskForNewBundle();
 
             RemoveSelected.Click += (_, _) =>

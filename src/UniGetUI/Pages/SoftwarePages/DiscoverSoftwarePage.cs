@@ -181,16 +181,12 @@ namespace UniGetUI.Interface.SoftwarePages
 
             AppBarButton ExportSelection = new();
 
-            AppBarButton HelpButton = new();
-
             ToolBar.PrimaryCommands.Add(new AppBarSeparator());
             ToolBar.PrimaryCommands.Add(InstallationSettings);
             ToolBar.PrimaryCommands.Add(new AppBarSeparator());
             ToolBar.PrimaryCommands.Add(PackageDetails);
             ToolBar.PrimaryCommands.Add(new AppBarSeparator());
             ToolBar.PrimaryCommands.Add(ExportSelection);
-            ToolBar.PrimaryCommands.Add(new AppBarSeparator());
-            ToolBar.PrimaryCommands.Add(HelpButton);
 
             Dictionary<DependencyObject, string> Labels = new()
             { // Entries with a trailing space are collapsed
@@ -202,7 +198,6 @@ namespace UniGetUI.Interface.SoftwarePages
                 { InstallationSettings, CoreTools.Translate("Install options") },
                 { PackageDetails, " " + CoreTools.Translate("Package details") },
                 { ExportSelection, CoreTools.Translate("Add selection to bundle") },
-                { HelpButton, CoreTools.Translate("Help") },
             };
 
             Dictionary<DependencyObject, IconType> Icons = new()
@@ -214,7 +209,6 @@ namespace UniGetUI.Interface.SoftwarePages
                 { InstallInteractive, IconType.Interactive },
                 { PackageDetails, IconType.Info_Round },
                 { ExportSelection, IconType.AddTo },
-                { HelpButton, IconType.Help },
             };
 
             ApplyTextAndIconsToToolbar(Labels, Icons);
@@ -222,7 +216,6 @@ namespace UniGetUI.Interface.SoftwarePages
             PackageDetails.Click += (_, _) =>
                 ShowDetailsForPackage(SelectedItem, TEL_InstallReferral.DIRECT_SEARCH);
             ExportSelection.Click += ExportSelection_Click;
-            HelpButton.Click += (_, _) => MainApp.Instance.MainWindow.NavigationPage.ShowHelp();
             InstallationSettings.Click += (_, _) =>
                 _ = ShowInstallationOptionsForPackage(SelectedItem);
 

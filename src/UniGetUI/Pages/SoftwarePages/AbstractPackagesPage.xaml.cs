@@ -162,6 +162,7 @@ namespace UniGetUI.Interface
         protected readonly bool DISABLE_RELOAD;
         protected readonly string PAGE_NAME;
         public readonly bool RoleIsUpdateLike;
+        protected AppBarButton ReloadButton = new();
         protected DateTime LastPackageLoadTime { get; private set; }
         protected readonly OperationType PAGE_ROLE;
 
@@ -426,6 +427,11 @@ namespace UniGetUI.Interface
 
             OrderAsc_Menu.Click += (_, _) => SortPackagesBy(ascendent: true);
             OrderDesc_Menu.Click += (_, _) => SortPackagesBy(ascendent: false);
+
+            ReloadButton.Icon = new LocalIcon(IconType.Reload);
+            ReloadButton.Label = CoreTools.Translate("Reload");
+            ToolBar.PrimaryCommands.Add(ReloadButton);
+            ToolBar.PrimaryCommands.Add(new AppBarSeparator());
 
             GenerateToolBar();
             var menu = GenerateContextMenu();

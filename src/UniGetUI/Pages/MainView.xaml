@@ -12,6 +12,7 @@
   xmlns:operationWidgets="using:UniGetUI.Controls.OperationWidgets"
   xmlns:operations="using:UniGetUI.PackageOperations"
   xmlns:pages="using:UniGetUI.Interface"
+  xmlns:services="using:UniGetUI.Services"
   xmlns:widgets="using:UniGetUI.Interface.Widgets"
   MinWidth="200"
   MinHeight="200"
@@ -367,6 +368,9 @@
         Text="More"
       />
     </NavigationView.FooterMenuItems>
+    <NavigationView.PaneFooter>
+      <services:UserAvatar Margin="12,4,12,8" />
+    </NavigationView.PaneFooter>
 
     <Grid Name="ContentGrid" Grid.Row="0" Grid.Column="1" Margin="8,8,8,8" RowSpacing="0">
       <Grid.ColumnDefinitions>

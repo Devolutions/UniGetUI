@@ -493,6 +493,7 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="*" />
@@ -505,7 +506,6 @@
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="80" />
         <ColumnDefinition Width="*" />
-        <ColumnDefinition Width="Auto" />
       </Grid.ColumnDefinitions>
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />
@@ -545,101 +545,7 @@
         />
       </StackPanel>
 
-      <Grid
-        Grid.Row="0"
-        Grid.Column="2"
-        HorizontalAlignment="Right"
-        VerticalAlignment="Center"
-        ColumnSpacing="8"
-        RowSpacing="8"
-      >
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto" />
-          <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
-        <StackPanel
-          x:Name="OrderByContainer"
-          Grid.Column="0"
-          VerticalAlignment="Center"
-          Orientation="Horizontal"
-          Spacing="4"
-        >
-          <widgets:TranslatedTextBlock VerticalAlignment="Center" Text="Order by:" />
-          <DropDownButton x:Name="OrderByButton">
-            <DropDownButton.Flyout>
-              <widgets:BetterMenu Placement="Bottom">
-                <widgets:BetterToggleMenuItem x:Name="OrderByName_Menu" Text="Name" />
-                <widgets:BetterToggleMenuItem x:Name="OrderById_Menu" Text="Id" />
-                <widgets:BetterToggleMenuItem x:Name="OrderByVer_Menu" Text="Version" />
-                <widgets:BetterToggleMenuItem
-                  x:Name="OrderByNewVer_Menu"
-                  Text="New version"
-                  Visibility="{x:Bind RoleIsUpdateLike}"
-                />
-                <widgets:BetterToggleMenuItem x:Name="OrderBySrc_Menu" Text="Source" />
-                <MenuFlyoutSeparator />
-                <widgets:BetterToggleMenuItem x:Name="OrderAsc_Menu" Text="Ascendant" />
-                <widgets:BetterToggleMenuItem x:Name="OrderDesc_Menu" Text="Descendant" />
-              </widgets:BetterMenu>
-            </DropDownButton.Flyout>
-          </DropDownButton>
-        </StackPanel>
-        <StackPanel
-          x:Name="ViewModeContainer"
-          Grid.Row="1"
-          Grid.Column="0"
-          Grid.ColumnSpan="2"
-          VerticalAlignment="Center"
-          Orientation="Horizontal"
-          Spacing="4"
-          AutomationProperties.Name="View modes"
-          AutomationProperties.LocalizedControlType="grouping"
-        >
-          <widgets:TranslatedTextBlock VerticalAlignment="Center" Text="View mode:" />
-          <Toolkit:Segmented
-            x:Name="ViewModeSelector"
-            SelectionChanged="ViewModeSelector_SelectionChanged"
-            SelectionMode="Single"
-          >
-            <Toolkit:SegmentedItem x:Name="Selector_List" AutomationProperties.Name="List view">
-              <Toolkit:SegmentedItem.Icon>
-                <FontIcon Glyph="&#xE8FD;" />
-              </Toolkit:SegmentedItem.Icon>
-            </Toolkit:SegmentedItem>
-            <Toolkit:SegmentedItem x:Name="Selector_Grid" AutomationProperties.Name="Grid view">
-              <Toolkit:SegmentedItem.Icon>
-                <FontIcon Glyph="&#xF168;" />
-              </Toolkit:SegmentedItem.Icon>
-            </Toolkit:SegmentedItem>
-            <Toolkit:SegmentedItem x:Name="Selector_Icons" AutomationProperties.Name="Icons view">
-              <Toolkit:SegmentedItem.Icon>
-                <FontIcon Glyph="&#xF0E2;" />
-              </Toolkit:SegmentedItem.Icon>
-            </Toolkit:SegmentedItem>
-          </Toolkit:Segmented>
-        </StackPanel>
-        <Button
-          x:Name="ReloadButton"
-          Grid.Column="1"
-          Width="32"
-          Height="32"
-          Padding="0"
-          HorizontalAlignment="Right"
-          VerticalAlignment="Center"
-          x:FieldModifier="protected"
-          AutomationProperties.HelpText="Reload packages"
-          CornerRadius="4"
-        >
-          <FontIcon FontSize="16" Glyph="&#xE72C;" />
-        </Button>
-      </Grid>
-
-      <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3">
+      <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="Auto" />
@@ -751,7 +657,7 @@
 
     <SplitView
       Name="FilteringPanel"
-      Grid.Row="2"
+      Grid.Row="1"
       Grid.Column="1"
       BorderThickness="0"
       CornerRadius="0,0,0,0"
@@ -1295,5 +1201,74 @@
         </Grid>
       </Grid>
     </SplitView>
+
+    <!--  FOOTER STATUS BAR  -->
+    <Border
+      Grid.Row="2"
+      Grid.Column="1"
+      Padding="4,3,4,3"
+      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+      BorderThickness="0,1,0,0"
+    >
+      <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <StackPanel
+          x:Name="OrderByContainer"
+          VerticalAlignment="Center"
+          Orientation="Horizontal"
+          Spacing="4"
+        >
+          <widgets:TranslatedTextBlock FontSize="12" VerticalAlignment="Center" Text="Order by:" />
+          <DropDownButton x:Name="OrderByButton" FontSize="12">
+            <DropDownButton.Flyout>
+              <widgets:BetterMenu Placement="Top">
+                <widgets:BetterToggleMenuItem x:Name="OrderByName_Menu" Text="Name" />
+                <widgets:BetterToggleMenuItem x:Name="OrderById_Menu" Text="Id" />
+                <widgets:BetterToggleMenuItem x:Name="OrderByVer_Menu" Text="Version" />
+                <widgets:BetterToggleMenuItem
+                  x:Name="OrderByNewVer_Menu"
+                  Text="New version"
+                  Visibility="{x:Bind RoleIsUpdateLike}"
+                />
+                <widgets:BetterToggleMenuItem x:Name="OrderBySrc_Menu" Text="Source" />
+                <MenuFlyoutSeparator />
+                <widgets:BetterToggleMenuItem x:Name="OrderAsc_Menu" Text="Ascendant" />
+                <widgets:BetterToggleMenuItem x:Name="OrderDesc_Menu" Text="Descendant" />
+              </widgets:BetterMenu>
+            </DropDownButton.Flyout>
+          </DropDownButton>
+        </StackPanel>
+        <Border Width="1" Height="14" Background="{ThemeResource CardStrokeColorDefaultBrush}" />
+        <StackPanel
+          x:Name="ViewModeContainer"
+          VerticalAlignment="Center"
+          Orientation="Horizontal"
+          Spacing="4"
+          AutomationProperties.Name="View modes"
+          AutomationProperties.LocalizedControlType="grouping"
+        >
+          <Toolkit:Segmented
+            x:Name="ViewModeSelector"
+            SelectionChanged="ViewModeSelector_SelectionChanged"
+            SelectionMode="Single"
+          >
+            <Toolkit:SegmentedItem x:Name="Selector_List" AutomationProperties.Name="List view">
+              <Toolkit:SegmentedItem.Icon>
+                <FontIcon Glyph="&#xE8FD;" />
+              </Toolkit:SegmentedItem.Icon>
+            </Toolkit:SegmentedItem>
+            <Toolkit:SegmentedItem x:Name="Selector_Grid" AutomationProperties.Name="Grid view">
+              <Toolkit:SegmentedItem.Icon>
+                <FontIcon Glyph="&#xF168;" />
+              </Toolkit:SegmentedItem.Icon>
+            </Toolkit:SegmentedItem>
+            <Toolkit:SegmentedItem x:Name="Selector_Icons" AutomationProperties.Name="Icons view">
+              <Toolkit:SegmentedItem.Icon>
+                <FontIcon Glyph="&#xF0E2;" />
+              </Toolkit:SegmentedItem.Icon>
+            </Toolkit:SegmentedItem>
+          </Toolkit:Segmented>
+        </StackPanel>
+      </StackPanel>
+    </Border>
   </Grid>
 </Page>

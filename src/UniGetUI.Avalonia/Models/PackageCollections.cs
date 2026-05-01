@@ -24,6 +24,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         Timeout = TimeSpan.FromSeconds(8),
     };
     private static readonly ConcurrentDictionary<long, Bitmap?> _iconCache = new();
+    private static readonly SemaphoreSlim _iconLoadSemaphore = new(4, 4);
 
     public IPackage Package { get; }
     public PackageWrapper Self => this;
@@ -107,23 +108,32 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
 
         try
         {
-            var uri = Package.GetIconUrlIfAny();
-            if (uri is null) { _iconCache[hash] = null; return; }
-
+            await _iconLoadSemaphore.WaitAsync().ConfigureAwait(false);
             Bitmap bitmap;
-            if (uri.IsFile)
+            try
             {
-                bitmap = new Bitmap(uri.LocalPath);
-            }
-            else if (uri.Scheme is "http" or "https")
-            {
-                var bytes = await _iconHttpClient.GetByteArrayAsync(uri);
-                using var ms = new MemoryStream(bytes);
-                bitmap = new Bitmap(ms);
-            }
-            else { _iconCache[hash] = null; return; }
+                var uri = await Task.Run(Package.GetIconUrlIfAny).ConfigureAwait(false);
+                if (uri is null) { _iconCache[hash] = null; return; }
 
-            _iconCache[hash] = bitmap;
+                if (uri.IsFile)
+                {
+                    bitmap = await Task.Run(() => new Bitmap(uri.LocalPath)).ConfigureAwait(false);
+                }
+                else if (uri.Scheme is "http" or "https")
+                {
+                    var bytes = await _iconHttpClient.GetByteArrayAsync(uri).ConfigureAwait(false);
+                    using var ms = new MemoryStream(bytes);
+                    bitmap = new Bitmap(ms);
+                }
+                else { _iconCache[hash] = null; return; }
+
+                _iconCache[hash] = bitmap;
+            }
+            finally
+            {
+                _iconLoadSemaphore.Release();
+            }
+
             await Dispatcher.UIThread.InvokeAsync(() => IconBitmap = bitmap);
         }
         catch { _iconCache[hash] = null; }

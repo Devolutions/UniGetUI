@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -36,9 +37,19 @@ public enum PageType
 
 public partial class MainWindow : Window
 {
+    private const int SW_RESTORE = 9;
+    private const uint MONITOR_DEFAULTTONEAREST = 2;
+    private const int SM_CXSIZEFRAME = 32;
+    private const int SM_CYSIZEFRAME = 33;
+    private const int SM_CXPADDEDBORDER = 92;
+    private const uint SWP_NOZORDER = 0x0004;
+    private const uint SWP_NOACTIVATE = 0x0010;
+    private const uint SWP_FRAMECHANGED = 0x0020;
+
     private bool _focusSidebarSelectionOnNextPageChange;
     private WindowsTrayService? _trayService;
     private bool _allowClose;
+    private NativeMethods.RECT? _windowsRestoreBoundsBeforeManualMaximize;
 
     public enum RuntimeNotificationLevel
     {
@@ -174,13 +185,7 @@ public partial class MainWindow : Window
             MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
             this.GetObservable(WindowStateProperty).Subscribe(state =>
             {
-                MaximizeIcon.Data = Geometry.Parse(
-                    state == WindowState.Maximized
-                        ? "M2,0 H10 V8 H2 Z M0,2 H8 V10 H0 Z"
-                        : "M0,0 H10 V10 H0 Z");
-                ToolTip.SetTip(
-                    MaximizeButton,
-                    CoreTools.Translate(state == WindowState.Maximized ? "Restore" : "Maximize"));
+                UpdateMaximizeButtonState(state == WindowState.Maximized || _windowsRestoreBoundsBeforeManualMaximize is not null);
             });
         }
         else if (OperatingSystem.IsLinux())
@@ -197,13 +202,7 @@ public partial class MainWindow : Window
             // Keep maximize icon in sync with window state
             this.GetObservable(WindowStateProperty).Subscribe(state =>
             {
-                MaximizeIcon.Data = Geometry.Parse(
-                    state == WindowState.Maximized
-                        ? "M2,0 H10 V8 H2 Z M0,2 H8 V10 H0 Z"  // restore: two overlapping squares
-                        : "M0,0 H10 V10 H0 Z");                  // maximise: single square
-                ToolTip.SetTip(
-                    MaximizeButton,
-                    CoreTools.Translate(state == WindowState.Maximized ? "Restore" : "Maximize"));
+                UpdateMaximizeButtonState(state == WindowState.Maximized);
             });
         }
     }
@@ -219,9 +218,181 @@ public partial class MainWindow : Window
         => WindowState = WindowState.Minimized;
 
     private void MaximizeButton_Click(object? sender, RoutedEventArgs e)
-        => WindowState = WindowState == WindowState.Maximized
+    {
+        if (OperatingSystem.IsWindows() && TryGetNativeWindowHandle() is { } handle)
+        {
+            ToggleWindowsManualMaximize(handle);
+            return;
+        }
+
+        WindowState = WindowState == WindowState.Maximized
             ? WindowState.Normal
             : WindowState.Maximized;
+    }
+
+    private void UpdateMaximizeButtonState(bool isMaximized)
+    {
+        MaximizeIcon.Data = Geometry.Parse(
+            isMaximized
+                ? "M2,0 H10 V8 H2 Z M0,2 H8 V10 H0 Z"
+                : "M0,0 H10 V10 H0 Z");
+        ToolTip.SetTip(
+            MaximizeButton,
+            CoreTools.Translate(isMaximized ? "Restore" : "Maximize"));
+    }
+
+    private nint? TryGetNativeWindowHandle()
+    {
+        var handle = TryGetPlatformHandle()?.Handle ?? 0;
+        return handle == 0 ? null : handle;
+    }
+
+    private void ToggleWindowsManualMaximize(nint handle)
+    {
+        if (_windowsRestoreBoundsBeforeManualMaximize is { } restoreBounds)
+        {
+            if (SetWindowsWindowBounds(handle, restoreBounds))
+            {
+                _windowsRestoreBoundsBeforeManualMaximize = null;
+                UpdateMaximizeButtonState(false);
+            }
+            return;
+        }
+
+        if (NativeMethods.IsZoomed(handle))
+        {
+            _ = NativeMethods.ShowWindow(handle, SW_RESTORE);
+            UpdateMaximizeButtonState(false);
+            return;
+        }
+
+        if (!NativeMethods.GetWindowRect(handle, out NativeMethods.RECT currentBounds))
+        {
+            Logger.Warn("Could not get the window bounds before maximizing.");
+            return;
+        }
+
+        var monitor = NativeMethods.MonitorFromWindow(handle, MONITOR_DEFAULTTONEAREST);
+        if (monitor == 0)
+        {
+            Logger.Warn("Could not find a monitor for the window before maximizing.");
+            return;
+        }
+
+        var monitorInfo = new NativeMethods.MONITORINFO
+        {
+            cbSize = Marshal.SizeOf<NativeMethods.MONITORINFO>(),
+        };
+        if (!NativeMethods.GetMonitorInfo(monitor, ref monitorInfo))
+        {
+            Logger.Warn("Could not get monitor bounds before maximizing.");
+            return;
+        }
+
+        if (SetWindowsWindowBounds(handle, GetMaximizedWindowBounds(handle, monitorInfo.rcWork)))
+        {
+            _windowsRestoreBoundsBeforeManualMaximize = currentBounds;
+            UpdateMaximizeButtonState(true);
+        }
+    }
+
+    private static NativeMethods.RECT GetMaximizedWindowBounds(nint handle, NativeMethods.RECT workArea)
+    {
+        uint dpi = NativeMethods.GetDpiForWindow(handle);
+        if (dpi == 0)
+            dpi = NativeMethods.GetDpiForSystem();
+
+        int frameX = NativeMethods.GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi)
+            + NativeMethods.GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+        int frameY = NativeMethods.GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi)
+            + NativeMethods.GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+
+        frameX = Math.Max(frameX, 8);
+        frameY = Math.Max(frameY, 8);
+
+        return new NativeMethods.RECT
+        {
+            Left = workArea.Left - frameX,
+            Top = workArea.Top - frameY,
+            Right = workArea.Right + frameX,
+            Bottom = workArea.Bottom + frameY,
+        };
+    }
+
+    private bool SetWindowsWindowBounds(nint handle, NativeMethods.RECT bounds)
+    {
+        bool result = NativeMethods.SetWindowPos(
+            handle,
+            0,
+            bounds.Left,
+            bounds.Top,
+            bounds.Right - bounds.Left,
+            bounds.Bottom - bounds.Top,
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+        if (!result)
+            Logger.Warn($"Could not set window bounds. Win32 error: {Marshal.GetLastWin32Error()}");
+        return result;
+    }
+
+    private static class NativeMethods
+    {
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool IsZoomed(nint hWnd);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool ShowWindow(nint hWnd, int nCmdShow);
+
+        [DllImport("user32.dll")]
+        public static extern uint GetDpiForWindow(nint hwnd);
+
+        [DllImport("user32.dll")]
+        public static extern uint GetDpiForSystem();
+
+        [DllImport("user32.dll")]
+        public static extern int GetSystemMetricsForDpi(int nIndex, uint dpi);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetWindowRect(nint hWnd, out RECT lpRect);
+
+        [DllImport("user32.dll")]
+        public static extern nint MonitorFromWindow(nint hwnd, uint dwFlags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetMonitorInfo(nint hMonitor, ref MONITORINFO lpmi);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetWindowPos(
+            nint hWnd,
+            nint hWndInsertAfter,
+            int X,
+            int Y,
+            int cx,
+            int cy,
+            uint uFlags);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MONITORINFO
+        {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public uint dwFlags;
+        }
+    }
 
     private void CloseButton_Click(object? sender, RoutedEventArgs e)
         => Close();

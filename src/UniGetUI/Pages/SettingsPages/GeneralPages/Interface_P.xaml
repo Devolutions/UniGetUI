@@ -37,6 +37,15 @@
         Text="UniGetUI startup page:"
       />
 
+      <UserControl Height="16" />
+      <widgets:CheckboxCard
+        CornerRadius="8"
+        SettingName="DisableClassicMode"
+        StateChanged="ShowRestartBanner"
+        Text="Use classic mode"
+        WarningText="Restart UniGetUI to apply this change"
+      />
+
       <widgets:TranslatedTextBlock
         Margin="4,32,4,8"
         FontWeight="SemiBold"

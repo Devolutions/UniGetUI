@@ -89,6 +89,7 @@ public static partial class Settings
         PerManagerMinimumUpdateAgeCustom,
         WinGetCliToolPreference,
         WinGetComApiPolicy,
+        DisableClassicMode,
 
         Test1,
         Test2,
@@ -189,6 +190,7 @@ public static partial class Settings
             K.PerManagerMinimumUpdateAgeCustom => "PerManagerMinimumUpdateAgeCustom",
             K.WinGetCliToolPreference => "WinGetCliToolPreference",
             K.WinGetComApiPolicy => "WinGetComApiPolicy",
+            K.DisableClassicMode => "DisableClassicMode",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

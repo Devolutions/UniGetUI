@@ -41,9 +41,9 @@ Before reading: All of the rules below are guidelines, which means that they sho
 ## Formatting:
  - Run `pwsh ./scripts/install-git-hooks.ps1` once after cloning to enable the repository pre-commit hook.
 - The pre-commit hook runs `dotnet format whitespace src --folder` on staged files under `src` when the `dotnet` CLI is available, and stops the commit if it had to rewrite files so you can review the changes and commit again.
- - CI enforces whitespace formatting with `dotnet format whitespace src --folder --verify-no-changes` and code-style verification with `dotnet format style src/UniGetUI.sln --no-restore --verify-no-changes` in `.github/workflows/dotnet-test.yml`.
+- CI enforces whitespace formatting with `dotnet format whitespace src --folder --verify-no-changes` and code-style verification with `dotnet format style src/UniGetUI.Windows.slnx --no-restore --verify-no-changes` in `.github/workflows/dotnet-test.yml`.
  - The pre-commit hook intentionally does not run `dotnet format style` because solution loading makes it take roughly the same time for one staged C# file as for the full solution.
- - If you want to check the same style rules locally before pushing, run `dotnet format style src/UniGetUI.sln --no-restore --verify-no-changes` from the repository root.
+- If you want to check the same style rules locally before pushing, run `dotnet format style src/UniGetUI.Windows.slnx --no-restore --verify-no-changes` from the repository root.
  - If you want to prepare a dedicated formatting-only commit, run `dotnet format whitespace src --folder` from the repository root.
 
 ## Coding:

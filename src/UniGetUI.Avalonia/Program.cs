@@ -1,11 +1,17 @@
 using System;
 using Avalonia;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Logging;
 
 namespace UniGetUI.Avalonia;
 
 sealed class Program
 {
+    private static Mutex? _singleInstanceMutex;
+
+    internal static event Action<string[]>? SecondaryInstanceArgsReceived;
+
     // Initialization code. Don't use any Avalonia, third-party APIs or any
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
@@ -25,7 +31,40 @@ sealed class Program
 
         CoreData.WasDaemon = CoreData.IsDaemon = args.Contains(AvaloniaCliHandler.DAEMON);
 
+        if (!TryRegisterSingleInstance(args))
+            return;
+
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
+
+    private static bool TryRegisterSingleInstance(string[] args)
+    {
+        if (!OperatingSystem.IsWindows())
+            return true;
+
+        _singleInstanceMutex = new Mutex(
+            initiallyOwned: true,
+            name: CoreData.MainWindowIdentifier,
+            createdNew: out bool createdNew
+        );
+
+        if (createdNew)
+        {
+            SingleInstanceRedirector.StartListener(args =>
+                SecondaryInstanceArgsReceived?.Invoke(args)
+            );
+            return true;
+        }
+
+        if (SingleInstanceRedirector.TryForwardToFirstInstance(args))
+        {
+            _singleInstanceMutex.Dispose();
+            _singleInstanceMutex = null;
+            return false;
+        }
+
+        Logger.Warn("Could not redirect to the existing Avalonia instance; starting a new one");
+        return true;
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

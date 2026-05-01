@@ -77,6 +77,10 @@ namespace UniGetUI
                     int ret = CLIHandler.DisableSecureSettingForUser();
                     Environment.Exit(ret);
                 }
+                else if (!ModernAppLauncher.IsClassicModeEnabled())
+                {
+                    ModernAppLauncher.Launch(args);
+                }
                 else
                 {
                     CoreData.WasDaemon = CoreData.IsDaemon = args.Contains(CLIHandler.DAEMON);

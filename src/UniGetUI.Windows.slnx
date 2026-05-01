@@ -1,0 +1,232 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="arm64" />
+  </Configurations>
+  <Folder Name="/ExternalLibraries/">
+    <Project Path="ExternalLibraries.Clipboard/ExternalLibraries.Clipboard.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="ExternalLibraries.FilePickers/ExternalLibraries.FilePickers.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="WindowsPackageManager.Interop/ExternalLibraries.WindowsPackageManager.Interop.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="SharedAssemblyInfo.cs" />
+  </Folder>
+  <Folder Name="/UniGetUI.Core.Logger/" />
+  <Folder Name="/UniGetUI.Core/">
+    <Project Path="UniGetUI.Core.Classes/UniGetUI.Core.Classes.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.Data/UniGetUI.Core.Data.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.IconStore/UniGetUI.Core.IconEngine.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.LanguageEngine/UniGetUI.Core.LanguageEngine.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.Logger/UniGetUI.Core.Logging.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.SecureSettings/UniGetUI.Core.SecureSettings.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.Settings/UniGetUI.Core.Settings.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.Tools/UniGetUI.Core.Tools.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/UniGetUI.Core/Tests/">
+    <Project Path="UniGetUI.Core.Classes.Tests/UniGetUI.Core.Classes.Tests.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.Data.Tests/UniGetUI.Core.Data.Tests.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.IconEngine.Tests/UniGetUI.Core.IconEngine.Tests.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.Language.Tests/UniGetUI.Core.LanguageEngine.Tests.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.Logging.Tests/UniGetUI.Core.Logging.Tests.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.Settings.Tests/UniGetUI.Core.Settings.Tests.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Core.Tools.Tests/UniGetUI.Core.Tools.Tests.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/UniGetUI.Interface/">
+    <Project Path="UniGetUI.Interface.BackgroundApi/UniGetUI.Interface.BackgroundApi.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Interface.Enums/UniGetUI.Interface.Enums.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Interface.Telemetry/UniGetUI.Interface.Telemetry.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/UniGetUI.PackageEngine.PackageEngine/" />
+  <Folder Name="/UniGetUI.PackageEngine/">
+    <Project Path="UniGetUI.PackageEngine.Enums/UniGetUI.PackageEngine.Structs.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PAckageEngine.Interfaces/UniGetUI.PackageEngine.Interfaces.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.Homebrew/UniGetUI.PackageEngine.Managers.Homebrew.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Operations/UniGetUI.PackageEngine.Operations.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.PackageEngine/UniGetUI.PackageEngine.PEInterface.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.PackageLoader/UniGetUI.PackageEngine.PackageLoaders.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.PackageManagerClasses/UniGetUI.PackageEngine.Classes.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Serializable/UniGetUI.PackageEngine.Serializable.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/UniGetUI.PackageEngine/Managers/">
+    <Project Path="UniGetUI.PackageEngine.Managers.Apt/UniGetUI.PackageEngine.Managers.Apt.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.Cargo/UniGetUI.PackageEngine.Managers.Cargo.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.Chocolatey/UniGetUI.PackageEngine.Managers.Chocolatey.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.Dnf/UniGetUI.PackageEngine.Managers.Dnf.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.Dotnet/UniGetUI.PackageEngine.Managers.Dotnet.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.Npm/UniGetUI.PackageEngine.Managers.Npm.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.Pacman/UniGetUI.PackageEngine.Managers.Pacman.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.Pip/UniGetUI.PackageEngine.Managers.Pip.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.PowerShell/UniGetUI.PackageEngine.Managers.PowerShell.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.PowerShell7/UniGetUI.PackageEngine.Managers.PowerShell7.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.Scoop/UniGetUI.PackageEngine.Managers.Scoop.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.Snap/UniGetUI.PackageEngine.Managers.Snap.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.Vcpkg/UniGetUI.PackageEngine.Managers.Vcpkg.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Managers.WinGet/UniGetUI.PackageEngine.Managers.WinGet.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/UniGetUI.PackageEngine/Managers/Generic/">
+    <Project Path="UniGetUI.PackageEngine.Managers.Generic.NuGet/UniGetUI.PackageEngine.Managers.Generic.NuGet.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/UniGetUI.PackageEngine/Tests/">
+    <Project Path="UniGetUI.PackageEngine.Serializable.Tests/UniGetUI.PackageEngine.Serializable.Tests.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.PackageEngine.Tests/UniGetUI.PackageEngine.Tests.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
+  <Project Path="UniGetUI.Avalonia/UniGetUI.Avalonia.csproj">
+    <Platform Solution="*|arm64" Project="arm64" />
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+  <Project Path="UniGetUI.Interface.Telemetry.Tests/UniGetUI.Interface.Telemetry.Tests.csproj">
+    <Platform Solution="*|arm64" Project="arm64" />
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+  <Project Path="UniGetUI.Pinget.Cli/UniGetUI.Pinget.Cli.csproj">
+    <Platform Solution="*|arm64" Project="arm64" />
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+  <Project Path="UniGetUI.Tests/UniGetUI.Tests.csproj">
+    <Platform Solution="*|arm64" Project="arm64" />
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+  <Project Path="UniGetUI/UniGetUI.csproj">
+    <Platform Solution="*|arm64" Project="arm64" />
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+</Solution>

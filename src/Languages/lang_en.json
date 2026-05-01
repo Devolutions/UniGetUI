@@ -380,6 +380,8 @@
   "Follow system color scheme": "Follow system color scheme",
   "Application theme:": "Application theme:",
   "UniGetUI startup page:": "UniGetUI startup page:",
+  "Use classic mode": "Use classic mode",
+  "Restart UniGetUI to apply this change": "Restart UniGetUI to apply this change",
   "Proxy settings": "Proxy settings",
   "Other settings": "Other settings",
   "Connect the internet using a custom proxy": "Connect the internet using a custom proxy",

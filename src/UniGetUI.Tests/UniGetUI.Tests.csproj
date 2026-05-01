@@ -45,5 +45,6 @@
         <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
         <Compile Include="..\UniGetUI\AutoUpdater.Helpers.cs" Link="AutoUpdater.Helpers.cs" />
         <Compile Include="..\UniGetUI\CLIHandler.cs" Link="CLIHandler.cs" />
+        <Compile Include="..\UniGetUI\ModernAppLauncher.cs" Link="ModernAppLauncher.cs" />
     </ItemGroup>
 </Project>

@@ -125,7 +125,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ env.NUGET_PACKAGES }}
-          key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln') }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln', 'src/**/*.slnx') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
 
@@ -160,17 +160,17 @@ jobs:
 
       - name: Restore dependencies
         working-directory: src
-        run: dotnet restore UniGetUI.sln
+        run: dotnet restore UniGetUI.Windows.slnx
 
       - name: Run tests
         working-directory: src
         shell: pwsh
         run: |
           # Retry once to handle flaky tests (e.g. TaskRecyclerTests uses Random)
-          dotnet test UniGetUI.sln --no-restore --verbosity q --nologo
+          dotnet test UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Platform=x64
           if ($LASTEXITCODE -ne 0) {
             Write-Host "::warning::First test run failed, retrying..."
-            dotnet test UniGetUI.sln --no-restore --verbosity q --nologo
+            dotnet test UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Platform=x64
             if ($LASTEXITCODE -ne 0) { exit 1 }
           }
 
@@ -188,13 +188,19 @@ jobs:
 
           $TargetFramework = "$PortableTargetFramework-windows$WindowsTargetPlatformVersion"
           dotnet publish src/UniGetUI/UniGetUI.csproj /noLogo /p:Configuration=Release /p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform -v m
-          if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish WinUI failed" }
+
+          dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj /noLogo /p:Configuration=Release /p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform --self-contained true -v m
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish Avalonia failed" }
 
           # Stage binaries
           $PublishDir = "src/UniGetUI/bin/$Platform/Release/$TargetFramework/win-$Platform/publish"
+          $AvaloniaPublishDir = "src/UniGetUI.Avalonia/bin/$Platform/Release/$TargetFramework/win-$Platform/publish"
           if (Test-Path "unigetui_bin") { Remove-Item "unigetui_bin" -Recurse -Force }
           New-Item "unigetui_bin" -ItemType Directory | Out-Null
           Get-ChildItem $PublishDir | Move-Item -Destination "unigetui_bin" -Force
+          New-Item "unigetui_bin/Avalonia" -ItemType Directory | Out-Null
+          Get-ChildItem $AvaloniaPublishDir | Move-Item -Destination "unigetui_bin/Avalonia" -Force
 
           # Backward-compat alias
           Copy-Item "unigetui_bin/UniGetUI.exe" "unigetui_bin/WingetUI.exe" -Force
@@ -330,7 +336,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ env.NUGET_PACKAGES }}
-          key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln') }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln', 'src/**/*.slnx') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
 

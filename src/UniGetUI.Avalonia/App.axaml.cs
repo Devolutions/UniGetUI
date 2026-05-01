@@ -65,6 +65,8 @@ public partial class App : Application
             ApplyTheme(CoreSettings.GetValue(CoreSettings.K.PreferredTheme));
             var mainWindow = new MainWindow();
             desktop.MainWindow = mainWindow;
+            Program.SecondaryInstanceArgsReceived += args =>
+                HandleSecondaryInstanceArgs(mainWindow, args);
 
             if (CoreData.WasDaemon)
             {
@@ -137,6 +139,20 @@ public partial class App : Application
         }
 
         await AvaloniaBootstrapper.InitializeAsync();
+    }
+
+    private static void HandleSecondaryInstanceArgs(MainWindow mainWindow, string[] args)
+    {
+        bool isDaemonLaunch = args.Contains(AvaloniaCliHandler.DAEMON);
+        CoreData.IsDaemon = isDaemonLaunch;
+
+        if (isDaemonLaunch)
+            return;
+
+        if (!mainWindow.IsVisible)
+            mainWindow.Show();
+
+        mainWindow.Activate();
     }
 
     public static void ApplyTheme(string value)

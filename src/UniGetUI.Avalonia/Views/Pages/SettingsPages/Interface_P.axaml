@@ -21,11 +21,19 @@
             <settings:ComboboxCard x:Name="ThemeSelector"
                                    CornerRadius="8,8,0,0"/>
 
-            <settings:ComboboxCard x:Name="StartupPageSelector"
-                                   CornerRadius="0,0,8,8"
-                                   BorderThickness="1,0,1,1"/>
+             <settings:ComboboxCard x:Name="StartupPageSelector"
+                                    CornerRadius="0,0,8,8"
+                                    BorderThickness="1,0,1,1"/>
 
-            <StackPanel x:Name="SystemTraySection" Orientation="Vertical" IsVisible="{Binding IsWindows}">
+            <Border Height="16"/>
+
+            <settings:CheckboxCard SettingName="DisableClassicMode"
+                                   Text="{t:Translate Use classic mode}"
+                                   WarningText="{t:Translate Restart UniGetUI to apply this change}"
+                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
+                                   CornerRadius="8"/>
+
+             <StackPanel x:Name="SystemTraySection" Orientation="Vertical" IsVisible="{Binding IsWindows}">
                 <settings:TranslatedTextBlock Text="UniGetUI on the background and system tray"
                                               FontWeight="SemiBold"
                                               Margin="44,32,4,8"

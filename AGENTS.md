@@ -5,7 +5,7 @@
 UniGetUI is a WinUI 3 desktop app (C#/.NET 10, Windows App SDK) providing a GUI for CLI package managers (WinGet, Scoop, Chocolatey, Pip, Npm, .NET Tool, PowerShell Gallery, Cargo, Vcpkg).
 
 Solution entry points:
-- `src/UniGetUI.sln` - official Windows application based on WinUI 3
+- `src/UniGetUI.Windows.slnx` - official Windows solution; builds the WinUI 3 launcher/classic app and the Avalonia app
 - `src/UniGetUI.Avalonia.slnx` - experimental cross-platform Avalonia port
 
 ## Architecture
@@ -94,7 +94,7 @@ Use `CoreTools.Translate("text")` for all user-facing strings. Parameterized: `C
 
 | Purpose | Path |
 |---|---|
-| Solution | `src/UniGetUI.sln` |
+| Windows solution | `src/UniGetUI.Windows.slnx` |
 | Experimental cross-platform solution | `src/UniGetUI.Avalonia.slnx` |
 | Shared build props | `src/Directory.Build.props` |
 | Version info | `src/SharedAssemblyInfo.cs` |

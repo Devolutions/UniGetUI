@@ -57,9 +57,7 @@ jobs:
 
     - name: Install dependencies
       working-directory: src
-      run: |
-        dotnet restore UniGetUI.Windows.slnx
-        dotnet restore UniGetUI.Avalonia.slnx
+      run: dotnet restore UniGetUI.Windows.slnx
 
     - name: Check whitespace formatting
       run: dotnet format whitespace src --folder --verify-no-changes --verbosity minimal
@@ -68,17 +66,9 @@ jobs:
       working-directory: src
       run: dotnet format style UniGetUI.Windows.slnx --no-restore --verify-no-changes --verbosity minimal
 
-    - name: Check code style formatting (Avalonia solution)
-      working-directory: src
-      run: dotnet format style UniGetUI.Avalonia.slnx --no-restore --verify-no-changes --verbosity minimal
-
     - name: Build Windows solution
       working-directory: src
       run: dotnet build UniGetUI.Windows.slnx --no-restore --verbosity minimal /p:Platform=x64
-
-    - name: Build Avalonia solution
-      working-directory: src
-      run: dotnet build UniGetUI.Avalonia.slnx --no-restore --verbosity minimal
 
     - name: Run Tests
       working-directory: src

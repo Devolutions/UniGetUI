@@ -100,7 +100,7 @@ namespace UniGetUI.Interface.Widgets
 
             Button.Click += (s, e) => Click?.Invoke(s, e);
 
-            Loaded += (s, e) => 
+            Loaded += (s, e) =>
             {
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(this, _textblock.Text);
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetLocalizedControlType(this, "grouping");

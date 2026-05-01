@@ -19,7 +19,7 @@ namespace UniGetUI.Interface.Widgets
         private string _text = "";
         public string Text
         {
-            set 
+            set
             {
                 _text = CoreTools.Translate(value);
                 Header = _text;
@@ -39,7 +39,7 @@ namespace UniGetUI.Interface.Widgets
             };
             Content = _button;
 
-            Loaded += (s, e) => 
+            Loaded += (s, e) =>
             {
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(this, _text);
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetLocalizedControlType(this, "grouping");

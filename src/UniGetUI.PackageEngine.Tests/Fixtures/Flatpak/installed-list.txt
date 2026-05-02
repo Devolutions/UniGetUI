@@ -1,0 +1,3 @@
+com.github.tchx84.Flatseal	2.4.0	stable	flathub	Flatseal
+com.heroicgameslauncher.hgl	v2.21.0	stable	flathub	Heroic
+io.github.nokse22.high-tide	1.3.1	stable	flathub	High Tide

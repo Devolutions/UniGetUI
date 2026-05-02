@@ -1,0 +1,3 @@
+io.podman_desktop.PodmanDesktop	1.27.1	stable	flathub	Podman Desktop
+org.freedesktop.Platform.Compat.i386		25.08	flathub	i386
+org.freedesktop.Platform.GL.default	26.0.4	24.08	flathub	Mesa

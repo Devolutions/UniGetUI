@@ -20,6 +20,7 @@ using UniGetUI.PackageEngine.Managers.DnfManager;
 using UniGetUI.PackageEngine.Managers.HomebrewManager;
 using UniGetUI.PackageEngine.Managers.PacmanManager;
 using UniGetUI.PackageEngine.Managers.SnapManager;
+using UniGetUI.PackageEngine.Managers.FlatpakManager;
 #endif
 
 namespace UniGetUI.PackageEngine
@@ -50,6 +51,7 @@ namespace UniGetUI.PackageEngine
         public static readonly Pacman Pacman = new();
         public static readonly Homebrew Homebrew = new();
         public static readonly Snap Snap = new();
+        public static readonly Flatpak Flatpak = new();
 #endif
 
         public static readonly IPackageManager[] Managers = CreateManagers();
@@ -74,7 +76,10 @@ namespace UniGetUI.PackageEngine
                 if (unknown || families.Contains("arch"))
                     managers.Add(Pacman);
                 if (unknown || families.Contains("ubuntu") || families.Contains("debian") || families.Contains("fedora") || families.Contains("arch"))
+                {
                     managers.Add(Snap);
+                    managers.Add(Flatpak);
+                }
             }
 #endif
             return [.. managers];

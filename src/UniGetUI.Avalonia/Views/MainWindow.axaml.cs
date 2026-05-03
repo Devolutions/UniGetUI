@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -204,6 +205,14 @@ public partial class MainWindow : Window
             {
                 UpdateMaximizeButtonState(state == WindowState.Maximized);
             });
+
+            // Avalonia's X11 backend treats BorderOnly as None (no decorations at all).
+            // Add invisible resize grips so the user can still resize by dragging edges.
+            if (!isWsl)
+            {
+                CreateResizeGrips();
+            }
+
         }
     }
 
@@ -212,6 +221,83 @@ public partial class MainWindow : Window
         string? wslDistro = Environment.GetEnvironmentVariable("WSL_DISTRO_NAME");
         string? wslInterop = Environment.GetEnvironmentVariable("WSL_INTEROP");
         return !string.IsNullOrWhiteSpace(wslDistro) || !string.IsNullOrWhiteSpace(wslInterop);
+    }
+
+    /// <summary>
+    /// Creates invisible resize-grip borders at the edges and corners of the window,
+    /// enabling mouse-driven resize on platforms where native decorations are absent
+    /// (e.g. Linux with WindowDecorations.None).
+    /// </summary>
+    private void CreateResizeGrips()
+    {
+        if (this.Content is not Panel panel)
+        {
+            return;
+        }
+
+        const int edgeThickness = 5;
+        const int cornerSize = 8;
+
+        // Edge strips
+        panel.Children.Add(MakeGrip(this, double.NaN, edgeThickness,
+            HorizontalAlignment.Stretch, VerticalAlignment.Top,
+            StandardCursorType.SizeNorthSouth, WindowEdge.North));
+
+        panel.Children.Add(MakeGrip(this, double.NaN, edgeThickness,
+            HorizontalAlignment.Stretch, VerticalAlignment.Bottom,
+            StandardCursorType.SizeNorthSouth, WindowEdge.South));
+
+        panel.Children.Add(MakeGrip(this, edgeThickness, double.NaN,
+            HorizontalAlignment.Left, VerticalAlignment.Stretch,
+            StandardCursorType.SizeWestEast, WindowEdge.West));
+
+        panel.Children.Add(MakeGrip(this, edgeThickness, double.NaN,
+            HorizontalAlignment.Right, VerticalAlignment.Stretch,
+            StandardCursorType.SizeWestEast, WindowEdge.East));
+
+        // Corner squares
+        panel.Children.Add(MakeGrip(this, cornerSize, cornerSize,
+            HorizontalAlignment.Left, VerticalAlignment.Top,
+            StandardCursorType.TopLeftCorner, WindowEdge.NorthWest));
+
+        panel.Children.Add(MakeGrip(this, cornerSize, cornerSize,
+            HorizontalAlignment.Right, VerticalAlignment.Top,
+            StandardCursorType.TopRightCorner, WindowEdge.NorthEast));
+
+        panel.Children.Add(MakeGrip(this, cornerSize, cornerSize,
+            HorizontalAlignment.Left, VerticalAlignment.Bottom,
+            StandardCursorType.BottomLeftCorner, WindowEdge.SouthWest));
+
+        panel.Children.Add(MakeGrip(this, cornerSize, cornerSize,
+            HorizontalAlignment.Right, VerticalAlignment.Bottom,
+            StandardCursorType.BottomRightCorner, WindowEdge.SouthEast));
+        return;
+
+        static Border MakeGrip(MainWindow window, double width, double height,
+            HorizontalAlignment hAlign, VerticalAlignment vAlign,
+            StandardCursorType cursorType, WindowEdge edge)
+        {
+            var grip = new Border
+            {
+                Width = width,
+                Height = height,
+                HorizontalAlignment = hAlign,
+                VerticalAlignment = vAlign,
+                Background = Brushes.Transparent,
+                Cursor = new Cursor(cursorType),
+                IsHitTestVisible = true,
+            };
+            grip.PointerPressed += (_, e) =>
+            {
+                if (e.GetCurrentPoint(window).Properties.IsLeftButtonPressed)
+                {
+                    window.BeginResizeDrag(edge, e);
+                    e.Handled = true;
+                }
+            };
+            return grip;
+        }
+
     }
 
     private void MinimizeButton_Click(object? sender, RoutedEventArgs e)
@@ -319,7 +405,7 @@ public partial class MainWindow : Window
         };
     }
 
-    private bool SetWindowsWindowBounds(nint handle, NativeMethods.RECT bounds)
+    private static bool SetWindowsWindowBounds(nint handle, NativeMethods.RECT bounds)
     {
         bool result = NativeMethods.SetWindowPos(
             handle,

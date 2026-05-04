@@ -239,7 +239,7 @@ URL:        $Url
 # The self-contained .NET runtime links against liblttng-ust.so.0, which was
 # renamed to .so.1 in newer distros (Fedora 38+). Exclude it so the package
 # installs on both old and new releases; .NET ships its own tracing fallback.
-%global __requires_exclude ^liblttng-ust\\.so
+%global __requires_exclude ^liblttng-ust\.so
 
 %description
 $Description

@@ -184,7 +184,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
                     Manager.Name,
                     CoreTools.MakeValidFileName(Id)
                 );
-                return path is null ? null : new Uri("file:///" + path);
+                return path is null ? null : new Uri((path.StartsWith('/') ? "file://" : "file:///") + path);
             }
             catch (Exception ex)
             {

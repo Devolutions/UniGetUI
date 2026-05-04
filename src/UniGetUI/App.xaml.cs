@@ -16,6 +16,7 @@ using UniGetUI.Interface;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageOperations;
 using UniGetUI.Pages.DialogPages;
@@ -66,11 +67,15 @@ namespace UniGetUI
         }
 
         public bool RaiseExceptionAsFatal = true;
+        private int _isQuitting;
 
         public MainWindow MainWindow = null!;
         public ThemeListener ThemeListener = null!;
 
-        private readonly BackgroundApiRunner BackgroundApi = new();
+        private readonly IpcServer IpcApi = new()
+        {
+            SessionKind = IpcTransportOptions.GuiSessionKind,
+        };
         public static MainApp Instance = null!;
 
         public MainApp()
@@ -107,7 +112,7 @@ namespace UniGetUI
             ThemeListener = new ThemeListener();
         }
 
-        private static async Task LoadGSudo()
+        internal static async Task LoadGSudoAsync()
         {
             try
             {
@@ -374,7 +379,7 @@ namespace UniGetUI
                     Task.Run(SetUpWebViewUserDataFolder),
                     Task.Run(IconDatabase.Instance.LoadFromCacheAsync),
                     Task.Run(RegisterNotificationService),
-                    Task.Run(LoadGSudo),
+                    Task.Run(LoadGSudoAsync),
                     Task.Run(InitializeBackgroundAPI),
                 ];
 
@@ -420,47 +425,179 @@ namespace UniGetUI
 
         private async Task InitializeBackgroundAPI()
         {
-            // Bind the background api to the main interface
+            // Bind the IPC API to the main interface
             try
             {
                 if (Settings.Get(Settings.K.DisableApi))
                     return;
 
-                BackgroundApi.OnOpenWindow += (_, _) =>
-                    MainWindow.DispatcherQueue.TryEnqueue(() => MainWindow.Activate());
+                IpcApi.AppInfoProvider = () => RunOnUiThread(GetAppInfo);
+                IpcApi.ShowAppHandler = () => RunOnUiThread(ShowApp);
+                IpcApi.NavigateAppHandler = request => RunOnUiThread(() => NavigateApp(request));
+                IpcApi.QuitAppHandler = () => RunOnUiThread(QuitApp);
+                IpcApi.ShowPackageHandler = request => RunOnUiThread(() => ShowPackage(request));
 
-                BackgroundApi.OnOpenUpdatesPage += (_, _) =>
-                    MainWindow.DispatcherQueue.TryEnqueue(() =>
-                    {
-                        MainWindow?.NavigationPage?.NavigateTo(PageType.Updates);
-                        MainWindow?.Activate();
-                    });
-
-                BackgroundApi.OnUpgradeAll += (_, _) =>
+                IpcApi.OnUpgradeAll += (_, _) =>
                     MainWindow.DispatcherQueue.TryEnqueue(() =>
                     {
                         _ = Operations.UpdateAll();
                     });
 
-                BackgroundApi.OnUpgradeAllForManager += (s, managerName) =>
+                IpcApi.OnUpgradeAllForManager += (s, managerName) =>
                     MainWindow.DispatcherQueue.TryEnqueue(() =>
                     {
                         _ = Operations.UpdateAllForManager(managerName);
                     });
 
-                BackgroundApi.OnUpgradePackage += (s, packageId) =>
-                    MainWindow.DispatcherQueue.TryEnqueue(() =>
-                    {
-                        _ = Operations.UpdateForId(packageId);
-                    });
-
-                await BackgroundApi.Start();
+                await IpcApi.Start();
             }
             catch (Exception ex)
             {
-                Logger.Error("Could not initialize Background API:");
+                Logger.Error("Could not initialize IPC API:");
                 Logger.Error(ex);
             }
+        }
+
+        private static T RunOnUiThread<T>(Func<T> action)
+        {
+            if (Instance.MainWindow.DispatcherQueue.HasThreadAccess)
+            {
+                return action();
+            }
+
+            var completion = new TaskCompletionSource<T>(
+                TaskCreationOptions.RunContinuationsAsynchronously
+            );
+            if (!Instance.MainWindow.DispatcherQueue.TryEnqueue(() =>
+                {
+                    try
+                    {
+                        completion.SetResult(action());
+                    }
+                    catch (Exception ex)
+                    {
+                        completion.SetException(ex);
+                    }
+                }))
+            {
+                throw new InvalidOperationException("Failed to dispatch the app automation request.");
+            }
+
+            return completion.Task.GetAwaiter().GetResult();
+        }
+
+        private IpcAppInfo GetAppInfo()
+        {
+            return new IpcAppInfo
+            {
+                Headless = false,
+                WindowAvailable = MainWindow is not null,
+                WindowVisible = MainWindow?.IsInterfaceVisible ?? false,
+                CanShowWindow = MainWindow is not null,
+                CanNavigate = MainWindow?.NavigationPage is not null,
+                CanQuit = true,
+                CurrentPage = MainWindow?.NavigationPage is null
+                    ? ""
+                    : IpcAppPages.ToPageName(MainWindow.NavigationPage.CurrentPage.ToString()),
+                SupportedPages = IpcAppPages.SupportedPages,
+            };
+        }
+
+        private IpcCommandResult ShowApp()
+        {
+            MainWindow.ShowFromTray();
+            return IpcCommandResult.Success("show-app");
+        }
+
+        private IpcCommandResult NavigateApp(IpcAppNavigateRequest request)
+        {
+            string page = IpcAppPages.NormalizePageName(request.Page);
+            IPackageManager? manager = ResolveManager(request.ManagerName);
+
+            switch (page)
+            {
+                case "discover":
+                    MainWindow.NavigationPage.NavigateTo(PageType.Discover);
+                    break;
+                case "updates":
+                    MainWindow.NavigationPage.NavigateTo(PageType.Updates);
+                    break;
+                case "installed":
+                    MainWindow.NavigationPage.NavigateTo(PageType.Installed);
+                    break;
+                case "bundles":
+                    MainWindow.NavigationPage.NavigateTo(PageType.Bundles);
+                    break;
+                case "settings":
+                    MainWindow.NavigationPage.NavigateTo(PageType.Settings);
+                    break;
+                case "managers":
+                    MainWindow.NavigationPage.OpenManagerSettings(manager);
+                    break;
+                case "own-log":
+                    MainWindow.NavigationPage.NavigateTo(PageType.OwnLog);
+                    break;
+                case "manager-log":
+                    MainWindow.NavigationPage.OpenManagerLogs(manager);
+                    break;
+                case "operation-history":
+                    MainWindow.NavigationPage.NavigateTo(PageType.OperationHistory);
+                    break;
+                case "help":
+                    MainWindow.NavigationPage.ShowHelp(request.HelpAttachment ?? "");
+                    break;
+                case "release-notes":
+                    _ = DialogHelper.ShowReleaseNotes();
+                    break;
+                case "about":
+                    _ = DialogHelper.ShowAboutUniGetUI();
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Unsupported app page \"{request.Page}\"."
+                    );
+            }
+
+            MainWindow.ShowFromTray();
+            return IpcCommandResult.Success("navigate-app");
+        }
+
+        private IpcCommandResult ShowPackage(IpcPackageActionRequest request)
+        {
+            IPackage package = IpcPackageApi.ResolvePackage(request);
+            MainWindow.ShowFromTray();
+            _ = DialogHelper.ShowPackageDetails(
+                package,
+                OperationType.Install,
+                TEL_InstallReferral.DIRECT_SEARCH
+            );
+            return IpcCommandResult.Success("show-package");
+        }
+
+        private IpcCommandResult QuitApp()
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(150);
+                RunOnUiThread(() =>
+                {
+                    DisposeAndQuit();
+                    return true;
+                });
+            });
+            return IpcCommandResult.Success("quit-app");
+        }
+
+        private static IPackageManager? ResolveManager(string? managerName)
+        {
+            if (string.IsNullOrWhiteSpace(managerName))
+            {
+                return null;
+            }
+
+            return PEInterface.Managers.FirstOrDefault(manager =>
+                manager.Id.Equals(managerName, StringComparison.OrdinalIgnoreCase))
+                ?? throw new InvalidOperationException($"Unknown manager \"{managerName}\".");
         }
 
         private async Task CheckForMissingDependencies()
@@ -569,11 +706,16 @@ namespace UniGetUI
 
         public void DisposeAndQuit(int outputCode = 0)
         {
+            if (Interlocked.Exchange(ref _isQuitting, 1) == 1)
+            {
+                return;
+            }
+
             Logger.Warn("Quitting UniGetUI");
             DWMThreadHelper.ChangeState_DWM(false);
             DWMThreadHelper.ChangeState_XAML(false);
             MainWindow?.Close();
-            BackgroundApi?.Stop();
+            IpcApi.Stop().GetAwaiter().GetResult();
             Exit();
             // await Task.Delay(100);
             // Environment.Exit(outputCode);

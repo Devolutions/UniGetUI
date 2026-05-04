@@ -5,10 +5,12 @@ using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
+using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.PackageEngine.Tests;
@@ -216,6 +218,120 @@ public sealed class PackageOperationsTests
         Assert.NotNull(InstalledPackagesLoader.Instance.GetEquivalentPackage(package));
     }
 
+    [Fact]
+    public async Task InstallOperationSuccessfulRunPrefersAuthoritativeInstalledVersion()
+    {
+        TestPackageManager? manager = null;
+        Package? installedPackage = null;
+        manager = new PackageManagerBuilder()
+            .WithInstalledPackages(_ => [Assert.IsType<Package>(installedPackage)])
+            .Build();
+        var searchResult = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("dotnetsay")
+            .WithVersion("3.0.3")
+            .Build();
+        installedPackage = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("dotnetsay")
+            .WithVersion("2.1.4")
+            .Build();
+        InitializeLoaders();
+        using var operation = new SimulatedInstallPackageOperation(
+            searchResult,
+            new InstallOptions { Version = "2.1.4" },
+            OperationVeredict.Success
+        );
+
+        await operation.MainThread();
+        await WaitForAsync(() =>
+            InstalledPackagesLoader.Instance.GetEquivalentPackages(searchResult)
+                .Any(package => package.VersionString == "2.1.4")
+        );
+
+        Assert.DoesNotContain(
+            InstalledPackagesLoader.Instance.GetEquivalentPackages(searchResult),
+            package => package.VersionString == "3.0.3"
+        );
+    }
+
+    [Fact]
+    public async Task UpdateOperationSuccessfulRunPrefersAuthoritativeInstalledVersion()
+    {
+        TestPackageManager? manager = null;
+        Package? installedPackage = null;
+        manager = new PackageManagerBuilder()
+            .WithInstalledPackages(_ => [Assert.IsType<Package>(installedPackage)])
+            .Build();
+        var upgradablePackage = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("dotnetsay")
+            .WithVersion("2.1.4")
+            .WithNewVersion("3.0.0")
+            .Build();
+        installedPackage = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("dotnetsay")
+            .WithVersion("3.0.3")
+            .Build();
+        InitializeLoaders();
+        await InstalledPackagesLoader.Instance.AddForeign(upgradablePackage);
+        using var operation = new SimulatedUpdatePackageOperation(
+            upgradablePackage,
+            new InstallOptions(),
+            OperationVeredict.Success
+        );
+
+        await operation.MainThread();
+        await WaitForAsync(() =>
+            InstalledPackagesLoader.Instance.GetEquivalentPackages(upgradablePackage)
+                .Any(package => package.VersionString == "3.0.3")
+        );
+
+        Assert.DoesNotContain(
+            InstalledPackagesLoader.Instance.GetEquivalentPackages(upgradablePackage),
+            package => package.VersionString == "3.0.0"
+        );
+    }
+
+    [Fact]
+    public async Task UpdateOperationSuccessfulRunPrefersRequestedVersionWhenSnapshotLags()
+    {
+        TestPackageManager? manager = null;
+        Package? installedPackage = null;
+        manager = new PackageManagerBuilder()
+            .WithInstalledPackages(_ => [Assert.IsType<Package>(installedPackage)])
+            .Build();
+        var installedBeforeUpdate = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("dotnetsay")
+            .WithVersion("2.1.4")
+            .Build();
+        installedPackage = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("dotnetsay")
+            .WithVersion("2.1.4")
+            .Build();
+        InitializeLoaders();
+        await InstalledPackagesLoader.Instance.AddForeign(installedBeforeUpdate);
+        using var operation = new SimulatedUpdatePackageOperation(
+            installedBeforeUpdate,
+            new InstallOptions { Version = "3.0.3" },
+            OperationVeredict.Success
+        );
+
+        await operation.MainThread();
+        await WaitForAsync(() =>
+            InstalledPackagesLoader.Instance.GetEquivalentPackages(installedBeforeUpdate)
+                .Any(package => package.VersionString == "3.0.3")
+        );
+
+        Assert.DoesNotContain(
+            InstalledPackagesLoader.Instance.GetEquivalentPackages(installedBeforeUpdate),
+            package => package.VersionString == "2.1.4"
+        );
+    }
+
     private static IReadOnlyList<AbstractOperation.InnerOperation> GetInnerOperations(
         AbstractOperation operation,
         string fieldName
@@ -312,6 +428,26 @@ public sealed class PackageOperationsTests
         private readonly OperationVeredict _veredict;
 
         public SimulatedInstallPackageOperation(
+            IPackage package,
+            InstallOptions options,
+            OperationVeredict veredict
+        )
+            : base(package, options)
+        {
+            _veredict = veredict;
+        }
+
+        protected override Task<OperationVeredict> PerformOperation()
+        {
+            return Task.FromResult(_veredict);
+        }
+    }
+
+    private sealed class SimulatedUpdatePackageOperation : UpdatePackageOperation
+    {
+        private readonly OperationVeredict _veredict;
+
+        public SimulatedUpdatePackageOperation(
             IPackage package,
             InstallOptions options,
             OperationVeredict veredict

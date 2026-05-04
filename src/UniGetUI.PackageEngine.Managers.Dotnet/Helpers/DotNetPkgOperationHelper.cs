@@ -55,7 +55,7 @@ internal sealed class DotNetPkgOperationHelper : BasePkgOperationHelper
             );
         }
 
-        if (operation is OperationType.Install)
+        if (operation is OperationType.Install or OperationType.Update)
         {
             if (options.Version != "")
             {

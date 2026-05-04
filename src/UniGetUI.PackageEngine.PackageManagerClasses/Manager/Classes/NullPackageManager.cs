@@ -19,6 +19,10 @@ namespace UniGetUI.PackageEngine.Classes.Manager
         public ManagerProperties Properties { get; }
         public ManagerCapabilities Capabilities { get; }
         public ManagerStatus Status { get; }
+        public string Id
+        {
+            get => string.IsNullOrWhiteSpace(Properties.Id) ? Properties.Name : Properties.Id;
+        }
         public string Name
         {
             get => Properties.Name;
@@ -51,6 +55,7 @@ namespace UniGetUI.PackageEngine.Classes.Manager
             Properties = new ManagerProperties
             {
                 IsDummy = true,
+                Id = "unknown",
                 Name = CoreTools.Translate("Unknown"),
                 Description = "Unset",
                 IconId = IconType.Help,

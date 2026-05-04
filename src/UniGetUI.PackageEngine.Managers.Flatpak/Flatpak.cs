@@ -39,6 +39,7 @@ public partial class Flatpak : PackageManager
 
         Properties = new ManagerProperties
         {
+            Id = "flatpak",
             Name = "Flatpak",
             Description = CoreTools.Translate(
                 "The universal Linux package manager for desktop applications.<br>Contains: <b>Flatpak applications from configured remotes</b>"

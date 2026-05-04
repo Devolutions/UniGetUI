@@ -57,6 +57,7 @@ public class Homebrew : PackageManager
 
         Properties = new ManagerProperties
         {
+            Id = "homebrew",
             Name = "Homebrew",
             Description = CoreTools.Translate(
                 "The Missing Package Manager for macOS (or Linux).<br>Contains: <b>Formulae, Casks</b>"

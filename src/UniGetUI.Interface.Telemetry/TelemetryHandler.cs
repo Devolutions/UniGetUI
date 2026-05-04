@@ -73,19 +73,7 @@ public static class TelemetryHandler
 #endif
 
     private static readonly HttpClient _httpClient = CreateHttpClient();
-
     private static readonly ConcurrentQueue<UniGetUIPackageEvent> _pendingPackageEvents = new();
-
-    private static HttpClient CreateHttpClient()
-    {
-        var httpClient = new HttpClient(CoreTools.GenericHttpClientParameters)
-        {
-            Timeout = TimeSpan.FromSeconds(30),
-        };
-        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-        return httpClient;
-    }
-
     private static readonly Settings.K[] SettingsToSend =
     [
         Settings.K.DisableAutoUpdateWingetUI,
@@ -101,6 +89,16 @@ public static class TelemetryHandler
     ];
 
     // -------------------------------------------------------------------------
+
+    private static HttpClient CreateHttpClient()
+    {
+        var httpClient = new HttpClient(CoreTools.GenericHttpClientParameters)
+        {
+            Timeout = TimeSpan.FromSeconds(30),
+        };
+        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
+        return httpClient;
+    }
 
     public static async Task InitializeAsync()
     {

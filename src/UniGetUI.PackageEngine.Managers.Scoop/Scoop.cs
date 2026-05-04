@@ -84,6 +84,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 
             Properties = new ManagerProperties
             {
+                Id = "scoop",
                 Name = "Scoop",
                 Description = CoreTools.Translate(
                     "Great repository of unknown but useful utilities and other interesting packages.<br>Contains: <b>Utilities, Command-line programs, General Software (extras bucket required)</b>"

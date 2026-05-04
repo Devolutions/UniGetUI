@@ -1,10 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
+    <Target Name="GenerateBuildInfo" BeforeTargets="BeforeBuild">
+        <Exec Command="pwsh -File generate-secrets.ps1 $(IntermediateOutputPath)" />
+        <ItemGroup>
+            <Compile Include="$(IntermediateOutputPath)Generated Files\Secrets.Generated.cs" />
+        </ItemGroup>
+    </Target>
+
     <PropertyGroup>
         <TargetFrameworks>$(SharedTargetFrameworks)</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Remove="Generated Files\**\*.cs" />
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <PackageReference Include="Octokit" Version="14.0.0" />
         <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
     </ItemGroup>
 
@@ -14,11 +23,14 @@
         <ProjectReference Include="..\UniGetUI.Core.IconStore\UniGetUI.Core.IconEngine.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.LanguageEngine\UniGetUI.Core.LanguageEngine.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Logger\UniGetUI.Core.Logging.csproj" />
+        <ProjectReference Include="..\UniGetUI.Core.SecureSettings\UniGetUI.Core.SecureSettings.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Settings\UniGetUI.Core.Settings.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Tools\UniGetUI.Core.Tools.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Enums\UniGetUI.PackageEngine.Structs.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Operations\UniGetUI.PackageEngine.Operations.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.PackageEngine\UniGetUI.PackageEngine.PEInterface.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.PackageManagerClasses\UniGetUI.PackageEngine.Classes.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Serializable\UniGetUI.PackageEngine.Serializable.csproj" />
     </ItemGroup>
 
     <ItemGroup>

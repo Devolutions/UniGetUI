@@ -32,10 +32,10 @@ internal static class AvaloniaCliHandler
     private enum ExitCode
     {
         Success = 0,
-        Failed = -1,
-        InvalidParameter = -1073741811,
-        NoSuchFile = -1073741809,
-        UnknownSettingsKey = -2,
+        Failed = 1,
+        InvalidParameter = 2,
+        NoSuchFile = 3,
+        UnknownSettingsKey = 4,
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ internal static class AvaloniaCliHandler
     {
         if (args.Contains(HELP))
         {
-            CoreTools.Launch("https://github.com/Devolutions/UniGetUI/blob/main/cli-arguments.md#unigetui-command-line-parameters");
+            CoreTools.Launch("https://github.com/Devolutions/UniGetUI/blob/main/docs/CLI.md#unigetui-command-line-interface");
             return (int)ExitCode.Success;
         }
 

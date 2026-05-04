@@ -12,6 +12,8 @@ using UniGetUI.Interface;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
+using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Infrastructure;
@@ -19,7 +21,7 @@ namespace UniGetUI.Avalonia.Infrastructure;
 internal static class AvaloniaBootstrapper
 {
     private static bool _hasStarted;
-    private static BackgroundApiRunner? _backgroundApi;
+    private static IpcServer? _ipcApi;
 
     public static async Task InitializeAsync()
     {
@@ -97,14 +99,14 @@ internal static class AvaloniaBootstrapper
     private static Task InitializeSharedServicesAsync()
     {
         CoreTools.ReloadLanguageEngineInstance();
-        MainWindow.ApplyProxyVariableToProcess();
+        ProcessEnvironmentConfigurator.ApplyProxySettingsToProcess();
         _ = Task.Run(AvaloniaAutoUpdater.UpdateCheckLoopAsync)
             .ContinueWith(
                 t => Logger.Error(t.Exception!),
                 CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted,
                 TaskScheduler.Default);
-        _ = Task.Run(InitializeBackgroundApiAsync)
+        _ = Task.Run(InitializeIpcApiAsync)
             .ContinueWith(
                 t => Logger.Error(t.Exception!),
                 CancellationToken.None,
@@ -147,46 +149,170 @@ internal static class AvaloniaBootstrapper
         await Task.Run(PEInterface.LoadManagers);
     }
 
-    private static async Task InitializeBackgroundApiAsync()
+    private static async Task InitializeIpcApiAsync()
     {
         try
         {
             if (Settings.Get(Settings.K.DisableApi))
                 return;
 
-            _backgroundApi = new BackgroundApiRunner();
+            _ipcApi = new IpcServer
+            {
+                SessionKind = IpcTransportOptions.GuiSessionKind,
+            };
+            _ipcApi.AppInfoProvider = () =>
+                Dispatcher.UIThread.InvokeAsync(GetAppInfo).GetAwaiter().GetResult();
+            _ipcApi.ShowAppHandler = () =>
+                Dispatcher.UIThread.InvokeAsync(ShowApp).GetAwaiter().GetResult();
+            _ipcApi.NavigateAppHandler = request =>
+                Dispatcher.UIThread.InvokeAsync(() => NavigateApp(request)).GetAwaiter().GetResult();
+            _ipcApi.QuitAppHandler = () =>
+                Dispatcher.UIThread.InvokeAsync(QuitApp).GetAwaiter().GetResult();
+            _ipcApi.ShowPackageHandler = request =>
+                Dispatcher.UIThread.InvokeAsync(() => ShowPackage(request)).GetAwaiter().GetResult();
 
-            _backgroundApi.OnOpenWindow += (_, _) =>
-                Dispatcher.UIThread.Post(() => MainWindow.Instance?.ShowFromTray());
-
-            _backgroundApi.OnOpenUpdatesPage += (_, _) =>
-                Dispatcher.UIThread.Post(() =>
-                {
-                    MainWindow.Instance?.Navigate(PageType.Updates);
-                    MainWindow.Instance?.ShowFromTray();
-                });
-
-            _backgroundApi.OnUpgradeAll += (_, _) =>
+            _ipcApi.OnUpgradeAll += (_, _) =>
                 Dispatcher.UIThread.Post(() => _ = AvaloniaPackageOperationHelper.UpdateAllAsync());
 
-            _backgroundApi.OnUpgradeAllForManager += (_, managerName) =>
+            _ipcApi.OnUpgradeAllForManager += (_, managerName) =>
                 Dispatcher.UIThread.Post(() =>
                     _ = AvaloniaPackageOperationHelper.UpdateAllForManagerAsync(managerName));
 
-            _backgroundApi.OnUpgradePackage += (_, packageId) =>
-                Dispatcher.UIThread.Post(() =>
-                    _ = AvaloniaPackageOperationHelper.UpdateForIdAsync(packageId));
-
-            await _backgroundApi.Start();
+            await _ipcApi.Start();
         }
         catch (Exception ex)
         {
-            Logger.Error("Could not initialize Background API:");
+            Logger.Error("Could not initialize IPC API:");
             Logger.Error(ex);
         }
     }
 
-    public static void StopBackgroundApi() => _backgroundApi?.Stop();
+    public static async Task StopIpcApiAsync()
+    {
+        if (_ipcApi is null)
+        {
+            return;
+        }
+
+        IpcServer ipcApi = _ipcApi;
+        _ipcApi = null;
+        await ipcApi.Stop().ConfigureAwait(false);
+    }
+
+    private static IpcAppInfo GetAppInfo()
+    {
+        MainWindow? window = MainWindow.Instance;
+        return new IpcAppInfo
+        {
+            Headless = false,
+            WindowAvailable = window is not null,
+            WindowVisible = window?.IsVisible ?? false,
+            CanShowWindow = window is not null,
+            CanNavigate = window is not null,
+            CanQuit = true,
+            CurrentPage = window is null ? "" : IpcAppPages.ToPageName(window.CurrentPage.ToString()),
+            SupportedPages = IpcAppPages.SupportedPages,
+        };
+    }
+
+    private static IpcCommandResult ShowApp()
+    {
+        MainWindow window = MainWindow.Instance
+            ?? throw new InvalidOperationException("The application window is not available.");
+        window.ShowFromTray();
+        return IpcCommandResult.Success("show-app");
+    }
+
+    private static IpcCommandResult NavigateApp(IpcAppNavigateRequest request)
+    {
+        MainWindow window = MainWindow.Instance
+            ?? throw new InvalidOperationException("The application window is not available.");
+        string page = IpcAppPages.NormalizePageName(request.Page);
+        var manager = ResolveManager(request.ManagerName);
+
+        switch (page)
+        {
+            case "discover":
+                window.Navigate(PageType.Discover);
+                break;
+            case "updates":
+                window.Navigate(PageType.Updates);
+                break;
+            case "installed":
+                window.Navigate(PageType.Installed);
+                break;
+            case "bundles":
+                window.Navigate(PageType.Bundles);
+                break;
+            case "settings":
+                window.Navigate(PageType.Settings);
+                break;
+            case "managers":
+                window.OpenManagerSettings(manager);
+                break;
+            case "own-log":
+                window.Navigate(PageType.OwnLog);
+                break;
+            case "manager-log":
+                window.OpenManagerLogs(manager);
+                break;
+            case "operation-history":
+                window.Navigate(PageType.OperationHistory);
+                break;
+            case "help":
+                window.ShowHelp(request.HelpAttachment ?? "");
+                break;
+            case "release-notes":
+                window.Navigate(PageType.ReleaseNotes);
+                break;
+            case "about":
+                window.Navigate(PageType.About);
+                break;
+            default:
+                throw new InvalidOperationException(
+                    $"Unsupported app page \"{request.Page}\"."
+                );
+        }
+
+        window.ShowFromTray();
+        return IpcCommandResult.Success("navigate-app");
+    }
+
+    private static IpcCommandResult ShowPackage(IpcPackageActionRequest request)
+    {
+        MainWindow window = MainWindow.Instance
+            ?? throw new InvalidOperationException("The application window is not available.");
+        IPackage package = IpcPackageApi.ResolvePackage(request);
+        window.ShowFromTray();
+        _ = new PackageDetailsWindow(package, OperationType.Install).ShowDialog(window);
+        return IpcCommandResult.Success("show-package");
+    }
+
+    private static IpcCommandResult QuitApp()
+    {
+        MainWindow window = MainWindow.Instance
+            ?? throw new InvalidOperationException("The application window is not available.");
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(150);
+            await Dispatcher.UIThread.InvokeAsync(window.QuitApplication);
+        });
+        return IpcCommandResult.Success("quit-app");
+    }
+
+    private static IPackageManager? ResolveManager(string? managerName)
+    {
+        if (string.IsNullOrWhiteSpace(managerName))
+        {
+            return null;
+        }
+
+        return PEInterface.Managers.FirstOrDefault(manager =>
+            manager.Id.Equals(managerName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException(
+                $"Unknown manager \"{managerName}\"."
+            );
+    }
 
     private static async Task LoadElevatorAsync()
     {

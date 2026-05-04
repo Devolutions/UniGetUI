@@ -29,6 +29,7 @@ public class Pacman : PackageManager
 
         Properties = new ManagerProperties
         {
+            Id = "pacman",
             Name = "Pacman",
             Description = CoreTools.Translate(
                 "The default package manager for Arch Linux and its derivatives.<br>Contains: <b>Arch Linux packages</b>"

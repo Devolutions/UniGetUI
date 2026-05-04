@@ -67,6 +67,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
 
             Properties = new ManagerProperties
             {
+                Id = "pip",
                 Name = "Pip",
                 Description = CoreTools.Translate(
                     "Python's library manager. Full of python libraries and other python-related utilities<br>Contains: <b>Python libraries and related utilities</b>"

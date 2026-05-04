@@ -8,6 +8,7 @@ namespace UniGetUI.PackageEngine.Operations;
 public class DownloadOperation : AbstractOperation
 {
     private readonly IPackage _package;
+    public IPackage Package => _package;
     private string downloadLocation;
     public string DownloadLocation
     {

@@ -843,7 +843,8 @@ namespace UniGetUI.Interface.SoftwarePages
             foreach (var possible_manager in PEInterface.Managers)
             {
                 if (
-                    possible_manager.Name == raw_package.ManagerName
+                    possible_manager.Id == raw_package.ManagerName
+                    || possible_manager.Name == raw_package.ManagerName
                     || possible_manager.DisplayName == raw_package.ManagerName
                 )
                 {

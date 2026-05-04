@@ -42,7 +42,7 @@ internal static class AvaloniaPackageOperationHelper
     public static async Task UpdateAllForManagerAsync(string managerName)
     {
         foreach (var pkg in UpgradablePackagesLoader.Instance.Packages
-            .Where(p => p.Manager.Name == managerName || p.Manager.DisplayName == managerName)
+            .Where(p => p.Manager.Id == managerName)
             .ToList())
         {
             if (pkg.Tag is PackageTag.BeingProcessed or PackageTag.OnQueue) continue;

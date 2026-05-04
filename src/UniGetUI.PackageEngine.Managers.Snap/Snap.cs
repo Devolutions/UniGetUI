@@ -38,6 +38,7 @@ public partial class Snap : PackageManager
 
         Properties = new ManagerProperties
         {
+            Id = "snap",
             Name = "Snap",
             Description = CoreTools.Translate(
                 "The universal Linux package manager by Canonical.<br>Contains: <b>Snap packages from the Snapcraft store</b>"

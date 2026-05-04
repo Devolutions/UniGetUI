@@ -1,7 +1,10 @@
+using System.Text.Json;
+using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface;
 
 namespace UniGetUI;
 
@@ -25,6 +28,7 @@ public static class CLIHandler
     public const string DISABLE_SECURE_SETTING = "--disable-secure-setting";
     public const string ENABLE_SECURE_SETTING_FOR_USER = SecureSettings.Args.ENABLE_FOR_USER;
     public const string DISABLE_SECURE_SETTING_FOR_USER = SecureSettings.Args.DISABLE_FOR_USER;
+    public const string HEADLESS = "--headless";
 
     private enum HRESULT
     {
@@ -33,12 +37,14 @@ public static class CLIHandler
         STATUS_INVALID_PARAMETER = -1073741811,
         STATUS_NO_SUCH_FILE = -1073741809,
         STATUS_UNKNOWN__SETTINGS_KEY = -2,
+        STATUS_BACKGROUND_API_UNAVAILABLE = -3,
+        STATUS_UNKNOWN_AUTOMATION_COMMAND = -4,
     }
 
     public static int Help()
     {
         var url =
-            "https://github.com/Devolutions/UniGetUI/blob/main/cli-arguments.md#unigetui-command-line-parameters";
+            "https://github.com/Devolutions/UniGetUI/blob/main/docs/CLI.md#unigetui-command-line-interface";
         CoreTools.Launch(url);
         return 0;
     }
@@ -393,5 +399,17 @@ public static class CLIHandler
         {
             return ex.HResult;
         }
+    }
+
+    public static int Automation()
+    {
+        return Automation(Environment.GetCommandLineArgs());
+    }
+
+    internal static int Automation(IReadOnlyList<string> args)
+    {
+        return IpcCliCommandRunner.RunAsync(args, Console.Out, Console.Error)
+            .GetAwaiter()
+            .GetResult();
     }
 }

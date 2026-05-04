@@ -61,7 +61,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
                     Name = Name,
                     Version = _version,
                     Source = Source.Name,
-                    ManagerName = Manager.Name,
+                    ManagerName = Manager.Id,
                     InstallationOptions = installation_options.Copy(),
                     Updates = updates_options.Copy(),
                 }

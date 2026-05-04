@@ -1,0 +1,99 @@
+{
+  "name": "linux-headless-ipc",
+  "daemon": {
+    "kind": "avalonia-dll",
+    "project": "UniGetUI.Avalonia\\UniGetUI.Avalonia.csproj",
+    "assemblyName": "UniGetUI.Avalonia"
+  },
+  "transport": {
+    "kind": "named-pipe",
+    "verifyNoTcpListener": false
+  },
+  "secureSettings": {
+    "allowSet": true,
+    "toggleKey": "AllowCustomManagerPaths",
+    "managerForExecutableOverride": "npm"
+  },
+  "uninstallValidationManagers": [
+    "pip"
+  ],
+  "packageManagers": [
+    {
+      "manager": "pip",
+      "sourceName": "pip",
+      "query": "cowsay",
+      "packageId": "cowsay",
+      "installVersion": "5.0",
+      "scope": "User",
+      "roles": [
+        "specific-update"
+      ]
+    },
+    {
+      "manager": "npm",
+      "sourceName": "npm",
+      "query": "cowsay",
+      "packageId": "cowsay",
+      "installVersion": "1.5.0",
+      "scope": "Global",
+      "roles": [
+        "bundle",
+        "update-manager",
+        "reinstall",
+        "repair",
+        "toggle-manager",
+        "update-all"
+      ]
+    }
+  ],
+  "queueOperations": [
+    {
+      "manager": "pip",
+      "sourceName": "pip",
+      "packageId": "awscli",
+      "target": "download",
+      "query": "awscli"
+    },
+    {
+      "manager": "npm",
+      "sourceName": "npm",
+      "packageId": "typescript",
+      "target": "download",
+      "query": "typescript"
+    }
+  ],
+  "excludedCommands": [
+    {
+      "command": "manager action",
+      "reason": "Current manager actions are Windows-specific and system-changing, so they are intentionally excluded from Linux CI."
+    },
+    {
+      "command": "source add",
+      "reason": "The deterministic Linux manager matrix does not include a manager with reliable CI-safe custom source mutation."
+    },
+    {
+      "command": "source remove",
+      "reason": "The deterministic Linux manager matrix does not include a manager with reliable CI-safe custom source mutation."
+    },
+    {
+      "command": "operation cancel",
+      "reason": "Queued package downloads complete too quickly on current Linux CI runners to guarantee a stable cancellable operation window."
+    },
+    {
+      "command": "operation retry",
+      "reason": "A deterministic retry scenario depends on first forcing a stable failed or canceled operation, which is not yet reliable in CI."
+    },
+    {
+      "command": "operation reorder",
+      "reason": "Queued package downloads complete too quickly on current Linux CI runners to guarantee a stable reorderable operation window."
+    },
+    {
+      "command": "backup github *",
+      "reason": "GitHub device-flow authentication is intentionally excluded from deterministic CI."
+    },
+    {
+      "command": "backup cloud *",
+      "reason": "Cloud backup flows depend on external authenticated GitHub state and are intentionally excluded from deterministic CI."
+    }
+  ]
+}

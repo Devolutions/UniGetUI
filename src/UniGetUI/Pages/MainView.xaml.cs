@@ -58,6 +58,7 @@ namespace UniGetUI.Interface
         private PageType OldPage_t = PageType.Null;
         private PageType CurrentPage_t = PageType.Null;
         private readonly List<PageType> NavigationHistory = new();
+        public PageType CurrentPage => CurrentPage_t;
 
         private readonly AutoSuggestBox MainTextBlock;
         public event EventHandler<bool>? CanGoBackChanged;

@@ -87,7 +87,7 @@
     </Project>
   </Folder>
   <Folder Name="/UniGetUI.Interface/">
-    <Project Path="UniGetUI.Interface.BackgroundApi/UniGetUI.Interface.BackgroundApi.csproj">
+    <Project Path="UniGetUI.Interface.IpcApi/UniGetUI.Interface.IpcApi.csproj">
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>

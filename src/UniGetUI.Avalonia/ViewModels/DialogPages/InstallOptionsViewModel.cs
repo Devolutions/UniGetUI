@@ -123,10 +123,10 @@ public partial class InstallOptionsViewModel : ObservableObject
     [ObservableProperty] private bool _skipMinorChecked;
     [ObservableProperty] private bool _autoUpdateChecked;
 
-    partial void OnAdminCheckedChanged(bool _) => Refresh();
-    partial void OnInteractiveCheckedChanged(bool _) => Refresh();
-    partial void OnSkipHashCheckedChanged(bool _) => Refresh();
-    partial void OnSelectedVersionChanged(string? _) => Refresh();
+    partial void OnAdminCheckedChanged(bool value) => Refresh();
+    partial void OnInteractiveCheckedChanged(bool value) => Refresh();
+    partial void OnSkipHashCheckedChanged(bool value) => Refresh();
+    partial void OnSelectedVersionChanged(string? value) => Refresh();
 
     // ── Architecture / Scope / Location tab ───────────────────────────────────
     [ObservableProperty] private bool _archEnabled;
@@ -140,17 +140,17 @@ public partial class InstallOptionsViewModel : ObservableObject
     [ObservableProperty] private string _locationText = "";
     [ObservableProperty] private bool _locationEnabled;
 
-    partial void OnSelectedArchChanged(string? _) => Refresh();
-    partial void OnSelectedScopeChanged(string? _) => Refresh();
+    partial void OnSelectedArchChanged(string? value) => Refresh();
+    partial void OnSelectedScopeChanged(string? value) => Refresh();
 
     // ── CLI params tab ────────────────────────────────────────────────────────
     [ObservableProperty] private string _paramsInstall = "";
     [ObservableProperty] private string _paramsUpdate = "";
     [ObservableProperty] private string _paramsUninstall = "";
 
-    partial void OnParamsInstallChanged(string _) => Refresh();
-    partial void OnParamsUpdateChanged(string _) => Refresh();
-    partial void OnParamsUninstallChanged(string _) => Refresh();
+    partial void OnParamsInstallChanged(string value) => Refresh();
+    partial void OnParamsUpdateChanged(string value) => Refresh();
+    partial void OnParamsUninstallChanged(string value) => Refresh();
 
     // ── Pre/Post commands tab ─────────────────────────────────────────────────
     [ObservableProperty] private string _preInstallText = "";

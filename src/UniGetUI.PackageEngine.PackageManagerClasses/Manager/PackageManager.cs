@@ -20,6 +20,10 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public ManagerProperties Properties { get; set; } = new(IsDummy: true);
         public ManagerCapabilities Capabilities { get; set; } = new(IsDummy: true);
         public ManagerStatus Status { get; set; } = new() { Found = false };
+        public string Id
+        {
+            get => string.IsNullOrWhiteSpace(Properties.Id) ? Name : Properties.Id;
+        }
         public string Name
         {
             get => Properties.Name;

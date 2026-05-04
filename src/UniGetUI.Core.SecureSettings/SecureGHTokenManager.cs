@@ -6,6 +6,7 @@ namespace UniGetUI.Core.SecureSettings
     public static class SecureGHTokenManager
     {
         private const string GitHubResourceName = "UniGetUI/GitHubAccessToken";
+        private const string CredentialNamespaceEnvironmentVariable = "UNIGETUI_GITHUB_TOKEN_NAMESPACE";
         private static readonly string UserName = Environment.UserName;
 
         public static void StoreToken(string token)
@@ -21,7 +22,7 @@ namespace UniGetUI.Core.SecureSettings
                 if (GetToken() is not null)
                     DeleteToken(); // Delete any old token(s)
 
-                CoreCredentialStore.SetSecret(GitHubResourceName, UserName, token);
+                CoreCredentialStore.SetSecret(GetScopedResourceName(), UserName, token);
                 Logger.Info("GitHub access token stored/updated securely.");
             }
             catch (Exception ex)
@@ -37,7 +38,7 @@ namespace UniGetUI.Core.SecureSettings
         {
             try
             {
-                string? token = CoreCredentialStore.GetSecret(GitHubResourceName, UserName);
+                string? token = CoreCredentialStore.GetSecret(GetScopedResourceName(), UserName);
                 if (token is null)
                 {
                     return null;
@@ -57,7 +58,7 @@ namespace UniGetUI.Core.SecureSettings
         {
             try
             {
-                CoreCredentialStore.DeleteSecret(GitHubResourceName, UserName);
+                CoreCredentialStore.DeleteSecret(GetScopedResourceName(), UserName);
                 Logger.Info("GitHub access token deleted.");
             }
             catch (Exception ex)
@@ -67,6 +68,17 @@ namespace UniGetUI.Core.SecureSettings
                 );
                 Logger.Error(ex);
             }
+        }
+
+        private static string GetScopedResourceName()
+        {
+            string? credentialNamespace = Environment.GetEnvironmentVariable(
+                CredentialNamespaceEnvironmentVariable
+            );
+
+            return string.IsNullOrWhiteSpace(credentialNamespace)
+                ? GitHubResourceName
+                : $"{GitHubResourceName}/{credentialNamespace.Trim()}";
         }
     }
 }

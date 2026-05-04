@@ -97,6 +97,7 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
 
             Properties = new ManagerProperties
             {
+                Id = "chocolatey",
                 Name = "Chocolatey",
                 Description = CoreTools.Translate(
                     "The classical package manager for windows. You'll find everything there. <br>Contains: <b>General Software</b>"

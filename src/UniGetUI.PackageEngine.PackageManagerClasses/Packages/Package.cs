@@ -348,7 +348,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
                 Name = Name,
                 Version = VersionString,
                 Source = Source.Name,
-                ManagerName = Manager.Name,
+                ManagerName = Manager.Id,
                 InstallationOptions = await InstallOptionsFactory.LoadForPackageAsync(this),
                 Updates = new SerializableUpdatesOptions
                 {

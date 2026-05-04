@@ -41,6 +41,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
 
             Properties = new ManagerProperties
             {
+                Id = "pwsh",
                 Name = "PowerShell7",
                 DisplayName = "PowerShell 7.x",
                 Description = CoreTools.Translate(

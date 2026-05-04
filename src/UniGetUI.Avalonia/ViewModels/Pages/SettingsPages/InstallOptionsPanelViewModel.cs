@@ -97,13 +97,13 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
     partial void OnLocationSelectEnabledChanged(bool value) => OnPropertyChanged(nameof(LocationOpacity));
 
     // Mark HasChanges when user edits options (guards against firing during load)
-    partial void OnAdminCheckedChanged(bool _) => HasChanges = !IsLoading;
-    partial void OnInteractiveCheckedChanged(bool _) => HasChanges = !IsLoading;
-    partial void OnSkipHashCheckedChanged(bool _) => HasChanges = !IsLoading;
-    partial void OnPreReleaseCheckedChanged(bool _) => HasChanges = !IsLoading;
-    partial void OnUninstallPreviousCheckedChanged(bool _) => HasChanges = !IsLoading;
-    partial void OnSelectedArchitectureChanged(string? _) => HasChanges = !IsLoading;
-    partial void OnSelectedScopeChanged(string? _) => HasChanges = !IsLoading;
+    partial void OnAdminCheckedChanged(bool value) => HasChanges = !IsLoading;
+    partial void OnInteractiveCheckedChanged(bool value) => HasChanges = !IsLoading;
+    partial void OnSkipHashCheckedChanged(bool value) => HasChanges = !IsLoading;
+    partial void OnPreReleaseCheckedChanged(bool value) => HasChanges = !IsLoading;
+    partial void OnUninstallPreviousCheckedChanged(bool value) => HasChanges = !IsLoading;
+    partial void OnSelectedArchitectureChanged(string? value) => HasChanges = !IsLoading;
+    partial void OnSelectedScopeChanged(string? value) => HasChanges = !IsLoading;
 
     public InstallOptionsPanelViewModel(IPackageManager manager)
     {

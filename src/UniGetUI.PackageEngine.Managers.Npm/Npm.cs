@@ -33,6 +33,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
 
             Properties = new ManagerProperties
             {
+                Id = "npm",
                 Name = "Npm",
                 Description = CoreTools.Translate(
                     "Node JS's package manager. Full of libraries and other utilities that orbit the javascript world<br>Contains: <b>Node javascript libraries and other related utilities</b>"

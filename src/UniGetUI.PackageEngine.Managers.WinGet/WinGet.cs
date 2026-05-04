@@ -93,6 +93,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
             Properties = new ManagerProperties
             {
+                Id = "winget",
                 Name = "Winget",
                 DisplayName = "WinGet",
                 Description = CoreTools.Translate(

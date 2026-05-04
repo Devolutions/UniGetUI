@@ -12,6 +12,7 @@ namespace UniGetUI.PackageEngine.Operations
         protected abstract void Initialize();
 
         protected IManagerSource Source;
+        public IManagerSource ManagerSource => Source;
         public bool ForceAsAdministrator { get; private set; }
 
         public SourceOperation(IManagerSource source, IReadOnlyList<InnerOperation>? preOps)

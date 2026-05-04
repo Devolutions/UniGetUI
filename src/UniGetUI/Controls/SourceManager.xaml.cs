@@ -27,8 +27,7 @@ namespace UniGetUI.Interface.Widgets
 
         public void Remove(object sender, RoutedEventArgs e)
         {
-            var op = new OperationControl(new RemoveSourceOperation(Source));
-            MainApp.Operations._operationList.Add(op);
+            var op = MainApp.Operations.Add(new RemoveSourceOperation(Source));
             op.Operation.OperationSucceeded += (_, _) =>
             {
                 Parent.RemoveSourceItem(this);

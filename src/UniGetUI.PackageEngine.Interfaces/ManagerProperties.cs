@@ -8,6 +8,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         private const IconType DefaultIconId = (IconType)'\uE916';
 
         public bool IsDummy = false;
+        public string Id { get; set; } = "";
         public string Name { get; set; } = "Unset";
         public string? DisplayName { get; set; }
         public string Description { get; set; } = "Unset";

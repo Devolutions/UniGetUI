@@ -30,6 +30,7 @@ public class Apt : PackageManager
 
         Properties = new ManagerProperties
         {
+            Id = "apt",
             Name = "Apt",
             Description = CoreTools.Translate(
                 "The default package manager for Debian/Ubuntu-based Linux distributions.<br>Contains: <b>Debian/Ubuntu packages</b>"

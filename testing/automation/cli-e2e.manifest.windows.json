@@ -1,0 +1,105 @@
+{
+  "name": "windows-headless-ipc",
+  "daemon": {
+    "kind": "winui-exe",
+    "project": "UniGetUI\\UniGetUI.csproj",
+    "assemblyName": "UniGetUI"
+  },
+  "transport": {
+    "kind": "named-pipe",
+    "verifyNoTcpListener": true
+  },
+  "secureSettings": {
+    "allowSet": false,
+    "toggleKey": "AllowCustomManagerPaths",
+    "managerForExecutableOverride": "npm"
+  },
+  "packageManagers": [
+    {
+      "manager": "dotnet-tool",
+      "sourceName": "nuget.org",
+      "query": "dotnetsay",
+      "packageId": "dotnetsay",
+      "installVersion": "2.1.4",
+      "scope": "Global",
+      "roles": [
+        "bundle",
+        "update-manager",
+        "reinstall",
+        "repair"
+      ]
+    },
+    {
+      "manager": "npm",
+      "sourceName": "npm",
+      "query": "cowsay",
+      "packageId": "cowsay",
+      "installVersion": "1.5.0",
+      "scope": "Global",
+      "roles": [
+        "specific-update",
+        "toggle-manager",
+        "update-all",
+        "update-discovery"
+      ]
+    }
+  ],
+  "queueOperations": [
+    {
+      "manager": "npm",
+      "sourceName": "npm",
+      "packageId": "typescript",
+      "target": "download",
+      "query": "typescript"
+    }
+  ],
+  "uninstallValidationManagers": [
+    "dotnet-tool"
+  ],
+  "excludedCommands": [
+    {
+      "command": "manager action",
+      "reason": "Windows manager actions require elevated system changes that are not deterministic on hosted runners."
+    },
+    {
+      "command": "settings secure set",
+      "reason": "Secure setting writes on Windows elevate via runas, which is not deterministic in GitHub-hosted CI."
+    },
+    {
+      "command": "source add",
+      "reason": "The deterministic Windows manager matrix does not include a manager with reliable CI-safe custom source mutation."
+    },
+    {
+      "command": "source remove",
+      "reason": "The deterministic Windows manager matrix does not include a manager with reliable CI-safe custom source mutation."
+    },
+    {
+      "command": "operation cancel",
+      "reason": "Queued package downloads complete too quickly on current Windows CI runners to guarantee a stable cancellable operation window."
+    },
+    {
+      "command": "operation retry",
+      "reason": "A deterministic retry scenario depends on first forcing a stable failed or canceled operation, which is not yet reliable in CI."
+    },
+    {
+      "command": "operation reorder",
+      "reason": "Queued package downloads complete too quickly on current Windows CI runners to guarantee a stable reorderable operation window."
+    },
+    {
+      "command": "manager set-executable",
+      "reason": "Custom manager path coverage depends on secure setting writes, which are skipped on Windows CI."
+    },
+    {
+      "command": "manager clear-executable",
+      "reason": "Custom manager path coverage depends on secure setting writes, which are skipped on Windows CI."
+    },
+    {
+      "command": "backup github *",
+      "reason": "GitHub device-flow authentication is intentionally excluded from deterministic CI."
+    },
+    {
+      "command": "backup cloud *",
+      "reason": "Cloud backup flows depend on external authenticated GitHub state and are intentionally excluded from deterministic CI."
+    }
+  ]
+}

@@ -61,7 +61,7 @@ Use these rules when changing Avalonia diagnostics/devtools behavior:
 - Default policy: enabled in `Debug`, disabled in `Release`.
 - `src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj` must condition `AvaloniaUI.DiagnosticsSupport` on `$(EnableAvaloniaDiagnostics)`.
 - Compile-time diagnostics code in `src/UniGetUI.Avalonia/Program.cs` must be gated by `#if AVALONIA_DIAGNOSTICS_ENABLED` (not `#if DEBUG`).
-- Runtime controls are developer-only and intentionally not listed in `cli-arguments.md`.
+- Runtime controls are developer-only and intentionally not listed in `docs/CLI.md`.
 - Runtime precedence in `Program.cs`: CLI flags > `UNIGETUI_AVALONIA_DEVTOOLS` environment variable > `Auto` default.
 - Accepted runtime env/CLI values for mode parsing: `auto`, `enabled`, `disabled`, `on`, `off`, `true`, `false`, `1`, `0`.
 - `Auto` mode must remain WSL-safe (DevTools disabled by default on WSL).

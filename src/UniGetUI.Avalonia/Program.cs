@@ -3,6 +3,7 @@ using Avalonia;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
+using UniGetUI.Interface;
 
 namespace UniGetUI.Avalonia;
 
@@ -21,11 +22,30 @@ sealed class Program
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             CrashHandler.ReportFatalException((Exception)e.ExceptionObject);
 
+        if (ShouldPrepareCliConsole(args))
+        {
+            WindowsConsoleHost.PrepareCliIO();
+        }
+
         // Handle pre-UI CLI arguments (settings manipulation, help, etc.) without
         // launching the Avalonia UI. Mirrors WinUI's EntryPoint.cs dispatch logic.
         if (AvaloniaCliHandler.HandlePreUiArgs(args) is { } exitCode)
         {
             Environment.Exit(exitCode);
+            return;
+        }
+
+        if (IpcCliSyntax.IsIpcCommand(args))
+        {
+            Environment.ExitCode = IpcCliCommandRunner.RunAsync(args, Console.Out, Console.Error)
+                .GetAwaiter()
+                .GetResult();
+            return;
+        }
+
+        if (HeadlessModeOptions.IsHeadless(args))
+        {
+            Environment.ExitCode = HeadlessDaemonHost.RunAsync().GetAwaiter().GetResult();
             return;
         }
 
@@ -35,6 +55,11 @@ sealed class Program
             return;
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
+
+    private static bool ShouldPrepareCliConsole(IReadOnlyList<string> args)
+    {
+        return IpcCliSyntax.HasVerbCommand(args);
     }
 
     private static bool TryRegisterSingleInstance(string[] args)

@@ -11,6 +11,7 @@ namespace UniGetUI.PackageEngine.Interfaces
         public ManagerProperties Properties { get; }
         public ManagerCapabilities Capabilities { get; }
         public ManagerStatus Status { get; }
+        public string Id { get; }
         public string Name { get; }
         public string DisplayName { get; }
         public IManagerSource DefaultSource { get; }

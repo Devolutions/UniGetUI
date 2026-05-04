@@ -49,7 +49,8 @@ Read more in the [Devolutions announcement](https://devolutions.net/blog/2026/03
  - [Contributors](#contributors)
  - [Screenshots](#screenshots)
  - [Frequently Asked Questions](#frequently-asked-questions)
- - [Command-line Arguments](cli-arguments.md)
+ - [CLI reference](docs/CLI.md)
+ - [IPC reference](docs/IPC.md)
 
 ## Installation
 <p>There are multiple ways to install UniGetUI — choose whichever one you prefer!</p>
@@ -185,6 +186,6 @@ Microsoft has implemented a few checks for the software available on Winget to m
 
 <br><p align="center"><i>Check out the <a href="https://github.com/Devolutions/UniGetUI/wiki">Wiki</a> for more information!</i></p>
 
-## Command-line parameters:
+## Command-line interface:
 
-Check out the full list of parameters [here](cli-arguments.md)
+Check out the CLI reference [here](docs/CLI.md) and the IPC reference [here](docs/IPC.md).

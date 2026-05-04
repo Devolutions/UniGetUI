@@ -11,6 +11,7 @@ using Microsoft.Windows.AppNotifications.Builder;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface;
 using UniGetUI.Interface.Enums;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.Interface.Widgets;
@@ -396,6 +397,10 @@ public partial class OperationControl : INotifyPropertyChanged
         MainApp.Operations._operationList.Remove(this);
         while (AbstractOperation.OperationQueue.Remove(Operation))
             ;
+        if (Operation.Status is not (OperationStatus.InQueue or OperationStatus.Running))
+        {
+            IpcOperationApi.ForgetTracking(Operation.Metadata.Identifier);
+        }
     }
 
     private string _buttonText;

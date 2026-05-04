@@ -41,6 +41,7 @@ namespace UniGetUI.Interface
         private bool HasLoadedLastGeometry;
 
         public MainView NavigationPage = null!;
+        public bool IsInterfaceVisible => MainContentFrame.Content is not null;
         public bool BlockLoading;
         private string _currentSubtitle = "";
         private int _currentSubtitlePxLength;
@@ -368,6 +369,15 @@ namespace UniGetUI.Interface
                     {
                         /* Skip */
                     }
+                    else if (
+                        param
+                        is IpcTransportOptions.TransportArgument
+                            or IpcTransportOptions.TcpPortArgument
+                            or IpcTransportOptions.NamedPipeArgument
+                    )
+                    {
+                        _ = ParametersToProcess.Count > 0 ? ParametersToProcess.Dequeue() : null;
+                    }
                     else
                     {
                         Logger.Warn("Unknown parameter " + param);
@@ -680,6 +690,12 @@ namespace UniGetUI.Interface
             };
 
             SetMinimizable(true);
+        }
+
+        public void ShowFromTray()
+        {
+            AppWindow.Show();
+            Activate();
         }
 
         public void ApplyTheme()

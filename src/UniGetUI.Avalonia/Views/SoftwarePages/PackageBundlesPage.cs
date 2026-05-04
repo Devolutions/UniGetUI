@@ -466,7 +466,7 @@ public class PackageBundlesPage : AbstractPackagesPage
         IPackageManager? manager = null;
         foreach (var m in PEInterface.Managers)
         {
-            if (m.Name == raw.ManagerName || m.DisplayName == raw.ManagerName)
+            if (m.Id == raw.ManagerName || m.Name == raw.ManagerName || m.DisplayName == raw.ManagerName)
             { manager = m; break; }
         }
 

@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
+using UniGetUI.Interface;
 
 namespace UniGetUI
 {
@@ -14,68 +15,83 @@ namespace UniGetUI
             // Having an async main method breaks WebView2
             try
             {
+                if (ShouldPrepareCliConsole(args))
+                {
+                    WindowsConsoleHost.PrepareCliIO();
+                }
+
                 if (args.Contains(CLIHandler.HELP))
                 {
-                    CLIHandler.Help();
-                    Environment.Exit(0);
+                    Environment.ExitCode = CLIHandler.Help();
+                    return;
                 }
                 else if (args.Contains(CLIHandler.MIGRATE_WINGETUI_TO_UNIGETUI))
                 {
-                    int ret = CLIHandler.WingetUIToUniGetUIMigrator();
-                    Environment.Exit(ret);
+                    Environment.ExitCode = CLIHandler.WingetUIToUniGetUIMigrator();
+                    return;
                 }
                 else if (
                     args.Contains(CLIHandler.UNINSTALL_UNIGETUI)
                     || args.Contains(CLIHandler.UNINSTALL_WINGETUI)
                 )
                 {
-                    int ret = CLIHandler.UninstallUniGetUI();
-                    Environment.Exit(ret);
+                    Environment.ExitCode = CLIHandler.UninstallUniGetUI();
+                    return;
                 }
                 else if (args.Contains(CLIHandler.IMPORT_SETTINGS))
                 {
-                    int ret = CLIHandler.ImportSettings();
-                    Environment.Exit(ret);
+                    Environment.ExitCode = CLIHandler.ImportSettings();
+                    return;
                 }
                 else if (args.Contains(CLIHandler.EXPORT_SETTINGS))
                 {
-                    int ret = CLIHandler.ExportSettings();
-                    Environment.Exit(ret);
+                    Environment.ExitCode = CLIHandler.ExportSettings();
+                    return;
                 }
                 else if (args.Contains(CLIHandler.ENABLE_SETTING))
                 {
-                    int ret = CLIHandler.EnableSetting();
-                    Environment.Exit(ret);
+                    Environment.ExitCode = CLIHandler.EnableSetting();
+                    return;
                 }
                 else if (args.Contains(CLIHandler.DISABLE_SETTING))
                 {
-                    int ret = CLIHandler.DisableSetting();
-                    Environment.Exit(ret);
+                    Environment.ExitCode = CLIHandler.DisableSetting();
+                    return;
                 }
                 else if (args.Contains(CLIHandler.SET_SETTING_VAL))
                 {
-                    int ret = CLIHandler.SetSettingsValue();
-                    Environment.Exit(ret);
+                    Environment.ExitCode = CLIHandler.SetSettingsValue();
+                    return;
                 }
                 else if (args.Contains(CLIHandler.ENABLE_SECURE_SETTING))
                 {
-                    int ret = CLIHandler.EnableSecureSetting();
-                    Environment.Exit(ret);
+                    Environment.ExitCode = CLIHandler.EnableSecureSetting();
+                    return;
                 }
                 else if (args.Contains(CLIHandler.DISABLE_SECURE_SETTING))
                 {
-                    int ret = CLIHandler.DisableSecureSetting();
-                    Environment.Exit(ret);
+                    Environment.ExitCode = CLIHandler.DisableSecureSetting();
+                    return;
                 }
                 else if (args.Contains(CLIHandler.ENABLE_SECURE_SETTING_FOR_USER))
                 {
-                    int ret = CLIHandler.EnableSecureSettingForUser();
-                    Environment.Exit(ret);
+                    Environment.ExitCode = CLIHandler.EnableSecureSettingForUser();
+                    return;
                 }
                 else if (args.Contains(CLIHandler.DISABLE_SECURE_SETTING_FOR_USER))
                 {
-                    int ret = CLIHandler.DisableSecureSettingForUser();
-                    Environment.Exit(ret);
+                    Environment.ExitCode = CLIHandler.DisableSecureSettingForUser();
+                    return;
+                }
+                else if (IpcCliSyntax.IsIpcCommand(args))
+                {
+                    Environment.ExitCode = CLIHandler.Automation(args);
+                    return;
+                }
+                else if (args.Contains(CLIHandler.HEADLESS))
+                {
+                    Environment.ExitCode = WinUiHeadlessHost.RunAsync(args).GetAwaiter().GetResult();
+                    return;
                 }
                 else if (!ModernAppLauncher.IsClassicModeEnabled())
                 {
@@ -91,6 +107,11 @@ namespace UniGetUI
             {
                 CrashHandler.ReportFatalException(e);
             }
+        }
+
+        private static bool ShouldPrepareCliConsole(IReadOnlyList<string> args)
+        {
+            return IpcCliSyntax.HasVerbCommand(args);
         }
 
         /// <summary>

@@ -23,13 +23,13 @@ public partial class SidebarViewModel : ViewModelBase
     partial void OnUpdatesBadgeCountChanged(int value) =>
         UpdatesBadgeVisible = value > 0;
 
-    partial void OnUpdatesBadgeVisibleChanged(bool _)
+    partial void OnUpdatesBadgeVisibleChanged(bool value)
     {
         OnPropertyChanged(nameof(UpdatesBadgeExpandedVisible));
         OnPropertyChanged(nameof(UpdatesBadgeCompactVisible));
     }
 
-    partial void OnBundlesBadgeVisibleChanged(bool _)
+    partial void OnBundlesBadgeVisibleChanged(bool value)
     {
         OnPropertyChanged(nameof(BundlesBadgeExpandedVisible));
         OnPropertyChanged(nameof(BundlesBadgeCompactVisible));

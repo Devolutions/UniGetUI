@@ -40,6 +40,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
             Properties = new ManagerProperties
             {
+                Id = "winps",
                 Name = "PowerShell",
                 DisplayName = "PowerShell 5.x",
                 Description = CoreTools.Translate(

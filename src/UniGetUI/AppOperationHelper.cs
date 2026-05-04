@@ -35,7 +35,13 @@ public partial class MainApp
 
         public static ObservableCollection<OperationControl> _operationList = new();
 
-        public static void Add(AbstractOperation op) => _operationList.Add(new(op));
+        public static OperationControl Add(AbstractOperation op)
+        {
+            IpcOperationApi.Track(op);
+            var control = new OperationControl(op);
+            _operationList.Add(control);
+            return control;
+        }
 
         public static void Remove(OperationControl control) => _operationList.Remove(control);
 
@@ -360,8 +366,7 @@ public partial class MainApp
             foreach (IPackage package in UpgradablePackagesLoader.Instance.Packages)
             {
                 if (
-                    package.Manager.Name != managerName
-                    && package.Manager.DisplayName != managerName
+                    package.Manager.Id != managerName
                 )
                     continue; // Package not from the desired package manager
 

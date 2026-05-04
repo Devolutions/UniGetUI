@@ -47,6 +47,7 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
 
             Properties = new ManagerProperties
             {
+                Id = "dotnet-tool",
                 Name = ".NET Tool",
                 Description = CoreTools.Translate(
                     "A repository full of tools and executables designed with Microsoft's .NET ecosystem in mind.<br>Contains: <b>.NET related tools and scripts</b>"

@@ -73,6 +73,7 @@ public partial class Cargo : PackageManager
 
         Properties = new ManagerProperties
         {
+            Id = "cargo",
             Name = "Cargo",
             Description = CoreTools.Translate(
                 "The Rust package manager.<br>Contains: <b>Rust libraries and programs written in Rust</b>"

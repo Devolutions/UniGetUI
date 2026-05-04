@@ -33,6 +33,7 @@ public class Dnf : PackageManager
 
         Properties = new ManagerProperties
         {
+            Id = "dnf",
             Name = "Dnf",
             Description = CoreTools.Translate(
                 "The default package manager for RHEL/Fedora-based Linux distributions.<br>Contains: <b>RPM packages</b>"

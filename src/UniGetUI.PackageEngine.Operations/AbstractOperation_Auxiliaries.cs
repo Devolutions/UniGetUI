@@ -5,6 +5,12 @@ public abstract partial class AbstractOperation
     public static readonly List<AbstractOperation> OperationQueue = [];
     public static int MAX_OPERATIONS;
 
+    /// <summary>
+    /// Raised on the thread that completed the last operation in <see cref="OperationQueue"/>.
+    /// Subscribers should not do heavy work here — fire-and-forget async is fine.
+    /// </summary>
+    public static event EventHandler<EventArgs>? QueueDrained;
+
     public static class RetryMode
     {
         public const string NoRetry = "";

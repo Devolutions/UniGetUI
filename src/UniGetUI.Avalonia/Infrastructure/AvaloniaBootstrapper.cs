@@ -12,6 +12,7 @@ using UniGetUI.Interface;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
+using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
@@ -112,6 +113,7 @@ internal static class AvaloniaBootstrapper
         TelemetryHandler.Configure(
             Secrets.GetOpenSearchUsername(),
             Secrets.GetOpenSearchPassword());
+        AbstractOperation.QueueDrained += (_, _) => _ = TelemetryHandler.FlushPackageEventsAsync();
         _ = TelemetryHandler.InitializeAsync()
             .ContinueWith(
                 t => Logger.Error(t.Exception!),

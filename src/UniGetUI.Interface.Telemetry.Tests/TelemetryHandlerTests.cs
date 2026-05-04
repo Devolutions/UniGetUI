@@ -169,10 +169,13 @@ public sealed class TelemetryHandlerTests : IDisposable
             );
         });
 
-        using var json = JsonDocument.Parse(captured.Body);
+        // Body is NDJSON: {"index":{}}\n{event}\n
+        string[] lines = captured.Body.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(2, lines.Length);
+        using var json = JsonDocument.Parse(lines[1]);
         JsonElement root = json.RootElement;
 
-        Assert.Contains("package_events", captured.RequestUri.AbsoluteUri);
+        Assert.Contains("package_events/_bulk", captured.RequestUri.AbsoluteUri);
         Assert.Equal("install", root.GetProperty("operation").GetString());
         Assert.Equal(package.Id, root.GetProperty("packageId").GetString());
         Assert.Equal(package.Manager.Name, root.GetProperty("managerName").GetString());
@@ -202,12 +205,51 @@ public sealed class TelemetryHandlerTests : IDisposable
             TelemetryHandler.PackageDetails(package, "DIRECT_LINK");
         });
 
-        using var json = JsonDocument.Parse(captured.Body);
+        // Body is NDJSON: {"index":{}}\n{event}\n
+        string[] lines = captured.Body.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(2, lines.Length);
+        using var json = JsonDocument.Parse(lines[1]);
         JsonElement root = json.RootElement;
 
         Assert.Equal("details", root.GetProperty("operation").GetString());
         Assert.Equal("DIRECT_LINK", root.GetProperty("eventSource").GetString());
         Assert.False(root.TryGetProperty("operationResult", out _));
+    }
+
+    [Fact]
+    public async Task UpdatePackages_BatchesManyEventsIntoOneBulkRequest()
+    {
+        TelemetryHandler.Configure("telemetry-user", "telemetry-pass");
+
+        int requestCount = 0;
+        string lastBody = string.Empty;
+        TaskCompletionSource<string> completionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        TelemetryHandler.TestSendAsyncOverride = async request =>
+        {
+            Interlocked.Increment(ref requestCount);
+            lastBody = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync();
+            completionSource.TrySetResult(lastBody);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        };
+
+        var packages = Enumerable.Range(1, 5).Select(i => new Package(
+            $"Package {i}", $"pkg.{i}", "1.0", new NullSource("src"), NullPackageManager.Instance
+        )).ToArray();
+
+        foreach (var pkg in packages)
+            TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
+
+        await TelemetryHandler.FlushPackageEventsAsync();
+        string body = await completionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(1, requestCount);
+
+        // NDJSON body must have 2 lines per event: action + document
+        string[] lines = body.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(10, lines.Length); // 5 events × 2 lines
+        for (int i = 0; i < lines.Length; i += 2)
+            Assert.Equal("{\"index\":{}}", lines[i]);
     }
 
     [Fact]
@@ -266,7 +308,7 @@ public sealed class TelemetryHandlerTests : IDisposable
         CaptureRequestAsync(() =>
         {
             trigger();
-            return Task.CompletedTask;
+            return TelemetryHandler.FlushPackageEventsAsync();
         });
 
     private static async Task<IReadOnlyList<CapturedRequest>> CaptureRequestsAsync(

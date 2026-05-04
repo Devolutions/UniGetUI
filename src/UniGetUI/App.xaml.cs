@@ -17,6 +17,7 @@ using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageOperations;
 using UniGetUI.Pages.DialogPages;
 using UniGetUI.Services;
 using Windows.ApplicationModel.Activation;
@@ -384,6 +385,7 @@ namespace UniGetUI
                 TelemetryHandler.Configure(
                     Secrets.GetOpenSearchUsername(),
                     Secrets.GetOpenSearchPassword());
+                AbstractOperation.QueueDrained += (_, _) => _ = TelemetryHandler.FlushPackageEventsAsync();
                 _ = TelemetryHandler.InitializeAsync();
                 _ = IconDatabase.Instance.LoadIconAndScreenshotsDatabaseAsync();
 

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -72,6 +73,8 @@ public static class TelemetryHandler
 #endif
 
     private static readonly HttpClient _httpClient = CreateHttpClient();
+
+    private static readonly ConcurrentQueue<UniGetUIPackageEvent> _pendingPackageEvents = new();
 
     private static HttpClient CreateHttpClient()
     {
@@ -181,6 +184,7 @@ public static class TelemetryHandler
         _openSearchPassword = "";
         _credentialsWarningLogged = false;
         TestSendAsyncOverride = null;
+        while (_pendingPackageEvents.TryDequeue(out _)) { }
     }
 
     // -------------------------------------------------------------------------
@@ -189,57 +193,107 @@ public static class TelemetryHandler
         IPackage package,
         TEL_OP_RESULT status,
         TEL_InstallReferral source
-    ) => _ = TrackPackageEventAsync(package, "install", status, source.ToString());
+    ) => EnqueuePackageEvent(package, "install", status, source.ToString());
 
     public static void UpdatePackage(IPackage package, TEL_OP_RESULT status) =>
-        _ = TrackPackageEventAsync(package, "update", status);
+        EnqueuePackageEvent(package, "update", status);
 
     public static void DownloadPackage(
         IPackage package,
         TEL_OP_RESULT status,
         TEL_InstallReferral source
-    ) => _ = TrackPackageEventAsync(package, "download", status, source.ToString());
+    ) => EnqueuePackageEvent(package, "download", status, source.ToString());
 
     public static void UninstallPackage(IPackage package, TEL_OP_RESULT status) =>
-        _ = TrackPackageEventAsync(package, "uninstall", status);
+        EnqueuePackageEvent(package, "uninstall", status);
 
     public static void PackageDetails(IPackage package, string eventSource) =>
-        _ = TrackPackageEventAsync(package, "details", eventSource: eventSource);
+        EnqueuePackageEvent(package, "details", eventSource: eventSource);
 
-    private static async Task TrackPackageEventAsync(
+    private static void EnqueuePackageEvent(
         IPackage package,
         string operation,
         TEL_OP_RESULT? result = null,
         string? eventSource = null)
     {
+        if (result is null && eventSource is null)
+            throw new ArgumentException("result and eventSource cannot both be null");
+        if (Settings.Get(Settings.K.DisableTelemetry))
+            return;
+
+        _pendingPackageEvents.Enqueue(new UniGetUIPackageEvent
+        {
+            InstallID = GetRandomizedId(),
+            Locale = LanguageEngine.SelectedLocale,
+            Application = BuildApplicationInfo(),
+            Platform = BuildPlatformInfo(),
+            Operation = operation,
+            PackageId = package.Id,
+            ManagerName = package.Manager.Name,
+            SourceName = package.Source.Name,
+            OperationResult = result?.ToString(),
+            EventSource = eventSource,
+        });
+    }
+
+    /// <summary>
+    /// Drains the pending package-event queue and sends everything in a single
+    /// bulk request. Called from QueueDrained event subscribers and on app shutdown.
+    /// </summary>
+    public static async Task FlushPackageEventsAsync()
+    {
+        if (_pendingPackageEvents.IsEmpty)
+            return;
+
+        var batch = new List<UniGetUIPackageEvent>();
+        while (_pendingPackageEvents.TryDequeue(out UniGetUIPackageEvent? ev))
+            batch.Add(ev);
+
+        if (batch.Count > 0)
+            await PostBulkPackageEventsAsync(batch);
+    }
+
+    private static async Task PostBulkPackageEventsAsync(IReadOnlyList<UniGetUIPackageEvent> events)
+    {
+        if (!CredentialsConfigured())
+            return;
+
         try
         {
-            if (result is null && eventSource is null)
-                throw new ArgumentException("result and eventSource cannot both be null");
-            if (Settings.Get(Settings.K.DisableTelemetry))
-                return;
-
             await CoreTools.WaitForInternetConnection();
 
-            var ev = new UniGetUIPackageEvent
-            {
-                InstallID = GetRandomizedId(),
-                Locale = LanguageEngine.SelectedLocale,
-                Application = BuildApplicationInfo(),
-                Platform = BuildPlatformInfo(),
-                Operation = operation,
-                PackageId = package.Id,
-                ManagerName = package.Manager.Name,
-                SourceName = package.Source.Name,
-                OperationResult = result?.ToString(),
-                EventSource = eventSource,
-            };
+            string fullIndex = IndexPrefix + IndexPackage;
 
-            await PostToOpenSearchAsync(IndexPackage, ev, TelemetrySerializerContext.Trimming.UniGetUIPackageEvent);
+            var sb = new StringBuilder();
+            foreach (UniGetUIPackageEvent ev in events)
+            {
+                sb.Append("{\"index\":{}}\n");
+                sb.Append(JsonSerializer.Serialize(ev, TelemetrySerializerContext.BulkTrimming.UniGetUIPackageEvent));
+                sb.Append('\n');
+            }
+
+            string credentials = Convert.ToBase64String(
+                Encoding.UTF8.GetBytes($"{_openSearchUsername}:{_openSearchPassword}"));
+
+            using var content = new StringContent(sb.ToString(), Encoding.UTF8, "application/x-ndjson");
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{OpenSearchUrl}/{fullIndex}/_bulk")
+            {
+                Content = content,
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+
+            HttpResponseMessage response = TestSendAsyncOverride is { } sendAsync
+                ? await sendAsync(request)
+                : await _httpClient.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+                Logger.Debug($"[Telemetry] Sent {events.Count} package event(s) to {fullIndex} (bulk)");
+            else
+                Logger.Warn($"[Telemetry] Bulk {fullIndex} returned {(int)response.StatusCode}");
         }
         catch (Exception ex)
         {
-            Logger.Error($"[Telemetry] Hard crash in TrackPackageEventAsync ({operation})");
+            Logger.Error("[Telemetry] Hard crash posting bulk package events");
             Logger.Error(ex);
         }
     }
@@ -373,5 +427,14 @@ internal partial class TelemetrySerializerContext : JsonSerializerContext
         new(new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
         {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        });
+
+    // Compact (non-indented) variant required for NDJSON bulk payloads:
+    // OpenSearch _bulk API requires each document to be on a single line.
+    internal static readonly TelemetrySerializerContext BulkTrimming =
+        new(new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            WriteIndented = false,
         });
 }

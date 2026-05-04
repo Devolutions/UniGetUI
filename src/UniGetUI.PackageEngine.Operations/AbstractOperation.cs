@@ -243,6 +243,11 @@ public abstract partial class AbstractOperation : IDisposable
                 LineType.ProgressIndicator
             );
         }
+        finally
+        {
+            if (OperationQueue.Count == 0)
+                QueueDrained?.Invoke(null, EventArgs.Empty);
+        }
     }
 
     private async Task<OperationVeredict> _runOperation()

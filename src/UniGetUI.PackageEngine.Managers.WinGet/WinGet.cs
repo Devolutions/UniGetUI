@@ -22,6 +22,8 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
     {
         internal const string CliToolPreferenceEnvironmentVariable = "UNIGETUI_WINGET_CLI";
         internal const string ComApiPolicyEnvironmentVariable = "UNIGETUI_WINGET_COM";
+        private const string SystemWinGetExecutableName = "winget.exe";
+        private const string PingetExecutableName = "pinget.exe";
 
         public static string[] FALSE_PACKAGE_NAMES = ["", "e(s)", "have", "the", "Id"];
         public static string[] FALSE_PACKAGE_IDS =
@@ -274,24 +276,38 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             WinGetCliToolPreference cliToolPreference = WinGetCliToolPreference.Default
         )
         {
-            IReadOnlyList<string> systemWinGetCandidates = findExecutables("winget.exe");
-            bool bundledPingetExists = fileExists(bundledPingetPath);
+            List<string> candidates = [];
 
-            List<string> candidates = cliToolPreference switch
+            if (cliToolPreference is not WinGetCliToolPreference.BundledPinget)
             {
-                WinGetCliToolPreference.BundledPinget => bundledPingetExists
-                    ? [bundledPingetPath]
-                    : [],
-                WinGetCliToolPreference.SystemWinGet => [.. systemWinGetCandidates],
-                _ => [.. systemWinGetCandidates],
-            };
+                candidates.AddRange(findExecutables(SystemWinGetExecutableName));
+            }
 
-            if (cliToolPreference is WinGetCliToolPreference.Default && bundledPingetExists)
+            if (cliToolPreference is not WinGetCliToolPreference.SystemWinGet)
             {
-                candidates.Add(bundledPingetPath);
+                candidates.AddRange(
+                    FindPingetExecutableFiles(findExecutables, fileExists, bundledPingetPath)
+                );
             }
 
             return candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+
+        private static IEnumerable<string> FindPingetExecutableFiles(
+            Func<string, IReadOnlyList<string>> findExecutables,
+            Func<string, bool> fileExists,
+            string bundledPingetPath
+        )
+        {
+            if (fileExists(bundledPingetPath))
+            {
+                yield return bundledPingetPath;
+            }
+
+            foreach (string pingetExecutablePath in findExecutables(PingetExecutableName))
+            {
+                yield return pingetExecutablePath;
+            }
         }
 
         internal static string GetBundledPingetExecutablePath()
@@ -326,7 +342,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
             if (SelectedCliToolKind == WinGetCliToolKind.BundledPinget)
             {
-                Logger.Warn("Using bundled Pinget CLI tool.");
+                Logger.Warn("Using Pinget CLI tool.");
                 WinGetHelper.Instance = new PingetCliHelper(this, path);
                 return;
             }
@@ -473,15 +489,29 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 : value.Trim().Replace("-", "").Replace("_", "").ToLowerInvariant();
         }
 
-        private static WinGetCliToolKind GetCliToolKind(string executablePath)
+        internal static WinGetCliToolKind GetCliToolKind(string executablePath)
         {
-            return Path.GetFullPath(executablePath)
+            return IsPingetExecutablePath(executablePath)
+                ? WinGetCliToolKind.BundledPinget
+                : WinGetCliToolKind.SystemWinGet;
+        }
+
+        private static bool IsPingetExecutablePath(string executablePath)
+        {
+            if (string.IsNullOrWhiteSpace(executablePath))
+            {
+                return false;
+            }
+
+            return Path.GetFileName(executablePath).Equals(
+                    PingetExecutableName,
+                    StringComparison.OrdinalIgnoreCase
+                )
+                || Path.GetFullPath(executablePath)
                     .Equals(
                         Path.GetFullPath(GetBundledPingetExecutablePath()),
                         StringComparison.OrdinalIgnoreCase
-                    )
-                ? WinGetCliToolKind.BundledPinget
-                : WinGetCliToolKind.SystemWinGet;
+                    );
         }
 
         protected override void _loadManagerVersion(out string version)
@@ -514,7 +544,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
             string rawVersion = process.StandardOutput.ReadToEnd().Trim();
             version = usesPingetHelper
-                ? $"Bundled Pinget CLI Version: {rawVersion}"
+                ? $"Pinget CLI Version: {rawVersion}"
                 : $"System WinGet (CLI) Version: {rawVersion}";
 
             if (usesPingetHelper)

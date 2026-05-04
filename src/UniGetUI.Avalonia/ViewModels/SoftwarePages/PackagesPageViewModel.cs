@@ -160,6 +160,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     protected ConcurrentDictionary<IPackageManager, SourceTreeNode> RootNodeForManager = new();
     protected ConcurrentDictionary<IManagerSource, SourceTreeNode> NodesForSources = new();
     private readonly SourceTreeNode _localPackagesNode = new() { PackageName = "local" };
+    private bool _isSynchronizingSourceSelection;
 
     // ─── Events (replace abstract methods) ───────────────────────────────────
     public event Action<ReloadReason>? PackagesLoaded;
@@ -457,14 +458,17 @@ public partial class PackagesPageViewModel : ViewModelBase
             _ => pkg => FilterHelpers.NameOrIdContains(pkg, query, filters),
         };
 
-        var selectedSources = GetSelectedSourceNodes();
+        var (visibleSources, visibleManagers) = GetSelectedSourceFilters();
         Func<IPackage, bool> sourceFilter = SourceNodes.Count == 0
             ? _ => true   // sources not yet loaded — show everything
-            : selectedSources.Count == 0
+            : visibleSources.Count == 0 && visibleManagers.Count == 0
                 ? _ => false  // sources loaded but none selected — show nothing
-                : pkg => selectedSources.Any(n =>
-                    n.PackageName.TrimEnd('.', ' ') == pkg.Source.Manager.DisplayName
-                    || n.PackageName.TrimEnd('.', ' ') == pkg.Source.Name);
+                : pkg =>
+                    visibleSources.Contains(pkg.Source)
+                    || (
+                        !pkg.Manager.Capabilities.SupportsCustomSources
+                        && visibleManagers.Contains(pkg.Manager)
+                    );
 
         var results = FilteredPackages.ApplyToList(
             _wrappedPackages.Where(w => matchFunc(w.Package) && sourceFilter(w.Package))
@@ -597,11 +601,12 @@ public partial class PackagesPageViewModel : ViewModelBase
                 Version = package.VersionString,
                 Source = package.Source.Name
             };
-            item.PropertyChanged += OnRootSourceNodePropertyChanged;
             NodesForSources.TryAdd(source, item);
 
             if (source.IsVirtualManager)
             {
+                item.IsSelected = _localPackagesNode.IsSelected;
+                item.PropertyChanged += OnRootSourceNodePropertyChanged;
                 _localPackagesNode.Children.Add(item);
                 if (!GetAllSourceNodes().Contains(_localPackagesNode))
                 {
@@ -611,7 +616,10 @@ public partial class PackagesPageViewModel : ViewModelBase
             }
             else
             {
-                RootNodeForManager[source.Manager].Children.Add(item);
+                var rootNode = RootNodeForManager[source.Manager];
+                item.IsSelected = rootNode.IsSelected;
+                item.PropertyChanged += OnRootSourceNodePropertyChanged;
+                rootNode.Children.Add(item);
             }
         }
     }
@@ -641,9 +649,65 @@ public partial class PackagesPageViewModel : ViewModelBase
     private void OnRootSourceNodePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(SourceTreeNode.IsSelected))
+        {
+            if (sender is SourceTreeNode node && SourceNodes.Contains(node))
+            {
+                _isSynchronizingSourceSelection = true;
+                try
+                {
+                    foreach (var child in node.Children)
+                    {
+                        child.IsSelected = node.IsSelected;
+                    }
+                }
+                finally
+                {
+                    _isSynchronizingSourceSelection = false;
+                }
+            }
+
+            if (_isSynchronizingSourceSelection)
+                return;
+
             FilterPackages();
+        }
     }
     private List<SourceTreeNode> GetAllSourceNodes() => SourceNodes.ToList();
+
+    private (List<IManagerSource> Sources, List<IPackageManager> Managers) GetSelectedSourceFilters()
+    {
+        var visibleSources = new List<IManagerSource>();
+        var visibleManagers = new List<IPackageManager>();
+
+        foreach (var node in GetSelectedSourceNodes())
+        {
+            var source = NodesForSources.FirstOrDefault(x => ReferenceEquals(x.Value, node)).Key;
+            if (source is not null)
+            {
+                if (!visibleSources.Contains(source))
+                    visibleSources.Add(source);
+                continue;
+            }
+
+            var manager = RootNodeForManager.FirstOrDefault(x => ReferenceEquals(x.Value, node)).Key;
+            if (manager is null)
+                continue;
+
+            if (!visibleManagers.Contains(manager))
+                visibleManagers.Add(manager);
+
+            if (!manager.Capabilities.SupportsCustomSources || node.Children.Count > 0)
+                continue;
+
+            foreach (IManagerSource managerSource in manager.SourcesHelper.Factory.GetAvailableSources())
+            {
+                if (!visibleSources.Contains(managerSource))
+                    visibleSources.Add(managerSource);
+            }
+        }
+
+        return (visibleSources, visibleManagers);
+    }
 
     private List<SourceTreeNode> GetSelectedSourceNodes()
     {

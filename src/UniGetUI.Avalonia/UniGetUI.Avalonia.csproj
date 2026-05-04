@@ -23,9 +23,51 @@
         <ApplicationManifest Condition="$([MSBuild]::IsOSPlatform('Windows'))">app.manifest</ApplicationManifest>
     </PropertyGroup>
 
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+        <PingetCliProject>$(MSBuildThisFileDirectory)..\UniGetUI.Pinget.Cli\UniGetUI.Pinget.Cli.csproj</PingetCliProject>
+        <PingetCliRuntimeIdentifier Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</PingetCliRuntimeIdentifier>
+        <PingetCliRuntimeIdentifier Condition="'$(PingetCliRuntimeIdentifier)' == '' and '$(Platform)' == 'arm64'">win-arm64</PingetCliRuntimeIdentifier>
+        <PingetCliRuntimeIdentifier Condition="'$(PingetCliRuntimeIdentifier)' == ''">win-x64</PingetCliRuntimeIdentifier>
+        <PingetCliPublishDir>$(MSBuildProjectDirectory)\obj\$(Platform)\$(Configuration)\BundledPinget\$(PingetCliRuntimeIdentifier)\</PingetCliPublishDir>
+        <PingetCliExecutablePath>$(PingetCliPublishDir)pinget.exe</PingetCliExecutablePath>
+        <PingetCliNativeSqlitePath>$(PingetCliPublishDir)e_sqlite3.dll</PingetCliNativeSqlitePath>
+    </PropertyGroup>
+
     <PropertyGroup Condition="'$(EnableAvaloniaDiagnostics)' == 'true'">
         <DefineConstants>$(DefineConstants);AVALONIA_DIAGNOSTICS_ENABLED</DefineConstants>
     </PropertyGroup>
+
+    <Target
+        Name="PublishBundledPingetCli"
+        AfterTargets="Build;Publish"
+        Condition="'$(DesignTimeBuild)' != 'true' and $([MSBuild]::IsOSPlatform('Windows'))"
+    >
+        <MSBuild
+            Projects="$(PingetCliProject)"
+            Targets="Restore;Publish"
+            Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=net10.0;RuntimeIdentifier=$(PingetCliRuntimeIdentifier);SelfContained=true;PublishSingleFile=true;PublishTrimmed=false;PublishDir=$(PingetCliPublishDir);AppendRuntimeIdentifierToOutputPath=false"
+        />
+        <ItemGroup>
+            <PingetCliOutputFiles Include="$(PingetCliExecutablePath)" Condition="Exists('$(PingetCliExecutablePath)')" />
+            <PingetCliOutputFiles Include="$(PingetCliNativeSqlitePath)" Condition="Exists('$(PingetCliNativeSqlitePath)')" />
+            <PingetCliOutputFiles Include="$(TargetDir)runtimes\$(PingetCliRuntimeIdentifier)\native\e_sqlite3.dll" Condition="!Exists('$(PingetCliNativeSqlitePath)') and Exists('$(TargetDir)runtimes\$(PingetCliRuntimeIdentifier)\native\e_sqlite3.dll')" />
+            <PingetCliPublishOutputFiles Include="$(PingetCliExecutablePath)" Condition="Exists('$(PingetCliExecutablePath)')" />
+            <PingetCliPublishOutputFiles Include="$(PingetCliNativeSqlitePath)" Condition="Exists('$(PingetCliNativeSqlitePath)')" />
+            <PingetCliPublishOutputFiles Include="$(PublishDir)runtimes\$(PingetCliRuntimeIdentifier)\native\e_sqlite3.dll" Condition="!Exists('$(PingetCliNativeSqlitePath)') and Exists('$(PublishDir)runtimes\$(PingetCliRuntimeIdentifier)\native\e_sqlite3.dll')" />
+        </ItemGroup>
+        <Copy
+            SourceFiles="@(PingetCliOutputFiles)"
+            DestinationFolder="$(TargetDir)"
+            SkipUnchangedFiles="true"
+            Condition="'$(TargetDir)' != ''"
+        />
+        <Copy
+            SourceFiles="@(PingetCliPublishOutputFiles)"
+            DestinationFolder="$(PublishDir)"
+            SkipUnchangedFiles="true"
+            Condition="'$(PublishDir)' != '' and Exists('$(PublishDir)')"
+        />
+    </Target>
 
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="12.0.0-rc1" />

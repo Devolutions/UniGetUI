@@ -355,17 +355,54 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
 
         switch (manager.Name)
         {
-            case "WinGet":
+            case "Winget":
                 disableNotifsCard.CornerRadius = new CornerRadius(8, 8, 0, 0);
                 disableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);
                 ExtraControls.Children.Add(disableNotifsCard);
+
+                var wingetCliToolPreference = new ComboboxCard
+                {
+                    Text = CoreTools.Translate("WinGet command-line tool"),
+                    Description = CoreTools.Translate(
+                        "Choose which command-line tool UniGetUI uses for WinGet operations when the COM API is not used"
+                    ),
+                    SettingName = CoreSettings.K.WinGetCliToolPreference,
+                    CornerRadius = new CornerRadius(0),
+                    BorderThickness = new Thickness(1, 0, 1, 1),
+                };
+                wingetCliToolPreference.AddItem("Default", "default");
+                wingetCliToolPreference.AddItem("WinGet", "winget", false);
+                wingetCliToolPreference.AddItem("Pinget", "pinget", false);
+                wingetCliToolPreference.ShowAddedItems();
+                wingetCliToolPreference.ValueChanged += (_, _) =>
+                    _ = ViewModel.ReloadManagerCommand.ExecuteAsync(null);
+                ExtraControls.Children.Add(wingetCliToolPreference);
+
+                var wingetComApiPolicy = new ComboboxCard
+                {
+                    Text = CoreTools.Translate("WinGet COM API"),
+                    Description = CoreTools.Translate(
+                        "Choose whether UniGetUI can use the WinGet COM API before falling back to the command-line tool"
+                    ),
+                    SettingName = CoreSettings.K.WinGetComApiPolicy,
+                    CornerRadius = new CornerRadius(0),
+                    BorderThickness = new Thickness(1, 0, 1, 1),
+                };
+                wingetComApiPolicy.AddItem("Default", "default");
+                wingetComApiPolicy.AddItem("Enabled", "enabled");
+                wingetComApiPolicy.AddItem("Disabled", "disabled");
+                wingetComApiPolicy.ShowAddedItems();
+                wingetComApiPolicy.ValueChanged += (_, _) =>
+                    _ = ViewModel.ReloadManagerCommand.ExecuteAsync(null);
+                ExtraControls.Children.Add(wingetComApiPolicy);
 
                 var wingetResetBtn = new ButtonCard
                 {
                     Text = CoreTools.Translate("Reset WinGet")
                         + $" ({CoreTools.Translate("This may help if no packages are listed")})",
                     ButtonText = CoreTools.AutoTranslated("Reset"),
-                    CornerRadius = new CornerRadius(0, 0, 8, 8),
+                    CornerRadius = new CornerRadius(0),
+                    BorderThickness = new Thickness(1, 0, 1, 1),
                 };
                 wingetResetBtn.Click += (_, _) => _ = AvaloniaPackageOperationHelper.HandleBrokenWinGetAsync();
                 ExtraControls.Children.Add(wingetResetBtn);
@@ -374,7 +411,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 {
                     Text = CoreTools.Translate("Force install location parameter when updating packages with custom locations"),
                     SettingName = CoreSettings.K.WinGetForceLocationOnUpdate,
-                    CornerRadius = new CornerRadius(0),
+                    CornerRadius = new CornerRadius(0, 0, 8, 8),
                     BorderThickness = new Thickness(1, 0, 1, 1),
                 });
 

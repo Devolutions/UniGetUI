@@ -205,6 +205,30 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void FindCandidateExecutableFilesCanUsePathPingetWithoutSystemWinGetFallback()
+    {
+        const string bundledPinget = @"C:\Program Files\UniGetUI\pinget.exe";
+        const string pathPinget = @"C:\Tools\pinget.exe";
+
+        var candidates = WinGet.FindCandidateExecutableFiles(
+            static executableName =>
+                executableName switch
+                {
+                    "winget.exe" => throw new InvalidOperationException(
+                        "System WinGet should not be queried in Pinget mode."
+                    ),
+                    "pinget.exe" => [pathPinget],
+                    _ => [],
+                },
+            static _ => false,
+            bundledPinget,
+            WinGetCliToolPreference.BundledPinget
+        );
+
+        Assert.Equal([pathPinget], candidates);
+    }
+
+    [Fact]
     public void FindCandidateExecutableFilesReturnsEmptyWhenNoCliToolExists()
     {
         var candidates = WinGet.FindCandidateExecutableFiles(
@@ -290,6 +314,18 @@ public sealed class WinGetManagerTests : IDisposable
         );
 
         Assert.Equal((WinGetCliToolPreference)expectedPreference, preference);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Program Files\UniGetUI\pinget.exe", 1)]
+    [InlineData(@"C:\Tools\pinget.exe", 1)]
+    [InlineData(@"C:\WindowsApps\winget.exe", 0)]
+    public void GetCliToolKindRecognizesPingetExecutableName(
+        string executablePath,
+        int expectedKind
+    )
+    {
+        Assert.Equal((WinGetCliToolKind)expectedKind, WinGet.GetCliToolKind(executablePath));
     }
 
     [Theory]

@@ -525,7 +525,7 @@
   "Do not automatically install updates when the battery saver is on": "Ne pas installer automatiquement les mises à jour lorsque l'économiseur de batterie est activé",
   "Only show updates that are at least the specified number of days old": "Afficher uniquement les mises à jour âgées d'au moins le nombre de jours indiqué",
   "Change how UniGetUI handles install, update and uninstall operations.": "Modifier la façon dont UniGetUI gère les opérations d'installation, de mise à jour et de désinstallation.",
-  "Navigation": "Volet de navigation",
+  "Navigation": "Navigation",
   "Quit UniGetUI": "Quitter UniGetUI",
   "Filters": "Filtres",
   "Sources": "Sources",

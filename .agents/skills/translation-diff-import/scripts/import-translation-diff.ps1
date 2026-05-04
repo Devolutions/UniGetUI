@@ -22,6 +22,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot '..\..\translation-diff-export\scripts\TranslationDiff.JsonTools.ps1')
+. ([System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..\..\scripts\translation\Languages\IntentionalSourceEqualValues.ps1')))
 
 function Assert-PatchCompatibility {
     param(
@@ -30,6 +31,9 @@ function Assert-PatchCompatibility {
 
         [Parameter(Mandatory = $true)]
         [System.Collections.IDictionary]$TranslatedMap,
+
+        [Parameter(Mandatory = $true)]
+        [string]$LanguageCode,
 
         [Parameter(Mandatory = $true)]
         [bool]$AllowUnchanged
@@ -49,7 +53,7 @@ function Assert-PatchCompatibility {
         $sourceValue = [string]$SourceMap[$key]
         Assert-TranslationStructure -SourceValue $sourceValue -TranslatedValue $translatedValue -Key $key
 
-        if (-not $AllowUnchanged -and $translatedValue -ceq $sourceValue) {
+        if (-not $AllowUnchanged -and $translatedValue -ceq $sourceValue -and -not (Test-IntentionalSourceEqualValue -LanguageCode $LanguageCode -SourceValue $sourceValue -TargetValue $translatedValue)) {
             throw "Translated patch still contains the English source value for key '$key'. Use -AllowUnchangedValues only when that is intentional."
         }
     }
@@ -99,6 +103,13 @@ if (-not (Test-Path -Path $translatedPatchPath -PathType Leaf)) {
 $targetPath = Get-FullPath -Path $TargetJson
 $targetMap = Read-OrderedJsonMap -Path $targetPath
 $translatedPatchMap = Read-OrderedJsonMap -Path $translatedPatchPath
+$targetBaseName = [System.IO.Path]::GetFileNameWithoutExtension($targetPath)
+$languageCode = if ($targetBaseName.StartsWith('lang_', [System.StringComparison]::Ordinal)) {
+    $targetBaseName.Substring(5)
+}
+else {
+    ''
+}
 
 if ([string]::IsNullOrWhiteSpace($NeutralJson)) {
     $NeutralJson = Join-Path (Split-Path -Path $targetPath -Parent) 'lang_en.json'
@@ -118,7 +129,7 @@ if (-not [string]::IsNullOrWhiteSpace($SourcePatch)) {
     }
 
     $sourceMap = Read-OrderedJsonMap -Path $sourcePatchPath
-    Assert-PatchCompatibility -SourceMap $sourceMap -TranslatedMap $translatedPatchMap -AllowUnchanged:$AllowUnchangedValues.IsPresent
+    Assert-PatchCompatibility -SourceMap $sourceMap -TranslatedMap $translatedPatchMap -LanguageCode $languageCode -AllowUnchanged:$AllowUnchangedValues.IsPresent
 }
 
 foreach ($entry in $translatedPatchMap.GetEnumerator()) {

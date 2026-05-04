@@ -300,6 +300,8 @@ function Test-IntentionalSourceEqualValue {
     return $false
 }
 
+. (Join-Path $PSScriptRoot 'Languages\IntentionalSourceEqualValues.ps1')
+
 function Get-TranslationStatusRow {
     param(
         [Parameter(Mandatory = $true)]

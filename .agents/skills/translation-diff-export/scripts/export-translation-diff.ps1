@@ -286,8 +286,13 @@ function Test-IntentionalSourceEqualValue {
     return $false
 }
 
+. ([System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..\..\scripts\translation\Languages\IntentionalSourceEqualValues.ps1')))
+
 function Sync-TranslatedWorkingCopy {
     param(
+        [Parameter(Mandatory = $true)]
+        [string]$LanguageCode,
+
         [Parameter(Mandatory = $true)]
         [System.Collections.IDictionary]$CurrentSourceMap,
 
@@ -313,7 +318,9 @@ function Sync-TranslatedWorkingCopy {
         }
 
         if ($translatedValue -ceq $sourceValue) {
-            continue
+            if (-not (Test-IntentionalSourceEqualValue -LanguageCode $LanguageCode -SourceValue $sourceValue -TargetValue $translatedValue)) {
+                continue
+            }
         }
 
         if ($null -ne $PreviousSourceMap -and $PreviousSourceMap.Contains($key)) {
@@ -473,7 +480,7 @@ else {
 
 Write-OrderedJsonMap -Path $sourcePatchPath -Map $sourcePatchMap
 Write-OrderedJsonMap -Path $referencePatchPath -Map $referencePatchMap
-Sync-TranslatedWorkingCopy -CurrentSourceMap $sourcePatchMap -TranslatedPatchPath $translatedPatchPath -PreviousSourceMap $previousSourceMap
+Sync-TranslatedWorkingCopy -LanguageCode $languageCode -CurrentSourceMap $sourcePatchMap -TranslatedPatchPath $translatedPatchPath -PreviousSourceMap $previousSourceMap
 
 $mergedTargetPath = Join-Path ([System.IO.Path]::GetDirectoryName($targetPath)) ('{0}.merged.json' -f [System.IO.Path]::GetFileNameWithoutExtension($targetPath))
 $skillsRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))

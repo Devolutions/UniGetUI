@@ -717,7 +717,7 @@
   "version {0}": "versione {0}",
   "[RAN AS ADMINISTRATOR]": "[ESEGUITO COME AMMINISTRATORE]",
   "Portable mode": "Modalità portatile",
-  "DEBUG BUILD": "BUILD DI DEBUG",
+  "DEBUG BUILD": "DEBUG BUILD",
   "Here you can change UniGetUI's behaviour regarding the following shortcuts. Checking a shortcut will make UniGetUI delete it if if gets created on a future upgrade. Unchecking it will keep the shortcut intact": "Qui puoi modificare il comportamento di UniGetUI relativamente ai collegamenti seguenti. Selezionando un collegamento UniGetUI lo eliminerà se verrà creato in un futuro aggiornamento. Deselezionandolo, il collegamento rimarrà intatto",
   "Manual scan": "Scansione manuale",
   "Existing shortcuts on your desktop will be scanned, and you will need to pick which ones to keep and which ones to remove.": "Verranno analizzati i collegamenti presenti sul desktop e sarà necessario scegliere quali mantenere e quali rimuovere.",

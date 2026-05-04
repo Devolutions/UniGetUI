@@ -111,9 +111,14 @@ function Test-IntentionalSourceEqualValue {
     )
 
     if ($SourceValue -in @(
+        'MSI',
+        'MSIX',
         'OK',
         'UniGetUI',
-        'UniGetUI - {0} {1}'
+        'UniGetUI - {0} {1}',
+        'your@email.com',
+        '{0}: {1}',
+        '{0}: {1}, {2}'
     )) {
         return $true
     }

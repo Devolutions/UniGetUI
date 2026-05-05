@@ -6,6 +6,25 @@
              xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
              x:DataType="vm:InfoBarViewModel">
 
+    <UserControl.Styles>
+        <Style Selector="Border.severity-success">
+            <Setter Property="Background"   Value="{DynamicResource StatusSuccessBackground}"/>
+            <Setter Property="BorderBrush"  Value="{DynamicResource StatusSuccessBorderBrush}"/>
+        </Style>
+        <Style Selector="Border.severity-error">
+            <Setter Property="Background"   Value="{DynamicResource StatusErrorBackground}"/>
+            <Setter Property="BorderBrush"  Value="{DynamicResource StatusErrorBorderBrush}"/>
+        </Style>
+        <Style Selector="Border.severity-warning">
+            <Setter Property="Background"   Value="{DynamicResource WarningBannerBackground}"/>
+            <Setter Property="BorderBrush"  Value="{DynamicResource WarningBannerBorderBrush}"/>
+        </Style>
+        <Style Selector="Border.severity-info">
+            <Setter Property="Background"   Value="{DynamicResource StatusInfoBackground}"/>
+            <Setter Property="BorderBrush"  Value="{DynamicResource StatusInfoBorderBrush}"/>
+        </Style>
+    </UserControl.Styles>
+
     <Border x:Name="BodyBorder"
             IsVisible="{Binding IsOpen}"
             BorderThickness="0,1,0,1"

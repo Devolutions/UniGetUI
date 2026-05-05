@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>$(SharedTargetFrameworks)</TargetFrameworks>
+        <RootNamespace>UniGetUI.PackageEngine.AgentBroker</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Devolutions.Now.Policy.Api" Version="2026.7.13" />
+        <PackageReference Include="Devolutions.Now.Policy.Client" Version="2026.7.13" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\UniGetUI.Core.Logger\UniGetUI.Core.Logging.csproj" />
+        <ProjectReference Include="..\UniGetUI.Core.Settings\UniGetUI.Core.Settings.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Enums\UniGetUI.PackageEngine.Structs.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Interfaces\UniGetUI.PackageEngine.Interfaces.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Serializable\UniGetUI.PackageEngine.Serializable.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
+    </ItemGroup>
+
+</Project>

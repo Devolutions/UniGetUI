@@ -306,6 +306,7 @@ jobs:
       UNIGETUI_OPENSEARCH_USERNAME: ${{ secrets.UNIGETUI_OPENSEARCH_USERNAME }}
       UNIGETUI_OPENSEARCH_PASSWORD: ${{ secrets.UNIGETUI_OPENSEARCH_PASSWORD }}
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+      SIGNING_IDENTITY: 'Developer ID Application: Devolutions inc.'
     strategy:
       fail-fast: false
       matrix:
@@ -363,13 +364,30 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install create-dmg
 
+      - name: Check out Devolutions/actions
+        if: ${{ runner.os == 'macOS' && fromJSON(needs.preflight.outputs.dry-run) == false }}
+        uses: actions/checkout@v6
+        with:
+          repository: Devolutions/actions
+          ref: v1
+          token: ${{ secrets.DEVOLUTIONSBOT_TOKEN }}
+          path: ./.github/workflows
+
+      - name: Import Developer ID certificate
+        if: ${{ runner.os == 'macOS' && fromJSON(needs.preflight.outputs.dry-run) == false }}
+        uses: ./.github/workflows/macos-code-sign-setup
+        with:
+          base64_certificate: ${{ secrets.APPLE_APP_DEV_ID_APP_CERTIFICATE }}
+          certificate_password: ${{ secrets.APPLE_APP_DEV_ID_APP_CERTIFICATE_PASSWORD }}
+
       - name: Package (macOS)
-        if: runner.os == 'macOS'
+        if: ${{ runner.os == 'macOS' }}
         run: |
           set -euo pipefail
           VERSION='${{ needs.preflight.outputs.package-version }}'
           APP_BUNDLE="UniGetUI.app"
           APP_EXECUTABLE="UniGetUI.Avalonia"
+          DRY_RUN='${{ needs.preflight.outputs.dry-run }}'
 
           rm -rf "${APP_BUNDLE}" output
           mkdir -p output
@@ -377,17 +395,31 @@ jobs:
           mkdir -p "${APP_BUNDLE}/Contents/Resources"
 
           cp -R "bin/${{ matrix.name }}/." "${APP_BUNDLE}/Contents/MacOS/"
+          find "${APP_BUNDLE}/Contents/MacOS" -name "*.pdb" -type f -delete
           chmod +x "${APP_BUNDLE}/Contents/MacOS/${APP_EXECUTABLE}"
           sed "s|@VERSION@|${VERSION}|g" \
             scripts/macos/Info.plist \
             > "${APP_BUNDLE}/Contents/Info.plist"
           cp scripts/macos/UniGetUI.icns "${APP_BUNDLE}/Contents/Resources/"
 
-          # Temporary ad-hoc signing only; proper Developer ID signing/notarization comes later.
-          find "${APP_BUNDLE}/Contents/MacOS" -type f | while IFS= read -r f; do
-            codesign --force --sign - "$f" 2>/dev/null || true
-          done
-          codesign --force --sign - "${APP_BUNDLE}"
+          if [ "$DRY_RUN" = "false" ]; then
+            ENTITLEMENTS="scripts/macos/Entitlements.plist"
+            find "${APP_BUNDLE}/Contents/MacOS" -type f \! -name "${APP_EXECUTABLE}" -print0 \
+              | while IFS= read -r -d '' f; do
+              codesign --force --timestamp --options runtime \
+                --entitlements "$ENTITLEMENTS" \
+                --sign "$SIGNING_IDENTITY" "$f"
+            done
+            codesign --force --timestamp --options runtime \
+              --entitlements "$ENTITLEMENTS" \
+              --sign "$SIGNING_IDENTITY" "${APP_BUNDLE}"
+            codesign --verify --verbose=2 "${APP_BUNDLE}"
+          else
+            find "${APP_BUNDLE}/Contents/MacOS" -type f | while IFS= read -r f; do
+              codesign --force --sign - "$f" 2>/dev/null || true
+            done
+            codesign --force --sign - "${APP_BUNDLE}"
+          fi
 
           COPYFILE_DISABLE=1 tar -czf "output/UniGetUI.${{ matrix.name }}.tar.gz" "${APP_BUNDLE}"
 
@@ -405,6 +437,22 @@ jobs:
 
           test -f "output/UniGetUI.${{ matrix.name }}.tar.gz"
           test -f "output/UniGetUI.${{ matrix.name }}.dmg"
+
+      - name: Sign DMG
+        if: ${{ runner.os == 'macOS' && fromJSON(needs.preflight.outputs.dry-run) == false }}
+        run: |
+          set -euo pipefail
+          DMG="output/UniGetUI.${{ matrix.name }}.dmg"
+          codesign --force --timestamp --sign "$SIGNING_IDENTITY" "$DMG"
+          codesign --verify --verbose=2 "$DMG"
+
+      - name: Notarize DMG
+        if: ${{ runner.os == 'macOS' && fromJSON(needs.preflight.outputs.dry-run) == false }}
+        uses: ./.github/workflows/macos-notarize
+        timeout-minutes: 15
+        with:
+          apple_password: ${{ secrets.APPLE_BOT_PASSWORD }}
+          package_path: output/UniGetUI.${{ matrix.name }}.dmg
 
       - name: Install Linux packaging tools
         if: runner.os == 'Linux'

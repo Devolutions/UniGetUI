@@ -51,6 +51,7 @@ pwsh ./.agents/skills/translation-status/scripts/get-translation-status.ps1 \
 ## Notes
 
 - The script treats source-equal values as untranslated for non-English languages.
+- Completion never reports `100%` unless every active English key is present and translated.
 - `Extra` counts locale-only keys not present in the English file.
 - Use `-IncludeEnglish` if you want the `en` row included in the report.
 - Use `-OnlyIncomplete` to focus on languages that still need work.

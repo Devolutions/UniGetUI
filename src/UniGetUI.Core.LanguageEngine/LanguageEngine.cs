@@ -6,7 +6,6 @@ using Jeffijoe.MessageFormat;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
-using UniGetUI.PackageEngine.Enums;
 
 namespace UniGetUI.Core.Language
 {
@@ -57,7 +56,6 @@ namespace UniGetUI.Core.Language
                 MainLangDict = LoadLanguageFile(Locale);
                 Formatter = new() { Locale = Locale.Replace('_', '-') };
 
-                LoadStaticTranslation();
                 SelectedLocale = Locale;
                 Logger.Info("Loaded language locale: " + Locale);
             }
@@ -70,7 +68,6 @@ namespace UniGetUI.Core.Language
                 Locale = "en";
                 MainLangDict = LoadLanguageFile(Locale);
                 Formatter = new() { Locale = "en" };
-                LoadStaticTranslation();
                 SelectedLocale = Locale;
             }
         }
@@ -240,22 +237,6 @@ namespace UniGetUI.Core.Language
             }
 
             return entries;
-        }
-
-        public void LoadStaticTranslation()
-        {
-            CommonTranslations.ScopeNames[PackageScope.Local] = Translate("User | Local");
-            CommonTranslations.ScopeNames[PackageScope.Global] = Translate("Machine | Global");
-
-            CommonTranslations.InvertedScopeNames.Clear();
-            CommonTranslations.InvertedScopeNames.Add(
-                Translate("Machine | Global"),
-                PackageScope.Global
-            );
-            CommonTranslations.InvertedScopeNames.Add(
-                Translate("User | Local"),
-                PackageScope.Local
-            );
         }
 
         public string Translate(string key)

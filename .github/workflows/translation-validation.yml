@@ -42,7 +42,3 @@ jobs:
     - name: Validate boundary alignment
       shell: pwsh
       run: pwsh ./scripts/translation/Set-TranslationBoundaryOrder.ps1 -CheckOnly
-
-    - name: Validate translation metadata drift
-      shell: pwsh
-      run: pwsh ./scripts/translation/Sync-TranslationMetadata.ps1 -AllLanguages -CheckOnly

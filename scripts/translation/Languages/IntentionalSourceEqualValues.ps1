@@ -18,6 +18,7 @@ function Test-IntentionalSourceEqualValue {
         'OK',
         'UniGetUI',
         'UniGetUI - {0} {1}',
+        'WinGet COM API',
         'your@email.com',
         '{0}: {1}',
         '{0}: {1}, {2}'
@@ -90,6 +91,7 @@ function Test-IntentionalSourceEqualValue {
         'Descendant',
         'Global',
         'Local',
+        'Machine | Global',
         'Navigation',
         'Portable',
         'Source',
@@ -202,6 +204,12 @@ function Test-IntentionalSourceEqualValue {
         'Verbose',
         'website',
         'library'
+    )) {
+        return $true
+    }
+
+    if ($LanguageCode -ceq 'tl' -and $SourceValue -ceq $TargetValue -and $SourceValue -in @(
+        'Machine | Global'
     )) {
         return $true
     }

@@ -186,14 +186,14 @@ function Get-CSharpTranslationMatches {
         [System.Collections.IList]$Warnings
     )
 
-    $literalPattern = [regex]'CoreTools\.(?:Translate|AutoTranslated)\(\s*(?<literal>@"(?:[^"]|"")*"|"(?:\\.|[^"\\])*")'
+    $literalPattern = [regex]'CoreTools\s*\.\s*(?:Translate|AutoTranslated)\(\s*(?<literal>@"(?:[^"]|"")*"|"(?:\\.|[^"\\])*")'
     foreach ($match in $literalPattern.Matches($Content)) {
         $literal = [string]$match.Groups['literal'].Value
         $lineNumber = Get-LineNumberFromIndex -Text $Content -Index $match.Index
         Add-TranslationSourceKey -Key (Convert-CSharpStringLiteralValue -Literal $literal) -SourcePath $FilePath -LineNumber $lineNumber -KeyOrder $KeyOrder -SourcesByKey $SourcesByKey
     }
 
-    $interpolatedPattern = [regex]'CoreTools\.Translate\(\s*\$@?"'
+    $interpolatedPattern = [regex]'CoreTools\s*\.\s*Translate\(\s*\$@?"'
     foreach ($match in $interpolatedPattern.Matches($Content)) {
         $lineNumber = Get-LineNumberFromIndex -Text $Content -Index $match.Index
         Add-TranslationSourceWarning -Type 'InterpolatedTranslateCall' -SourcePath $FilePath -LineNumber $lineNumber -Message 'Interpolated CoreTools.Translate call is not synchronized automatically.' -Warnings $Warnings

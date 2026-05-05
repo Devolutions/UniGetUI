@@ -494,6 +494,8 @@
   "View {0} logs": "Mostra el registre del {0}",
   "If Python cannot be found or is not listing packages but is installed on the system, ": "Si no es troba Python o no llista paquets però està instal·lat al sistema, ",
   "Advanced options": "Opcions avançades",
+  "WinGet command-line tool": "Eina de línia d'ordres del WinGet",
+  "WinGet COM API": "API COM del WinGet",
   "Reset WinGet": "Reseteja el WinGet",
   "This may help if no packages are listed": "Això pot ajudar si no es mostren paquetsa les llistes",
   "Force install location parameter when updating packages with custom locations": "Forca el paràmetre d'ubicació quan s'actualitzin paquets amb ubicacions personalitzades",

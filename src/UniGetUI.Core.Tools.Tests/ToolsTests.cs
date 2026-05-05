@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using UniGetUI.Core.Language;
+using UniGetUI.PackageEngine.Enums;
 
 namespace UniGetUI.Core.Tools.Tests
 {
@@ -29,6 +30,24 @@ namespace UniGetUI.Core.Tools.Tests
             }
 
             Assert.Equal(CoreTools.AutoTranslated(textEntry), textEntry);
+        }
+
+        [Fact]
+        public void TestStaticallyLoadedLanguages()
+        {
+            CoreTools.ReloadLanguageEngineInstance("ca");
+
+            Assert.Equal("Usuari | Local", CommonTranslations.ScopeNames[PackageScope.Local]);
+            Assert.Equal("Màquina | Global", CommonTranslations.ScopeNames[PackageScope.Global]);
+
+            Assert.Equal(
+                PackageScope.Global,
+                CommonTranslations.InvertedScopeNames["Màquina | Global"]
+            );
+            Assert.Equal(
+                PackageScope.Local,
+                CommonTranslations.InvertedScopeNames["Usuari | Local"]
+            );
         }
 
         [Fact]

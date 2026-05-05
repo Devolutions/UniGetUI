@@ -84,7 +84,12 @@ function Get-CompletionPercentage {
         return 0
     }
 
-    return [int][Math]::Round(($Completed / $Total) * 100, 0, [MidpointRounding]::AwayFromZero)
+    if ($Completed -ge $Total) {
+        return 100
+    }
+
+    $rounded = [int][Math]::Round(($Completed / $Total) * 100, 0, [MidpointRounding]::AwayFromZero)
+    return [Math]::Min($rounded, 99)
 }
 
 function Test-KnownPlaceholderLocale {

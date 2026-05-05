@@ -494,6 +494,8 @@
   "View {0} logs": "{0} 로그 보기",
   "If Python cannot be found or is not listing packages but is installed on the system, ": "Python을 찾을 수 없거나 시스템에 설치되어 있는데도 패키지 목록이 표시되지 않는 경우, ",
   "Advanced options": "고급 옵션",
+  "WinGet command-line tool": "WinGet 명령줄 도구",
+  "WinGet COM API": "WinGet COM API",
   "Reset WinGet": "WinGet 재설정",
   "This may help if no packages are listed": "패키지가 표시되지 않으면 도움이 될 수 있습니다",
   "Force install location parameter when updating packages with custom locations": "사용자 지정 위치의 패키지를 업데이트할 때 설치 위치 매개 변수 강제 사용",

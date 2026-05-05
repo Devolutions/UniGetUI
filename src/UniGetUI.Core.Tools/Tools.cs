@@ -10,6 +10,7 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.Language;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.PackageEngine.Enums;
 #if WINDOWS
 using Windows.Networking.Connectivity;
 #endif
@@ -45,6 +46,11 @@ namespace UniGetUI.Core.Tools
 
         private static LanguageEngine LanguageEngine = new();
 
+        static CoreTools()
+        {
+            LoadStaticTranslation();
+        }
+
         /// <summary>
         /// Translate a string to the current language
         /// </summary>
@@ -74,6 +80,20 @@ namespace UniGetUI.Core.Tools
         public static void ReloadLanguageEngineInstance(string ForceLanguage = "")
         {
             LanguageEngine = new LanguageEngine(ForceLanguage);
+            LoadStaticTranslation();
+        }
+
+        private static void LoadStaticTranslation()
+        {
+            string localScopeName = CoreTools.Translate("User | Local");
+            string globalScopeName = CoreTools.Translate("Machine | Global");
+
+            CommonTranslations.ScopeNames[PackageScope.Local] = localScopeName;
+            CommonTranslations.ScopeNames[PackageScope.Global] = globalScopeName;
+
+            CommonTranslations.InvertedScopeNames.Clear();
+            CommonTranslations.InvertedScopeNames.Add(globalScopeName, PackageScope.Global);
+            CommonTranslations.InvertedScopeNames.Add(localScopeName, PackageScope.Local);
         }
 
         /// <summary>

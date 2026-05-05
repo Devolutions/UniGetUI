@@ -109,25 +109,6 @@ namespace UniGetUI.Core.Language.Tests
             }
         }
 
-        [Fact]
-        public void TestStaticallyLoadedLanguages()
-        {
-            LanguageEngine engine = new();
-            engine.LoadLanguage("ca");
-            engine.LoadStaticTranslation();
-            Assert.Equal("Usuari | Local", CommonTranslations.ScopeNames[PackageScope.Local]);
-            Assert.Equal("Màquina | Global", CommonTranslations.ScopeNames[PackageScope.Global]);
-
-            Assert.Equal(
-                PackageScope.Global,
-                CommonTranslations.InvertedScopeNames["Màquina | Global"]
-            );
-            Assert.Equal(
-                PackageScope.Local,
-                CommonTranslations.InvertedScopeNames["Usuari | Local"]
-            );
-        }
-
         /*
         [Fact]
         public async Task TestDownloadUpdatedTranslationsAsync()

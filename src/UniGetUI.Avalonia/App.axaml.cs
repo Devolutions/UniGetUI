@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -10,6 +11,7 @@ using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Logging;
 using UniGetUI.PackageEngine;
 using CoreSettings = global::UniGetUI.Core.SettingsEngine.Settings;
 
@@ -38,6 +40,12 @@ public partial class App : Application
     {
         if (OperatingSystem.IsWindows())
         {
+            // Redirect WebView2 user-data folder to a writable temp location.
+            // Without this, WebView2 tries to write next to the executable in
+            // C:\Program Files\, which is read-only for non-admin users and
+            // causes UnauthorizedAccessException (E_ACCESSDENIED) on startup.
+            SetUpWebViewUserDataFolder();
+
             // Safety net for NativeWebView (WebView2) initialization failures thrown
             // asynchronously on the dispatcher. Without this the app crashes; with it
             // the Help page shows a fallback "Open in browser" button.
@@ -163,6 +171,23 @@ public partial class App : Application
             "dark" => ThemeVariant.Dark,
             _ => ThemeVariant.Default,
         };
+    }
+
+    private static void SetUpWebViewUserDataFolder()
+    {
+        try
+        {
+            string webViewPath = Path.Join(Path.GetTempPath(), "UniGetUI", "WebView");
+            if (!Directory.Exists(webViewPath))
+                Directory.CreateDirectory(webViewPath);
+
+            Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", webViewPath);
+        }
+        catch (Exception e)
+        {
+            Logger.Warn("Could not set up data folder for WebView2");
+            Logger.Warn(e);
+        }
     }
 
 }

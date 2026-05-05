@@ -178,7 +178,6 @@ public class SvgIcon : Control
     {
         if (_geometries.Count == 0) return;
 
-        IBrush brush = Foreground ?? Brushes.Black;
         IBrush brush = _localForeground ?? LookupThemeForeground();
 
         double scaleX = Bounds.Width / _viewBoxWidth;

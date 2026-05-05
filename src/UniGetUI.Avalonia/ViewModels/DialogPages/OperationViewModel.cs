@@ -289,7 +289,6 @@ public sealed partial class OperationViewModel : ViewModelBase
                 Path = $"avares://UniGetUI.Avalonia/Assets/Symbols/{svgName}",
                 Width = 16,
                 Height = 16,
-                Foreground = Brushes.White,
             },
         };
 

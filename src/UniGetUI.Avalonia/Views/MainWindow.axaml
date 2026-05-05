@@ -211,7 +211,7 @@
                                                             <StackPanel Orientation="Horizontal" Spacing="4">
                                                                 <controls:SvgIcon Path="{Binding IconPath}"
                                                                                   Width="12" Height="12"
-                                                                                  Foreground="White"/>
+                                                                                  Foreground="{DynamicResource AppIconForeground}"/>
                                                                 <TextBlock Text="{Binding Label}"
                                                                            FontSize="10"
                                                                            Opacity="0.8"/>

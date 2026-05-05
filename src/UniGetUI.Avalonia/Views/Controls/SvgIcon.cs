@@ -5,8 +5,10 @@ using System.Xml.Linq;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Media;
 using Avalonia.Platform;
+using Avalonia.Styling;
 
 namespace UniGetUI.Avalonia.Views.Controls;
 
@@ -35,6 +37,7 @@ public class SvgIcon : Control
         set => SetValue(PathProperty, value);
     }
 
+    private IBrush? _localForeground;
     public IBrush? Foreground
     {
         get => GetValue(ForegroundProperty);
@@ -50,12 +53,34 @@ public class SvgIcon : Control
         AffectsMeasure<SvgIcon>(PathProperty);
     }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        if (Application.Current is { } app)
+            app.ActualThemeVariantChanged += OnThemeChanged;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        if (Application.Current is { } app)
+            app.ActualThemeVariantChanged -= OnThemeChanged;
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == PathProperty)
+        if (change.Property == ForegroundProperty)
+        {
+            _localForeground = change.Priority < BindingPriority.Style
+                ? change.NewValue as IBrush
+                : null;
+        }
+        else if (change.Property == PathProperty)
             LoadSvg(change.NewValue as string);
     }
+
+    private void OnThemeChanged(object? sender, EventArgs e) => InvalidateVisual();
 
     private void LoadSvg(string? uri)
     {
@@ -134,6 +159,14 @@ public class SvgIcon : Control
         InvalidateVisual();
     }
 
+    private static readonly IBrush _darkFg = new SolidColorBrush(Color.Parse("#E8E8E8"));
+    private static readonly IBrush _lightFg = new SolidColorBrush(Color.Parse("#1E1E1E"));
+
+    private static IBrush LookupThemeForeground() =>
+        Application.Current?.ActualThemeVariant == ThemeVariant.Dark
+            ? _darkFg
+            : _lightFg;
+
     protected override Size MeasureOverride(Size availableSize)
     {
         double w = double.IsInfinity(availableSize.Width) ? _viewBoxWidth : availableSize.Width;
@@ -146,6 +179,7 @@ public class SvgIcon : Control
         if (_geometries.Count == 0) return;
 
         IBrush brush = Foreground ?? Brushes.Black;
+        IBrush brush = _localForeground ?? LookupThemeForeground();
 
         double scaleX = Bounds.Width / _viewBoxWidth;
         double scaleY = Bounds.Height / _viewBoxHeight;

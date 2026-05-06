@@ -334,6 +334,14 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     continue;
                 }
 
+                if (nativePackage.DefaultInstallVersion.PackageCatalog?.Info is null)
+                {
+                    Logger.Warn(
+                        $"WinGet package {nativePackage.Id} has a DefaultInstallVersion with null PackageCatalog or Info, skipping"
+                    );
+                    continue;
+                }
+
                 IManagerSource source;
                 source = Manager.SourcesHelper.Factory.GetSourceOrDefault(
                     nativePackage.DefaultInstallVersion.PackageCatalog.Info.Name

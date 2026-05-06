@@ -1,4 +1,5 @@
 using Microsoft.Management.Deployment;
+using Microsoft.Win32;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -89,11 +90,17 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             }
             parameters.Add("--include-unknown");
 
-            if (
-                Settings.Get(Settings.K.WinGetForceLocationOnUpdate)
-                && options.CustomInstallLocation != ""
-            )
-                parameters.AddRange(["--location", $"\"{options.CustomInstallLocation}\""]);
+            if (options.CustomInstallLocation != "")
+            {
+                if (Settings.Get(Settings.K.WinGetForceLocationOnUpdate))
+                    parameters.AddRange(["--location", $"\"{options.CustomInstallLocation}\""]);
+            }
+            else
+            {
+                var detectedLocation = TryGetPortableInstallLocation(package);
+                if (detectedLocation is not null)
+                    parameters.AddRange(["--location", $"\"{detectedLocation}\""]);
+            }
         }
         else if (operation is OperationType.Install)
         {
@@ -329,5 +336,69 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         if (val is null || val == "")
             val = "Unknown";
         return val;
+    }
+
+    /// <summary>
+    /// For portable WinGet packages, reads the current install location from the Windows registry
+    /// ARP entry (written by WinGet at install time). Returns null if the package is not portable
+    /// or the location cannot be determined.
+    /// </summary>
+    private static string? TryGetPortableInstallLocation(IPackage package)
+    {
+        try
+        {
+            foreach (
+                var hive in new RegistryKey[] { Registry.CurrentUser, Registry.LocalMachine }
+            )
+            {
+                using var uninstallKey = hive.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Uninstall"
+                );
+                if (uninstallKey is null)
+                    continue;
+
+                foreach (var name in uninstallKey.GetSubKeyNames())
+                {
+                    using var entry = uninstallKey.OpenSubKey(name);
+                    if (entry is null)
+                        continue;
+
+                    if (
+                        entry.GetValue("WinGetPackageIdentifier") is not string pkgId
+                        || !string.Equals(pkgId, package.Id, StringComparison.OrdinalIgnoreCase)
+                    )
+                        continue;
+
+                    if (
+                        entry.GetValue("WinGetInstallerType") is not string installerType
+                        || !string.Equals(
+                            installerType,
+                            "portable",
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                        return null;
+
+                    if (
+                        entry.GetValue("InstallLocation") is string location
+                        && location.Length > 0
+                    )
+                    {
+                        Logger.Info(
+                            $"Auto-detected portable install location for {package.Id}: {location}"
+                        );
+                        return location;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(
+                $"Failed to auto-detect portable install location for {package.Id}: {ex.Message}"
+            );
+        }
+
+        return null;
     }
 }

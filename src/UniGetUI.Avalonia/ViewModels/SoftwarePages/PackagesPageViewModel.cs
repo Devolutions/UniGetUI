@@ -354,11 +354,13 @@ public partial class PackagesPageViewModel : ViewModelBase
         {
             foreach (var pkg in e.AddedPackages)
             {
-                if (_wrappedPackages.Any(w => w.Package.Equals(pkg))) continue;
+                if (_wrappedPackages.Any(w => w.Package.GetVersionedHash() == pkg.GetVersionedHash())) continue;
                 _wrappedPackages.Add(new PackageWrapper(pkg, this));
                 AddPackageToSourcesList(pkg);
             }
-            var toRemove = _wrappedPackages.Where(w => e.RemovedPackages.Contains(w.Package)).ToList();
+            var toRemove = _wrappedPackages
+                .Where(w => e.RemovedPackages.Any(r => r.GetVersionedHash() == w.Package.GetVersionedHash()))
+                .ToList();
             foreach (var wrapper in toRemove) { wrapper.Dispose(); _wrappedPackages.Remove(wrapper); }
         }
         else

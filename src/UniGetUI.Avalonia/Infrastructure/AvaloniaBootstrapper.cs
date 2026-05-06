@@ -219,8 +219,10 @@ internal static class AvaloniaBootstrapper
             Logger.Warn($"Using system GSudo since UniGetUI Elevator is not available in DEBUG builds");
             CoreData.ElevatorPath = (await CoreTools.WhichAsync("gsudo.exe")).Item2;
 #else
+            string installRoot = Path.GetDirectoryName(CoreData.UniGetUIExecutableDirectory)
+                ?? CoreData.UniGetUIExecutableDirectory;
             CoreData.ElevatorPath = Path.Join(
-                CoreData.UniGetUIExecutableDirectory,
+                installRoot,
                 "Assets",
                 "Utilities",
                 "UniGetUI Elevator.exe"

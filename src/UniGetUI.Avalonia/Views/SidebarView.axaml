@@ -231,6 +231,9 @@
                         <MenuItem Header="{t:Translate Release notes}" Command="{Binding RequestNavigationCommand}" CommandParameter="ReleaseNotes">
                             <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/megaphone.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
+                        <MenuItem Header="{t:Translate Check for UniGetUI updates}" Command="{Binding CheckForUpdatesCommand}">
+                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/update.svg" Width="16" Height="16"/></MenuItem.Icon>
+                        </MenuItem>
                         <Separator/>
                         <MenuItem Header="{t:Translate Help}" Command="{Binding RequestNavigationCommand}" CommandParameter="Help">
                             <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/help.svg" Width="16" Height="16"/></MenuItem.Icon>

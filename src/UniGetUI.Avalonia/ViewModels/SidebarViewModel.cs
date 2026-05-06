@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
@@ -82,6 +83,10 @@ public partial class SidebarViewModel : ViewModelBase
         if (Enum.TryParse<PageType>(pageName, out var page))
             NavigationRequested?.Invoke(this, page);
     }
+
+    [RelayCommand]
+    private static Task CheckForUpdates() =>
+        AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false);
 
     public void SelectNavButtonForPage(PageType page) =>
         SelectedPageType = page;

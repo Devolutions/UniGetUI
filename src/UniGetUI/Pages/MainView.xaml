@@ -47,6 +47,12 @@
           IconName="megaphone"
           Text="Release notes"
         />
+        <widgets:BetterMenuItem
+          Name="CheckForUpdatesMenu"
+          Click="CheckForUpdates_Click"
+          IconName="Update"
+          Text="Check for UniGetUI updates"
+        />
         <MenuFlyoutSeparator Height="5" />
         <widgets:BetterMenuItem
           Name="HelpMenu"

@@ -371,6 +371,12 @@ namespace UniGetUI.Interface
         private void ReleaseNotesMenu_Click(object sender, RoutedEventArgs e) =>
             _ = DialogHelper.ShowReleaseNotes();
 
+        private void CheckForUpdates_Click(object sender, RoutedEventArgs e)
+        {
+            var mainWindow = MainApp.Instance.MainWindow;
+            _ = AutoUpdater.CheckAndInstallUpdates(mainWindow, mainWindow.UpdatesBanner, true, false, true);
+        }
+
         private void OperationHistoryMenu_Click(object sender, RoutedEventArgs e) =>
             NavigateTo(PageType.OperationHistory);
 

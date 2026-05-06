@@ -48,7 +48,7 @@ public partial class MainWindow : Window
     private const uint SWP_FRAMECHANGED = 0x0020;
 
     private bool _focusSidebarSelectionOnNextPageChange;
-    private WindowsTrayService? _trayService;
+    private TrayService? _trayService;
     private bool _allowClose;
     private NativeMethods.RECT? _windowsRestoreBoundsBeforeManualMaximize;
 
@@ -73,16 +73,13 @@ public partial class MainWindow : Window
         KeyDown += Window_KeyDown;
         ViewModel.CurrentPageChanged += OnCurrentPageChanged;
 
-        if (OperatingSystem.IsWindows())
-        {
-            _trayService = new WindowsTrayService(this);
-            _trayService.UpdateStatus();
-        }
+        _trayService = new TrayService(this);
+        _trayService.UpdateStatus();
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
-        if (!_allowClose && OperatingSystem.IsWindows() && !Settings.Get(Settings.K.DisableSystemTray))
+        if (!_allowClose && !Settings.Get(Settings.K.DisableSystemTray))
         {
             e.Cancel = true;
             Hide();
@@ -90,11 +87,8 @@ public partial class MainWindow : Window
         }
 
         AvaloniaAutoUpdater.ReleaseLockForAutoupdate_Window = true;
-        if (OperatingSystem.IsWindows())
-        {
-            _trayService?.Dispose();
-            _trayService = null;
-        }
+        _trayService?.Dispose();
+        _trayService = null;
         base.OnClosing(e);
     }
 
@@ -532,11 +526,7 @@ public partial class MainWindow : Window
         ViewModel.ErrorBanner.IsOpen = true;
     }
 
-    public void UpdateSystemTrayStatus()
-    {
-        if (OperatingSystem.IsWindows())
-            _trayService?.UpdateStatus();
-    }
+    public void UpdateSystemTrayStatus() => _trayService?.UpdateStatus();
 
     public void ShowRuntimeNotification(string title, string message, RuntimeNotificationLevel level) =>
         ShowBanner(title, message, level);

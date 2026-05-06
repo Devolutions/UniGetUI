@@ -131,7 +131,7 @@
       <Compile Include="Infrastructure\AvaloniaOperationRegistry.cs" />
       <Compile Include="Infrastructure\AppRestartHelper.cs" />
       <Compile Include="Infrastructure\WindowsAppNotificationBridge.cs" />
-      <Compile Include="Infrastructure\WindowsTrayService.cs" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+      <Compile Include="Infrastructure\TrayService.cs" />
       <Compile Include="Infrastructure\MacOsNotificationBridge.cs" />
       <Compile Include="Infrastructure\Secrets.cs" />
       <Compile Include="Infrastructure\AsyncCommand.cs" />

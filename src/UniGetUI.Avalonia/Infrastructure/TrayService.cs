@@ -1,9 +1,8 @@
-using System.Runtime.Versioning;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
+using Avalonia.Styling;
 using Avalonia.Threading;
-using Microsoft.Win32;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
@@ -14,13 +13,12 @@ using UniGetUI.PackageEngine.PackageLoader;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
-[SupportedOSPlatform("windows")]
-internal sealed class WindowsTrayService : IDisposable
+internal sealed class TrayService : IDisposable
 {
     private readonly TrayIcon _trayIcon;
     private string _lastIconUri = "";
 
-    public WindowsTrayService(MainWindow owner)
+    public TrayService(MainWindow owner)
     {
         _trayIcon = new TrayIcon
         {
@@ -96,12 +94,13 @@ internal sealed class WindowsTrayService : IDisposable
         }
     }
 
-    // Windows reads SystemUsesLightTheme to pick dark vs light taskbar icons.
     private static bool IsTaskbarLight()
     {
+#if WINDOWS
+        // On Windows, read the registry to match the taskbar background colour.
         try
         {
-            using var key = Registry.CurrentUser.OpenSubKey(
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
                 @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
             return key?.GetValue("SystemUsesLightTheme") is int v && v > 0;
         }
@@ -109,6 +108,11 @@ internal sealed class WindowsTrayService : IDisposable
         {
             return false;
         }
+#else
+        // On Linux (and other platforms), mirror the app's active theme variant so
+        // the icon remains legible regardless of the desktop colour scheme.
+        return Application.Current?.ActualThemeVariant == ThemeVariant.Light;
+#endif
     }
 
     private static NativeMenu BuildMenu(MainWindow owner)

@@ -33,7 +33,7 @@
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    CornerRadius="8"/>
 
-             <StackPanel x:Name="SystemTraySection" Orientation="Vertical" IsVisible="{Binding IsWindows}">
+             <StackPanel x:Name="SystemTraySection" Orientation="Vertical">
                 <settings:TranslatedTextBlock Text="UniGetUI on the background and system tray"
                                               FontWeight="SemiBold"
                                               Margin="44,32,4,8"
@@ -46,6 +46,7 @@
                 <settings:ButtonCard x:Name="EditAutostartSettings"
                                      CornerRadius="0,0,8,8"
                                      BorderThickness="1,0,1,1"
+                                     IsVisible="{Binding IsWindows}"
                                      Text="{t:Translate Manage UniGetUI autostart behaviour}"
                                      ButtonText="{t:Translate Open}"
                                      Command="{Binding EditAutostartSettingsCommand}"/>

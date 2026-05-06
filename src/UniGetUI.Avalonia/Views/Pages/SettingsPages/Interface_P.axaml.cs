@@ -20,9 +20,6 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         DataContext = new Interface_PViewModel();
         InitializeComponent();
 
-        if (OperatingSystem.IsMacOS())
-            SystemTraySection.IsVisible = false;
-
         VM.RestartRequired += (s, e) => RestartRequired?.Invoke(s, e);
         _ = VM.LoadIconCacheSize();
 

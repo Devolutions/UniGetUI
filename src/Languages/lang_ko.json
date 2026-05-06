@@ -474,7 +474,7 @@
   "Update check frequency, automatically install updates, etc.": "업데이트 주기적 확인, 업데이트 자동 설치 등",
   "Reduce UAC prompts, elevate installations by default, unlock certain dangerous features, etc.": "UAC 프롬프트 감소, 기본 설치 업그레이드, 특정 위험한 기능 잠금 해제 등.",
   "Package operation preferences": "패키지 작업 환경 설정",
-  "Enable {pm}": "{pm} 사용함
+  "Enable {pm}": "{pm} 사용함",
   "Not finding the file you are looking for? Make sure it has been added to path.": "찾고 있는 파일을 찾지 못했나요? 경로에 파일이 추가되었는지 확인하세요.",
   "Select the executable to be used. The following list shows the executables found by UniGetUI": "사용할 실행 파일을 선택합니다. 다음 목록은 UniGetUI에서 찾은 실행 파일을 보여줍니다",
   "For security reasons, changing the executable file is disabled by default": "보안상의 이유로 실행 파일을 변경하는 것은 기본적으로 비활성화되어 있습니다",

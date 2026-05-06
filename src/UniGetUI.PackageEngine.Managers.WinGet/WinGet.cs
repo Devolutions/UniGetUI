@@ -312,7 +312,26 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
         internal static string GetBundledPingetExecutablePath()
         {
-            return Path.Join(CoreData.UniGetUIExecutableDirectory, "pinget.exe");
+            return GetBundledPingetExecutablePath(CoreData.UniGetUIExecutableDirectory, File.Exists);
+        }
+
+        internal static string GetBundledPingetExecutablePath(
+            string executableDirectory,
+            Func<string, bool> fileExists
+        )
+        {
+            string rootPingetPath = Path.Join(executableDirectory, PingetExecutableName);
+            if (fileExists(rootPingetPath))
+            {
+                return rootPingetPath;
+            }
+
+            string avaloniaPingetPath = Path.Join(
+                executableDirectory,
+                "Avalonia",
+                PingetExecutableName
+            );
+            return fileExists(avaloniaPingetPath) ? avaloniaPingetPath : rootPingetPath;
         }
 
         internal IWinGetManagerHelper CreateCliHelperForSelectedCliTool()

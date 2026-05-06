@@ -144,6 +144,46 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void GetBundledPingetExecutablePathPrefersRootExecutable()
+    {
+        const string installDir = @"C:\Program Files\UniGetUI";
+        string rootPinget = Path.Join(installDir, "pinget.exe");
+        string avaloniaPinget = Path.Join(installDir, "Avalonia", "pinget.exe");
+
+        string path = WinGet.GetBundledPingetExecutablePath(
+            installDir,
+            filePath => filePath == rootPinget || filePath == avaloniaPinget
+        );
+
+        Assert.Equal(rootPinget, path);
+    }
+
+    [Fact]
+    public void GetBundledPingetExecutablePathFallsBackToAvaloniaExecutable()
+    {
+        const string installDir = @"C:\Program Files\UniGetUI";
+        string avaloniaPinget = Path.Join(installDir, "Avalonia", "pinget.exe");
+
+        string path = WinGet.GetBundledPingetExecutablePath(
+            installDir,
+            filePath => filePath == avaloniaPinget
+        );
+
+        Assert.Equal(avaloniaPinget, path);
+    }
+
+    [Fact]
+    public void GetBundledPingetExecutablePathReturnsRootPathWhenNoExecutableExists()
+    {
+        const string installDir = @"C:\Program Files\UniGetUI";
+        string rootPinget = Path.Join(installDir, "pinget.exe");
+
+        string path = WinGet.GetBundledPingetExecutablePath(installDir, static _ => false);
+
+        Assert.Equal(rootPinget, path);
+    }
+
+    [Fact]
     public void FindCandidateExecutableFilesPrefersSystemWinGetBeforeBundledPinget()
     {
         const string systemWinGet = @"C:\WindowsApps\winget.exe";

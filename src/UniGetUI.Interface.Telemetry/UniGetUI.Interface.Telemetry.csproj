@@ -15,7 +15,7 @@
     <ItemGroup>
         <ProjectReference Include="..\UniGetUI.Core.Settings\UniGetUI.Core.Settings.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Tools\UniGetUI.Core.Tools.csproj" />
-        <ProjectReference Include="..\UniGetUI.PAckageEngine.Interfaces\UniGetUI.PackageEngine.Interfaces.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Interfaces\UniGetUI.PackageEngine.Interfaces.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.PackageEngine\UniGetUI.PackageEngine.PEInterface.csproj" />
     </ItemGroup>
 </Project>

@@ -24,7 +24,7 @@
     <ItemGroup>
         <ProjectReference Include="..\UniGetUI.PackageEngine.Serializable\UniGetUI.PackageEngine.Serializable.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.PackageManagerClasses\UniGetUI.PackageEngine.Classes.csproj" />
-        <ProjectReference Include="..\UniGetUI.PAckageEngine.Interfaces\UniGetUI.PackageEngine.Interfaces.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Interfaces\UniGetUI.PackageEngine.Interfaces.csproj" />
         <ProjectReference Include="..\UniGetUI.Interface.Enums\UniGetUI.Interface.Enums.csproj" />
     </ItemGroup>
 </Project>

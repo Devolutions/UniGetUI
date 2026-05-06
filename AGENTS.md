@@ -98,7 +98,7 @@ Use `CoreTools.Translate("text")` for all user-facing strings. Parameterized: `C
 | Experimental cross-platform solution | `src/UniGetUI.Avalonia.slnx` |
 | Shared build props | `src/Directory.Build.props` |
 | Version info | `src/SharedAssemblyInfo.cs` |
-| Manager interface | `src/UniGetUI.PAckageEngine.Interfaces/IPackageManager.cs` |
+| Manager interface | `src/UniGetUI.PackageEngine.Interfaces/IPackageManager.cs` |
 | Base manager class | `src/UniGetUI.PackageEngine.PackageManagerClasses/Manager/PackageManager.cs` |
 | Package class | `src/UniGetUI.PackageEngine.PackageManagerClasses/Packages/Package.cs` |
 | Settings engine | `src/UniGetUI.Core.Settings/SettingsEngine.cs` |

@@ -379,7 +379,7 @@ namespace UniGetUI.Core.Tools.Tests
         }
 
         [Fact]
-        public void TestEnvVariableYuxtaposition()
+        public void TestEnvVariableJuxtaposition()
         {
             const string ENV = "PATH";
 

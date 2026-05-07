@@ -125,7 +125,7 @@
         />
         <Exec
             IgnoreExitCode="true"
-            Command="pwsh -NoProfile -File &quot;$(MergePublishOutputScript)&quot; -Source &quot;$([System.IO.Path]::GetFullPath('$(AvaloniaPublishDir)'))&quot; -Destination &quot;$([System.IO.Path]::GetFullPath('$(PublishDir)'))&quot;"
+            Command="pwsh -NoProfile -File &quot;$(MergePublishOutputScript)&quot; -Source &quot;$([System.IO.Path]::TrimEndingDirectorySeparator($([System.IO.Path]::GetFullPath('$(AvaloniaPublishDir)'))))&quot; -Destination &quot;$([System.IO.Path]::TrimEndingDirectorySeparator($([System.IO.Path]::GetFullPath('$(PublishDir)'))))&quot;"
         />
         <Error
             Condition="!Exists('$(PublishDir)UniGetUI.Avalonia.exe')"

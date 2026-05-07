@@ -345,14 +345,7 @@ internal static class AvaloniaBootstrapper
             Logger.Warn($"Using system GSudo since UniGetUI Elevator is not available in DEBUG builds");
             CoreData.ElevatorPath = (await CoreTools.WhichAsync("gsudo.exe")).Item2;
 #else
-            string installRoot = Path.GetDirectoryName(CoreData.UniGetUIExecutableDirectory)
-                ?? CoreData.UniGetUIExecutableDirectory;
-            CoreData.ElevatorPath = Path.Join(
-                installRoot,
-                "Assets",
-                "Utilities",
-                "UniGetUI Elevator.exe"
-            );
+            CoreData.ElevatorPath = ResolveBundledElevatorPath();
             Logger.Debug($"Using built-in UniGetUI Elevator at {CoreData.ElevatorPath}");
 #endif
         }
@@ -361,6 +354,40 @@ internal static class AvaloniaBootstrapper
             Logger.Error("Elevator/GSudo failed to be loaded!");
             Logger.Error(ex);
         }
+    }
+
+    private static string ResolveBundledElevatorPath()
+    {
+        string executableDirectory = CoreData.UniGetUIExecutableDirectory;
+        string localPath = Path.Join(
+            executableDirectory,
+            "Assets",
+            "Utilities",
+            "UniGetUI Elevator.exe"
+        );
+
+        if (File.Exists(localPath))
+        {
+            return localPath;
+        }
+
+        string? parentDirectory = Path.GetDirectoryName(executableDirectory);
+        if (!string.IsNullOrEmpty(parentDirectory))
+        {
+            string parentPath = Path.Join(
+                parentDirectory,
+                "Assets",
+                "Utilities",
+                "UniGetUI Elevator.exe"
+            );
+
+            if (File.Exists(parentPath))
+            {
+                return parentPath;
+            }
+        }
+
+        return localPath;
     }
 
     [System.Runtime.Versioning.SupportedOSPlatform("linux")]

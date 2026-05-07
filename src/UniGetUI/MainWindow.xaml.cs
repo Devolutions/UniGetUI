@@ -253,6 +253,11 @@ namespace UniGetUI.Interface
             {
                 AutoUpdater.ReleaseLockForAutoupdate_Window = true;
                 _ = SaveGeometry(Force: true);
+                if (MainApp.Instance.IsQuitting)
+                {
+                    return;
+                }
+
                 if (
                     !Settings.Get(Settings.K.DisableSystemTray)
                     || AutoUpdater.UpdateReadyToBeInstalled

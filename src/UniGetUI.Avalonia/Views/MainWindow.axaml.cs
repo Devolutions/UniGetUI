@@ -550,9 +550,28 @@ public partial class MainWindow : Window
     public void QuitApplication()
     {
         _allowClose = true;
-        AvaloniaBootstrapper.StopIpcApiAsync().GetAwaiter().GetResult();
-        (global::Avalonia.Application.Current?.ApplicationLifetime
-            as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+        _ = QuitApplicationAsync();
+    }
+
+    private async Task QuitApplicationAsync()
+    {
+        try
+        {
+            await AvaloniaBootstrapper.StopIpcApiAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        catch (TimeoutException ex)
+        {
+            Logger.Warn("Timed out while stopping Avalonia IPC API during shutdown");
+            Logger.Warn(ex);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex);
+        }
+
+        Dispatcher.UIThread.Post(() =>
+            (global::Avalonia.Application.Current?.ApplicationLifetime
+                as IClassicDesktopStyleApplicationLifetime)?.Shutdown());
     }
 
     public static void ApplyProxyVariableToProcess()

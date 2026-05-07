@@ -110,9 +110,28 @@ namespace UniGetUI.Core.Tools
         public static void RelaunchProcess()
         {
             Logger.Debug("Launching process: " + CoreData.UniGetUIExecutableFile);
-            Process.Start(CoreData.UniGetUIExecutableFile);
+            ScheduleRelaunchAfterExit();
             Logger.Warn("About to kill process");
             Environment.Exit(0);
+        }
+
+        public static void ScheduleRelaunchAfterExit(string? executablePath = null)
+        {
+            executablePath ??= CoreData.UniGetUIExecutableFile;
+            int currentProcessId = Environment.ProcessId;
+            string escapedExecutablePath = executablePath.Replace("'", "''");
+            string command =
+                $"Wait-Process -Id {currentProcessId}; Start-Process -FilePath '{escapedExecutablePath}'";
+
+            Process.Start(
+                new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -WindowStyle Hidden -Command \"{command}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                }
+            );
         }
 
         /// <summary>

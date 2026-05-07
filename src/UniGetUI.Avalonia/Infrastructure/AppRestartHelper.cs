@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using Avalonia.Controls.ApplicationLifetimes;
+using UniGetUI.Core.Tools;
 using UniGetUI.Avalonia.Views;
 
 namespace UniGetUI.Avalonia.Infrastructure;
@@ -11,10 +11,7 @@ internal static class AppRestartHelper
     public static void Restart()
     {
         string executablePath = ResolveRestartExecutablePath(AppContext.BaseDirectory);
-        Process.Start(new ProcessStartInfo(executablePath)
-        {
-            UseShellExecute = false,
-        });
+        CoreTools.ScheduleRelaunchAfterExit(executablePath);
 
         if (MainWindow.Instance is { } mainWindow)
         {

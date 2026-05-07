@@ -715,17 +715,36 @@ namespace UniGetUI
             DWMThreadHelper.ChangeState_DWM(false);
             DWMThreadHelper.ChangeState_XAML(false);
             MainWindow?.Close();
-            IpcApi.Stop().GetAwaiter().GetResult();
-            Exit();
+            _ = StopIpcAndExitAsync(outputCode);
             // await Task.Delay(100);
             // Environment.Exit(outputCode);
         }
 
+        public bool IsQuitting => Interlocked.CompareExchange(ref _isQuitting, 0, 0) == 1;
+
+        private async Task StopIpcAndExitAsync(int outputCode)
+        {
+            try
+            {
+                await IpcApi.Stop().WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            catch (TimeoutException ex)
+            {
+                Logger.Warn("Timed out while stopping IPC API during shutdown");
+                Logger.Warn(ex);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex);
+            }
+
+            Environment.Exit(outputCode);
+        }
+
         public void KillAndRestart()
         {
-            Process.Start(CoreData.UniGetUIExecutableFile);
-            Instance.MainWindow?.Close();
-            Environment.Exit(0);
+            CoreTools.ScheduleRelaunchAfterExit();
+            DisposeAndQuit();
         }
     }
 }

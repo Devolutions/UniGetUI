@@ -21,17 +21,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
+          - name: Windows (WinUI 3)
+            os: windows-latest
             solution: UniGetUI.Windows.slnx
             daemon_project: UniGetUI/UniGetUI.csproj
             daemon_build_args: '-p:Platform=x64'
             manifest: testing/automation/cli-e2e.manifest.windows.json
-          - os: ubuntu-latest
+          - name: Linux (Avalonia)
+            os: ubuntu-latest
             solution: UniGetUI.Avalonia.slnx
             daemon_project: UniGetUI.Avalonia/UniGetUI.Avalonia.csproj
             daemon_build_args: ''
             manifest: testing/automation/cli-e2e.manifest.linux.json
 
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     env:
       CONFIGURATION: Release
@@ -110,6 +113,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cli-headless-e2e-${{ runner.os }}
+          name: cli-headless-e2e-${{ matrix.name }}
           path: artifacts/cli-headless-e2e/${{ runner.os }}
           if-no-files-found: warn

@@ -5,12 +5,9 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Avalonia;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Microsoft.Win32;
 using UniGetUI.Avalonia.ViewModels;
-using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
@@ -104,7 +101,11 @@ internal static partial class AvaloniaAutoUpdater
     /// <summary>
     /// Called by the user when they click "Update now" in the update banner.
     /// </summary>
-    public static void TriggerInstall() => _installRequested = true;
+    public static void TriggerInstall()
+    {
+        Logger.Info("Auto-updater: TriggerInstall invoked (user clicked Update now).");
+        _installRequested = true;
+    }
     public static async Task UpdateCheckLoopAsync()
     {
         if (Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
@@ -132,14 +133,14 @@ internal static partial class AvaloniaAutoUpdater
     }
 
     // ------------------------------------------------------------------ core logic
-    internal static async Task<bool> CheckAndInstallUpdatesAsync(bool autoLaunch = false, bool verbose = false)
+    internal static async Task<bool> CheckAndInstallUpdatesAsync(bool autoLaunch = false, bool manualCheck = false)
     {
         UpdaterOverrides overrides = LoadUpdaterOverrides();
         bool wasCheckingForUpdates = true;
 
         try
         {
-            if (verbose)
+            if (manualCheck)
             {
                 RaiseStatus(
                     CoreTools.Translate("We are checking for updates."),
@@ -155,7 +156,7 @@ internal static partial class AvaloniaAutoUpdater
 
             if (!candidate.IsUpgradable)
             {
-                if (verbose)
+                if (manualCheck)
                 {
                     RaiseStatus(
                         CoreTools.Translate("Great! You are on the latest version."),
@@ -179,7 +180,7 @@ internal static partial class AvaloniaAutoUpdater
             )
             {
                 Logger.Info("Cached valid installer found, preparing to launch...");
-                return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch);
+                return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch, manualCheck);
             }
 
             // Delete invalid/outdated cached copy
@@ -202,7 +203,7 @@ internal static partial class AvaloniaAutoUpdater
             )
             {
                 Logger.Info("Downloaded installer is valid, preparing to launch...");
-                return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch);
+                return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch, manualCheck);
             }
 
             Logger.Error("Installer authenticity could not be verified. Aborting update.");
@@ -217,7 +218,7 @@ internal static partial class AvaloniaAutoUpdater
         {
             Logger.Error("An error occurred while checking for updates:");
             Logger.Error(ex);
-            if (verbose || !wasCheckingForUpdates)
+            if (manualCheck || !wasCheckingForUpdates)
             {
                 RaiseStatus(
                     CoreTools.Translate("An error occurred when checking for updates: "),
@@ -233,7 +234,8 @@ internal static partial class AvaloniaAutoUpdater
     private static async Task<bool> PrepareAndLaunchAsync(
         string installerPath,
         string versionName,
-        bool autoLaunch)
+        bool autoLaunch,
+        bool manualCheck)
     {
         _pendingInstallerPath = installerPath;
         _installRequested = false;
@@ -254,7 +256,7 @@ internal static partial class AvaloniaAutoUpdater
         // Wait until user requests install, clicks the toast, or the window is being closed
         while (!_installRequested && !ReleaseLockForAutoupdate_Window && !ReleaseLockForAutoupdate_Notification)
         {
-            if (Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
+            if (!manualCheck && Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
             {
                 Logger.Warn("Auto-updater: disabled while waiting for user \u2014 aborting.");
                 return true;
@@ -262,12 +264,12 @@ internal static partial class AvaloniaAutoUpdater
             await Task.Delay(500);
         }
 
-        Logger.Info("Installing update \u2014 launching installer and quitting.");
-        await LaunchInstallerAndQuitAsync(installerPath);
+        Logger.Info("Installing update \u2014 launching installer.");
+        await LaunchInstallerAsync(installerPath);
         return true;
     }
 
-    private static async Task LaunchInstallerAndQuitAsync(string installerLocation)
+    private static async Task LaunchInstallerAsync(string installerLocation)
     {
         Logger.Info($"Launching installer: {installerLocation}");
         using Process p = new()
@@ -281,10 +283,26 @@ internal static partial class AvaloniaAutoUpdater
             },
         };
 
-        bool started = p.Start();
+        bool started;
+        try
+        {
+            started = p.Start();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Process.Start threw while launching the installer:");
+            Logger.Error(ex);
+            RaiseStatus(
+                CoreTools.Translate("Something went wrong while launching the updater."),
+                ex.Message,
+                InfoBarSeverity.Error,
+                isClosable: true);
+            return;
+        }
+
         if (!started)
         {
-            Logger.Error("Failed to start installer process.");
+            Logger.Error("Failed to start installer process (Process.Start returned false).");
             RaiseStatus(
                 CoreTools.Translate("Something went wrong while launching the updater."),
                 CoreTools.Translate("Please try again later"),
@@ -293,23 +311,23 @@ internal static partial class AvaloniaAutoUpdater
             return;
         }
 
-        // Quit the app on the UI thread
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
-            {
-                if (lifetime.MainWindow is MainWindow mw)
-                {
-                    mw.QuitApplication();
-                }
-                else
-                {
-                    lifetime.Shutdown();
-                }
-            }
-        });
+        Logger.Info($"Installer process started (PID {p.Id}). The installer is expected to terminate UniGetUI before file replacement.");
+
+        RaiseStatus(
+            CoreTools.Translate("UniGetUI is being updated..."),
+            CoreTools.Translate("This may take a minute or two"),
+            InfoBarSeverity.Informational,
+            isClosable: false);
 
         await p.WaitForExitAsync();
+
+        // If we reach here, the installer exited without terminating us \u2014 surface that
+        // to the user the same way WinUI does.
+        RaiseStatus(
+            CoreTools.Translate("Something went wrong while launching the updater."),
+            CoreTools.Translate("Please try again later"),
+            InfoBarSeverity.Error,
+            isClosable: true);
     }
 
     // ------------------------------------------------------------------ update check sources

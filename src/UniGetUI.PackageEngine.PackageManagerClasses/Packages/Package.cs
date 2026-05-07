@@ -294,6 +294,11 @@ namespace UniGetUI.PackageEngine.PackageClasses
         {
             foreach (var p in GetInstalledPackages())
             {
+                if (p.NormalizedVersion == CoreTools.Version.Null || this.NormalizedNewVersion == CoreTools.Version.Null)
+                {
+                    continue;
+                }
+
                 if (p.NormalizedVersion >= this.NormalizedNewVersion)
                 {
                     return true;

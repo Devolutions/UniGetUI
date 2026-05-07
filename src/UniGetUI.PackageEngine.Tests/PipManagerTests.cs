@@ -50,6 +50,7 @@ public sealed class PipManagerTests : IDisposable
     public void SearchHelpersParseSimpleIndexAndRankPrefixMatchesFirst()
     {
         var names = Pip.ParseSimpleIndexProjectNames(
+
             PackageEngineFixtureFiles.ReadAllText(Path.Combine("Pip", "simple-index.json"))
         );
 

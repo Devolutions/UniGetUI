@@ -236,6 +236,7 @@ namespace UniGetUI.Core.Tools
                     p.StartInfo.ArgumentList.Add(path);
                     p.StartInfo.UseShellExecute = false;
                 }
+
                 p.StartInfo.CreateNoWindow = true;
                 p.Start();
                 await p.WaitForExitAsync();
@@ -310,22 +311,22 @@ namespace UniGetUI.Core.Tools
                 if (
                     response.StatusCode
                     is HttpStatusCode.Moved
-                        or HttpStatusCode.Redirect
-                        or HttpStatusCode.RedirectMethod
-                        or HttpStatusCode.TemporaryRedirect
-                        or HttpStatusCode.PermanentRedirect
+                    or HttpStatusCode.Redirect
+                    or HttpStatusCode.RedirectMethod
+                    or HttpStatusCode.TemporaryRedirect
+                    or HttpStatusCode.PermanentRedirect
                 )
                 {
                     return GetFileName(
                         response.Headers.Location
-                            ?? throw new HttpRequestException(
-                                "A redirect code was returned but no new location was given"
-                            )
+                        ?? throw new HttpRequestException(
+                            "A redirect code was returned but no new location was given"
+                        )
                     );
                 }
 
                 return response.Content.Headers.ContentDisposition?.FileName
-                    ?? Path.GetFileName(url.LocalPath);
+                       ?? Path.GetFileName(url.LocalPath);
             }
             catch (Exception e)
             {
@@ -404,19 +405,47 @@ namespace UniGetUI.Core.Tools
         /// <summary>
         /// Converts a string into a double floating-point number.
         /// </summary>
-        /// <param name="Version">Any string</param>
+        /// <param name="version">Any string</param>
         /// <returns>The best approximation of the string as a Version</returns>
-        public static Version VersionStringToStruct(string Version)
+        public static Version VersionStringToStruct(string version)
         {
             try
             {
                 char[] separators = ['.', '-', '/', '#'];
                 string[] versionItems = ["", "", "", ""];
 
+                string[] segments = version.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var segment in segments)
+                {
+                    bool seenDigit = false;
+                    bool seenLetterAfterDigit = false;
+                    bool seenDigitAfterLetter = false;
+                    foreach (char c in segment)
+                    {
+                        if (char.IsDigit(c))
+                        {
+                            if (seenLetterAfterDigit)
+                                seenDigitAfterLetter = true;
+                            seenDigit = true;
+                        }
+                        else if (char.IsLetter(c) && seenDigit)
+                        {
+                            seenLetterAfterDigit = true;
+                        }
+                    }
+
+                    if (seenDigit && seenLetterAfterDigit && seenDigitAfterLetter)
+                    {
+                        Logger.Warn(
+                            $"Version string {version} appears to contain non-numeric characters within a numeric segment and will be treated as unknown");
+                        return CoreTools.Version.Null;
+                    }
+                }
+
                 int dotCount = 0;
                 bool first = true;
 
-                foreach (char c in Version)
+                foreach (char c in version)
                 {
                     if (char.IsDigit(c))
                         versionItems[dotCount] += c;
@@ -438,7 +467,7 @@ namespace UniGetUI.Core.Tools
             }
             catch
             {
-                Logger.Warn($"Failed to parse version {Version} to float");
+                Logger.Warn($"Failed to parse version {version} to float");
                 return CoreTools.Version.Null;
             }
         }
@@ -862,12 +891,7 @@ namespace UniGetUI.Core.Tools
 
                 var p = new Process()
                 {
-                    StartInfo = new()
-                    {
-                        FileName = path,
-                        UseShellExecute = true,
-                        CreateNoWindow = true,
-                    },
+                    StartInfo = new() { FileName = path, UseShellExecute = true, CreateNoWindow = true, },
                 };
                 p.Start();
             }
@@ -993,8 +1017,8 @@ namespace UniGetUI.Core.Tools
         private static IReadOnlyList<string> GetWindowsExecutableExtensions()
         {
             List<string> extensions = (
-                Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD"
-            )
+                    Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD"
+                )
                 .Split(';', StringSplitOptions.RemoveEmptyEntries)
                 .Select(extension => extension.Trim())
                 .Where(extension => !string.IsNullOrWhiteSpace(extension))
@@ -1073,15 +1097,15 @@ namespace UniGetUI.Core.Tools
 
             string separator = Path.PathSeparator.ToString();
             string pathValue =
-                (
-                    Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User)
-                    ?? string.Empty
-                ) + separator;
+            (
+                Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User)
+                ?? string.Empty
+            ) + separator;
             pathValue +=
-                (
-                    Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine)
-                    ?? string.Empty
-                ) + separator;
+            (
+                Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine)
+                ?? string.Empty
+            ) + separator;
             pathValue +=
                 Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process)
                 ?? string.Empty;

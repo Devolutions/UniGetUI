@@ -16,7 +16,7 @@ public sealed class NpmManagerTests
         var manager = new Npm();
 
         var packages = Npm.ParseSearchOutput(
-            PackageEngineFixtureFiles.ReadAllText(@"Npm\search-array-with-warning.txt"),
+            File.ReadAllText(PackageEngineFixtureFiles.GetPath(Path.Combine("Npm", "search-array-with-warning.txt"))),
             manager.DefaultSource,
             manager
         );
@@ -37,7 +37,7 @@ public sealed class NpmManagerTests
         var manager = new Npm();
 
         var packages = Npm.ParseSearchOutput(
-            PackageEngineFixtureFiles.ReadAllText(@"Npm\search-ndjson.txt"),
+            File.ReadAllText(PackageEngineFixtureFiles.GetPath(Path.Combine("Npm", "search-ndjson.txt"))),
             manager.DefaultSource,
             manager
         );
@@ -56,7 +56,7 @@ public sealed class NpmManagerTests
         var manager = new Npm();
 
         var packages = Npm.ParseAvailableUpdatesOutput(
-            PackageEngineFixtureFiles.ReadAllText(@"Npm\outdated.json"),
+            File.ReadAllText(PackageEngineFixtureFiles.GetPath(Path.Combine("Npm", "outdated.json"))),
             manager.DefaultSource,
             manager,
             new OverridenInstallationOptions(PackageScope.Global)
@@ -76,7 +76,7 @@ public sealed class NpmManagerTests
         var manager = new Npm();
 
         var packages = Npm.ParseInstalledPackagesOutput(
-            PackageEngineFixtureFiles.ReadAllText(@"Npm\installed.json"),
+            File.ReadAllText(PackageEngineFixtureFiles.GetPath(Path.Combine("Npm", "installed.json"))),
             manager.DefaultSource,
             manager,
             new OverridenInstallationOptions(PackageScope.Local)

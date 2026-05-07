@@ -317,6 +317,13 @@ namespace UniGetUI.Core.Tools.Tests
             Assert.Equal(i4, v.Remainder);
         }
 
+        [Fact]
+        public void TestGetVersionStringAsFloat_WithNonNumericVersion_ReturnsNull()
+        {
+            CoreTools.Version v = CoreTools.VersionStringToStruct("10c8e557");
+            Assert.Equal(CoreTools.Version.Null, v);
+        }
+
         [Theory]
         [InlineData("2026.1.0", "2026.1.0")]
         [InlineData("2026.1.0.0", "2026.1.0")]

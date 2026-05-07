@@ -40,7 +40,7 @@
     <Target
         Name="PublishBundledPingetCli"
         AfterTargets="Build;Publish"
-        Condition="'$(DesignTimeBuild)' != 'true' and $([MSBuild]::IsOSPlatform('Windows'))"
+      Condition="'$(DesignTimeBuild)' != 'true' and '$(SkipBundledPingetCli)' != 'true' and $([MSBuild]::IsOSPlatform('Windows'))"
     >
         <MSBuild
             Projects="$(PingetCliProject)"

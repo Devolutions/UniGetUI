@@ -58,12 +58,12 @@ internal static class ModernAppLauncher
 
     private static IEnumerable<string> GetModernExecutableCandidates(string baseDirectory)
     {
+        yield return Path.Combine(baseDirectory, ModernAppExecutableName);
         yield return Path.Combine(
             baseDirectory,
             ModernAppDirectoryName,
             ModernAppExecutableName
         );
-        yield return Path.Combine(baseDirectory, ModernAppExecutableName);
 
         foreach (string candidate in GetDevelopmentBuildCandidates(baseDirectory))
             yield return candidate;

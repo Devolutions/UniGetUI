@@ -39,7 +39,6 @@ $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $SrcDir = Join-Path $RepoRoot "src"
 $WindowsSolution = Join-Path $SrcDir "UniGetUI.Windows.slnx"
 $PublishProject = Join-Path $SrcDir "UniGetUI" "UniGetUI.csproj"
-$AvaloniaPublishProject = Join-Path $SrcDir "UniGetUI.Avalonia" "UniGetUI.Avalonia.csproj"
 $BinDir = Join-Path $RepoRoot "unigetui_bin"
 $BuildPropsPath = Join-Path $SrcDir "Directory.Build.props"
 [xml] $BuildProps = Get-Content $BuildPropsPath
@@ -52,7 +51,6 @@ if ([string]::IsNullOrWhiteSpace($PortableTargetFramework) -or [string]::IsNullO
 
 $TargetFramework = "$PortableTargetFramework-windows$WindowsTargetPlatformVersion"
 $PublishDir = Join-Path $SrcDir "UniGetUI" "bin" $Platform $Configuration $TargetFramework "win-$Platform" "publish"
-$AvaloniaPublishDir = Join-Path $SrcDir "UniGetUI.Avalonia" "bin" $Platform $Configuration $TargetFramework "win-$Platform" "publish"
 
 # --- Version stamping ---
 if ($Version) {
@@ -84,19 +82,11 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish WinUI failed with exit code $LASTEXITCODE"
 }
 
-dotnet publish $AvaloniaPublishProject /noLogo /p:Configuration=$Configuration /p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform --self-contained true --ignore-failed-sources -v m
-if ($LASTEXITCODE -ne 0) {
-    throw "dotnet publish Avalonia failed with exit code $LASTEXITCODE"
-}
-
 # --- Stage binaries ---
 if (Test-Path $BinDir) { Remove-Item $BinDir -Recurse -Force }
 New-Item $BinDir -ItemType Directory | Out-Null
 # Move published output into unigetui_bin
 Get-ChildItem $PublishDir | Move-Item -Destination $BinDir -Force
-$AvaloniaBinDir = Join-Path $BinDir "Avalonia"
-New-Item $AvaloniaBinDir -ItemType Directory | Out-Null
-Get-ChildItem $AvaloniaPublishDir | Move-Item -Destination $AvaloniaBinDir -Force
 
 # WingetUI.exe alias for backward compat
 Copy-Item (Join-Path $BinDir "UniGetUI.exe") (Join-Path $BinDir "WingetUI.exe") -Force

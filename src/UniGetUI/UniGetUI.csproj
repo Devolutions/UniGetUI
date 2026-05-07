@@ -49,6 +49,18 @@
     </PropertyGroup>
 
     <PropertyGroup>
+        <BundleModernApp Condition="'$(BundleModernApp)' == ''">true</BundleModernApp>
+        <PublishTrimmed Condition="'$(BundleModernApp)' == 'true'">false</PublishTrimmed>
+        <AvaloniaProject>$(MSBuildThisFileDirectory)..\UniGetUI.Avalonia\UniGetUI.Avalonia.csproj</AvaloniaProject>
+        <AvaloniaRuntimeIdentifier Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</AvaloniaRuntimeIdentifier>
+        <AvaloniaRuntimeIdentifier Condition="'$(AvaloniaRuntimeIdentifier)' == '' and '$(Platform)' == 'arm64'">win-arm64</AvaloniaRuntimeIdentifier>
+        <AvaloniaRuntimeIdentifier Condition="'$(AvaloniaRuntimeIdentifier)' == ''">win-x64</AvaloniaRuntimeIdentifier>
+        <AvaloniaPublishDir>$(MSBuildProjectDirectory)\obj\$(Platform)\$(Configuration)\BundledAvalonia\$(AvaloniaRuntimeIdentifier)\</AvaloniaPublishDir>
+        <AvaloniaExecutablePath>$(AvaloniaPublishDir)UniGetUI.Avalonia.exe</AvaloniaExecutablePath>
+        <MergePublishOutputScript>$(MSBuildProjectDirectory)\..\..\scripts\merge-publish-output.ps1</MergePublishOutputScript>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <GeneratedBuildInfoFile>$(IntermediateOutputPath)\Generated Files\Secrets.Generated.cs</GeneratedBuildInfoFile>
     </PropertyGroup>
 
@@ -94,6 +106,38 @@
             DestinationFolder="$(PublishDir)"
             SkipUnchangedFiles="true"
             Condition="Exists('$(PingetCliExecutablePath)') and '$(PublishDir)' != '' and Exists('$(PublishDir)')"
+        />
+    </Target>
+
+    <Target
+        Name="PublishBundledAvaloniaApp"
+        BeforeTargets="PostPublishGenerateIntegrityTree"
+        Condition="'$(DesignTimeBuild)' != 'true' and '$(BundleModernApp)' == 'true' and '$(PublishDir)' != '' and Exists('$(PublishDir)')"
+    >
+        <MSBuild
+            Projects="$(AvaloniaProject)"
+            Targets="Restore;Publish"
+            Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(WindowsTargetFramework);RuntimeIdentifier=$(AvaloniaRuntimeIdentifier);SelfContained=false;PublishSelfContained=false;PublishTrimmed=false;PublishDir=$(AvaloniaPublishDir);AppendRuntimeIdentifierToOutputPath=false;SkipBundledPingetCli=true;BundleModernApp=false"
+        />
+        <Error
+            Condition="!Exists('$(AvaloniaExecutablePath)')"
+            Text="Bundled Avalonia executable was not published to '$(AvaloniaExecutablePath)'."
+        />
+        <Exec
+            IgnoreExitCode="true"
+            Command="pwsh -NoProfile -File &quot;$(MergePublishOutputScript)&quot; -Source &quot;$([System.IO.Path]::GetFullPath('$(AvaloniaPublishDir)'))&quot; -Destination &quot;$([System.IO.Path]::GetFullPath('$(PublishDir)'))&quot;"
+        />
+        <Error
+            Condition="!Exists('$(PublishDir)UniGetUI.Avalonia.exe')"
+            Text="Bundled Avalonia executable was not merged into '$(PublishDir)'."
+        />
+        <Error
+            Condition="!Exists('$(PublishDir)UniGetUI.Avalonia.deps.json')"
+            Text="Bundled Avalonia deps file was not merged into '$(PublishDir)'."
+        />
+        <Error
+            Condition="!Exists('$(PublishDir)UniGetUI.Avalonia.runtimeconfig.json')"
+            Text="Bundled Avalonia runtimeconfig file was not merged into '$(PublishDir)'."
         />
     </Target>
 
@@ -180,6 +224,7 @@
         <PackageReference Include="CommunityToolkit.WinUI.Converters" Version="8.2.250402" />
         <PackageReference Include="CommunityToolkit.WinUI.Media" Version="8.2.250402" />
         <PackageReference Include="H.NotifyIcon.WinUI" Version="2.3.0" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.5" />
         <PackageReference Include="Microsoft.Windows.CsWinRT" Version="2.2.0" />
         <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
         <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4948" />

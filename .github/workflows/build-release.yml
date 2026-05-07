@@ -190,17 +190,11 @@ jobs:
           dotnet publish src/UniGetUI/UniGetUI.csproj /noLogo /p:Configuration=Release /p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform -v m
           if ($LASTEXITCODE -ne 0) { throw "dotnet publish WinUI failed" }
 
-          dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj /noLogo /p:Configuration=Release /p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform --self-contained true -v m
-          if ($LASTEXITCODE -ne 0) { throw "dotnet publish Avalonia failed" }
-
           # Stage binaries
           $PublishDir = "src/UniGetUI/bin/$Platform/Release/$TargetFramework/win-$Platform/publish"
-          $AvaloniaPublishDir = "src/UniGetUI.Avalonia/bin/$Platform/Release/$TargetFramework/win-$Platform/publish"
           if (Test-Path "unigetui_bin") { Remove-Item "unigetui_bin" -Recurse -Force }
           New-Item "unigetui_bin" -ItemType Directory | Out-Null
           Get-ChildItem $PublishDir | Move-Item -Destination "unigetui_bin" -Force
-          New-Item "unigetui_bin/Avalonia" -ItemType Directory | Out-Null
-          Get-ChildItem $AvaloniaPublishDir | Move-Item -Destination "unigetui_bin/Avalonia" -Force
 
           # Backward-compat alias
           Copy-Item "unigetui_bin/UniGetUI.exe" "unigetui_bin/WingetUI.exe" -Force

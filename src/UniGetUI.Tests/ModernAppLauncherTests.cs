@@ -38,7 +38,23 @@ public sealed class ModernAppLauncherTests : IDisposable
     }
 
     [Fact]
-    public void ResolveModernExecutablePath_PrefersAvaloniaSubdirectory()
+    public void ResolveModernExecutablePath_PrefersRootExecutable()
+    {
+        string baseDirectory = Path.Combine(_testRoot, "Launcher");
+        Directory.CreateDirectory(baseDirectory);
+
+        string expected = Path.Combine(baseDirectory, ModernAppLauncher.ModernAppExecutableName);
+        File.WriteAllText(expected, "");
+
+        string avaloniaDirectory = Path.Combine(baseDirectory, ModernAppLauncher.ModernAppDirectoryName);
+        Directory.CreateDirectory(avaloniaDirectory);
+        File.WriteAllText(Path.Combine(avaloniaDirectory, ModernAppLauncher.ModernAppExecutableName), "");
+
+        Assert.Equal(expected, ModernAppLauncher.ResolveModernExecutablePath(baseDirectory));
+    }
+
+    [Fact]
+    public void ResolveModernExecutablePath_FallsBackToAvaloniaSubdirectory()
     {
         string baseDirectory = Path.Combine(_testRoot, "Launcher");
         string avaloniaDirectory = Path.Combine(baseDirectory, ModernAppLauncher.ModernAppDirectoryName);

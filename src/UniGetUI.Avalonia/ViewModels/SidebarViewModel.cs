@@ -86,7 +86,7 @@ public partial class SidebarViewModel : ViewModelBase
 
     [RelayCommand]
     private static Task CheckForUpdates() =>
-        AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false);
+        AvaloniaAutoUpdater.CheckAndInstallUpdatesAsync(autoLaunch: false, verbose: true);
 
     public void SelectNavButtonForPage(PageType page) =>
         SelectedPageType = page;

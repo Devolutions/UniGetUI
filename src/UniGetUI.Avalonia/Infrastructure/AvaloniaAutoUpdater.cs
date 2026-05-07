@@ -9,6 +9,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Microsoft.Win32;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
@@ -64,6 +65,25 @@ internal static partial class AvaloniaAutoUpdater
     /// </summary>
     public static event Action<string>? UpdateAvailable;
 
+    /// <summary>
+    /// Fired on the UI thread to surface progress/result of an update check or
+    /// install attempt to the UI banner.  Mirrors the verbose feedback the WinUI
+    /// AutoUpdater shows in its <c>InfoBar</c>.
+    /// </summary>
+    public static event Action<UpdateStatusInfo>? StatusChanged;
+
+    public sealed record UpdateStatusInfo(
+        string Title,
+        string Message,
+        InfoBarSeverity Severity,
+        bool IsClosable);
+
+    private static void RaiseStatus(string title, string message, InfoBarSeverity severity, bool isClosable)
+    {
+        var info = new UpdateStatusInfo(title, message, severity, isClosable);
+        Dispatcher.UIThread.Post(() => StatusChanged?.Invoke(info));
+    }
+
     private static volatile bool _installRequested;
     private static string? _pendingInstallerPath;
 
@@ -112,12 +132,22 @@ internal static partial class AvaloniaAutoUpdater
     }
 
     // ------------------------------------------------------------------ core logic
-    internal static async Task<bool> CheckAndInstallUpdatesAsync(bool autoLaunch = false)
+    internal static async Task<bool> CheckAndInstallUpdatesAsync(bool autoLaunch = false, bool verbose = false)
     {
         UpdaterOverrides overrides = LoadUpdaterOverrides();
+        bool wasCheckingForUpdates = true;
 
         try
         {
+            if (verbose)
+            {
+                RaiseStatus(
+                    CoreTools.Translate("We are checking for updates."),
+                    CoreTools.Translate("Please wait"),
+                    InfoBarSeverity.Informational,
+                    isClosable: false);
+            }
+
             UpdateCandidate candidate = await GetUpdateCandidateAsync(overrides);
             Logger.Info(
                 $"Auto-updater source '{candidate.SourceName}' returned version {candidate.VersionName} (upgradable={candidate.IsUpgradable})"
@@ -125,9 +155,18 @@ internal static partial class AvaloniaAutoUpdater
 
             if (!candidate.IsUpgradable)
             {
+                if (verbose)
+                {
+                    RaiseStatus(
+                        CoreTools.Translate("Great! You are on the latest version."),
+                        CoreTools.Translate("There are no new UniGetUI versions to be installed"),
+                        InfoBarSeverity.Success,
+                        isClosable: true);
+                }
                 return true;
             }
 
+            wasCheckingForUpdates = false;
             Logger.Info($"Update to UniGetUI {candidate.VersionName} is available.");
 
             string installerPath = Path.Join(CoreData.UniGetUIDataDirectory, "UniGetUI Updater.exe");
@@ -146,6 +185,14 @@ internal static partial class AvaloniaAutoUpdater
             // Delete invalid/outdated cached copy
             try { File.Delete(installerPath); } catch { }
 
+            RaiseStatus(
+                CoreTools.Translate(
+                    "UniGetUI version {0} is being downloaded.",
+                    candidate.VersionName.ToString(CultureInfo.InvariantCulture)),
+                CoreTools.Translate("This may take a minute or two"),
+                InfoBarSeverity.Informational,
+                isClosable: false);
+
             Logger.Info("Downloading installer...");
             await DownloadInstallerAsync(candidate.InstallerDownloadUrl, installerPath, overrides);
 
@@ -159,12 +206,25 @@ internal static partial class AvaloniaAutoUpdater
             }
 
             Logger.Error("Installer authenticity could not be verified. Aborting update.");
+            RaiseStatus(
+                CoreTools.Translate("The installer authenticity could not be verified."),
+                CoreTools.Translate("The update process has been aborted."),
+                InfoBarSeverity.Error,
+                isClosable: true);
             return false;
         }
         catch (Exception ex)
         {
             Logger.Error("An error occurred while checking for updates:");
             Logger.Error(ex);
+            if (verbose || !wasCheckingForUpdates)
+            {
+                RaiseStatus(
+                    CoreTools.Translate("An error occurred when checking for updates: "),
+                    ex.Message,
+                    InfoBarSeverity.Error,
+                    isClosable: true);
+            }
             return false;
         }
     }
@@ -225,6 +285,11 @@ internal static partial class AvaloniaAutoUpdater
         if (!started)
         {
             Logger.Error("Failed to start installer process.");
+            RaiseStatus(
+                CoreTools.Translate("Something went wrong while launching the updater."),
+                CoreTools.Translate("Please try again later"),
+                InfoBarSeverity.Error,
+                isClosable: true);
             return;
         }
 

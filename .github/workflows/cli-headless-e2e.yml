@@ -1,17 +1,6 @@
 name: CLI Headless E2E
 
 on:
-  push:
-    paths:
-      - 'src/**/*.cs'
-      - 'src/**/*.csproj'
-      - 'src/**/*.props'
-      - 'src/**/*.targets'
-      - 'src/**/*.sln'
-      - 'src/**/*.slnx'
-      - 'testing/automation/**'
-      - '.github/workflows/cli-headless-e2e.yml'
-      - 'global.json'
   pull_request:
     branches: [ "main" ]
     paths:

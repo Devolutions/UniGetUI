@@ -34,6 +34,15 @@ $Destination = (Resolve-Path $Destination).Path
 
 $sourceWinsConflicts = @{
     'Microsoft.Extensions.DependencyInjection.Abstractions.dll' = $true
+    'Microsoft.VisualBasic.dll' = $true
+    'Microsoft.Win32.SystemEvents.dll' = $true
+    'System.Diagnostics.EventLog.dll' = $true
+    'System.Drawing.Common.dll' = $true
+    'System.Drawing.dll' = $true
+    'System.Private.Windows.Core.dll' = $true
+    'System.Security.Cryptography.Pkcs.dll' = $true
+    'System.Security.Cryptography.Xml.dll' = $true
+    'WindowsBase.dll' = $true
 }
 
 $destinationWinsConflicts = @{

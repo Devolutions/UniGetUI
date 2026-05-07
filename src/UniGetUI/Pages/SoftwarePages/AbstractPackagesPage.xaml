@@ -170,7 +170,19 @@
             FontSize="24"
             FontWeight="ExtraLight"
             ToolTipService.ToolTip="{x:Bind Package.NewVersionString}"
-            Visibility="{x:Bind Package.IsUpgradable}"
+            Visibility="{x:Bind ShowUpgradeDownloadIcon, Mode=OneWay}"
+          />
+
+          <TextBlock
+            Grid.Row="0"
+            Grid.Column="4"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Center"
+            widgets:IconBuilder.Icon="Warning_Filled"
+            FontSize="22"
+            Foreground="#F59E0B"
+            ToolTipService.ToolTip="{x:Bind InstallerHostChangeTooltip, Mode=OneWay}"
+            Visibility="{x:Bind InstallerHostChanged, Mode=OneWay}"
           />
 
           <TextBlock
@@ -279,6 +291,18 @@
             FontWeight="ExtraLight"
             ToolTipService.ToolTip="{x:Bind ListedNameTooltip, Mode=OneWay}"
             Visibility="{x:Bind AlternateIdIconVisible, Mode=OneWay}"
+          />
+
+          <TextBlock
+            Grid.Column="0"
+            Margin="0,-2,-2,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            widgets:IconBuilder.Icon="Warning_Filled"
+            FontSize="18"
+            Foreground="#F59E0B"
+            ToolTipService.ToolTip="{x:Bind InstallerHostChangeTooltip, Mode=OneWay}"
+            Visibility="{x:Bind InstallerHostChanged, Mode=OneWay}"
           />
 
           <CheckBox
@@ -402,6 +426,18 @@
             Foreground="{ThemeResource AccentAAFillColorTertiaryBrush}"
             ToolTipService.ToolTip="{x:Bind ListedNameTooltip, Mode=OneWay}"
             Visibility="{x:Bind AlternateIdIconVisible, Mode=OneWay}"
+          />
+
+          <TextBlock
+            Grid.Row="1"
+            Margin="20,-4,0,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            widgets:IconBuilder.Icon="Warning_Filled"
+            FontSize="22"
+            Foreground="#F59E0B"
+            ToolTipService.ToolTip="{x:Bind InstallerHostChangeTooltip, Mode=OneWay}"
+            Visibility="{x:Bind InstallerHostChanged, Mode=OneWay}"
           />
 
           <TextBlock

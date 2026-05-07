@@ -93,9 +93,6 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
         {
             bool isCustom = Settings.GetValue(Settings.K.MinimumUpdateAge) == "custom";
             MinimumUpdateAgeCustomCard.Visibility = isCustom ? Visibility.Visible : Visibility.Collapsed;
-            MinimumUpdateAgeSelector.CornerRadius = isCustom
-                ? new CornerRadius(8, 8, 0, 0)
-                : new CornerRadius(8);
         }
 
         private static UIElement BuildReleaseDateCompatTable()

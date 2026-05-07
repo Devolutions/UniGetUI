@@ -1,14 +1,18 @@
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using UniGetUI.Core.Classes;
+using UniGetUI.Core.Logging;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Managers.WingetManager;
 
 namespace UniGetUI.PackageEngine.PackageClasses
 {
@@ -60,6 +64,13 @@ namespace UniGetUI.PackageEngine.PackageClasses
         public readonly string ExtendedTooltip = "";
         public float ListedOpacity = 1.0f;
 
+        public bool InstallerHostChanged { get; private set; }
+        public string InstallerHostChangeTooltip { get; private set; } = "";
+
+        public bool ShowUpgradeDownloadIcon => Package.IsUpgradable && !InstallerHostChanged;
+
+        private CancellationTokenSource? _installerHostCheckCts;
+
         public int NewVersionLabelWidth
         {
             get => Package.IsUpgradable ? 125 : 0;
@@ -94,6 +105,89 @@ namespace UniGetUI.PackageEngine.PackageClasses
                     $"{package.Name} ({package.Id} from {package.Source.AsString_DisplayName})";
             else
                 ExtendedTooltip = $"{package.Name} (from {package.Source.AsString_DisplayName})";
+
+            MaybeStartInstallerHostCheck();
+        }
+
+        /// <summary>
+        /// For upgradable WinGet packages, asynchronously fetches the installer URL host for
+        /// both the installed and the new version, and flags the row when the hosts differ.
+        /// See issue #4617 — defense-in-depth signal that an upgrade may be redirecting the
+        /// download to a different domain than the user originally trusted.
+        /// </summary>
+        private void MaybeStartInstallerHostCheck()
+        {
+            if (!Package.IsUpgradable) return;
+            if (Package.Manager is not WinGet) return;
+            if (Settings.Get(Settings.K.DisableInstallerHostChangeWarning)) return;
+
+            string installedVersion = Package.VersionString;
+            string newVersion = Package.NewVersionString;
+            if (string.IsNullOrWhiteSpace(installedVersion) || string.IsNullOrWhiteSpace(newVersion))
+                return;
+            if (installedVersion == newVersion) return;
+
+            DispatcherQueue? dispatcher = _page.DispatcherQueue
+                ?? DispatcherQueue.GetForCurrentThread();
+            if (dispatcher is null) return;
+
+            _installerHostCheckCts?.Cancel();
+            _installerHostCheckCts = new CancellationTokenSource();
+            CancellationToken token = _installerHostCheckCts.Token;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    if (token.IsCancellationRequested) return;
+                    var oldHosts = WinGet.TryGetInstallerHostsForVersion(Package, installedVersion);
+                    if (token.IsCancellationRequested) return;
+                    var newHosts = WinGet.TryGetInstallerHostsForVersion(Package, newVersion);
+                    if (token.IsCancellationRequested) return;
+
+                    if (oldHosts is null || newHosts is null) return;
+                    // Only flag when the two host sets are fully disjoint. If they share even
+                    // one host, the publisher hasn't moved hosting — adding/removing CDN mirrors
+                    // or architectures shouldn't trigger the warning.
+                    if (oldHosts.Overlaps(newHosts)) return;
+
+                    string tooltip = CoreTools.Translate(
+                        "Installer host changed since the installed version.\n"
+                        + "Old: {0}\n"
+                        + "New: {1}\n\n"
+                        + "This is usually harmless (the publisher moved hosting), "
+                        + "but can also indicate a hijacked package manifest. "
+                        + "Verify the new source before upgrading.",
+                        string.Join(", ", oldHosts),
+                        string.Join(", ", newHosts)
+                    );
+
+                    dispatcher.TryEnqueue(() =>
+                    {
+                        if (token.IsCancellationRequested) return;
+                        InstallerHostChanged = true;
+                        InstallerHostChangeTooltip = tooltip;
+                        PropertyChanged?.Invoke(
+                            this,
+                            new PropertyChangedEventArgs(nameof(InstallerHostChanged))
+                        );
+                        PropertyChanged?.Invoke(
+                            this,
+                            new PropertyChangedEventArgs(nameof(InstallerHostChangeTooltip))
+                        );
+                        PropertyChanged?.Invoke(
+                            this,
+                            new PropertyChangedEventArgs(nameof(ShowUpgradeDownloadIcon))
+                        );
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn(
+                        $"Installer-host check failed for {Package.Id}: {ex.Message}"
+                    );
+                }
+            }, token);
         }
 
         public void PackageItemContainer_DoubleTapped(
@@ -157,6 +251,9 @@ namespace UniGetUI.PackageEngine.PackageClasses
         public void Dispose()
         {
             Package.PropertyChanged -= Package_PropertyChanged;
+            _installerHostCheckCts?.Cancel();
+            _installerHostCheckCts?.Dispose();
+            _installerHostCheckCts = null;
         }
 
         /// <summary>

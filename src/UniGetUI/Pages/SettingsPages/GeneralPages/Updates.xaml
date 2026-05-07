@@ -88,15 +88,15 @@
 
       <widgets:ComboboxCard
         x:Name="MinimumUpdateAgeSelector"
-        CornerRadius="8"
+        CornerRadius="8,8,0,0"
         SettingName="MinimumUpdateAge"
         Text="Minimum age for updates"
       />
 
       <controls:SettingsCard
         x:Name="MinimumUpdateAgeCustomCard"
-        BorderThickness="1,0,1,1"
-        CornerRadius="0,0,8,8"
+        BorderThickness="1,0,1,0"
+        CornerRadius="0"
         Visibility="Collapsed"
       >
         <controls:SettingsCard.Header>
@@ -106,6 +106,13 @@
           <TextBox x:Name="MinimumUpdateAgeCustomInput" MinWidth="200" />
         </controls:SettingsCard.Content>
       </controls:SettingsCard>
+
+      <widgets:CheckboxCard
+        BorderThickness="1,0,1,1"
+        CornerRadius="0,0,8,8"
+        SettingName="DisableInstallerHostChangeWarning"
+        Text="Warn me when an upgrade's installer URL points to a different host than the installed version (WinGet only)"
+      />
 
       <ContentControl
         x:Name="ReleaseDateCompatTableHolder"

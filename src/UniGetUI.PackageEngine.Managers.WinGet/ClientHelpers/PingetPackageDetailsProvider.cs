@@ -136,6 +136,12 @@ internal sealed class PingetCliPackageDetailsProvider(string cliExecutablePath)
             arguments.Add(source);
         }
 
+        if (!string.IsNullOrWhiteSpace(query.Version))
+        {
+            arguments.Add("--version");
+            arguments.Add(query.Version);
+        }
+
         arguments.Add("--accept-source-agreements");
         arguments.Add("--output");
         arguments.Add("json");
@@ -347,7 +353,7 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
         }
     }
 
-    internal static PackageQuery CreateQuery(IPackage package)
+    internal static PackageQuery CreateQuery(IPackage package, string? version = null)
     {
         string id = package.Id.TrimEnd('…');
         string name = package.Name.TrimEnd('…');
@@ -377,6 +383,11 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
         )
         {
             query = query with { Source = package.Source.Name };
+        }
+
+        if (!string.IsNullOrWhiteSpace(version))
+        {
+            query = query with { Version = version };
         }
 
         return query;
@@ -444,6 +455,61 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
     {
         using Repository repository = OpenRepository();
         return repository.ShowFirstMatchAcrossSources(query);
+    }
+
+    /// <summary>
+    /// Fetches the set of installer URL hosts for a specific version of a package.
+    /// Returns null if the manifest can't be loaded, OR a non-empty set otherwise.
+    /// Used to detect installer-host changes between installed and upgrade versions (issue #4617).
+    /// Returns the SET (not just one) because manifests typically have multiple installers
+    /// (per arch / locale / scope) — flagging on a single-installer comparison can produce
+    /// false positives when a publisher legitimately uses different CDNs per architecture
+    /// or adds/removes architectures across versions.
+    /// </summary>
+    internal static IReadOnlySet<string>? TryGetInstallerHostsForVersion(
+        IPackage package,
+        string version
+    )
+    {
+        try
+        {
+            PackageQuery query = CreateQuery(package, version);
+            ShowResult result;
+            using (Repository repository = OpenRepository())
+            {
+                result = repository.ShowFirstMatchAcrossSources(query);
+            }
+
+            // Pinget silently falls back to the latest manifest when the requested version
+            // isn't in the index (yanked / expired / never indexed). That fallback would
+            // make the host-change check return false-negatives, so reject any result whose
+            // manifest version doesn't match what we asked for.
+            string returnedVersion = result.Manifest.Version ?? "";
+            if (!string.Equals(returnedVersion, version, StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.Info(
+                    $"Pinget returned manifest version '{returnedVersion}' when '{version}' "
+                    + $"was requested for {package.Id}; treating as not found"
+                );
+                return null;
+            }
+
+            HashSet<string> hosts = new(StringComparer.OrdinalIgnoreCase);
+            foreach (Installer installer in result.Manifest.Installers)
+            {
+                if (TryCreateUri(installer.Url, out Uri? uri) && uri is not null)
+                    hosts.Add(uri.Host);
+            }
+
+            return hosts.Count > 0 ? hosts : null;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(
+                $"Could not resolve installer hosts for {package.Id} version {version}: {ex.Message}"
+            );
+            return null;
+        }
     }
 
     private static Repository OpenRepository()

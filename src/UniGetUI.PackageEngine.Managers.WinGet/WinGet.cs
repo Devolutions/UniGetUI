@@ -180,6 +180,21 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             return $"--proxy {proxyUri.ToString().TrimEnd('/')}";
         }
 
+        /// <summary>
+        /// Returns the set of installer URL hosts from the WinGet manifest for a specific
+        /// version of the given package, or null if it can't be resolved. Used for the
+        /// installer-host-change warning on the Updates page (issue #4617).
+        /// Returns a set (not a single host) so callers can do set-overlap comparison —
+        /// see PingetPackageDetailsProvider.TryGetInstallerHostsForVersion for rationale.
+        /// </summary>
+        public static IReadOnlySet<string>? TryGetInstallerHostsForVersion(
+            UniGetUI.PackageEngine.Interfaces.IPackage package,
+            string version
+        )
+        {
+            return PingetPackageDetailsProvider.TryGetInstallerHostsForVersion(package, version);
+        }
+
         protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
         {
             return WinGetHelper.Instance.FindPackages_UnSafe(query);

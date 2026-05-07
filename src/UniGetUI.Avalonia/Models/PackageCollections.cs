@@ -6,10 +6,12 @@ using Avalonia.Collections;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels.Pages;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Managers.WingetManager;
 
 // ReSharper disable once CheckNamespace
 namespace UniGetUI.PackageEngine.PackageClasses;
@@ -64,6 +66,11 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     public string TagIconPath { get; private set; } = "";
     public bool TagIconVisible { get; private set; }
 
+    public bool InstallerHostChanged { get; private set; }
+    public string InstallerHostChangeTooltip { get; private set; } = "";
+
+    private CancellationTokenSource? _installerHostCheckCts;
+
     public string SourceIconPath => IconTypeToSvgPath(Package.Source.IconId);
 
     private static string IconTypeToSvgPath(IconType icon)
@@ -94,6 +101,79 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
 
         if (!Settings.Get(Settings.K.DisableIconsOnPackageLists))
             _ = LoadIconAsync();
+
+        MaybeStartInstallerHostCheck();
+    }
+
+    /// <summary>
+    /// For upgradable WinGet packages, asynchronously fetches the installer URL host for
+    /// both the installed and the new version, and flags the row when the hosts differ.
+    /// See issue #4617 — defense-in-depth signal that an upgrade may be redirecting the
+    /// download to a different domain than the user originally trusted.
+    /// </summary>
+    private void MaybeStartInstallerHostCheck()
+    {
+        if (!Package.IsUpgradable) return;
+        if (Package.Manager is not WinGet) return;
+        if (Settings.Get(Settings.K.DisableInstallerHostChangeWarning)) return;
+
+        string installedVersion = Package.VersionString;
+        string newVersion = Package.NewVersionString;
+        if (string.IsNullOrWhiteSpace(installedVersion) || string.IsNullOrWhiteSpace(newVersion))
+            return;
+        if (installedVersion == newVersion) return;
+
+        _installerHostCheckCts?.Cancel();
+        _installerHostCheckCts = new CancellationTokenSource();
+        CancellationToken token = _installerHostCheckCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (token.IsCancellationRequested) return;
+                var oldHosts = WinGet.TryGetInstallerHostsForVersion(Package, installedVersion);
+                if (token.IsCancellationRequested) return;
+                var newHosts = WinGet.TryGetInstallerHostsForVersion(Package, newVersion);
+                if (token.IsCancellationRequested) return;
+
+                if (oldHosts is null || newHosts is null) return;
+                // Only flag when the two host sets are fully disjoint. If they share even
+                // one host, the publisher hasn't moved hosting — adding/removing CDN mirrors
+                // or architectures shouldn't trigger the warning.
+                if (oldHosts.Overlaps(newHosts)) return;
+
+                string tooltip = CoreTools.Translate(
+                    "Installer host changed since the installed version.\n"
+                    + "Old: {0}\n"
+                    + "New: {1}\n\n"
+                    + "This is usually harmless (the publisher moved hosting), "
+                    + "but can also indicate a hijacked package manifest. "
+                    + "Verify the new source before upgrading.",
+                    string.Join(", ", oldHosts),
+                    string.Join(", ", newHosts)
+                );
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (token.IsCancellationRequested) return;
+                    InstallerHostChanged = true;
+                    InstallerHostChangeTooltip = tooltip;
+                    PropertyChanged?.Invoke(
+                        this,
+                        new PropertyChangedEventArgs(nameof(InstallerHostChanged))
+                    );
+                    PropertyChanged?.Invoke(
+                        this,
+                        new PropertyChangedEventArgs(nameof(InstallerHostChangeTooltip))
+                    );
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Installer-host check failed for {Package.Id}: {ex.Message}");
+            }
+        }, token);
     }
 
     private async Task LoadIconAsync()
@@ -187,6 +267,9 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     public void Dispose()
     {
         Package.PropertyChanged -= Package_PropertyChanged;
+        _installerHostCheckCts?.Cancel();
+        _installerHostCheckCts?.Dispose();
+        _installerHostCheckCts = null;
     }
 }
 

@@ -90,6 +90,7 @@ public static partial class Settings
         WinGetCliToolPreference,
         WinGetComApiPolicy,
         DisableClassicMode,
+        DisableInstallerHostChangeWarning,
 
         Test1,
         Test2,
@@ -191,6 +192,7 @@ public static partial class Settings
             K.WinGetCliToolPreference => "WinGetCliToolPreference",
             K.WinGetComApiPolicy => "WinGetComApiPolicy",
             K.DisableClassicMode => "DisableClassicMode",
+            K.DisableInstallerHostChangeWarning => "DisableInstallerHostChangeWarning",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

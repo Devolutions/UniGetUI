@@ -81,6 +81,11 @@
                                   BorderThickness="1,0,1,1"
                                   CornerRadius="0,0,8,8"/>
 
+            <settings:CheckboxCard SettingName="DisableInstallerHostChangeWarning"
+                                   Text="{t:Translate Text='Warn me when the installer URL host changes between the installed version and the new version (WinGet only)'}"
+                                   CornerRadius="8"
+                                   Margin="0,8,0,0"/>
+
             <ContentControl x:Name="ReleaseDateCompatTableHolder"
                             Margin="0,8,0,0"/>
 

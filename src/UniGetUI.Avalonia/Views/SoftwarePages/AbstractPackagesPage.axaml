@@ -469,7 +469,13 @@
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
                                                 <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/download.svg"
-                                                                  Width="16" Height="16" VerticalAlignment="Center"/>
+                                                                  Width="16" Height="16" VerticalAlignment="Center"
+                                                                  IsVisible="{Binding !InstallerHostChanged}"/>
+                                                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/warning_filled.svg"
+                                                                  Width="16" Height="16" VerticalAlignment="Center"
+                                                                  Foreground="#F59E0B"
+                                                                  IsVisible="{Binding InstallerHostChanged}"
+                                                                  ToolTip.Tip="{Binding InstallerHostChangeTooltip}"/>
                                                 <TextBlock Text="{Binding Package.NewVersionString}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </DataTemplate>
@@ -528,6 +534,13 @@
                                                                       IsVisible="{Binding TagIconVisible}"
                                                                       HorizontalAlignment="Right"
                                                                       VerticalAlignment="Bottom"/>
+                                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/warning_filled.svg"
+                                                                      Width="14" Height="14"
+                                                                      Foreground="#F59E0B"
+                                                                      IsVisible="{Binding InstallerHostChanged}"
+                                                                      ToolTip.Tip="{Binding InstallerHostChangeTooltip}"
+                                                                      HorizontalAlignment="Right"
+                                                                      VerticalAlignment="Top"/>
                                                 </Panel>
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                                                     <TextBlock Text="{Binding Package.Name}"
@@ -604,6 +617,13 @@
                                                                       IsVisible="{Binding TagIconVisible}"
                                                                       HorizontalAlignment="Right"
                                                                       VerticalAlignment="Bottom"/>
+                                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/warning_filled.svg"
+                                                                      Width="18" Height="18"
+                                                                      Foreground="#F59E0B"
+                                                                      IsVisible="{Binding InstallerHostChanged}"
+                                                                      ToolTip.Tip="{Binding InstallerHostChangeTooltip}"
+                                                                      HorizontalAlignment="Right"
+                                                                      VerticalAlignment="Top"/>
                                                 </Panel>
                                                 <TextBlock Grid.Row="2"
                                                            Text="{Binding Package.Name}"

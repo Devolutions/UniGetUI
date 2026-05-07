@@ -808,5 +808,7 @@
   "Error": "Error",
   "Log in failed: ": "Log in failed: ",
   "Log out failed: ": "Log out failed: ",
-  "Package backup settings": "Package backup settings"
+  "Package backup settings": "Package backup settings",
+  "Warn me when the installer URL host changes between the installed version and the new version (WinGet only)": "Warn me when the installer URL host changes between the installed version and the new version (WinGet only)",
+  "Installer host changed since the installed version.\nOld: {0}\nNew: {1}\n\nThis is usually harmless (the publisher moved hosting), but can also indicate a hijacked package manifest. Verify the new source before upgrading.": "Installer host changed since the installed version.\nOld: {0}\nNew: {1}\n\nThis is usually harmless (the publisher moved hosting), but can also indicate a hijacked package manifest. Verify the new source before upgrading."
 }

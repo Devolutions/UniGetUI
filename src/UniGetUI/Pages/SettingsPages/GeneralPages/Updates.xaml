@@ -111,7 +111,7 @@
         BorderThickness="1,0,1,1"
         CornerRadius="0,0,8,8"
         SettingName="DisableInstallerHostChangeWarning"
-        Text="Warn me when an upgrade's installer URL points to a different host than the installed version (WinGet only)"
+        Text="Warn me when the installer URL host changes between the installed version and the new version (WinGet only)"
       />
 
       <ContentControl

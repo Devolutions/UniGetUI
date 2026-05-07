@@ -1,6 +1,6 @@
 using Avalonia.Controls.ApplicationLifetimes;
-using UniGetUI.Core.Tools;
 using UniGetUI.Avalonia.Views;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 

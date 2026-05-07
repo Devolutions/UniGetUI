@@ -356,6 +356,7 @@ internal static class AvaloniaBootstrapper
         }
     }
 
+#if !DEBUG
     private static string ResolveBundledElevatorPath()
     {
         string executableDirectory = CoreData.UniGetUIExecutableDirectory;
@@ -389,6 +390,7 @@ internal static class AvaloniaBootstrapper
 
         return localPath;
     }
+#endif
 
     [System.Runtime.Versioning.SupportedOSPlatform("linux")]
     private static async Task LoadLinuxElevatorAsync()

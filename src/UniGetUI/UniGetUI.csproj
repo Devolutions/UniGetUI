@@ -469,6 +469,7 @@
 
     <ItemGroup>
         <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
+        <Compile Include="..\Shared\SharedPreUiCommandDispatcher.cs" Link="Shared\SharedPreUiCommandDispatcher.cs" />
     </ItemGroup>
 
     <ItemGroup>

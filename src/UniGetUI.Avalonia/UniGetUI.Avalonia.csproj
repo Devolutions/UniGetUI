@@ -98,6 +98,10 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Compile Include="..\Shared\SharedPreUiCommandDispatcher.cs" Link="Shared\SharedPreUiCommandDispatcher.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
         <!-- SVG symbol icons (shared with WinUI project) -->
         <AvaloniaResource Include="..\UniGetUI\Assets\Symbols\*.svg" Link="Assets\Symbols\%(Filename)%(Extension)" />
 

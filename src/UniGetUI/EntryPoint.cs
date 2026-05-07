@@ -4,6 +4,7 @@ using Microsoft.Windows.AppLifecycle;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Interface;
+using UniGetUI.Shared;
 
 namespace UniGetUI
 {
@@ -20,9 +21,9 @@ namespace UniGetUI
                     WindowsConsoleHost.PrepareCliIO();
                 }
 
-                if (args.Contains(CLIHandler.HELP))
+                if (SharedPreUiCommandDispatcher.TryHandle(args, SharedPreUiCommandDispatcher.WinUiExitCodes) is { } preUiExitCode)
                 {
-                    Environment.ExitCode = CLIHandler.Help();
+                    Environment.ExitCode = preUiExitCode;
                     return;
                 }
                 else if (args.Contains(CLIHandler.MIGRATE_WINGETUI_TO_UNIGETUI))
@@ -36,51 +37,6 @@ namespace UniGetUI
                 )
                 {
                     Environment.ExitCode = CLIHandler.UninstallUniGetUI();
-                    return;
-                }
-                else if (args.Contains(CLIHandler.IMPORT_SETTINGS))
-                {
-                    Environment.ExitCode = CLIHandler.ImportSettings();
-                    return;
-                }
-                else if (args.Contains(CLIHandler.EXPORT_SETTINGS))
-                {
-                    Environment.ExitCode = CLIHandler.ExportSettings();
-                    return;
-                }
-                else if (args.Contains(CLIHandler.ENABLE_SETTING))
-                {
-                    Environment.ExitCode = CLIHandler.EnableSetting();
-                    return;
-                }
-                else if (args.Contains(CLIHandler.DISABLE_SETTING))
-                {
-                    Environment.ExitCode = CLIHandler.DisableSetting();
-                    return;
-                }
-                else if (args.Contains(CLIHandler.SET_SETTING_VAL))
-                {
-                    Environment.ExitCode = CLIHandler.SetSettingsValue();
-                    return;
-                }
-                else if (args.Contains(CLIHandler.ENABLE_SECURE_SETTING))
-                {
-                    Environment.ExitCode = CLIHandler.EnableSecureSetting();
-                    return;
-                }
-                else if (args.Contains(CLIHandler.DISABLE_SECURE_SETTING))
-                {
-                    Environment.ExitCode = CLIHandler.DisableSecureSetting();
-                    return;
-                }
-                else if (args.Contains(CLIHandler.ENABLE_SECURE_SETTING_FOR_USER))
-                {
-                    Environment.ExitCode = CLIHandler.EnableSecureSettingForUser();
-                    return;
-                }
-                else if (args.Contains(CLIHandler.DISABLE_SECURE_SETTING_FOR_USER))
-                {
-                    Environment.ExitCode = CLIHandler.DisableSecureSettingForUser();
                     return;
                 }
                 else if (IpcCliSyntax.IsIpcCommand(args))

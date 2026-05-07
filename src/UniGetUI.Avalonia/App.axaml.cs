@@ -80,7 +80,7 @@ public partial class App : Application
             ApplyTheme(CoreSettings.GetValue(CoreSettings.K.PreferredTheme));
             var mainWindow = new MainWindow();
             desktop.MainWindow = mainWindow;
-            Program.SecondaryInstanceArgsReceived += args =>
+            AvaloniaAppHost.SecondaryInstanceArgsReceived += args =>
                 HandleSecondaryInstanceArgs(mainWindow, args);
 
             if (CoreData.WasDaemon)

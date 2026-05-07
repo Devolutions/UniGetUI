@@ -105,7 +105,7 @@
             SourceFiles="$(PingetCliExecutablePath)"
             DestinationFolder="$(PublishDir)"
             SkipUnchangedFiles="true"
-            Condition="Exists('$(PingetCliExecutablePath)') and '$(PublishDir)' != '' and Exists('$(PublishDir)')"
+            Condition="Exists('$(PingetCliExecutablePath)') and '$(PublishDir)' != ''"
         />
     </Target>
 

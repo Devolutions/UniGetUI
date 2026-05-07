@@ -11,7 +11,9 @@ using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+#if WINDOWS
 using UniGetUI.PackageEngine.Managers.WingetManager;
+#endif
 
 // ReSharper disable once CheckNamespace
 namespace UniGetUI.PackageEngine.PackageClasses;
@@ -113,6 +115,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     /// </summary>
     private void MaybeStartInstallerHostCheck()
     {
+#if WINDOWS
         if (!Package.IsUpgradable) return;
         if (Package.Manager is not WinGet) return;
         if (Settings.Get(Settings.K.DisableInstallerHostChangeWarning)) return;
@@ -174,6 +177,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
                 Logger.Warn($"Installer-host check failed for {Package.Id}: {ex.Message}");
             }
         }, token);
+#endif
     }
 
     private async Task LoadIconAsync()

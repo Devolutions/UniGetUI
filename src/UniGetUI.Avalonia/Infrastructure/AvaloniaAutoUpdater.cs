@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Avalonia.Threading;
@@ -73,13 +74,245 @@ internal static partial class AvaloniaAutoUpdater
         string Title,
         string Message,
         InfoBarSeverity Severity,
-        bool IsClosable);
+        bool IsClosable,
+        string? ActionButtonText = null,
+        Action? ActionButtonAction = null);
 
-    private static void RaiseStatus(string title, string message, InfoBarSeverity severity, bool isClosable)
+    private static void RaiseStatus(
+        string title,
+        string message,
+        InfoBarSeverity severity,
+        bool isClosable,
+        string? actionButtonText = null,
+        Action? actionButtonAction = null)
     {
-        var info = new UpdateStatusInfo(title, message, severity, isClosable);
+        var info = new UpdateStatusInfo(title, message, severity, isClosable, actionButtonText, actionButtonAction);
         Dispatcher.UIThread.Post(() => StatusChanged?.Invoke(info));
     }
+
+    // ------------------------------------------------------------------ per-attempt log
+    // Captures auto-updater log entries for the current update attempt. We keep a
+    // dedicated buffer (in addition to the global session log) so the "View log"
+    // banner button can show the user only the entries relevant to their failed
+    // update, instead of dumping the entire noisy session log.
+    private static readonly Lock _updateLogLock = new();
+    private static StringBuilder? _updateLogBuilder;
+    private static readonly string _updateLogPath = Path.Combine(
+        Path.GetTempPath(),
+        "UniGetUI",
+        "last-update-attempt.log"
+    );
+
+    private static void ResetUpdateLog(bool manualCheck, bool autoLaunch)
+    {
+        lock (_updateLogLock)
+        {
+            _updateLogBuilder = new StringBuilder()
+                .AppendLine($"=== UniGetUI update attempt started at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===")
+                .AppendLine($"Current version: {CoreData.VersionName} (build {CoreData.BuildNumber})")
+                .AppendLine($"Manual check: {manualCheck}")
+                .AppendLine($"Auto-launch: {autoLaunch}")
+                .AppendLine($"Process architecture: {RuntimeInformation.ProcessArchitecture}")
+                .AppendLine();
+            FlushUpdateLogToDiskNoLock();
+        }
+    }
+
+    private static void AppendToUpdateLog(string severity, string message)
+    {
+        lock (_updateLogLock)
+        {
+            if (_updateLogBuilder is null) return;
+            _updateLogBuilder.AppendLine($"[{DateTime.Now:HH:mm:ss}] [{severity}] {message}");
+            FlushUpdateLogToDiskNoLock();
+        }
+    }
+
+    // Persists the current buffer to _updateLogPath. Caller MUST hold _updateLogLock.
+    // Failures are silently swallowed — a missing log file should never break the
+    // update flow itself.
+    private static void FlushUpdateLogToDiskNoLock()
+    {
+        if (_updateLogBuilder is null) return;
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_updateLogPath)!);
+            File.WriteAllText(_updateLogPath, _updateLogBuilder.ToString());
+        }
+        catch { /* see comment above */ }
+    }
+
+    private const string AttemptFinishedMarker = "=== Attempt finished:";
+
+    // Appends a structured line indicating the update flow reached a terminal state.
+    // The presence/absence of this marker on disk lets a subsequent app launch tell
+    // whether the previous attempt completed cleanly or was killed mid-flow (e.g.,
+    // by the installer terminating us during file replacement).
+    private static void MarkAttemptFinished(string outcome)
+    {
+        lock (_updateLogLock)
+        {
+            if (_updateLogBuilder is null) return;
+            _updateLogBuilder
+                .AppendLine()
+                .AppendLine($"{AttemptFinishedMarker} {outcome} at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===");
+            FlushUpdateLogToDiskNoLock();
+        }
+    }
+
+    private static void RecordTargetVersion(string version)
+    {
+        lock (_updateLogLock)
+        {
+            _updateLogBuilder?.AppendLine($"Target version: {version}");
+            FlushUpdateLogToDiskNoLock();
+        }
+    }
+
+    /// <summary>
+    /// On app startup, detects an interrupted update attempt — the log file
+    /// from the previous attempt has no <see cref="AttemptFinishedMarker"/>,
+    /// indicating the app was killed mid-flow (almost always because the
+    /// installer terminated us during file replacement).
+    ///
+    /// If the running version equals the target version we recorded, the
+    /// install succeeded and we are now the new version — silently appends
+    /// a marker so we don't re-prompt next time.
+    ///
+    /// Otherwise, surfaces a Warning banner with a "View log" button so the
+    /// user can investigate what happened.
+    /// </summary>
+    public static void CheckForOrphanedUpdateAttempt()
+    {
+        try
+        {
+            if (!File.Exists(_updateLogPath)) return;
+
+            var info = new FileInfo(_updateLogPath);
+            if ((DateTime.Now - info.LastWriteTime).TotalMinutes > 10)
+                return;
+
+            string content = File.ReadAllText(_updateLogPath);
+            if (content.Contains(AttemptFinishedMarker))
+                return;
+
+            string currentVer = CoreData.VersionName;
+            string? targetVer = null;
+            foreach (string line in content.Split('\n'))
+            {
+                if (line.StartsWith("Target version: "))
+                {
+                    targetVer = line["Target version: ".Length..].Trim();
+                    break;
+                }
+            }
+
+            if (targetVer is not null && targetVer == currentVer)
+            {
+                Logger.Info($"Previous update attempt killed mid-flow but install succeeded (running version {currentVer} matches target). Marking as finished.");
+                try
+                {
+                    File.AppendAllText(
+                        _updateLogPath,
+                        $"{Environment.NewLine}{AttemptFinishedMarker} installer succeeded (detected on next launch — running version is {currentVer}) at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ==={Environment.NewLine}");
+                }
+                catch { /* swallow */ }
+                return;
+            }
+
+            Logger.Warn($"Detected interrupted update attempt. Running={currentVer}, Target={targetVer ?? "(unknown)"}");
+
+            RaiseStatus(
+                CoreTools.Translate("Your last update attempt did not complete."),
+                CoreTools.Translate("UniGetUI could not confirm whether the update succeeded. Open the log to see what happened."),
+                InfoBarSeverity.Warning,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not check for orphaned update attempt: {ex.Message}");
+        }
+    }
+
+    private static void LogUpdateInfo(string message, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+    {
+        Logger.Info(message, caller);
+        AppendToUpdateLog("INFO ", message);
+    }
+
+    private static void LogUpdateWarn(string message, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+    {
+        Logger.Warn(message, caller);
+        AppendToUpdateLog("WARN ", message);
+    }
+
+    private static void LogUpdateWarn(Exception ex, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+    {
+        Logger.Warn(ex, caller);
+        AppendToUpdateLog("WARN ", ex.ToString());
+    }
+
+    private static void LogUpdateError(string message, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+    {
+        Logger.Error(message, caller);
+        AppendToUpdateLog("ERROR", message);
+    }
+
+    private static void LogUpdateError(Exception ex, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+    {
+        Logger.Error(ex, caller);
+        AppendToUpdateLog("ERROR", ex.ToString());
+    }
+
+    private static void LogUpdateDebug(string message, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+    {
+        Logger.Debug(message, caller);
+        AppendToUpdateLog("DEBUG", message);
+    }
+
+    private static void OpenUpdateLog()
+    {
+        // The buffer is flushed to disk on every append/reset, so the file should
+        // already be current. Only fall back to the full session log if no flow
+        // has ever run (button shouldn't appear in that case, but be defensive).
+        string pathToOpen = File.Exists(_updateLogPath)
+            ? _updateLogPath
+            : Logger.GetSessionLogPath();
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = pathToOpen,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not open log file '{pathToOpen}': {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Translates an Inno Setup installer exit code into a short human-readable
+    /// reason. The codes come from the Inno Setup documentation
+    /// (https://jrsoftware.org/ishelp/index.php?topic=setupexitcodes).
+    /// </summary>
+    private static string DescribeInstallerExitCode(int code) => code switch
+    {
+        0 => CoreTools.Translate("The installer reported success but did not restart UniGetUI."),
+        1 => CoreTools.Translate("The installer failed to initialize."),
+        2 => CoreTools.Translate("Setup was canceled before installation began."),
+        3 => CoreTools.Translate("A fatal error occurred during the preparation phase."),
+        4 => CoreTools.Translate("A fatal error occurred during installation."),
+        5 => CoreTools.Translate("Installation was canceled while in progress."),
+        6 => CoreTools.Translate("The installer was terminated by another process."),
+        7 => CoreTools.Translate("The preparation phase determined the installation cannot proceed."),
+        8 => CoreTools.Translate("The installer could not start. UniGetUI may already be running, or you do not have permission to install."),
+        _ => CoreTools.Translate("Unexpected installer error."),
+    };
 
     private static volatile bool _installRequested;
     private static string? _pendingInstallerPath;
@@ -103,14 +336,14 @@ internal static partial class AvaloniaAutoUpdater
     /// </summary>
     public static void TriggerInstall()
     {
-        Logger.Info("Auto-updater: TriggerInstall invoked (user clicked Update now).");
+        LogUpdateInfo("Auto-updater: TriggerInstall invoked (user clicked Update now).");
         _installRequested = true;
     }
     public static async Task UpdateCheckLoopAsync()
     {
         if (Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
         {
-            Logger.Warn("Auto-updater: disabled by user setting, skipping.");
+            LogUpdateWarn("Auto-updater: disabled by user setting, skipping.");
             return;
         }
 
@@ -121,7 +354,7 @@ internal static partial class AvaloniaAutoUpdater
         {
             if (Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
             {
-                Logger.Warn("Auto-updater: disabled by user setting, stopping loop.");
+                LogUpdateWarn("Auto-updater: disabled by user setting, stopping loop.");
                 return;
             }
 
@@ -135,6 +368,7 @@ internal static partial class AvaloniaAutoUpdater
     // ------------------------------------------------------------------ core logic
     internal static async Task<bool> CheckAndInstallUpdatesAsync(bool autoLaunch = false, bool manualCheck = false)
     {
+        ResetUpdateLog(manualCheck, autoLaunch);
         UpdaterOverrides overrides = LoadUpdaterOverrides();
         bool wasCheckingForUpdates = true;
 
@@ -150,7 +384,7 @@ internal static partial class AvaloniaAutoUpdater
             }
 
             UpdateCandidate candidate = await GetUpdateCandidateAsync(overrides);
-            Logger.Info(
+            LogUpdateInfo(
                 $"Auto-updater source '{candidate.SourceName}' returned version {candidate.VersionName} (upgradable={candidate.IsUpgradable})"
             );
 
@@ -164,11 +398,13 @@ internal static partial class AvaloniaAutoUpdater
                         InfoBarSeverity.Success,
                         isClosable: true);
                 }
+                MarkAttemptFinished("no update available");
                 return true;
             }
 
             wasCheckingForUpdates = false;
-            Logger.Info($"Update to UniGetUI {candidate.VersionName} is available.");
+            RecordTargetVersion(candidate.VersionName);
+            LogUpdateInfo($"Update to UniGetUI {candidate.VersionName} is available.");
 
             string installerPath = Path.Join(CoreData.UniGetUIDataDirectory, "UniGetUI Updater.exe");
 
@@ -179,7 +415,7 @@ internal static partial class AvaloniaAutoUpdater
                 && CheckInstallerSignerThumbprint(installerPath, overrides)
             )
             {
-                Logger.Info("Cached valid installer found, preparing to launch...");
+                LogUpdateInfo("Cached valid installer found, preparing to launch...");
                 return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch, manualCheck);
             }
 
@@ -194,7 +430,7 @@ internal static partial class AvaloniaAutoUpdater
                 InfoBarSeverity.Informational,
                 isClosable: false);
 
-            Logger.Info("Downloading installer...");
+            LogUpdateInfo("Downloading installer...");
             await DownloadInstallerAsync(candidate.InstallerDownloadUrl, installerPath, overrides);
 
             if (
@@ -202,30 +438,36 @@ internal static partial class AvaloniaAutoUpdater
                 && CheckInstallerSignerThumbprint(installerPath, overrides)
             )
             {
-                Logger.Info("Downloaded installer is valid, preparing to launch...");
+                LogUpdateInfo("Downloaded installer is valid, preparing to launch...");
                 return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch, manualCheck);
             }
 
-            Logger.Error("Installer authenticity could not be verified. Aborting update.");
+            LogUpdateError("Installer authenticity could not be verified. Aborting update.");
             RaiseStatus(
                 CoreTools.Translate("The installer authenticity could not be verified."),
                 CoreTools.Translate("The update process has been aborted."),
                 InfoBarSeverity.Error,
-                isClosable: true);
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("authenticity verification failed");
             return false;
         }
         catch (Exception ex)
         {
-            Logger.Error("An error occurred while checking for updates:");
-            Logger.Error(ex);
+            LogUpdateError("An error occurred while checking for updates:");
+            LogUpdateError(ex);
             if (manualCheck || !wasCheckingForUpdates)
             {
                 RaiseStatus(
                     CoreTools.Translate("An error occurred when checking for updates: "),
                     ex.Message,
                     InfoBarSeverity.Error,
-                    isClosable: true);
+                    isClosable: true,
+                    actionButtonText: CoreTools.Translate("View log"),
+                    actionButtonAction: OpenUpdateLog);
             }
+            MarkAttemptFinished($"exception: {ex.Message}");
             return false;
         }
     }
@@ -258,20 +500,21 @@ internal static partial class AvaloniaAutoUpdater
         {
             if (!manualCheck && Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
             {
-                Logger.Warn("Auto-updater: disabled while waiting for user \u2014 aborting.");
+                LogUpdateWarn("Auto-updater: disabled while waiting for user \u2014 aborting.");
+                MarkAttemptFinished("aborted - auto-update disabled while waiting");
                 return true;
             }
             await Task.Delay(500);
         }
 
-        Logger.Info("Installing update \u2014 launching installer.");
+        LogUpdateInfo("Installing update \u2014 launching installer.");
         await LaunchInstallerAsync(installerPath);
         return true;
     }
 
     private static async Task LaunchInstallerAsync(string installerLocation)
     {
-        Logger.Info($"Launching installer: {installerLocation}");
+        LogUpdateInfo($"Launching installer: {installerLocation}");
         using Process p = new()
         {
             StartInfo = new ProcessStartInfo
@@ -290,28 +533,34 @@ internal static partial class AvaloniaAutoUpdater
         }
         catch (Exception ex)
         {
-            Logger.Error("Process.Start threw while launching the installer:");
-            Logger.Error(ex);
+            LogUpdateError("Process.Start threw while launching the installer:");
+            LogUpdateError(ex);
             RaiseStatus(
-                CoreTools.Translate("Something went wrong while launching the updater."),
+                CoreTools.Translate("The updater could not be launched."),
                 ex.Message,
                 InfoBarSeverity.Error,
-                isClosable: true);
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished($"installer launch threw: {ex.Message}");
             return;
         }
 
         if (!started)
         {
-            Logger.Error("Failed to start installer process (Process.Start returned false).");
+            LogUpdateError("Failed to start installer process (Process.Start returned false).");
             RaiseStatus(
-                CoreTools.Translate("Something went wrong while launching the updater."),
-                CoreTools.Translate("Please try again later"),
+                CoreTools.Translate("The updater could not be launched."),
+                CoreTools.Translate("The operating system did not start the installer process."),
                 InfoBarSeverity.Error,
-                isClosable: true);
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("Process.Start returned false");
             return;
         }
 
-        Logger.Info($"Installer process started (PID {p.Id}). The installer is expected to terminate UniGetUI before file replacement.");
+        LogUpdateInfo($"Installer process started (PID {p.Id}). The installer is expected to terminate UniGetUI before file replacement.");
 
         RaiseStatus(
             CoreTools.Translate("UniGetUI is being updated..."),
@@ -321,13 +570,42 @@ internal static partial class AvaloniaAutoUpdater
 
         await p.WaitForExitAsync();
 
-        // If we reach here, the installer exited without terminating us \u2014 surface that
-        // to the user the same way WinUI does.
+        // If we reach here, the installer exited without terminating this process.
+        // Distinguish two cases:
+        //   - Exit code 0: installer succeeded; the new version IS installed at the
+        //     install location, but the running copy was not replaced (almost always
+        //     because UniGetUI is running from outside the install location — typically
+        //     a development build). This is not really an error.
+        //   - Any other code: installer reported a failure; the update did not apply.
+        int exitCode = p.ExitCode;
+        string reason = DescribeInstallerExitCode(exitCode);
+
+        if (exitCode == 0)
+        {
+            string runningPath = Environment.ProcessPath ?? "(unknown)";
+            LogUpdateWarn($"Installer reported success (exit code 0) but did not replace this running copy. Running from: {runningPath}");
+
+            RaiseStatus(
+                CoreTools.Translate("Update installed."),
+                CoreTools.Translate("UniGetUI was updated successfully, but this running copy was not replaced. This usually means you are running a development build. Close this copy and start the newly-installed version to finish."),
+                InfoBarSeverity.Warning,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("installer succeeded but did not replace running copy");
+            return;
+        }
+
+        LogUpdateError($"Installer exited with code {exitCode} ({reason}) without restarting UniGetUI.");
+
         RaiseStatus(
-            CoreTools.Translate("Something went wrong while launching the updater."),
-            CoreTools.Translate("Please try again later"),
+            CoreTools.Translate("The update could not be applied."),
+            CoreTools.Translate("Installer exit code {0}: {1}", exitCode, reason),
             InfoBarSeverity.Error,
-            isClosable: true);
+            isClosable: true,
+            actionButtonText: CoreTools.Translate("View log"),
+            actionButtonAction: OpenUpdateLog);
+        MarkAttemptFinished($"installer failed with code {exitCode}");
     }
 
     // ------------------------------------------------------------------ update check sources
@@ -338,7 +616,7 @@ internal static partial class AvaloniaAutoUpdater
 
     private static async Task<UpdateCandidate> CheckFromProductInfoAsync(UpdaterOverrides overrides)
     {
-        Logger.Debug($"Checking updates via ProductInfo: {overrides.ProductInfoUrl}");
+        LogUpdateDebug($"Checking updates via ProductInfo: {overrides.ProductInfoUrl}");
 
         if (!IsSourceUrlAllowed(overrides.ProductInfoUrl, overrides.AllowUnsafeUrls))
         {
@@ -396,7 +674,7 @@ internal static partial class AvaloniaAutoUpdater
         Version available = ParseVersionOrFallback(channel.Version, new Version(0, 0, 0, 0));
         bool upgradable = available > current;
 
-        Logger.Debug(
+        LogUpdateDebug(
             $"ProductInfo check: current={current}, available={available}, upgradable={upgradable}"
         );
 
@@ -411,7 +689,7 @@ internal static partial class AvaloniaAutoUpdater
     {
         if (overrides.SkipHashValidation)
         {
-            Logger.Warn("Registry override: skipping hash validation.");
+            LogUpdateWarn("Registry override: skipping hash validation.");
             return true;
         }
 
@@ -422,11 +700,11 @@ internal static partial class AvaloniaAutoUpdater
 
         if (actual == expectedHash.ToLowerInvariant())
         {
-            Logger.Debug($"Hash match: {actual}");
+            LogUpdateDebug($"Hash match: {actual}");
             return true;
         }
 
-        Logger.Warn($"Hash mismatch. Expected: {expectedHash}  Got: {actual}");
+        LogUpdateWarn($"Hash mismatch. Expected: {expectedHash}  Got: {actual}");
         return false;
     }
 
@@ -434,7 +712,7 @@ internal static partial class AvaloniaAutoUpdater
     {
         if (overrides.SkipSignerThumbprintCheck)
         {
-            Logger.Warn("Registry override: skipping signer thumbprint validation.");
+            LogUpdateWarn("Registry override: skipping signer thumbprint validation.");
             return true;
         }
 
@@ -448,23 +726,23 @@ internal static partial class AvaloniaAutoUpdater
 
             if (string.IsNullOrWhiteSpace(thumbprint))
             {
-                Logger.Warn($"Could not read signer thumbprint for '{path}'");
+                LogUpdateWarn($"Could not read signer thumbprint for '{path}'");
                 return false;
             }
 
             if (DEVOLUTIONS_CERT_THUMBPRINTS.Contains(thumbprint, StringComparer.OrdinalIgnoreCase))
             {
-                Logger.Debug($"Installer signer thumbprint is trusted: {thumbprint}");
+                LogUpdateDebug($"Installer signer thumbprint is trusted: {thumbprint}");
                 return true;
             }
 
-            Logger.Warn($"Installer signer thumbprint is NOT trusted: {thumbprint}");
+            LogUpdateWarn($"Installer signer thumbprint is NOT trusted: {thumbprint}");
             return false;
         }
         catch (Exception ex)
         {
-            Logger.Warn("Could not validate installer signer thumbprint.");
-            Logger.Warn(ex);
+            LogUpdateWarn("Could not validate installer signer thumbprint.");
+            LogUpdateWarn(ex);
             return false;
         }
     }
@@ -480,7 +758,7 @@ internal static partial class AvaloniaAutoUpdater
             throw new InvalidOperationException($"Download URL is not allowed: {url}");
         }
 
-        Logger.Debug($"Downloading installer from {url}");
+        LogUpdateDebug($"Downloading installer from {url}");
         using HttpClient client = new(CreateHttpClientHandler(overrides));
         client.Timeout = TimeSpan.FromSeconds(600);
         client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
@@ -491,7 +769,7 @@ internal static partial class AvaloniaAutoUpdater
         using FileStream fs = new(destination, FileMode.OpenOrCreate);
         await response.Content.CopyToAsync(fs);
 
-        Logger.Debug("Installer download complete.");
+        LogUpdateDebug("Installer download complete.");
     }
 
     // ------------------------------------------------------------------ HTTP client
@@ -500,7 +778,7 @@ internal static partial class AvaloniaAutoUpdater
         var handler = new HttpClientHandler();
         if (overrides.DisableTlsValidation)
         {
-            Logger.Warn("Registry override: TLS certificate validation is disabled for updater requests.");
+            LogUpdateWarn("Registry override: TLS certificate validation is disabled for updater requests.");
             handler.ServerCertificateCustomValidationCallback = static (_, _, _, _) => true;
         }
         return handler;
@@ -516,7 +794,7 @@ internal static partial class AvaloniaAutoUpdater
 
         if (allowUnsafe)
         {
-            Logger.Warn($"Registry override: allowing potentially unsafe URL {url}");
+            LogUpdateWarn($"Registry override: allowing potentially unsafe URL {url}");
             return true;
         }
 
@@ -558,7 +836,7 @@ internal static partial class AvaloniaAutoUpdater
             return CoreTools.NormalizeVersionForComparison(parsed);
         }
 
-        Logger.Warn($"Could not parse version '{raw}', using fallback '{fallback}'");
+        LogUpdateWarn($"Could not parse version '{raw}', using fallback '{fallback}'");
         return fallback;
     }
 
@@ -574,7 +852,7 @@ internal static partial class AvaloniaAutoUpdater
 #if DEBUG
         if (key is not null)
         {
-            Logger.Info($"Updater registry overrides loaded from HKLM\\{REGISTRY_PATH}");
+            LogUpdateInfo($"Updater registry overrides loaded from HKLM\\{REGISTRY_PATH}");
         }
 
         return new UpdaterOverrides(
@@ -614,7 +892,7 @@ internal static partial class AvaloniaAutoUpdater
         {
             if (key.GetValue(valueName) is not null)
             {
-                Logger.Warn(
+                LogUpdateWarn(
                     $"Release build is ignoring updater registry value HKLM\\{REGISTRY_PATH}\\{valueName}."
                 );
             }

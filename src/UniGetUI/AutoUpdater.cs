@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.Json;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -37,8 +38,241 @@ public partial class AutoUpdater
     public static bool ReleaseLockForAutoupdate_UpdateBanner;
     public static bool UpdateReadyToBeInstalled { get; private set; }
 
+    // ------------------------------------------------------------------ per-attempt log
+    // Captures auto-updater log entries for the current update attempt. We keep a
+    // dedicated buffer (in addition to the global session log) so the "View log"
+    // banner button can show the user only the entries relevant to their failed
+    // update, instead of dumping the entire noisy session log.
+    private static readonly Lock _updateLogLock = new();
+    private static StringBuilder? _updateLogBuilder;
+    private static readonly string _updateLogPath = Path.Combine(
+        Path.GetTempPath(),
+        "UniGetUI",
+        "last-update-attempt.log"
+    );
+
+    private static void ResetUpdateLog(bool manualCheck, bool autoLaunch)
+    {
+        lock (_updateLogLock)
+        {
+            _updateLogBuilder = new StringBuilder()
+                .AppendLine($"=== UniGetUI update attempt started at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===")
+                .AppendLine($"Current version: {CoreData.VersionName} (build {CoreData.BuildNumber})")
+                .AppendLine($"Manual check: {manualCheck}")
+                .AppendLine($"Auto-launch: {autoLaunch}")
+                .AppendLine($"UI: WinUI")
+                .AppendLine();
+            FlushUpdateLogToDiskNoLock();
+        }
+    }
+
+    private static void AppendToUpdateLog(string severity, string message)
+    {
+        lock (_updateLogLock)
+        {
+            if (_updateLogBuilder is null) return;
+            _updateLogBuilder.AppendLine($"[{DateTime.Now:HH:mm:ss}] [{severity}] {message}");
+            FlushUpdateLogToDiskNoLock();
+        }
+    }
+
+    // Persists the current buffer to _updateLogPath. Caller MUST hold _updateLogLock.
+    // Failures are silently swallowed — a missing log file should never break the
+    // update flow itself.
+    private static void FlushUpdateLogToDiskNoLock()
+    {
+        if (_updateLogBuilder is null) return;
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_updateLogPath)!);
+            File.WriteAllText(_updateLogPath, _updateLogBuilder.ToString());
+        }
+        catch { /* see comment above */ }
+    }
+
+    private const string AttemptFinishedMarker = "=== Attempt finished:";
+
+    // Appends a structured line indicating the update flow reached a terminal state.
+    // The presence/absence of this marker on disk lets a subsequent app launch tell
+    // whether the previous attempt completed cleanly or was killed mid-flow.
+    private static void MarkAttemptFinished(string outcome)
+    {
+        lock (_updateLogLock)
+        {
+            if (_updateLogBuilder is null) return;
+            _updateLogBuilder
+                .AppendLine()
+                .AppendLine($"{AttemptFinishedMarker} {outcome} at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===");
+            FlushUpdateLogToDiskNoLock();
+        }
+    }
+
+    private static void RecordTargetVersion(string version)
+    {
+        lock (_updateLogLock)
+        {
+            _updateLogBuilder?.AppendLine($"Target version: {version}");
+            FlushUpdateLogToDiskNoLock();
+        }
+    }
+
+    /// <summary>
+    /// On app startup, detects an interrupted update attempt — the log file
+    /// from the previous attempt has no <see cref="AttemptFinishedMarker"/>,
+    /// indicating the app was killed mid-flow (almost always because the
+    /// installer terminated us during file replacement).
+    /// Caller must have already assigned <see cref="Window"/> and
+    /// <see cref="Banner"/> so the banner can render.
+    /// </summary>
+    public static void CheckForOrphanedUpdateAttempt()
+    {
+        try
+        {
+            if (!File.Exists(_updateLogPath)) return;
+
+            var info = new FileInfo(_updateLogPath);
+            if ((DateTime.Now - info.LastWriteTime).TotalMinutes > 10)
+                return;
+
+            string content = File.ReadAllText(_updateLogPath);
+            if (content.Contains(AttemptFinishedMarker))
+                return;
+
+            string currentVer = CoreData.VersionName;
+            string? targetVer = null;
+            foreach (string line in content.Split('\n'))
+            {
+                if (line.StartsWith("Target version: "))
+                {
+                    targetVer = line["Target version: ".Length..].Trim();
+                    break;
+                }
+            }
+
+            if (targetVer is not null && targetVer == currentVer)
+            {
+                Logger.Info($"Previous update attempt killed mid-flow but install succeeded (running version {currentVer} matches target). Marking as finished.");
+                try
+                {
+                    File.AppendAllText(
+                        _updateLogPath,
+                        $"{Environment.NewLine}{AttemptFinishedMarker} installer succeeded (detected on next launch — running version is {currentVer}) at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ==={Environment.NewLine}");
+                }
+                catch { /* swallow */ }
+                return;
+            }
+
+            Logger.Warn($"Detected interrupted update attempt. Running={currentVer}, Target={targetVer ?? "(unknown)"}");
+
+            ShowMessage_ThreadSafe(
+                CoreTools.Translate("Your last update attempt did not complete."),
+                CoreTools.Translate("UniGetUI could not confirm whether the update succeeded. Open the log to see what happened."),
+                InfoBarSeverity.Warning,
+                true,
+                CreateViewLogButton()
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not check for orphaned update attempt: {ex.Message}");
+        }
+    }
+
+    private static void LogUpdateInfo(string message, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+    {
+        Logger.Info(message, caller);
+        AppendToUpdateLog("INFO ", message);
+    }
+
+    private static void LogUpdateWarn(string message, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+    {
+        Logger.Warn(message, caller);
+        AppendToUpdateLog("WARN ", message);
+    }
+
+    private static void LogUpdateWarn(Exception ex, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+    {
+        Logger.Warn(ex, caller);
+        AppendToUpdateLog("WARN ", ex.ToString());
+    }
+
+    private static void LogUpdateError(string message, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+    {
+        Logger.Error(message, caller);
+        AppendToUpdateLog("ERROR", message);
+    }
+
+    private static void LogUpdateError(Exception ex, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+    {
+        Logger.Error(ex, caller);
+        AppendToUpdateLog("ERROR", ex.ToString());
+    }
+
+    private static void LogUpdateDebug(string message, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+    {
+        Logger.Debug(message, caller);
+        AppendToUpdateLog("DEBUG", message);
+    }
+
+    private static void OpenUpdateLog()
+    {
+        // The buffer is flushed to disk on every append/reset, so the file should
+        // already be current. Only fall back to the full session log if no flow
+        // has ever run (button shouldn't appear in that case, but be defensive).
+        string pathToOpen = File.Exists(_updateLogPath)
+            ? _updateLogPath
+            : Logger.GetSessionLogPath();
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = pathToOpen,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not open log file '{pathToOpen}': {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Translates an Inno Setup installer exit code into a short human-readable
+    /// reason. The codes come from the Inno Setup documentation
+    /// (https://jrsoftware.org/ishelp/index.php?topic=setupexitcodes).
+    /// </summary>
+    private static string DescribeInstallerExitCode(int code) => code switch
+    {
+        0 => CoreTools.Translate("The installer reported success but did not restart UniGetUI."),
+        1 => CoreTools.Translate("The installer failed to initialize."),
+        2 => CoreTools.Translate("Setup was canceled before installation began."),
+        3 => CoreTools.Translate("A fatal error occurred during the preparation phase."),
+        4 => CoreTools.Translate("A fatal error occurred during installation."),
+        5 => CoreTools.Translate("Installation was canceled while in progress."),
+        6 => CoreTools.Translate("The installer was terminated by another process."),
+        7 => CoreTools.Translate("The preparation phase determined the installation cannot proceed."),
+        8 => CoreTools.Translate("The installer could not start. UniGetUI may already be running, or you do not have permission to install."),
+        _ => CoreTools.Translate("Unexpected installer error."),
+    };
+
+    private static Button CreateViewLogButton()
+    {
+        var btn = new Button { Content = CoreTools.Translate("View log") };
+        btn.Click += (_, _) => OpenUpdateLog();
+        return btn;
+    }
+
     public static async Task UpdateCheckLoop(Window window, InfoBar banner)
     {
+        Window = window;
+        Banner = banner;
+
+        // If the previous update attempt was killed mid-flow (typically by the
+        // installer terminating us during file replacement), surface a banner
+        // before either entering or short-circuiting the auto-update loop.
+        CheckForOrphanedUpdateAttempt();
+
         if (Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
         {
             Logger.Warn("User has disabled updates");
@@ -46,8 +280,6 @@ public partial class AutoUpdater
         }
 
         bool IsFirstLaunch = true;
-        Window = window;
-        Banner = banner;
 
         await CoreTools.WaitForInternetConnection();
         while (true)
@@ -83,6 +315,7 @@ public partial class AutoUpdater
         Window = window;
         Banner = banner;
         bool WasCheckingForUpdates = true;
+        ResetUpdateLog(ManualCheck, AutoLaunch);
         UpdaterOverrides updaterOverrides = LoadUpdaterOverrides();
 
         try
@@ -97,14 +330,15 @@ public partial class AutoUpdater
 
             // Check for updates
             UpdateCandidate updateCandidate = await GetUpdateCandidate(updaterOverrides);
-            Logger.Info(
+            LogUpdateInfo(
                 $"Updater source '{updateCandidate.SourceName}' returned version {updateCandidate.VersionName} (upgradable={updateCandidate.IsUpgradable})"
             );
 
             if (updateCandidate.IsUpgradable)
             {
                 WasCheckingForUpdates = false;
-                Logger.Info(
+                RecordTargetVersion(updateCandidate.VersionName);
+                LogUpdateInfo(
                     $"An update to UniGetUI version {updateCandidate.VersionName} is available"
                 );
                 string InstallerPath = Path.Join(
@@ -122,7 +356,7 @@ public partial class AutoUpdater
                     && CheckInstallerSignerThumbprint(InstallerPath, updaterOverrides)
                 )
                 {
-                    Logger.Info($"A cached valid installer was found, launching update process...");
+                    LogUpdateInfo($"A cached valid installer was found, launching update process...");
                     return await PrepairToLaunchInstaller(
                         InstallerPath,
                         updateCandidate.VersionName,
@@ -158,7 +392,7 @@ public partial class AutoUpdater
                     ) && CheckInstallerSignerThumbprint(InstallerPath, updaterOverrides)
                 )
                 {
-                    Logger.Info("The downloaded installer is valid, launching update process...");
+                    LogUpdateInfo("The downloaded installer is valid, launching update process...");
                     return await PrepairToLaunchInstaller(
                         InstallerPath,
                         updateCandidate.VersionName,
@@ -171,8 +405,10 @@ public partial class AutoUpdater
                     CoreTools.Translate("The installer authenticity could not be verified."),
                     CoreTools.Translate("The update process has been aborted."),
                     InfoBarSeverity.Error,
-                    true
+                    true,
+                    CreateViewLogButton()
                 );
+                MarkAttemptFinished("authenticity verification failed");
                 return false;
             }
 
@@ -183,20 +419,23 @@ public partial class AutoUpdater
                     InfoBarSeverity.Success,
                     true
                 );
+            MarkAttemptFinished("no update available");
             return true;
         }
         catch (Exception e)
         {
-            Logger.Error("An error occurred while checking for updates: ");
-            Logger.Error(e);
+            LogUpdateError("An error occurred while checking for updates: ");
+            LogUpdateError(e);
             // We don't want an error popping if updates can't
             if (Verbose || !WasCheckingForUpdates)
                 ShowMessage_ThreadSafe(
                     CoreTools.Translate("An error occurred when checking for updates: "),
                     e.Message,
                     InfoBarSeverity.Error,
-                    true
+                    true,
+                    CreateViewLogButton()
                 );
+            MarkAttemptFinished($"exception: {e.Message}");
             return false;
         }
     }
@@ -213,7 +452,7 @@ public partial class AutoUpdater
         UpdaterOverrides updaterOverrides
     )
     {
-        Logger.Debug(
+        LogUpdateDebug(
             $"Begin check for updates on productinfo source {updaterOverrides.ProductInfoUrl}"
         );
 
@@ -283,7 +522,7 @@ public partial class AutoUpdater
         Version availableVersion = ParseVersionOrFallback(channel.Version, new Version(0, 0, 0, 0));
 
         bool isUpgradable = availableVersion > currentVersion;
-        Logger.Debug(
+        LogUpdateDebug(
             $"Productinfo check result: current={currentVersion}, available={availableVersion}, upgradable={isUpgradable}"
         );
 
@@ -307,11 +546,11 @@ public partial class AutoUpdater
     {
         if (updaterOverrides.SkipHashValidation)
         {
-            Logger.Warn("Registry override enabled: skipping updater hash validation.");
+            LogUpdateWarn("Registry override enabled: skipping updater hash validation.");
             return true;
         }
 
-        Logger.Debug($"Checking updater hash on location {installerLocation}");
+        LogUpdateDebug($"Checking updater hash on location {installerLocation}");
         using (FileStream stream = File.OpenRead(installerLocation))
         {
             string hash = Convert
@@ -319,10 +558,10 @@ public partial class AutoUpdater
                 .ToLower();
             if (hash == expectedHash.ToLower())
             {
-                Logger.Debug($"The hashes match ({hash})");
+                LogUpdateDebug($"The hashes match ({hash})");
                 return true;
             }
-            Logger.Warn($"Hash mismatch.\nExpected: {expectedHash}\nGot:      {hash}");
+            LogUpdateWarn($"Hash mismatch.\nExpected: {expectedHash}\nGot:      {hash}");
             return false;
         }
     }
@@ -334,7 +573,7 @@ public partial class AutoUpdater
     {
         if (updaterOverrides.SkipSignerThumbprintCheck)
         {
-            Logger.Warn(
+            LogUpdateWarn(
                 "Registry override enabled: skipping updater signer thumbprint validation."
             );
             return true;
@@ -352,7 +591,7 @@ public partial class AutoUpdater
             string signerThumbprint = NormalizeThumbprint(cert.Thumbprint ?? string.Empty);
             if (string.IsNullOrWhiteSpace(signerThumbprint))
             {
-                Logger.Warn(
+                LogUpdateWarn(
                     $"Could not read signer thumbprint for installer '{installerLocation}'"
                 );
                 return false;
@@ -365,17 +604,17 @@ public partial class AutoUpdater
                 )
             )
             {
-                Logger.Debug($"Installer signer thumbprint is trusted: {signerThumbprint}");
+                LogUpdateDebug($"Installer signer thumbprint is trusted: {signerThumbprint}");
                 return true;
             }
 
-            Logger.Warn($"Installer signer thumbprint is not trusted. Got: {signerThumbprint}");
+            LogUpdateWarn($"Installer signer thumbprint is not trusted. Got: {signerThumbprint}");
             return false;
         }
         catch (Exception ex)
         {
-            Logger.Warn("Could not validate installer signer thumbprint");
-            Logger.Warn(ex);
+            LogUpdateWarn("Could not validate installer signer thumbprint");
+            LogUpdateWarn(ex);
             return false;
         }
     }
@@ -394,7 +633,7 @@ public partial class AutoUpdater
             throw new InvalidOperationException($"Download URL is not allowed: {downloadUrl}");
         }
 
-        Logger.Debug($"Downloading installer from {downloadUrl} to {installerLocation}");
+        LogUpdateDebug($"Downloading installer from {downloadUrl} to {installerLocation}");
         using (HttpClient client = new(CreateHttpClientHandler(updaterOverrides)))
         {
             client.Timeout = TimeSpan.FromSeconds(600);
@@ -404,7 +643,7 @@ public partial class AutoUpdater
             using FileStream fs = new(installerLocation, FileMode.OpenOrCreate);
             await result.Content.CopyToAsync(fs);
         }
-        Logger.Debug("The download has finished successfully");
+        LogUpdateDebug("The download has finished successfully");
     }
 
     /// <summary>
@@ -417,7 +656,7 @@ public partial class AutoUpdater
         bool ManualCheck
     )
     {
-        Logger.Debug("Starting the process to launch the installer.");
+        LogUpdateDebug("Starting the process to launch the installer.");
         UpdateReadyToBeInstalled = true;
         ReleaseLockForAutoupdate_Window = false;
         ReleaseLockForAutoupdate_Notification = false;
@@ -428,7 +667,8 @@ public partial class AutoUpdater
         {
             // Banner is a UI element; always touch it from the UI thread.
             Window.DispatcherQueue.TryEnqueue(() => Banner.IsOpen = false);
-            Logger.Warn("User disabled updates!");
+            LogUpdateWarn("User disabled updates!");
+            MarkAttemptFinished("aborted - auto-update disabled before launch");
             return true;
         }
 
@@ -472,11 +712,11 @@ public partial class AutoUpdater
 
         if (AutoLaunch && !Window.Visible)
         {
-            Logger.Debug("AutoLaunch is enabled and the Window is hidden, launching installer...");
+            LogUpdateDebug("AutoLaunch is enabled and the Window is hidden, launching installer...");
         }
         else
         {
-            Logger.Debug(
+            LogUpdateDebug(
                 "Waiting for mainWindow to be closed or for user to trigger the update from the notification..."
             );
             while (
@@ -487,12 +727,13 @@ public partial class AutoUpdater
             {
                 await Task.Delay(100);
             }
-            Logger.Debug("Autoupdater lock released, launching installer...");
+            LogUpdateDebug("Autoupdater lock released, launching installer...");
         }
 
         if (!ManualCheck && Settings.Get(Settings.K.DisableAutoUpdateWingetUI))
         {
-            Logger.Warn("User has disabled updates");
+            LogUpdateWarn("User has disabled updates");
+            MarkAttemptFinished("aborted - auto-update disabled while waiting");
             return true;
         }
 
@@ -501,11 +742,13 @@ public partial class AutoUpdater
     }
 
     /// <summary>
-    /// Launches the installer located on the installerLocation argument and quits UniGetUI
+    /// Launches the installer located on the installerLocation argument. The installer
+    /// is expected to terminate UniGetUI before file replacement; if it returns control
+    /// to us, we surface the exit code so the user has something concrete to act on.
     /// </summary>
     private static async Task LaunchInstallerAndQuit(string installerLocation)
     {
-        Logger.Debug("Launching the updater...");
+        LogUpdateInfo($"Launching installer: {installerLocation}");
         using Process p = new()
         {
             StartInfo = new()
@@ -517,20 +760,88 @@ public partial class AutoUpdater
                 CreateNoWindow = true,
             },
         };
-        p.Start();
+
+        bool started;
+        try
+        {
+            started = p.Start();
+        }
+        catch (Exception ex)
+        {
+            LogUpdateError("Process.Start threw while launching the installer:");
+            LogUpdateError(ex);
+            ShowMessage_ThreadSafe(
+                CoreTools.Translate("The updater could not be launched."),
+                ex.Message,
+                InfoBarSeverity.Error,
+                true,
+                CreateViewLogButton()
+            );
+            MarkAttemptFinished($"installer launch threw: {ex.Message}");
+            return;
+        }
+
+        if (!started)
+        {
+            LogUpdateError("Failed to start installer process (Process.Start returned false).");
+            ShowMessage_ThreadSafe(
+                CoreTools.Translate("The updater could not be launched."),
+                CoreTools.Translate("The operating system did not start the installer process."),
+                InfoBarSeverity.Error,
+                true,
+                CreateViewLogButton()
+            );
+            MarkAttemptFinished("Process.Start returned false");
+            return;
+        }
+
+        LogUpdateInfo($"Installer process started (PID {p.Id}). The installer is expected to terminate UniGetUI before file replacement.");
+
         ShowMessage_ThreadSafe(
             CoreTools.Translate("UniGetUI is being updated..."),
             CoreTools.Translate("This may take a minute or two"),
             InfoBarSeverity.Informational,
             false
         );
+
         await p.WaitForExitAsync();
+
+        // If we reach here, the installer exited without terminating this process.
+        // Distinguish two cases:
+        //   - Exit code 0: installer succeeded; the new version IS installed at the
+        //     install location, but the running copy was not replaced (almost always
+        //     because UniGetUI is running from outside the install location — typically
+        //     a development build). This is not really an error.
+        //   - Any other code: installer reported a failure; the update did not apply.
+        int exitCode = p.ExitCode;
+        string reason = DescribeInstallerExitCode(exitCode);
+
+        if (exitCode == 0)
+        {
+            string runningPath = Environment.ProcessPath ?? "(unknown)";
+            LogUpdateWarn($"Installer reported success (exit code 0) but did not replace this running copy. Running from: {runningPath}");
+
+            ShowMessage_ThreadSafe(
+                CoreTools.Translate("Update installed."),
+                CoreTools.Translate("UniGetUI was updated successfully, but this running copy was not replaced. This usually means you are running a development build. Close this copy and start the newly-installed version to finish."),
+                InfoBarSeverity.Warning,
+                true,
+                CreateViewLogButton()
+            );
+            MarkAttemptFinished("installer succeeded but did not replace running copy");
+            return;
+        }
+
+        LogUpdateError($"Installer exited with code {exitCode} ({reason}) without restarting UniGetUI.");
+
         ShowMessage_ThreadSafe(
-            CoreTools.Translate("Something went wrong while launching the updater."),
-            CoreTools.Translate("Please try again later"),
+            CoreTools.Translate("The update could not be applied."),
+            CoreTools.Translate("Installer exit code {0}: {1}", exitCode, reason),
             InfoBarSeverity.Error,
-            true
+            true,
+            CreateViewLogButton()
         );
+        MarkAttemptFinished($"installer failed with code {exitCode}");
     }
 
     private static void ShowMessage_ThreadSafe(

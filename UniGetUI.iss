@@ -109,6 +109,7 @@ procedure KillRunningApps;
 begin
     TaskKill('WingetUI.exe');
     TaskKill('UniGetUI.exe');
+    TaskKill('UniGetUI.Avalonia.exe');
 end;
 
 function CmdLineParamExists(const Value: string): Boolean;
@@ -236,3 +237,4 @@ Filename: "{app}\{#MyAppExeName}"; Parameters: "--migrate-wingetui-to-unigetui";
 ; Filename: "{app}\{#MyAppExeName}"; Parameters: "--uninstall-unigetui"; Flags: skipifdoesntexist runhidden;
 Filename: {sys}\taskkill.exe; Parameters: "/f /im WingetUI.exe"; Flags: skipifdoesntexist runhidden; RunOnceId: "KillWingetUI"
 Filename: {sys}\taskkill.exe; Parameters: "/f /im UniGetUI.exe"; Flags: skipifdoesntexist runhidden; RunOnceId: "KillUniGetUI"
+Filename: {sys}\taskkill.exe; Parameters: "/f /im UniGetUI.Avalonia.exe"; Flags: skipifdoesntexist runhidden; RunOnceId: "KillUniGetUIAvalonia"

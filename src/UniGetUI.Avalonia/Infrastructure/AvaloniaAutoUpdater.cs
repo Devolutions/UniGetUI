@@ -870,7 +870,7 @@ internal static partial class AvaloniaAutoUpdater
             Process.Start(new ProcessStartInfo
             {
                 FileName = "/bin/sh",
-                ArgumentList = { "-c", $"sleep 1 && \"{runningApp}\" >/dev/null 2>&1 &" },
+                ArgumentList = { "-c", "sleep 1 && \"$1\" >/dev/null 2>&1 &", "sh", runningApp },
                 UseShellExecute = false,
                 CreateNoWindow = true,
             });

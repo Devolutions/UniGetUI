@@ -1,7 +1,7 @@
 {
   "{0} is now {1}": "{0} 現在是 {1}",
   "Enabled": "啟用",
-  "Disabled": "禁用",
+  "Disabled": "停用",
   "Operation in progress": "正在執行操作",
   "Please wait...": "請稍候...",
   "Success!": "完成！",
@@ -61,7 +61,7 @@
   "Uninstall": "解除安裝",
   "Open": "開啟",
   "Operation profile:": "操作狀況：",
-  "Follow the default options when installing, upgrading or uninstalling this package": "安裝、升級或解除安裝此套件時，請遵循預設選項",
+  "Follow the default options when installing, upgrading or uninstalling this package": "安裝、更新或解除安裝此套件時，請遵循預設選項",
   "The following settings will be applied each time this package is installed, updated or removed.": "以下的設定會被套用到這個套件安裝、更新或移除",
   "Version to install:": "即將安裝的版本：",
   "Architecture to install:": "安裝架構：",
@@ -207,7 +207,7 @@
   "Apply": "套用",
   "For security reasons, custom command-line arguments are disabled by default. Go to UniGetUI security settings to change this.": "基於安全考量，自訂命令列參數預設為停用。請前往 UniGetUI 安全性設定變更此設定。",
   "Go to UniGetUI security settings": "前往 UniGetUI 安全設定",
-  "The following options will be applied by default each time a {0} package is installed, upgraded or uninstalled.": "每次安裝、升級或解除安裝{0}套件時，預設會套用下列選項。",
+  "The following options will be applied by default each time a {0} package is installed, upgraded or uninstalled.": "每次安裝、更新或解除安裝{0}套件時，預設會套用下列選項。",
   "Package's default": "套件的預設值",
   "Install location can't be changed for {0} packages": "{0}套件安裝的位置無法變更",
   "The local icon cache currently takes {0} MB": "此本機圖示快取使用容量為 {0} MB",
@@ -370,9 +370,9 @@
   "Prohibit any kind of Elevation via UniGetUI Elevator or GSudo": "阻止透過 UniGetUI Elevator 或 GSudo 進行任何形式的提升",
   "This option WILL cause issues. Any operation incapable of elevating itself WILL FAIL. Install/update/uninstall as administrator will NOT WORK.": "此選項將導致問題。任何無法自我提升的操作都會失敗。以管理員身份安裝/更新/解除安裝將無法執行。",
   "Allow custom command-line arguments": "允許自訂指令列參數",
-  "Custom command-line arguments can change the way in which programs are installed, upgraded or uninstalled, in a way UniGetUI cannot control. Using custom command-lines can break packages. Proceed with caution.": "自訂命令列參數可以改變程式安裝、升級或解除安裝的方式，而 UniGetUI 無法控制。使用自訂命令列可能會破壞套件。請謹慎使用。",
+  "Custom command-line arguments can change the way in which programs are installed, upgraded or uninstalled, in a way UniGetUI cannot control. Using custom command-lines can break packages. Proceed with caution.": "自訂命令列參數可以改變程式安裝、更新或解除安裝的方式，而 UniGetUI 無法控制。使用自訂命令列可能會破壞套件。請謹慎使用。",
   "Ignore custom pre-install and post-install commands when importing packages from a bundle": "允許執行自訂的安裝前與安裝後的指令",
-  "Pre and post install commands will be run before and after a package gets installed, upgraded or uninstalled. Be aware that they may break things unless used carefully": "安裝前和安裝後指令會在套件安裝、升級或解除安裝前後執行。請注意，除非小心使用，否則這些指令可能會破壞系統。",
+  "Pre and post install commands will be run before and after a package gets installed, upgraded or uninstalled. Be aware that they may break things unless used carefully": "安裝前和安裝後指令會在套件安裝、更新或解除安裝前後執行。請注意，除非小心使用，否則這些指令可能會破壞系統。",
   "Allow changing the paths for package manager executables": "允許變更套件管理員執行檔的路徑",
   "Turning this on enables changing the executable file used to interact with package managers. While this allows finer-grained customization of your install processes, it may also be dangerous": "開啟此功能可變更用於與套件管理員互動的可執行檔案。雖然這可讓您更精準的自訂安裝程式，但也可能會有危險",
   "Allow importing custom command-line arguments when importing packages from a bundle": "從套件包匯入套件時，允許匯入自訂命令列參數",
@@ -808,5 +808,7 @@
   "Error": "錯誤",
   "Log in failed: ": "登入失敗：",
   "Log out failed: ": "登出失敗：",
-  "Package backup settings": "套件備份設定"
+  "Package backup settings": "套件備份設定",
+  "Warn me when the installer URL host changes between the installed version and the new version (WinGet only)": "當安裝程式 URL 主機在已安裝版本與新版本之間變更時提醒我（僅限 WinGet）",
+  "Installer host changed since the installed version.\nOld: {0}\nNew: {1}\n\nThis is usually harmless (the publisher moved hosting), but can also indicate a hijacked package manifest. Verify the new source before upgrading.": "安裝程式主機在已安裝版本之後變更。\n舊版: {0}\n新版: {1}\n\n這通常無害（發布者移動了主機），但也可能表示套件描述檔已被劫持。更新前請驗證新來源。"
 }

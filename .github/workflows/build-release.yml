@@ -196,6 +196,17 @@ jobs:
           New-Item "unigetui_bin" -ItemType Directory | Out-Null
           Get-ChildItem $PublishDir | Move-Item -Destination "unigetui_bin" -Force
 
+          $MaxShippedPdbSizeBytes = 1MB
+          $PdbsToRemove = Get-ChildItem "unigetui_bin" -Filter "*.pdb" -File | Where-Object {
+            $_.Length -gt $MaxShippedPdbSizeBytes
+          }
+
+          if ($PdbsToRemove.Count -gt 0) {
+            $RemovedPdbBytes = ($PdbsToRemove | Measure-Object -Property Length -Sum).Sum
+            $PdbsToRemove | Remove-Item -Force
+            Write-Host ("Removed {0} oversized PDBs above {1:N2} MiB ({2:N2} MiB total)." -f $PdbsToRemove.Count, ($MaxShippedPdbSizeBytes / 1MB), ($RemovedPdbBytes / 1MB))
+          }
+
           # Backward-compat alias
           Copy-Item "unigetui_bin/UniGetUI.exe" "unigetui_bin/WingetUI.exe" -Force
 

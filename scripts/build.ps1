@@ -88,6 +88,19 @@ New-Item $BinDir -ItemType Directory | Out-Null
 # Move published output into unigetui_bin
 Get-ChildItem $PublishDir | Move-Item -Destination $BinDir -Force
 
+# Keep smaller symbols for useful local crash source information, and prune oversized ones.
+$MaxShippedPdbSizeBytes = 1MB
+
+$PdbsToRemove = Get-ChildItem $BinDir -Filter "*.pdb" -File | Where-Object {
+    $_.Length -gt $MaxShippedPdbSizeBytes
+}
+
+if ($PdbsToRemove.Count -gt 0) {
+    $RemovedPdbBytes = ($PdbsToRemove | Measure-Object -Property Length -Sum).Sum
+    $PdbsToRemove | Remove-Item -Force
+    Write-Host ("Removed {0} oversized PDBs above {1:N2} MiB ({2:N2} MiB total)." -f $PdbsToRemove.Count, ($MaxShippedPdbSizeBytes / 1MB), ($RemovedPdbBytes / 1MB))
+}
+
 # WingetUI.exe alias for backward compat
 Copy-Item (Join-Path $BinDir "UniGetUI.exe") (Join-Path $BinDir "WingetUI.exe") -Force
 

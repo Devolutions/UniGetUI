@@ -233,7 +233,7 @@
         <PackageReference Include="YamlDotNet" Version="17.0.1" />
         <PackageReference Include="IdentityModel.OidcClient" Version="6.0.0" />
         <PackageReference Include="Octokit" Version="14.0.0" />
-        <PackageReference Include="Devolutions.UniGetUI.Elevator" Version="2.6.1.3" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive" />
+        <PackageReference Include="Devolutions.UniGetUI.Elevator" Version="2.6.1.3" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />
 
         <Manifest Include="$(ApplicationManifest)" />
     </ItemGroup>

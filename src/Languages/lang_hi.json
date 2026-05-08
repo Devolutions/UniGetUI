@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "कृपया ध्यान दें कि सभी पैकेज प्रबंधक इस सुविधा का पूर्णतः समर्थन नहीं कर सकते हैं",
   "Proxy URL": "प्रॉक्सी URL",
   "Enter proxy URL here": "प्रॉक्सी URL यहां डालें",
-  "Authenticate to the proxy with a user and a password": "उपयोगकर्ता नाम और पासवर्ड के साथ प्रॉक्सी में प्रमाणीकरण करें",
+  "Authenticate to the proxy with an user and a password": "उपयोगकर्ता नाम और पासवर्ड के साथ प्रॉक्सी में प्रमाणीकरण करें",
   "Internet and proxy settings": "इंटरनेट और प्रॉक्सी सेटिंग्स",
   "Package manager preferences": "पैकेज प्रबंधक वरीयताएँ",
   "Ready": "तैयार",

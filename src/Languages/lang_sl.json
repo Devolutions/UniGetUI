@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Upoštevajte, da vsi upravljalniki paketov morda ne podpirajo te funkcije",
   "Proxy URL": "URL posredniškega strežnika",
   "Enter proxy URL here": "Vnesite URL posredniškega strežnika tukaj",
-  "Authenticate to the proxy with a user and a password": "Za overitev pri posredniškem strežniku uporabite uporabniško ime in geslo",
+  "Authenticate to the proxy with an user and a password": "Za overitev pri posredniškem strežniku uporabite uporabniško ime in geslo",
   "Internet and proxy settings": "Nastavitve interneta in posredniškega strežnika",
   "Package manager preferences": "Nastavitve upravitelja paketov",
   "Ready": "Pripravljen",

@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Te rog ia aminte că nu toți managerii de pachete pot suporta această funcție",
   "Proxy URL": "URL proxy",
   "Enter proxy URL here": "Introdu URL proxy aici",
-  "Authenticate to the proxy with a user and a password": "Autentifică-te la proxy cu un utilizator și o parolă",
+  "Authenticate to the proxy with an user and a password": "Autentifică-te la proxy cu un utilizator și o parolă",
   "Internet and proxy settings": "Setări Internet și proxy",
   "Package manager preferences": "Preferințe manageri pachete",
   "Ready": "Pregătit",

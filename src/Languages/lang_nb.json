@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Vær oppmerksom på at ikke alle pakkehåndterere kan støtte denne funksjonen fullt ut",
   "Proxy URL": "Mellomtjener-URL",
   "Enter proxy URL here": "Skriv inn mellomtjener-URL her",
-  "Authenticate to the proxy with a user and a password": "Autentiser mot mellomtjeneren med brukernavn og passord",
+  "Authenticate to the proxy with an user and a password": "Autentiser mot mellomtjeneren med brukernavn og passord",
   "Internet and proxy settings": "Internett- og mellomtjenerinnstillinger",
   "Package manager preferences": "Innstillinger for pakkehåndterer",
   "Ready": "Klar",

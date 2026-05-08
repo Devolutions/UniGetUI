@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Observe que nem todos os gerenciadores de pacotes podem suportar totalmente este recurso",
   "Proxy URL": "URL do proxy",
   "Enter proxy URL here": "Insira o URL do proxy aqui",
-  "Authenticate to the proxy with a user and a password": "Autenticar no proxy com um usuário e uma senha",
+  "Authenticate to the proxy with an user and a password": "Autenticar no proxy com um usuário e uma senha",
   "Internet and proxy settings": "Configurações de internet e proxy",
   "Package manager preferences": "Preferências do gerenciador de pacotes",
   "Ready": "Pronto",

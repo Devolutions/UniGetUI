@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Pakitandaan na hindi lahat ng package manager ay maaaring ganap na suportahan ang feature na ito",
   "Proxy URL": "URL ng proxy",
   "Enter proxy URL here": "Ilagay ang proxy URL dito",
-  "Authenticate to the proxy with a user and a password": "Mag-authenticate sa proxy gamit ang user at password",
+  "Authenticate to the proxy with an user and a password": "Mag-authenticate sa proxy gamit ang user at password",
   "Internet and proxy settings": "Mga setting ng internet at proxy",
   "Package manager preferences": "Mga kagustuhan sa mga package manager",
   "Ready": "Handa",

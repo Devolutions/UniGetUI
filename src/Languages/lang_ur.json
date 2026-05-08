@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "براہ کرم نوٹ کریں کہ تمام پیکیج مینیجرز اس خصوصیت کو مکمل طور پر سپورٹ نہیں کر سکتے",
   "Proxy URL": "پروکسی URL",
   "Enter proxy URL here": "یہاں پروکسی URL درج کریں",
-  "Authenticate to the proxy with a user and a password": "صارف نام اور پاس ورڈ کے ساتھ پروکسی پر توثیق کریں",
+  "Authenticate to the proxy with an user and a password": "صارف نام اور پاس ورڈ کے ساتھ پروکسی پر توثیق کریں",
   "Internet and proxy settings": "انٹرنیٹ اور پروکسی کی ترتیبات",
   "Package manager preferences": "پیکیج منیجر کی ترجیحات",
   "Ready": "تیار",

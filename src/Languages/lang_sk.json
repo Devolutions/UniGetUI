@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Upozorňujeme, že nie všetci správcovia balíčkov môžu túto funkciu plne podporovať.",
   "Proxy URL": "URL proxy servera",
   "Enter proxy URL here": "Sem zadajte URL proxy servera",
-  "Authenticate to the proxy with a user and a password": "Overiť sa na proxy pomocou používateľského mena a hesla",
+  "Authenticate to the proxy with an user and a password": "Overiť sa na proxy pomocou používateľského mena a hesla",
   "Internet and proxy settings": "Nastavenia internetu a proxy",
   "Package manager preferences": "Nastavenie správcu balíčkov",
   "Ready": "Pripravený",

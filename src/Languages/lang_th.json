@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "โปรดทราบว่าอาจมีตัวจัดการแพ็กเกจบางตัวที่ไม่รองรับฟีเจอร์นี้อย่างสมบูรณ์",
   "Proxy URL": "URL ของพร็อกซี",
   "Enter proxy URL here": "กรอก URL ของ proxy ที่นี่",
-  "Authenticate to the proxy with a user and a password": "ยืนยันตัวตนกับพร็อกซีด้วยชื่อผู้ใช้และรหัสผ่าน",
+  "Authenticate to the proxy with an user and a password": "ยืนยันตัวตนกับพร็อกซีด้วยชื่อผู้ใช้และรหัสผ่าน",
   "Internet and proxy settings": "การตั้งค่าอินเทอร์เน็ตและพร็อกซี",
   "Package manager preferences": "การตั้งค่าตัวจัดการแพ็กเกจ",
   "Ready": "พร้อม",

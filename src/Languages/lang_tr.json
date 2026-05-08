@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Lütfen tüm paket yöneticilerinin bu özelliği tam olarak desteklemeyebileceğini unutmayın",
   "Proxy URL": "Proxy URL'si",
   "Enter proxy URL here": "Proxy URL'sini buraya girin",
-  "Authenticate to the proxy with a user and a password": "Proxy için kullanıcı adı ve parola ile kimlik doğrulayın",
+  "Authenticate to the proxy with an user and a password": "Proxy için kullanıcı adı ve parola ile kimlik doğrulayın",
   "Internet and proxy settings": "İnternet ve proxy ayarları",
   "Package manager preferences": "Paket yöneticisi tercihleri",
   "Ready": "Hazır",

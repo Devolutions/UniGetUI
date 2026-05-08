@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "שימו לב שלא כל מנהלי החבילות עשויים לתמוך בתכונה זו באופן מלא",
   "Proxy URL": "כתובת Proxy",
   "Enter proxy URL here": "הזן כאן כתובת URL של Proxy",
-  "Authenticate to the proxy with a user and a password": "הזדהה מול שרת ה-Proxy באמצעות שם משתמש וסיסמה",
+  "Authenticate to the proxy with an user and a password": "הזדהה מול שרת ה-Proxy באמצעות שם משתמש וסיסמה",
   "Internet and proxy settings": "הגדרות אינטרנט ו-Proxy",
   "Package manager preferences": "העדפות של מנהל החבילות",
   "Ready": "מוכן",

@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Vegye figyelembe, hogy nem minden csomagkezelő támogatja teljes mértékben ezt a funkciót.",
   "Proxy URL": "Proxy URL-cím",
   "Enter proxy URL here": "Adja meg a Proxy URL-t",
-  "Authenticate to the proxy with a user and a password": "Hitelesítés a proxyn felhasználónévvel és jelszóval",
+  "Authenticate to the proxy with an user and a password": "Hitelesítés a proxyn felhasználónévvel és jelszóval",
   "Internet and proxy settings": "Internet- és proxybeállítások",
   "Package manager preferences": "Csomagkezelő preferenciái",
   "Ready": "Kész",

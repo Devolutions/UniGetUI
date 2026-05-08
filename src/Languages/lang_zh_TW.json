@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "請注意，並非所有套件管理員都完全支援此功能",
   "Proxy URL": "Proxy 網址",
   "Enter proxy URL here": "在這裡輸入 Proxy 伺服器網址",
-  "Authenticate to the proxy with a user and a password": "使用使用者名稱與密碼驗證 Proxy",
+  "Authenticate to the proxy with an user and a password": "使用使用者名稱與密碼驗證 Proxy",
   "Internet and proxy settings": "網際網路與 Proxy 設定",
   "Package manager preferences": "套件管理平台偏好設定",
   "Ready": "已就緒",

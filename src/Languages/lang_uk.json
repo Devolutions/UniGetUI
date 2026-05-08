@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Будь ласка, зауважте, що не всі менеджери пакетів повністю підтримують цю функціональність ",
   "Proxy URL": "URL-адреса проксі",
   "Enter proxy URL here": "Введіть URL проксі тут",
-  "Authenticate to the proxy with a user and a password": "Автентифікуватися на проксі за допомогою імені користувача та пароля",
+  "Authenticate to the proxy with an user and a password": "Автентифікуватися на проксі за допомогою імені користувача та пароля",
   "Internet and proxy settings": "Налаштування Інтернету та проксі",
   "Package manager preferences": "Налаштування менеджерів пакетів",
   "Ready": "Готовий",

@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "કૃપા કરીને નોંધો કે બધા package managers આ feature ને સંપૂર્ણપણે support ન કરતાં હોય શકે",
   "Proxy URL": "પ્રોક્સી URL",
   "Enter proxy URL here": "અહીં proxy URL દાખલ કરો",
-  "Authenticate to the proxy with a user and a password": "વપરાશકર્તા અને પાસવર્ડ સાથે proxy પર authenticate કરો",
+  "Authenticate to the proxy with an user and a password": "વપરાશકર્તા અને પાસવર્ડ સાથે proxy પર authenticate કરો",
   "Internet and proxy settings": "internet અને proxy settings",
   "Package manager preferences": "Package manager preferences",
   "Ready": "તૈયાર",

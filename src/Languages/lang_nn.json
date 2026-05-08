@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Ver merksam på at ikkje alle pakkehåndterarar kan fullstendig støtte denne funksjonen",
   "Proxy URL": "Proxy-URL",
   "Enter proxy URL here": "Skriv inn proxy-URL her",
-  "Authenticate to the proxy with a user and a password": "Autentiser mot proxyen med brukarnamn og passord",
+  "Authenticate to the proxy with an user and a password": "Autentiser mot proxyen med brukarnamn og passord",
   "Internet and proxy settings": "Internett- og proxyinnstillingar",
   "Package manager preferences": "Innstillingar for pakkehandterar",
   "Ready": "Klar",

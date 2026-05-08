@@ -41,6 +41,11 @@ internal static partial class AvaloniaAutoUpdater
         "50f753333811ff11f1920274afde3ffd4468b210",
     ];
 
+    private static readonly string[] DEVOLUTIONS_MAC_DEVELOPER_IDS =
+    [
+        "N592S9ASDB",
+    ];
+
 #if !DEBUG
     private static readonly string[] RELEASE_IGNORED_REGISTRY_VALUES =
     [
@@ -369,6 +374,22 @@ internal static partial class AvaloniaAutoUpdater
     internal static async Task<bool> CheckAndInstallUpdatesAsync(bool autoLaunch = false, bool manualCheck = false)
     {
         ResetUpdateLog(manualCheck, autoLaunch);
+
+        if (!OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS())
+        {
+            LogUpdateWarn("Auto-updater is not yet supported on this platform.");
+            if (manualCheck)
+            {
+                RaiseStatus(
+                    CoreTools.Translate("Updates are not yet supported on this platform."),
+                    CoreTools.Translate("Please update UniGetUI manually."),
+                    InfoBarSeverity.Warning,
+                    isClosable: true);
+            }
+            MarkAttemptFinished("platform not supported");
+            return false;
+        }
+
         UpdaterOverrides overrides = LoadUpdaterOverrides();
         bool wasCheckingForUpdates = true;
 
@@ -406,7 +427,18 @@ internal static partial class AvaloniaAutoUpdater
             RecordTargetVersion(candidate.VersionName);
             LogUpdateInfo($"Update to UniGetUI {candidate.VersionName} is available.");
 
-            string installerPath = Path.Join(CoreData.UniGetUIDataDirectory, "UniGetUI Updater.exe");
+            // Linux artifact format is undecided (.deb / .rpm / .AppImage / .tar.gz) —
+            // when adding Linux support, extend this branch and the matching arms in
+            // SelectInstallerFile, CheckInstallerSignerThumbprint, and LaunchInstallerAsync.
+            string installerName;
+            if (OperatingSystem.IsWindows())
+                installerName = "UniGetUI Updater.exe";
+            else if (OperatingSystem.IsMacOS())
+                installerName = "UniGetUI Updater.pkg";
+            else
+                throw new PlatformNotSupportedException(
+                    "Auto-updater is not yet supported on this platform.");
+            string installerPath = Path.Join(CoreData.UniGetUIDataDirectory, installerName);
 
             // Try cached installer first
             if (
@@ -451,6 +483,23 @@ internal static partial class AvaloniaAutoUpdater
                 actionButtonText: CoreTools.Translate("View log"),
                 actionButtonAction: OpenUpdateLog);
             MarkAttemptFinished("authenticity verification failed");
+            return false;
+        }
+        catch (PlatformArtifactMissingException ex)
+        {
+            // A newer version exists in productinfo but no installer artifact is
+            // published for the current OS/arch yet. Surface this as a friendly
+            // "manual update required" notice rather than a generic error.
+            LogUpdateWarn(ex.Message);
+            if (manualCheck)
+            {
+                RaiseStatus(
+                    CoreTools.Translate("Auto-update is not yet available on this platform."),
+                    CoreTools.Translate("Please update UniGetUI manually."),
+                    InfoBarSeverity.Warning,
+                    isClosable: true);
+            }
+            MarkAttemptFinished("platform artifact missing");
             return false;
         }
         catch (Exception ex)
@@ -514,6 +563,12 @@ internal static partial class AvaloniaAutoUpdater
 
     private static async Task LaunchInstallerAsync(string installerLocation)
     {
+        if (OperatingSystem.IsMacOS())
+        {
+            await LaunchMacInstallerAsync(installerLocation);
+            return;
+        }
+
         LogUpdateInfo($"Launching installer: {installerLocation}");
         using Process p = new()
         {
@@ -606,6 +661,154 @@ internal static partial class AvaloniaAutoUpdater
             actionButtonText: CoreTools.Translate("View log"),
             actionButtonAction: OpenUpdateLog);
         MarkAttemptFinished($"installer failed with code {exitCode}");
+    }
+
+    private static async Task LaunchMacInstallerAsync(string installerLocation)
+    {
+        LogUpdateInfo($"Launching macOS installer: {installerLocation}");
+
+        // Escape for inclusion in the AppleScript string literal.
+        string scriptPath = installerLocation.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        string appleScript =
+            $"do shell script \"/usr/sbin/installer -pkg \\\"{scriptPath}\\\" -target /\" with administrator privileges";
+
+        using Process p = new()
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "/usr/bin/osascript",
+                ArgumentList = { "-e", appleScript },
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            },
+        };
+
+        bool started;
+        try
+        {
+            started = p.Start();
+        }
+        catch (Exception ex)
+        {
+            LogUpdateError("osascript threw while launching the macOS installer:");
+            LogUpdateError(ex);
+            RaiseStatus(
+                CoreTools.Translate("The updater could not be launched."),
+                ex.Message,
+                InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished($"installer launch threw: {ex.Message}");
+            return;
+        }
+
+        if (!started)
+        {
+            LogUpdateError("Failed to start osascript process (Process.Start returned false).");
+            RaiseStatus(
+                CoreTools.Translate("The updater could not be launched."),
+                CoreTools.Translate("The operating system did not start the installer process."),
+                InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("Process.Start returned false");
+            return;
+        }
+
+        RaiseStatus(
+            CoreTools.Translate("UniGetUI is being updated..."),
+            CoreTools.Translate("This may take a minute or two"),
+            InfoBarSeverity.Informational,
+            isClosable: false);
+
+        string stderr = await p.StandardError.ReadToEndAsync();
+        await p.WaitForExitAsync();
+        int exitCode = p.ExitCode;
+
+        if (exitCode != 0)
+        {
+            // osascript exits 1 with stderr "User canceled." when the user dismisses
+            // the admin authentication prompt. Treat that as a normal cancellation.
+            bool userCancelled = stderr.Contains("User canceled", StringComparison.OrdinalIgnoreCase)
+                                 || stderr.Contains("(-128)");
+            string trimmed = stderr.Trim();
+            LogUpdateError(
+                userCancelled
+                    ? "macOS installer cancelled at the authentication prompt."
+                    : $"macOS installer failed (exit {exitCode}): {trimmed}"
+            );
+
+            RaiseStatus(
+                userCancelled
+                    ? CoreTools.Translate("Update cancelled.")
+                    : CoreTools.Translate("The update could not be applied."),
+                userCancelled
+                    ? CoreTools.Translate("Authentication was cancelled.")
+                    : (string.IsNullOrWhiteSpace(trimmed)
+                        ? CoreTools.Translate("Installer exit code {0}", exitCode)
+                        : trimmed),
+                userCancelled ? InfoBarSeverity.Warning : InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished(
+                userCancelled
+                    ? "user cancelled authentication"
+                    : $"installer failed with code {exitCode}"
+            );
+            return;
+        }
+
+        LogUpdateInfo("macOS installer completed successfully.");
+
+        const string installedApp = "/Applications/UniGetUI.app";
+        if (!Directory.Exists(installedApp))
+        {
+            string runningPath = Environment.ProcessPath ?? "(unknown)";
+            LogUpdateWarn(
+                $"Installer reported success but {installedApp} was not found. Running from: {runningPath}"
+            );
+            RaiseStatus(
+                CoreTools.Translate("Update installed."),
+                CoreTools.Translate("UniGetUI was updated successfully, but this running copy was not replaced. This usually means you are running a development build. Close this copy and start the newly-installed version to finish."),
+                InfoBarSeverity.Warning,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("installer succeeded but did not replace running copy");
+            return;
+        }
+
+        LogUpdateInfo($"Relaunching {installedApp} and exiting current process.");
+
+        // Detach a tiny shell that waits a moment, then opens a *new* instance of the
+        // freshly-installed app. The brief sleep gives this process time to exit so
+        // `open -na` doesn't race against our termination.
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "/bin/sh",
+                ArgumentList = { "-c", $"sleep 1 && /usr/bin/open -na \"{installedApp}\"" },
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            LogUpdateWarn("Could not schedule relaunch of new app instance:");
+            LogUpdateWarn(ex);
+        }
+
+        MarkAttemptFinished("macOS installer succeeded; relaunching");
+
+        // Match the Windows flow: the installer terminates the running copy. On macOS
+        // we do that ourselves so the relaunch picks up the freshly-installed bundle.
+        Environment.Exit(0);
     }
 
     // ------------------------------------------------------------------ update check sources
@@ -716,6 +919,17 @@ internal static partial class AvaloniaAutoUpdater
             return true;
         }
 
+        if (OperatingSystem.IsMacOS())
+        {
+            return CheckMacInstallerSignature(path);
+        }
+
+        if (!OperatingSystem.IsWindows())
+        {
+            LogUpdateWarn("Skipping installer signature validation on unsupported platform.");
+            return true;
+        }
+
         try
         {
 #pragma warning disable SYSLIB0057
@@ -742,6 +956,63 @@ internal static partial class AvaloniaAutoUpdater
         catch (Exception ex)
         {
             LogUpdateWarn("Could not validate installer signer thumbprint.");
+            LogUpdateWarn(ex);
+            return false;
+        }
+    }
+
+    private static bool CheckMacInstallerSignature(string path)
+    {
+        if (DEVOLUTIONS_MAC_DEVELOPER_IDS.Length == 0)
+        {
+            LogUpdateWarn(
+                "No Devolutions macOS Developer Team IDs configured — skipping .pkg signature validation."
+            );
+            return true;
+        }
+
+        try
+        {
+            using Process p = new()
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "/usr/sbin/pkgutil",
+                    ArgumentList = { "--check-signature", path },
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                },
+            };
+            p.Start();
+            string stdout = p.StandardOutput.ReadToEnd();
+            string stderr = p.StandardError.ReadToEnd();
+            p.WaitForExit();
+
+            if (p.ExitCode != 0)
+            {
+                LogUpdateWarn(
+                    $"pkgutil --check-signature exited {p.ExitCode}; signature could not be verified. {stderr.Trim()}"
+                );
+                return false;
+            }
+
+            foreach (string teamId in DEVOLUTIONS_MAC_DEVELOPER_IDS)
+            {
+                if (stdout.Contains($"({teamId})", StringComparison.OrdinalIgnoreCase))
+                {
+                    LogUpdateDebug($"Installer is signed by trusted Developer Team ID {teamId}.");
+                    return true;
+                }
+            }
+
+            LogUpdateWarn("Installer signature does not match any trusted Devolutions Developer Team ID.");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            LogUpdateWarn("Could not validate installer signature via pkgutil.");
             LogUpdateWarn(ex);
             return false;
         }
@@ -817,6 +1088,18 @@ internal static partial class AvaloniaAutoUpdater
             _ => "x64",
         };
 
+        if (OperatingSystem.IsMacOS())
+        {
+            ProductInfoFile? mac =
+                files.FirstOrDefault(f => f.Type.Equals("pkg", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals(arch, StringComparison.OrdinalIgnoreCase))
+                ?? files.FirstOrDefault(f => f.Type.Equals("pkg", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals("universal", StringComparison.OrdinalIgnoreCase))
+                ?? files.FirstOrDefault(f => f.Type.Equals("pkg", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals("Any", StringComparison.OrdinalIgnoreCase));
+
+            return mac ?? throw new PlatformArtifactMissingException(
+                $"No compatible macOS installer (.pkg) found in productinfo for architecture '{arch}'"
+            );
+        }
+
         ProductInfoFile? match =
             files.FirstOrDefault(f => f.Type.Equals("exe", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals(arch, StringComparison.OrdinalIgnoreCase))
             ?? files.FirstOrDefault(f => f.Type.Equals("exe", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals("Any", StringComparison.OrdinalIgnoreCase))
@@ -846,6 +1129,18 @@ internal static partial class AvaloniaAutoUpdater
     // ------------------------------------------------------------------ registry
     private static UpdaterOverrides LoadUpdaterOverrides()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            return new UpdaterOverrides(
+                DEFAULT_PRODUCTINFO_URL,
+                DEFAULT_PRODUCTINFO_KEY,
+                false,
+                false,
+                false,
+                false
+            );
+        }
+
 #pragma warning disable CA1416
         using RegistryKey? key = Registry.LocalMachine.OpenSubKey(REGISTRY_PATH);
 
@@ -927,6 +1222,8 @@ internal static partial class AvaloniaAutoUpdater
 #endif
 
     // ------------------------------------------------------------------ data types
+    private sealed class PlatformArtifactMissingException(string message) : Exception(message);
+
     private sealed record UpdateCandidate(
         bool IsUpgradable,
         string VersionName,

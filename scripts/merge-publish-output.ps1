@@ -37,6 +37,7 @@ $sourceWinsConflicts = @{
     'Microsoft.VisualBasic.dll' = $true
     'Microsoft.Win32.SystemEvents.dll' = $true
     'System.Diagnostics.EventLog.dll' = $true
+    'System.Diagnostics.EventLog.Messages.dll' = $true
     'System.Drawing.Common.dll' = $true
     'System.Drawing.dll' = $true
     'System.Private.Windows.Core.dll' = $true

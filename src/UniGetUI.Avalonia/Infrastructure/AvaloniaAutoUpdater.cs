@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -374,22 +375,6 @@ internal static partial class AvaloniaAutoUpdater
     internal static async Task<bool> CheckAndInstallUpdatesAsync(bool autoLaunch = false, bool manualCheck = false)
     {
         ResetUpdateLog(manualCheck, autoLaunch);
-
-        if (!OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS())
-        {
-            LogUpdateWarn("Auto-updater is not yet supported on this platform.");
-            if (manualCheck)
-            {
-                RaiseStatus(
-                    CoreTools.Translate("Updates are not yet supported on this platform."),
-                    CoreTools.Translate("Please update UniGetUI manually."),
-                    InfoBarSeverity.Warning,
-                    isClosable: true);
-            }
-            MarkAttemptFinished("platform not supported");
-            return false;
-        }
-
         UpdaterOverrides overrides = LoadUpdaterOverrides();
         bool wasCheckingForUpdates = true;
 
@@ -427,17 +412,13 @@ internal static partial class AvaloniaAutoUpdater
             RecordTargetVersion(candidate.VersionName);
             LogUpdateInfo($"Update to UniGetUI {candidate.VersionName} is available.");
 
-            // Linux artifact format is undecided (.deb / .rpm / .AppImage / .tar.gz) —
-            // when adding Linux support, extend this branch and the matching arms in
-            // SelectInstallerFile, CheckInstallerSignerThumbprint, and LaunchInstallerAsync.
             string installerName;
             if (OperatingSystem.IsWindows())
                 installerName = "UniGetUI Updater.exe";
             else if (OperatingSystem.IsMacOS())
                 installerName = "UniGetUI Updater.pkg";
             else
-                throw new PlatformNotSupportedException(
-                    "Auto-updater is not yet supported on this platform.");
+                installerName = "UniGetUI Updater.AppImage";
             string installerPath = Path.Join(CoreData.UniGetUIDataDirectory, installerName);
 
             // Try cached installer first
@@ -566,6 +547,12 @@ internal static partial class AvaloniaAutoUpdater
         if (OperatingSystem.IsMacOS())
         {
             await LaunchMacInstallerAsync(installerLocation);
+            return;
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            LaunchLinuxInstaller(installerLocation);
             return;
         }
 
@@ -811,6 +798,93 @@ internal static partial class AvaloniaAutoUpdater
         Environment.Exit(0);
     }
 
+    [SupportedOSPlatform("linux")]
+    private static void LaunchLinuxInstaller(string installerLocation)
+    {
+        LogUpdateInfo($"Applying Linux AppImage update from: {installerLocation}");
+
+        // The AppImage runtime sets APPIMAGE to the on-disk path of the running
+        // .AppImage file. Without it we have no reliable way to know which file
+        // to replace (e.g., when running from `dotnet run` during development).
+        string? runningApp = Environment.GetEnvironmentVariable("APPIMAGE");
+        if (string.IsNullOrEmpty(runningApp) || !File.Exists(runningApp))
+        {
+            LogUpdateWarn(
+                $"APPIMAGE env var is not set or points to a missing file (got '{runningApp}'). "
+                + "UniGetUI does not appear to be running from an AppImage; the running copy "
+                + "cannot be replaced automatically."
+            );
+            RaiseStatus(
+                CoreTools.Translate("Update installed."),
+                CoreTools.Translate("UniGetUI was updated successfully, but this running copy was not replaced. This usually means you are running a development build. Close this copy and start the newly-installed version to finish."),
+                InfoBarSeverity.Warning,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("not running from an AppImage; running copy not replaced");
+            return;
+        }
+
+        try
+        {
+            // Replace the running AppImage on disk. Linux allows renaming over a
+            // currently-executing file: the running process keeps its inode mapped,
+            // and future launches resolve the path to the new file.
+            File.Move(installerLocation, runningApp, overwrite: true);
+
+            File.SetUnixFileMode(
+                runningApp,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
+                    | UnixFileMode.GroupRead | UnixFileMode.GroupExecute
+                    | UnixFileMode.OtherRead | UnixFileMode.OtherExecute
+            );
+        }
+        catch (Exception ex)
+        {
+            LogUpdateError("Failed to replace the running AppImage:");
+            LogUpdateError(ex);
+            RaiseStatus(
+                CoreTools.Translate("The update could not be applied."),
+                ex.Message,
+                InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished($"AppImage replacement failed: {ex.Message}");
+            return;
+        }
+
+        LogUpdateInfo($"Replaced {runningApp}; relaunching new AppImage and exiting current process.");
+
+        RaiseStatus(
+            CoreTools.Translate("UniGetUI is being updated..."),
+            CoreTools.Translate("This may take a minute or two"),
+            InfoBarSeverity.Informational,
+            isClosable: false);
+
+        // Detach a shell that waits a moment, then runs the new AppImage. The brief
+        // sleep gives this process time to exit so the relaunched instance starts
+        // cleanly without lingering shared resources.
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "/bin/sh",
+                ArgumentList = { "-c", $"sleep 1 && \"{runningApp}\" >/dev/null 2>&1 &" },
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            LogUpdateWarn("Could not schedule relaunch of new AppImage:");
+            LogUpdateWarn(ex);
+        }
+
+        MarkAttemptFinished("Linux AppImage replaced; relaunching");
+        Environment.Exit(0);
+    }
+
     // ------------------------------------------------------------------ update check sources
     private static async Task<UpdateCandidate> GetUpdateCandidateAsync(UpdaterOverrides overrides)
     {
@@ -922,6 +996,17 @@ internal static partial class AvaloniaAutoUpdater
         if (OperatingSystem.IsMacOS())
         {
             return CheckMacInstallerSignature(path);
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            // AppImage has no built-in signing format equivalent to Authenticode/.pkg.
+            // Hash validation (verified separately, against the productinfo.json fetched
+            // over HTTPS from a trusted host) provides the integrity guarantee. A future
+            // extension could verify a detached GPG signature published alongside the
+            // .AppImage in productinfo.
+            LogUpdateWarn("Linux .AppImage signature validation is not implemented — relying on hash check.");
+            return true;
         }
 
         if (!OperatingSystem.IsWindows())
@@ -1097,6 +1182,18 @@ internal static partial class AvaloniaAutoUpdater
 
             return mac ?? throw new PlatformArtifactMissingException(
                 $"No compatible macOS installer (.pkg) found in productinfo for architecture '{arch}'"
+            );
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            ProductInfoFile? linux =
+                files.FirstOrDefault(f => f.Type.Equals("AppImage", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals(arch, StringComparison.OrdinalIgnoreCase))
+                ?? files.FirstOrDefault(f => f.Type.Equals("AppImage", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals("universal", StringComparison.OrdinalIgnoreCase))
+                ?? files.FirstOrDefault(f => f.Type.Equals("AppImage", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals("Any", StringComparison.OrdinalIgnoreCase));
+
+            return linux ?? throw new PlatformArtifactMissingException(
+                $"No compatible Linux installer (.AppImage) found in productinfo for architecture '{arch}'"
             );
         }
 

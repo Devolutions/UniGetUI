@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Imajte na umu da ne podržavaju svi upravitelji paketa u potpunosti ovu značajku",
   "Proxy URL": "URL proxy poslužitelja",
   "Enter proxy URL here": "Ovdje unesite proxy URL",
-  "Authenticate to the proxy with an user and a password": "Autentificiraj se na proxy pomoću korisničkog imena i lozinke",
+  "Authenticate to the proxy with a user and a password": "Autentificiraj se na proxy pomoću korisničkog imena i lozinke",
   "Internet and proxy settings": "Postavke interneta i proxyja",
   "Package manager preferences": "Postavke upravitelja paketa",
   "Ready": "Spremno",

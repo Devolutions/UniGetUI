@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Të lutem vë re që jo të gjithë menaxherët e paketave mund ta mbështesin plotësisht këtë veçori",
   "Proxy URL": "URL-ja e ndërmjetësit",
   "Enter proxy URL here": "Shkruaj këtu URL-në e ndërmjetësit",
-  "Authenticate to the proxy with an user and a password": "Autentifikohu te ndërmjetësi me emër përdoruesi dhe fjalëkalim",
+  "Authenticate to the proxy with a user and a password": "Autentifikohu te ndërmjetësi me emër përdoruesi dhe fjalëkalim",
   "Internet and proxy settings": "Cilësimet e internetit dhe të ndërmjetësit",
   "Package manager preferences": "Parapëlqimet e menaxherit të paketave",
   "Ready": "Gati",

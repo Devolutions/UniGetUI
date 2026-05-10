@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "请注意，并非所有的软件包管理器都能完全支持此功能",
   "Proxy URL": "代理网址",
   "Enter proxy URL here": "在此输入代理网址",
-  "Authenticate to the proxy with ann user and a password": "使用用户名和密码对代理进行身份验证",
+  "Authenticate to the proxy with a user and a password": "使用用户名和密码对代理进行身份验证",
   "Internet and proxy settings": "网络和代理设置",
   "Package manager preferences": "软件包管理器首选项",
   "Ready": "就绪",

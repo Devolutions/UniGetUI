@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "تکایە سەرنج بدە کە هەموو بەڕێوەبەرانی پاکێج ڕەنگە بە تەواوی پشتگیری ئەم تایبەتمەندییە نەکەن",
   "Proxy URL": "URLی proxy",
   "Enter proxy URL here": "URLی proxy لێرە بنووسە",
-  "Authenticate to the proxy with an user and a password": "بە ناوی بەکارهێنەر و وشەی نهێنی بۆ proxy پشتڕاستکردنەوە بکە",
+  "Authenticate to the proxy with a user and a password": "بە ناوی بەکارهێنەر و وشەی نهێنی بۆ proxy پشتڕاستکردنەوە بکە",
   "Internet and proxy settings": "ڕێکخستنەکانی ئینتەرنێت و proxy",
   "Package manager preferences": "هەڵبژاردەکانی بەڕێوەبەرانی پاکێج",
   "Ready": "ئامادە",

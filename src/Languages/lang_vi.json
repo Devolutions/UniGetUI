@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Xin lưu ý rằng không phải tất cả các trình quản lý gói đều có thể hỗ trợ đầy đủ tính năng này",
   "Proxy URL": "URL proxy",
   "Enter proxy URL here": "Nhập URL proxy vào đây",
-  "Authenticate to the proxy with an user and a password": "Xác thực với proxy bằng tên người dùng và mật khẩu",
+  "Authenticate to the proxy with a user and a password": "Xác thực với proxy bằng tên người dùng và mật khẩu",
   "Internet and proxy settings": "Cài đặt Internet và proxy",
   "Package manager preferences": "Tùy chọn trình quản lý gói",
   "Ready": "Sẵn sàng",

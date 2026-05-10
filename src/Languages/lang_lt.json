@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Atkreipkite dėmesį, kad ne visi paketų tvarkytuvai gali visiškai palaikyti šią funkciją",
   "Proxy URL": "Įgaliotojo/-inio „URL“ – saitas",
   "Enter proxy URL here": "Įveskite įgaliotojo „URL“ – saitą čia",
-  "Authenticate to the proxy with an user and a password": "Autentifikuotis tarpiniame serveryje naudojant naudotojo vardą ir slaptažodį",
+  "Authenticate to the proxy with a user and a password": "Autentifikuotis tarpiniame serveryje naudojant naudotojo vardą ir slaptažodį",
   "Internet and proxy settings": "Interneto ir tarpinio serverio nustatymai",
   "Package manager preferences": "Paketų tvarkytuvo/-ės nuostatos",
   "Ready": "Paruošta/-s",

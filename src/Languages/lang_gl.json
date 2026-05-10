@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Ten en conta que non todos os xestores de paquetes poden admitir completamente esta función",
   "Proxy URL": "URL do proxy",
   "Enter proxy URL here": "Introduce aquí a URL do proxy",
-  "Authenticate to the proxy with an user and a password": "Autenticarse no proxy cun usuario e un contrasinal",
+  "Authenticate to the proxy with a user and a password": "Autenticarse no proxy cun usuario e un contrasinal",
   "Internet and proxy settings": "Configuración de internet e do proxy",
   "Package manager preferences": "Preferencias dos xestores de paquetes",
   "Ready": "Listo",

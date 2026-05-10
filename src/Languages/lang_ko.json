@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "모든 패키지 관리자가 이 기능을 완전히 지원하는 것은 아닙니다",
   "Proxy URL": "프록시 URL",
   "Enter proxy URL here": "여기에 프록시 URL 입력",
-  "Authenticate to the proxy with an user and a password": "사용자 이름과 비밀번호로 프록시에 인증",
+  "Authenticate to the proxy with a user and a password": "사용자 이름과 비밀번호로 프록시에 인증",
   "Internet and proxy settings": "인터넷 및 프록시 설정",
   "Package manager preferences": "패키지 관리자 환경 설정",
   "Ready": "준비 완료",

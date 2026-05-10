@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Harap dicatat bahwa tidak semua manajer paket mendukung fitur ini sepenuhnya",
   "Proxy URL": "URL Proxy",
   "Enter proxy URL here": "Masukkan URL proxy di sini",
-  "Authenticate to the proxy with an user and a password": "Autentikasi ke proxy dengan nama pengguna dan kata sandi",
+  "Authenticate to the proxy with a user and a password": "Autentikasi ke proxy dengan nama pengguna dan kata sandi",
   "Internet and proxy settings": "Pengaturan internet dan proxy",
   "Package manager preferences": "Preferensi manajer paket",
   "Ready": "Siap",

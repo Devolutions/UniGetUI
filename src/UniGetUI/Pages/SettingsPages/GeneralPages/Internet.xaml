@@ -58,7 +58,7 @@
         IsEnabled="{x:Bind EnableProxy._checkbox.IsOn, Mode=OneWay}"
         SettingName="EnableProxyAuth"
         StateChanged="EnableProxy_OnStateChanged"
-        Text="Authenticate to the proxy with an user and a password"
+        Text="Authenticate to the proxy with a user and a password"
       >
         <widgets:CheckboxCard.Description>
           <widgets:TranslatedTextBlock Text="Please note that not all package managers may fully support this feature" />

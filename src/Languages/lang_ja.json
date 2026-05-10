@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "すべてのパッケージマネージャがこの機能を完全にサポートしているわけではないことに注意してください。 ",
   "Proxy URL": "プロキシ URL",
   "Enter proxy URL here": "ここにプロキシURLを入力してください ",
-  "Authenticate to the proxy with an user and a password": "ユーザー名とパスワードでプロキシ認証を行う",
+  "Authenticate to the proxy with a user and a password": "ユーザー名とパスワードでプロキシ認証を行う",
   "Internet and proxy settings": "インターネットとプロキシの設定",
   "Package manager preferences": "パッケージマネージャーの設定",
   "Ready": "準備完了",

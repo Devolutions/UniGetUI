@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "அனைத்து package managers உம் இந்த feature ஐ முழுமையாக ஆதரிக்காமல் இருக்கலாம் என்பதை கவனிக்கவும்",
   "Proxy URL": "ப்ராக்ஸி URL",
   "Enter proxy URL here": "proxy URL ஐ இங்கே உள்ளிடவும்",
-  "Authenticate to the proxy with an user and a password": "proxy-இற்கு பயனர் பெயரும் கடவுச்சொல்லும் கொண்டு அங்கீகரி",
+  "Authenticate to the proxy with a user and a password": "proxy-இற்கு பயனர் பெயரும் கடவுச்சொல்லும் கொண்டு அங்கீகரி",
   "Internet and proxy settings": "இணையம் மற்றும் proxy அமைப்புகள்",
   "Package manager preferences": "தொகுப்பு மேலாளர் விருப்பங்கள்",
   "Ready": "தயார்",

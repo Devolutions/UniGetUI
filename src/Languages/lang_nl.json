@@ -450,7 +450,7 @@
   "Please note that not all package managers may fully support this feature": "Houd er rekening mee dat niet alle pakketbeheerders deze functie volledig ondersteunen",
   "Proxy URL": "Proxy-url",
   "Enter proxy URL here": "Voer hier de proxy-URL in",
-  "Authenticate to the proxy with an user and a password": "Bij de proxy verifiëren met een gebruikersnaam en wachtwoord",
+  "Authenticate to the proxy with a user and a password": "Bij de proxy verifiëren met een gebruikersnaam en wachtwoord",
   "Internet and proxy settings": "Internet- en proxy-instellingen",
   "Package manager preferences": "Voorkeuren voor Pakketbeheerders",
   "Ready": "Klaar",

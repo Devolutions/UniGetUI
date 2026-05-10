@@ -485,7 +485,7 @@
   "Update security": "업데이트 보안",
   "Use global setting": "전역 설정 사용",
   "Minimum age for updates": "업데이트 최소 기간",
-  "e.g. 10": "예: 10",
+  "e.g. 10": "예시: 10",
   "Custom minimum age (days)": "사용자 지정 최소 기간(일)",
   "{pm} does not provide release dates for its packages, so this setting will have no effect": "{pm}은(는) 패키지의 릴리스 날짜를 제공하지 않으므로 이 설정은 적용되지 않습니다",
   "Override the global minimum update age for this package manager": "이 패키지 관리자에 대해 전역 최소 업데이트 기간 설정 재정의",
@@ -613,9 +613,9 @@
   "The classical package manager for windows. You'll find everything there. <br>Contains: <b>General Software</b>": "Windows용 클래식 패키지 관리자. 뭐든지 찾을 수 있습니다. <br>포함 내용: <b>일반 소프트웨어</b>",
   "The default package manager for RHEL/Fedora-based Linux distributions.<br>Contains: <b>RPM packages</b>": "RHEL/Fedora 기반 Linux 배포판의 기본 패키지 관리자입니다.<br>포함: <b>RPM 패키지</b>",
   "A repository full of tools and executables designed with Microsoft's .NET ecosystem in mind.<br>Contains: <b>.NET related tools and scripts</b>": "Microsoft의 .NET 생태계를 염두에 두고 설계된 도구와 실행 파일로 가득한 저장소입니다.<br>포함 내용: <b>.NET 관련 도구 및 스크립트</b>",
-  "The universal Linux package manager for desktop applications.<br>Contains: <b>Flatpak applications from configured remotes</b>": "데스크톱 애플리케이션용 범용 Linux 패키지 관리자입니다.<br>포함 항목: <b>구성된 원격 저장소의 Flatpak 애플리케이션</b>",
+  "The universal Linux package manager for desktop applications.<br>Contains: <b>Flatpak applications from configured remotes</b>": "데스크톱 응용 프로그램용 범용 Linux 패키지 관리자입니다.<br>포함 항목: <b>구성된 원격 저장소의 Flatpak 응용 프로그램</b>",
   "NuPkg (zipped manifest)": "NuPkg (압축된 매니페스트)",
-  "The Missing Package Manager for macOS (or Linux).<br>Contains: <b>Formulae, Casks</b>": "macOS(또는 Linux)를 위한 없어서는 안 될 패키지 관리자입니다.<br>포함 항목: <b>Formulae, Casks</b>",
+  "The Missing Package Manager for macOS (or Linux).<br>Contains: <b>Formulae, Casks</b>": "macOS (또는 Linux)를 위한 없어서는 안 될 패키지 관리자입니다.<br>포함 항목: <b>Formulae, Casks</b>",
   "Node JS's package manager. Full of libraries and other utilities that orbit the javascript world<br>Contains: <b>Node javascript libraries and other related utilities</b>": "Node JS의 패키지 관리자. 자바스크립트와 관련된 라이브러리와 기타 유틸리티로 가득합니다. <br>포함 내용: <b>노드 자바스크립트 라이브러리 및 기타 관련 유틸리티</b>",
   "The default package manager for Arch Linux and its derivatives.<br>Contains: <b>Arch Linux packages</b>": "Arch Linux 및 그 파생 배포판의 기본 패키지 관리자입니다.<br>포함: <b>Arch Linux 패키지</b>",
   "Python's library manager. Full of python libraries and other python-related utilities<br>Contains: <b>Python libraries and related utilities</b>": "Python 라이브러리 관리자. Python 라이브러리 및 기타 Python 관련 유틸리티가 가득합니다<br>포함 내용: <b>Python 라이브러리 및 관련 유틸리티</b>",
@@ -809,4 +809,6 @@
   "Log in failed: ": "로그인 실패: ",
   "Log out failed: ": "로그아웃 실패: ",
   "Package backup settings": "패키지 백업 설정"
+  "Warn me when the installer URL host changes between the installed version and the new version (WinGet only)": "설치된 버전과 새 버전 간에 설치 URL 호스트가 변경될 때 경고 표시 (WinGet 전용)",
+  "Installer host changed since the installed version.\nOld: {0}\nNew: {1}\n\nThis is usually harmless (the publisher moved hosting), but can also indicate a hijacked package manifest. Verify the new source before upgrading.": "설치된 버전 이후로 설치 프로그램 호스트가 변경되었습니다.\n이전: {0}\n최신: {1}\n\n이는 대개 무해한 경우 (게시자가 호스팅을 이동한 경우)이지만, 패키지 매니페스트가 변조되었음을 나타낼 수도 있습니다. 업그레이드하기 전에 새 소스를 확인하세요."
 }

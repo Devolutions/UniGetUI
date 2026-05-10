@@ -93,7 +93,7 @@
         <MSBuild
             Projects="$(PingetCliProject)"
             Targets="Restore;Publish"
-            Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=net10.0;RuntimeIdentifier=$(PingetCliRuntimeIdentifier);SelfContained=true;PublishSingleFile=true;PublishTrimmed=true;TrimMode=partial;PublishReadyToRun=false;JsonSerializerIsReflectionEnabledByDefault=true;PublishDir=$(PingetCliPublishDir);AppendRuntimeIdentifierToOutputPath=false"
+            Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=net10.0;RuntimeIdentifier=$(PingetCliRuntimeIdentifier);SelfContained=true;PublishSingleFile=true;PublishTrimmed=true;TrimMode=partial;JsonSerializerIsReflectionEnabledByDefault=true;PublishDir=$(PingetCliPublishDir);AppendRuntimeIdentifierToOutputPath=false"
         />
         <Copy
             SourceFiles="$(PingetCliExecutablePath)"

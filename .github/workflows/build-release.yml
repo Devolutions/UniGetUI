@@ -197,7 +197,7 @@ jobs:
           Get-ChildItem $PublishDir | Move-Item -Destination "unigetui_bin" -Force
 
           $MaxShippedPdbSizeBytes = 1MB
-          $PdbsToRemove = Get-ChildItem "unigetui_bin" -Filter "*.pdb" -File | Where-Object {
+          $PdbsToRemove = Get-ChildItem "unigetui_bin" -Filter "*.pdb" -File -Recurse | Where-Object {
             $_.Length -gt $MaxShippedPdbSizeBytes
           }
 

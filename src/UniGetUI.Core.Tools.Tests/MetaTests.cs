@@ -23,18 +23,20 @@ public class MetaTests
             var lines = File.ReadAllLines(file);
             var jsonSerCount = lines.Count(x => x.Contains("JsonSerializer.Serialize"));
             var jsonDeserCount = lines.Count(x => x.Contains("JsonSerializer.Deserialize"));
-            var serialOptionsCount1 = lines.Count(x =>
+            var trimSafeJsonMetadataCount = lines.Count(x =>
                 x.Contains("SerializationHelpers.DefaultOptions")
+                || x.Contains("SerializationHelpers.ImportBundleOptions")
+                || x.Contains("SerializationOptions")
+                || x.Contains("JsonTypeInfo")
+                || x.Contains("JsonSerializerContext")
+                || x.Contains("JsonSourceGenerationOptions")
+                || x.Contains("GetTypeInfo")
+                || x.Contains("typeInfo")
             );
-            var serialOptionsCount2 = lines.Count(x =>
-                x.Contains("SerializationHelpers.ImportBundleOptions")
-            );
-            var serialOptionsCount3 = lines.Count(x => x.Contains("SerializationOptions"));
             Assert.True(
-                (jsonSerCount + jsonDeserCount)
-                    <= serialOptionsCount1 + serialOptionsCount2 + serialOptionsCount3,
+                (jsonSerCount + jsonDeserCount) <= trimSafeJsonMetadataCount,
                 $"Failing on {file}. The specified file does not serialize and/or deserialize JSON with"
-                    + $" the proper SerializationHelpers.DefaultOptions set"
+                    + $" explicit trim-safe JSON metadata"
             );
         }
     }

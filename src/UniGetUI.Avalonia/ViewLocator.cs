@@ -1,17 +1,13 @@
-using System;
-using System.Diagnostics.CodeAnalysis;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Avalonia.Views;
 
 namespace UniGetUI.Avalonia;
 
 /// <summary>
-/// Given a view model, returns the corresponding view if possible.
+/// Given a view model, returns the corresponding view if possible without reflection.
 /// </summary>
-[RequiresUnreferencedCode(
-    "Default implementation of ViewLocator involves reflection which may be trimmed away.",
-    Url = "https://docs.avaloniaui.net/docs/concepts/view-locator")]
 public class ViewLocator : IDataTemplate
 {
     public Control? Build(object? param)
@@ -19,19 +15,19 @@ public class ViewLocator : IDataTemplate
         if (param is null)
             return null;
 
-        var name = param.GetType().FullName!.Replace("ViewModel", "View", StringComparison.Ordinal);
-        var type = Type.GetType(name);
-
-        if (type != null)
+        if (param is SidebarViewModel sidebar)
         {
-            return (Control)Activator.CreateInstance(type)!;
+            return new SidebarView
+            {
+                DataContext = sidebar,
+            };
         }
 
-        return new TextBlock { Text = "Not Found: " + name };
+        return new TextBlock { Text = "Not Found: " + param.GetType().Name };
     }
 
     public bool Match(object? data)
     {
-        return data is ViewModelBase;
+        return data is SidebarViewModel;
     }
 }

@@ -326,17 +326,16 @@ namespace UniGetUI.Core.Data
         {
             get
             {
-                string? dir = Path.GetDirectoryName(
-                    System.Reflection.Assembly.GetExecutingAssembly().Location
+                string? dir = AppContext.BaseDirectory.TrimEnd(
+                    Path.DirectorySeparatorChar,
+                    Path.AltDirectorySeparatorChar
                 );
                 if (dir is not null)
                 {
                     return dir;
                 }
 
-                Logger.Error(
-                    "System.Reflection.Assembly.GetExecutingAssembly().Location returned an empty path"
-                );
+                Logger.Error("AppContext.BaseDirectory returned an empty path");
 
                 return AppContext.BaseDirectory.TrimEnd(
                     Path.DirectorySeparatorChar,

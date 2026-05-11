@@ -21,6 +21,12 @@
         <ApplicationIcon>..\UniGetUI\icon.ico</ApplicationIcon>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <ApplicationManifest Condition="$([MSBuild]::IsOSPlatform('Windows'))">app.manifest</ApplicationManifest>
+        <PublishTrimmed>true</PublishTrimmed>
+        <TrimMode>full</TrimMode>
+        <PublishSingleFile>false</PublishSingleFile>
+        <IncludeAvaloniaPublishSymbols>false</IncludeAvaloniaPublishSymbols>
+        <AppxGeneratePriEnabled>false</AppxGeneratePriEnabled>
+        <AppxGeneratePrisForPortableLibrariesEnabled>false</AppxGeneratePrisForPortableLibrariesEnabled>
     </PropertyGroup>
 
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
@@ -67,6 +73,19 @@
             SkipUnchangedFiles="true"
             Condition="'$(PublishDir)' != '' and Exists('$(PublishDir)')"
         />
+    </Target>
+
+    <Target
+        Name="RemoveAvaloniaPublishSymbols"
+        AfterTargets="ComputeFilesToPublish"
+        Condition="'$(IncludeAvaloniaPublishSymbols)' != 'true'"
+    >
+        <ItemGroup>
+            <ResolvedFileToPublish
+                Remove="@(ResolvedFileToPublish)"
+                Condition="'%(ResolvedFileToPublish.Extension)' == '.pdb'"
+            />
+        </ItemGroup>
     </Target>
 
     <ItemGroup>

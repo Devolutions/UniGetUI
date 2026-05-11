@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 
@@ -75,7 +74,6 @@ public partial class Settings
 
     public static JsonSerializerOptions SerializationOptions = new()
     {
-        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
         AllowTrailingCommas = true,
         WriteIndented = true,
     };

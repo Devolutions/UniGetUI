@@ -3,6 +3,7 @@
 
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Diagnostics.CodeAnalysis;
 using Windows.Win32.System.Com;
 using WinRT;
 
@@ -17,6 +18,10 @@ public class WindowsPackageManagerStandardFactory : WindowsPackageManagerFactory
     )
         : base(clsidContext, allowLowerTrustRegistration) { }
 
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2072",
+        Justification = "WinGet COM projected activation types come from the Windows Package Manager WinMD and registered COM server; this path does not depend on app-owned trimmed constructors.")]
     protected override T CreateInstance<T>(Guid clsid, Guid iid)
     {
         if (!_allowLowerTrustRegistration)

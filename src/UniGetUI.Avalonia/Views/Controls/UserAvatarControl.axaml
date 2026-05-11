@@ -87,8 +87,8 @@
             </Flyout>
         </Button.Flyout>
 
-        <!-- Avatar / placeholder (reflection bindings: compiled bindings lose scope inside Button content) -->
-        <Panel Width="32" Height="32" ClipToBounds="True" x:CompileBindings="False">
+        <!-- Avatar / placeholder -->
+        <Panel Width="32" Height="32" ClipToBounds="True" x:DataType="vm:UserAvatarViewModel">
             <Ellipse Fill="{DynamicResource SettingsCardBackground}"
                      Width="32" Height="32"/>
 

@@ -25,7 +25,7 @@ public abstract class SerializableComponent<T>
     /// <returns>A pretty-formatted JSON string representing the current data</returns>
     public string AsJsonString()
     {
-        return JsonSerializer.Serialize(AsJsonNode(), SerializationHelpers.DefaultOptions);
+        return AsJsonNode().ToJsonString(SerializationHelpers.DefaultOptions);
     }
 
     /// <summary>

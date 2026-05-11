@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -23,6 +24,10 @@ namespace UniGetUI.Interface
         public static string Token = "";
     }
 
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026",
+        Justification = "IPC JSON metadata is supplied by IpcJsonContext; remaining ASP.NET Core JSON overload warnings are guarded by that generated resolver.")]
     public class IpcServer
     {
         public string SessionId { get; } = Guid.NewGuid().ToString("N");
@@ -56,23 +61,21 @@ namespace UniGetUI.Interface
             ApiTokenHolder.Token = CoreTools.RandomString(64);
             Logger.Info("Generated a IPC API auth token for the current session");
 
-            var builder = Host.CreateDefaultBuilder();
-            builder.ConfigureServices(services => services.AddCors());
-            builder.ConfigureWebHostDefaults(webBuilder =>
+            var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
             {
-                webBuilder.UseKestrel(serverOptions => ConfigureTransport(serverOptions));
+                Args = [],
+                ApplicationName = typeof(IpcServer).Assembly.FullName,
+            });
+            builder.Services.AddCors();
+            builder.WebHost.UseKestrel(ConfigureTransport);
 #if !DEBUG
-                webBuilder.SuppressStatusMessages(true);
+            builder.WebHost.UseSetting(WebHostDefaults.SuppressStatusMessagesKey, "true");
 #endif
-                webBuilder.Configure(app =>
-                {
-                    app.UseCors(policy =>
-                        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()
-                    );
-
-                    app.UseRouting();
-                    app.UseEndpoints(endpoints =>
-                    {
+            var app = builder.Build();
+            app.UseCors(policy =>
+                policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()
+            );
+            var endpoints = app;
                         endpoints.MapGet(IpcHttpRoutes.Path("/status"), V3_Status);
                         endpoints.MapGet(IpcHttpRoutes.Path("/app"), V3_GetAppInfo);
                         endpoints.MapPost(IpcHttpRoutes.Path("/app/show"), V3_ShowApp);
@@ -279,10 +282,7 @@ namespace UniGetUI.Interface
                             IpcHttpRoutes.Path("/packages/update-manager"),
                             V3_UpdateAllPackagesForManager
                         );
-                    });
-                });
-            });
-            _host = builder.Build();
+            _host = app;
             try
             {
                 await _host.StartAsync();
@@ -444,11 +444,7 @@ namespace UniGetUI.Interface
                     Version = CoreData.VersionName,
                     BuildNumber = CoreData.BuildNumber,
                 },
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
+                IpcJson.Options
             );
         }
 
@@ -462,11 +458,7 @@ namespace UniGetUI.Interface
 
             await context.Response.WriteAsJsonAsync(
                 IpcManagerSettingsApi.ListManagers(),
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
+                IpcJson.Options
             );
         }
 
@@ -485,11 +477,7 @@ namespace UniGetUI.Interface
                         ?? throw new InvalidOperationException(
                             "The application did not register an app-state provider."
                         ),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -611,11 +599,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     IpcManagerSettingsApi.ListSources(context.Request.Query["manager"]),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -645,11 +629,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     IpcManagerMaintenanceApi.GetMaintenanceInfo(managerName),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -711,11 +691,7 @@ namespace UniGetUI.Interface
 
             await context.Response.WriteAsJsonAsync(
                 IpcManagerSettingsApi.ListSettings(),
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
+                IpcJson.Options
             );
         }
 
@@ -739,11 +715,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     IpcManagerSettingsApi.GetSetting(key),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -774,11 +746,7 @@ namespace UniGetUI.Interface
                             Value = GetOptionalQueryValue(context.Request, "value"),
                         }
                     ),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -808,11 +776,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     IpcManagerSettingsApi.ClearSetting(key),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -833,11 +797,7 @@ namespace UniGetUI.Interface
             IpcManagerSettingsApi.ResetSettingsPreservingSession();
             await context.Response.WriteAsJsonAsync(
                 IpcCommandResult.Success("reset-settings"),
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
+                IpcJson.Options
             );
         }
 
@@ -851,11 +811,7 @@ namespace UniGetUI.Interface
 
             await context.Response.WriteAsJsonAsync(
                 IpcSecureSettingsApi.ListSettings(context.Request.Query["user"]),
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
+                IpcJson.Options
             );
         }
 
@@ -874,11 +830,7 @@ namespace UniGetUI.Interface
                         GetRequiredQueryValue(context, "key"),
                         GetOptionalQueryValue(context.Request, "user")
                     ),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -914,11 +866,7 @@ namespace UniGetUI.Interface
                             Enabled = enabled,
                         }
                     ),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -953,11 +901,7 @@ namespace UniGetUI.Interface
                             Enabled = enabled,
                         }
                     ),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -992,11 +936,7 @@ namespace UniGetUI.Interface
                             Enabled = enabled,
                         }
                     ),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1016,11 +956,7 @@ namespace UniGetUI.Interface
 
             await context.Response.WriteAsJsonAsync(
                 IpcDesktopShortcutsApi.ListShortcuts(),
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
+                IpcJson.Options
             );
         }
 
@@ -1042,11 +978,7 @@ namespace UniGetUI.Interface
                             Status = GetOptionalQueryValue(context.Request, "status"),
                         }
                     ),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1073,11 +1005,7 @@ namespace UniGetUI.Interface
                             Path = GetRequiredQueryValue(context, "path"),
                         }
                     ),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1097,11 +1025,7 @@ namespace UniGetUI.Interface
 
             await context.Response.WriteAsJsonAsync(
                 IpcDesktopShortcutsApi.ResetAllShortcuts(),
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
+                IpcJson.Options
             );
         }
 
@@ -1118,11 +1042,7 @@ namespace UniGetUI.Interface
                 : 4;
             await context.Response.WriteAsJsonAsync(
                 IpcLogsApi.ListAppLog(level),
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
+                IpcJson.Options
             );
         }
 
@@ -1136,11 +1056,7 @@ namespace UniGetUI.Interface
 
             await context.Response.WriteAsJsonAsync(
                 IpcLogsApi.ListOperationHistory(),
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
+                IpcJson.Options
             );
         }
 
@@ -1159,11 +1075,7 @@ namespace UniGetUI.Interface
                         context.Request.Query["manager"],
                         bool.TryParse(context.Request.Query["verbose"], out bool verbose) && verbose
                     ),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1183,11 +1095,7 @@ namespace UniGetUI.Interface
 
             await context.Response.WriteAsJsonAsync(
                 await IpcBackupApi.GetStatusAsync(),
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
+                IpcJson.Options
             );
         }
 
@@ -1203,11 +1111,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     await IpcBackupApi.CreateLocalBackupAsync(),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1237,11 +1141,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     await IpcBackupApi.CompleteGitHubDeviceFlowAsync(),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1261,11 +1161,7 @@ namespace UniGetUI.Interface
 
             await context.Response.WriteAsJsonAsync(
                 await IpcBackupApi.SignOutGitHubAsync(),
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
+                IpcJson.Options
             );
         }
 
@@ -1281,11 +1177,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     await IpcBackupApi.ListCloudBackupsAsync(),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1307,11 +1199,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     await IpcBackupApi.CreateCloudBackupAsync(),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1349,11 +1237,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     await IpcBundleApi.GetCurrentBundleAsync(),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1375,11 +1259,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     IpcBundleApi.ResetBundle(),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1459,11 +1339,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     IpcPackageApi.SearchPackages(query, manager, maxResults),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1485,11 +1361,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     IpcPackageApi.ListInstalledPackages(context.Request.Query["manager"]),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1511,11 +1383,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     IpcPackageApi.ListUpgradablePackages(context.Request.Query["manager"]),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1547,11 +1415,7 @@ namespace UniGetUI.Interface
                     await IpcPackageApi.GetPackageDetailsAsync(
                         BuildPackageActionRequest(context.Request)
                     ),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1581,11 +1445,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     IpcPackageApi.GetPackageVersions(BuildPackageActionRequest(context.Request)),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1605,11 +1465,7 @@ namespace UniGetUI.Interface
 
             await context.Response.WriteAsJsonAsync(
                 IpcPackageApi.ListIgnoredUpdates(),
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
+                IpcJson.Options
             );
         }
 
@@ -1694,11 +1550,7 @@ namespace UniGetUI.Interface
                         ?? throw new InvalidOperationException(
                             "The current UniGetUI session cannot open package details."
                         ),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1772,11 +1624,7 @@ namespace UniGetUI.Interface
 
                 await context.Response.WriteAsJsonAsync(
                     await action(request),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1798,11 +1646,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     action(),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1827,11 +1671,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     action(),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1864,11 +1704,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     await action(BuildPackageActionRequest(context.Request)),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1900,11 +1736,7 @@ namespace UniGetUI.Interface
                             SourceUrl = GetOptionalQueryValue(context.Request, "url"),
                         }
                     ),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1929,11 +1761,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     await action(await ReadJsonBodyAsync<TRequest>(context)),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1958,11 +1786,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     await action(await ReadJsonBodyAsync<TRequest>(context)),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -1987,11 +1811,7 @@ namespace UniGetUI.Interface
             {
                 await context.Response.WriteAsJsonAsync(
                     await action(await ReadJsonBodyAsync<TRequest>(context)),
-                    new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true,
-                    }
+                    IpcJson.Options
                 );
             }
             catch (InvalidOperationException ex)
@@ -2003,13 +1823,8 @@ namespace UniGetUI.Interface
 
         private static async Task<TRequest> ReadJsonBodyAsync<TRequest>(HttpContext context)
         {
-            var request = await context.Request.ReadFromJsonAsync<TRequest>(
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
-            );
+            using var reader = new StreamReader(context.Request.Body, Encoding.UTF8);
+            var request = IpcJson.Deserialize<TRequest>(await reader.ReadToEndAsync());
             return request
                 ?? throw new InvalidOperationException("The request body is required.");
         }

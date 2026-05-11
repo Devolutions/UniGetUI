@@ -55,9 +55,8 @@ namespace UniGetUI.Core.SettingsEngine
                     {
                         if (result != "")
                         {
-                            Dictionary<KeyT, ValueT?>? item = JsonSerializer.Deserialize<
-                                Dictionary<KeyT, ValueT?>
-                            >(result, SerializationOptions);
+                            Dictionary<KeyT, ValueT?>? item =
+                                SettingsJson.DeserializeDictionary<KeyT, ValueT?>(result);
                             if (item is not null)
                             {
                                 value = item;
@@ -109,7 +108,7 @@ namespace UniGetUI.Core.SettingsEngine
             try
             {
                 if (value.Count != 0)
-                    File.WriteAllText(file, JsonSerializer.Serialize(value, SerializationOptions));
+                    File.WriteAllText(file, SettingsJson.SerializeDictionary(value));
                 else if (File.Exists(file))
                     File.Delete(file);
             }

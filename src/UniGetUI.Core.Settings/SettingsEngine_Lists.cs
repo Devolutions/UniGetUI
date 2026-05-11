@@ -44,10 +44,7 @@ namespace UniGetUI.Core.SettingsEngine
                     {
                         if (result != "")
                         {
-                            List<T>? item = JsonSerializer.Deserialize<List<T>>(
-                                result,
-                                SerializationOptions
-                            );
+                            List<T>? item = SettingsJson.DeserializeList<T>(result);
                             if (item is not null)
                             {
                                 value = item;
@@ -86,7 +83,7 @@ namespace UniGetUI.Core.SettingsEngine
             try
             {
                 if (value.Count != 0)
-                    File.WriteAllText(file, JsonSerializer.Serialize(value, SerializationOptions));
+                    File.WriteAllText(file, SettingsJson.SerializeList(value));
                 else if (File.Exists(file))
                     File.Delete(file);
             }

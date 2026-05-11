@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -22,6 +23,10 @@ namespace UniGetUI.Avalonia;
 
 public partial class App : Application
 {
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026",
+        Justification = "Platform theme dictionaries are Avalonia resources included in the app package; only the resource URI is selected dynamically.")]
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);

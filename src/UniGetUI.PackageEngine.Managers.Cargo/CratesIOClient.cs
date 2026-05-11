@@ -97,7 +97,7 @@ internal sealed class CratesIOClient
         var manifestStr = client.GetStringAsync(url).GetAwaiter().GetResult();
 
         var manifest =
-            JsonSerializer.Deserialize<T>(manifestStr, options: SerializationHelpers.DefaultOptions)
+            CargoJson.Deserialize<T>(manifestStr)
             ?? throw new NullResponseException($"Null response for request to {url}");
         return manifest;
     }

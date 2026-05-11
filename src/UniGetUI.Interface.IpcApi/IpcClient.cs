@@ -80,14 +80,7 @@ public sealed class IpcClient : IDisposable
         try
         {
             string json = await SendAsync(HttpMethod.Get, IpcHttpRoutes.Path("/status"));
-            var status = JsonSerializer.Deserialize<IpcStatus>(
-                json,
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
-            );
+            var status = IpcJson.Deserialize<IpcStatus>(json);
             if (status is not null)
             {
                 return status;
@@ -1098,14 +1091,7 @@ public sealed class IpcClient : IDisposable
     )
     {
         string json = await SendAuthenticatedAsync(method, relativePath, queryParameters);
-        return JsonSerializer.Deserialize<T>(
-            json,
-            new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = true,
-            }
-        );
+        return IpcJson.Deserialize<T>(json);
     }
 
     private async Task<TResponse?> ReadAuthenticatedJsonWithBodyAsync<TResponse, TBody>(
@@ -1114,23 +1100,9 @@ public sealed class IpcClient : IDisposable
         IReadOnlyDictionary<string, string>? queryParameters = null
     )
     {
-        using var content = JsonContent.Create(
-            body,
-            options: new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = true,
-            }
-        );
+        using var content = IpcJson.CreateContent(body);
         string json = await SendAuthenticatedAsync(HttpMethod.Post, relativePath, queryParameters, content);
-        return JsonSerializer.Deserialize<TResponse>(
-            json,
-            new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = true,
-            }
-        );
+        return IpcJson.Deserialize<TResponse>(json);
     }
 
     private async Task<IpcPackageOperationResult> SendPackageOperationAsync(

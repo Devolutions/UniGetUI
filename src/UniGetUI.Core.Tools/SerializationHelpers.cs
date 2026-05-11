@@ -1,25 +1,32 @@
 using System.Globalization;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization.Metadata;
 using System.Xml;
+using YamlDotNet.RepresentationModel;
 
 namespace UniGetUI.Core.Data;
 
 public static class SerializationHelpers
 {
+    private static readonly JsonSerializerOptions NodeJsonOptions = new()
+    {
+        AllowTrailingCommas = true,
+        WriteIndented = true,
+    };
+
     public static Task<string> YAML_to_JSON(string YAML) => Task.Run(() => yaml_to_json(YAML));
 
     private static string yaml_to_json(string YAML)
     {
-        var yamlObject = new YamlDotNet.Serialization.Deserializer().Deserialize(YAML);
-        if (yamlObject is null)
-            return "{'message': 'deserialized YAML object was null'}";
-        return new YamlDotNet.Serialization.SerializerBuilder()
-            .JsonCompatible()
-            .Build()
-            .Serialize(yamlObject);
+        using var reader = new StringReader(YAML);
+        var stream = new YamlStream();
+        stream.Load(reader);
+
+        if (stream.Documents.Count == 0 || stream.Documents[0].RootNode is null)
+            return "{\"message\":\"deserialized YAML object was null\"}";
+
+        return ConvertYamlNode(stream.Documents[0].RootNode)?.ToJsonString(NodeJsonOptions)
+            ?? "null";
     }
 
     public static Task<string> XML_to_JSON(string XML) => Task.Run(() => xml_to_json(XML));
@@ -29,63 +36,109 @@ public static class SerializationHelpers
         var doc = new XmlDocument();
         doc.LoadXml(XML);
         if (doc.DocumentElement is null)
-            return "{'message': 'XmlDocument.DocumentElement was null'}";
-        return JsonSerializer.Serialize(
-            _convertXmlNode(doc.DocumentElement),
-            SerializationHelpers.DefaultOptions
-        );
+            return "{\"message\":\"XmlDocument.DocumentElement was null\"}";
+
+        return ConvertXmlNode(doc.DocumentElement)?.ToJsonString(NodeJsonOptions)
+            ?? "null";
     }
 
-    private static object? _convertXmlNode(XmlNode node)
+    private static JsonNode? ConvertXmlNode(XmlNode node)
     {
-        // If node has no children, return its text or attributes
         if (node.ChildNodes.Count == 1 && node.FirstChild is XmlText singleText)
         {
-            return singleText.Value;
+            return JsonValue.Create(singleText.Value);
         }
 
-        // Attributes dictionary
-        var dict = new Dictionary<string, object?>();
+        var jsonObject = new JsonObject();
         if (node.Attributes?.Count > 0)
         {
             foreach (XmlAttribute attr in node.Attributes)
             {
-                dict[$"@{attr.Name}"] = attr.Value;
+                jsonObject[$"@{attr.Name}"] = attr.Value;
             }
         }
 
-        // Group child elements
-        var children = new Dictionary<string, List<object?>>();
+        var children = new Dictionary<string, List<JsonNode?>>();
         foreach (XmlNode child in node.ChildNodes)
         {
             if (child is XmlElement childElement)
             {
-                var value = _convertXmlNode(childElement);
+                var value = ConvertXmlNode(childElement);
                 if (!children.ContainsKey(childElement.Name))
-                    children[childElement.Name] = new List<object?>();
+                    children[childElement.Name] = new List<JsonNode?>();
                 children[childElement.Name].Add(value);
             }
         }
 
-        // Flatten repeated elements if only one group exists
-        if (children.Count == 1 && dict.Count == 0)
+        if (children.Count == 1 && jsonObject.Count == 0)
         {
             var firstKey = children.Keys.First();
-            return children[firstKey].Count == 1 ? children[firstKey][0] : children[firstKey];
+            return children[firstKey].Count == 1
+                ? children[firstKey][0]
+                : new JsonArray(children[firstKey].ToArray());
         }
 
-        // Otherwise build normal object
         foreach (var kv in children)
         {
-            dict[kv.Key] = kv.Value.Count == 1 ? kv.Value[0] : kv.Value;
+            jsonObject[kv.Key] = kv.Value.Count == 1 ? kv.Value[0] : new JsonArray(kv.Value.ToArray());
         }
 
-        return dict;
+        return jsonObject;
+    }
+
+    private static JsonNode? ConvertYamlNode(YamlNode node)
+    {
+        return node switch
+        {
+            YamlScalarNode scalar => ConvertYamlScalar(scalar),
+            YamlSequenceNode sequence => ConvertYamlSequence(sequence),
+            YamlMappingNode mapping => ConvertYamlMapping(mapping),
+            _ => JsonValue.Create(node.ToString()),
+        };
+    }
+
+    private static JsonNode? ConvertYamlScalar(YamlScalarNode scalar)
+    {
+        if (scalar.Value is null)
+            return null;
+
+        if (bool.TryParse(scalar.Value, out bool boolValue))
+            return JsonValue.Create(boolValue);
+
+        if (long.TryParse(scalar.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long longValue))
+            return JsonValue.Create(longValue);
+
+        if (double.TryParse(scalar.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double doubleValue))
+            return JsonValue.Create(doubleValue);
+
+        return JsonValue.Create(scalar.Value);
+    }
+
+    private static JsonArray ConvertYamlSequence(YamlSequenceNode sequence)
+    {
+        var array = new JsonArray();
+        foreach (YamlNode child in sequence.Children)
+            array.Add(ConvertYamlNode(child));
+        return array;
+    }
+
+    private static JsonObject ConvertYamlMapping(YamlMappingNode mapping)
+    {
+        var obj = new JsonObject();
+        foreach (var (key, value) in mapping.Children)
+            obj[ConvertYamlKey(key)] = ConvertYamlNode(value);
+        return obj;
+    }
+
+    private static string ConvertYamlKey(YamlNode key)
+    {
+        return key is YamlScalarNode scalar
+            ? scalar.Value ?? ""
+            : key.ToString();
     }
 
     public static JsonSerializerOptions DefaultOptions = new()
     {
-        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
         AllowTrailingCommas = true,
         WriteIndented = true,
     };

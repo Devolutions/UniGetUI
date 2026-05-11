@@ -69,8 +69,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         {
             var reloadBtn = ViewModel.AddToolbarButton("reload", CoreTools.Translate("Reload"),
                 ViewModel.TriggerReload);
-            reloadBtn.Bind(ToolTip.TipProperty,
-                new global::Avalonia.Data.Binding(nameof(PackagesPageViewModel.ReloadButtonTooltip)) { Source = ViewModel });
+            UpdateReloadButtonTooltip(reloadBtn);
             ViewModel.AddToolbarSeparator();
         }
 
@@ -135,6 +134,16 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
     // ─── UI-only: focus the package list ─────────────────────────────────────
     private void OnFocusListRequested() => PackageList.Focus();
+
+    private void UpdateReloadButtonTooltip(Button reloadButton)
+    {
+        ToolTip.SetTip(reloadButton, ViewModel.ReloadButtonTooltip);
+        ViewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName is nameof(PackagesPageViewModel.ReloadButtonTooltip))
+                ToolTip.SetTip(reloadButton, ViewModel.ReloadButtonTooltip);
+        };
+    }
 
     public void FocusPackageList()
     {

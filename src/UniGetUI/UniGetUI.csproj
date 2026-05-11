@@ -50,14 +50,13 @@
 
     <PropertyGroup>
         <BundleModernApp Condition="'$(BundleModernApp)' == ''">true</BundleModernApp>
-        <PublishTrimmed Condition="'$(BundleModernApp)' == 'true'">false</PublishTrimmed>
+        <ModernAppDirectoryName>Avalonia</ModernAppDirectoryName>
         <AvaloniaProject>$(MSBuildThisFileDirectory)..\UniGetUI.Avalonia\UniGetUI.Avalonia.csproj</AvaloniaProject>
         <AvaloniaRuntimeIdentifier Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</AvaloniaRuntimeIdentifier>
         <AvaloniaRuntimeIdentifier Condition="'$(AvaloniaRuntimeIdentifier)' == '' and '$(Platform)' == 'arm64'">win-arm64</AvaloniaRuntimeIdentifier>
         <AvaloniaRuntimeIdentifier Condition="'$(AvaloniaRuntimeIdentifier)' == ''">win-x64</AvaloniaRuntimeIdentifier>
         <AvaloniaPublishDir>$(MSBuildProjectDirectory)\obj\$(Platform)\$(Configuration)\BundledAvalonia\$(AvaloniaRuntimeIdentifier)\</AvaloniaPublishDir>
         <AvaloniaExecutablePath>$(AvaloniaPublishDir)UniGetUI.Avalonia.exe</AvaloniaExecutablePath>
-        <MergePublishOutputScript>$(MSBuildProjectDirectory)\..\..\scripts\merge-publish-output.ps1</MergePublishOutputScript>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -114,30 +113,19 @@
         BeforeTargets="PostPublishGenerateIntegrityTree"
         Condition="'$(DesignTimeBuild)' != 'true' and '$(BundleModernApp)' == 'true' and '$(PublishDir)' != '' and Exists('$(PublishDir)')"
     >
+        <PropertyGroup>
+            <!-- Keep the trimmed Avalonia app isolated; trimmed shared assemblies are entry-point specific. -->
+            <BundledAvaloniaPublishDir>$(PublishDir)$(ModernAppDirectoryName)\</BundledAvaloniaPublishDir>
+            <BundledAvaloniaExecutablePath>$(BundledAvaloniaPublishDir)UniGetUI.Avalonia.exe</BundledAvaloniaExecutablePath>
+        </PropertyGroup>
         <MSBuild
             Projects="$(AvaloniaProject)"
             Targets="Restore;Publish"
-            Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(WindowsTargetFramework);RuntimeIdentifier=$(AvaloniaRuntimeIdentifier);SelfContained=true;PublishSelfContained=true;PublishTrimmed=false;PublishDir=$(AvaloniaPublishDir);AppendRuntimeIdentifierToOutputPath=false;SkipBundledPingetCli=true;BundleModernApp=false"
+            Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(WindowsTargetFramework);RuntimeIdentifier=$(AvaloniaRuntimeIdentifier);SelfContained=true;PublishSelfContained=true;PublishTrimmed=true;TrimMode=full;PublishSingleFile=false;PublishDir=$(BundledAvaloniaPublishDir);AppendRuntimeIdentifierToOutputPath=false;SkipBundledPingetCli=true;BundleModernApp=false"
         />
         <Error
-            Condition="!Exists('$(AvaloniaExecutablePath)')"
-            Text="Bundled Avalonia executable was not published to '$(AvaloniaExecutablePath)'."
-        />
-        <Exec
-            IgnoreExitCode="true"
-            Command="pwsh -NoProfile -File &quot;$(MergePublishOutputScript)&quot; -Source &quot;$([System.IO.Path]::TrimEndingDirectorySeparator($([System.IO.Path]::GetFullPath('$(AvaloniaPublishDir)'))))&quot; -Destination &quot;$([System.IO.Path]::TrimEndingDirectorySeparator($([System.IO.Path]::GetFullPath('$(PublishDir)'))))&quot;"
-        />
-        <Error
-            Condition="!Exists('$(PublishDir)UniGetUI.Avalonia.exe')"
-            Text="Bundled Avalonia executable was not merged into '$(PublishDir)'."
-        />
-        <Error
-            Condition="!Exists('$(PublishDir)UniGetUI.Avalonia.deps.json')"
-            Text="Bundled Avalonia deps file was not merged into '$(PublishDir)'."
-        />
-        <Error
-            Condition="!Exists('$(PublishDir)UniGetUI.Avalonia.runtimeconfig.json')"
-            Text="Bundled Avalonia runtimeconfig file was not merged into '$(PublishDir)'."
+            Condition="!Exists('$(BundledAvaloniaExecutablePath)')"
+            Text="Bundled Avalonia executable was not published to '$(BundledAvaloniaExecutablePath)'."
         />
     </Target>
 

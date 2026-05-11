@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 
@@ -50,13 +51,10 @@ public static class IpcCliCommandRunner
             return subcommand switch
             {
                 "status" => await WriteJsonAsync(output, await client.GetStatusAsync()),
-                "get-app-state" => await WriteJsonAsync(
+                "get-app-state" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        app = await client.GetAppInfoAsync(),
-                    }
+                    "app",
+                    await client.GetAppInfoAsync()
                 ),
                 "show-app" => await WriteJsonAsync(output, await client.ShowAppAsync()),
                 "navigate-app" => await WriteJsonAsync(
@@ -64,58 +62,46 @@ public static class IpcCliCommandRunner
                     await client.NavigateAppAsync(BuildAppNavigateRequest(args))
                 ),
                 "quit-app" => await WriteJsonAsync(output, await client.QuitAppAsync()),
-                "list-operations" => await WriteJsonAsync(
+                "list-operations" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        operations = await client.ListOperationsAsync(),
-                    }
+                    "operations",
+                    await client.ListOperationsAsync()
                 ),
-                "get-operation" => await WriteJsonAsync(
+                "get-operation" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        operation = await client.GetOperationAsync(
-                            GetRequiredArgument(
-                                args,
-                                "--operation-id",
-                                "operation get requires --id."
-                            )
-                        ),
-                    }
+                    "operation",
+                    await client.GetOperationAsync(
+                        GetRequiredArgument(
+                            args,
+                            "--operation-id",
+                            "operation get requires --id."
+                        )
+                    )
                 ),
-                "get-operation-output" => await WriteJsonAsync(
+                "get-operation-output" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        output = await client.GetOperationOutputAsync(
-                            GetRequiredArgument(
-                                args,
-                                "--operation-id",
-                                "operation output requires --id."
-                            ),
-                            GetOptionalIntArgument(args, "--tail")
+                    "output",
+                    await client.GetOperationOutputAsync(
+                        GetRequiredArgument(
+                            args,
+                            "--operation-id",
+                            "operation output requires --id."
                         ),
-                    }
+                        GetOptionalIntArgument(args, "--tail")
+                    )
                 ),
-                "wait-operation" => await WriteJsonAsync(
+                "wait-operation" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        operation = await client.WaitForOperationAsync(
-                            GetRequiredArgument(
-                                args,
-                                "--operation-id",
-                                "operation wait requires --id."
-                            ),
-                            GetOptionalIntArgument(args, "--timeout") ?? 300,
-                            ((GetOptionalIntArgument(args, "--delay") ?? 1) * 1000)
+                    "operation",
+                    await client.WaitForOperationAsync(
+                        GetRequiredArgument(
+                            args,
+                            "--operation-id",
+                            "operation wait requires --id."
                         ),
-                    }
+                        GetOptionalIntArgument(args, "--timeout") ?? 300,
+                        ((GetOptionalIntArgument(args, "--delay") ?? 1) * 1000)
+                    )
                 ),
                 "cancel-operation" => await WriteJsonAsync(
                     output,
@@ -163,27 +149,21 @@ public static class IpcCliCommandRunner
                         )
                     )
                 ),
-                "list-managers" => await WriteJsonAsync(
+                "list-managers" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        managers = await client.ListManagersAsync(),
-                    }
+                    "managers",
+                    await client.ListManagersAsync()
                 ),
-                "get-manager-maintenance" => await WriteJsonAsync(
+                "get-manager-maintenance" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        maintenance = await client.GetManagerMaintenanceAsync(
-                            GetRequiredArgument(
-                                args,
-                                "--manager",
-                                "manager maintenance requires --manager."
-                            )
-                        ),
-                    }
+                    "maintenance",
+                    await client.GetManagerMaintenanceAsync(
+                        GetRequiredArgument(
+                            args,
+                            "--manager",
+                            "manager maintenance requires --manager."
+                        )
+                    )
                 ),
                 "reload-manager" => await WriteJsonAsync(
                     output,
@@ -205,13 +185,10 @@ public static class IpcCliCommandRunner
                         BuildManagerMaintenanceRequest(args, requireAction: true)
                     )
                 ),
-                "list-sources" => await WriteJsonAsync(
+                "list-sources" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        sources = await client.ListSourcesAsync(GetOptionalArgument(args, "--manager")),
-                    }
+                    "sources",
+                    await client.ListSourcesAsync(GetOptionalArgument(args, "--manager"))
                 ),
                 "add-source" => await WriteJsonAsync(
                     output,
@@ -221,114 +198,80 @@ public static class IpcCliCommandRunner
                     output,
                     await client.RemoveSourceAsync(BuildSourceRequest(args))
                 ),
-                "list-settings" => await WriteJsonAsync(
+                "list-settings" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        settings = await client.ListSettingsAsync(),
-                    }
+                    "settings",
+                    await client.ListSettingsAsync()
                 ),
-                "list-secure-settings" => await WriteJsonAsync(
+                "list-secure-settings" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        settings = await client.ListSecureSettingsAsync(
-                            GetOptionalArgument(args, "--user")
+                    "settings",
+                    await client.ListSecureSettingsAsync(GetOptionalArgument(args, "--user"))
+                ),
+                "get-secure-setting" => await WriteWrappedJsonAsync(
+                    output,
+                    "setting",
+                    await client.GetSecureSettingAsync(
+                        GetRequiredArgument(
+                            args,
+                            "--key",
+                            "settings secure get requires --key."
                         ),
-                    }
+                        GetOptionalArgument(args, "--user")
+                    )
                 ),
-                "get-secure-setting" => await WriteJsonAsync(
+                "set-secure-setting" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        setting = await client.GetSecureSettingAsync(
-                            GetRequiredArgument(
-                                args,
-                                "--key",
-                                "settings secure get requires --key."
-                            ),
-                            GetOptionalArgument(args, "--user")
-                        ),
-                    }
+                    "setting",
+                    await client.SetSecureSettingAsync(BuildSecureSettingRequest(args))
                 ),
-                "set-secure-setting" => await WriteJsonAsync(
+                "get-setting" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        setting = await client.SetSecureSettingAsync(
-                            BuildSecureSettingRequest(args)
-                        ),
-                    }
+                    "setting",
+                    await client.GetSettingAsync(
+                        GetRequiredArgument(
+                            args,
+                            "--key",
+                            "settings get requires --key."
+                        )
+                    )
                 ),
-                "get-setting" => await WriteJsonAsync(
+                "set-setting" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        setting = await client.GetSettingAsync(
-                            GetRequiredArgument(
-                                args,
-                                "--key",
-                                "settings get requires --key."
-                            )
-                        ),
-                    }
+                    "setting",
+                    await client.SetSettingAsync(BuildSettingRequest(args))
                 ),
-                "set-setting" => await WriteJsonAsync(
+                "clear-setting" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        setting = await client.SetSettingAsync(BuildSettingRequest(args)),
-                    }
+                    "setting",
+                    await client.ClearSettingAsync(
+                        GetRequiredArgument(
+                            args,
+                            "--key",
+                            "settings clear requires --key."
+                        )
+                    )
                 ),
-                "clear-setting" => await WriteJsonAsync(
+                "set-manager-enabled" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        setting = await client.ClearSettingAsync(
-                            GetRequiredArgument(
-                                args,
-                                "--key",
-                                "settings clear requires --key."
-                            )
-                        ),
-                    }
+                    "manager",
+                    await client.SetManagerEnabledAsync(BuildManagerToggleRequest(args))
                 ),
-                "set-manager-enabled" => await WriteJsonAsync(
+                "set-manager-update-notifications" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        manager = await client.SetManagerEnabledAsync(BuildManagerToggleRequest(args)),
-                    }
-                ),
-                "set-manager-update-notifications" => await WriteJsonAsync(
-                    output,
-                    new
-                    {
-                        status = "success",
-                        manager = await client.SetManagerUpdateNotificationsAsync(
-                            BuildManagerToggleRequest(args)
-                        ),
-                    }
+                    "manager",
+                    await client.SetManagerUpdateNotificationsAsync(
+                        BuildManagerToggleRequest(args)
+                    )
                 ),
                 "reset-settings" => await WriteJsonAsync(
                     output,
                     await client.ResetSettingsAsync()
                 ),
-                "list-desktop-shortcuts" => await WriteJsonAsync(
+                "list-desktop-shortcuts" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        shortcuts = await client.ListDesktopShortcutsAsync(),
-                    }
+                    "shortcuts",
+                    await client.ListDesktopShortcutsAsync()
                 ),
                 "set-desktop-shortcut" => await WriteJsonAsync(
                     output,
@@ -348,40 +291,28 @@ public static class IpcCliCommandRunner
                     output,
                     await client.ResetDesktopShortcutsAsync()
                 ),
-                "get-app-log" => await WriteJsonAsync(
+                "get-app-log" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        entries = await client.GetAppLogAsync(GetOptionalIntArgument(args, "--level") ?? 4),
-                    }
+                    "entries",
+                    await client.GetAppLogAsync(GetOptionalIntArgument(args, "--level") ?? 4)
                 ),
-                "get-operation-history" => await WriteJsonAsync(
+                "get-operation-history" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        history = await client.GetOperationHistoryAsync(),
-                    }
+                    "history",
+                    await client.GetOperationHistoryAsync()
                 ),
-                "get-manager-log" => await WriteJsonAsync(
+                "get-manager-log" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        managers = await client.GetManagerLogAsync(
-                            GetOptionalArgument(args, "--manager"),
-                            args.Contains("--verbose")
-                        ),
-                    }
+                    "managers",
+                    await client.GetManagerLogAsync(
+                        GetOptionalArgument(args, "--manager"),
+                        args.Contains("--verbose")
+                    )
                 ),
-                "get-backup-status" => await WriteJsonAsync(
+                "get-backup-status" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        backup = await client.GetBackupStatusAsync(),
-                    }
+                    "backup",
+                    await client.GetBackupStatusAsync()
                 ),
                 "create-local-backup" => await WriteJsonAsync(
                     output,
@@ -399,13 +330,10 @@ public static class IpcCliCommandRunner
                     output,
                     await client.SignOutGitHubAsync()
                 ),
-                "list-cloud-backups" => await WriteJsonAsync(
+                "list-cloud-backups" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        backups = await client.ListCloudBackupsAsync(),
-                    }
+                    "backups",
+                    await client.ListCloudBackupsAsync()
                 ),
                 "create-cloud-backup" => await WriteJsonAsync(
                     output,
@@ -419,13 +347,10 @@ public static class IpcCliCommandRunner
                     output,
                     await client.RestoreCloudBackupAsync(BuildCloudBackupRequest(args))
                 ),
-                "get-bundle" => await WriteJsonAsync(
+                "get-bundle" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        bundle = await client.GetBundleAsync(),
-                    }
+                    "bundle",
+                    await client.GetBundleAsync()
                 ),
                 "reset-bundle" => await WriteJsonAsync(
                     output,
@@ -451,73 +376,52 @@ public static class IpcCliCommandRunner
                     output,
                     await client.InstallBundleAsync(BuildBundleInstallRequest(args))
                 ),
-                "get-version" => await WriteJsonAsync(
+                "get-version" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        build = await client.GetVersionAsync(),
-                    }
+                    "build",
+                    await client.GetVersionAsync()
                 ),
-                "get-updates" => await WriteJsonAsync(
+                "get-updates" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        updates = await client.ListUpgradablePackagesAsync(
-                            GetOptionalArgument(args, "--manager")
+                    "updates",
+                    await client.ListUpgradablePackagesAsync(
+                        GetOptionalArgument(args, "--manager")
+                    )
+                ),
+                "list-installed" => await WriteWrappedJsonAsync(
+                    output,
+                    "packages",
+                    await client.ListInstalledPackagesAsync(
+                        GetOptionalArgument(args, "--manager")
+                    )
+                ),
+                "search-packages" => await WriteWrappedJsonAsync(
+                    output,
+                    "packages",
+                    await client.SearchPackagesAsync(
+                        GetRequiredArgument(
+                            args,
+                            "--query",
+                            "package search requires --query."
                         ),
-                    }
+                        GetOptionalArgument(args, "--manager"),
+                        GetOptionalIntArgument(args, "--max-results")
+                    )
                 ),
-                "list-installed" => await WriteJsonAsync(
+                "package-details" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        packages = await client.ListInstalledPackagesAsync(
-                            GetOptionalArgument(args, "--manager")
-                        ),
-                    }
+                    "package",
+                    await client.GetPackageDetailsAsync(BuildPackageActionRequest(args))
                 ),
-                "search-packages" => await WriteJsonAsync(
+                "package-versions" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        packages = await client.SearchPackagesAsync(
-                            GetRequiredArgument(
-                                args,
-                                "--query",
-                                "package search requires --query."
-                            ),
-                            GetOptionalArgument(args, "--manager"),
-                            GetOptionalIntArgument(args, "--max-results")
-                        ),
-                    }
+                    "versions",
+                    await client.GetPackageVersionsAsync(BuildPackageActionRequest(args))
                 ),
-                "package-details" => await WriteJsonAsync(
+                "list-ignored-updates" => await WriteWrappedJsonAsync(
                     output,
-                    new
-                    {
-                        status = "success",
-                        package = await client.GetPackageDetailsAsync(BuildPackageActionRequest(args)),
-                    }
-                ),
-                "package-versions" => await WriteJsonAsync(
-                    output,
-                    new
-                    {
-                        status = "success",
-                        versions = await client.GetPackageVersionsAsync(BuildPackageActionRequest(args)),
-                    }
-                ),
-                "list-ignored-updates" => await WriteJsonAsync(
-                    output,
-                    new
-                    {
-                        status = "success",
-                        ignoredUpdates = await client.ListIgnoredUpdatesAsync(),
-                    }
+                    "ignoredUpdates",
+                    await client.ListIgnoredUpdatesAsync()
                 ),
                 "ignore-package" => await WriteJsonAsync(
                     output,
@@ -929,15 +833,23 @@ public static class IpcCliCommandRunner
     private static async Task<int> WriteJsonAsync<T>(TextWriter output, T value)
     {
         await output.WriteLineAsync(
-            JsonSerializer.Serialize(
-                value,
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
-            )
+            IpcJson.Serialize(value)
         );
+        return (int)IpcCliExitCode.Success;
+    }
+
+    private static async Task<int> WriteWrappedJsonAsync<T>(
+        TextWriter output,
+        string propertyName,
+        T value
+    )
+    {
+        var response = new JsonObject
+        {
+            ["status"] = "success",
+            [propertyName] = JsonNode.Parse(IpcJson.Serialize(value)),
+        };
+        await output.WriteLineAsync(response.ToJsonString(IpcJson.Options));
         return (int)IpcCliExitCode.Success;
     }
 
@@ -948,14 +860,7 @@ public static class IpcCliCommandRunner
     )
     {
         await output.WriteLineAsync(
-            JsonSerializer.Serialize(
-                new { status = "error", message },
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
-            )
+            IpcJson.Serialize(new IpcCommandResult { Status = "error", Message = message })
         );
         return (int)exitCode;
     }

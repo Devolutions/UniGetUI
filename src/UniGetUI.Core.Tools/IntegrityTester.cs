@@ -70,10 +70,7 @@ public static class IntegrityTester
 
         try
         {
-            data = JsonSerializer.Deserialize<Dictionary<string, string>>(
-                rawData,
-                SerializationHelpers.DefaultOptions
-            );
+            data = CoreToolsJson.DeserializeStringDictionary(rawData);
         }
         catch (Exception ex)
         {

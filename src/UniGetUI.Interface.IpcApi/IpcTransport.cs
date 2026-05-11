@@ -108,14 +108,7 @@ public sealed record IpcTransportOptions(
 
         File.WriteAllText(
             GetEndpointMetadataPath(sessionId),
-            JsonSerializer.Serialize(
-                metadata,
-                new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true,
-                }
-            )
+            IpcJson.Serialize(metadata)
         );
     }
 
@@ -155,13 +148,8 @@ public sealed record IpcTransportOptions(
             {
                 foreach (string file in Directory.GetFiles(EndpointMetadataDirectoryPath, "*.json"))
                 {
-                    var registration = JsonSerializer.Deserialize<IpcEndpointRegistration>(
-                        File.ReadAllText(file),
-                        new JsonSerializerOptions(SerializationHelpers.DefaultOptions)
-                        {
-                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                            WriteIndented = true,
-                        }
+                    var registration = IpcJson.Deserialize<IpcEndpointRegistration>(
+                        File.ReadAllText(file)
                     );
 
                     if (registration is not null)

@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -28,7 +29,8 @@ public partial class OperationFailedDialog : Window
         var normalBrush = Application.Current?.FindResource("SystemControlForegroundBaseHighBrush") as IBrush
                           ?? Brushes.White;
 
-        var lines = new List<OutputLineVm>();
+        var inlines = OutputText.Inlines ??= new InlineCollection();
+        bool first = true;
         foreach (var (text, type) in operation.GetOutput())
         {
             IBrush brush = type switch
@@ -37,9 +39,10 @@ public partial class OperationFailedDialog : Window
                 AbstractOperation.LineType.VerboseDetails => debugBrush,
                 _ => normalBrush,
             };
-            lines.Add(new OutputLineVm(text, brush));
+            if (!first) inlines.Add(new LineBreak());
+            inlines.Add(new Run(text) { Foreground = brush });
+            first = false;
         }
-        OutputLines.ItemsSource = lines;
 
         var closeButton = new Button
         {
@@ -131,11 +134,4 @@ public partial class OperationFailedDialog : Window
         item.Click += (_, _) => action();
         return item;
     }
-}
-
-/// <summary>View model for a single colored output line in OperationFailedDialog.</summary>
-public sealed class OutputLineVm(string text, IBrush foreground)
-{
-    public string Text { get; } = text;
-    public IBrush Foreground { get; } = foreground;
 }

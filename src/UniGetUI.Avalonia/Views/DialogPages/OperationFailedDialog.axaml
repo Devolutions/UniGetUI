@@ -1,7 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
-        xmlns:local="using:UniGetUI.Avalonia.Views.DialogPages"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.OperationFailedDialog"
         Width="800" MinWidth="500"
         Height="550" MinHeight="300"
@@ -28,19 +27,12 @@
                       VerticalScrollBarVisibility="Auto"
                       Background="{DynamicResource AppDialogDarkBackground}"
                       CornerRadius="6">
-            <ItemsControl x:Name="OutputLines"
-                          Padding="8"
-                          automation:AutomationProperties.AccessibilityView="Raw">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="local:OutputLineVm">
-                        <TextBlock Text="{Binding Text}"
-                                   Foreground="{Binding Foreground}"
-                                   FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
-                                   FontSize="12"
-                                   TextWrapping="Wrap"/>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <SelectableTextBlock x:Name="OutputText"
+                                 Padding="8"
+                                 FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+                                 FontSize="12"
+                                 TextWrapping="Wrap"
+                                 automation:AutomationProperties.AccessibilityView="Raw"/>
         </ScrollViewer>
 
         <!-- ── Footer buttons ── -->

@@ -328,12 +328,12 @@ public sealed partial class OperationViewModel : ViewModelBase
         if (Operation.Status is OperationStatus.Failed)
         {
             var win = new OperationFailedDialog(Operation);
-            _ = win.ShowDialog(mainWindow);
+            win.Show(mainWindow);
         }
         else
         {
             var win = new OperationOutputWindow(Operation);
-            _ = win.ShowDialog(mainWindow);
+            win.Show(mainWindow);
         }
     }
 

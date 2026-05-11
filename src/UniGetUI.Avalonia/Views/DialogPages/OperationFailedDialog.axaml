@@ -4,7 +4,6 @@
         x:Class="UniGetUI.Avalonia.Views.DialogPages.OperationFailedDialog"
         Width="800" MinWidth="500"
         Height="550" MinHeight="300"
-        MaxWidth="800"
         CanResize="True"
         ShowInTaskbar="False"
         Background="{DynamicResource AppDialogBackground}"

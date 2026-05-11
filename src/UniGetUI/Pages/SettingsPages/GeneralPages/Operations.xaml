@@ -31,7 +31,7 @@
         x:Name="ParallelOperationCount"
         CornerRadius="8,8,0,0"
         SettingName="ParallelOperationCount"
-        Text="Choose how many operations shouls be performed in parallel"
+        Text="Choose how many operations should be performed in parallel"
         ValueChanged="ParallelOperationCount_OnValueChanged"
       />
 

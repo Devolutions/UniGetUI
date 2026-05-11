@@ -47,10 +47,10 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         ];
 
         parameters.AddRange(GetIdNamePiece(package).Split(" "));
-        parameters.AddRange([
-            "--source",
-            package.Source.IsVirtualManager ? "winget" : package.Source.Name,
-        ]);
+        if (!package.Source.IsVirtualManager)
+        {
+            parameters.AddRange(["--source", package.Source.Name]);
+        }
         parameters.AddRange(["--accept-source-agreements", "--disable-interactivity"]);
 
         // package.OverridenInstallationOptions.Scope is meaningless in WinGet packages. Default is unspecified, hence the _ => [].

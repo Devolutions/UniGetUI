@@ -39,19 +39,24 @@ public enum PageType
 
 public partial class MainWindow : Window
 {
-    private const int SW_RESTORE = 9;
+    // Workaround for Avalonia 12 issue #21160 / #21212: BorderOnly + ExtendClientArea
+    // strips WS_CAPTION / WS_THICKFRAME, which makes DWM disable Aero Snap drag-to-top,
+    // Win+Up, and the maximize/minimize/restore animations. Re-add those bits on every
+    // style change. WM_GETMINMAXINFO is also overridden because Avalonia's default values
+    // on the primary monitor make Aero Snap maximize to the current window size (no-op).
+    // Targeted upstream fix in Avalonia 12.1.
+    private const uint WM_STYLECHANGING = 0x007C;
+    private const uint WM_GETMINMAXINFO = 0x0024;
+    private const int GWL_STYLE = -16;
+    private const uint WS_CAPTION = 0x00C00000;
+    private const uint WS_THICKFRAME = 0x00040000;
+    private const uint WS_MINIMIZEBOX = 0x00020000;
+    private const uint WS_MAXIMIZEBOX = 0x00010000;
     private const uint MONITOR_DEFAULTTONEAREST = 2;
-    private const int SM_CXSIZEFRAME = 32;
-    private const int SM_CYSIZEFRAME = 33;
-    private const int SM_CXPADDEDBORDER = 92;
-    private const uint SWP_NOZORDER = 0x0004;
-    private const uint SWP_NOACTIVATE = 0x0010;
-    private const uint SWP_FRAMECHANGED = 0x0020;
 
     private bool _focusSidebarSelectionOnNextPageChange;
     private TrayService? _trayService;
     private bool _allowClose;
-    private NativeMethods.RECT? _windowsRestoreBoundsBeforeManualMaximize;
 
     public enum RuntimeNotificationLevel
     {
@@ -77,6 +82,27 @@ public partial class MainWindow : Window
 
         _trayService = new TrayService(this);
         _trayService.UpdateStatus();
+    }
+
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        // Install the hook so future style-change attempts by Avalonia can't re-strip our bits.
+        Win32Properties.AddWndProcHookCallback(this, OnWindowsWndProc);
+
+        // The initial strip already happened during Show() (before this hook could catch it),
+        // so manually OR our bits back into the current style. DWM picks them up immediately
+        // and starts honouring Aero Snap / Win+Up / native maximize animations again.
+        if (TryGetPlatformHandle()?.Handle is { } handle && handle != 0)
+        {
+            nint current = NativeMethods.GetWindowLongPtr(handle, GWL_STYLE);
+            nint updated = (nint)((nuint)current | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+            if (updated != current)
+                NativeMethods.SetWindowLongPtr(handle, GWL_STYLE, updated);
+        }
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)
@@ -182,7 +208,7 @@ public partial class MainWindow : Window
             MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
             this.GetObservable(WindowStateProperty).Subscribe(state =>
             {
-                UpdateMaximizeButtonState(state == WindowState.Maximized || _windowsRestoreBoundsBeforeManualMaximize is not null);
+                UpdateMaximizeButtonState(state == WindowState.Maximized);
             });
         }
         else if (OperatingSystem.IsLinux())
@@ -301,12 +327,6 @@ public partial class MainWindow : Window
 
     private void MaximizeButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (OperatingSystem.IsWindows() && TryGetNativeWindowHandle() is { } handle)
-        {
-            ToggleWindowsManualMaximize(handle);
-            return;
-        }
-
         WindowState = WindowState == WindowState.Maximized
             ? WindowState.Normal
             : WindowState.Maximized;
@@ -323,121 +343,64 @@ public partial class MainWindow : Window
             CoreTools.Translate(isMaximized ? "Restore" : "Maximize"));
     }
 
-    private nint? TryGetNativeWindowHandle()
+    private static nint OnWindowsWndProc(nint hWnd, uint msg, nint wParam, nint lParam, ref bool handled)
     {
-        var handle = TryGetPlatformHandle()?.Handle ?? 0;
-        return handle == 0 ? null : handle;
-    }
-
-    private void ToggleWindowsManualMaximize(nint handle)
-    {
-        if (_windowsRestoreBoundsBeforeManualMaximize is { } restoreBounds)
+        // Intercept SetWindowLong(GWL_STYLE, ...) attempts and OR our required bits back into
+        // the new style before Windows accepts the change. lParam points to a STYLESTRUCT
+        // whose styleNew member is the proposed new style. We modify it in place and let the
+        // chain continue (no handled=true) so Avalonia / DefWindowProc still process the
+        // (now-corrected) message.
+        if (msg == WM_STYLECHANGING && wParam.ToInt64() == GWL_STYLE)
         {
-            if (SetWindowsWindowBounds(handle, restoreBounds))
+            var ss = Marshal.PtrToStructure<NativeMethods.STYLESTRUCT>(lParam);
+            uint preserved = ss.styleNew | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+            if (preserved != ss.styleNew)
             {
-                _windowsRestoreBoundsBeforeManualMaximize = null;
-                UpdateMaximizeButtonState(false);
+                ss.styleNew = preserved;
+                Marshal.StructureToPtr(ss, lParam, false);
             }
-            return;
         }
 
-        if (NativeMethods.IsZoomed(handle))
+        // Override the max-size / max-position Avalonia would otherwise provide. On the
+        // primary monitor (where the taskbar lives) Avalonia's defaults can leave ptMaxSize
+        // equal to the current window size, so Aero Snap drag-to-top "maximizes" to the same
+        // bounds and the window appears not to resize. We always report the current monitor's
+        // work area, which is what Windows actually uses for native maximize.
+        // handled = true so Avalonia's own WM_GETMINMAXINFO handler can't run after us and
+        // overwrite the values we just set.
+        if (msg == WM_GETMINMAXINFO)
         {
-            _ = NativeMethods.ShowWindow(handle, SW_RESTORE);
-            UpdateMaximizeButtonState(false);
-            return;
+            nint monitor = NativeMethods.MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
+            if (monitor != 0)
+            {
+                var mi = new NativeMethods.MONITORINFO { cbSize = Marshal.SizeOf<NativeMethods.MONITORINFO>() };
+                if (NativeMethods.GetMonitorInfo(monitor, ref mi))
+                {
+                    var mmi = Marshal.PtrToStructure<NativeMethods.MINMAXINFO>(lParam);
+                    mmi.ptMaxPosition.X = mi.rcWork.Left - mi.rcMonitor.Left;
+                    mmi.ptMaxPosition.Y = mi.rcWork.Top - mi.rcMonitor.Top;
+                    mmi.ptMaxSize.X = mi.rcWork.Right - mi.rcWork.Left;
+                    mmi.ptMaxSize.Y = mi.rcWork.Bottom - mi.rcWork.Top;
+                    if (mmi.ptMaxTrackSize.X < mmi.ptMaxSize.X) mmi.ptMaxTrackSize.X = mmi.ptMaxSize.X;
+                    if (mmi.ptMaxTrackSize.Y < mmi.ptMaxSize.Y) mmi.ptMaxTrackSize.Y = mmi.ptMaxSize.Y;
+                    Marshal.StructureToPtr(mmi, lParam, false);
+                    handled = true;
+                    return 0;
+                }
+            }
         }
-
-        if (!NativeMethods.GetWindowRect(handle, out NativeMethods.RECT currentBounds))
-        {
-            Logger.Warn("Could not get the window bounds before maximizing.");
-            return;
-        }
-
-        var monitor = NativeMethods.MonitorFromWindow(handle, MONITOR_DEFAULTTONEAREST);
-        if (monitor == 0)
-        {
-            Logger.Warn("Could not find a monitor for the window before maximizing.");
-            return;
-        }
-
-        var monitorInfo = new NativeMethods.MONITORINFO
-        {
-            cbSize = Marshal.SizeOf<NativeMethods.MONITORINFO>(),
-        };
-        if (!NativeMethods.GetMonitorInfo(monitor, ref monitorInfo))
-        {
-            Logger.Warn("Could not get monitor bounds before maximizing.");
-            return;
-        }
-
-        if (SetWindowsWindowBounds(handle, GetMaximizedWindowBounds(handle, monitorInfo.rcWork)))
-        {
-            _windowsRestoreBoundsBeforeManualMaximize = currentBounds;
-            UpdateMaximizeButtonState(true);
-        }
+        return 0;
     }
 
-    private static NativeMethods.RECT GetMaximizedWindowBounds(nint handle, NativeMethods.RECT workArea)
-    {
-        uint dpi = NativeMethods.GetDpiForWindow(handle);
-        if (dpi == 0)
-            dpi = NativeMethods.GetDpiForSystem();
-
-        int frameX = NativeMethods.GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi)
-            + NativeMethods.GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
-        int frameY = NativeMethods.GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi)
-            + NativeMethods.GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
-
-        frameX = Math.Max(frameX, 8);
-        frameY = Math.Max(frameY, 8);
-
-        return new NativeMethods.RECT
-        {
-            Left = workArea.Left - frameX,
-            Top = workArea.Top - frameY,
-            Right = workArea.Right + frameX,
-            Bottom = workArea.Bottom + frameY,
-        };
-    }
-
-    private static bool SetWindowsWindowBounds(nint handle, NativeMethods.RECT bounds)
-    {
-        bool result = NativeMethods.SetWindowPos(
-            handle,
-            0,
-            bounds.Left,
-            bounds.Top,
-            bounds.Right - bounds.Left,
-            bounds.Bottom - bounds.Top,
-            SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-        if (!result)
-            Logger.Warn($"Could not set window bounds. Win32 error: {Marshal.GetLastWin32Error()}");
-        return result;
-    }
-
+    // P/Invokes compile on any platform; they are only called from code paths guarded by
+    // OperatingSystem.IsWindows(), so non-Windows targets never invoke user32.dll at runtime.
     private static class NativeMethods
     {
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool IsZoomed(nint hWnd);
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+        public static extern nint GetWindowLongPtr(nint hWnd, int nIndex);
 
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool ShowWindow(nint hWnd, int nCmdShow);
-
-        [DllImport("user32.dll")]
-        public static extern uint GetDpiForWindow(nint hwnd);
-
-        [DllImport("user32.dll")]
-        public static extern uint GetDpiForSystem();
-
-        [DllImport("user32.dll")]
-        public static extern int GetSystemMetricsForDpi(int nIndex, uint dpi);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool GetWindowRect(nint hWnd, out RECT lpRect);
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+        public static extern nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
 
         [DllImport("user32.dll")]
         public static extern nint MonitorFromWindow(nint hwnd, uint dwFlags);
@@ -446,16 +409,29 @@ public partial class MainWindow : Window
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool GetMonitorInfo(nint hMonitor, ref MONITORINFO lpmi);
 
-        [DllImport("user32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool SetWindowPos(
-            nint hWnd,
-            nint hWndInsertAfter,
-            int X,
-            int Y,
-            int cx,
-            int cy,
-            uint uFlags);
+        [StructLayout(LayoutKind.Sequential)]
+        public struct STYLESTRUCT
+        {
+            public uint styleOld;
+            public uint styleNew;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MINMAXINFO
+        {
+            public POINT ptReserved;
+            public POINT ptMaxSize;
+            public POINT ptMaxPosition;
+            public POINT ptMinTrackSize;
+            public POINT ptMaxTrackSize;
+        }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT

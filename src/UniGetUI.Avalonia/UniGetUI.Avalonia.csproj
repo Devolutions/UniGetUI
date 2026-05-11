@@ -70,17 +70,17 @@
     </Target>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="12.0.0-rc1" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.0.0-rc1" />
-        <PackageReference Include="Avalonia.Desktop" Version="12.0.0-rc1" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.0-rc1" />
+        <PackageReference Include="Avalonia" Version="12.0.3" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.0.0" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.0.3" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
         <PackageReference Include="Devolutions.AvaloniaTheme.DevExpress" Version="2026.3.13" />
         <PackageReference Include="Devolutions.AvaloniaTheme.MacOS" Version="2026.3.13" />
         <PackageReference Include="Devolutions.AvaloniaTheme.Linux" Version="2026.3.11" />
         <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta3" Condition="'$(EnableAvaloniaDiagnostics)' == 'true'" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
         <PackageReference Include="Octokit" Version="14.0.0" />
-        <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.0-rc1" />
+        <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.0" />
         <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
     </ItemGroup>
 

@@ -32,6 +32,7 @@
                                    WarningText="{t:Translate Restart UniGetUI to apply this change}"
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    IsEnabled="{Binding !IsBetaTester}"
+                                   IsVisible="{Binding IsWindows}"
                                    ToolTip.Tip="{t:Translate The classic UI is disabled for beta testers}"
                                    CornerRadius="8"/>
 

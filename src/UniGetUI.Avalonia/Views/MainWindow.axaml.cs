@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -195,6 +196,34 @@ public partial class MainWindow : Window
             // Traffic lights sit on the left → keep the 65 px HamburgerPanel margin.
             ExtendClientAreaToDecorationsHint = true;
             ExtendClientAreaTitleBarHeightHint = -1;
+
+            // In fullscreen the native title bar is hidden and WindowDecorationMargin
+            // collapses to 0, which would clip the search box and hamburger. Use a fixed
+            // title bar height in that state, and drop the traffic-light reservation
+            // since the traffic lights aren't shown either.
+            this.GetObservable(WindowStateProperty).Subscribe(state =>
+            {
+                if (state == WindowState.FullScreen)
+                {
+                    TitleBarGrid.ClearValue(HeightProperty);
+                    TitleBarGrid.Height = 44;
+                    MainContentGrid.ClearValue(MarginProperty);
+                    MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
+                    HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
+                }
+                else
+                {
+                    TitleBarGrid.Bind(HeightProperty, new Binding("WindowDecorationMargin.Top")
+                    {
+                        RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor) { AncestorType = typeof(Window) },
+                    });
+                    MainContentGrid.Bind(MarginProperty, new Binding("WindowDecorationMargin")
+                    {
+                        RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor) { AncestorType = typeof(Window) },
+                    });
+                    HamburgerPanel.Margin = new Thickness(65, 0, 8, 0);
+                }
+            });
         }
         else if (OperatingSystem.IsWindows())
         {

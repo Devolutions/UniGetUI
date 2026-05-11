@@ -627,6 +627,16 @@ jobs:
             "output/UniGetUI-release-arm64/UniGetUI.Installer.arm64.exe" = "Devolutions.UniGetUI.win-arm64.$OneDriveVersion.exe"
             "output/UniGetUI-release-x64/UniGetUI.x64.zip" = "Devolutions.UniGetUI.win-x64.$OneDriveVersion.zip"
             "output/UniGetUI-release-arm64/UniGetUI.arm64.zip" = "Devolutions.UniGetUI.win-arm64.$OneDriveVersion.zip"
+            "output/UniGetUI-macos-x64/UniGetUI.macos-x64.dmg" = "Devolutions.UniGetUI.macos-x64.$OneDriveVersion.dmg"
+            "output/UniGetUI-macos-arm64/UniGetUI.macos-arm64.dmg" = "Devolutions.UniGetUI.macos-arm64.$OneDriveVersion.dmg"
+            "output/UniGetUI-macos-x64/UniGetUI.macos-x64.tar.gz" = "Devolutions.UniGetUI.macos-x64.$OneDriveVersion.tar.gz"
+            "output/UniGetUI-macos-arm64/UniGetUI.macos-arm64.tar.gz" = "Devolutions.UniGetUI.macos-arm64.$OneDriveVersion.tar.gz"
+            "output/UniGetUI-linux-x64/UniGetUI.linux-x64.deb" = "Devolutions.UniGetUI.linux-x64.$OneDriveVersion.deb"
+            "output/UniGetUI-linux-arm64/UniGetUI.linux-arm64.deb" = "Devolutions.UniGetUI.linux-arm64.$OneDriveVersion.deb"
+            "output/UniGetUI-linux-x64/UniGetUI.linux-x64.rpm" = "Devolutions.UniGetUI.linux-x64.$OneDriveVersion.rpm"
+            "output/UniGetUI-linux-arm64/UniGetUI.linux-arm64.rpm" = "Devolutions.UniGetUI.linux-arm64.$OneDriveVersion.rpm"
+            "output/UniGetUI-linux-x64/UniGetUI.linux-x64.tar.gz" = "Devolutions.UniGetUI.linux-x64.$OneDriveVersion.tar.gz"
+            "output/UniGetUI-linux-arm64/UniGetUI.linux-arm64.tar.gz" = "Devolutions.UniGetUI.linux-arm64.$OneDriveVersion.tar.gz"
           }
 
           foreach ($entry in $Mappings.GetEnumerator()) {

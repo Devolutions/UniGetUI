@@ -10,7 +10,7 @@ namespace UniGetUI.Controls;
 
 internal sealed partial class CustomNavViewItem : NavigationViewItem
 {
-    int _iconSize = 24;
+    int _iconSize = 20;
     public IconType LocalIcon
     {
         set => base.Icon = new LocalIcon(value);
@@ -64,7 +64,7 @@ internal sealed partial class CustomNavViewItem : NavigationViewItem
 
     public CustomNavViewItem()
     {
-        Height = 54;
+        Height = 48;
         Resources["NavigationViewItemOnLeftIconBoxHeight"] = _iconSize;
         Resources["NavigationViewItemContentPresenterMargin"] = new Thickness(0);
 
@@ -72,9 +72,9 @@ internal sealed partial class CustomNavViewItem : NavigationViewItem
 
         _progressRing = new ProgressRing
         {
-            Width = 24,
-            Height = 24,
-            Margin = new Thickness(-42, 0, 0, 0),
+            Width = 20,
+            Height = 20,
+            Margin = new Thickness(-32, 0, 0, 0),
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Center,
             IsIndeterminate = true,

@@ -271,7 +271,7 @@
     VerticalAlignment="Stretch"
     x:FieldModifier="public"
     CompactModeThresholdWidth="800"
-    CompactPaneLength="68"
+    CompactPaneLength="52"
     ExpandedModeThresholdWidth="1600"
     IsBackButtonVisible="Collapsed"
     IsPaneOpen="False"
@@ -290,7 +290,7 @@
     <NavigationView.MenuItems>
       <controls1:CustomNavViewItem
         x:Name="DiscoverNavBtn"
-        FontSize="16"
+        FontSize="14"
         FontWeight="SemiBold"
         GlyphIcon="&#xF6FA;"
         Tag="Discover"
@@ -299,7 +299,7 @@
 
       <controls1:CustomNavViewItem
         x:Name="UpdatesNavBtn"
-        FontSize="16"
+        FontSize="14"
         FontWeight="SemiBold"
         GlyphIcon="&#xE895;"
         Tag="Updates"
@@ -311,7 +311,7 @@
       </controls1:CustomNavViewItem>
       <controls1:CustomNavViewItem
         x:Name="InstalledNavBtn"
-        FontSize="16"
+        FontSize="14"
         FontWeight="SemiBold"
         GlyphIcon="&#xE977;"
         Tag="Installed"
@@ -319,7 +319,7 @@
       />
       <controls1:CustomNavViewItem
         x:Name="BundlesNavBtn"
-        FontSize="16"
+        FontSize="14"
         FontWeight="SemiBold"
         GlyphIcon="&#xF133;"
         Tag="Bundles"
@@ -375,7 +375,7 @@
       />
     </NavigationView.FooterMenuItems>
     <NavigationView.PaneFooter>
-      <services:UserAvatar Margin="12,4,12,8" />
+      <services:UserAvatar Margin="6,4,6,8" />
     </NavigationView.PaneFooter>
 
     <Grid Name="ContentGrid" Grid.Row="0" Grid.Column="1" Margin="8,8,8,8" RowSpacing="0">

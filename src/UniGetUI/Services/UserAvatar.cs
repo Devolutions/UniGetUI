@@ -120,7 +120,7 @@ namespace UniGetUI.Services
 
         private PointButton GenerateLoginControl()
         {
-            var personPicture = new PersonPicture { Width = 36, Height = 36 };
+            var personPicture = new PersonPicture { Width = 32, Height = 32 };
 
             var translatedTextBlock = new TextBlock
             {
@@ -208,8 +208,8 @@ namespace UniGetUI.Services
 
             var personPicture = new PersonPicture
             {
-                Width = 36,
-                Height = 36,
+                Width = 32,
+                Height = 32,
                 ProfilePicture = new BitmapImage(new Uri(user.AvatarUrl)),
             };
 

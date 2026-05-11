@@ -38,6 +38,16 @@ public sealed class ModernAppLauncherTests : IDisposable
     }
 
     [Fact]
+    public void BetaTestersDefaultToModernUI()
+    {
+        Assert.True(ModernAppLauncher.IsClassicModeEnabled());
+
+        Settings.Set(Settings.K.EnableUniGetUIBeta, true);
+
+        Assert.False(ModernAppLauncher.IsClassicModeEnabled());
+    }
+
+    [Fact]
     public void ResolveModernExecutablePath_PrefersRootExecutable()
     {
         string baseDirectory = Path.Combine(_testRoot, "Launcher");

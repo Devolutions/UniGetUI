@@ -31,6 +31,8 @@
                                    Text="{t:Translate Use classic mode}"
                                    WarningText="{t:Translate Restart UniGetUI to apply this change}"
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
+                                   IsEnabled="{Binding !IsBetaTester}"
+                                   ToolTip.Tip="{t:Translate The classic UI is disabled for beta testers}"
                                    CornerRadius="8"/>
 
              <StackPanel x:Name="SystemTraySection" Orientation="Vertical">

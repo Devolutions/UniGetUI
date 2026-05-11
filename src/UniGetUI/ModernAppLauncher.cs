@@ -9,7 +9,8 @@ internal static class ModernAppLauncher
     internal const string ModernAppDirectoryName = "Avalonia";
     internal const string ModernAppExecutableName = "UniGetUI.Avalonia.exe";
 
-    public static bool IsClassicModeEnabled() => !Settings.Get(Settings.K.DisableClassicMode);
+    public static bool IsClassicModeEnabled() =>
+        !Settings.Get(Settings.K.DisableClassicMode) && !Settings.Get(Settings.K.EnableUniGetUIBeta);
 
     public static void Launch(string[] args)
     {

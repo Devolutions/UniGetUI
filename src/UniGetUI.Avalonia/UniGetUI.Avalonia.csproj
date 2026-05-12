@@ -22,7 +22,7 @@
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <ApplicationManifest Condition="$([MSBuild]::IsOSPlatform('Windows'))">app.manifest</ApplicationManifest>
         <PublishTrimmed>true</PublishTrimmed>
-        <TrimMode>full</TrimMode>
+        <TrimMode>partial</TrimMode>
         <PublishSingleFile>false</PublishSingleFile>
         <IncludeAvaloniaPublishSymbols>false</IncludeAvaloniaPublishSymbols>
         <AppxGeneratePriEnabled>false</AppxGeneratePriEnabled>

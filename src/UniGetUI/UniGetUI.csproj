@@ -121,7 +121,7 @@
         <MSBuild
             Projects="$(AvaloniaProject)"
             Targets="Restore;Publish"
-            Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(WindowsTargetFramework);RuntimeIdentifier=$(AvaloniaRuntimeIdentifier);SelfContained=true;PublishSelfContained=true;PublishTrimmed=true;TrimMode=full;PublishSingleFile=false;PublishDir=$(BundledAvaloniaPublishDir);AppendRuntimeIdentifierToOutputPath=false;SkipBundledPingetCli=true;BundleModernApp=false"
+            Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(WindowsTargetFramework);RuntimeIdentifier=$(AvaloniaRuntimeIdentifier);SelfContained=true;PublishSelfContained=true;PublishTrimmed=true;TrimMode=partial;PublishSingleFile=false;PublishDir=$(BundledAvaloniaPublishDir);AppendRuntimeIdentifierToOutputPath=false;SkipBundledPingetCli=true;BundleModernApp=false"
         />
         <Error
             Condition="!Exists('$(BundledAvaloniaExecutablePath)')"

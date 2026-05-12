@@ -57,7 +57,7 @@
               Grid.Row="0"
               ColumnDefinitions="80,*"
               ColumnSpacing="8"
-              Margin="0,0,0,4">
+              Margin="0,0,0,8">
 
             <controls:SvgIcon x:Name="HeaderIcon"
                               Grid.Column="0"
@@ -116,7 +116,7 @@
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button x:Name="MainToolbarButton"
                         Height="36"
-                        Margin="0,0,1,0"
+                        Margin="-9,0,1,0"
                         CornerRadius="4,0,0,4">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                         <controls:SvgIcon x:Name="MainToolbarButtonIcon"
@@ -163,7 +163,7 @@
                               Grid.Column="0"
                               IsVisible="{Binding IsFilterPaneOpen}"
                               HorizontalScrollBarVisibility="Disabled"
-                              Padding="0,0,4,0"
+                              Padding="0,8,4,0"
                               automation:AutomationProperties.AccessibilityView="Control"
                               automation:AutomationProperties.Name="{t:Translate Filters}"
                               automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Search}"

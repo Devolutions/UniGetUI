@@ -70,7 +70,6 @@ public abstract partial class AbstractPackagesPage : UserControl,
             var reloadBtn = ViewModel.AddToolbarButton("reload", CoreTools.Translate("Reload"),
                 ViewModel.TriggerReload);
             UpdateReloadButtonTooltip(reloadBtn);
-            ViewModel.AddToolbarSeparator();
         }
 
         // Build the toolbar now that both AXAML controls and the ViewModel are ready

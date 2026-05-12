@@ -1,8 +1,10 @@
+using System.Runtime.InteropServices;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.Tools;
 using UniGetUI.Interface;
 using UniGetUI.Shared;
 
@@ -89,8 +91,16 @@ namespace UniGetUI
                 Logger.ImportantInfo(textart);
                 Logger.ImportantInfo("  ");
                 Logger.ImportantInfo($"Build {CoreData.BuildNumber}");
+                Logger.ImportantInfo("UI Framework: WinUI 3");
                 Logger.ImportantInfo($"Data directory {CoreData.UniGetUIDataDirectory}");
                 Logger.ImportantInfo($"Encoding Code Page set to {CoreData.CODE_PAGE}");
+                Logger.ImportantInfo($"OS: {RuntimeInformation.OSDescription}");
+                Logger.ImportantInfo($"Process arch: {RuntimeInformation.ProcessArchitecture} (OS: {RuntimeInformation.OSArchitecture})");
+                Logger.ImportantInfo($"Runtime: {RuntimeInformation.FrameworkDescription}");
+                Logger.ImportantInfo($"Elevated: {CoreTools.IsAdministrator()}");
+                Logger.ImportantInfo($"Packaged (MSIX): {CoreTools.IsPackagedApp()}");
+                string[] cmdArgs = Environment.GetCommandLineArgs();
+                Logger.ImportantInfo($"Args: {(cmdArgs.Length > 1 ? string.Join(" ", cmdArgs.Skip(1)) : "(none)")}");
 
                 // WinRT single-instance fancy stuff
                 WinRT.ComWrappersSupport.InitializeComWrappers();

@@ -1,6 +1,8 @@
+using System.Runtime.InteropServices;
 using Avalonia;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.Tools;
 using UniGetUI.Interface;
 
 namespace UniGetUI.Avalonia.Infrastructure;
@@ -42,6 +44,27 @@ public static class AvaloniaAppHost
         }
 
         CoreData.WasDaemon = CoreData.IsDaemon = args.Contains(AvaloniaCliHandler.DAEMON);
+
+        string textart = $"""
+               __  __      _ ______     __  __  ______
+              / / / /___  (_) ____/__  / /_/ / / /  _/
+             / / / / __ \/ / / __/ _ \/ __/ / / // /
+            / /_/ / / / / / /_/ /  __/ /_/ /_/ // /
+            \____/_/ /_/_/\____/\___/\__/\____/___/
+                Welcome to UniGetUI Version {CoreData.VersionName}
+            """;
+
+        Logger.ImportantInfo(textart);
+        Logger.ImportantInfo("  ");
+        Logger.ImportantInfo($"Build {CoreData.BuildNumber}");
+        Logger.ImportantInfo("UI Framework: Avalonia");
+        Logger.ImportantInfo($"Data directory {CoreData.UniGetUIDataDirectory}");
+        Logger.ImportantInfo($"OS: {RuntimeInformation.OSDescription}");
+        Logger.ImportantInfo($"Process arch: {RuntimeInformation.ProcessArchitecture} (OS: {RuntimeInformation.OSArchitecture})");
+        Logger.ImportantInfo($"Runtime: {RuntimeInformation.FrameworkDescription}");
+        Logger.ImportantInfo($"Elevated: {CoreTools.IsAdministrator()}");
+        Logger.ImportantInfo($"Packaged (MSIX): {CoreTools.IsPackagedApp()}");
+        Logger.ImportantInfo($"Args: {(args.Length > 0 ? string.Join(" ", args) : "(none)")}");
 
         if (!TryRegisterSingleInstance(args))
         {

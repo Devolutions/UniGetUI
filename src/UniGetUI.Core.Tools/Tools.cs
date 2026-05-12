@@ -2,6 +2,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
@@ -290,6 +291,34 @@ namespace UniGetUI.Core.Tools
                 return false;
             }
         }
+
+        /// <summary>
+        /// Checks whether the current process is running inside an MSIX package (Store / sideloaded).
+        /// </summary>
+        /// <returns>True when packaged, false when running unpackaged or on a non-Windows platform.</returns>
+        public static bool IsPackagedApp()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return false;
+            }
+
+            try
+            {
+                int len = 0;
+                int rc = GetCurrentPackageFullName(ref len, IntPtr.Zero);
+                return rc != APPMODEL_ERROR_NO_PACKAGE;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private const int APPMODEL_ERROR_NO_PACKAGE = 15700;
+
+        [DllImport("kernel32.dll", SetLastError = false)]
+        private static extern int GetCurrentPackageFullName(ref int packageFullNameLength, IntPtr packageFullName);
 
         public static Task<long> GetFileSizeAsLongAsync(Uri? url) =>
             Task.Run(() => GetFileSizeAsLong(url));

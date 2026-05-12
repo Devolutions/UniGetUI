@@ -469,6 +469,7 @@
   "Package lists": "Popis paketa",
   "Use classic mode": "Koristi klasični način rada",
   "Restart UniGetUI to apply this change": "Ponovno pokrenite UniGetUI kako biste primijenili ovu promjenu",
+  "The classic UI is disabled for beta testers": "Klasično korisničko sučelje onemogućeno je za beta testere",
   "Close UniGetUI to the system tray": "Zatvorite UniGetUI u sistemsku traku",
   "Manage UniGetUI autostart behaviour": "Upravljanje ponašanjem automatskog pokretanja UniGetUI-ja",
   "Show package icons on package lists": "Prikaži ikone paketa na popisima paketa",

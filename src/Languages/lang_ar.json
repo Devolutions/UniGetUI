@@ -469,6 +469,7 @@
   "Package lists": "قوائم الحزمة",
   "Use classic mode": "استخدام الوضع الكلاسيكي",
   "Restart UniGetUI to apply this change": "أعد تشغيل UniGetUI لتطبيق هذا التغيير",
+  "The classic UI is disabled for beta testers": "واجهة المستخدم الكلاسيكية معطّلة لمختبري الإصدارات التجريبية",
   "Close UniGetUI to the system tray": "إغلاق UniGetUI إلى شريط المهام",
   "Manage UniGetUI autostart behaviour": "إدارة سلوك بدء UniGetUI تلقائيًا",
   "Show package icons on package lists": "إظهار أيقونات الحزمة في قوائم الحزمة",

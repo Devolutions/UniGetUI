@@ -238,7 +238,7 @@ public static partial class DialogHelper
     {
         var dialog = DialogFactory.Create();
 
-        dialog.Title = "Integrity violation";
+        dialog.Title = CoreTools.Translate("Integrity violation");
         dialog.Content = new ScrollView()
         {
             Content = new StackPanel()

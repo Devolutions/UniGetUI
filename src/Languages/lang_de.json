@@ -469,6 +469,7 @@
   "Package lists": "Paketlisten",
   "Use classic mode": "Klassischen Modus verwenden",
   "Restart UniGetUI to apply this change": "Starten Sie UniGetUI neu, um diese Änderung anzuwenden",
+  "The classic UI is disabled for beta testers": "Die klassische Benutzeroberfläche ist für Betatester deaktiviert",
   "Close UniGetUI to the system tray": "UniGetUI nach dem Schließen im Infobereich anzeigen",
   "Manage UniGetUI autostart behaviour": "Autostartverhalten von UniGetUI verwalten",
   "Show package icons on package lists": "Paketsymbole in Paketlisten anzeigen",

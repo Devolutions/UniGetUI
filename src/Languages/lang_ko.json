@@ -469,8 +469,9 @@
   "Package lists": "패키지 목록",
   "Use classic mode": "클래식 모드 사용",
   "Restart UniGetUI to apply this change": "이 변경 사항을 적용하려면 UniGetUI를 다시 시작하세요",
+  "The classic UI is disabled for beta testers": "베타 테스터에게는 클래식 UI가 비활성화되어 있습니다",
   "Close UniGetUI to the system tray": "시스템 트레이에 UniGetUI 닫기",
-  "Manage UniGetUI autostart behaviour from the Settings app": "UniGetUI 자동 시작 동작 관리",
+  "Manage UniGetUI autostart behaviour": "UniGetUI 자동 시작 동작 관리",
   "Show package icons on package lists": "패키지 목록에 패키지 아이콘 표시",
   "Clear cache": "캐시 지우기",
   "Select upgradable packages by default": "기본적으로 업그레이드 가능한 패키지 선택",
@@ -500,7 +501,7 @@
   "Show a notification when an operation finishes successfully": "작업이 성공적으로 완료되면 알림 표시",
   "Concurrency and execution": "동시성 및 실행",
   "Automatic desktop shortcut remover": "바탕 화면 바로 가기 자동 제거",
-  "Choose how many operations shoulds be performed in parallel": "병렬로 수행할 작업 수를 선택하세요",
+  "Choose how many operations should be performed in parallel": "병렬로 수행할 작업 수를 선택하세요",
   "Clear successful operations from the operation list after a 5 second delay": "성공한 작업을 작업 목록에서 5초 후에 지우기",
   "Download operations are not affected by this setting": "다운로드 작업은 이 설정에 영향을 받지 않습니다",
   "You may lose unsaved data": "저장되지 않은 데이터를 잃을 수 있습니다",
@@ -833,5 +834,7 @@
   "Error": "오류",
   "Log in failed: ": "로그인 실패: ",
   "Log out failed: ": "로그아웃 실패: ",
-  "Package backup settings": "패키지 백업 설정"
+  "Package backup settings": "패키지 백업 설정",
+  "Manage UniGetUI autostart behaviour from the Settings app": "UniGetUI 자동 시작 동작 관리",
+  "Choose how many operations shoulds be performed in parallel": "병렬로 수행할 작업 수를 선택하세요"
 }

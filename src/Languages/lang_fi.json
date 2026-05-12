@@ -469,6 +469,7 @@
   "Package lists": "Pakettilista",
   "Use classic mode": "Käytä perinteistä tilaa",
   "Restart UniGetUI to apply this change": "Käynnistä UniGetUI uudelleen ottaaksesi tämän muutoksen käyttöön",
+  "The classic UI is disabled for beta testers": "Perinteinen käyttöliittymä ei ole käytössä beetatestaajille",
   "Close UniGetUI to the system tray": "Pienennä UniGetUI ilmoitusalueelle",
   "Manage UniGetUI autostart behaviour": "Hallinnoi UniGetUI:n automaattisen käynnistyksen toimintaa",
   "Show package icons on package lists": "Näytä paketin ikonit pakettilistassa",

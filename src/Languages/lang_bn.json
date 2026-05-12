@@ -469,6 +469,7 @@
   "Package lists": "প্যাকেজ তালিকা",
   "Use classic mode": "ক্লাসিক মোড ব্যবহার করুন",
   "Restart UniGetUI to apply this change": "এই পরিবর্তন প্রয়োগ করতে UniGetUI পুনরায় চালু করুন",
+  "The classic UI is disabled for beta testers": "বিটা পরীক্ষকদের জন্য ক্লাসিক UI নিষ্ক্রিয় করা হয়েছে",
   "Close UniGetUI to the system tray": "UniGetUI সিস্টেম ট্রেতে বন্ধ করুন",
   "Manage UniGetUI autostart behaviour": "UniGetUI-এর স্বয়ংক্রিয় চালু হওয়ার আচরণ পরিচালনা করুন",
   "Show package icons on package lists": "প্যাকেজ তালিকায় প্যাকেজ আইকন দেখান",

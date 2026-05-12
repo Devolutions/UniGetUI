@@ -469,6 +469,7 @@
   "Package lists": "پیکیج کی فہرستیں",
   "Use classic mode": "کلاسک موڈ استعمال کریں",
   "Restart UniGetUI to apply this change": "یہ تبدیلی لاگو کرنے کے لیے UniGetUI کو دوبارہ شروع کریں",
+  "The classic UI is disabled for beta testers": "بیٹا ٹیسٹرز کے لیے کلاسک UI غیر فعال ہے",
   "Close UniGetUI to the system tray": "UniGetUI کو سسٹم ٹرے میں بند کریں۔",
   "Manage UniGetUI autostart behaviour": "UniGetUI کے خودکار آغاز کا رویہ منظم کریں",
   "Show package icons on package lists": "پیکیج کی فہرستوں پر پیکیج کی شبیہیں دکھائیں۔",

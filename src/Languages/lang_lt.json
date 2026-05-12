@@ -469,6 +469,7 @@
   "Package lists": "Paketų sąrašai",
   "Use classic mode": "Naudoti klasikinį režimą",
   "Restart UniGetUI to apply this change": "Paleiskite „UniGetUI“ iš naujo, kad pritaikytumėte šį pakeitimą",
+  "The classic UI is disabled for beta testers": "Klasikinė naudotojo sąsaja išjungta beta testuotojams",
   "Close UniGetUI to the system tray": "Uždaryti „UniGetUI“ į sistemos juostelę",
   "Manage UniGetUI autostart behaviour": "Valdyti „UniGetUI“ automatinio paleidimo elgseną",
   "Show package icons on package lists": "Rodyti paketų piktogramas, paketų sąraše",

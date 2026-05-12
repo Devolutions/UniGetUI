@@ -469,6 +469,7 @@
   "Package lists": "软件包列表",
   "Use classic mode": "使用经典模式",
   "Restart UniGetUI to apply this change": "重启 UniGetUI 以应用此更改",
+  "The classic UI is disabled for beta testers": "经典 UI 已对测试版测试人员禁用",
   "Close UniGetUI to the system tray": "关闭 UniGetUI 时将它隐藏到系统托盘",
   "Manage UniGetUI autostart behaviour": "管理 UniGetUI 自动启动行为",
   "Show package icons on package lists": "在软件包列表中显示软件包图标",

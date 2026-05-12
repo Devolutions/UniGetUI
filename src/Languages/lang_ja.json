@@ -469,6 +469,7 @@
   "Package lists": "パッケージリスト ",
   "Use classic mode": "クラシック モードを使用する",
   "Restart UniGetUI to apply this change": "この変更を適用するには UniGetUI を再起動してください",
+  "The classic UI is disabled for beta testers": "ベータテスター向けにはクラシック UI が無効になっています",
   "Close UniGetUI to the system tray": "UniGetUIをシステムトレイに閉じます ",
   "Manage UniGetUI autostart behaviour": "UniGetUI の自動起動動作を管理する",
   "Show package icons on package lists": "パッケージリストでパッケージアイコンを表示する",

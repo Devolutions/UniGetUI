@@ -469,6 +469,7 @@
   "Package lists": "Daftar paket",
   "Use classic mode": "Gunakan mode klasik",
   "Restart UniGetUI to apply this change": "Mulai ulang UniGetUI untuk menerapkan perubahan ini",
+  "The classic UI is disabled for beta testers": "UI klasik dinonaktifkan untuk penguji beta",
   "Close UniGetUI to the system tray": "Tutup UniGetUI ke tray sistem",
   "Manage UniGetUI autostart behaviour": "Kelola perilaku mulai otomatis UniGetUI",
   "Show package icons on package lists": "Tampilkan ikon paket di daftar paket",

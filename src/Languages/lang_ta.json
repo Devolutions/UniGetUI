@@ -469,6 +469,7 @@
   "Package lists": "package பட்டியல்கள்",
   "Use classic mode": "பாரம்பரிய முறையைப் பயன்படுத்து",
   "Restart UniGetUI to apply this change": "இந்த மாற்றத்தைப் பயன்படுத்த UniGetUI ஐ மறுதொடக்கம் செய்",
+  "The classic UI is disabled for beta testers": "பீட்டா சோதனையாளர்களுக்கு கிளாசிக் UI முடக்கப்பட்டுள்ளது",
   "Close UniGetUI to the system tray": "UniGetUI ஐ system tray க்கு close செய்",
   "Manage UniGetUI autostart behaviour": "UniGetUI தானியங்கு தொடக்க நடத்தையை நிர்வகி",
   "Show package icons on package lists": "package பட்டியல்களில் package icons ஐ காட்டு",

@@ -469,6 +469,7 @@
   "Package lists": "Pakettide nimekirjad",
   "Use classic mode": "Kasuta klassikalist režiimi",
   "Restart UniGetUI to apply this change": "Selle muudatuse rakendamiseks taaskäivita UniGetUI",
+  "The classic UI is disabled for beta testers": "Klassikaline kasutajaliides on beetatestijatele keelatud",
   "Close UniGetUI to the system tray": "Sule UniGetUI tegumiribi",
   "Manage UniGetUI autostart behaviour": "Halda UniGetUI automaatse käivitumise käitumist",
   "Show package icons on package lists": "Näita paketi ikoonid pakettide nimekirjades",

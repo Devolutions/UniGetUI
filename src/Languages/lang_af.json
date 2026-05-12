@@ -469,6 +469,7 @@
   "Package lists": "Pakket lyste",
   "Use classic mode": "Gebruik klassieke modus",
   "Restart UniGetUI to apply this change": "Herbegin UniGetUI om hierdie verandering toe te pas",
+  "The classic UI is disabled for beta testers": "Die klassieke UI is vir beta-toetsers gedeaktiveer",
   "Close UniGetUI to the system tray": "Maak dat Unigetui na die stelselbakkie toe gaan",
   "Manage UniGetUI autostart behaviour": "Bestuur UniGetUI se outostart-gedrag",
   "Show package icons on package lists": "Wys pakket ikone op pakket lyste",

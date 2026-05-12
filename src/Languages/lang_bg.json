@@ -469,6 +469,7 @@
   "Package lists": "Списъци с пакети",
   "Use classic mode": "Използване на класически режим",
   "Restart UniGetUI to apply this change": "Рестартирайте UniGetUI, за да приложите тази промяна",
+  "The classic UI is disabled for beta testers": "Класическият интерфейс е изключен за бета тестерите",
   "Close UniGetUI to the system tray": "Затвори UniGetUI в системния трей",
   "Manage UniGetUI autostart behaviour": "Управление на поведението за автоматично стартиране на UniGetUI",
   "Show package icons on package lists": "Показване на икони в списъците с пакети",

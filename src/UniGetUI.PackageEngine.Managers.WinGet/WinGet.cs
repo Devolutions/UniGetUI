@@ -336,14 +336,19 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             Func<string, bool> fileExists
         )
         {
-            string rootPingetPath = Path.Join(executableDirectory, PingetExecutableName);
+            string installDirectory = CoreData.ResolveInstallationDirectory(
+                executableDirectory,
+                fileExists,
+                static _ => false
+            );
+            string rootPingetPath = Path.Join(installDirectory, PingetExecutableName);
             if (fileExists(rootPingetPath))
             {
                 return rootPingetPath;
             }
 
             string avaloniaPingetPath = Path.Join(
-                executableDirectory,
+                installDirectory,
                 "Avalonia",
                 PingetExecutableName
             );

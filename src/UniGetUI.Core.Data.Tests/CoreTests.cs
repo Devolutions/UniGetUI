@@ -39,6 +39,36 @@ namespace UniGetUI.Core.Data.Tests
             );
         }
 
+        [Fact]
+        public void ResolveInstallationDirectoryReturnsParentForBundledAvaloniaDirectory()
+        {
+            string installDirectory = Path.GetFullPath(Path.Join("install-root"));
+            string avaloniaDirectory = Path.Join(installDirectory, "Avalonia");
+            string classicExecutable = Path.Join(installDirectory, "UniGetUI.exe");
+
+            string resolvedDirectory = CoreData.ResolveInstallationDirectory(
+                avaloniaDirectory,
+                filePath => filePath == classicExecutable,
+                static _ => false
+            );
+
+            Assert.Equal(installDirectory, resolvedDirectory);
+        }
+
+        [Fact]
+        public void ResolveInstallationDirectoryKeepsStandaloneAvaloniaDirectory()
+        {
+            string avaloniaDirectory = Path.GetFullPath(Path.Join("standalone", "Avalonia"));
+
+            string resolvedDirectory = CoreData.ResolveInstallationDirectory(
+                avaloniaDirectory,
+                static _ => false,
+                static _ => false
+            );
+
+            Assert.Equal(avaloniaDirectory, resolvedDirectory);
+        }
+
         [Theory]
         [InlineData("3.3.7", "3.3.7")]
         [InlineData("2026.1.2", "v2026.1.2")]

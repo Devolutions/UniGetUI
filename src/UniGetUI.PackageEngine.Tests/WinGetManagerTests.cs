@@ -159,6 +159,21 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void GetBundledPingetExecutablePathFindsRootExecutableFromAvaloniaDirectory()
+    {
+        const string installDir = @"C:\Program Files\UniGetUI";
+        string avaloniaDir = Path.Join(installDir, "Avalonia");
+        string rootPinget = Path.Join(installDir, "pinget.exe");
+
+        string path = WinGet.GetBundledPingetExecutablePath(
+            avaloniaDir,
+            filePath => filePath == rootPinget
+        );
+
+        Assert.Equal(rootPinget, path);
+    }
+
+    [Fact]
     public void GetBundledPingetExecutablePathFallsBackToAvaloniaExecutable()
     {
         const string installDir = @"C:\Program Files\UniGetUI";

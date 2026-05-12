@@ -40,12 +40,11 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <PingetCliProject>$(MSBuildThisFileDirectory)..\UniGetUI.Pinget.Cli\UniGetUI.Pinget.Cli.csproj</PingetCliProject>
         <PingetCliRuntimeIdentifier Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</PingetCliRuntimeIdentifier>
         <PingetCliRuntimeIdentifier Condition="'$(PingetCliRuntimeIdentifier)' == '' and '$(Platform)' == 'arm64'">win-arm64</PingetCliRuntimeIdentifier>
         <PingetCliRuntimeIdentifier Condition="'$(PingetCliRuntimeIdentifier)' == ''">win-x64</PingetCliRuntimeIdentifier>
-        <PingetCliPublishDir>$(MSBuildProjectDirectory)\obj\$(Platform)\$(Configuration)\BundledPinget\$(PingetCliRuntimeIdentifier)\</PingetCliPublishDir>
-        <PingetCliExecutablePath>$(PingetCliPublishDir)pinget.exe</PingetCliExecutablePath>
+        <PingetCliPackageNativePath>$(PkgDevolutions_Pinget_Cli_Rust)\runtimes\$(PingetCliRuntimeIdentifier)\native</PingetCliPackageNativePath>
+        <PingetCliExecutablePath>$(PingetCliPackageNativePath)\pinget.exe</PingetCliExecutablePath>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -89,22 +88,21 @@
         BeforeTargets="PostBuildGenerateIntegrityTree;PostPublishGenerateIntegrityTree"
         Condition="'$(DesignTimeBuild)' != 'true'"
     >
-        <MSBuild
-            Projects="$(PingetCliProject)"
-            Targets="Restore;Publish"
-            Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=net10.0;RuntimeIdentifier=$(PingetCliRuntimeIdentifier);SelfContained=true;PublishSingleFile=true;PublishTrimmed=true;TrimMode=partial;JsonSerializerIsReflectionEnabledByDefault=true;PublishDir=$(PingetCliPublishDir);AppendRuntimeIdentifierToOutputPath=false"
+        <Error
+            Condition="!Exists('$(PingetCliExecutablePath)')"
+            Text="NuGet pinget executable not found at '$(PingetCliExecutablePath)'. Ensure package restore has completed for Devolutions.Pinget.Cli.Rust."
         />
         <Copy
             SourceFiles="$(PingetCliExecutablePath)"
             DestinationFolder="$(TargetDir)"
             SkipUnchangedFiles="true"
-            Condition="Exists('$(PingetCliExecutablePath)') and '$(TargetDir)' != ''"
+            Condition="'$(TargetDir)' != ''"
         />
         <Copy
             SourceFiles="$(PingetCliExecutablePath)"
             DestinationFolder="$(PublishDir)"
             SkipUnchangedFiles="true"
-            Condition="Exists('$(PingetCliExecutablePath)') and '$(PublishDir)' != ''"
+            Condition="'$(PublishDir)' != ''"
         />
     </Target>
 
@@ -222,6 +220,7 @@
         <PackageReference Include="IdentityModel.OidcClient" Version="6.0.0" />
         <PackageReference Include="Octokit" Version="14.0.0" />
         <PackageReference Include="Devolutions.UniGetUI.Elevator" Version="2.6.1.3" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />
+        <PackageReference Include="Devolutions.Pinget.Cli.Rust" Version="0.4.0" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />
 
         <Manifest Include="$(ApplicationManifest)" />
     </ItemGroup>

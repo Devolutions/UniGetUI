@@ -30,13 +30,11 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-        <PingetCliProject>$(MSBuildThisFileDirectory)..\UniGetUI.Pinget.Cli\UniGetUI.Pinget.Cli.csproj</PingetCliProject>
         <PingetCliRuntimeIdentifier Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</PingetCliRuntimeIdentifier>
         <PingetCliRuntimeIdentifier Condition="'$(PingetCliRuntimeIdentifier)' == '' and '$(Platform)' == 'arm64'">win-arm64</PingetCliRuntimeIdentifier>
         <PingetCliRuntimeIdentifier Condition="'$(PingetCliRuntimeIdentifier)' == ''">win-x64</PingetCliRuntimeIdentifier>
-        <PingetCliPublishDir>$(MSBuildProjectDirectory)\obj\$(Platform)\$(Configuration)\BundledPinget\$(PingetCliRuntimeIdentifier)\</PingetCliPublishDir>
-        <PingetCliExecutablePath>$(PingetCliPublishDir)pinget.exe</PingetCliExecutablePath>
-        <PingetCliNativeSqlitePath>$(PingetCliPublishDir)e_sqlite3.dll</PingetCliNativeSqlitePath>
+        <PingetCliPackageNativePath>$(PkgDevolutions_Pinget_Cli_Rust)\runtimes\$(PingetCliRuntimeIdentifier)\native</PingetCliPackageNativePath>
+        <PingetCliExecutablePath>$(PingetCliPackageNativePath)\pinget.exe</PingetCliExecutablePath>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(EnableAvaloniaDiagnostics)' == 'true'">
@@ -48,18 +46,13 @@
         AfterTargets="Build;Publish"
       Condition="'$(DesignTimeBuild)' != 'true' and '$(SkipBundledPingetCli)' != 'true' and $([MSBuild]::IsOSPlatform('Windows'))"
     >
-        <MSBuild
-            Projects="$(PingetCliProject)"
-            Targets="Restore;Publish"
-            Properties="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=net10.0;RuntimeIdentifier=$(PingetCliRuntimeIdentifier);SelfContained=true;PublishSingleFile=true;PublishTrimmed=true;TrimMode=partial;JsonSerializerIsReflectionEnabledByDefault=true;PublishDir=$(PingetCliPublishDir);AppendRuntimeIdentifierToOutputPath=false"
+        <Error
+            Condition="!Exists('$(PingetCliExecutablePath)')"
+            Text="NuGet pinget executable not found at '$(PingetCliExecutablePath)'. Ensure package restore has completed for Devolutions.Pinget.Cli.Rust."
         />
         <ItemGroup>
             <PingetCliOutputFiles Include="$(PingetCliExecutablePath)" Condition="Exists('$(PingetCliExecutablePath)')" />
-            <PingetCliOutputFiles Include="$(PingetCliNativeSqlitePath)" Condition="Exists('$(PingetCliNativeSqlitePath)')" />
-            <PingetCliOutputFiles Include="$(TargetDir)runtimes\$(PingetCliRuntimeIdentifier)\native\e_sqlite3.dll" Condition="!Exists('$(PingetCliNativeSqlitePath)') and Exists('$(TargetDir)runtimes\$(PingetCliRuntimeIdentifier)\native\e_sqlite3.dll')" />
             <PingetCliPublishOutputFiles Include="$(PingetCliExecutablePath)" Condition="Exists('$(PingetCliExecutablePath)')" />
-            <PingetCliPublishOutputFiles Include="$(PingetCliNativeSqlitePath)" Condition="Exists('$(PingetCliNativeSqlitePath)')" />
-            <PingetCliPublishOutputFiles Include="$(PublishDir)runtimes\$(PingetCliRuntimeIdentifier)\native\e_sqlite3.dll" Condition="!Exists('$(PingetCliNativeSqlitePath)') and Exists('$(PublishDir)runtimes\$(PingetCliRuntimeIdentifier)\native\e_sqlite3.dll')" />
         </ItemGroup>
         <Copy
             SourceFiles="@(PingetCliOutputFiles)"
@@ -101,6 +94,7 @@
         <PackageReference Include="Octokit" Version="14.0.0" />
         <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.0-rc1" />
         <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
+        <PackageReference Include="Devolutions.Pinget.Cli.Rust" Version="0.4.0" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />
     </ItemGroup>
 
     <ItemGroup>

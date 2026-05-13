@@ -113,7 +113,8 @@
     >
         <PropertyGroup>
             <!-- Keep the trimmed Avalonia app isolated; trimmed shared assemblies are entry-point specific. -->
-            <BundledAvaloniaPublishDir>$(PublishDir)$(ModernAppDirectoryName)\</BundledAvaloniaPublishDir>
+            <!-- Resolve to an absolute path so the inner MSBuild call doesn't re-anchor it to the Avalonia project directory. -->
+            <BundledAvaloniaPublishDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(PublishDir)', '$(ModernAppDirectoryName)'))</BundledAvaloniaPublishDir>
             <BundledAvaloniaExecutablePath>$(BundledAvaloniaPublishDir)UniGetUI.Avalonia.exe</BundledAvaloniaExecutablePath>
         </PropertyGroup>
         <MSBuild

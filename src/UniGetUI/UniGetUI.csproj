@@ -220,7 +220,7 @@
         <PackageReference Include="IdentityModel.OidcClient" Version="6.0.0" />
         <PackageReference Include="Octokit" Version="14.0.0" />
         <PackageReference Include="Devolutions.UniGetUI.Elevator" Version="2.6.1.3" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />
-        <PackageReference Include="Devolutions.Pinget.Cli.Rust" Version="0.4.0" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />
+        <PackageReference Include="Devolutions.Pinget.Cli.Rust" Version="0.4.2" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />
 
         <Manifest Include="$(ApplicationManifest)" />
     </ItemGroup>

@@ -18,6 +18,7 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
     private static readonly JsonSerializerOptions SerializationOptions = new()
     {
         PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
     private static readonly PingetCliJsonContext SerializationContext = new(SerializationOptions);
 
@@ -77,7 +78,7 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
     {
         ListResponse result = RunJson<ListResponse>(
             LoggableTaskType.ListInstalledPackages,
-            "list --accept-source-agreements --output json"
+            "list --output json"
         );
 
         return result
@@ -97,7 +98,7 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
     {
         SearchResponse result = RunJson<SearchResponse>(
             LoggableTaskType.FindPackages,
-            $"search {Quote(query)} --accept-source-agreements --output json"
+            $"search {Quote(query)} --output json"
         );
 
         return result
@@ -115,9 +116,12 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
 
     public IReadOnlyList<IManagerSource> GetSources_UnSafe()
     {
+        // pinget 0.4.1 dropped JSON support for `source list`; `source export` is the
+        // equivalent JSON-emitting command (PascalCase keys, but case-insensitive matching
+        // in SerializationOptions binds them to our records).
         PingetSourcesResponse result = RunJson<PingetSourcesResponse>(
             LoggableTaskType.ListSources,
-            "source list --output json"
+            "source export --output json"
         );
 
         return result
@@ -133,7 +137,7 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
     {
         VersionsResult result = RunJson<VersionsResult>(
             LoggableTaskType.LoadPackageVersions,
-            $"show {WinGetPkgOperationHelper.GetIdNamePiece(package)} --versions --accept-source-agreements --output json"
+            $"show {WinGetPkgOperationHelper.GetIdNamePiece(package)} --versions --output json"
         );
 
         return result
@@ -203,9 +207,11 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
         }
 
         process.Start();
-        string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
+        string output = stdoutTask.GetAwaiter().GetResult();
+        string error = stderrTask.GetAwaiter().GetResult();
 
         logger.AddToStdOut(output.Split(Environment.NewLine));
         logger.AddToStdErr(error.Split(Environment.NewLine));

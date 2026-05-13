@@ -35,6 +35,12 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         OperationType operation
     )
     {
+        // Pinget 0.4.x does not accept --accept-source-agreements, --disable-interactivity,
+        // or --proxy on any verb; --accept-package-agreements, --force, --location, and
+        // --interactive are accepted on install/uninstall but rejected on upgrade.
+        bool usePinget =
+            ((WinGet)Manager).SelectedCliToolKind == WinGetCliToolKind.BundledPinget;
+
         List<string> parameters =
         [
             operation switch
@@ -51,7 +57,10 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         {
             parameters.AddRange(["--source", package.Source.Name]);
         }
-        parameters.AddRange(["--accept-source-agreements", "--disable-interactivity"]);
+        if (!usePinget)
+        {
+            parameters.AddRange(["--accept-source-agreements", "--disable-interactivity"]);
+        }
 
         // package.OverridenInstallationOptions.Scope is meaningless in WinGet packages. Default is unspecified, hence the _ => [].
         parameters.AddRange(
@@ -76,7 +85,15 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             parameters.AddRange(["--version", $"\"{options.Version}\""]);
         }
 
-        parameters.Add(options.InteractiveInstallation ? "--interactive" : "--silent");
+        if (usePinget && operation is OperationType.Update)
+        {
+            // pinget upgrade only supports --silent (no --interactive).
+            parameters.Add("--silent");
+        }
+        else
+        {
+            parameters.Add(options.InteractiveInstallation ? "--interactive" : "--silent");
+        }
 
         if (operation is OperationType.Update)
         {
@@ -90,16 +107,19 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             }
             parameters.Add("--include-unknown");
 
-            if (options.CustomInstallLocation != "")
+            if (!usePinget)
             {
-                if (Settings.Get(Settings.K.WinGetForceLocationOnUpdate))
-                    parameters.AddRange(["--location", $"\"{options.CustomInstallLocation}\""]);
-            }
-            else
-            {
-                var detectedLocation = TryGetPortableInstallLocation(package);
-                if (detectedLocation is not null)
-                    parameters.AddRange(["--location", $"\"{detectedLocation}\""]);
+                if (options.CustomInstallLocation != "")
+                {
+                    if (Settings.Get(Settings.K.WinGetForceLocationOnUpdate))
+                        parameters.AddRange(["--location", $"\"{options.CustomInstallLocation}\""]);
+                }
+                else
+                {
+                    var detectedLocation = TryGetPortableInstallLocation(package);
+                    if (detectedLocation is not null)
+                        parameters.AddRange(["--location", $"\"{detectedLocation}\""]);
+                }
             }
         }
         else if (operation is OperationType.Install)
@@ -110,7 +130,11 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
         if (operation is not OperationType.Uninstall)
         {
-            parameters.AddRange(["--accept-package-agreements", "--force"]);
+            // pinget upgrade does not accept --accept-package-agreements or --force.
+            if (!(usePinget && operation is OperationType.Update))
+            {
+                parameters.AddRange(["--accept-package-agreements", "--force"]);
+            }
 
             if (options.SkipHashCheck)
                 parameters.Add("--ignore-security-hash");
@@ -189,7 +213,10 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             Logger.Error(ex);
         }
 
-        parameters.Add(WinGet.GetProxyArgument());
+        if (!usePinget)
+        {
+            parameters.Add(WinGet.GetProxyArgument());
+        }
 
         parameters.AddRange(
             operation switch

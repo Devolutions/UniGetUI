@@ -94,7 +94,7 @@
         <PackageReference Include="Octokit" Version="14.0.0" />
         <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.0" />
         <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
-        <PackageReference Include="Devolutions.Pinget.Cli.Rust" Version="0.4.0" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />
+        <PackageReference Include="Devolutions.Pinget.Cli.Rust" Version="0.4.2" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />
     </ItemGroup>
 
     <ItemGroup>

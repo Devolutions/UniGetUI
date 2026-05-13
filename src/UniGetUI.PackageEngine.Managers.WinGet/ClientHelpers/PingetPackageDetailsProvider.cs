@@ -142,7 +142,6 @@ internal sealed class PingetCliPackageDetailsProvider(string cliExecutablePath)
             arguments.Add(query.Version);
         }
 
-        arguments.Add("--accept-source-agreements");
         arguments.Add("--output");
         arguments.Add("json");
         return arguments;

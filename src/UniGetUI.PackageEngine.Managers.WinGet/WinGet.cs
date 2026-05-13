@@ -725,7 +725,10 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                     FileName = Status.ExecutablePath,
                     Arguments =
                         Status.ExecutableCallArgs
-                        + " source update --disable-interactivity "
+                        + " source update"
+                        + (SelectedCliToolKind == WinGetCliToolKind.SystemWinGet
+                            ? " --disable-interactivity "
+                            : " ")
                         + GetCliToolProxyArgument(),
                     UseShellExecute = false,
                     RedirectStandardOutput = true,

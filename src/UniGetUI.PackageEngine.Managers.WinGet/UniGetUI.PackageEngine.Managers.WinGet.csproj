@@ -24,7 +24,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Devolutions.Pinget.Core" Version="0.3.0" />
+        <PackageReference Include="Devolutions.Pinget.Core" Version="0.4.2" />
         <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
     </ItemGroup>
 </Project>

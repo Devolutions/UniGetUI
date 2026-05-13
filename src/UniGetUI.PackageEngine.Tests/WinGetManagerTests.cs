@@ -3,10 +3,12 @@ using Devolutions.Pinget.Core;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.WingetManager;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 
@@ -298,23 +300,24 @@ public sealed class WinGetManagerTests : IDisposable
     [Fact]
     public void PingetCliHelperDeserializesListResponsesWithGeneratedContext()
     {
+        // pinget 0.4.1+ emits snake_case keys.
         const string json = """
             {
                 "matches": [
                     {
                         "name": "Contoso Tool",
                         "id": "Contoso.Tool",
-                        "localId": null,
-                        "installedVersion": "1.2.3",
-                        "availableVersion": "2.0.0",
-                        "sourceName": "winget",
+                        "local_id": null,
+                        "installed_version": "1.2.3",
+                        "available_version": "2.0.0",
+                        "source_name": "winget",
                         "publisher": null,
                         "scope": null,
-                        "installerCategory": null,
-                        "installLocation": null,
-                        "packageFamilyNames": [],
-                        "productCodes": [],
-                        "upgradeCodes": []
+                        "installer_category": null,
+                        "install_location": null,
+                        "package_family_names": [],
+                        "product_codes": [],
+                        "upgrade_codes": []
                     }
                 ],
                 "warnings": [],
@@ -706,6 +709,149 @@ public sealed class WinGetManagerTests : IDisposable
             "https://github.com/microsoft/winget-pkgs/tree/master/manifests/c/Contoso/Tool",
             details.ManifestUrl?.ToString()
         );
+    }
+
+    [Theory]
+    [InlineData(0)] // OperationType.Install
+    [InlineData(1)] // OperationType.Update
+    [InlineData(2)] // OperationType.Uninstall
+    public void WinGetOperationHelperEmitsWinGetCompatibleFlagsForSystemCli(int operationType)
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            (OperationType)operationType
+        );
+
+        Assert.Contains("--accept-source-agreements", parameters);
+        Assert.Contains("--disable-interactivity", parameters);
+    }
+
+    [Fact]
+    public void WinGetOperationHelperSkipsUnsupportedFlagsForPingetInstall()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Spotify.Spotify")
+            .Build();
+
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Install
+        );
+
+        Assert.DoesNotContain("--accept-source-agreements", parameters);
+        Assert.DoesNotContain("--disable-interactivity", parameters);
+        // pinget install does accept these.
+        Assert.Contains("--accept-package-agreements", parameters);
+        Assert.Contains("--force", parameters);
+        Assert.Contains("--silent", parameters);
+    }
+
+    [Fact]
+    public void WinGetOperationHelperSkipsUnsupportedFlagsForPingetUpgrade()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        var options = new InstallOptions
+        {
+            InteractiveInstallation = true,
+            CustomInstallLocation = @"C:\Apps\Contoso",
+        };
+
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            options,
+            OperationType.Update
+        );
+
+        Assert.DoesNotContain("--accept-source-agreements", parameters);
+        Assert.DoesNotContain("--disable-interactivity", parameters);
+        // pinget upgrade does NOT accept these even though winget upgrade does.
+        Assert.DoesNotContain("--accept-package-agreements", parameters);
+        Assert.DoesNotContain("--force", parameters);
+        Assert.DoesNotContain("--interactive", parameters);
+        Assert.DoesNotContain("--location", parameters);
+        // pinget upgrade still supports --include-unknown and --silent.
+        Assert.Contains("--include-unknown", parameters);
+        Assert.Contains("--silent", parameters);
+    }
+
+    [Fact]
+    public void WinGetOperationHelperSkipsUnsupportedFlagsForPingetUninstall()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .Build();
+
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Uninstall
+        );
+
+        Assert.DoesNotContain("--accept-source-agreements", parameters);
+        Assert.DoesNotContain("--disable-interactivity", parameters);
+    }
+
+    [Fact]
+    public void WinGetOperationHelperOmitsProxyArgumentForPinget()
+    {
+        Settings.Set(Settings.K.EnableProxy, true);
+        Settings.Set(Settings.K.EnableProxyAuth, false);
+        Settings.SetValue(Settings.K.ProxyURL, "http://proxy.example.test:3128/");
+        try
+        {
+            var manager = new WinGet();
+            SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
+            var package = new PackageBuilder()
+                .WithManager(manager)
+                .WithId("Contoso.Tool")
+                .Build();
+
+            var parameters = manager.OperationHelper.GetParameters(
+                package,
+                new InstallOptions(),
+                OperationType.Install
+            );
+
+            Assert.DoesNotContain(parameters, p => p.StartsWith("--proxy", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Settings.Set(Settings.K.EnableProxy, false);
+            Settings.SetValue(Settings.K.ProxyURL, "");
+        }
+    }
+
+    private static void SetCliToolKind(WinGet manager, WinGetCliToolKind kind)
+    {
+        typeof(WinGet)
+            .GetProperty(nameof(WinGet.SelectedCliToolKind), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .GetSetMethod(nonPublic: true)!
+            .Invoke(manager, [kind]);
     }
 
     private sealed class TestableWinGet : WinGet

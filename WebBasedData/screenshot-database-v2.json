@@ -29011,8 +29011,12 @@
       "images": []
     },
     "numere": {
-      "icon": "",
-      "images": []
+      "icon": "https://raw.githubusercontent.com/numere-org/Resources/refs/heads/main/icons/app/folder.png",
+      "images": [
+        "https://a.fsdn.com/con/app/proj/numere/screenshots/numere-session-screen.png",
+        "https://a.fsdn.com/con/app/proj/numere/screenshots/promotion_1.png",
+        "https://a.fsdn.com/con/app/proj/numere/screenshots/promotion_2.png"
+      ]
     },
     "numpy": {
       "icon": "https://images.seeklogo.com/logo-png/39/1/numpy-logo-png_seeklogo-398690.png",

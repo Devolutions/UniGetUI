@@ -100,9 +100,17 @@ function Invoke-BatchSign {
     }
 
     Write-Host "Signing $($Files.Count) files..."
-    AzureSignTool @SignParams $Files
-    if ($LASTEXITCODE -ne 0) {
-        throw "AzureSignTool failed with exit code $LASTEXITCODE"
+
+    # Pass file paths via -ifl so we don't blow past the Windows 32K command-line limit.
+    $tempListPath = [System.IO.Path]::GetTempFileName()
+    try {
+        Set-Content -Path $tempListPath -Value $Files -Encoding utf8
+        AzureSignTool @SignParams -ifl $tempListPath
+        if ($LASTEXITCODE -ne 0) {
+            throw "AzureSignTool failed with exit code $LASTEXITCODE"
+        }
+    } finally {
+        Remove-Item -Path $tempListPath -ErrorAction SilentlyContinue
     }
 }
 

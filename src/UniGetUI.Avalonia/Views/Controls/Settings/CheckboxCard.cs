@@ -118,7 +118,10 @@ public partial class CheckboxCard : SettingsCard
         StateChanged?.Invoke(this, EventArgs.Empty);
         _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
         SyncToggleItemStatus();
-        AccessibilityAnnouncementService.AnnounceToggle(_textblock.Text, _checkbox.IsChecked ?? false);
+        if (_textblock.Text is not null)
+        {
+            AccessibilityAnnouncementService.AnnounceToggle(_textblock.Text, _checkbox.IsChecked ?? false);
+        }
         var cmd = StateChangedCommand;
         if (cmd?.CanExecute(null) == true)
             cmd.Execute(null);
@@ -133,9 +136,11 @@ public partial class CheckboxCard : SettingsCard
         AutomationProperties.SetItemStatus(_checkbox, state);
         // Name with state suffix: guarantees VoiceOver announces state on macOS
         // where ToggleSwitch AX role may not expose IsChecked natively
-        string baseName = _textblock.Text;
+        string? baseName = _textblock.Text;
         if (!string.IsNullOrEmpty(baseName))
+        {
             AutomationProperties.SetName(_checkbox, $"{baseName}, {state}");
+        }
     }
 }
 
@@ -197,6 +202,9 @@ public partial class CheckboxCard_Dict : CheckboxCard
         StateChanged?.Invoke(this, EventArgs.Empty);
         _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
         SyncToggleItemStatus();
-        AccessibilityAnnouncementService.AnnounceToggle(_textblock.Text, _checkbox.IsChecked ?? false);
+        if (_textblock.Text is not null)
+        {
+            AccessibilityAnnouncementService.AnnounceToggle(_textblock.Text, _checkbox.IsChecked ?? false);
+        }
     }
 }

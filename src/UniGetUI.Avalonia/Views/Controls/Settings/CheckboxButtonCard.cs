@@ -94,7 +94,10 @@ public sealed partial class CheckboxButtonCard : SettingsCard
             StateChanged?.Invoke(this, EventArgs.Empty);
             Button.IsEnabled = (_checkbox.IsChecked ?? false) ? true : _buttonAlwaysOn;
             _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
-            AccessibilityAnnouncementService.AnnounceToggle(_textblock.Text, _checkbox.IsChecked ?? false);
+            if (_textblock.Text is not null)
+            {
+                AccessibilityAnnouncementService.AnnounceToggle(_textblock.Text, _checkbox.IsChecked ?? false);
+            }
         };
         Button.Click += (s, e) => Click?.Invoke(s, e);
         ApplyAutomationMetadata(_checkbox, _textblock.Text);

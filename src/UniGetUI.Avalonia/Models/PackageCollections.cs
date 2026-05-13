@@ -327,8 +327,8 @@ public sealed class ObservablePackageCollection : AvaloniaList<PackageWrapper>
         Sorter.Checked => w.IsChecked ? "0" : "1",
         Sorter.Name => w.Package.Name,
         Sorter.Id => w.Package.Id,
-        Sorter.Version => w.Package.NormalizedVersion.ToString(),
-        Sorter.NewVersion => w.Package.NormalizedNewVersion.ToString(),
+        Sorter.Version => w.Package.NormalizedVersion.ToString() ?? string.Empty,
+        Sorter.NewVersion => w.Package.NormalizedNewVersion.ToString() ?? string.Empty,
         Sorter.Source => w.Package.Source.AsString_DisplayName,
         _ => w.Package.Name,
     };

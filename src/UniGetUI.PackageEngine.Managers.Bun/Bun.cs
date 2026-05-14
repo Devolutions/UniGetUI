@@ -166,12 +166,18 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
             IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListInstalledPackages, p);
             p.Start();
 
-            string strContents = p.StandardOutput.ReadToEnd();
+            // Read both streams concurrently to avoid deadlock when the process writes
+            // to both. Bun may write to stderr when stdout is not a TTY.
+            var stdoutTask = p.StandardOutput.ReadToEndAsync();
+            var stderrTask = p.StandardError.ReadToEndAsync();
+            Task.WaitAll(stdoutTask, stderrTask);
+
+            string strContents = stdoutTask.Result;
             logger.AddToStdOut(strContents);
 
             Packages.AddRange(ParseInstalledPackages(strContents, DefaultSource, this, new OverridenInstallationOptions(PackageScope.Global)));
 
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
+            logger.AddToStdErr(stderrTask.Result);
             p.WaitForExit();
             logger.Close(p.ExitCode);
 
@@ -351,8 +357,8 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                 // Skip header row, empty rows, and border lines (which contain only dashes or box-drawing chars)
                 if (id is "Package" || string.IsNullOrWhiteSpace(id)
                     || string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(recommendedUpdate)
-                    || id.All(c => c == '-' || c == '─' || c == '┬' || c == '┼' || c == '┴')
-                    || version.All(c => c == '-' || c == '─' || c == '┬' || c == '┼' || c == '┴'))
+                    || id.All(c => c == '-' || c == '─' || c == '┬' || c == '┼' || c == '┴' || c == '├' || c == '┤' || c == '┌' || c == '└' || c == '┘' || c == '┐')
+                    || version.All(c => c == '-' || c == '─' || c == '┬' || c == '┼' || c == '┴' || c == '├' || c == '┤' || c == '┌' || c == '└' || c == '┘' || c == '┐'))
                 {
                     Logger.Debug($"Bun: Skipping line {lineNum} (header/empty/border): {id}/{version}/{recommendedUpdate}");
                     continue;

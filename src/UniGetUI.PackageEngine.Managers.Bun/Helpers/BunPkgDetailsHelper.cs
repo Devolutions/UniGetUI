@@ -39,7 +39,11 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                 IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(LoggableTaskType.LoadPackageDetails, p);
                 p.Start();
 
-                string strContents = p.StandardOutput.ReadToEnd();
+                var stdoutTask = p.StandardOutput.ReadToEndAsync();
+                var stderrTask = p.StandardError.ReadToEndAsync();
+                Task.WaitAll(stdoutTask, stderrTask);
+
+                string strContents = stdoutTask.Result;
                 logger.AddToStdOut(strContents);
                 JsonObject? contents = JsonNode.Parse(strContents) as JsonObject;
 
@@ -104,7 +108,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                     });
                 }
 
-                logger.AddToStdErr(p.StandardError.ReadToEnd());
+                logger.AddToStdErr(stderrTask.Result);
                 p.WaitForExit();
                 logger.Close(p.ExitCode);
             }
@@ -118,12 +122,12 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
         protected override CacheableIcon? GetIcon_UnSafe(IPackage package)
         {
-            throw new NotImplementedException();
+            return null;
         }
 
         protected override IReadOnlyList<Uri> GetScreenshots_UnSafe(IPackage package)
         {
-            throw new NotImplementedException();
+            return [];
         }
 
         protected override string? GetInstallLocation_UnSafe(IPackage package)

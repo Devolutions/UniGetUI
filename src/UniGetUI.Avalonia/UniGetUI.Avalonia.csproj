@@ -97,7 +97,7 @@
         <PackageReference Include="Devolutions.Pinget.Cli.Rust" Version="0.4.2" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />
     </ItemGroup>
     <ItemGroup>
-        <TrimmerRootAssembly Include="Avalonia.Controls.WebView" />
+        <TrimmerRootAssembly Include="Avalonia.Controls.WebView" RootMode="all" />
         <PublishReadyToRunExclude Include="Avalonia.Controls.WebView.dll" />
     </ItemGroup>
 

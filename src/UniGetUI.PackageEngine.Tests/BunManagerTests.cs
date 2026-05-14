@@ -538,4 +538,14 @@ public sealed class BunManagerTests
         Assert.NotNull(manager.DefaultSource);
         Assert.NotNull(manager.OperationHelper);
     }
+
+    /// <summary>
+    /// Tests that package info fixture exists for details helper testing.
+    /// </summary>
+    [Fact]
+    public void PackageInfoFixtureExists()
+    {
+        string fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Bun", "package-info.json");
+        Assert.True(File.Exists(fixturePath), $"Fixture file not found at {fixturePath}");
+    }
 }

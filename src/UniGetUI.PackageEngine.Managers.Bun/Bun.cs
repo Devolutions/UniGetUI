@@ -36,9 +36,9 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
             {
                 Id = "bun",
                 Name = "Bun",
-                Description = CoreTools.Translate("A npmjs package manager written in Zig. Full of libraries and other utilities that orbit the javascript world<br>Contains: <b>Node javascript libraries and other related utilities</b>"),
-                IconId = IconType.Node,
-                ColorIconId = "node_color",
+                Description = CoreTools.Translate("Fast JavaScript runtime, bundler, and package manager"),
+                IconId = IconType.Bun,
+                ColorIconId = "bun_color",
                 ExecutableFriendlyName = "bun",
                 InstallVerb = "add",
                 UninstallVerb = "remove",
@@ -120,9 +120,11 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
             logger.AddToStdOut(strOut);
             logger.AddToStdErr(strErr);
 
-            // Parse stdout first; fall back to stderr if stdout has no table rows.
-            string tableSrc = ParseBunOutdatedTable(strOut).Any() ? strOut : strErr;
+            // Read the preference first
             bool preferLatest = Settings.Get(Settings.K.PreferLatestVersionsForBun);
+
+            // Parse stdout first; fall back to stderr if stdout has no table rows.
+            string tableSrc = ParseBunOutdatedTable(strOut, preferLatest).Any() ? strOut : strErr;
             var result = ParseAvailableUpdates(tableSrc, DefaultSource, this, preferLatest);
 
             Logger.Info($"Bun: Found {result.Count} packages with available updates (preferLatest={preferLatest})");

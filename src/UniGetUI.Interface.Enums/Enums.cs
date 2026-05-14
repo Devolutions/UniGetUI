@@ -90,6 +90,7 @@ namespace UniGetUI.Interface.Enums
         Pacman = '\uE946',
         Snap = '\uE947',
         Flatpak = '\uE948',
+        Bun = '\uE949',
     }
 
     public class NotificationArguments

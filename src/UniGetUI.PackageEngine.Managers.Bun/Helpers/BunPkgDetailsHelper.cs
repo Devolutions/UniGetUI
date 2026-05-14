@@ -26,7 +26,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                 p.StartInfo = new ProcessStartInfo
                 {
                     FileName = Manager.Status.ExecutablePath,
-                    Arguments = Manager.Status.ExecutableCallArgs + " show " + details.Package.Id + " --json",
+                    Arguments = Manager.Status.ExecutableCallArgs + " info " + details.Package.Id + " --json --global",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -50,7 +50,9 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                     details.HomepageUrl = homepageUrl;
 
                 details.Publisher = (contents?["maintainers"] as JsonArray)?[0]?.ToString();
-                details.Author = contents?["author"]?.ToString();
+                // Handle author which can be string or object with "name" property
+                var authorNode = contents?["author"];
+                details.Author = authorNode is JsonObject authorObj ? authorObj["name"]?.ToString() : authorNode?.ToString();
                 details.UpdateDate = contents?["time"]?[contents?["dist-tags"]?["latest"]?.ToString() ?? details.Package.VersionString]?.ToString();
 
                 if (Uri.TryCreate(contents?["dist"]?["tarball"]?.ToString() ?? "", UriKind.RelativeOrAbsolute, out var installerUrl))
@@ -140,7 +142,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                 {
                     FileName = Manager.Status.ExecutablePath,
                     Arguments =
-                        Manager.Status.ExecutableCallArgs + " show " + package.Id + " versions --json",
+                        Manager.Status.ExecutableCallArgs + " info " + package.Id + " --json --global",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -156,7 +158,8 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
             string strContents = p.StandardOutput.ReadToEnd();
             logger.AddToStdOut(strContents);
-            JsonArray? rawVersions = JsonNode.Parse(strContents) as JsonArray;
+            JsonObject? contents = JsonNode.Parse(strContents) as JsonObject;
+            JsonArray? rawVersions = contents?["versions"] as JsonArray;
 
             List<string> versions = [];
             foreach(JsonNode? raw_ver in rawVersions ?? [])

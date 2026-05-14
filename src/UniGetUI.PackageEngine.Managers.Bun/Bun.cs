@@ -25,7 +25,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                 CanRunAsAdmin = true,
                 SupportsCustomVersions = true,
                 CanDownloadInstaller = true,
-                SupportsCustomScopes = true,
+                SupportsCustomScopes = false,
                 CanListDependencies = true,
                 SupportsPreRelease = true,
                 SupportsProxy = ProxySupport.No,
@@ -84,10 +84,16 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
         protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
         {
             // bun outdated checks the project in the current directory, not a --global flag.
-            // Global packages live in ~/.bun/install/global which has its own package.json.
-            string globalDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".bun", "install", "global");
+            // Until Bun supports per-project working directories in UniGetUI, expose Bun as
+            // a global-only manager and query the dedicated global package.json.
+            string globalDir = GetGlobalPackagesDirectory(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
+            if (!HasGlobalPackageManifest(globalDir))
+            {
+                Logger.Info($"Bun: Skipping global update detection because {globalDir} is missing package.json");
+                return [];
+            }
 
             using Process p = new()
             {
@@ -100,8 +106,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                     RedirectStandardInput = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    WorkingDirectory = Directory.Exists(globalDir) ? globalDir
-                        : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    WorkingDirectory = globalDir,
                     StandardOutputEncoding = System.Text.Encoding.UTF8
                 }
             };
@@ -175,6 +180,12 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles()
             => CoreTools.WhichMultiple(OperatingSystem.IsWindows() ? "bun.exe" : "bun");
+
+        internal static string GetGlobalPackagesDirectory(string userProfile)
+            => Path.Combine(userProfile, ".bun", "install", "global");
+
+        internal static bool HasGlobalPackageManifest(string globalDir)
+            => Directory.Exists(globalDir) && File.Exists(Path.Combine(globalDir, "package.json"));
 
         protected override void _loadManagerExecutableFile(out bool found, out string path, out string callArguments)
         {

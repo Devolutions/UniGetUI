@@ -31,8 +31,8 @@ internal sealed class BunPkgOperationHelper : BasePkgOperationHelper
             _ => throw new InvalidDataException("Invalid package operation")
         };
 
-        if (package.OverridenOptions.Scope == PackageScope.Global ||
-            (package.OverridenOptions.Scope is null && options.InstallationScope == PackageScope.Global))
+        string effectiveScope = package.OverridenOptions.Scope ?? options.InstallationScope;
+        if (effectiveScope is not PackageScope.Local)
             parameters.Add("--global");
 
         parameters.AddRange(operation switch

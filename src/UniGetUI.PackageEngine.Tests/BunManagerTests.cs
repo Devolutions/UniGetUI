@@ -1,6 +1,7 @@
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Managers.BunManager;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
@@ -16,6 +17,11 @@ namespace UniGetUI.PackageEngine.Tests;
 /// </summary>
 public sealed class BunManagerTests
 {
+    private sealed class TestableBun : Bun
+    {
+        public IReadOnlyList<Package> GetAvailableUpdatesUnsafe() => base.GetAvailableUpdates_UnSafe();
+    }
+
     /// <summary>
     /// Tests parsing of JSON search results from 'bun search &lt;query&gt; --json'.
     /// Verifies that multiple packages with different names and versions are correctly parsed.
@@ -268,6 +274,7 @@ public sealed class BunManagerTests
 
         Assert.Contains("add", parameters);
         Assert.Contains("typescript@5.3.3", parameters);
+        Assert.Contains("--global", parameters);
     }
 
     /// <summary>
@@ -368,6 +375,25 @@ public sealed class BunManagerTests
     }
 
     /// <summary>
+    /// Tests OperationHelper allows explicit local installs when scope is overridden.
+    /// </summary>
+    [Fact]
+    public void OperationHelperDoesNotAddGlobalFlagForExplicitLocalScope()
+    {
+        var manager = new Bun();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("typescript")
+            .WithVersion("5.3.3")
+            .WithOptions(new OverridenInstallationOptions(PackageScope.Local))
+            .Build();
+
+        var parameters = manager.OperationHelper.GetParameters(package, new InstallOptions(), OperationType.Install);
+
+        Assert.DoesNotContain("--global", parameters);
+    }
+
+    /// <summary>
     /// Tests OperationHelper includes custom install parameters.
     /// </summary>
     [Fact]
@@ -429,7 +455,7 @@ public sealed class BunManagerTests
         Assert.True(manager.Capabilities.CanRunAsAdmin);
         Assert.True(manager.Capabilities.SupportsCustomVersions);
         Assert.True(manager.Capabilities.CanDownloadInstaller);
-        Assert.True(manager.Capabilities.SupportsCustomScopes);
+        Assert.False(manager.Capabilities.SupportsCustomScopes);
         Assert.True(manager.Capabilities.CanListDependencies);
         Assert.True(manager.Capabilities.SupportsPreRelease);
         Assert.Equal(ProxySupport.No, manager.Capabilities.SupportsProxy);
@@ -523,6 +549,100 @@ public sealed class BunManagerTests
         Assert.Single(resultsLatest);
         Assert.Equal("typescript", resultsLatest[0].Id);
         Assert.Equal("6.0.0", resultsLatest[0].NewVersionString);
+    }
+
+    /// <summary>
+    /// Tests Bun global updates are skipped when there is no global package manifest.
+    /// </summary>
+    [Fact]
+    public void HasGlobalPackageManifestRequiresPackageJson()
+    {
+        string globalDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            Directory.CreateDirectory(globalDir);
+
+            Assert.False(Bun.HasGlobalPackageManifest(globalDir));
+
+            File.WriteAllText(Path.Combine(globalDir, "package.json"), "{}");
+
+            Assert.True(Bun.HasGlobalPackageManifest(globalDir));
+        }
+        finally
+        {
+            if (Directory.Exists(globalDir))
+                Directory.Delete(globalDir, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// Tests Bun update detection returns no results when the global manifest is missing.
+    /// </summary>
+    [Fact]
+    public void GetAvailableUpdatesReturnsEmptyWhenGlobalManifestIsMissing()
+    {
+        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string globalDir = Bun.GetGlobalPackagesDirectory(userProfile);
+        string manifestPath = Path.Combine(globalDir, "package.json");
+        string backupManifestPath = manifestPath + ".bun-test-backup";
+
+        if (!Directory.Exists(globalDir))
+        {
+            Assert.Empty(new TestableBun().GetAvailableUpdatesUnsafe());
+            return;
+        }
+
+        bool restoreManifest = false;
+
+        try
+        {
+            if (File.Exists(backupManifestPath))
+                File.Delete(backupManifestPath);
+
+            if (File.Exists(manifestPath))
+            {
+                File.Move(manifestPath, backupManifestPath);
+                restoreManifest = true;
+            }
+
+            Assert.Empty(new TestableBun().GetAvailableUpdatesUnsafe());
+        }
+        finally
+        {
+            if (restoreManifest)
+            {
+                if (File.Exists(manifestPath))
+                    File.Delete(manifestPath);
+                File.Move(backupManifestPath, manifestPath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests Bun install location defaults to the global Bun node_modules directory.
+    /// </summary>
+    [Fact]
+    public void GetInstallLocationDefaultsToBunGlobalNodeModules()
+    {
+        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string location = BunPkgDetailsHelper.GetInstallLocation(userProfile, null, "typescript");
+
+        Assert.Equal(
+            Path.Join(userProfile, ".bun", "install", "global", "node_modules", "typescript"),
+            location);
+    }
+
+    /// <summary>
+    /// Tests Bun install location honors explicit local scope.
+    /// </summary>
+    [Fact]
+    public void GetInstallLocationUsesLocalNodeModulesForLocalScope()
+    {
+        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string location = BunPkgDetailsHelper.GetInstallLocation(userProfile, PackageScope.Local, "typescript");
+
+        Assert.Equal(Path.Join(userProfile, "node_modules", "typescript"), location);
     }
 
     /// <summary>

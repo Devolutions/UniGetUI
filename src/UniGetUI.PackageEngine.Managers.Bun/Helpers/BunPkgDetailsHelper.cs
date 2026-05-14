@@ -128,10 +128,18 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
         protected override string? GetInstallLocation_UnSafe(IPackage package)
         {
-            if (package.OverridenOptions.Scope is PackageScope.Local)
-                return Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "node_modules", package.Id);
-            return Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Roaming", "npm",
-                "node_modules", package.Id);
+            return GetInstallLocation(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                package.OverridenOptions.Scope,
+                package.Id);
+        }
+
+        internal static string GetInstallLocation(string userProfile, string? scope, string packageId)
+        {
+            if (scope is PackageScope.Local)
+                return Path.Join(userProfile, "node_modules", packageId);
+
+            return Path.Join(Bun.GetGlobalPackagesDirectory(userProfile), "node_modules", packageId);
         }
 
         protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)

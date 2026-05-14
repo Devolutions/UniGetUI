@@ -116,6 +116,57 @@ public sealed class BunManagerTests
     }
 
     /// <summary>
+    /// Tests that ParseBunOutdatedTable skips border lines (all dashes or box-drawing chars).
+    /// Verifies that lines like |---| or ├─┤ are not parsed as packages.
+    /// </summary>
+    [Fact]
+    public void ParseBunOutdatedTableSkipsBorderLines()
+    {
+        var output = """
+            bun outdated v1.3.9
+            |-------------------------------------------------|
+            | Package              | Current | Update  | Latest  |
+            |--------------------------------------------------|
+            | typescript           | 5.2.0   | 5.3.0   | 5.4.0   |
+            |-------------------------------------------------|
+            | lodash               | 4.17.0  | 4.17.21 | 4.17.21 |
+            |-------------------------------------------------|
+            """;
+
+        var results = Bun.ParseBunOutdatedTable(output).ToList();
+
+        // Should find both typescript and lodash with updates, and skip all border lines
+        Assert.Equal(2, results.Count);
+        Assert.Equal("typescript", results[0].Id);
+        Assert.Equal("lodash", results[1].Id);
+    }
+
+    /// <summary>
+    /// Tests that ParseBunOutdatedTable skips Unicode box-drawing borders.
+    /// </summary>
+    [Fact]
+    public void ParseBunOutdatedTableSkipsUnicodeBorders()
+    {
+        var output = """
+            bun outdated v1.3.10
+            ┌────────────────┬─────────┬────────┬────────┐
+            │ Package        │ Current │ Update │ Latest │
+            ├────────────────┼─────────┼────────┼────────┤
+            │ typescript     │ 5.2.0   │ 5.3.0  │ 5.4.0  │
+            ├────────────────┼─────────┼────────┼────────┤
+            │ lodash         │ 4.17.0  │ 4.17.21│ 4.17.21│
+            └────────────────┴─────────┴────────┴────────┘
+            """;
+
+        var results = Bun.ParseBunOutdatedTable(output).ToList();
+
+        // Should find both packages with updates, and skip Unicode border lines
+        Assert.Equal(2, results.Count);
+        Assert.Equal("typescript", results[0].Id);
+        Assert.Equal("lodash", results[1].Id);
+    }
+
+    /// <summary>
     /// Tests that ParseBunOutdatedTable uses "Update" column by default (preferLatest=false).
     /// This provides safe, semantic-versioning compatible updates.
     /// </summary>
@@ -521,6 +572,93 @@ public sealed class BunManagerTests
         Assert.Equal("typescript", results[0].Id);
         Assert.Equal("5.2.0", results[0].Version);
         Assert.Equal("5.3.0", results[0].NewVersion);
+    }
+
+    /// <summary>
+    /// Tests parsing of Unicode box-drawing table format from 'bun outdated' (v1.3.10+).
+    /// Real-world output uses Unicode box-drawing characters instead of ASCII pipes.
+    /// Verifies that the parser correctly handles both formats.
+    /// </summary>
+    [Fact]
+    public void ParseBunOutdatedTableHandlesUnicodeBoxDrawingFormat()
+    {
+        var output = """
+            bun outdated v1.3.10 (30e609e0)
+            ┌───────────────────────────┬─────────┬────────┬────────┐
+            │ Package                   │ Current │ Update │ Latest │
+            ├───────────────────────────┼─────────┼────────┼────────┤
+            │ @google/gemini-cli        │ 0.32.1  │ 0.32.1 │ 0.42.0 │
+            ├───────────────────────────┼─────────┼────────┼────────┤
+            │ @oh-my-pi/pi-coding-agent │ 15.0.0  │ 15.0.0 │ 15.0.1 │
+            └───────────────────────────┴─────────┴────────┴────────┘
+            """;
+
+        var results = Bun.ParseBunOutdatedTable(output).ToList();
+
+        // Both packages have Current == Update, so they should NOT be included (no updates available)
+        Assert.Empty(results);
+    }
+
+    /// <summary>
+    /// Tests that ParseBunOutdatedTable correctly handles Unicode format with actual updates available.
+    /// </summary>
+    [Fact]
+    public void ParseBunOutdatedTableHandlesUnicodeBoxDrawingWithUpdates()
+    {
+        var output = """
+            bun outdated v1.3.10
+            ┌────────────────┬─────────┬────────┬────────┐
+            │ Package        │ Current │ Update │ Latest │
+            ├────────────────┼─────────┼────────┼────────┤
+            │ typescript     │ 5.2.0   │ 5.3.0  │ 5.4.0  │
+            ├────────────────┼─────────┼────────┼────────┤
+            │ @types/node    │ 20.8.0  │ 20.9.0 │ 20.10.0│
+            └────────────────┴─────────┴────────┴────────┘
+            """;
+
+        var results = Bun.ParseBunOutdatedTable(output).ToList();
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal("typescript", results[0].Id);
+        Assert.Equal("5.2.0", results[0].Version);
+        Assert.Equal("5.3.0", results[0].NewVersion);
+        Assert.Equal("@types/node", results[1].Id);
+        Assert.Equal("20.8.0", results[1].Version);
+        Assert.Equal("20.9.0", results[1].NewVersion);
+    }
+
+    /// <summary>
+    /// Tests that Unicode box-drawing format works with preferLatest=true.
+    /// This scenario matches when a user enables PreferLatestVersionsForBun setting
+    /// and runs bun outdated with the new Unicode table format.
+    /// </summary>
+    [Fact]
+    public void ParseBunOutdatedTableHandlesUnicodeWithPreferLatest()
+    {
+        var output = """
+            bun outdated v1.3.10 (30e609e0)
+            ┌───────────────────────────┬─────────┬────────┬────────┐
+            │ Package                   │ Current │ Update │ Latest │
+            ├───────────────────────────┼─────────┼────────┼────────┤
+            │ @google/gemini-cli        │ 0.32.1  │ 0.32.1 │ 0.42.0 │
+            ├───────────────────────────┼─────────┼────────┼────────┤
+            │ @oh-my-pi/pi-coding-agent │ 15.0.0  │ 15.0.0 │ 15.0.1 │
+            └───────────────────────────┴─────────┴────────┴────────┘
+            """;
+
+        // With preferLatest=false (default), no updates because Update column = Current
+        var resultsDefault = Bun.ParseBunOutdatedTable(output, preferLatest: false).ToList();
+        Assert.Empty(resultsDefault);
+
+        // With preferLatest=true, both packages should show as having updates from Latest column
+        var resultsPreferLatest = Bun.ParseBunOutdatedTable(output, preferLatest: true).ToList();
+        Assert.Equal(2, resultsPreferLatest.Count);
+        Assert.Equal("@google/gemini-cli", resultsPreferLatest[0].Id);
+        Assert.Equal("0.32.1", resultsPreferLatest[0].Version);
+        Assert.Equal("0.42.0", resultsPreferLatest[0].NewVersion);
+        Assert.Equal("@oh-my-pi/pi-coding-agent", resultsPreferLatest[1].Id);
+        Assert.Equal("15.0.0", resultsPreferLatest[1].Version);
+        Assert.Equal("15.0.1", resultsPreferLatest[1].NewVersion);
     }
 
     /// <summary>

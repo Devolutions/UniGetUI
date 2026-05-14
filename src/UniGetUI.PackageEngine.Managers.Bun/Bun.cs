@@ -348,11 +348,13 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                 string version = parts[2].Trim();
                 string recommendedUpdate = parts[columnIndex].Trim();
 
-                // Skip header row and empty rows
+                // Skip header row, empty rows, and border lines (which contain only dashes or box-drawing chars)
                 if (id is "Package" || string.IsNullOrWhiteSpace(id)
-                    || string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(recommendedUpdate))
+                    || string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(recommendedUpdate)
+                    || id.All(c => c == '-' || c == '─' || c == '┬' || c == '┼' || c == '┴')
+                    || version.All(c => c == '-' || c == '─' || c == '┬' || c == '┼' || c == '┴'))
                 {
-                    Logger.Debug($"Bun: Skipping line {lineNum} (header/empty): {id}/{version}/{recommendedUpdate}");
+                    Logger.Debug($"Bun: Skipping line {lineNum} (header/empty/border): {id}/{version}/{recommendedUpdate}");
                     continue;
                 }
 

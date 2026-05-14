@@ -40,6 +40,8 @@ public enum PageType
 
 public partial class MainWindow : Window
 {
+    private const string FORCE_NATIVE_LINUX_DECORATIONS_ENVIRONMENT_VARIABLE = "UNIGETUI_FORCE_NATIVE_LINUX_DECORATIONS";
+
     // Workaround for Avalonia 12 issue #21160 / #21212: BorderOnly + ExtendClientArea
     // strips WS_CAPTION / WS_THICKFRAME, which makes DWM disable Aero Snap drag-to-top,
     // Win+Up, and the maximize/minimize/restore animations. Re-add those bits on every
@@ -242,14 +244,15 @@ public partial class MainWindow : Window
         }
         else if (OperatingSystem.IsLinux())
         {
-            // WSLg can report incorrect maximize/input bounds with frameless windows.
-            // Keep native decorations there and use the in-app toolbar only.
-            bool isWsl = IsRunningUnderWsl();
-            WindowDecorations = isWsl ? WindowDecorations.Full : WindowDecorations.None;
+            // WSLg and SSH-forwarded X11 can report incorrect maximize/input bounds
+            // with frameless windows. Keep native decorations for those environments.
+            bool useNativeDecorations = ShouldUseNativeLinuxWindowDecorations(out string decorationReason);
+            Logger.Info($"Linux window decorations: {(useNativeDecorations ? "native" : "custom")} ({decorationReason})");
+            WindowDecorations = useNativeDecorations ? WindowDecorations.Full : WindowDecorations.None;
             TitleBarGrid.ClearValue(HeightProperty);
             TitleBarGrid.Height = 44;
             HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
-            LinuxWindowButtons.IsVisible = !isWsl;
+            LinuxWindowButtons.IsVisible = !useNativeDecorations;
             MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
             // Keep maximize icon in sync with window state
             this.GetObservable(WindowStateProperty).Subscribe(state =>
@@ -259,11 +262,69 @@ public partial class MainWindow : Window
 
             // Avalonia's X11 backend treats BorderOnly as None (no decorations at all).
             // Add invisible resize grips so the user can still resize by dragging edges.
-            if (!isWsl)
+            if (!useNativeDecorations)
             {
                 CreateResizeGrips();
             }
 
+        }
+    }
+
+    private static bool ShouldUseNativeLinuxWindowDecorations(out string reason)
+    {
+        if (TryGetNativeLinuxDecorationsOverride(out bool forceNativeDecorations))
+        {
+            reason = $"{FORCE_NATIVE_LINUX_DECORATIONS_ENVIRONMENT_VARIABLE}={(forceNativeDecorations ? "true" : "false")}";
+            return forceNativeDecorations;
+        }
+
+        if (IsRunningUnderWsl())
+        {
+            reason = "WSL environment";
+            return true;
+        }
+
+        if (IsRunningUnderSshX11Forwarding())
+        {
+            reason = "SSH X11 forwarding";
+            return true;
+        }
+
+        reason = "default Linux desktop";
+        return false;
+    }
+
+    private static bool TryGetNativeLinuxDecorationsOverride(out bool forceNativeDecorations)
+    {
+        forceNativeDecorations = false;
+
+        string? overrideValue = Environment.GetEnvironmentVariable(FORCE_NATIVE_LINUX_DECORATIONS_ENVIRONMENT_VARIABLE);
+        if (string.IsNullOrWhiteSpace(overrideValue))
+        {
+            return false;
+        }
+
+        switch (overrideValue.Trim().ToLowerInvariant())
+        {
+            case "1":
+            case "true":
+            case "on":
+            case "yes":
+            case "enabled":
+                forceNativeDecorations = true;
+                return true;
+
+            case "0":
+            case "false":
+            case "off":
+            case "no":
+            case "disabled":
+                forceNativeDecorations = false;
+                return true;
+
+            default:
+                Logger.Warn($"Ignoring invalid {FORCE_NATIVE_LINUX_DECORATIONS_ENVIRONMENT_VARIABLE} value '{overrideValue}'. Use true/false.");
+                return false;
         }
     }
 
@@ -272,6 +333,38 @@ public partial class MainWindow : Window
         string? wslDistro = Environment.GetEnvironmentVariable("WSL_DISTRO_NAME");
         string? wslInterop = Environment.GetEnvironmentVariable("WSL_INTEROP");
         return !string.IsNullOrWhiteSpace(wslDistro) || !string.IsNullOrWhiteSpace(wslInterop);
+    }
+
+    private static bool IsRunningUnderSshX11Forwarding()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return false;
+        }
+
+        string? display = Environment.GetEnvironmentVariable("DISPLAY");
+        if (string.IsNullOrWhiteSpace(display))
+        {
+            return false;
+        }
+
+        bool hasSshSession =
+            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SSH_CONNECTION")) ||
+            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SSH_CLIENT"));
+        if (!hasSshSession)
+        {
+            return false;
+        }
+
+        string normalizedDisplay = display.Trim();
+        if (normalizedDisplay.StartsWith(":", StringComparison.Ordinal) ||
+            normalizedDisplay.StartsWith("unix/", StringComparison.OrdinalIgnoreCase) ||
+            normalizedDisplay.StartsWith("unix:", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return normalizedDisplay.Contains(':');
     }
 
     /// <summary>

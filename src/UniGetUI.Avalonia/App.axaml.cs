@@ -158,15 +158,17 @@ public partial class App : Application
         };
     }
 
+    public static string WebViewUserDataFolder { get; } =
+        Path.Join(Path.GetTempPath(), "UniGetUI", "WebView");
+
     private static void SetUpWebViewUserDataFolder()
     {
         try
         {
-            string webViewPath = Path.Join(Path.GetTempPath(), "UniGetUI", "WebView");
-            if (!Directory.Exists(webViewPath))
-                Directory.CreateDirectory(webViewPath);
+            if (!Directory.Exists(WebViewUserDataFolder))
+                Directory.CreateDirectory(WebViewUserDataFolder);
 
-            Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", webViewPath);
+            Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", WebViewUserDataFolder);
         }
         catch (Exception e)
         {

@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
-             xmlns:wv="using:Avalonia.Controls"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -36,7 +36,7 @@
 
         <!-- WebView -->
         <Border x:Name="WebViewBorder" Grid.Row="2" CornerRadius="6" ClipToBounds="True">
-            <wv:NativeWebView x:Name="WebViewControl"/>
+            <controls:UniGetUiWebView x:Name="WebViewControl"/>
         </Border>
 
         <!-- Linux fallback -->

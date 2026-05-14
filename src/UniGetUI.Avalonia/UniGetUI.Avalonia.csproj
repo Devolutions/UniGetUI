@@ -96,6 +96,10 @@
         <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
         <PackageReference Include="Devolutions.Pinget.Cli.Rust" Version="0.4.2" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />
     </ItemGroup>
+    <ItemGroup>
+        <TrimmerRootAssembly Include="Avalonia.Controls.WebView" />
+        <PublishReadyToRunExclude Include="Avalonia.Controls.WebView.dll" />
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\UniGetUI.Core.Data\UniGetUI.Core.Data.csproj" />

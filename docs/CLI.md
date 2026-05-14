@@ -51,7 +51,7 @@ Related environment variables:
   - `--source` maps to `--package-source`
 - Boolean options use explicit values such as `--enabled true` or `--wait false`.
 - `--detach` is shorthand for asynchronous package operations (`--wait false`).
-- `--manager` uses stable manager ids, not GUI labels. Current ids: `apt`, `cargo`, `chocolatey`, `dnf`, `dotnet-tool`, `flatpak`, `homebrew`, `npm`, `pacman`, `pip`, `pwsh`, `scoop`, `snap`, `vcpkg`, `winget`, and `winps`.
+- `--manager` uses stable manager ids, not GUI labels. Current ids: `apt`, `bun`, `cargo`, `chocolatey`, `dnf`, `dotnet-tool`, `flatpak`, `homebrew`, `npm`, `pacman`, `pip`, `pwsh`, `scoop`, `snap`, `vcpkg`, `winget`, and `winps`.
 
 ## Command reference
 

@@ -340,7 +340,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 {
                     CornerRadius = new CornerRadius(0, 0, 8, 8),
                     BorderThickness = new Thickness(1, 0, 1, 1),
-                    SettingName = Settings.K.PreferLatestVersionsForBun,
+                    SettingName = Settings.K.BunPreferLatestVersions,
                     Text = CoreTools.Translate("Prefer latest versions (may include breaking changes) instead of recommended safe updates"),
                 };
                 ExtraControls.Children.Add(Bun_PreferLatestVersions);

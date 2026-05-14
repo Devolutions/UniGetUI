@@ -11,7 +11,7 @@
 [![Release Version Badge](https://img.shields.io/github/v/release/Devolutions/UniGetUI?style=for-the-badge)](https://github.com/Devolutions/UniGetUI/releases)
 [![Issues Badge](https://img.shields.io/github/issues/Devolutions/UniGetUI?style=for-the-badge)](https://github.com/Devolutions/UniGetUI/issues)
 [![Closed Issues Badge](https://img.shields.io/github/issues-closed/Devolutions/UniGetUI?color=%238256d0&style=for-the-badge)](https://github.com/Devolutions/UniGetUI/issues?q=is%3Aissue+is%3Aclosed)<br>
-UniGetUI is an intuitive GUI for the most common CLI package managers on Windows 10 and 11, including [WinGet](https://learn.microsoft.com/en-us/windows/package-manager/), [Scoop](https://scoop.sh/), [Chocolatey](https://chocolatey.org/), [pip](https://pypi.org/), [npm](https://www.npmjs.com/), [.NET Tool](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-tool-install), [PowerShell Gallery](https://www.powershellgallery.com/), and more.
+UniGetUI is an intuitive GUI for the most common CLI package managers on Windows 10 and 11, including [WinGet](https://learn.microsoft.com/en-us/windows/package-manager/), [Scoop](https://scoop.sh/), [Chocolatey](https://chocolatey.org/), [pip](https://pypi.org/), [npm](https://www.npmjs.com/), [Bun](https://bun.sh/), [.NET Tool](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-tool-install), [PowerShell Gallery](https://www.powershellgallery.com/), and more.
 With UniGetUI, you can discover, install, update, and uninstall software from multiple package managers through one interface.
 
 ![image](https://github.com/user-attachments/assets/7cb447ca-ee8b-4bce-8561-b9332fb0139a)
@@ -92,7 +92,7 @@ UniGetUI has a built-in autoupdater. However, it can also be updated like any ot
 
 ## Features
 
- - Install, update, and remove software from your system easily at one click: UniGetUI combines the packages from the most used package managers for windows: Winget, Chocolatey, Scoop, Pip, Npm and .NET Tool.
+ - Install, update, and remove software from your system easily at one click: UniGetUI combines the packages from the most used package managers for windows: Winget, Chocolatey, Scoop, Pip, Npm, Bun and .NET Tool.
  - Discover new packages and filter them to easily find the package you want.
  - View detailed metadata about any package before installing it. Get the direct download URL or the name of the publisher, as well as the size of the download.
  - Easily bulk-install, update, or uninstall multiple packages at once selecting multiple packages before performing an operation

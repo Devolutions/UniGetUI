@@ -468,8 +468,8 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 {
                     CornerRadius = new CornerRadius(0, 0, 8, 8),
                     BorderThickness = new Thickness(1, 0, 1, 1),
-                    SettingName = CoreSettings.K.PreferLatestVersionsForBun,
-                    Text = CoreTools.Translate("Prefer latest versions instead of recommended safe (minor or patch) updates"),
+                    SettingName = CoreSettings.K.BunPreferLatestVersions,
+                    Text = CoreTools.Translate("Prefer latest versions (may include breaking changes) instead of recommended safe updates"),
                 });
                 break;
 

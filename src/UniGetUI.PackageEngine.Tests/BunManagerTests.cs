@@ -587,9 +587,9 @@ public sealed class BunManagerTests
             ┌───────────────────────────┬─────────┬────────┬────────┐
             │ Package                   │ Current │ Update │ Latest │
             ├───────────────────────────┼─────────┼────────┼────────┤
-            │ @google/gemini-cli        │ 0.32.1  │ 0.32.1 │ 0.42.0 │
+            │ @types/jest               │ 29.6.0  │ 29.6.0 │ 30.0.0 │
             ├───────────────────────────┼─────────┼────────┼────────┤
-            │ @oh-my-pi/pi-coding-agent │ 15.0.0  │ 15.0.0 │ 15.0.1 │
+            │ @org/shared-lib           │ 3.2.0   │ 3.2.0  │ 4.0.0  │
             └───────────────────────────┴─────────┴────────┴────────┘
             """;
 
@@ -629,7 +629,7 @@ public sealed class BunManagerTests
 
     /// <summary>
     /// Tests that Unicode box-drawing format works with preferLatest=true.
-    /// This scenario matches when a user enables PreferLatestVersionsForBun setting
+    /// This scenario matches when a user enables BunPreferLatestVersions setting
     /// and runs bun outdated with the new Unicode table format.
     /// </summary>
     [Fact]
@@ -640,9 +640,9 @@ public sealed class BunManagerTests
             ┌───────────────────────────┬─────────┬────────┬────────┐
             │ Package                   │ Current │ Update │ Latest │
             ├───────────────────────────┼─────────┼────────┼────────┤
-            │ @google/gemini-cli        │ 0.32.1  │ 0.32.1 │ 0.42.0 │
+            │ @types/jest               │ 29.6.0  │ 29.6.0 │ 30.0.0 │
             ├───────────────────────────┼─────────┼────────┼────────┤
-            │ @oh-my-pi/pi-coding-agent │ 15.0.0  │ 15.0.0 │ 15.0.1 │
+            │ @org/shared-lib           │ 3.2.0   │ 3.2.0  │ 4.0.0  │
             └───────────────────────────┴─────────┴────────┴────────┘
             """;
 
@@ -653,12 +653,12 @@ public sealed class BunManagerTests
         // With preferLatest=true, both packages should show as having updates from Latest column
         var resultsPreferLatest = Bun.ParseBunOutdatedTable(output, preferLatest: true).ToList();
         Assert.Equal(2, resultsPreferLatest.Count);
-        Assert.Equal("@google/gemini-cli", resultsPreferLatest[0].Id);
-        Assert.Equal("0.32.1", resultsPreferLatest[0].Version);
-        Assert.Equal("0.42.0", resultsPreferLatest[0].NewVersion);
-        Assert.Equal("@oh-my-pi/pi-coding-agent", resultsPreferLatest[1].Id);
-        Assert.Equal("15.0.0", resultsPreferLatest[1].Version);
-        Assert.Equal("15.0.1", resultsPreferLatest[1].NewVersion);
+        Assert.Equal("@types/jest", resultsPreferLatest[0].Id);
+        Assert.Equal("29.6.0", resultsPreferLatest[0].Version);
+        Assert.Equal("30.0.0", resultsPreferLatest[0].NewVersion);
+        Assert.Equal("@org/shared-lib", resultsPreferLatest[1].Id);
+        Assert.Equal("3.2.0", resultsPreferLatest[1].Version);
+        Assert.Equal("4.0.0", resultsPreferLatest[1].NewVersion);
     }
 
     /// <summary>

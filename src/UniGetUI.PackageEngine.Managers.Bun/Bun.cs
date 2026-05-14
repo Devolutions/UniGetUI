@@ -126,7 +126,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
             logger.AddToStdErr(strErr);
 
             // Read the preference first
-            bool preferLatest = Settings.Get(Settings.K.PreferLatestVersionsForBun);
+            bool preferLatest = Settings.Get(Settings.K.BunPreferLatestVersions);
 
             // Parse stdout first; fall back to stderr if stdout has no table rows.
             string tableSrc = ParseBunOutdatedTable(strOut, preferLatest).Any() ? strOut : strErr;
@@ -330,23 +330,19 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
             int columnIndex = preferLatest ? 4 : 3; // 4 = Latest, 3 = Update
             string columnName = preferLatest ? "Latest" : "Update";
 
-            int lineNum = 0;
             foreach (string line in output.Split('\n'))
             {
-                lineNum++;
                 string trimmed = line.TrimStart();
                 // Skip lines that don't contain package data (headers, separators, etc.)
                 if (!trimmed.StartsWith('│') && !trimmed.StartsWith('|'))
                 {
-                    Logger.Debug($"Bun: Skipping line {lineNum} (no pipe): {line.Substring(0, Math.Min(50, line.Length))}");
                     continue;
-                }
 
+                }
                 // Split by either Unicode box-drawing or ASCII pipe characters
                 string[] parts = line.Split(new[] { '│', '|' }, StringSplitOptions.None);
                 if (parts.Length < columnIndex + 1)
                 {
-                    Logger.Debug($"Bun: Skipping line {lineNum} (insufficient parts for {columnName}): {line.Substring(0, Math.Min(50, line.Length))}");
                     continue;
                 }
 
@@ -360,7 +356,6 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                     || id.All(c => c == '-' || c == '─' || c == '┬' || c == '┼' || c == '┴' || c == '├' || c == '┤' || c == '┌' || c == '└' || c == '┘' || c == '┐')
                     || version.All(c => c == '-' || c == '─' || c == '┬' || c == '┼' || c == '┴' || c == '├' || c == '┤' || c == '┌' || c == '└' || c == '┘' || c == '┐'))
                 {
-                    Logger.Debug($"Bun: Skipping line {lineNum} (header/empty/border): {id}/{version}/{recommendedUpdate}");
                     continue;
                 }
 

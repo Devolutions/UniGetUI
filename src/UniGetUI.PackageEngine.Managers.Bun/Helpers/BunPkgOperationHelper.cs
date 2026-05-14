@@ -11,9 +11,22 @@ internal sealed class BunPkgOperationHelper : BasePkgOperationHelper
     protected override IReadOnlyList<string> _getOperationParameters(IPackage package,
         InstallOptions options, OperationType operation)
     {
-        List<string> parameters = operation switch {
-            OperationType.Install => [Manager.Properties.InstallVerb, $"'{package.Id}@{(options.Version == string.Empty? package.VersionString: options.Version)}'"],
-            OperationType.Update => [Manager.Properties.UpdateVerb, $"'{package.Id}@{package.NewVersionString}'"],
+        // Bun is called directly (not through PowerShell), so we do NOT use quotes.
+        // Quotes would be passed literally to bun.exe, which doesn't understand them.
+        // Unlike Npm which goes through PowerShell on Windows, Bun always executes directly.
+
+        List<string> parameters = operation switch
+        {
+            OperationType.Install =>
+            [
+                Manager.Properties.InstallVerb,
+                $"{package.Id}@{(options.Version == string.Empty ? package.VersionString : options.Version)}",
+            ],
+            OperationType.Update =>
+            [
+                Manager.Properties.UpdateVerb,
+                $"{package.Id}@{package.NewVersionString}",
+            ],
             OperationType.Uninstall => [Manager.Properties.UninstallVerb, package.Id],
             _ => throw new InvalidDataException("Invalid package operation")
         };

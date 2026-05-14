@@ -459,6 +459,20 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 });
                 break;
 
+            case "Bun":
+                disableNotifsCard.CornerRadius = new CornerRadius(8, 8, 0, 0);
+                disableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);
+                ExtraControls.Children.Add(disableNotifsCard);
+
+                ExtraControls.Children.Add(new CheckboxCard
+                {
+                    CornerRadius = new CornerRadius(0, 0, 8, 8),
+                    BorderThickness = new Thickness(1, 0, 1, 1),
+                    SettingName = CoreSettings.K.PreferLatestVersionsForBun,
+                    Text = CoreTools.AutoTranslated("Prefer latest versions (may include breaking changes) instead of recommended safe updates"),
+                });
+                break;
+
             case "vcpkg":
                 disableNotifsCard.CornerRadius = new CornerRadius(8, 8, 0, 0);
                 disableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);

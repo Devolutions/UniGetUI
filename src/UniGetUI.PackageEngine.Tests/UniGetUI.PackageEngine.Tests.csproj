@@ -24,6 +24,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Bun\UniGetUI.PackageEngine.Managers.Bun.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Cargo\UniGetUI.PackageEngine.Managers.Cargo.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Dotnet\UniGetUI.PackageEngine.Managers.Dotnet.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Pip\UniGetUI.PackageEngine.Managers.Pip.csproj" />

@@ -11,6 +11,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Widgets;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Managers.BunManager;
 using UniGetUI.PackageEngine.Managers.CargoManager;
 using UniGetUI.PackageEngine.Managers.ChocolateyManager;
 using UniGetUI.PackageEngine.Managers.DotNetManager;
@@ -77,6 +78,8 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 Manager = PEInterface.PowerShell7;
             else if (Manager_T == typeof(Cargo))
                 Manager = PEInterface.Cargo;
+            else if (Manager_T == typeof(Bun))
+                Manager = PEInterface.Bun;
             else if (Manager_T == typeof(Vcpkg))
                 Manager = PEInterface.Vcpkg;
             else if (Manager_T == typeof(DotNet))
@@ -324,6 +327,23 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                     Text = "Enable Scoop cleanup on launch",
                 };
                 ExtraControls.Children.Add(Scoop_CleanupOnStart);
+            }
+            // -------------------------------- BUN EXTRA SETTINGS ----------------------------------
+
+            else if (Manager is Bun)
+            {
+                DisableNotifsCard.CornerRadius = new CornerRadius(8, 8, 0, 0);
+                DisableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);
+                ExtraControls.Children.Add(DisableNotifsCard);
+
+                CheckboxCard Bun_PreferLatestVersions = new()
+                {
+                    CornerRadius = new CornerRadius(0, 0, 8, 8),
+                    BorderThickness = new Thickness(1, 0, 1, 1),
+                    SettingName = Settings.K.PreferLatestVersionsForBun,
+                    Text = CoreTools.Translate("Prefer latest versions (may include breaking changes) instead of recommended safe updates"),
+                };
+                ExtraControls.Children.Add(Bun_PreferLatestVersions);
             }
             // -------------------------------- VCPKG EXTRA SETTINGS --------------------------------------
 

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json.Nodes;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
@@ -73,40 +74,15 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
             string strContents = p.StandardOutput.ReadToEnd();
             logger.AddToStdOut(strContents);
-            List<Package> Packages = [];
-
-            if (strContents.Any())
-            {
-                try
-                {
-                    JsonArray? results = JsonNode.Parse(strContents) as JsonArray;
-                    foreach (JsonNode? entry in results ?? [])
-                    {
-                        string? id = entry?["name"]?.ToString();
-                        string? version = entry?["version"]?.ToString();
-                        if (id is not null && version is not null)
-                        {
-                            Packages.Add(new Package(CoreTools.FormatAsName(id), id, version, DefaultSource, this));
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    logger.AddToStdErr($"Failed to parse search results: {e.Message}");
-                }
-            }
-
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
             logger.Close(p.ExitCode);
 
-            return Packages;
+            return ParseSearchOutput(strContents, DefaultSource, this);
         }
 
         protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
         {
-            List<Package> Packages = [];
-
             // bun outdated checks the project in the current directory, not a --global flag.
             // Global packages live in ~/.bun/install/global which has its own package.json.
             string globalDir = Path.Combine(
@@ -146,15 +122,18 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
             // Parse stdout first; fall back to stderr if stdout has no table rows.
             string tableSrc = ParseBunOutdatedTable(strOut).Any() ? strOut : strErr;
-            foreach (var (packageId, version, newVersion) in ParseBunOutdatedTable(tableSrc))
+            bool preferLatest = Settings.Get(Settings.K.PreferLatestVersionsForBun);
+            var result = ParseAvailableUpdates(tableSrc, DefaultSource, this, preferLatest);
+
+            Logger.Info($"Bun: Found {result.Count} packages with available updates (preferLatest={preferLatest})");
+            foreach (var pkg in result)
             {
-                Packages.Add(new Package(CoreTools.FormatAsName(packageId), packageId, version, newVersion,
-                    DefaultSource, this, new(PackageScope.Global)));
+                Logger.Info($"  - {pkg.Id}: {pkg.VersionString} → {pkg.NewVersionString}");
             }
 
             p.WaitForExit();
             logger.Close(p.ExitCode);
-            return Packages;
+            return result;
         }
 
         protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe()
@@ -183,27 +162,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
             string strContents = p.StandardOutput.ReadToEnd();
             logger.AddToStdOut(strContents);
 
-            // bun pm ls --global outputs a tree:
-            // /home/user/.bun/install/global node_modules (3)
-            // ├── @devcontainers/cli@0.81.1
-            // └── typescript@5.7.3
-            foreach (string line in strContents.Split('\n'))
-            {
-                if (!line.Contains("──")) continue;
-                string entry = line[(line.IndexOf("──") + 2)..].Trim();
-
-                // Use LastIndexOf to handle scoped packages: @scope/name@version
-                int atIdx = entry.LastIndexOf('@');
-                if (atIdx <= 0) continue;
-
-                string packageName = entry[..atIdx];
-                string version = entry[(atIdx + 1)..];
-
-                if (string.IsNullOrWhiteSpace(packageName) || string.IsNullOrWhiteSpace(version)) continue;
-
-                Packages.Add(new Package(CoreTools.FormatAsName(packageName), packageName, version,
-                    DefaultSource, this, new(PackageScope.Global)));
-            }
+            Packages.AddRange(ParseInstalledPackages(strContents, DefaultSource, this, new OverridenInstallationOptions(PackageScope.Global)));
 
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
@@ -246,26 +205,154 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
         }
 
         /// <summary>
-        /// Parses the Unicode box-drawing table produced by <c>bun outdated</c>.
-        /// Each yielded tuple contains (packageId, currentVersion, latestVersion).
-        /// Columns: │ Package │ Current │ Update │ Latest │
+        /// Parses JSON search results from 'bun search &lt;query&gt; --json'.
+        /// Each result object contains 'name' and 'version' fields.
         /// </summary>
-        private static IEnumerable<(string Id, string Version, string NewVersion)> ParseBunOutdatedTable(string output)
+        internal static IReadOnlyList<Package> ParseSearchOutput(
+            string output,
+            IManagerSource source,
+            IPackageManager manager)
         {
+            List<Package> packages = [];
+
+            if (!output.Any()) return packages;
+
+            try
+            {
+                JsonArray? results = JsonNode.Parse(output) as JsonArray;
+                foreach (JsonNode? entry in results ?? [])
+                {
+                    string? id = entry?["name"]?.ToString();
+                    string? version = entry?["version"]?.ToString();
+                    if (id is not null && version is not null)
+                    {
+                        packages.Add(new Package(CoreTools.FormatAsName(id), id, version, source, manager));
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Warn($"Failed to parse Bun search results: {e.Message}");
+            }
+
+            return packages;
+        }
+
+        /// <summary>
+        /// Parses the outdated packages table from 'bun outdated'.
+        /// Creates packages with current and available versions and sets scope to Global.
+        /// </summary>
+        internal static IReadOnlyList<Package> ParseAvailableUpdates(
+            string output,
+            IManagerSource source,
+            IPackageManager manager,
+            bool preferLatest = false)
+        {
+            List<Package> packages = [];
+
+            foreach (var (packageId, version, newVersion) in ParseBunOutdatedTable(output, preferLatest))
+            {
+                packages.Add(new Package(CoreTools.FormatAsName(packageId), packageId, version, newVersion,
+                    source, manager, new(PackageScope.Global)));
+            }
+
+            return packages;
+        }
+
+        /// <summary>
+        /// Parses the installed packages tree from 'bun pm ls --global'.
+        /// Each package entry is formatted as: [├/└]── [@scope/]name@version
+        /// </summary>
+        internal static IReadOnlyList<Package> ParseInstalledPackages(
+            string output,
+            IManagerSource source,
+            IPackageManager manager,
+            OverridenInstallationOptions options)
+        {
+            List<Package> packages = [];
+
+            // bun pm ls --global outputs a tree:
+            // /home/user/.bun/install/global node_modules (3)
+            // ├── @devcontainers/cli@0.81.1
+            // └── typescript@5.7.3
             foreach (string line in output.Split('\n'))
             {
-                if (!line.TrimStart().StartsWith('│')) continue;
-                string[] parts = line.Split('│');
-                if (parts.Length < 5) continue;
+                if (!line.Contains("──")) continue;
+                string entry = line[(line.IndexOf("──") + 2)..].Trim();
+
+                // Use LastIndexOf to handle scoped packages: @scope/name@version
+                int atIdx = entry.LastIndexOf('@');
+                if (atIdx <= 0) continue;
+
+                string packageName = entry[..atIdx];
+                string version = entry[(atIdx + 1)..];
+
+                if (string.IsNullOrWhiteSpace(packageName) || string.IsNullOrWhiteSpace(version)) continue;
+
+                packages.Add(new Package(CoreTools.FormatAsName(packageName), packageName, version,
+                    source, manager, options));
+            }
+
+            return packages;
+        }
+
+        /// <summary>
+        /// Parses the outdated packages table from 'bun outdated'.
+        /// Supports both ASCII pipe format (|) and Unicode box-drawing format (│).
+        /// Each yielded tuple contains (packageId, currentVersion, recommendedUpdateVersion).
+        /// Columns: [Package | Current | Update | Latest]
+        /// If preferLatest is true, uses "Latest" (parts[4], may have breaking changes).
+        /// If preferLatest is false (default), uses "Update" (parts[3], safe semantic version).
+        /// </summary>
+        internal static IEnumerable<(string Id, string Version, string NewVersion)> ParseBunOutdatedTable(
+            string output,
+            bool preferLatest = false)
+        {
+            int columnIndex = preferLatest ? 4 : 3; // 4 = Latest, 3 = Update
+            string columnName = preferLatest ? "Latest" : "Update";
+
+            int lineNum = 0;
+            foreach (string line in output.Split('\n'))
+            {
+                lineNum++;
+                string trimmed = line.TrimStart();
+                // Skip lines that don't contain package data (headers, separators, etc.)
+                if (!trimmed.StartsWith('│') && !trimmed.StartsWith('|'))
+                {
+                    Logger.Debug($"Bun: Skipping line {lineNum} (no pipe): {line.Substring(0, Math.Min(50, line.Length))}");
+                    continue;
+                }
+
+                // Split by either Unicode box-drawing or ASCII pipe characters
+                string[] parts = line.Split(new[] { '│', '|' }, StringSplitOptions.None);
+                if (parts.Length < columnIndex + 1)
+                {
+                    Logger.Debug($"Bun: Skipping line {lineNum} (insufficient parts for {columnName}): {line.Substring(0, Math.Min(50, line.Length))}");
+                    continue;
+                }
 
                 string id = parts[1].Trim();
                 string version = parts[2].Trim();
-                string newVersion = parts[4].Trim();
+                string recommendedUpdate = parts[columnIndex].Trim();
 
+                // Skip header row and empty rows
                 if (id is "Package" || string.IsNullOrWhiteSpace(id)
-                    || string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(newVersion)) continue;
+                    || string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(recommendedUpdate))
+                {
+                    Logger.Debug($"Bun: Skipping line {lineNum} (header/empty): {id}/{version}/{recommendedUpdate}");
+                    continue;
+                }
 
-                yield return (id, version, newVersion);
+                // Only include packages that have a different update version
+                if (version != recommendedUpdate)
+                {
+                    Logger.Debug($"Bun: Found update for {id}: {version} → {recommendedUpdate} (using {columnName} column)");
+                    yield return (id, version, recommendedUpdate);
+                }
+                else
+                {
+                    Logger.Debug($"Bun: Skipping {id} (no update available: {version} == {recommendedUpdate})");
+                }
             }
         }
     }

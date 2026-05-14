@@ -11,6 +11,7 @@ namespace UniGetUI.Core.Data
         private const string BundledModernAppDirectoryName = "Avalonia";
         private const string ClassicExecutableName = "UniGetUI.exe";
         private const string BundledPingetExecutableName = "pinget.exe";
+        public const string ReleaseNotesUrl = "https://devolutions.net/unigetui/release-notes/";
 
         private static int? __code_page;
         public static int CODE_PAGE
@@ -60,7 +61,7 @@ namespace UniGetUI.Core.Data
 
         public static string GetGitHubReleasePageUrl()
         {
-            return GetGitHubReleasePageUrlFromTag(GetGitHubReleaseTag());
+            return ReleaseNotesUrl;
         }
 
         public static string GetGitHubReleasePageUrlFromTag(string releaseTag)

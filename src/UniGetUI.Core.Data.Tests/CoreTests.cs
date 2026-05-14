@@ -98,6 +98,8 @@ namespace UniGetUI.Core.Data.Tests
                 "https://api.github.com/repos/Devolutions/UniGetUI/releases/tags/3.3.7-beta1",
                 CoreData.GetGitHubReleaseApiUrlFromTag("3.3.7-beta1")
             );
+            Assert.Equal("https://devolutions.net/unigetui/release-notes/", CoreData.ReleaseNotesUrl);
+            Assert.Equal(CoreData.ReleaseNotesUrl, CoreData.GetGitHubReleasePageUrl());
         }
     }
 }

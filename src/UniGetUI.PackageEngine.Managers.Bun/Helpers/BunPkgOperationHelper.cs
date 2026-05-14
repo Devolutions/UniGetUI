@@ -4,6 +4,7 @@ using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.Managers.BunManager;
+
 internal sealed class BunPkgOperationHelper : BasePkgOperationHelper
 {
     public BunPkgOperationHelper(Bun manager) : base(manager) { }

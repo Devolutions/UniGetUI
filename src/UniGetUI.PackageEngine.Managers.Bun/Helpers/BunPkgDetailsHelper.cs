@@ -71,7 +71,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                 HashSet<string> addedDeps = new();
                 foreach (var rawDep in (contents?["dependencies"]?.AsObject() ?? []))
                 {
-                    if(addedDeps.Contains(rawDep.Key)) continue;
+                    if (addedDeps.Contains(rawDep.Key)) continue;
                     addedDeps.Add(rawDep.Key);
 
                     details.Dependencies.Add(new()
@@ -84,7 +84,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
                 foreach (var rawDep in (contents?["devDependencies"]?.AsObject() ?? []))
                 {
-                    if(addedDeps.Contains(rawDep.Key)) continue;
+                    if (addedDeps.Contains(rawDep.Key)) continue;
                     addedDeps.Add(rawDep.Key);
 
                     details.Dependencies.Add(new()
@@ -97,7 +97,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
                 foreach (var rawDep in (contents?["peerDependencies"]?.AsObject() ?? []))
                 {
-                    if(addedDeps.Contains(rawDep.Key)) continue;
+                    if (addedDeps.Contains(rawDep.Key)) continue;
                     addedDeps.Add(rawDep.Key);
 
                     details.Dependencies.Add(new()
@@ -174,7 +174,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
             JsonArray? rawVersions = contents?["versions"] as JsonArray;
 
             List<string> versions = [];
-            foreach(JsonNode? raw_ver in rawVersions ?? [])
+            foreach (JsonNode? raw_ver in rawVersions ?? [])
             {
                 if (raw_ver is not null)
                     versions.Add(raw_ver.ToString());

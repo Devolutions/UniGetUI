@@ -323,6 +323,9 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
         /// If preferLatest is true, uses "Latest" (parts[4], may have breaking changes).
         /// If preferLatest is false (default), uses "Update" (parts[3], safe semantic version).
         /// </summary>
+        // TODO: Replace table parsing with JSON deserialization when bun outdated adds --json flag.
+        // Track: https://github.com/oven-sh/bun/issues — once --json is available, this entire
+        // method should be swapped for a simple JsonNode.Parse() call.
         internal static IEnumerable<(string Id, string Version, string NewVersion)> ParseBunOutdatedTable(
             string output,
             bool preferLatest = false)

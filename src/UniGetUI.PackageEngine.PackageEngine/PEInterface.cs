@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using UniGetUI.Core.Logging;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Managers.BunManager;
 using UniGetUI.PackageEngine.Managers.CargoManager;
 using UniGetUI.PackageEngine.Managers.DotNetManager;
 using UniGetUI.PackageEngine.Managers.NpmManager;
@@ -37,6 +38,7 @@ namespace UniGetUI.PackageEngine
         public static readonly Chocolatey Chocolatey = new();
 #endif
         public static readonly Npm Npm = new();
+        public static readonly Bun Bun = new();
         public static readonly Pip Pip = new();
         public static readonly DotNet DotNet = new();
         public static readonly PowerShell7 PowerShell7 = new();
@@ -58,7 +60,7 @@ namespace UniGetUI.PackageEngine
 
         private static IPackageManager[] CreateManagers()
         {
-            List<IPackageManager> managers = [Npm, Pip, Cargo, Vcpkg, DotNet, PowerShell7];
+            List<IPackageManager> managers = [Npm, Bun, Pip, Cargo, Vcpkg, DotNet, PowerShell7];
 #if WINDOWS
             managers.InsertRange(0, [WinGet, Scoop, Chocolatey]);
             managers.Add(PowerShell);

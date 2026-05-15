@@ -9994,37 +9994,37 @@
       "images": []
     },
     "Devolutions.Agent": {
-      "icon": "https://webdevolutions.blob.core.windows.net/images/projects/devolutions-agent/logos/devolutions-agent-icon.svg",
+      "icon": "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/WebBasedData/icons/devolutions-agent-icon.png",
       "images": []
     },
     "Devolutions.Gateway": {
-      "icon": "https://webdevolutions.blob.core.windows.net/images/projects/gateway/logos/gateway-icon.svg",
+      "icon": "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/WebBasedData/icons/gateway-icon.png",
       "images": []
     },
     "Devolutions.Jetsocat": {
-      "icon": "https://webdevolutions.blob.core.windows.net/images/projects/gateway/logos/gateway-icon.svg",
+      "icon": "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/WebBasedData/icons/gateway-icon.png",
       "images": []
     },
     "Devolutions.Launcher": {
-      "icon": "https://webdevolutions.blob.core.windows.net/images/projects/launcher/logos/launcher-icon.svg",
+      "icon": "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/WebBasedData/icons/launcher-icon.png",
       "images": []
     },
     "Devolutions.MsRdpEx": {
-      "icon": "",
+      "icon": "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/WebBasedData/icons/msrdpex-icon.png",
       "images": [
         "https://raw.githubusercontent.com/Devolutions/MsRdpEx/master/images/MsRdpEx_installed.png"
       ]
     },
     "Devolutions.RemoteDesktopManager": {
-      "icon": "https://webdevolutions.blob.core.windows.net/images/projects/remote-desktop-manager/logos/remote-desktop-manager-icon.svg",
+      "icon": "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/WebBasedData/icons/remote-desktop-manager-icon.png",
       "images": []
     },
     "Devolutions.RemoteDesktopManagerAgent": {
-      "icon": "https://webdevolutions.blob.core.windows.net/images/projects/remote-desktop-manager-agent/logos/remote-desktop-manager-agent-icon.svg",
+      "icon": "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/WebBasedData/icons/remote-desktop-manager-agent-icon.png",
       "images": []
     },
     "Devolutions.ServerConsole": {
-      "icon": "https://webdevolutions.blob.core.windows.net/images/projects/server/logos/server-icon.svg",
+      "icon": "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/WebBasedData/icons/server-icon.png",
       "images": []
     },
     "Devolutions.UniGetUI": {
@@ -10036,7 +10036,7 @@
       ]
     },
     "Devolutions.Workspace": {
-      "icon": "https://webdevolutions.blob.core.windows.net/images/projects/workspace/logos/workspace-icon.svg",
+      "icon": "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/WebBasedData/icons/workspace-icon.png",
       "images": []
     },
     "de4dot": {

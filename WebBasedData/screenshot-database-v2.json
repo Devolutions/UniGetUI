@@ -17126,12 +17126,8 @@
       "images": []
     },
     "gnupg": {
-      "icon": "https://www.tech-faq.com/wp-content/uploads/gnupg-shell.png",
-      "images": [
-        "https://www.tech-faq.com/gnupg-shell/keyring_editor.png",
-        "https://www.tech-faq.com/gnupg-shell/create_new_keyring.png",
-        "https://www.tech-faq.com/gnupg-shell/file_manager.png"
-      ]
+      "icon": "https://gnupg.org/share/logo-gnupg-light-purple-bg.png",
+      "images": []
     },
     "gnupg-modern": {
       "icon": "",

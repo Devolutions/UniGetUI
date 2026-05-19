@@ -273,7 +273,6 @@ public partial class MainWindow : Window
             {
                 CreateResizeGrips();
             }
-
         }
     }
 
@@ -448,7 +447,6 @@ public partial class MainWindow : Window
             };
             return grip;
         }
-
     }
 
     private async Task SaveGeometryAsync()
@@ -649,12 +647,17 @@ public partial class MainWindow : Window
                     mmi.ptMaxSize.Y = mi.rcWork.Bottom - mi.rcWork.Top;
                     if (mmi.ptMaxTrackSize.X < mmi.ptMaxSize.X) mmi.ptMaxTrackSize.X = mmi.ptMaxSize.X;
                     if (mmi.ptMaxTrackSize.Y < mmi.ptMaxSize.Y) mmi.ptMaxTrackSize.Y = mmi.ptMaxSize.Y;
+                    // Set ptMinTrackSize to MinWidth/MinHeight in DIPs plus the real
+                    // WS_THICKFRAME inset. Avalonia's own handler would omit the inset for
+                    // BorderOnly (BorderThickness returns 0), letting the outer window shrink
+                    // below the client minimum — Avalonia then grows it back via SetWindowPos
+                    // pinning x, pushing the right edge → the window slides past MinWidth.
                     if (Instance is { } w)
                     {
-                        double scale = GetDpiScale(hWnd);
-                        uint style = (uint)NativeMethods.GetWindowLongPtr(hWnd, GWL_STYLE).ToInt64();
                         uint dpi = NativeMethods.GetDpiForWindow(hWnd);
                         if (dpi == 0) dpi = 96;
+                        double scale = dpi / 96.0;
+                        uint style = (uint)NativeMethods.GetWindowLongPtr(hWnd, GWL_STYLE).ToInt64();
 
                         var frame = default(NativeMethods.RECT);
                         int frameW = 0, frameH = 0;
@@ -679,29 +682,22 @@ public partial class MainWindow : Window
         return 0;
     }
 
-    private static double GetDpiScale(nint hWnd)
-    {
-        uint dpi = NativeMethods.GetDpiForWindow(hWnd);
-        return dpi == 0 ? 1.0 : dpi / 96.0;
-    }
-
     // P/Invokes compile on any platform; they are only called from code paths guarded by
     // OperatingSystem.IsWindows(), so non-Windows targets never invoke user32.dll at runtime.
     private static class NativeMethods
     {
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+        public static extern nint GetWindowLongPtr(nint hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+        public static extern nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
+
         [DllImport("user32.dll")]
         public static extern uint GetDpiForWindow(nint hWnd);
 
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool AdjustWindowRectExForDpi(ref RECT lpRect, uint dwStyle, [MarshalAs(UnmanagedType.Bool)] bool bMenu, uint dwExStyle, uint dpi);
-
-
-        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
-        public static extern nint GetWindowLongPtr(nint hWnd, int nIndex);
-
-        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
-        public static extern nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
 
         [DllImport("user32.dll")]
         public static extern nint MonitorFromWindow(nint hwnd, uint dwFlags);

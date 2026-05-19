@@ -80,8 +80,14 @@ public partial class MainWindow : Window
         InitializeComponent();
         SetupTitleBar();
 
+        RestoreGeometry();
+
         KeyDown += Window_KeyDown;
         ViewModel.CurrentPageChanged += OnCurrentPageChanged;
+
+        Resized += (_, _) => _ = SaveGeometryAsync();
+        PositionChanged += (_, _) => _ = SaveGeometryAsync();
+        this.GetObservable(WindowStateProperty).Subscribe(state => { _ = SaveGeometryAsync(); });
 
         _trayService = new TrayService(this);
         _trayService.UpdateStatus();
@@ -117,6 +123,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        SaveGeometryNow();
         AvaloniaAutoUpdater.ReleaseLockForAutoupdate_Window = true;
         _trayService?.Dispose();
         _trayService = null;
@@ -444,6 +451,143 @@ public partial class MainWindow : Window
 
     }
 
+    private async Task SaveGeometryAsync()
+    {
+        try
+        {
+            int oldWidth = (int)Width;
+            int oldHeight = (int)Height;
+            PixelPoint oldPosition = Position;
+            WindowState oldState = WindowState;
+            await Task.Delay(100);
+
+            if (oldWidth != (int)Width || oldHeight != (int)Height
+                || oldPosition != Position || oldState != WindowState)
+                return;
+
+            SaveGeometryNow();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex);
+        }
+    }
+
+    private void SaveGeometryNow()
+    {
+        try
+        {
+            int state = WindowState == WindowState.Maximized ? 1 : 0;
+            string geometry = $"v2,{Position.X},{Position.Y},{(int)Width},{(int)Height},{state}";
+            Settings.SetValue(Settings.K.WindowGeometry, geometry);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex);
+        }
+    }
+
+    private void RestoreGeometry()
+    {
+        string geometry = Settings.GetValue(Settings.K.WindowGeometry);
+        if (string.IsNullOrEmpty(geometry))
+            return;
+
+        string[] items = geometry.Split(',');
+        if (items.Length is not (5 or 6))
+        {
+            Logger.Warn($"The restored geometry did not have a supported item count (found length was {items.Length})");
+            return;
+        }
+
+        int x, y, width, height, state;
+        try
+        {
+            if (items.Length == 6 && items[0] == "v2")
+            {
+                x = int.Parse(items[1]);
+                y = int.Parse(items[2]);
+                width = int.Parse(items[3]);
+                height = int.Parse(items[4]);
+                state = int.Parse(items[5]);
+            }
+            else
+            {
+                x = int.Parse(items[0]);
+                y = int.Parse(items[1]);
+                width = int.Parse(items[2]);
+                height = int.Parse(items[3]);
+                state = int.Parse(items[4]);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Could not parse window geometry integers");
+            Logger.Error(ex);
+            return;
+        }
+
+        WindowStartupLocation = WindowStartupLocation.Manual;
+
+        if (state == 1)
+        {
+            // Mirror WinUI behaviour: don't reapply the saved (maximized) bounds, just
+            // maximize. The OS / Avalonia picks a sensible un-maximize restore size.
+            WindowState = WindowState.Maximized;
+        }
+        else if (IsRectangleFullyVisible(x, y, width, height))
+        {
+            Width = width;
+            Height = height;
+            Position = new PixelPoint(x, y);
+        }
+        else
+        {
+            Logger.Warn("Restored geometry was outside of desktop bounds");
+        }
+    }
+
+    private bool IsRectangleFullyVisible(int x, int y, int width, int height)
+    {
+        // Position is in screen pixels, Width/Height are DIPs. Scale width/height
+        // by the DPI of the screen that contains the saved position before comparing
+        // against the union of all monitor bounds (which Avalonia reports in pixels).
+        var screens = Screens?.All;
+        if (screens is null || screens.Count == 0)
+            return true;
+
+        int minX = int.MaxValue, minY = int.MaxValue;
+        int maxX = int.MinValue, maxY = int.MinValue;
+        double hostScaling = 1.0;
+        bool foundHost = false;
+
+        foreach (var screen in screens)
+        {
+            var bounds = screen.Bounds;
+            if (bounds.X < minX) minX = bounds.X;
+            if (bounds.Y < minY) minY = bounds.Y;
+            if (bounds.X + bounds.Width > maxX) maxX = bounds.X + bounds.Width;
+            if (bounds.Y + bounds.Height > maxY) maxY = bounds.Y + bounds.Height;
+
+            if (!foundHost && bounds.Contains(new PixelPoint(x, y)))
+            {
+                hostScaling = screen.Scaling;
+                foundHost = true;
+            }
+        }
+
+        if (!foundHost)
+            hostScaling = Screens?.Primary?.Scaling ?? 1.0;
+
+        int widthPx = (int)(width * hostScaling);
+        int heightPx = (int)(height * hostScaling);
+
+        if (x + 10 < minX || x + widthPx - 10 > maxX || y + 10 < minY || y + heightPx - 10 > maxY)
+            return false;
+
+        return true;
+    }
+
     private void MinimizeButton_Click(object? sender, RoutedEventArgs e)
         => WindowState = WindowState.Minimized;
 
@@ -505,6 +649,27 @@ public partial class MainWindow : Window
                     mmi.ptMaxSize.Y = mi.rcWork.Bottom - mi.rcWork.Top;
                     if (mmi.ptMaxTrackSize.X < mmi.ptMaxSize.X) mmi.ptMaxTrackSize.X = mmi.ptMaxSize.X;
                     if (mmi.ptMaxTrackSize.Y < mmi.ptMaxSize.Y) mmi.ptMaxTrackSize.Y = mmi.ptMaxSize.Y;
+                    if (Instance is { } w)
+                    {
+                        double scale = GetDpiScale(hWnd);
+                        uint style = (uint)NativeMethods.GetWindowLongPtr(hWnd, GWL_STYLE).ToInt64();
+                        uint dpi = NativeMethods.GetDpiForWindow(hWnd);
+                        if (dpi == 0) dpi = 96;
+
+                        var frame = default(NativeMethods.RECT);
+                        int frameW = 0, frameH = 0;
+                        if (NativeMethods.AdjustWindowRectExForDpi(ref frame, style, false, 0, dpi))
+                        {
+                            frameW = (-frame.Left) + frame.Right;
+                            frameH = (-frame.Top) + frame.Bottom;
+                        }
+
+                        int minX = (int)Math.Ceiling(w.MinWidth * scale) + frameW;
+                        int minY = (int)Math.Ceiling(w.MinHeight * scale) + frameH;
+                        if (mmi.ptMinTrackSize.X < minX) mmi.ptMinTrackSize.X = minX;
+                        if (mmi.ptMinTrackSize.Y < minY) mmi.ptMinTrackSize.Y = minY;
+                    }
+
                     Marshal.StructureToPtr(mmi, lParam, false);
                     handled = true;
                     return 0;
@@ -514,10 +679,24 @@ public partial class MainWindow : Window
         return 0;
     }
 
+    private static double GetDpiScale(nint hWnd)
+    {
+        uint dpi = NativeMethods.GetDpiForWindow(hWnd);
+        return dpi == 0 ? 1.0 : dpi / 96.0;
+    }
+
     // P/Invokes compile on any platform; they are only called from code paths guarded by
     // OperatingSystem.IsWindows(), so non-Windows targets never invoke user32.dll at runtime.
     private static class NativeMethods
     {
+        [DllImport("user32.dll")]
+        public static extern uint GetDpiForWindow(nint hWnd);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool AdjustWindowRectExForDpi(ref RECT lpRect, uint dwStyle, [MarshalAs(UnmanagedType.Bool)] bool bMenu, uint dwExStyle, uint dpi);
+
+
         [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
         public static extern nint GetWindowLongPtr(nint hWnd, int nIndex);
 
@@ -579,8 +758,18 @@ public partial class MainWindow : Window
 
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            BeginMoveDrag(e);
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+
+        if (e.ClickCount == 2)
+        {
+            WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+            return;
+        }
+
+        BeginMoveDrag(e);
     }
 
     private void SearchBox_KeyDown(object? sender, KeyEventArgs e)

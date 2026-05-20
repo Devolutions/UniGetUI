@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <Target Name="GenerateBuildInfo" BeforeTargets="BeforeBuild">
-        <Exec Command="pwsh -File generate-secrets.ps1 $(IntermediateOutputPath)" />
+        <Exec Command="pwsh -File generate-secrets.ps1 $(IntermediateOutputPath)" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+        <Exec Command="bash generate-secrets.sh $(IntermediateOutputPath)" Condition="!$([MSBuild]::IsOSPlatform('Windows'))" />
         <ItemGroup>
             <Compile Include="$(IntermediateOutputPath)Generated Files\Secrets.Generated.cs" />
         </ItemGroup>

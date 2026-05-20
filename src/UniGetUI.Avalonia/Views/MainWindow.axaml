@@ -310,7 +310,8 @@
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
                         Margin="65,0,8,0"
-                        Spacing="8">
+                        Spacing="8"
+                        Opacity="0.6">
                 <Button Width="32" Height="32"
                         Padding="4"
                         Background="Transparent"
@@ -323,7 +324,7 @@
                               automation:AutomationProperties.AccessibilityView="Raw"
                               Data="M1,1 H15 V3 H1 Z M1,7 H15 V9 H1 Z M1,13 H15 V15 H1 Z"/>
                 </Button>
-                <TextBlock Text="UniGetUI"
+                <TextBlock Text="{Binding TitleBarText}"
                            FontSize="13"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center"/>
@@ -334,7 +335,8 @@
                         VerticalAlignment="Center"
                         automation:AutomationProperties.AccessibilityView="Control"
                         Orientation="Horizontal"
-                        Spacing="0">
+                        Spacing="0"
+                        Opacity="0.6">
                 <TextBox x:Name="GlobalSearchBox"
                          Width="300"
                          MinHeight="20"
@@ -365,13 +367,14 @@
             <!-- Right column: Linux window buttons on the far right -->
             <Panel Grid.Column="2">
 
-                <!-- Linux only: min / max / close (IsVisible set in code-behind) -->
+                <!-- Custom min / max / close (shown on Windows, macOS, and Linux without native decorations; IsVisible set in code-behind) -->
                 <StackPanel x:Name="LinuxWindowButtons"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Margin="0,0,4,0"
                             Spacing="0"
+                            Opacity="0.55"
                             IsVisible="False">
                     <!-- Minimize: horizontal line -->
                     <Button Width="46" Height="32" Padding="0"

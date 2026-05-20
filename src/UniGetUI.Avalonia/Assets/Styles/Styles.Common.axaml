@@ -2,7 +2,154 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls">
 
+    <Styles.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <!-- WinUI Fluent v2 design tokens (Avalonia's Fluent theme only ships UWP-era names; these polyfill the v2 set). -->
+                <ResourceDictionary x:Key="Light">
+                    <!-- Accent fills -->
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush"  Color="{DynamicResource SystemAccentColor}"/>
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColorDark1}"/>
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorDark2}"/>
+                    <SolidColorBrush x:Key="AccentFillColorDisabledBrush"  Color="#37000000"/>
+                    <SolidColorBrush x:Key="AccentFillColorSelectedTextBackgroundBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <!-- Accent text (darker accents read better on light bg) -->
+                    <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush"   Color="{DynamicResource SystemAccentColorDark2}"/>
+                    <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColorDark3}"/>
+                    <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorDark1}"/>
+                    <SolidColorBrush x:Key="AccentTextFillColorDisabledBrush"  Color="#5C000000"/>
+                    <!-- Text fill -->
+                    <SolidColorBrush x:Key="TextFillColorPrimaryBrush"   Color="#E4000000"/>
+                    <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#9E000000"/>
+                    <SolidColorBrush x:Key="TextFillColorTertiaryBrush"  Color="#72000000"/>
+                    <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5C000000"/>
+                    <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#FFFFFFFF"/>
+                    <!-- Text on accent -->
+                    <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush"      Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="TextOnAccentFillColorSecondaryBrush"    Color="#B3FFFFFF"/>
+                    <SolidColorBrush x:Key="TextOnAccentFillColorDisabledBrush"     Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="TextOnAccentFillColorSelectedTextBrush" Color="#FFFFFFFF"/>
+                    <!-- Settings cards -->
+                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#FBFBFB"/>
+                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#ECECEC"/>
+                    <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#F6F6F6"/>
+                    <!-- Window structure -->
+                    <SolidColorBrush x:Key="AppWindowBackground"         Color="#F3F3F3"/>
+                    <SolidColorBrush x:Key="AppTitleBarBackground"       Color="#F3F3F3"/>
+                    <SolidColorBrush x:Key="AppSplitterBackground"       Color="#E5E5E5"/>
+                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#EEEEEE"/>
+                    <SolidColorBrush x:Key="AppBorderBrush"              Color="#E5E5E5"/>
+                    <SolidColorBrush x:Key="AppBadgeBackground"          Color="#EDEDED"/>
+                    <!-- Dialogs -->
+                    <SolidColorBrush x:Key="AppDialogBackground"         Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#F9F9F9"/>
+                    <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#EEEEEE"/>
+                    <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#EEEEEE"/>
+                    <!-- Warning banner -->
+                    <SolidColorBrush x:Key="WarningBannerBackground"     Color="#FFF4CE"/>
+                    <SolidColorBrush x:Key="WarningBannerBorderBrush"    Color="#9D5D00"/>
+                    <SolidColorBrush x:Key="WarningBannerIconBackground" Color="#9D5D00"/>
+                    <SolidColorBrush x:Key="WarningBannerIconForeground" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="WarningBannerSubtext"        Color="#9D5D00"/>
+                    <!-- Status banners (success / error / info) -->
+                    <SolidColorBrush x:Key="StatusSuccessBackground"     Color="#DFF6DD"/>
+                    <SolidColorBrush x:Key="StatusSuccessBorderBrush"    Color="#0F7B0F"/>
+                    <SolidColorBrush x:Key="StatusErrorBackground"       Color="#FDE7E9"/>
+                    <SolidColorBrush x:Key="StatusErrorBorderBrush"      Color="#C42B1C"/>
+                    <SolidColorBrush x:Key="StatusInfoBackground"        Color="#E5F1FA"/>
+                    <SolidColorBrush x:Key="StatusInfoBorderBrush"       Color="#005FB8"/>
+                    <!-- Status badge foreground -->
+                    <SolidColorBrush x:Key="StatusSuccessForeground"     Color="#0F7B0F"/>
+                    <SolidColorBrush x:Key="StatusWarningForeground"     Color="#9D5D00"/>
+                    <SolidColorBrush x:Key="StatusErrorForeground"       Color="#C42B1C"/>
+                    <!-- Setting warning subtext -->
+                    <SolidColorBrush x:Key="SettingWarningTextForeground" Color="#9D5D00"/>
+                    <!-- Operation log output text -->
+                    <SolidColorBrush x:Key="LogOutputVerboseForeground"   Color="#5C5C5C"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <!-- Accent fills (lighter accents on dark bg) -->
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush"   Color="{DynamicResource SystemAccentColorLight2}"/>
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColorLight1}"/>
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColor}"/>
+                    <SolidColorBrush x:Key="AccentFillColorDisabledBrush"  Color="#28FFFFFF"/>
+                    <SolidColorBrush x:Key="AccentFillColorSelectedTextBackgroundBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <!-- Accent text -->
+                    <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush"   Color="{DynamicResource SystemAccentColorLight3}"/>
+                    <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColorLight3}"/>
+                    <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorLight2}"/>
+                    <SolidColorBrush x:Key="AccentTextFillColorDisabledBrush"  Color="#5CFFFFFF"/>
+                    <!-- Text fill -->
+                    <SolidColorBrush x:Key="TextFillColorPrimaryBrush"   Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#C5FFFFFF"/>
+                    <SolidColorBrush x:Key="TextFillColorTertiaryBrush"  Color="#87FFFFFF"/>
+                    <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5DFFFFFF"/>
+                    <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#E4000000"/>
+                    <!-- Text on accent -->
+                    <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush"      Color="#000000"/>
+                    <SolidColorBrush x:Key="TextOnAccentFillColorSecondaryBrush"    Color="#80000000"/>
+                    <SolidColorBrush x:Key="TextOnAccentFillColorDisabledBrush"     Color="#87FFFFFF"/>
+                    <SolidColorBrush x:Key="TextOnAccentFillColorSelectedTextBrush" Color="#FFFFFFFF"/>
+                    <!-- Settings cards -->
+                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#2D2D2D"/>
+                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#393939"/>
+                    <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#323232"/>
+                    <!-- Window structure -->
+                    <SolidColorBrush x:Key="AppWindowBackground"         Color="#202020"/>
+                    <SolidColorBrush x:Key="AppTitleBarBackground"       Color="#202020"/>
+                    <SolidColorBrush x:Key="AppSplitterBackground"       Color="#1A1A1A"/>
+                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#1C1C1C"/>
+                    <SolidColorBrush x:Key="AppBorderBrush"              Color="#353535"/>
+                    <SolidColorBrush x:Key="AppBadgeBackground"          Color="#3C3C3C"/>
+                    <!-- Dialogs -->
+                    <SolidColorBrush x:Key="AppDialogBackground"         Color="#202020"/>
+                    <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#2C2C2C"/>
+                    <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#393939"/>
+                    <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#1A1A1A"/>
+                    <!-- Warning banner -->
+                    <SolidColorBrush x:Key="WarningBannerBackground"     Color="#433519"/>
+                    <SolidColorBrush x:Key="WarningBannerBorderBrush"    Color="#A07208"/>
+                    <SolidColorBrush x:Key="WarningBannerIconBackground" Color="#FCE100"/>
+                    <SolidColorBrush x:Key="WarningBannerIconForeground" Color="#1a1000"/>
+                    <SolidColorBrush x:Key="WarningBannerSubtext"        Color="#FCE100"/>
+                    <!-- Status banners (success / error / info) -->
+                    <SolidColorBrush x:Key="StatusSuccessBackground"     Color="#393D1B"/>
+                    <SolidColorBrush x:Key="StatusSuccessBorderBrush"    Color="#4F7B27"/>
+                    <SolidColorBrush x:Key="StatusErrorBackground"       Color="#442726"/>
+                    <SolidColorBrush x:Key="StatusErrorBorderBrush"      Color="#8B4A48"/>
+                    <SolidColorBrush x:Key="StatusInfoBackground"        Color="#1B2A35"/>
+                    <SolidColorBrush x:Key="StatusInfoBorderBrush"       Color="#2E4756"/>
+                    <!-- Status badge foreground -->
+                    <SolidColorBrush x:Key="StatusSuccessForeground"     Color="#6CCB5F"/>
+                    <SolidColorBrush x:Key="StatusWarningForeground"     Color="#FCE100"/>
+                    <SolidColorBrush x:Key="StatusErrorForeground"       Color="#FF99A4"/>
+                    <!-- Setting warning subtext -->
+                    <SolidColorBrush x:Key="SettingWarningTextForeground" Color="#FCE100"/>
+                    <!-- Operation log output text -->
+                    <SolidColorBrush x:Key="LogOutputVerboseForeground"   Color="#9D9D9D"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Styles.Resources>
+
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+
+    <!-- DataGrid selection: WinUI-style border-only. Negative margin offsets the added border so adjacent rows don't shift. -->
+    <Style Selector="DataGridRow">
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="DataGridRow:selected">
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}"/>
+        <Setter Property="Margin" Value="0,-2"/>
+    </Style>
+    <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+        <Setter Property="Fill" Value="Transparent"/>
+    </Style>
+    <Style Selector="DataGridRow:selected:pointerover /template/ Rectangle#BackgroundRectangle">
+        <Setter Property="Fill" Value="{DynamicResource SettingsCardHoverBackground}"/>
+    </Style>
 
     <!-- SettingsCard appearance -->
     <Style Selector="Border.settings-card">

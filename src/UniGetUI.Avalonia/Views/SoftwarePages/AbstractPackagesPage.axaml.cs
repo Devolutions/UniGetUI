@@ -95,11 +95,13 @@ public abstract partial class AbstractPackagesPage : UserControl,
                 if (width.IsAbsolute && width.Value >= 100)
                 {
                     _savedFilterPaneWidth = width.Value;
+                    ViewModel.TrackedFilterPaneWidth = width.Value;
                     Settings.SetDictionaryItem(Settings.K.SidepanelWidths, ViewModel.PageName, (int)width.Value);
                 }
                 else if (width.IsAbsolute && width.Value < 100)
                 {
                     _savedFilterPaneWidth = 220;
+                    ViewModel.TrackedFilterPaneWidth = 220;
                     ViewModel.IsFilterPaneOpen = false;
                 }
             });
@@ -126,6 +128,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // Restore per-page filter pane width from settings.
         var savedWidth = Settings.GetDictionaryItem<string, int>(Settings.K.SidepanelWidths, ViewModel.PageName);
         if (savedWidth >= 100) _savedFilterPaneWidth = savedWidth;
+        ViewModel.TrackedFilterPaneWidth = _savedFilterPaneWidth;
 
         // Apply the initial filter-pane state (AXAML defaults to 220px open).
         UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);

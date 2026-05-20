@@ -25,6 +25,9 @@ public partial class SecureCheckboxCard : SettingsCard
     public TextBlock _textblock;
     public TextBlock _warningBlock;
     public ProgressBar _loading;   // Avalonia has no ProgressRing; use indeterminate ProgressBar
+    private readonly TextBlock _stateLabel;
+    private static readonly string EnabledLabel = CoreTools.Translate("Enabled");
+    private static readonly string DisabledLabel = CoreTools.Translate("Disabled");
     private bool IS_INVERTED;
 
     private SecureSettings.K setting_name = SecureSettings.K.Unset;
@@ -37,6 +40,7 @@ public partial class SecureCheckboxCard : SettingsCard
             IS_INVERTED = SecureSettings.ResolveKey(value).StartsWith("Disable");
             _checkbox.IsChecked = SecureSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
             _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
+            UpdateStateLabel();
             _checkbox.IsEnabled = true;
         }
     }
@@ -77,9 +81,17 @@ public partial class SecureCheckboxCard : SettingsCard
     {
         _checkbox = new ToggleSwitch
         {
+            // OnContent/OffContent intentionally left null — the state label is
+            // a sibling TextBlock placed to the LEFT of the knob below.
+            OnContent = null,
+            OffContent = null,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        _stateLabel = new TextBlock
+        {
+            Text = DisabledLabel,
+            VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 8, 0),
-            OnContent = new TextBlock { Text = CoreTools.Translate("Enabled") },
-            OffContent = new TextBlock { Text = CoreTools.Translate("Disabled") },
         };
         _loading = new ProgressBar
         {
@@ -108,7 +120,8 @@ public partial class SecureCheckboxCard : SettingsCard
         {
             Spacing = 4,
             Orientation = Orientation.Horizontal,
-            Children = { _loading, _checkbox },
+            VerticalAlignment = VerticalAlignment.Center,
+            Children = { _loading, _stateLabel, _checkbox },
         };
         Header = new StackPanel
         {
@@ -150,6 +163,7 @@ public partial class SecureCheckboxCard : SettingsCard
                 cmd.Execute(null);
             _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
             _checkbox.IsChecked = SecureSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
+            UpdateStateLabel();
             if (_textblock.Text is not null)
             {
                 AccessibilityAnnouncementService.AnnounceToggle(_textblock.Text, _checkbox.IsChecked ?? false);
@@ -161,8 +175,14 @@ public partial class SecureCheckboxCard : SettingsCard
         {
             Logger.Warn(ex);
             _checkbox.IsChecked = SecureSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
+            UpdateStateLabel();
             _loading.IsVisible = false;
             _checkbox.IsEnabled = true;
         }
+    }
+
+    private void UpdateStateLabel()
+    {
+        _stateLabel.Text = (_checkbox.IsChecked ?? false) ? EnabledLabel : DisabledLabel;
     }
 }

@@ -1,10 +1,8 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -23,25 +21,12 @@ namespace UniGetUI.Avalonia;
 
 public partial class App : Application
 {
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026",
-        Justification = "Platform theme dictionaries are Avalonia resources included in the app package; only the resource URI is selected dynamically.")]
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
 #if AVALONIA_DIAGNOSTICS_ENABLED
         this.AttachDeveloperTools();
 #endif
-
-        string platform = OperatingSystem.IsWindows() ? "Windows"
-            : OperatingSystem.IsMacOS() ? "macOS"
-            : "Linux";
-
-        Styles.Add(new StyleInclude(new Uri("avares://UniGetUI.Avalonia/"))
-        {
-            Source = new Uri($"avares://UniGetUI.Avalonia/Assets/Styles/Styles.{platform}.axaml")
-        });
     }
 
     public override void OnFrameworkInitializationCompleted()

@@ -70,7 +70,16 @@ public class SourceTreeNode : INotifyPropertyChanged
     public string? PackageID { get; init; }
     public string? Version { get; init; }
     public string? Source { get; init; }
-    public AvaloniaList<SourceTreeNode> Children { get; } = new();
+    public AvaloniaList<SourceTreeNode> Children { get; }
+
+    public bool HasChildren => Children.Count > 0;
+
+    public SourceTreeNode()
+    {
+        Children = new AvaloniaList<SourceTreeNode>();
+        Children.CollectionChanged += (_, _) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasChildren)));
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -91,7 +100,21 @@ public class SourceTreeNode : INotifyPropertyChanged
 
 public partial class PackagesPageViewModel : ViewModelBase
 {
-    public double FilterPaneColumnWidth => IsFilterPaneOpen ? 220.0 : 0.0;
+    // Live width of the filter pane. Code-behind keeps this in sync with the GridSplitter
+    // so the toolbar's main button (bound to FilterPaneColumnWidth) tracks resizes.
+    private double _trackedFilterPaneWidth = 220.0;
+    public double TrackedFilterPaneWidth
+    {
+        get => _trackedFilterPaneWidth;
+        set
+        {
+            if (Math.Abs(_trackedFilterPaneWidth - value) < 0.5) return;
+            _trackedFilterPaneWidth = value;
+            if (IsFilterPaneOpen) OnPropertyChanged(nameof(FilterPaneColumnWidth));
+        }
+    }
+
+    public double FilterPaneColumnWidth => IsFilterPaneOpen ? _trackedFilterPaneWidth : 0.0;
     partial void OnIsFilterPaneOpenChanged(bool value)
     {
         OnPropertyChanged(nameof(FilterPaneColumnWidth));
@@ -195,6 +218,11 @@ public partial class PackagesPageViewModel : ViewModelBase
         SearchBoxPlaceholder = CoreTools.Translate("Search for packages");
 
         AllPackagesChecked = data.PackagesAreCheckedByDefault;
+        FilteredPackages.SelectionStateChanged += (_, _) =>
+        {
+            if (_suppressSelectionRecompute) return;
+            AllPackagesChecked = FilteredPackages.GetSelectionState();
+        };
 
         Loader = data.Loader;
         Loader.StartedLoading += Loader_StartedLoading;
@@ -241,12 +269,12 @@ public partial class PackagesPageViewModel : ViewModelBase
         var icon = new SvgIcon
         {
             Path = $"avares://UniGetUI.Avalonia/Assets/Symbols/{svgName}.svg",
-            Width = 16,
-            Height = 16,
+            Width = 20,
+            Height = 20,
             VerticalAlignment = VerticalAlignment.Center,
         };
 
-        var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+        var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         content.Children.Add(icon);
         if (showLabel)
         {
@@ -260,8 +288,8 @@ public partial class PackagesPageViewModel : ViewModelBase
 
         var btn = new Button
         {
-            Height = 36,
-            Padding = new Thickness(8, 4),
+            Height = 40,
+            Padding = new Thickness(10, 4),
             CornerRadius = new CornerRadius(4),
             Content = content,
         };
@@ -275,13 +303,19 @@ public partial class PackagesPageViewModel : ViewModelBase
     /// <summary>Adds a thin vertical separator to the toolbar.</summary>
     public void AddToolbarSeparator()
     {
+        object? borderResource = null;
+        Application.Current?.Resources.TryGetResource(
+            "AppBorderBrush",
+            Application.Current?.ActualThemeVariant,
+            out borderResource);
+
         var sep = new Separator
         {
             Width = 1,
-            Height = 30,
+            Height = 32,
             Margin = new Thickness(4, 4),
-            Background = Application.Current?.FindResource("AppBorderBrush") as IBrush
-                         ?? new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)),
+            Background = borderResource as IBrush
+                         ?? new SolidColorBrush(Color.FromArgb(80, 128, 128, 128)),
         };
         AutomationProperties.SetAccessibilityView(sep, AccessibilityView.Raw);
         ToolBarItems.Add(sep);
@@ -559,10 +593,19 @@ public partial class PackagesPageViewModel : ViewModelBase
     public bool SearchMode_Exact { get => SearchMode == SearchMode.Exact; set { if (value) SearchMode = SearchMode.Exact; } }
     public bool SearchMode_Similar { get => SearchMode == SearchMode.Similar; set { if (value) SearchMode = SearchMode.Similar; } }
 
+    private bool _suppressSelectionRecompute;
     partial void OnAllPackagesCheckedChanged(bool? value)
     {
-        if (value == true) FilteredPackages.SelectAll();
-        else if (value == false) FilteredPackages.ClearSelection();
+        _suppressSelectionRecompute = true;
+        try
+        {
+            if (value == true) FilteredPackages.SelectAll();
+            else if (value == false) FilteredPackages.ClearSelection();
+        }
+        finally
+        {
+            _suppressSelectionRecompute = false;
+        }
     }
 
     // ─── Sources ──────────────────────────────────────────────────────────────

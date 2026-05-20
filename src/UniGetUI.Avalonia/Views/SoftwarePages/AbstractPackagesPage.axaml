@@ -36,9 +36,6 @@
          <Setter Property="Background" Value="Transparent"/>
          <Setter Property="BorderThickness" Value="0"/>
       </Style>
-      <Style Selector="#ToolbarRow ToggleButton:checked">
-         <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
-      </Style>
       <!-- Main action button: card background with border -->
       <Style Selector="Button#MainToolbarButton">
          <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
@@ -47,6 +44,12 @@
       <Style Selector="Button#MainToolbarButtonDropdown">
          <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
          <Setter Property="BorderThickness" Value="1"/>
+      </Style>
+      <!-- Render the three-state "Select all" checkbox's indeterminate glyph as a dash instead of a square -->
+      <Style Selector="CheckBox:indeterminate /template/ Path#CheckGlyph">
+         <Setter Property="Data" Value="M0,0 H10 V2 H0 Z"/>
+         <Setter Property="Width" Value="10"/>
+         <Setter Property="Height" Value="2"/>
       </Style>
    </UserControl.Styles>
 
@@ -96,17 +99,50 @@
               ColumnSpacing="4"
               Margin="0">
 
-            <!-- Filters toggle — MinWidth tracks the filter pane so action buttons stay aligned with the package list -->
+            <!-- Filters toggle — MinWidth tracks the filter pane width so action buttons stay aligned
+                 with the package list when the pane is open, and collapse next to the Filters button when closed. -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,0"
                         MinWidth="{Binding FilterPaneColumnWidth}">
                 <ToggleButton x:Name="ToggleFiltersButton"
-                              Height="36"
-                              Padding="8,4"
+                              Height="40"
+                              Padding="10,4"
                               CornerRadius="4"
                               automation:AutomationProperties.Name="{t:Translate Filters}"
                               IsChecked="{Binding IsFilterPaneOpen, Mode=TwoWay}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/Filter.svg" Width="16" Height="16" VerticalAlignment="Center"/>
+                    <ToggleButton.Resources>
+                        <ResourceDictionary>
+                            <ResourceDictionary.ThemeDictionaries>
+                                <ResourceDictionary x:Key="Light">
+                                    <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="#FBFBFB"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="#F6F6F6"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed" Color="#EDEDED"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedDisabled" Color="#FBFBFB"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBorderBrushChecked" Color="#ECECEC"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPointerOver" Color="#ECECEC"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPressed" Color="#ECECEC"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedDisabled" Color="#ECECEC"/>
+                                    <SolidColorBrush x:Key="ToggleButtonForegroundChecked" Color="Black"/>
+                                    <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPointerOver" Color="Black"/>
+                                    <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPressed" Color="Black"/>
+                                </ResourceDictionary>
+                                <ResourceDictionary x:Key="Dark">
+                                    <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="#2D2D2D"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="#323232"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed" Color="#3C3C3C"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedDisabled" Color="#2D2D2D"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBorderBrushChecked" Color="#393939"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPointerOver" Color="#393939"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPressed" Color="#393939"/>
+                                    <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedDisabled" Color="#393939"/>
+                                    <SolidColorBrush x:Key="ToggleButtonForegroundChecked" Color="White"/>
+                                    <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPointerOver" Color="White"/>
+                                    <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPressed" Color="White"/>
+                                </ResourceDictionary>
+                            </ResourceDictionary.ThemeDictionaries>
+                        </ResourceDictionary>
+                    </ToggleButton.Resources>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/Filter.svg" Width="20" Height="20" VerticalAlignment="Center"/>
                         <TextBlock Text="{t:Translate Filters}" FontSize="12" FontWeight="Medium" VerticalAlignment="Center"/>
                     </StackPanel>
                 </ToggleButton>
@@ -115,12 +151,12 @@
             <!-- Main action button + dropdown -->
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button x:Name="MainToolbarButton"
-                        Height="36"
+                        Height="40"
                         Margin="-9,0,1,0"
                         CornerRadius="4,0,0,4">
-                    <StackPanel Orientation="Horizontal" Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
                         <controls:SvgIcon x:Name="MainToolbarButtonIcon"
-                                          Width="16" Height="16"
+                                          Width="20" Height="20"
                                           VerticalAlignment="Center"/>
                         <TextBlock x:Name="MainToolbarButtonText"
                                    FontSize="12"
@@ -129,13 +165,18 @@
                     </StackPanel>
                 </Button>
                 <Button x:Name="MainToolbarButtonDropdown"
-                        Width="30"
-                        Height="36"
+                        Width="32"
+                        Height="40"
                         Padding="4"
                         automation:AutomationProperties.Name="{t:Translate More}"
                         CornerRadius="0,4,4,0">
-                    <TextBlock Text="▾" FontSize="20" HorizontalAlignment="Center"
-                               automation:AutomationProperties.AccessibilityView="Raw"/>
+                    <Path Data="M 0,0 L 4,4 L 8,0"
+                          Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                          StrokeThickness="1.5"
+                          StrokeJoin="Miter"
+                          Fill="Transparent"
+                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                          automation:AutomationProperties.AccessibilityView="Raw"/>
                 </Button>
             </StackPanel>
 
@@ -209,7 +250,8 @@
                                             Padding="2"
                                             Background="Transparent"
                                             BorderThickness="0">
-                                        <TextBlock Text="{t:Translate Select all}" FontSize="12" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{t:Translate Select all}" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
                                     </Button>
                                     <Button x:Name="ClearSourceSelectionButton"
                                             Grid.Column="1"
@@ -220,7 +262,8 @@
                                             Padding="2"
                                             Background="Transparent"
                                             BorderThickness="0">
-                                        <TextBlock Text="{t:Translate Clear selection}" FontSize="12" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{t:Translate Clear selection}" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
                                     </Button>
                                     <ItemsControl x:Name="SourcesTreeView"
                                               Grid.Row="1"
@@ -232,10 +275,84 @@
                                             <DataTemplate x:DataType="vm:SourceTreeNode">
                                                 <StackPanel>
                                                     <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                              Content="{Binding PackageName}"/>
-                                                    <!-- Child sources, indented, shown when manager has custom sources -->
+                                                              VerticalAlignment="Center">
+                                                        <CheckBox.Content>
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                                                      IsVisible="{Binding HasChildren}"
+                                                                      BorderThickness="0"
+                                                                      Width="20" Height="20"
+                                                                      Padding="0"
+                                                                      Opacity="0.55"
+                                                                      VerticalAlignment="Center"
+                                                                      automation:AutomationProperties.Name="{t:Translate Expand}">
+                                                            <ToggleButton.Resources>
+                                                                <ResourceDictionary>
+                                                                    <ResourceDictionary.ThemeDictionaries>
+                                                                        <ResourceDictionary x:Key="Light">
+                                                                            <SolidColorBrush x:Key="ToggleButtonBackground"               Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver"    Color="#0F000000"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBackgroundPressed"        Color="#1A000000"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBackgroundChecked"        Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="#0F000000"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed" Color="#1A000000"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBorderBrush"               Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBorderBrushPointerOver"    Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBorderBrushPressed"        Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBorderBrushChecked"        Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPointerOver" Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPressed" Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonForegroundChecked"             Color="Black"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPointerOver" Color="Black"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPressed"     Color="Black"/>
+                                                                        </ResourceDictionary>
+                                                                        <ResourceDictionary x:Key="Dark">
+                                                                            <SolidColorBrush x:Key="ToggleButtonBackground"               Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver"    Color="#15FFFFFF"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBackgroundPressed"        Color="#20FFFFFF"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBackgroundChecked"        Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="#15FFFFFF"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed" Color="#20FFFFFF"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBorderBrush"               Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBorderBrushPointerOver"    Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBorderBrushPressed"        Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBorderBrushChecked"        Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPointerOver" Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPressed" Color="Transparent"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonForegroundChecked"             Color="White"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPointerOver" Color="White"/>
+                                                                            <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPressed"     Color="White"/>
+                                                                        </ResourceDictionary>
+                                                                    </ResourceDictionary.ThemeDictionaries>
+                                                                </ResourceDictionary>
+                                                            </ToggleButton.Resources>
+                                                            <Grid>
+                                                                <!-- Collapsed: chevron points right (>) -->
+                                                                <Path Data="M 0,0 L 4,4 L 0,8"
+                                                                      Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                      StrokeThickness="1.5"
+                                                                      StrokeJoin="Miter"
+                                                                      Fill="Transparent"
+                                                                      HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                      IsVisible="{Binding !IsExpanded}"/>
+                                                                <!-- Expanded: chevron points down (v) -->
+                                                                <Path Data="M 0,0 L 4,4 L 8,0"
+                                                                      Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                      StrokeThickness="1.5"
+                                                                      StrokeJoin="Miter"
+                                                                      Fill="Transparent"
+                                                                      HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                      IsVisible="{Binding IsExpanded}"/>
+                                                            </Grid>
+                                                        </ToggleButton>
+                                                                <TextBlock Text="{Binding PackageName}" VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </CheckBox.Content>
+                                                    </CheckBox>
+                                                    <!-- Child sources, indented, only shown when parent is expanded -->
                                                     <ItemsControl ItemsSource="{Binding Children}"
-                                                                  Margin="20,0,0,0">
+                                                                  IsVisible="{Binding IsExpanded}"
+                                                                  Margin="24,0,0,0">
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:SourceTreeNode">
                                                                 <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
@@ -398,7 +515,7 @@
                                   CanUserResizeColumns="True"
                                   CanUserSortColumns="True"
                                   SelectionMode="Extended"
-                                  GridLinesVisibility="Horizontal">
+                                  GridLinesVisibility="None">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Width="40">
                                     <DataGridTemplateColumn.CellTemplate>
@@ -693,7 +810,10 @@
         </Grid>
 
     <!-- ==================== FOOTER STATUS BAR ==================== -->
-    <Border Grid.Row="3" Margin="0,4,0,-8" VerticalAlignment="Center">
+    <Border Grid.Row="3" Margin="0,-4,0,-8" VerticalAlignment="Center"
+            BorderThickness="0,1,0,0"
+            BorderBrush="{DynamicResource AppBorderBrush}"
+            Padding="0,4,0,0">
         <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 
             <!-- Order by -->
@@ -703,7 +823,7 @@
                         VerticalAlignment="Center">
                 <TextBlock x:Name="OrderByLabel" Text="{t:Translate Order by:}" FontSize="13" VerticalAlignment="Center"/>
                 <Button x:Name="OrderByButton"
-                        Padding="10,6"
+                        Padding="8,3"
                         CornerRadius="4"
                         Background="Transparent"
                         BorderThickness="1"
@@ -711,8 +831,13 @@
                         automation:AutomationProperties.LabeledBy="{Binding #OrderByLabel}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="{Binding SortFieldName}" VerticalAlignment="Center" FontSize="13"/>
-                        <TextBlock Text="▾" VerticalAlignment="Center" FontSize="19" Opacity="0.7"
-                                   automation:AutomationProperties.AccessibilityView="Raw"/>
+                        <Path Data="M 0,0 L 4,4 L 8,0"
+                              Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                              StrokeThickness="1.5"
+                              StrokeJoin="Miter"
+                              Fill="Transparent"
+                              VerticalAlignment="Center"
+                              automation:AutomationProperties.AccessibilityView="Raw"/>
                     </StackPanel>
                     <Button.Flyout>
                         <MenuFlyout Placement="TopEdgeAlignedRight">
@@ -748,17 +873,45 @@
                             <StackPanel Orientation="Horizontal"/>
                         </ItemsPanelTemplate>
                     </ListBox.ItemsPanel>
-                    <ListBoxItem x:Name="Selector_List" Padding="10,6" ToolTip.Tip="List"
+                    <ListBoxItem x:Name="Selector_List" Padding="8,3" ToolTip.Tip="List"
                                  automation:AutomationProperties.Name="List">
-                        <TextBlock Text="☰" FontSize="19" automation:AutomationProperties.AccessibilityView="Raw"/>
+                        <Grid Width="16" Height="16"
+                              automation:AutomationProperties.AccessibilityView="Raw">
+                            <!-- bullets -->
+                            <Path Data="M 3,3 m -1.2,0 a 1.2,1.2 0 1,0 2.4,0 a 1.2,1.2 0 1,0 -2.4,0
+                                        M 3,8 m -1.2,0 a 1.2,1.2 0 1,0 2.4,0 a 1.2,1.2 0 1,0 -2.4,0
+                                        M 3,13 m -1.2,0 a 1.2,1.2 0 1,0 2.4,0 a 1.2,1.2 0 1,0 -2.4,0"
+                                  Fill="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            <!-- lines -->
+                            <Path Data="M 6,3 H 14 M 6,8 H 14 M 6,13 H 14"
+                                  Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                                  StrokeThickness="1.5"
+                                  StrokeLineCap="Round"
+                                  Fill="Transparent"/>
+                        </Grid>
                     </ListBoxItem>
-                    <ListBoxItem x:Name="Selector_Grid" Padding="10,6" ToolTip.Tip="Grid"
+                    <ListBoxItem x:Name="Selector_Grid" Padding="8,3" ToolTip.Tip="Grid"
                                  automation:AutomationProperties.Name="Grid">
-                        <TextBlock Text="⊞" FontSize="19" automation:AutomationProperties.AccessibilityView="Raw"/>
+                        <!-- Two rows: open "[" bracket on the left + two stacked lines on the right -->
+                        <Path Width="16" Height="16"
+                              Data="M 4,2 H 2 V 6 H 4   M 6,3 H 14   M 6,5 H 14
+                                    M 4,10 H 2 V 14 H 4 M 6,11 H 14  M 6,13 H 14"
+                              Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                              StrokeThickness="1"
+                              StrokeLineCap="Round"
+                              StrokeJoin="Miter"
+                              Fill="Transparent"
+                              automation:AutomationProperties.AccessibilityView="Raw"/>
                     </ListBoxItem>
-                    <ListBoxItem x:Name="Selector_Icons" Padding="10,6" ToolTip.Tip="Icons"
+                    <ListBoxItem x:Name="Selector_Icons" Padding="8,3" ToolTip.Tip="Icons"
                                  automation:AutomationProperties.Name="Icons">
-                        <TextBlock Text="⊟" FontSize="19" automation:AutomationProperties.AccessibilityView="Raw"/>
+                        <!-- 2x2 hollow squares (WinUI IconView) with extra gap between -->
+                        <Path Width="16" Height="16"
+                              Data="M 2,2 H 6 V 6 H 2 Z M 10,2 H 14 V 6 H 10 Z M 2,10 H 6 V 14 H 2 Z M 10,10 H 14 V 14 H 10 Z"
+                              Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                              StrokeThickness="1.3"
+                              Fill="Transparent"
+                              automation:AutomationProperties.AccessibilityView="Raw"/>
                     </ListBoxItem>
                 </ListBox>
             </StackPanel>

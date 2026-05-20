@@ -127,6 +127,14 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    // ─── Title bar ───────────────────────────────────────────────────────────
+    // Mirrors WinUI behavior: the version appears next to "UniGetUI" only when
+    // the ShowVersionNumberOnTitlebar setting is enabled (the setting is gated
+    // on restart, so a one-shot read at construction is sufficient).
+    public string TitleBarText { get; } = Settings.Get(Settings.K.ShowVersionNumberOnTitlebar)
+        ? $"UniGetUI {CoreTools.Translate("version {0}", CoreData.VersionName)}"
+        : "UniGetUI";
+
     // ─── Banners ─────────────────────────────────────────────────────────────
     public InfoBarViewModel UpdatesBanner { get; } = new() { Severity = InfoBarSeverity.Success };
     public InfoBarViewModel ErrorBanner { get; } = new() { Severity = InfoBarSeverity.Error };

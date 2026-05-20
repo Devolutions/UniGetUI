@@ -15,6 +15,9 @@ public sealed partial class CheckboxButtonCard : SettingsCard
     public ToggleSwitch _checkbox;
     public TextBlock _textblock;
     public Button Button;
+    private readonly TextBlock _stateLabel;
+    private static readonly string EnabledLabel = CoreTools.Translate("Enabled");
+    private static readonly string DisabledLabel = CoreTools.Translate("Disabled");
     private bool IS_INVERTED;
 
     private CoreSettings.K setting_name = CoreSettings.K.Unset;
@@ -26,6 +29,7 @@ public sealed partial class CheckboxButtonCard : SettingsCard
             IS_INVERTED = CoreSettings.ResolveKey(value).StartsWith("Disable");
             _checkbox.IsChecked = CoreSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
             _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
+            UpdateStateLabel();
             Button.IsEnabled = (_checkbox.IsChecked ?? false) || _buttonAlwaysOn;
         }
     }
@@ -70,10 +74,19 @@ public sealed partial class CheckboxButtonCard : SettingsCard
         Button = new Button { Margin = new Thickness(0, 8, 0, 0) };
         _checkbox = new ToggleSwitch
         {
-            Margin = new Thickness(0, 0, 8, 0),
-            OnContent = new TextBlock { Text = CoreTools.Translate("Enabled") },
-            OffContent = new TextBlock { Text = CoreTools.Translate("Disabled") },
+            // OnContent/OffContent intentionally left null — state label is a
+            // sibling TextBlock to the LEFT of the knob.
+            OnContent = null,
+            OffContent = null,
+            VerticalAlignment = VerticalAlignment.Center,
         };
+        _stateLabel = new TextBlock
+        {
+            Text = DisabledLabel,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0),
+        };
+        AutomationProperties.SetAccessibilityView(_stateLabel, AccessibilityView.Raw);
         _textblock = new TextBlock
         {
             Margin = new Thickness(2, 0, 0, 0),
@@ -84,7 +97,12 @@ public sealed partial class CheckboxButtonCard : SettingsCard
         IS_INVERTED = false;
         AutomationProperties.SetAccessibilityView(Button, AccessibilityView.Control);
 
-        Content = _checkbox;
+        Content = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+            Children = { _stateLabel, _checkbox },
+        };
         Header = _textblock;
         Description = Button;
 
@@ -94,6 +112,7 @@ public sealed partial class CheckboxButtonCard : SettingsCard
             StateChanged?.Invoke(this, EventArgs.Empty);
             Button.IsEnabled = (_checkbox.IsChecked ?? false) ? true : _buttonAlwaysOn;
             _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
+            UpdateStateLabel();
             if (_textblock.Text is not null)
             {
                 AccessibilityAnnouncementService.AnnounceToggle(_textblock.Text, _checkbox.IsChecked ?? false);
@@ -101,5 +120,10 @@ public sealed partial class CheckboxButtonCard : SettingsCard
         };
         Button.Click += (s, e) => Click?.Invoke(s, e);
         ApplyAutomationMetadata(_checkbox, _textblock.Text);
+    }
+
+    private void UpdateStateLabel()
+    {
+        _stateLabel.Text = (_checkbox.IsChecked ?? false) ? EnabledLabel : DisabledLabel;
     }
 }

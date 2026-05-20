@@ -296,6 +296,40 @@ public sealed class ObservablePackageCollection : AvaloniaList<PackageWrapper>
     public Sorter CurrentSorter { get; private set; } = Sorter.Name;
     private bool _ascending = true;
 
+    /// <summary>Fires when any wrapper's IsChecked changes, or when items are added/removed.</summary>
+    public event EventHandler? SelectionStateChanged;
+
+    public ObservablePackageCollection()
+    {
+        CollectionChanged += OnCollectionChanged;
+    }
+
+    private void OnCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems is not null)
+            foreach (PackageWrapper w in e.OldItems) w.PropertyChanged -= OnWrapperPropertyChanged;
+        if (e.NewItems is not null)
+            foreach (PackageWrapper w in e.NewItems) w.PropertyChanged += OnWrapperPropertyChanged;
+        SelectionStateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnWrapperPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PackageWrapper.IsChecked))
+            SelectionStateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Returns the tri-state value for a "select-all" checkbox: true=all, false=none, null=some.</summary>
+    public bool? GetSelectionState()
+    {
+        if (Count == 0) return false;
+        int checkedCount = 0;
+        foreach (var w in this) if (w.IsChecked) checkedCount++;
+        if (checkedCount == 0) return false;
+        if (checkedCount == Count) return true;
+        return null;
+    }
+
     public List<IPackage> GetPackages() =>
         this.Select(w => w.Package).ToList();
 

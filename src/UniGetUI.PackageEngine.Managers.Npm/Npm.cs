@@ -29,6 +29,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                 SupportsPreRelease = true,
                 SupportsProxy = ProxySupport.No,
                 SupportsProxyAuth = false,
+                KnowsPackageReleaseDate = PackageReleaseDateSupport.Yes,
             };
 
             Properties = new ManagerProperties

@@ -29,7 +29,8 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                 CanListDependencies = true,
                 SupportsPreRelease = true,
                 SupportsProxy = ProxySupport.No,
-                SupportsProxyAuth = false
+                SupportsProxyAuth = false,
+                KnowsPackageReleaseDate = PackageReleaseDateSupport.Yes,
             };
 
             Properties = new ManagerProperties

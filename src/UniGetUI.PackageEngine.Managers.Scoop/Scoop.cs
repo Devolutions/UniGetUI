@@ -80,6 +80,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 },
                 SupportsProxy = ProxySupport.No,
                 SupportsProxyAuth = false,
+                KnowsPackageReleaseDate = PackageReleaseDateSupport.No,
             };
 
             Properties = new ManagerProperties

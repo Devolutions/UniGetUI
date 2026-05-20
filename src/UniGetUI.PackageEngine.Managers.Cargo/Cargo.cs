@@ -67,6 +67,7 @@ public partial class Cargo : PackageManager
             CanDownloadInstaller = true,
             SupportsProxy = ProxySupport.Partially,
             SupportsProxyAuth = true,
+            KnowsPackageReleaseDate = PackageReleaseDateSupport.Yes,
         };
 
         var cratesIo = new ManagerSource(this, "crates.io", new Uri("https://index.crates.io/"));

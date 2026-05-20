@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Media;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine;
+using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using Windows.UI;
 using Windows.UI.Text;
 
@@ -18,9 +19,6 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
     /// </summary>
     public sealed partial class Updates : Page, ISettingsPage
     {
-        private static readonly HashSet<string> _managersWithoutUpdateDate =
-            new(StringComparer.OrdinalIgnoreCase) { "Homebrew", "Scoop", "vcpkg", "WinGet" };
-
         public Updates()
         {
             this.InitializeComponent();
@@ -97,9 +95,6 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
 
         private static UIElement BuildReleaseDateCompatTable()
         {
-            string yesStr = CoreTools.Translate("Yes");
-            string noStr = CoreTools.Translate("No");
-
             var managers = PEInterface.Managers.ToList();
 
             var table = new Grid { ColumnSpacing = 24, RowSpacing = 8 };
@@ -130,8 +125,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 int row = i + 1;
                 var name = new TextBlock { Text = manager.DisplayName, VerticalAlignment = VerticalAlignment.Center };
                 Grid.SetRow(name, row); Grid.SetColumn(name, 0);
-                bool supported = !_managersWithoutUpdateDate.Contains(manager.Name);
-                var badge = MakeStatusBadge(supported ? yesStr : noStr, supported);
+                var badge = MakeStatusBadge(manager.Capabilities.KnowsPackageReleaseDate);
                 Grid.SetRow(badge, row); Grid.SetColumn(badge, 1);
                 table.Children.Add(name);
                 table.Children.Add(badge);
@@ -156,14 +150,14 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
             return card;
         }
 
-        private static Border MakeStatusBadge(string text, bool isSupported)
+        private static Border MakeStatusBadge(PackageReleaseDateSupport support)
         {
-            var bgColor = isSupported
-                ? Color.FromArgb(60, 0, 180, 0)
-                : Color.FromArgb(60, 224, 82, 82);
-            var borderColor = isSupported
-                ? Color.FromArgb(120, 0, 180, 0)
-                : Color.FromArgb(120, 224, 82, 82);
+            (string text, Color baseColor) = support switch
+            {
+                PackageReleaseDateSupport.Yes => (CoreTools.Translate("Yes"), Color.FromArgb(255, 0, 180, 0)),
+                PackageReleaseDateSupport.Partial => (CoreTools.Translate("Partial"), Color.FromArgb(255, 224, 168, 0)),
+                _ => (CoreTools.Translate("No"), Color.FromArgb(255, 224, 82, 82)),
+            };
 
             return new Border
             {
@@ -171,8 +165,8 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 Padding = new Thickness(4, 2, 4, 2),
                 BorderThickness = new Thickness(1),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
-                Background = new SolidColorBrush(bgColor),
-                BorderBrush = new SolidColorBrush(borderColor),
+                Background = new SolidColorBrush(Color.FromArgb(60, baseColor.R, baseColor.G, baseColor.B)),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(120, baseColor.R, baseColor.G, baseColor.B)),
                 Child = new TextBlock { Text = text, TextAlignment = TextAlignment.Center },
             };
         }

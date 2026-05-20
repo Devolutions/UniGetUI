@@ -43,6 +43,7 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
                 SupportsCustomVersions = true,
                 SupportsProxy = ProxySupport.Partially,
                 SupportsProxyAuth = true,
+                KnowsPackageReleaseDate = PackageReleaseDateSupport.Yes,
             };
 
             Properties = new ManagerProperties

@@ -247,11 +247,14 @@ internal sealed class PingetCliPackageDetailsProvider(string cliExecutablePath)
                 .ToArray()!;
         }
 
+        // ReleaseDate is set at the manifest root by default, with an optional per-installer override
+        SetIfPresent(value => details.UpdateDate = value,
+            (hasInstaller ? GetString(installer, "ReleaseDate") : null) ?? GetString(manifest, "ReleaseDate"));
+
         if (hasInstaller)
         {
             SetIfPresent(value => details.InstallerHash = value, GetString(installer, "InstallerSha256"));
             SetIfPresent(value => details.InstallerType = value, GetString(installer, "InstallerType"));
-            SetIfPresent(value => details.UpdateDate = value, GetString(installer, "ReleaseDate"));
 
             if (TryCreateUri(GetString(installer, "InstallerUrl"), out Uri? installerUri))
             {

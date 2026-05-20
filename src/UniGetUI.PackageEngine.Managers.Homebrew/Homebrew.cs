@@ -53,6 +53,7 @@ public class Homebrew : PackageManager
             },
             SupportsProxy = ProxySupport.No,
             SupportsProxyAuth = false,
+            KnowsPackageReleaseDate = PackageReleaseDateSupport.No,
         };
 
         Properties = new ManagerProperties

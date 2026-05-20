@@ -7,6 +7,13 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         Yes,
     }
 
+    public enum PackageReleaseDateSupport
+    {
+        No,
+        Partial,
+        Yes,
+    }
+
     public struct SourceCapabilities
     {
         public bool KnowsUpdateDate { get; set; } = false;
@@ -37,6 +44,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public bool SupportsCustomPackageScreenshots = false;
         public ProxySupport SupportsProxy = ProxySupport.No;
         public bool SupportsProxyAuth = false;
+        public PackageReleaseDateSupport KnowsPackageReleaseDate = PackageReleaseDateSupport.No;
         public SourceCapabilities Sources { get; set; }
 
         public ManagerCapabilities()

@@ -12,6 +12,7 @@ using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.Managers.VcpkgManager;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 using CornerRadius = global::Avalonia.CornerRadius;
@@ -21,9 +22,6 @@ namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
 public sealed partial class PackageManagerPage : UserControl, ISettingsPage
 {
-    private static readonly HashSet<string> _managersWithoutUpdateDate =
-        new(StringComparer.OrdinalIgnoreCase)
-        { "Homebrew", "Scoop", "vcpkg" };
     private PackageManagerViewModel ViewModel => (PackageManagerViewModel)DataContext!;
 
     public bool CanGoBack => true;
@@ -260,17 +258,28 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         };
 
         bool initiallyCustom = savedAge == "custom";
-        bool ageSupported = !_managersWithoutUpdateDate.Contains(manager.Name);
-        object ageDescription = !ageSupported
-            ? new TextBlock
+        var releaseDateSupport = manager.Capabilities.KnowsPackageReleaseDate;
+        bool ageSupported = releaseDateSupport != PackageReleaseDateSupport.No;
+        object ageDescription = releaseDateSupport switch
+        {
+            PackageReleaseDateSupport.No => new TextBlock
             {
                 Text = CoreTools.Translate("{pm} does not provide release dates for its packages, so this setting will have no effect")
                                .Replace("{pm}", manager.DisplayName),
                 Foreground = new SolidColorBrush(Color.Parse("#e05252")),
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 12,
-            }
-            : CoreTools.Translate("Override the global minimum update age for this package manager");
+            },
+            PackageReleaseDateSupport.Partial => new TextBlock
+            {
+                Text = CoreTools.Translate("{pm} only provides release dates for some of its packages, so this setting will only apply to those packages")
+                               .Replace("{pm}", manager.DisplayName),
+                Foreground = new SolidColorBrush(Color.FromRgb(224, 168, 0)),
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 12,
+            },
+            _ => CoreTools.Translate("Override the global minimum update age for this package manager"),
+        };
 
         ageCombo.IsEnabled = ageSupported;
         customAgeInput.IsEnabled = ageSupported;

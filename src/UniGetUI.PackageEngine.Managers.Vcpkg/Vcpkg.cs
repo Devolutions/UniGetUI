@@ -45,6 +45,7 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
                 CanListDependencies = true,
                 SupportsProxy = ProxySupport.No,
                 SupportsProxyAuth = false,
+                KnowsPackageReleaseDate = PackageReleaseDateSupport.No,
             };
 
             string DefaultTriplet = GetDefaultTriplet();

@@ -37,6 +37,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
                 },
                 SupportsProxy = ProxySupport.Partially,
                 SupportsProxyAuth = true,
+                KnowsPackageReleaseDate = PackageReleaseDateSupport.Yes,
             };
 
             Properties = new ManagerProperties

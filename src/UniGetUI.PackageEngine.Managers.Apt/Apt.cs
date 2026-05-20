@@ -26,6 +26,7 @@ public class Apt : PackageManager
             SupportsCustomSources = false,
             SupportsProxy = ProxySupport.No,
             SupportsProxyAuth = false,
+            KnowsPackageReleaseDate = PackageReleaseDateSupport.Yes,
         };
 
         Properties = new ManagerProperties

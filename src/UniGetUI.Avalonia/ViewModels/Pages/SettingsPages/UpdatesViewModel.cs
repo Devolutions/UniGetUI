@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine;
+using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 using CornerRadius = Avalonia.CornerRadius;
 using Thickness = Avalonia.Thickness;
@@ -19,10 +20,6 @@ public partial class UpdatesViewModel : ViewModelBase
 
     [ObservableProperty] private bool _isAutoCheckEnabled;
     [ObservableProperty] private bool _isCustomAgeSelected;
-
-    private static readonly HashSet<string> _managersWithoutUpdateDate =
-        new(StringComparer.OrdinalIgnoreCase)
-        { "Homebrew", "Scoop", "vcpkg" };
 
     /// <summary>Items for the minimum update age ComboboxCard, in display/value pairs.</summary>
     public IReadOnlyList<(string Name, string Value)> MinimumAgeItems { get; } =
@@ -60,9 +57,6 @@ public partial class UpdatesViewModel : ViewModelBase
 
     public Control BuildReleaseDateCompatTable()
     {
-        string yesStr = CoreTools.Translate("Yes");
-        string noStr = CoreTools.Translate("No");
-
         var managers = PEInterface.Managers.ToList();
 
         var table = new Grid
@@ -89,8 +83,13 @@ public partial class UpdatesViewModel : ViewModelBase
             var name = new TextBlock { Text = manager.DisplayName, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetRow(name, row); Grid.SetColumn(name, 0);
 
-            bool supported = !_managersWithoutUpdateDate.Contains(manager.Name);
-            var badge = _statusBadge(supported ? yesStr : noStr, supported ? Colors.Green : Colors.Red);
+            (string label, Color color) = manager.Capabilities.KnowsPackageReleaseDate switch
+            {
+                PackageReleaseDateSupport.Yes => (CoreTools.Translate("Yes"), Colors.Green),
+                PackageReleaseDateSupport.Partial => (CoreTools.Translate("Partial"), Color.FromRgb(224, 168, 0)),
+                _ => (CoreTools.Translate("No"), Colors.Red),
+            };
+            var badge = _statusBadge(label, color);
             Grid.SetRow(badge, row); Grid.SetColumn(badge, 1);
 
             table.Children.Add(name);

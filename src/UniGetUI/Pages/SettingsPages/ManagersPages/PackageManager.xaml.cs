@@ -11,6 +11,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Widgets;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.Managers.BunManager;
 using UniGetUI.PackageEngine.Managers.CargoManager;
 using UniGetUI.PackageEngine.Managers.ChocolateyManager;
@@ -35,9 +36,6 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
     /// </summary>
     public sealed partial class PackageManagerPage : Page, ISettingsPage
     {
-        private static readonly HashSet<string> _managersWithoutUpdateDate =
-            new(StringComparer.OrdinalIgnoreCase) { "Homebrew", "Scoop", "vcpkg", "WinGet" };
-
         IPackageManager? Manager;
         public event EventHandler? RestartRequired;
         public event EventHandler<Type>? NavigationRequested
@@ -493,10 +491,12 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
             };
 
             bool initiallyCustomAge = savedAgeVal == "custom";
-            bool ageSupported = !_managersWithoutUpdateDate.Contains(Manager.Name);
+            var releaseDateSupport = Manager.Capabilities.KnowsPackageReleaseDate;
+            bool ageSupported = releaseDateSupport != PackageReleaseDateSupport.No;
 
-            object ageCardDescription = !ageSupported
-                ? new TextBlock
+            object ageCardDescription = releaseDateSupport switch
+            {
+                PackageReleaseDateSupport.No => new TextBlock
                 {
                     Text = CoreTools.Translate(
                             "{pm} does not provide release dates for its packages, so this setting will have no effect")
@@ -505,8 +505,19 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                         Windows.UI.Color.FromArgb(255, 224, 82, 82)),
                     TextWrapping = TextWrapping.Wrap,
                     FontSize = 12,
-                }
-                : (object)CoreTools.Translate("Override the global minimum update age for this package manager");
+                },
+                PackageReleaseDateSupport.Partial => new TextBlock
+                {
+                    Text = CoreTools.Translate(
+                            "{pm} only provides release dates for some of its packages, so this setting will only apply to those packages")
+                        .Replace("{pm}", Manager.DisplayName),
+                    Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                        Windows.UI.Color.FromArgb(255, 224, 168, 0)),
+                    TextWrapping = TextWrapping.Wrap,
+                    FontSize = 12,
+                },
+                _ => (object)CoreTools.Translate("Override the global minimum update age for this package manager"),
+            };
 
             ageCombo.IsEnabled = ageSupported;
             customAgeInput.IsEnabled = ageSupported;

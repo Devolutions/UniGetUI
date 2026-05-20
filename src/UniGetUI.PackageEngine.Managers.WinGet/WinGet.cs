@@ -89,6 +89,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 },
                 SupportsProxy = ProxySupport.Partially,
                 SupportsProxyAuth = false,
+                KnowsPackageReleaseDate = PackageReleaseDateSupport.Partial,
             };
 
             Properties = new ManagerProperties

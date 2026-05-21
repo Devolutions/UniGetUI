@@ -24,20 +24,49 @@
         <ProjectReference Include="..\UniGetUI.PackageEngine.PackageManagerClasses\UniGetUI.PackageEngine.Classes.csproj" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">
-        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.PowerShell\UniGetUI.PackageEngine.Managers.PowerShell.csproj" />
-        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Scoop\UniGetUI.PackageEngine.Managers.Scoop.csproj" />
-        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.WinGet\UniGetUI.PackageEngine.Managers.WinGet.csproj" />
-        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Chocolatey\UniGetUI.PackageEngine.Managers.Chocolatey.csproj" />
+    <!-- Windows-only managers (only target $(WindowsTargetFramework)). Declared unconditionally on Windows builds
+         so the project graph sees them; SetTargetFramework pins them to their only TFM regardless of consumer,
+         and ReferenceOutputAssembly disables the /reference inclusion for the net10.0 inner build. -->
+    <ItemGroup Condition="'$(BuildSharedWindowsTargetFrameworks)' == 'true'">
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.PowerShell\UniGetUI.PackageEngine.Managers.PowerShell.csproj"
+                          SetTargetFramework="TargetFramework=$(WindowsTargetFramework)">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Scoop\UniGetUI.PackageEngine.Managers.Scoop.csproj"
+                          SetTargetFramework="TargetFramework=$(WindowsTargetFramework)">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.WinGet\UniGetUI.PackageEngine.Managers.WinGet.csproj"
+                          SetTargetFramework="TargetFramework=$(WindowsTargetFramework)">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Chocolatey\UniGetUI.PackageEngine.Managers.Chocolatey.csproj"
+                          SetTargetFramework="TargetFramework=$(WindowsTargetFramework)">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' != '$(WindowsTargetFramework)'">
-        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Apt\UniGetUI.PackageEngine.Managers.Apt.csproj" />
-        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Dnf\UniGetUI.PackageEngine.Managers.Dnf.csproj" />
-        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Pacman\UniGetUI.PackageEngine.Managers.Pacman.csproj" />
-        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Homebrew\UniGetUI.PackageEngine.Managers.Homebrew.csproj" />
-        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Snap\UniGetUI.PackageEngine.Managers.Snap.csproj" />
-        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Flatpak\UniGetUI.PackageEngine.Managers.Flatpak.csproj" />
+    <!-- Multi-target managers (Linux + Windows TFMs). Declared unconditionally so the graph is correct;
+         ReferenceOutputAssembly disables the /reference for the Windows inner build. -->
+    <ItemGroup>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Apt\UniGetUI.PackageEngine.Managers.Apt.csproj">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Dnf\UniGetUI.PackageEngine.Managers.Dnf.csproj">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Pacman\UniGetUI.PackageEngine.Managers.Pacman.csproj">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Homebrew\UniGetUI.PackageEngine.Managers.Homebrew.csproj">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Snap\UniGetUI.PackageEngine.Managers.Snap.csproj">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Flatpak\UniGetUI.PackageEngine.Managers.Flatpak.csproj">
+            <ReferenceOutputAssembly Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">false</ReferenceOutputAssembly>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>

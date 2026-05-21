@@ -367,8 +367,8 @@
             <!-- Right column: Linux window buttons on the far right -->
             <Panel Grid.Column="2">
 
-                <!-- Custom min / max / close (shown on Windows, macOS, and Linux without native decorations; IsVisible set in code-behind) -->
-                <StackPanel x:Name="LinuxWindowButtons"
+                <!-- Custom min / max / close (shown on Windows, and Linux without native decorations; IsVisible set in code-behind) -->
+                <StackPanel x:Name="WindowButtons"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"

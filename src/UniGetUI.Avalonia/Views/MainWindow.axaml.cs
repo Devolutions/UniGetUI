@@ -242,7 +242,7 @@ public partial class MainWindow : Window
             TitleBarGrid.ClearValue(HeightProperty);
             TitleBarGrid.Height = 44;
             HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
-            LinuxWindowButtons.IsVisible = true;
+            WindowButtons.IsVisible = true;
             MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
             this.GetObservable(WindowStateProperty).Subscribe(state =>
             {
@@ -259,7 +259,7 @@ public partial class MainWindow : Window
             TitleBarGrid.ClearValue(HeightProperty);
             TitleBarGrid.Height = 44;
             HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
-            LinuxWindowButtons.IsVisible = !useNativeDecorations;
+            WindowButtons.IsVisible = !useNativeDecorations;
             MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
             // Keep maximize icon in sync with window state
             this.GetObservable(WindowStateProperty).Subscribe(state =>

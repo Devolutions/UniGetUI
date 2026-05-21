@@ -201,6 +201,13 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
 
                 if (uri.IsFile)
                 {
+                    if (!IsSkiaDecodableExtension(uri.LocalPath))
+                    {
+                        // Avalonia's Bitmap (Skia) can't decode SVG/AVIF/ICO/TIFF — the
+                        // icon cache may produce those. Reject upfront so we don't throw.
+                        _iconCache[hash] = null;
+                        return;
+                    }
                     bitmap = await Task.Run(() => new Bitmap(uri.LocalPath)).ConfigureAwait(false);
                 }
                 else if (uri.Scheme is "http" or "https")
@@ -221,6 +228,17 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
             await Dispatcher.UIThread.InvokeAsync(() => IconBitmap = bitmap);
         }
         catch { _iconCache[hash] = null; }
+    }
+
+    private static bool IsSkiaDecodableExtension(string path)
+    {
+        string ext = Path.GetExtension(path);
+        return ext.Equals(".png", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".gif", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".bmp", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".webp", StringComparison.OrdinalIgnoreCase);
     }
 
     private void Package_PropertyChanged(object? sender, PropertyChangedEventArgs e)

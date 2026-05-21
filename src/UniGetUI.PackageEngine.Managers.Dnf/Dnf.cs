@@ -29,7 +29,7 @@ public class Dnf : PackageManager
             SupportsCustomSources = false,
             SupportsProxy = ProxySupport.No,
             SupportsProxyAuth = false,
-            KnowsPackageReleaseDate = PackageReleaseDateSupport.Yes,
+            KnowsPackageReleaseDate = PackageReleaseDateSupport.No,
         };
 
         Properties = new ManagerProperties

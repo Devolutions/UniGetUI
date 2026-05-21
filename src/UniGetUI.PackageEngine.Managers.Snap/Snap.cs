@@ -32,7 +32,7 @@ public partial class Snap : PackageManager
             SupportsCustomSources = false,
             SupportsProxy = ProxySupport.No,
             SupportsProxyAuth = false,
-            KnowsPackageReleaseDate = PackageReleaseDateSupport.Yes,
+            KnowsPackageReleaseDate = PackageReleaseDateSupport.No,
         };
 
         var snapcraftSource = new ManagerSource(this, "snapcraft", new Uri("https://snapcraft.io"));

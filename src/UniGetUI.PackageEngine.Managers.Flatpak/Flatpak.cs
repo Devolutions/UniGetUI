@@ -35,7 +35,7 @@ public partial class Flatpak : PackageManager
             },
             SupportsProxy = ProxySupport.No,
             SupportsProxyAuth = false,
-            KnowsPackageReleaseDate = PackageReleaseDateSupport.Yes,
+            KnowsPackageReleaseDate = PackageReleaseDateSupport.No,
         };
 
         Properties = new ManagerProperties

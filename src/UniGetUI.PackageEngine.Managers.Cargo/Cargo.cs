@@ -65,6 +65,7 @@ public partial class Cargo : PackageManager
             SupportsCustomVersions = true,
             SupportsCustomLocations = true,
             CanDownloadInstaller = true,
+            SupportsMinimumAge = true,
             SupportsProxy = ProxySupport.Partially,
             SupportsProxyAuth = true,
         };

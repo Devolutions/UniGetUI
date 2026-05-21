@@ -27,6 +27,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                 SupportsCustomScopes = true,
                 CanListDependencies = true,
                 SupportsPreRelease = true,
+                SupportsMinimumAge = true,
                 SupportsProxy = ProxySupport.No,
                 SupportsProxyAuth = false,
             };

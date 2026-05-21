@@ -21,9 +21,6 @@ namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
 public sealed partial class PackageManagerPage : UserControl, ISettingsPage
 {
-    private static readonly HashSet<string> _managersWithoutUpdateDate =
-        new(StringComparer.OrdinalIgnoreCase)
-        { "Homebrew", "Scoop", "vcpkg" };
     private PackageManagerViewModel ViewModel => (PackageManagerViewModel)DataContext!;
 
     public bool CanGoBack => true;
@@ -260,7 +257,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         };
 
         bool initiallyCustom = savedAge == "custom";
-        bool ageSupported = !_managersWithoutUpdateDate.Contains(manager.Name);
+        bool ageSupported = manager.Capabilities.SupportsMinimumAge;
         object ageDescription = !ageSupported
             ? new TextBlock
             {

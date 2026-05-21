@@ -28,6 +28,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                 SupportsCustomScopes = false,
                 CanListDependencies = true,
                 SupportsPreRelease = true,
+                SupportsMinimumAge = true,
                 SupportsProxy = ProxySupport.No,
                 SupportsProxyAuth = false
             };

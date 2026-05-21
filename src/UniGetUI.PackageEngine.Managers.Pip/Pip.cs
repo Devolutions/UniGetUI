@@ -61,6 +61,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 CanDownloadInstaller = true,
                 SupportsPreRelease = true,
                 CanListDependencies = true,
+                SupportsMinimumAge = true,
                 SupportsProxy = ProxySupport.Yes,
                 SupportsProxyAuth = true,
             };

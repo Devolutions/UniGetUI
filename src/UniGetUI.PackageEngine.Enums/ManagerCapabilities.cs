@@ -35,6 +35,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public bool SupportsCustomSources = false;
         public bool SupportsCustomPackageIcons = false;
         public bool SupportsCustomPackageScreenshots = false;
+        public bool SupportsMinimumAge = false;
         public ProxySupport SupportsProxy = ProxySupport.No;
         public bool SupportsProxyAuth = false;
         public SourceCapabilities Sources { get; set; }

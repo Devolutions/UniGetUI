@@ -18,9 +18,6 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
     /// </summary>
     public sealed partial class Updates : Page, ISettingsPage
     {
-        private static readonly HashSet<string> _managersWithoutUpdateDate =
-            new(StringComparer.OrdinalIgnoreCase) { "Homebrew", "Scoop", "vcpkg", "WinGet" };
-
         public Updates()
         {
             this.InitializeComponent();
@@ -130,7 +127,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 int row = i + 1;
                 var name = new TextBlock { Text = manager.DisplayName, VerticalAlignment = VerticalAlignment.Center };
                 Grid.SetRow(name, row); Grid.SetColumn(name, 0);
-                bool supported = !_managersWithoutUpdateDate.Contains(manager.Name);
+                bool supported = manager.Capabilities.SupportsMinimumAge;
                 var badge = MakeStatusBadge(supported ? yesStr : noStr, supported);
                 Grid.SetRow(badge, row); Grid.SetColumn(badge, 1);
                 table.Children.Add(name);

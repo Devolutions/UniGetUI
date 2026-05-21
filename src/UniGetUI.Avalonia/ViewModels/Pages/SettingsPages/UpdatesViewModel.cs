@@ -20,10 +20,6 @@ public partial class UpdatesViewModel : ViewModelBase
     [ObservableProperty] private bool _isAutoCheckEnabled;
     [ObservableProperty] private bool _isCustomAgeSelected;
 
-    private static readonly HashSet<string> _managersWithoutUpdateDate =
-        new(StringComparer.OrdinalIgnoreCase)
-        { "Homebrew", "Scoop", "vcpkg" };
-
     /// <summary>Items for the minimum update age ComboboxCard, in display/value pairs.</summary>
     public IReadOnlyList<(string Name, string Value)> MinimumAgeItems { get; } =
     [
@@ -89,7 +85,7 @@ public partial class UpdatesViewModel : ViewModelBase
             var name = new TextBlock { Text = manager.DisplayName, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetRow(name, row); Grid.SetColumn(name, 0);
 
-            bool supported = !_managersWithoutUpdateDate.Contains(manager.Name);
+            bool supported = manager.Capabilities.SupportsMinimumAge;
             var badge = _statusBadge(supported ? yesStr : noStr, supported ? Colors.Green : Colors.Red);
             Grid.SetRow(badge, row); Grid.SetColumn(badge, 1);
 

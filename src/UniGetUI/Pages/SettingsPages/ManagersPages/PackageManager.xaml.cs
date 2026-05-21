@@ -35,9 +35,6 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
     /// </summary>
     public sealed partial class PackageManagerPage : Page, ISettingsPage
     {
-        private static readonly HashSet<string> _managersWithoutUpdateDate =
-            new(StringComparer.OrdinalIgnoreCase) { "Homebrew", "Scoop", "vcpkg", "WinGet" };
-
         IPackageManager? Manager;
         public event EventHandler? RestartRequired;
         public event EventHandler<Type>? NavigationRequested
@@ -493,7 +490,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
             };
 
             bool initiallyCustomAge = savedAgeVal == "custom";
-            bool ageSupported = !_managersWithoutUpdateDate.Contains(Manager.Name);
+            bool ageSupported = Manager.Capabilities.SupportsMinimumAge;
 
             object ageCardDescription = !ageSupported
                 ? new TextBlock

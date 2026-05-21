@@ -53,32 +53,6 @@ src/.vs
 src/.vscode
 new-names.docx
 
-src/UniGetUI/choco-cli/logs/
-src/UniGetUI/choco-cli/lib/
-src/UniGetUI/choco-cli/lib-bad/
-src/UniGetUI/choco-cli/.chocolatey/
-src/UniGetUI/choco-cli/lib/chocolatey-compatibility.extension/*
-src/UniGetUI/choco-cli/extensions/chocolatey-core/*
-src/UniGetUI/choco-cli/extensions/chocolatey-compatibility/*
-src/UniGetUI/choco-cli/lib-bkp/
-src/UniGetUI/choco-cli/extensions/chocolatey-windowsupdate/*
-src/UniGetUI/choco-cli/bin/chocolatey.exe
-src/UniGetUI/choco-cli/redirects/chocolatey.exe
-src/UniGetUI/choco-cli/redirects/chocolatey.exe.ignore
-src/UniGetUI/choco-cli/redirects/cinst.exe
-src/UniGetUI/choco-cli/redirects/cinst.exe.ignore
-src/UniGetUI/choco-cli/redirects/clist.exe
-src/UniGetUI/choco-cli/redirects/clist.exe.ignore
-src/UniGetUI/choco-cli/redirects/cpush.exe
-src/UniGetUI/choco-cli/redirects/cpush.exe.ignore
-src/UniGetUI/choco-cli/redirects/cuninst.exe
-src/UniGetUI/choco-cli/redirects/cuninst.exe.ignore
-src/UniGetUI/choco-cli/redirects/cup.exe
-src/UniGetUI/choco-cli/redirects/cup.exe.ignore
-src/UniGetUI/choco-cli/bin/ssh-copy-id.exe
-src/UniGetUI/choco-cli/extensions/chocolatey-visualstudio/
-src/UniGetUI/choco-cli/extensions/chocolatey-dotnetfx/
-
 *.user
 /src/UniGetUI/Generated Files
 /src/UniGetUI.Avalonia/Infrastructure/Generated Files
@@ -96,3 +70,5 @@ src/UniGetUI.v3.ncrunchsolution
 # macOS Finder metadata
 .DS_Store
 /src/UniGetUI.Avalonia/Generated Files
+
+winget-cli_x64/

@@ -127,10 +127,10 @@ public class PackageBundlesPage : AbstractPackagesPage
     // ─── Context menu ─────────────────────────────────────────────────────────
     protected override ContextMenu? GenerateContextMenu()
     {
-        _menuInstall = new MenuItem { Header = CoreTools.AutoTranslated("Install"), Icon = LoadMenuIcon("download") };
+        _menuInstall = new MenuItem { Header = CoreTools.Translate("Install"), Icon = LoadMenuIcon("download") };
         _menuInstall.Click += (_, _) => _ = ImportAndInstallPackage(SelectedItem is { } p ? [p] : []);
 
-        _menuInstallOptions = new MenuItem { Header = CoreTools.AutoTranslated("Install options"), Icon = LoadMenuIcon("options") };
+        _menuInstallOptions = new MenuItem { Header = CoreTools.Translate("Install options"), Icon = LoadMenuIcon("options") };
         _menuInstallOptions.Click += (_, _) =>
         {
             if (SelectedItem is ImportedPackage imported)
@@ -140,20 +140,20 @@ public class PackageBundlesPage : AbstractPackagesPage
             }
         };
 
-        _menuAsAdmin = new MenuItem { Header = CoreTools.AutoTranslated("Install as administrator"), Icon = LoadMenuIcon("uac"), IsVisible = OperatingSystem.IsWindows() };
+        _menuAsAdmin = new MenuItem { Header = CoreTools.Translate("Install as administrator"), Icon = LoadMenuIcon("uac"), IsVisible = OperatingSystem.IsWindows() };
         _menuAsAdmin.Click += (_, _) => _ = ImportAndInstallPackage(SelectedItem is { } p ? [p] : [], elevated: true);
 
-        _menuInteractive = new MenuItem { Header = CoreTools.AutoTranslated("Interactive installation"), Icon = LoadMenuIcon("interactive") };
+        _menuInteractive = new MenuItem { Header = CoreTools.Translate("Interactive installation"), Icon = LoadMenuIcon("interactive") };
         _menuInteractive.Click += (_, _) => _ = ImportAndInstallPackage(SelectedItem is { } p ? [p] : [], interactive: true);
 
-        _menuSkipHash = new MenuItem { Header = CoreTools.AutoTranslated("Skip hash checks"), Icon = LoadMenuIcon("checksum") };
+        _menuSkipHash = new MenuItem { Header = CoreTools.Translate("Skip hash checks"), Icon = LoadMenuIcon("checksum") };
         _menuSkipHash.Click += (_, _) => _ = ImportAndInstallPackage(SelectedItem is { } p ? [p] : [], skiphash: true);
 
-        _menuDownloadInstaller = new MenuItem { Header = CoreTools.AutoTranslated("Download installer"), Icon = LoadMenuIcon("download") };
+        _menuDownloadInstaller = new MenuItem { Header = CoreTools.Translate("Download installer"), Icon = LoadMenuIcon("download") };
         _menuDownloadInstaller.Click += (_, _) => _ = AvaloniaPackageOperationHelper.AskLocationAndDownloadAsync(
             SelectedItem, TEL_InstallReferral.FROM_BUNDLE);
 
-        var menuRemoveFromList = new MenuItem { Header = CoreTools.AutoTranslated("Remove from list"), Icon = LoadMenuIcon("delete") };
+        var menuRemoveFromList = new MenuItem { Header = CoreTools.Translate("Remove from list"), Icon = LoadMenuIcon("delete") };
         menuRemoveFromList.Click += (_, _) =>
         {
             if (SelectedItem is { } pkg)
@@ -163,7 +163,7 @@ public class PackageBundlesPage : AbstractPackagesPage
             }
         };
 
-        _menuDetails = new MenuItem { Header = CoreTools.AutoTranslated("Package details"), Icon = LoadMenuIcon("info_round") };
+        _menuDetails = new MenuItem { Header = CoreTools.Translate("Package details"), Icon = LoadMenuIcon("info_round") };
         _menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);
 
         var menu = new ContextMenu();

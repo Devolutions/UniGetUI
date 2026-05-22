@@ -109,28 +109,28 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     {
         var menuUpdate = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Update"),
+            Header = CoreTools.Translate("Update"),
             Icon = LoadMenuIcon("update"),
         };
         menuUpdate.Click += (_, _) => _ = LaunchUpdate([SelectedItem!]);
 
         var menuUpdateOptions = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Update options"),
+            Header = CoreTools.Translate("Update options"),
             Icon = LoadMenuIcon("options"),
         };
         menuUpdateOptions.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
 
         _menuOpenInstallLocation = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Open install location"),
+            Header = CoreTools.Translate("Open install location"),
             Icon = LoadMenuIcon("launch"),
         };
         _menuOpenInstallLocation.Click += (_, _) => OpenInstallLocation(SelectedItem);
 
         _menuAsAdmin = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Update as administrator"),
+            Header = CoreTools.Translate("Update as administrator"),
             Icon = LoadMenuIcon("uac"),
             IsVisible = OperatingSystem.IsWindows(),
         };
@@ -138,21 +138,21 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
         _menuInteractive = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Interactive update"),
+            Header = CoreTools.Translate("Interactive update"),
             Icon = LoadMenuIcon("interactive"),
         };
         _menuInteractive.Click += (_, _) => _ = LaunchUpdate([SelectedItem!], interactive: true);
 
         _menuSkipHash = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Skip hash check"),
+            Header = CoreTools.Translate("Skip hash check"),
             Icon = LoadMenuIcon("checksum"),
         };
         _menuSkipHash.Click += (_, _) => _ = LaunchUpdate([SelectedItem!], no_integrity: true);
 
         _menuDownloadInstaller = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Download installer"),
+            Header = CoreTools.Translate("Download installer"),
             Icon = LoadMenuIcon("download"),
         };
         _menuDownloadInstaller.Click += (_, _) => _ = AvaloniaPackageOperationHelper.AskLocationAndDownloadAsync(
@@ -160,21 +160,21 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
         var menuUninstallThenUpdate = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Uninstall package, then update it"),
+            Header = CoreTools.Translate("Uninstall package, then update it"),
             Icon = LoadMenuIcon("undelete"),
         };
         menuUninstallThenUpdate.Click += (_, _) => _ = LaunchUninstallThenUpdate(SelectedItem);
 
         var menuUninstall = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Uninstall package"),
+            Header = CoreTools.Translate("Uninstall package"),
             Icon = LoadMenuIcon("delete"),
         };
         menuUninstall.Click += (_, _) => _ = LaunchUninstallFromUpdates([SelectedItem!]);
 
         var menuIgnore = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Ignore updates for this package"),
+            Header = CoreTools.Translate("Ignore updates for this package"),
             Icon = LoadMenuIcon("pin"),
         };
         menuIgnore.Click += (_, _) =>
@@ -188,7 +188,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
         var menuSkipVersion = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Skip this version"),
+            Header = CoreTools.Translate("Skip this version"),
             Icon = LoadMenuIcon("skip"),
         };
         menuSkipVersion.Click += (_, _) =>
@@ -233,7 +233,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
         var menuDetails = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Package details"),
+            Header = CoreTools.Translate("Package details"),
             Icon = LoadMenuIcon("info_round"),
         };
         menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);

@@ -85,7 +85,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     {
         _menuAsAdmin = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Install as administrator"),
+            Header = CoreTools.Translate("Install as administrator"),
             Icon = LoadMenuIcon("uac"),
             IsVisible = OperatingSystem.IsWindows(),
         };
@@ -93,33 +93,33 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
 
         _menuInteractive = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Interactive installation"),
+            Header = CoreTools.Translate("Interactive installation"),
             Icon = LoadMenuIcon("interactive"),
         };
         _menuInteractive.Click += (_, _) => _ = LaunchInstall([SelectedItem!], interactive: true);
 
         _menuSkipHash = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Skip hash check"),
+            Header = CoreTools.Translate("Skip hash check"),
             Icon = LoadMenuIcon("checksum"),
         };
         _menuSkipHash.Click += (_, _) => _ = LaunchInstall([SelectedItem!], no_integrity: true);
 
         _menuDownloadInstaller = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Download installer"),
+            Header = CoreTools.Translate("Download installer"),
             Icon = LoadMenuIcon("download"),
         };
         _menuDownloadInstaller.Click += (_, _) => _ = AvaloniaPackageOperationHelper.AskLocationAndDownloadAsync(
             SelectedItem, TEL_InstallReferral.DIRECT_SEARCH);
 
-        var menuInstall = new MenuItem { Header = CoreTools.AutoTranslated("Install"), Icon = LoadMenuIcon("download") };
+        var menuInstall = new MenuItem { Header = CoreTools.Translate("Install"), Icon = LoadMenuIcon("download") };
         menuInstall.Click += (_, _) => _ = LaunchInstall([SelectedItem!]);
 
-        var menuInstallOptions = new MenuItem { Header = CoreTools.AutoTranslated("Install options"), Icon = LoadMenuIcon("options") };
+        var menuInstallOptions = new MenuItem { Header = CoreTools.Translate("Install options"), Icon = LoadMenuIcon("options") };
         menuInstallOptions.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
 
-        var menuDetails = new MenuItem { Header = CoreTools.AutoTranslated("Package details"), Icon = LoadMenuIcon("info_round") };
+        var menuDetails = new MenuItem { Header = CoreTools.Translate("Package details"), Icon = LoadMenuIcon("info_round") };
         menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);
 
         var menu = new ContextMenu();

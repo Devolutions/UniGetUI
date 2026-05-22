@@ -131,28 +131,28 @@ public class InstalledPackagesPage : AbstractPackagesPage
     {
         var menuUninstall = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Uninstall"),
+            Header = CoreTools.Translate("Uninstall"),
             Icon = LoadMenuIcon("delete"),
         };
         menuUninstall.Click += (_, _) => _ = LaunchUninstall([SelectedItem!]);
 
         _menuInstallationOptions = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Uninstall options"),
+            Header = CoreTools.Translate("Uninstall options"),
             Icon = LoadMenuIcon("options"),
         };
         _menuInstallationOptions.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
 
         _menuOpenInstallLocation = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Open install location"),
+            Header = CoreTools.Translate("Open install location"),
             Icon = LoadMenuIcon("launch"),
         };
         _menuOpenInstallLocation.Click += (_, _) => OpenInstallLocation(SelectedItem);
 
         _menuAsAdmin = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Uninstall as administrator"),
+            Header = CoreTools.Translate("Uninstall as administrator"),
             Icon = LoadMenuIcon("uac"),
             IsVisible = OperatingSystem.IsWindows(),
         };
@@ -160,21 +160,21 @@ public class InstalledPackagesPage : AbstractPackagesPage
 
         _menuInteractive = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Interactive uninstall"),
+            Header = CoreTools.Translate("Interactive uninstall"),
             Icon = LoadMenuIcon("interactive"),
         };
         _menuInteractive.Click += (_, _) => _ = LaunchUninstall([SelectedItem!], interactive: true);
 
         _menuRemoveData = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Uninstall and remove data"),
+            Header = CoreTools.Translate("Uninstall and remove data"),
             Icon = LoadMenuIcon("close_round"),
         };
         _menuRemoveData.Click += (_, _) => _ = LaunchUninstall([SelectedItem!], remove_data: true);
 
         _menuDownloadInstaller = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Download installer"),
+            Header = CoreTools.Translate("Download installer"),
             Icon = LoadMenuIcon("download"),
         };
         _menuDownloadInstaller.Click += (_, _) => _ = AvaloniaPackageOperationHelper.AskLocationAndDownloadAsync(
@@ -182,28 +182,28 @@ public class InstalledPackagesPage : AbstractPackagesPage
 
         _menuReinstall = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Reinstall package"),
+            Header = CoreTools.Translate("Reinstall package"),
             Icon = LoadMenuIcon("download"),
         };
         _menuReinstall.Click += (_, _) => _ = LaunchReinstall(SelectedItem);
 
         _menuUninstallThenReinstall = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Uninstall package, then reinstall it"),
+            Header = CoreTools.Translate("Uninstall package, then reinstall it"),
             Icon = LoadMenuIcon("undelete"),
         };
         _menuUninstallThenReinstall.Click += (_, _) => _ = LaunchUninstallThenReinstall(SelectedItem);
 
         _menuIgnoreUpdates = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Ignore updates for this package"),
+            Header = CoreTools.Translate("Ignore updates for this package"),
             Icon = LoadMenuIcon("pin"),
         };
         _menuIgnoreUpdates.Click += (_, _) => _ = ToggleIgnoreUpdatesAsync(SelectedItem);
 
         _menuDetails = new MenuItem
         {
-            Header = CoreTools.AutoTranslated("Package details"),
+            Header = CoreTools.Translate("Package details"),
             Icon = LoadMenuIcon("info_round"),
         };
         _menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);

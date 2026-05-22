@@ -84,10 +84,10 @@ internal sealed class PingetCliPackageDetailsProvider(string cliExecutablePath)
     {
         try
         {
-            string output = RunPinget(["source", "list", "--output", "json"], logger);
+            string output = RunPinget(["source", "export", "--output", "json"], logger);
             using JsonDocument document = JsonDocument.Parse(output);
             if (
-                !document.RootElement.TryGetProperty("sources", out JsonElement sources)
+                !document.RootElement.TryGetProperty("Sources", out JsonElement sources)
                 || sources.ValueKind != JsonValueKind.Array
             )
             {
@@ -97,7 +97,7 @@ internal sealed class PingetCliPackageDetailsProvider(string cliExecutablePath)
             return sources
                 .EnumerateArray()
                 .Select(source =>
-                    source.TryGetProperty("name", out JsonElement name)
+                    source.TryGetProperty("Name", out JsonElement name)
                         ? name.GetString()
                         : null
                 )

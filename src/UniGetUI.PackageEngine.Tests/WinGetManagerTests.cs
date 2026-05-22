@@ -300,28 +300,28 @@ public sealed class WinGetManagerTests : IDisposable
     [Fact]
     public void PingetCliHelperDeserializesListResponsesWithGeneratedContext()
     {
-        // pinget 0.4.1+ emits snake_case keys.
+        // Pinget emits PascalCase keys.
         const string json = """
             {
-                "matches": [
+                "Matches": [
                     {
-                        "name": "Contoso Tool",
-                        "id": "Contoso.Tool",
-                        "local_id": null,
-                        "installed_version": "1.2.3",
-                        "available_version": "2.0.0",
-                        "source_name": "winget",
-                        "publisher": null,
-                        "scope": null,
-                        "installer_category": null,
-                        "install_location": null,
-                        "package_family_names": [],
-                        "product_codes": [],
-                        "upgrade_codes": []
+                        "Name": "Contoso Tool",
+                        "Id": "Contoso.Tool",
+                        "LocalId": null,
+                        "InstalledVersion": "1.2.3",
+                        "AvailableVersion": "2.0.0",
+                        "SourceName": "winget",
+                        "Publisher": null,
+                        "Scope": null,
+                        "InstallerCategory": null,
+                        "InstallLocation": null,
+                        "PackageFamilyNames": [],
+                        "ProductCodes": [],
+                        "UpgradeCodes": []
                     }
                 ],
-                "warnings": [],
-                "truncated": false
+                "Warnings": [],
+                "Truncated": false
             }
             """;
 
@@ -333,6 +333,38 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Equal("1.2.3", match.InstalledVersion);
         Assert.Equal("2.0.0", match.AvailableVersion);
         Assert.Equal("winget", match.SourceName);
+    }
+
+    [Fact]
+    public void PingetCliHelperInfersWingetSourceWhenInstalledSourceNameIsMissing()
+    {
+        const string json = """
+            {
+                "Matches": [
+                    {
+                        "Name": "Contoso Tool",
+                        "Id": "ARP\\User\\X64\\Contoso.Tool_Microsoft.Winget.Source_8wekyb3d8bbwe",
+                        "LocalId": null,
+                        "InstalledVersion": "1.2.3",
+                        "AvailableVersion": null,
+                        "SourceName": null,
+                        "Publisher": "Contoso",
+                        "Scope": "User",
+                        "InstallerCategory": "exe",
+                        "InstallLocation": "C:\\Users\\example\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Contoso.Tool_Microsoft.Winget.Source_8wekyb3d8bbwe",
+                        "PackageFamilyNames": [],
+                        "ProductCodes": [],
+                        "UpgradeCodes": []
+                    }
+                ],
+                "Warnings": [],
+                "Truncated": false
+            }
+            """;
+
+        ListMatch match = Assert.Single(PingetCliHelper.DeserializeJson<ListResponse>(json).Matches);
+
+        Assert.Equal("winget", PingetCliHelper.InferSourceName(match));
     }
 
     [Fact]

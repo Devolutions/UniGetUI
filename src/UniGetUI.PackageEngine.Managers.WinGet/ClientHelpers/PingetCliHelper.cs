@@ -18,7 +18,6 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
     private static readonly JsonSerializerOptions SerializationOptions = new()
     {
         PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
     private static readonly PingetCliJsonContext SerializationContext = new(SerializationOptions);
 
@@ -55,7 +54,7 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
                 match.Id,
                 match.InstalledVersion,
                 match.AvailableVersion!,
-                GetSource(match.SourceName, match.Id),
+                GetSource(match),
                 Manager
             );
 
@@ -87,7 +86,7 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
                     match.Name,
                     match.Id,
                     match.InstalledVersion,
-                    GetSource(match.SourceName, match.Id),
+                    GetSource(match),
                     Manager
                 )
             )
@@ -232,6 +231,32 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
         return JsonSerializer.Deserialize(output, typeof(T), SerializationContext) is T result
             ? result
             : throw new InvalidOperationException("Pinget returned empty JSON output.");
+    }
+
+    internal static string? InferSourceName(ListMatch match)
+    {
+        if (!string.IsNullOrWhiteSpace(match.SourceName))
+        {
+            return match.SourceName;
+        }
+
+        if (match.Id.Contains("_Microsoft.Winget.Source_8wekyb3d8bbwe", StringComparison.OrdinalIgnoreCase))
+        {
+            return "winget";
+        }
+
+        if (!string.IsNullOrWhiteSpace(match.InstallLocation)
+            && match.InstallLocation.Contains("\\Microsoft\\WinGet\\Packages\\", StringComparison.OrdinalIgnoreCase))
+        {
+            return "winget";
+        }
+
+        return null;
+    }
+
+    private IManagerSource GetSource(ListMatch match)
+    {
+        return GetSource(InferSourceName(match), match.Id);
     }
 
     private IManagerSource GetSource(string? sourceName, string packageId)

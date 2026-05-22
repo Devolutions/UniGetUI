@@ -6,8 +6,8 @@
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.PackageDetailsWindow"
         x:DataType="vm:PackageDetailsViewModel"
-        Width="900" MinWidth="600"
-        Height="680" MinHeight="400"
+        Width="1000" MinWidth="640"
+        Height="720" MinHeight="420"
         CanResize="True"
         ShowInTaskbar="False"
         Background="{DynamicResource AppDialogBackground}"
@@ -18,441 +18,321 @@
         <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
             <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
         </Style>
+
+        <!-- Tag pill -->
+        <Style Selector="Border.tag-pill">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Margin" Value="0,0,6,6"/>
+            <Setter Property="Padding" Value="10,2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+        </Style>
+        <Style Selector="Border.tag-pill > TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Split action button: fused look -->
+        <Style Selector="Button.action-main">
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="CornerRadius" Value="8,0,0,8"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.action-chevron">
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="1,0,0,0"/>
+            <Setter Property="CornerRadius" Value="0,8,8,0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Screenshot pip dots (Button hosting an Ellipse) -->
+        <Style Selector="Button.pip">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="3,4"/>
+            <Setter Property="Width" Value="18"/>
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Ellipse.pip">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Height" Value="8"/>
+            <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}"/>
+        </Style>
+        <Style Selector="Ellipse.pip.active">
+            <Setter Property="Fill" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Height" Value="10"/>
+        </Style>
+
+        <!-- Screenshot prev/next chevrons (overlay on hover) -->
+        <Style Selector="Button.carousel-nav">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="#80000000"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border#ScreenshotsBorder:pointerover Button.carousel-nav">
+            <Setter Property="Opacity" Value="0.9"/>
+        </Style>
     </Window.Styles>
 
-    <Grid RowDefinitions="Auto,*,Auto">
-
-        <!-- Loading indicator -->
-        <ProgressBar Grid.Row="0"
-                     IsIndeterminate="True"
+    <Grid>
+        <!-- Loading indicator across the very top -->
+        <ProgressBar IsIndeterminate="True"
                      IsVisible="{Binding IsLoading}"
                      automation:AutomationProperties.Name="{Binding PackageName}"
+                     VerticalAlignment="Top"
                      Height="3"/>
 
-        <!-- ── Scrollable body ── -->
-        <ScrollViewer Grid.Row="1"
-                      VerticalScrollBarVisibility="Auto"
+        <!-- ── Scrollable content area ── -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="20,16,20,12" Spacing="12">
+            <Grid x:Name="MainGrid"
+                  Margin="24,20,24,24"
+                  ColumnSpacing="32">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-                <!-- ── Header: icon + name + source ── -->
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
-                    <Border
-                        Width="72" Height="72"
-                            CornerRadius="12"
-                            Background="{DynamicResource AppDialogPanelBackground}"
-                            ClipToBounds="True">
-                        <Image Source="{Binding PackageIcon}"
-                               automation:AutomationProperties.AccessibilityView="Raw"
-                               Stretch="Uniform"
-                               RenderOptions.BitmapInterpolationMode="HighQuality"/>
-                    </Border>
+                <!-- Left column: title, description, basic info, actions, install options.
+                     Children are reparented by code-behind for the narrow layout. -->
+                <StackPanel x:Name="LeftPanel" Grid.Column="0" Spacing="16" VerticalAlignment="Top">
 
-                    <StackPanel Grid.Column="1"
-                                VerticalAlignment="Center"
-                                Spacing="4">
-                        <TextBlock Text="{Binding PackageName}"
-                                   FontSize="22" FontWeight="Bold"
-                                   TextWrapping="Wrap"
-                                   automation:AutomationProperties.HeadingLevel="1"/>
-                        <TextBlock Text="{Binding SourceDisplay}"
-                                   FontSize="13" Opacity="0.65"/>
-                    </StackPanel>
-
-                </Grid>
-
-                <!-- ── Tags ── -->
-                <ItemsControl ItemsSource="{Binding Tags}"
-                              IsVisible="{Binding HasTags}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
-                            <Border Background="{DynamicResource AppDialogSubtleBackground}"
-                                    CornerRadius="4"
-                                    Padding="8,3"
-                                    Margin="0,0,6,6">
-                                <TextBlock Text="{Binding}" FontSize="12"/>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <!-- ── Description ── -->
-                <Border Background="{DynamicResource SettingsCardBackground}" CornerRadius="8" Padding="14">
-                    <TextBlock Text="{Binding Description}"
-                               TextWrapping="Wrap"
-                               Opacity="0.9"/>
-                </Border>
-
-                <!-- ── Basic info ── -->
-                <Border Background="{DynamicResource SettingsCardBackground}" CornerRadius="8" Padding="16">
-                    <StackPanel Spacing="10">
-
-                        <Grid ColumnDefinitions="160,*">
-                            <TextBlock Text="{Binding LabelVersion}"
-                                       Opacity="0.65" VerticalAlignment="Top"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding VersionDisplay}"
-                                       TextWrapping="Wrap"/>
-                        </Grid>
-
-                        <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-
-                        <Grid ColumnDefinitions="160,*,Auto">
-                            <TextBlock Text="{Binding LabelHomepage}"
-                                       Opacity="0.65" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding HomepageText}"
-                                       TextTrimming="CharacterEllipsis"
-                                       VerticalAlignment="Center"
-                                       ToolTip.Tip="{Binding HomepageText}"/>
-                            <Button Grid.Column="2"
-                                    Content="{Binding LabelOpen}"
-                                    IsVisible="{Binding HasHomepageUrl}"
-                                    Command="{Binding OpenUrlCommand}"
-                                    CommandParameter="{Binding HomepageText}"
-                                    automation:AutomationProperties.Name="{Binding LabelHomepage}"
-                                    Padding="8,3" Margin="8,0,0,0"/>
-                        </Grid>
-
-                        <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-
-                        <Grid ColumnDefinitions="160,*">
-                            <TextBlock Text="{Binding LabelAuthor}"
-                                       Opacity="0.65" VerticalAlignment="Top"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Author}"
-                                       TextWrapping="Wrap"/>
-                        </Grid>
-
-                        <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-
-                        <Grid ColumnDefinitions="160,*">
-                            <TextBlock Text="{Binding LabelPublisher}"
-                                       Opacity="0.65" VerticalAlignment="Top"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Publisher}"
-                                       TextWrapping="Wrap"/>
-                        </Grid>
-
-                        <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-
-                        <Grid ColumnDefinitions="160,*,Auto">
-                            <TextBlock Text="{Binding LabelLicense}"
-                                       Opacity="0.65" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding LicenseText}"
-                                       TextTrimming="CharacterEllipsis"
-                                       VerticalAlignment="Center"
-                                       ToolTip.Tip="{Binding LicenseText}"/>
-                            <Button Grid.Column="2"
-                                    Content="{Binding LabelOpen}"
-                                    IsVisible="{Binding HasLicenseUrl}"
-                                    Command="{Binding OpenUrlCommand}"
-                                    CommandParameter="{Binding LicenseText}"
-                                    automation:AutomationProperties.Name="{Binding LabelLicense}"
-                                    Padding="8,3" Margin="8,0,0,0"/>
-                        </Grid>
-
-                    </StackPanel>
-                </Border>
-
-                <!-- ── Actions ── -->
-                <Border Background="{DynamicResource SettingsCardBackground}" CornerRadius="8" Padding="16">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                        <Button x:Name="MainActionButton"
-                                Content="{Binding MainActionLabel}"
-                                automation:AutomationProperties.Name="{Binding MainActionLabel}"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center"
-                                Classes="accent"
-                                Padding="16,8"/>
-                        <Button x:Name="ActionVariantsButton"
-                                Grid.Column="1"
-                                Content="▾"
-                                automation:AutomationProperties.Name="{Binding MainActionLabel}"
-                                automation:AutomationProperties.HelpText="{Binding HeaderDetails}"
-                                Width="30"
-                                Height="30"
-                                FontSize="30"
-                                HorizontalContentAlignment="Center"
-                                Padding="0"/>
-                    </Grid>
-                </Border>
-
-                <!-- ── Installation options (inline expander) ── -->
-                <Expander HorizontalAlignment="Stretch"
-                          HorizontalContentAlignment="Stretch"
-                          IsExpanded="False"
-                          CornerRadius="8"
-                          Padding="4"
-                          Background="{DynamicResource SettingsCardBackground}">
-                    <Expander.Header>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg"
-                                              Width="16" Height="16" VerticalAlignment="Center"/>
-                            <TextBlock Text="{t:Translate Installation options}"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Expander.Header>
-                    <StackPanel Margin="16,8" Spacing="8">
-                        <ContentControl x:Name="InstallOptionsHolder"/>
-                        <Button x:Name="InstallOptionsSaveButton"
-                                Content="{t:Translate Save}"
-                                Classes="accent"
-                                HorizontalAlignment="Right"
-                                Padding="16,6"/>
-                    </StackPanel>
-                </Expander>
-
-                <!-- ── Screenshots ── -->
-                <Border Background="{DynamicResource SettingsCardBackground}"
-                        CornerRadius="8" Padding="8"
-                        IsVisible="{Binding HasScreenshots}">
-                    <StackPanel Spacing="6">
-                        <Border CornerRadius="4" ClipToBounds="True"
-                                Height="225"
-                                Background="#000000">
-                            <Image Source="{Binding SelectedScreenshot}"
+                    <!-- ── Top: icon + title ── -->
+                    <Grid x:Name="TitlePanel"
+                          ColumnDefinitions="Auto,*"
+                          ColumnSpacing="16">
+                        <Border Width="112" Height="112"
+                                CornerRadius="20"
+                                Background="{DynamicResource AppDialogPanelBackground}"
+                                ClipToBounds="True">
+                            <Image Source="{Binding PackageIcon}"
+                                   Width="72" Height="72"
+                                   Margin="12"
+                                   automation:AutomationProperties.AccessibilityView="Raw"
                                    Stretch="Uniform"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"/>
+                                   RenderOptions.BitmapInterpolationMode="HighQuality"/>
                         </Border>
-                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                            <Button Content="◀"
-                                    Command="{Binding PreviousScreenshotCommand}"
-                                    IsEnabled="{Binding CanGoPrevScreenshot}"
-                                    Padding="10,4"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding ScreenshotPageLabel}"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                            <Button Grid.Column="2"
-                                    Content="▶"
-                                    Command="{Binding NextScreenshotCommand}"
-                                    IsEnabled="{Binding CanGoNextScreenshot}"
-                                    Padding="10,4"/>
-                        </Grid>
+
+                        <StackPanel Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="4">
+                            <TextBlock Text="{Binding PackageName}"
+                                       FontSize="36" FontWeight="Bold"
+                                       TextWrapping="Wrap"
+                                       LineHeight="42"
+                                       automation:AutomationProperties.HeadingLevel="1"/>
+                            <TextBlock Text="{Binding SourceDisplay}"
+                                       FontSize="13" Opacity="0.65"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- ── Description: tag pills ── -->
+                    <StackPanel x:Name="DescriptionPanel"
+                                VerticalAlignment="Top"
+                                Spacing="10">
+                        <ItemsControl ItemsSource="{Binding Tags}"
+                                      IsVisible="{Binding HasTags}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Border Classes="tag-pill">
+                                        <TextBlock Text="{Binding}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
-                </Border>
 
-                <!-- ── Details expander ── -->
-                <Expander HorizontalAlignment="Stretch"
-                          HorizontalContentAlignment="Stretch"
-                          IsExpanded="False"
-                          CornerRadius="8"
-                          Padding="4"
-                          Background="{DynamicResource SettingsCardBackground}">
-                    <Expander.Header>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg"
-                                              Width="16" Height="16"
-                                              VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding HeaderDetails}"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Expander.Header>
+                    <!-- ── Basic info: inline rows built in code-behind ── -->
+                    <StackPanel x:Name="BasicInfoPanel"
+                                VerticalAlignment="Top"
+                                Spacing="6"/>
 
-                    <Border Padding="16,12">
-                        <StackPanel Spacing="10">
+                    <!-- ── Action button (split: main + chevron dropdown) ── -->
+                    <Grid x:Name="ActionsPanel"
+                          VerticalAlignment="Top"
+                          HorizontalAlignment="Left"
+                          ColumnSpacing="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="10000*" MaxWidth="260"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Button x:Name="MainActionButton"
+                                    Grid.Column="0"
+                                    Classes="accent action-main"
+                                    Content="{Binding MainActionLabel}"
+                                    automation:AutomationProperties.Name="{Binding MainActionLabel}"/>
+                            <Button x:Name="ActionVariantsButton"
+                                    Grid.Column="1"
+                                    Classes="accent action-chevron"
+                                    automation:AutomationProperties.Name="{Binding MainActionLabel}">
+                                <Path Data="M 0,0 L 4,4 L 8,0"
+                                      Stroke="White"
+                                      StrokeThickness="1.5"
+                                      StrokeJoin="Miter"
+                                      Fill="Transparent"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"
+                                      automation:AutomationProperties.AccessibilityView="Raw"/>
+                            </Button>
+                        </Grid>
+                    </Grid>
 
-                            <Grid ColumnDefinitions="160,*">
-                                <TextBlock Text="{Binding LabelPackageId}"
-                                           Opacity="0.65" VerticalAlignment="Top"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding PackageId}"
-                                           TextWrapping="Wrap"/>
-                            </Grid>
-
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-
-                            <Grid ColumnDefinitions="160,*,Auto">
-                                <TextBlock Text="{Binding LabelManifest}"
-                                           Opacity="0.65" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding ManifestText}"
-                                       automation:AutomationProperties.Name="{Binding LabelManifest}"
-                                           TextTrimming="CharacterEllipsis"
-                                           VerticalAlignment="Center"
-                                           ToolTip.Tip="{Binding ManifestText}"/>
-                                <Button Grid.Column="2"
-                                        Content="{Binding LabelOpen}"
-                                    automation:AutomationProperties.Name="{Binding LabelManifest}"
-                                        IsVisible="{Binding HasManifestUrl}"
-                                        Command="{Binding OpenUrlCommand}"
-                                        CommandParameter="{Binding ManifestText}"
-                                        Padding="8,3" Margin="8,0,0,0"/>
-                            </Grid>
-
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-
-                            <Grid ColumnDefinitions="160,*">
-                                <TextBlock Text="{Binding InstallerHashLabel}"
-                                           Opacity="0.65" VerticalAlignment="Top"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding InstallerHash}"
-                                           automation:AutomationProperties.Name="{Binding InstallerHashLabel}"
-                                           automation:AutomationProperties.HelpText="{Binding InstallerHash}"
-                                           TextWrapping="Wrap"
-                                           FontSize="11"/>
-                            </Grid>
-
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-
-                            <Grid ColumnDefinitions="160,*">
-                                <TextBlock Text="{Binding LabelInstallerType}"
-                                           Opacity="0.65" VerticalAlignment="Top"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding InstallerType}"
-                                           TextWrapping="Wrap"/>
-                            </Grid>
-
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-
-                            <Grid ColumnDefinitions="160,*,Auto">
-                                <TextBlock Text="{Binding LabelInstallerUrl}"
-                                           Opacity="0.65" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding InstallerUrlText}"
-                                       automation:AutomationProperties.Name="{Binding LabelInstallerUrl}"
-                                           TextTrimming="CharacterEllipsis"
-                                           VerticalAlignment="Center"
-                                           ToolTip.Tip="{Binding InstallerUrlText}"/>
-                                <Button Grid.Column="2"
-                                        Content="{Binding LabelOpen}"
-                                    automation:AutomationProperties.Name="{Binding LabelInstallerUrl}"
-                                        IsVisible="{Binding HasInstallerUrl}"
-                                        Command="{Binding OpenUrlCommand}"
-                                        CommandParameter="{Binding InstallerUrlText}"
-                                        Padding="8,3" Margin="8,0,0,0"/>
-                            </Grid>
-
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-
-                            <Grid ColumnDefinitions="160,*">
-                                <TextBlock Text="{Binding LabelInstallerSize}"
-                                           Opacity="0.65" VerticalAlignment="Top"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding InstallerSize}"
-                                           TextWrapping="Wrap"/>
-                            </Grid>
-
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-
-                            <Grid ColumnDefinitions="160,*">
-                                <TextBlock Text="{Binding LabelUpdateDate}"
-                                           Opacity="0.65" VerticalAlignment="Top"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding UpdateDate}"
-                                           TextWrapping="Wrap"/>
-                            </Grid>
-
-                        </StackPanel>
+                    <!-- ── Installation options (collapsible) ── -->
+                    <Border x:Name="InstallOptionsBorder" VerticalAlignment="Top">
+                        <Expander x:Name="InstallOptionsExpander"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch"
+                                  VerticalAlignment="Top"
+                                  IsExpanded="False"
+                                  CornerRadius="8"
+                                  Padding="4">
+                            <Expander.Header>
+                                <Grid ColumnDefinitions="Auto,*,Auto"
+                                      ColumnSpacing="12">
+                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/options.svg"
+                                                      Width="18" Height="18"
+                                                      VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding LabelInstallationOptions}"
+                                               FontSize="15"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"/>
+                                    <Button x:Name="InstallOptionsSaveButton"
+                                            Grid.Column="2"
+                                            Content="{Binding LabelSave}"
+                                            Classes="accent"
+                                            Height="32"
+                                            MinWidth="64"
+                                            Padding="12,0"
+                                            CornerRadius="6"
+                                            HorizontalContentAlignment="Center"
+                                            VerticalContentAlignment="Center"/>
+                                </Grid>
+                            </Expander.Header>
+                            <ContentControl x:Name="InstallOptionsHolder"
+                                            Margin="0,8,0,4"/>
+                        </Expander>
                     </Border>
-                </Expander>
+                </StackPanel>
 
-                <!-- ── Dependencies expander ── -->
-                <Expander HorizontalAlignment="Stretch"
-                          HorizontalContentAlignment="Stretch"
-                          IsExpanded="False"
-                          CornerRadius="8"
-                          Padding="4"
-                          Background="{DynamicResource SettingsCardBackground}">
-                    <Expander.Header>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/id.svg"
-                                              Width="16" Height="16"
-                                              VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding HeaderDeps}"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Expander.Header>
+                <!-- Right column: screenshots + details. Reparented to LeftPanel in narrow mode. -->
+                <StackPanel x:Name="RightPanel" Grid.Column="1" Spacing="16" VerticalAlignment="Top">
 
-                    <Border Padding="16,12">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="{Binding DependencyNote}"
-                                       IsVisible="{Binding HasDependencyNote}"
-                                       Opacity="0.65"/>
-                            <ItemsControl ItemsSource="{Binding Dependencies}"
-                                          IsVisible="{Binding HasDependenciesList}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:DependencyViewModel">
-                                        <TextBlock Text="{Binding DisplayText}"
-                                                   TextWrapping="Wrap"
-                                                   Margin="0,2"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </Border>
-                </Expander>
+                    <!-- ── Screenshots: Carousel + custom pips ── -->
+                    <StackPanel x:Name="ScreenshotsPanel"
+                                VerticalAlignment="Top"
+                                Spacing="8">
+                        <Border CornerRadius="8" ClipToBounds="True"
+                                x:Name="ScreenshotsBorder"
+                                Background="#000000"
+                                Height="320">
+                            <Panel>
+                                <Carousel x:Name="ScreenshotsCarousel"
+                                          IsVisible="{Binding HasScreenshots}"
+                                          ItemsSource="{Binding Screenshots}"
+                                          SelectedIndex="{Binding SelectedScreenshotIndex, Mode=TwoWay}">
+                                    <Carousel.PageTransition>
+                                        <PageSlide Duration="0:0:0.25" Orientation="Horizontal"/>
+                                    </Carousel.PageTransition>
+                                    <Carousel.ItemTemplate>
+                                        <DataTemplate>
+                                            <Image Source="{Binding}"
+                                                   Stretch="Uniform"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </Carousel.ItemTemplate>
+                                </Carousel>
 
-                <!-- ── Release notes expander ── -->
-                <Expander HorizontalAlignment="Stretch"
-                          HorizontalContentAlignment="Stretch"
-                          IsExpanded="False"
-                          CornerRadius="8"
-                          Padding="4"
-                          Background="{DynamicResource SettingsCardBackground}">
-                    <Expander.Header>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/megaphone.svg"
-                                              Width="16" Height="16"
-                                              VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding HeaderReleaseNotes}"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Expander.Header>
+                                <!-- Contributor banner shown when no screenshots -->
+                                <Grid IsVisible="{Binding !HasScreenshots}"
+                                      Background="{DynamicResource AppDialogSubtleBackground}"
+                                      ColumnDefinitions="*,Auto"
+                                      Margin="0"
+                                      ColumnSpacing="12">
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding LabelContributorBanner}"
+                                               TextWrapping="Wrap"
+                                               VerticalAlignment="Center"
+                                               Margin="18,12"/>
+                                    <Button Grid.Column="1"
+                                            x:Name="ContributeButton"
+                                            Content="{Binding LabelContribute}"
+                                            VerticalAlignment="Center"
+                                            Margin="0,12,18,12"/>
+                                </Grid>
 
-                    <Border Padding="16,12">
-                        <StackPanel Spacing="10">
+                                <!-- Prev / next overlay chevrons (only when there are screenshots) -->
+                                <Button x:Name="PrevScreenshotButton"
+                                        Classes="carousel-nav"
+                                        HorizontalAlignment="Left"
+                                        Margin="6,0,0,0"
+                                        Content="‹"
+                                        IsVisible="{Binding HasScreenshots}"/>
+                                <Button x:Name="NextScreenshotButton"
+                                        Classes="carousel-nav"
+                                        HorizontalAlignment="Right"
+                                        Margin="0,0,6,0"
+                                        Content="›"
+                                        IsVisible="{Binding HasScreenshots}"/>
+                            </Panel>
+                        </Border>
 
-                            <TextBlock Text="{Binding ReleaseNotes}"
-                                       TextWrapping="Wrap"/>
+                        <!-- Pip indicator (clickable to jump to a screenshot) -->
+                        <ItemsControl x:Name="ScreenshotPips"
+                                      IsVisible="{Binding HasScreenshots}"
+                                      HorizontalAlignment="Center"
+                                      ItemsSource="{Binding Screenshots}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Classes="pip">
+                                        <Ellipse Classes="pip"/>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
 
-                            <Grid ColumnDefinitions="160,*,Auto">
-                                <TextBlock Text="{Binding LabelReleaseNotesUrl}"
-                                           Opacity="0.65" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding ReleaseNotesUrlText}"
-                                       automation:AutomationProperties.Name="{Binding LabelReleaseNotesUrl}"
-                                           TextTrimming="CharacterEllipsis"
-                                           VerticalAlignment="Center"
-                                           ToolTip.Tip="{Binding ReleaseNotesUrlText}"/>
-                                <Button Grid.Column="2"
-                                        Content="{Binding LabelOpen}"
-                                    automation:AutomationProperties.Name="{Binding LabelReleaseNotesUrl}"
-                                        IsVisible="{Binding HasReleaseNotesUrl}"
-                                        Command="{Binding OpenUrlCommand}"
-                                        CommandParameter="{Binding ReleaseNotesUrlText}"
-                                        Padding="8,3" Margin="8,0,0,0"/>
-                            </Grid>
-
-                        </StackPanel>
-                    </Border>
-                </Expander>
-
-            </StackPanel>
+                    <!-- ── Details: inline rows built in code-behind ── -->
+                    <StackPanel x:Name="DetailsPanel"
+                                VerticalAlignment="Top"
+                                Spacing="6"/>
+                </StackPanel>
+            </Grid>
         </ScrollViewer>
-
-        <!-- ── Footer: close button ── -->
-        <Border Grid.Row="2"
-                BorderThickness="0,1,0,0"
-                Padding="16,10">
-            <Button Content="{Binding LabelClose}"
-                    automation:AutomationProperties.Name="{Binding LabelClose}"
-                    Command="{Binding RequestCloseCommand}"
-                    HorizontalAlignment="Right"
-                    Padding="16,6"/>
-        </Border>
-
     </Grid>
 </Window>

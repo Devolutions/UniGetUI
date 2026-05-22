@@ -1,8 +1,18 @@
+using System.ComponentModel;
+using System.Diagnostics;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
+using Avalonia.Controls.Shapes;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.DialogPages;
+using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -15,10 +25,13 @@ namespace UniGetUI.Avalonia.Views;
 
 public partial class PackageDetailsWindow : Window
 {
-    /// <summary>
-    /// True when the user confirmed the main action (install/update/uninstall) without extras.
-    /// Callers check this after ShowDialog() to trigger the default operation.
-    /// </summary>
+    private const double WideThreshold = 950;
+    private const string ContributeUrl = "https://github.com/Devolutions/UniGetUI";
+
+    private enum LayoutMode { Unset, Normal, Wide }
+    private LayoutMode _layoutMode = LayoutMode.Unset;
+
+    /// <summary>True when the user confirmed the main action (install/update/uninstall) without extras.</summary>
     public bool ShouldProceedWithOperation { get; private set; }
 
     private readonly PackageDetailsViewModel _vm;
@@ -32,23 +45,52 @@ public partial class PackageDetailsWindow : Window
         InitializeComponent();
 
         _vm.CloseRequested += (_, _) => Close();
+        _vm.DetailsLoaded += (_, _) =>
+        {
+            BuildBasicInfoInlines();
+            BuildDetailsInlines();
+        };
+        _vm.PropertyChanged += OnVmPropertyChanged;
+        _vm.Screenshots.CollectionChanged += (_, _) => Dispatcher.UIThread.Post(UpdatePips);
 
         MainActionButton.Click += (_, _) => OnMainAction();
         ActionVariantsButton.Flyout = BuildActionFlyout();
         InstallOptionsSaveButton.Click += (_, _) => _ = SaveInstallOptionsAsync();
+        ContributeButton.Click += (_, _) => OpenUrl(ContributeUrl);
+        PrevScreenshotButton.Click += (_, _) =>
+        {
+            if (_vm.SelectedScreenshotIndex > 0)
+                _vm.SelectedScreenshotIndex--;
+        };
+        NextScreenshotButton.Click += (_, _) =>
+        {
+            if (_vm.SelectedScreenshotIndex < _vm.ScreenshotCount - 1)
+                _vm.SelectedScreenshotIndex++;
+        };
+        ScreenshotPips.AddHandler(Button.ClickEvent, OnPipClicked);
+
+        SizeChanged += (_, _) => ApplyLayoutForCurrentSize();
+
+        // Seed inline blocks with loading placeholders.
+        BuildBasicInfoInlines();
+        BuildDetailsInlines();
     }
 
-    protected override async void OnOpened(EventArgs e)
+    protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+        ApplyLayoutForCurrentSize();
         Dispatcher.UIThread.Post(() => MainActionButton.Focus(), DispatcherPriority.Background);
         _ = _vm.LoadDetailsAsync();
         TelemetryHandler.PackageDetails(_vm.Package, _vm.OperationRole.ToString());
+        _ = InitInstallOptionsAsync();
+    }
 
+    private async Task InitInstallOptionsAsync()
+    {
         _installOpts = await InstallOptionsFactory.LoadForPackageAsync(_vm.Package);
         _installVm = new InstallOptionsViewModel(_vm.Package, _vm.OperationRole, _installOpts);
-        var embed = new InstallOptionsControl();
-        embed.DataContext = _installVm;
+        var embed = new InstallOptionsControl { DataContext = _installVm };
         InstallOptionsHolder.Content = embed;
     }
 
@@ -59,25 +101,329 @@ public partial class PackageDetailsWindow : Window
         await InstallOptionsFactory.SaveForPackageAsync(_installOpts, _vm.Package);
     }
 
+    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PackageDetailsViewModel.SelectedScreenshotIndex)
+            || e.PropertyName == nameof(PackageDetailsViewModel.ScreenshotCount))
+            Dispatcher.UIThread.Post(UpdatePips);
+    }
+
+    private void OnPipClicked(object? sender, RoutedEventArgs e)
+    {
+        if (e.Source is not Control src) return;
+        // Walk up to find the pip Button container; ask the ItemsControl for its index.
+        Control? cursor = src;
+        while (cursor is not null && cursor.Parent is not ItemsControl)
+            cursor = cursor.Parent as Control;
+        if (cursor is null) return;
+        int idx = ScreenshotPips.IndexFromContainer(cursor);
+        if (idx >= 0 && idx < _vm.ScreenshotCount)
+            _vm.SelectedScreenshotIndex = idx;
+    }
+
+    private void UpdatePips()
+    {
+        int active = _vm.SelectedScreenshotIndex;
+        int i = 0;
+        foreach (var container in ScreenshotPips.GetRealizedContainers())
+        {
+            // The pip template is <Button><Ellipse/></Button>; the realized container is the Button itself.
+            if (container is Button btn && btn.Content is Ellipse ellipse)
+                ellipse.Classes.Set("active", i == active);
+            i++;
+        }
+    }
+
+    // ── Responsive layout ────────────────────────────────────────────────────
+
+    private void ApplyLayoutForCurrentSize()
+    {
+        var wide = Bounds.Width >= WideThreshold;
+        var mode = wide ? LayoutMode.Wide : LayoutMode.Normal;
+        if (mode == _layoutMode) return;
+        _layoutMode = mode;
+
+        if (mode == LayoutMode.Wide)
+        {
+            // Ensure two columns and the right-column panels live in RightPanel.
+            EnsureChild(RightPanel, ScreenshotsPanel, 0);
+            EnsureChild(RightPanel, DetailsPanel, 1);
+            RightPanel.IsVisible = true;
+            MainGrid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
+
+            ScreenshotsBorder.Height = _vm.HasScreenshots ? 320 : 150;
+            InstallOptionsExpander.IsExpanded = true;
+        }
+        else
+        {
+            // Move screenshots + details into LeftPanel (after install options) and collapse the right column.
+            EnsureChild(LeftPanel, ScreenshotsPanel, LeftPanel.Children.Count);
+            EnsureChild(LeftPanel, DetailsPanel, LeftPanel.Children.Count);
+            RightPanel.IsVisible = false;
+            MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
+
+            ScreenshotsBorder.Height = _vm.HasScreenshots ? 225 : 130;
+            InstallOptionsExpander.IsExpanded = false;
+        }
+    }
+
+    /// <summary>Move <paramref name="child"/> to <paramref name="target"/> at the given index, removing from its old parent first.</summary>
+    private static void EnsureChild(Panel target, Control child, int index)
+    {
+        if (child.Parent is Panel current && current != target)
+            current.Children.Remove(child);
+        if (!target.Children.Contains(child))
+            target.Children.Insert(Math.Min(index, target.Children.Count), child);
+    }
+
+    // ── Per-row layout builders (inline flow like WinUI's RichTextBlock) ─────
+
+    private void BuildBasicInfoInlines()
+    {
+        BasicInfoPanel.Children.Clear();
+
+        if (!string.IsNullOrWhiteSpace(_vm.Description))
+        {
+            BasicInfoPanel.Children.Add(new SelectableTextBlock
+            {
+                Text = _vm.Description,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 8),
+            });
+        }
+
+        AddInlineRow(BasicInfoPanel, _vm.LabelHomepage, _vm.HomepageUrl);
+        AddInlineRow(BasicInfoPanel, _vm.LabelPublisher, _vm.Publisher);
+        AddInlineRow(BasicInfoPanel, _vm.LabelAuthor, _vm.Author);
+        AddLicenseRow(BasicInfoPanel);
+        AddInlineRow(BasicInfoPanel, _vm.LabelUpdateDate, _vm.UpdateDate);
+        AddInlineRow(BasicInfoPanel, _vm.LabelSource, _vm.SourceDisplay);
+    }
+
+    private void BuildDetailsInlines()
+    {
+        DetailsPanel.Children.Clear();
+
+        AddInlineRow(DetailsPanel, _vm.LabelPackageId, _vm.PackageId);
+        AddInlineRow(DetailsPanel, _vm.LabelManifest, _vm.ManifestUrl);
+        AddInlineRow(DetailsPanel, _vm.LabelVersion, _vm.VersionDisplay);
+
+        AddSpacer(DetailsPanel);
+
+        AddInlineRow(DetailsPanel, _vm.LabelInstallerType, _vm.InstallerType);
+        AddInlineRow(DetailsPanel, _vm.LabelInstallerUrl, _vm.InstallerUrl);
+        AddInlineRow(DetailsPanel, _vm.InstallerHashLabel.TrimEnd(':'), _vm.InstallerHash);
+
+        AddDownloadRow(DetailsPanel);
+
+        AddSpacer(DetailsPanel);
+
+        // Dependencies header + list
+        DetailsPanel.Children.Add(new SelectableTextBlock
+        {
+            Text = _vm.LabelDependencies + ":",
+            FontWeight = FontWeight.Bold,
+            Margin = new Thickness(0, 0, 0, 4),
+        });
+        if (_vm.HasDependencyNote)
+        {
+            DetailsPanel.Children.Add(new SelectableTextBlock
+            {
+                Text = "  " + _vm.DependencyNote,
+                Foreground = NotAvailableBrush,
+                Margin = new Thickness(0, 0, 0, 4),
+            });
+        }
+        else
+        {
+            foreach (var dep in _vm.Dependencies)
+            {
+                DetailsPanel.Children.Add(new SelectableTextBlock
+                {
+                    Text = dep.DisplayText,
+                    TextWrapping = TextWrapping.Wrap,
+                });
+            }
+        }
+
+        AddSpacer(DetailsPanel);
+
+        // Release notes
+        DetailsPanel.Children.Add(new SelectableTextBlock
+        {
+            Text = _vm.LabelReleaseNotes + ":",
+            FontWeight = FontWeight.Bold,
+            Margin = new Thickness(0, 0, 0, 4),
+        });
+        DetailsPanel.Children.Add(new SelectableTextBlock
+        {
+            Text = _vm.ReleaseNotes,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 8),
+        });
+        AddInlineRow(DetailsPanel, _vm.LabelReleaseNotesUrl, _vm.ReleaseNotesUrl);
+    }
+
+    private static readonly IBrush NotAvailableBrush =
+        new SolidColorBrush(Color.FromArgb(255, 127, 127, 127));
+
+    private static void AddSpacer(StackPanel host) =>
+        host.Children.Add(new Border { Height = 10 });
+
+    /// <summary>
+    /// Builds a single wrap-able row with "<bold>Label:</bold> value" all on one line,
+    /// matching the WinUI RichTextBlock paragraph layout.
+    /// </summary>
+    private void AddInlineRow(StackPanel host, string label, string value)
+    {
+        var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
+        var inlines = tb.Inlines ??= new InlineCollection();
+        inlines.Add(new Run(label + ": ") { FontWeight = FontWeight.Bold });
+        if (string.IsNullOrWhiteSpace(value) || value == _vm.LabelNotAvailable)
+            inlines.Add(new Run(_vm.LabelNotAvailable)
+            {
+                Foreground = NotAvailableBrush,
+                FontStyle = FontStyle.Italic,
+            });
+        else
+            inlines.Add(new Run(value));
+        host.Children.Add(tb);
+    }
+
+    private void AddInlineRow(StackPanel host, string label, Uri? url)
+    {
+        var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
+        var inlines = tb.Inlines ??= new InlineCollection();
+        inlines.Add(new Run(label + ": ") { FontWeight = FontWeight.Bold });
+
+        if (url is null)
+        {
+            inlines.Add(new Run(_vm.LabelNotAvailable)
+            {
+                Foreground = NotAvailableBrush,
+                FontStyle = FontStyle.Italic,
+            });
+        }
+        else
+        {
+            inlines.Add(new Run(url.ToString())
+            {
+                Foreground = LinkBrush,
+                TextDecorations = TextDecorations.Underline,
+            });
+            tb.Cursor = new Cursor(StandardCursorType.Hand);
+            tb.PointerPressed += (_, e) =>
+            {
+                if (e.GetCurrentPoint(tb).Properties.IsLeftButtonPressed)
+                    OpenUrl(url.ToString());
+            };
+        }
+        host.Children.Add(tb);
+    }
+
+    private void AddLicenseRow(StackPanel host)
+    {
+        var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
+        var inlines = tb.Inlines ??= new InlineCollection();
+        inlines.Add(new Run(_vm.LabelLicense + ": ") { FontWeight = FontWeight.Bold });
+
+        bool hasName = !string.IsNullOrEmpty(_vm.LicenseName);
+        bool hasUrl = _vm.LicenseUrl is not null;
+
+        if (hasName)
+            inlines.Add(new Run(_vm.LicenseName!));
+
+        if (hasUrl)
+        {
+            if (hasName) inlines.Add(new Run(" "));
+            var url = _vm.LicenseUrl!.ToString();
+            inlines.Add(new Run(url)
+            {
+                Foreground = LinkBrush,
+                TextDecorations = TextDecorations.Underline,
+            });
+            tb.Cursor = new Cursor(StandardCursorType.Hand);
+            tb.PointerPressed += (_, e) =>
+            {
+                if (e.GetCurrentPoint(tb).Properties.IsLeftButtonPressed)
+                    OpenUrl(url);
+            };
+        }
+        else if (!hasName)
+        {
+            inlines.Add(new Run(_vm.LabelNotAvailable)
+            {
+                Foreground = NotAvailableBrush,
+                FontStyle = FontStyle.Italic,
+            });
+        }
+
+        host.Children.Add(tb);
+    }
+
+    private void AddDownloadRow(StackPanel host)
+    {
+        var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
+        var inlines = tb.Inlines ??= new InlineCollection();
+
+        if (_vm.CanDownloadInstaller && !_vm.IsLoading)
+        {
+            inlines.Add(new Run(_vm.LabelDownloadInstaller)
+            {
+                Foreground = LinkBrush,
+                TextDecorations = TextDecorations.Underline,
+                FontWeight = FontWeight.SemiBold,
+            });
+            if (!string.IsNullOrEmpty(_vm.InstallerSize))
+                inlines.Add(new Run($" ({_vm.InstallerSize})"));
+            tb.Cursor = new Cursor(StandardCursorType.Hand);
+            tb.PointerPressed += (_, e) =>
+            {
+                if (e.GetCurrentPoint(tb).Properties.IsLeftButtonPressed)
+                    DownloadInstaller();
+            };
+        }
+        else
+        {
+            inlines.Add(new Run(_vm.LabelInstallerNotAvailable)
+            {
+                Foreground = NotAvailableBrush,
+                FontStyle = FontStyle.Italic,
+            });
+        }
+        host.Children.Add(tb);
+    }
+
+    private static IBrush LinkBrush =>
+        Application.Current?.Resources["AccentTextFillColorPrimaryBrush"] as IBrush
+        ?? new SolidColorBrush(Color.FromArgb(255, 0, 120, 212));
+
+    private static void OpenUrl(string url)
+    {
+        if (string.IsNullOrEmpty(url) || !url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            return;
+        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+        catch { }
+    }
+
+    private void DownloadInstaller()
+    {
+        if (!_vm.Package.Manager.Capabilities.CanDownloadInstaller) return;
+        Close();
+        // Hook into the platform's download path if/when wired up. For now, fall back to opening
+        // the installer URL so the user can still grab the file.
+        if (_vm.InstallerUrl is not null)
+            OpenUrl(_vm.InstallerUrl.ToString());
+    }
+
+    // ── Action flyout ────────────────────────────────────────────────────────
+
     private MenuFlyout BuildActionFlyout()
     {
         var flyout = new MenuFlyout();
-
-        var asAdmin = new MenuItem
-        {
-            Header = _vm.AsAdminLabel,
-            IsEnabled = _vm.CanRunAsAdmin,
-        };
-        var interactive = new MenuItem
-        {
-            Header = _vm.InteractiveLabel,
-            IsEnabled = _vm.CanRunInteractively,
-        };
-        var skipOrRemove = new MenuItem
-        {
-            Header = _vm.SkipHashOrRemoveDataLabel,
-            IsEnabled = _vm.CanSkipHashOrRemoveData,
-        };
+        var asAdmin = new MenuItem { Header = _vm.AsAdminLabel, IsEnabled = _vm.CanRunAsAdmin };
+        var interactive = new MenuItem { Header = _vm.InteractiveLabel, IsEnabled = _vm.CanRunInteractively };
+        var skipOrRemove = new MenuItem { Header = _vm.SkipHashOrRemoveDataLabel, IsEnabled = _vm.CanSkipHashOrRemoveData };
 
         var role = _vm.OperationRole;
         if (role is OperationType.Uninstall)
@@ -98,8 +444,6 @@ public partial class PackageDetailsWindow : Window
         flyout.Items.Add(skipOrRemove);
         return flyout;
     }
-
-    // ── Action handlers ────────────────────────────────────────────────────────
 
     private void OnMainAction()
     {

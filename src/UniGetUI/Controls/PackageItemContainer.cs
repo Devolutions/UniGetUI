@@ -17,15 +17,9 @@ namespace UniGetUI.Interface.Widgets
             get => _wrapper;
             set
             {
-                if (_wrapper != null)
-                {
-                    _wrapper.PropertyChanged -= Wrapper_PropertyChanged;
-                }
+                _wrapper?.PropertyChanged -= Wrapper_PropertyChanged;
                 _wrapper = value;
-                if (_wrapper != null)
-                {
-                    _wrapper.PropertyChanged += Wrapper_PropertyChanged;
-                }
+                _wrapper?.PropertyChanged += Wrapper_PropertyChanged;
             }
         }
 

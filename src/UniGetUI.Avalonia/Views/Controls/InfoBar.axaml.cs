@@ -23,16 +23,13 @@ public partial class InfoBar : UserControl
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (_vm is not null)
-            _vm.PropertyChanged -= OnViewModelPropertyChanged;
+        _vm?.PropertyChanged -= OnViewModelPropertyChanged;
 
         _vm = DataContext as InfoBarViewModel;
 
+        _vm?.PropertyChanged += OnViewModelPropertyChanged;
         if (_vm is not null)
-        {
-            _vm.PropertyChanged += OnViewModelPropertyChanged;
             ApplySeverity(_vm.Severity);
-        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

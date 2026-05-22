@@ -108,13 +108,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void SubscribeToPageViewModel(AbstractPackagesPage? page)
     {
-        if (_subscribedPageViewModel is not null)
-            _subscribedPageViewModel.PropertyChanged -= OnPageViewModelPropertyChanged;
+        _subscribedPageViewModel?.PropertyChanged -= OnPageViewModelPropertyChanged;
 
         _subscribedPageViewModel = page?.ViewModel;
 
-        if (_subscribedPageViewModel is not null)
-            _subscribedPageViewModel.PropertyChanged += OnPageViewModelPropertyChanged;
+        _subscribedPageViewModel?.PropertyChanged += OnPageViewModelPropertyChanged;
     }
 
     private void OnPageViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

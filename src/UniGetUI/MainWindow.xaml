@@ -130,7 +130,7 @@
                 />
               </animations:AnimationSet>
             </animations:Explicit.Animations>
-            <Image Width="96">
+            <Image Width="180">
               <Image.Source>
                 <BitmapImage UriSource="ms-appx:///Assets/Images/icon_unsquare.png" />
               </Image.Source>

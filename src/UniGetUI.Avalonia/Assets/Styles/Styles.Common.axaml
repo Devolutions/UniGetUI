@@ -134,15 +134,14 @@
 
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
 
-    <!-- DataGrid selection: WinUI-style border-only. Negative margin offsets the added border so adjacent rows don't shift. -->
+    <!-- DataGrid selection: WinUI-style border-only. Permanent transparent border reserves layout
+         space so adjacent rows don't shift on select and the accent border isn't clipped on first/last rows. -->
     <Style Selector="DataGridRow">
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="2"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
     <Style Selector="DataGridRow:selected">
-        <Setter Property="BorderThickness" Value="2"/>
         <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}"/>
-        <Setter Property="Margin" Value="0,-2"/>
     </Style>
     <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
         <Setter Property="Fill" Value="Transparent"/>

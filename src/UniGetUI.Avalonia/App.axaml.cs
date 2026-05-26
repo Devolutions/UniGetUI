@@ -54,42 +54,78 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            if (OperatingSystem.IsMacOS())
-            {
-                ProcessEnvironmentConfigurator.PrepareForCurrentPlatform();
-                using var stream = AssetLoader.Open(new Uri("avares://UniGetUI.Avalonia/Assets/icon.png"));
-                using var ms = new MemoryStream();
-                stream.CopyTo(ms);
-                MacOsNotificationBridge.SetDockIcon(ms.ToArray());
-            }
-            else
-            {
-                ProcessEnvironmentConfigurator.ApplyProxySettingsToProcess();
-            }
-            PEInterface.LoadLoaders();
+            // Apply the saved theme before any window is shown so the splash
+            // appears in the user's preferred light/dark variant from the start.
             ApplyTheme(CoreSettings.GetValue(CoreSettings.K.PreferredTheme));
-            var mainWindow = new MainWindow();
-            desktop.MainWindow = mainWindow;
-            AvaloniaAppHost.SecondaryInstanceArgsReceived += args =>
-                HandleSecondaryInstanceArgs(mainWindow, args);
 
-            if (CoreData.WasDaemon)
+            // Show the splash before any heavy initialization. Skipped in daemon
+            // mode since the app isn't supposed to be visible at all.
+            SplashWindow? splash = null;
+            if (!CoreData.WasDaemon)
             {
-                // Start silently: hide the window on first open only.
-                // Opened fires on every Show() in Avalonia, so we must unsubscribe
-                // immediately or every ShowFromTray() call would hide the window again.
-                void HideOnce(object? s, EventArgs e)
-                {
-                    mainWindow.Opened -= HideOnce;
-                    mainWindow.Hide();
-                }
-                mainWindow.Opened += HideOnce;
+                splash = new SplashWindow();
+                splash.Show();
             }
 
-            _ = StartupAsync(mainWindow);
+            // Defer the rest of startup so the splash gets a chance to paint
+            // before we block the UI thread loading package managers and the
+            // main window XAML. Without this the splash window appears empty
+            // until init completes, defeating its purpose.
+            Dispatcher.UIThread.Post(() => StartMainWindow(desktop, splash), DispatcherPriority.Background);
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static void StartMainWindow(IClassicDesktopStyleApplicationLifetime desktop, SplashWindow? splash)
+    {
+        if (OperatingSystem.IsMacOS())
+        {
+            ProcessEnvironmentConfigurator.PrepareForCurrentPlatform();
+            using var stream = AssetLoader.Open(new Uri("avares://UniGetUI.Avalonia/Assets/icon.png"));
+            using var ms = new MemoryStream();
+            stream.CopyTo(ms);
+            MacOsNotificationBridge.SetDockIcon(ms.ToArray());
+        }
+        else
+        {
+            ProcessEnvironmentConfigurator.ApplyProxySettingsToProcess();
+        }
+        PEInterface.LoadLoaders();
+        var mainWindow = new MainWindow();
+        desktop.MainWindow = mainWindow;
+        AvaloniaAppHost.SecondaryInstanceArgsReceived += args =>
+            HandleSecondaryInstanceArgs(mainWindow, args);
+
+        if (CoreData.WasDaemon)
+        {
+            // Start silently: hide the window on first open only.
+            // Opened fires on every Show() in Avalonia, so we must unsubscribe
+            // immediately or every ShowFromTray() call would hide the window again.
+            void HideOnce(object? s, EventArgs e)
+            {
+                mainWindow.Opened -= HideOnce;
+                mainWindow.Hide();
+            }
+            mainWindow.Opened += HideOnce;
+        }
+
+        if (splash is not null)
+        {
+            var splashRef = splash;
+            void CloseSplashOnce(object? s, EventArgs e)
+            {
+                mainWindow.Opened -= CloseSplashOnce;
+                splashRef.Close();
+            }
+            mainWindow.Opened += CloseSplashOnce;
+        }
+
+        // Framework auto-show already passed (we deferred via Dispatcher.Post),
+        // so we have to open the window ourselves.
+        mainWindow.Show();
+
+        _ = StartupAsync(mainWindow);
     }
 
     private static async Task StartupAsync(MainWindow mainWindow)

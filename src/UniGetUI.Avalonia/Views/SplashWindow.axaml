@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UniGetUI.Avalonia.Views.SplashWindow"
+        Width="660" Height="340"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        CanResize="False"
+        ShowInTaskbar="False"
+        Topmost="True">
+    <Border CornerRadius="12"
+            Background="{DynamicResource AppDialogBackground}"
+            BorderBrush="{DynamicResource AppBorderBrush}"
+            BorderThickness="1"
+            BoxShadow="0 8 32 0 #40000000"
+            Margin="16">
+        <Image x:Name="SplashImage"
+               Stretch="Uniform"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               Margin="24"/>
+    </Border>
+</Window>

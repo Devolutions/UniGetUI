@@ -122,6 +122,8 @@
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\icon.png" Link="Assets\icon.png" />
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\icon_unsquare.png" Link="Assets\icon_unsquare.png" />
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\package_color.png" Link="Assets\package_color.png" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\SplashScreen.png" Link="Assets\SplashScreen.png" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\SplashScreen.theme-dark.png" Link="Assets\SplashScreen.theme-dark.png" />
         <!-- Tray status icon variants -->
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_black.ico" Link="Assets\tray_empty_black.ico" />
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_white.ico" Link="Assets\tray_empty_white.ico" />
@@ -176,6 +178,9 @@
       </Compile>
       <Compile Update="Views\MainWindow.axaml.cs">
         <DependentUpon>MainWindow.axaml</DependentUpon>
+      </Compile>
+      <Compile Update="Views\SplashWindow.axaml.cs">
+        <DependentUpon>SplashWindow.axaml</DependentUpon>
       </Compile>
       <Compile Update="Views\Pages\AbstractPackagesPage.axaml.cs">
         <DependentUpon>AbstractPackagesPage.axaml</DependentUpon>

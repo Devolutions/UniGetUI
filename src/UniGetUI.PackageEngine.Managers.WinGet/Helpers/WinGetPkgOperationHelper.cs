@@ -109,16 +109,22 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
             if (!usePinget)
             {
-                if (options.CustomInstallLocation != "")
+                // For portable packages, always preserve the actual current install
+                // location read from the registry. A stale CustomInstallLocation in the
+                // saved InstallOptions would otherwise leave --location off and cause
+                // WinGet to uninstall the portable from its custom path and reinstall to
+                // the default portable root, silently deleting the original directory.
+                var detectedLocation = TryGetPortableInstallLocation(package);
+                if (detectedLocation is not null)
                 {
-                    if (Settings.Get(Settings.K.WinGetForceLocationOnUpdate))
-                        parameters.AddRange(["--location", $"\"{options.CustomInstallLocation}\""]);
+                    parameters.AddRange(["--location", $"\"{detectedLocation}\""]);
                 }
-                else
+                else if (
+                    options.CustomInstallLocation != ""
+                    && Settings.Get(Settings.K.WinGetForceLocationOnUpdate)
+                )
                 {
-                    var detectedLocation = TryGetPortableInstallLocation(package);
-                    if (detectedLocation is not null)
-                        parameters.AddRange(["--location", $"\"{detectedLocation}\""]);
+                    parameters.AddRange(["--location", $"\"{options.CustomInstallLocation}\""]);
                 }
             }
         }

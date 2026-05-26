@@ -50,12 +50,18 @@ public partial class MainWindow : Window
     // Targeted upstream fix in Avalonia 12.1.
     private const uint WM_STYLECHANGING = 0x007C;
     private const uint WM_GETMINMAXINFO = 0x0024;
+    private const uint WM_NCCALCSIZE = 0x0083;
     private const int GWL_STYLE = -16;
     private const uint WS_CAPTION = 0x00C00000;
     private const uint WS_THICKFRAME = 0x00040000;
     private const uint WS_MINIMIZEBOX = 0x00020000;
     private const uint WS_MAXIMIZEBOX = 0x00010000;
     private const uint MONITOR_DEFAULTTONEAREST = 2;
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOMOVE = 0x0002;
+    private const uint SWP_NOZORDER = 0x0004;
+    private const uint SWP_NOACTIVATE = 0x0010;
+    private const uint SWP_FRAMECHANGED = 0x0020;
 
     private bool _focusSidebarSelectionOnNextPageChange;
     private TrayService? _trayService;
@@ -110,7 +116,12 @@ public partial class MainWindow : Window
             nint current = NativeMethods.GetWindowLongPtr(handle, GWL_STYLE);
             nint updated = (nint)((nuint)current | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
             if (updated != current)
+            {
                 NativeMethods.SetWindowLongPtr(handle, GWL_STYLE, updated);
+                // Trigger WM_NCCALCSIZE so our hook runs against the new style.
+                NativeMethods.SetWindowPos(handle, 0, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            }
         }
     }
 
@@ -609,6 +620,14 @@ public partial class MainWindow : Window
 
     private static nint OnWindowsWndProc(nint hWnd, uint msg, nint wParam, nint lParam, ref bool handled)
     {
+        // Force client = full window rect. Avalonia's ExtendClientArea handler only overrides
+        // the top inset, leaving the WS_THICKFRAME left/right/bottom resize border as glass.
+        if (msg == WM_NCCALCSIZE && wParam.ToInt64() != 0)
+        {
+            handled = true;
+            return 0;
+        }
+
         // Intercept SetWindowLong(GWL_STYLE, ...) attempts and OR our required bits back into
         // the new style before Windows accepts the change. lParam points to a STYLESTRUCT
         // whose styleNew member is the proposed new style. We modify it in place and let the
@@ -691,6 +710,10 @@ public partial class MainWindow : Window
 
         [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
         public static extern nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
         [DllImport("user32.dll")]
         public static extern uint GetDpiForWindow(nint hWnd);

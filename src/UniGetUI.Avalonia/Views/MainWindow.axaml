@@ -331,38 +331,46 @@
             </StackPanel>
 
             <!-- Centre: search box — vertically centred, no platform-specific margin -->
-            <StackPanel Grid.Column="1"
-                        VerticalAlignment="Center"
-                        automation:AutomationProperties.AccessibilityView="Control"
-                        Orientation="Horizontal"
-                        Spacing="0"
-                        Opacity="0.6">
-                <TextBox x:Name="GlobalSearchBox"
-                         Width="300"
-                         MinHeight="20"
-                         Height="30"
-                         FontSize="15"
-                         Margin="0,5,0,0"
-                         CornerRadius="4,0,0,4"
-                         PlaceholderText="{Binding GlobalSearchPlaceholder}"
-                         IsEnabled="{Binding GlobalSearchEnabled}"
-                         automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
-                         automation:AutomationProperties.AcceleratorKey="Ctrl+F"
-                         Text="{Binding GlobalSearchText}"
-                         KeyDown="SearchBox_KeyDown"/>
-                <Button Height="30"
-                        Width="30"
-                        Padding="3"
-                        Margin="0,5,0,0"
-                        CornerRadius="0,4,4,0"
-                        IsEnabled="{Binding GlobalSearchEnabled}"
-                        automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
-                        Command="{Binding SubmitGlobalSearchCommand}">
-                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg"
-                                      Width="18"
-                                      Height="18"/>
-                </Button>
-            </StackPanel>
+            <Border Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Margin="0,5,0,0"
+                    Height="30"
+                    CornerRadius="4"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="1"
+                    Background="{DynamicResource AppBadgeBackground}"
+                    ClipToBounds="True"
+                    automation:AutomationProperties.AccessibilityView="Control">
+                <Grid ColumnDefinitions="300,30">
+                    <TextBox x:Name="GlobalSearchBox"
+                             Grid.Column="0"
+                             MinHeight="20"
+                             FontSize="15"
+                             CornerRadius="0"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             PlaceholderText="{Binding GlobalSearchPlaceholder}"
+                             IsEnabled="{Binding GlobalSearchEnabled}"
+                             automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
+                             automation:AutomationProperties.AcceleratorKey="Ctrl+F"
+                             Text="{Binding GlobalSearchText}"
+                             KeyDown="SearchBox_KeyDown"/>
+                    <Button Grid.Column="1"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            Padding="3"
+                            CornerRadius="0"
+                            BorderThickness="0"
+                            Background="Transparent"
+                            IsEnabled="{Binding GlobalSearchEnabled}"
+                            automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
+                            Command="{Binding SubmitGlobalSearchCommand}">
+                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg"
+                                          Width="18"
+                                          Height="18"/>
+                    </Button>
+                </Grid>
+            </Border>
 
             <!-- Right column: Linux window buttons on the far right -->
             <Panel Grid.Column="2">

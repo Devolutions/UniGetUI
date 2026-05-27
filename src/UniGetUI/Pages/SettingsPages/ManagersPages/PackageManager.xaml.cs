@@ -223,6 +223,17 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
                 };
                 ExtraControls.Children.Add(WinGet_ForceLocationWhenUpdating);
 
+                CheckboxCard WinGet_DownloadFullManifest = new()
+                {
+                    Text = CoreTools.Translate(
+                        "Download full package manifest alongside the installer"
+                    ),
+                    SettingName = Settings.K.WinGetDownloadFullManifest,
+                    CornerRadius = new CornerRadius(0),
+                    BorderThickness = new Thickness(1, 0, 1, 1),
+                };
+                ExtraControls.Children.Add(WinGet_DownloadFullManifest);
+
                 CheckboxCard WinGet_EnableTroubleshooter = new()
                 {
                     Text = CoreTools.Translate("Enable the automatic WinGet troubleshooter"),

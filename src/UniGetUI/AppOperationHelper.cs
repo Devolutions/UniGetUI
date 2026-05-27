@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml.Controls;
 using UniGetUI.Controls.OperationWidgets;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface;
 using UniGetUI.Interface.Enums;
@@ -11,6 +12,7 @@ using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.PowerShellManager;
+using UniGetUI.PackageEngine.Managers.WingetManager;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
@@ -65,6 +67,15 @@ public partial class MainApp
         {
             if (package is null)
                 return null;
+
+            if (
+                package.Manager is WinGet
+                && Settings.Get(Settings.K.WinGetDownloadFullManifest)
+            )
+            {
+                return await AskFolderAndDownloadWinGetManifest(package, referral);
+            }
+
             int loadingId = DialogHelper.ShowLoadingDialog(CoreTools.Translate("Please wait..."));
             try
             {
@@ -152,6 +163,38 @@ public partial class MainApp
             }
         }
 
+        private static async Task<AbstractOperation?> AskFolderAndDownloadWinGetManifest(
+            IPackage package,
+            TEL_InstallReferral referral
+        )
+        {
+            try
+            {
+                var hWnd = Instance.MainWindow.GetWindowHandle();
+                var picker = new ExternalLibraries.Pickers.FolderPicker(hWnd);
+                var outputPath = await Task.Run(picker.Show);
+                if (string.IsNullOrEmpty(outputPath))
+                    return null;
+
+                var op = new WinGetManifestDownloadOperation(package, outputPath);
+                op.OperationSucceeded += (_, _) =>
+                    TelemetryHandler.DownloadPackage(package, TEL_OP_RESULT.SUCCESS, referral);
+                op.OperationFailed += (_, _) =>
+                    TelemetryHandler.DownloadPackage(package, TEL_OP_RESULT.FAILED, referral);
+                Add(op);
+                Instance.MainWindow.UpdateSystemTrayStatus();
+                return op;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(
+                    $"An error occurred while downloading the WinGet manifest for package {package.Id}"
+                );
+                Logger.Error(ex);
+                return null;
+            }
+        }
+
         public static async Task Download(
             IEnumerable<IPackage> packages,
             TEL_InstallReferral referral
@@ -168,6 +211,7 @@ public partial class MainApp
                 if (outputPath == "")
                     return;
 
+                bool fullManifest = Settings.Get(Settings.K.WinGetDownloadFullManifest);
                 foreach (var package in packages)
                 {
                     if (
@@ -179,7 +223,10 @@ public partial class MainApp
                         continue;
                     }
 
-                    var op = new DownloadOperation(package, outputPath);
+                    AbstractOperation op =
+                        fullManifest && package.Manager is WinGet
+                            ? new WinGetManifestDownloadOperation(package, outputPath)
+                            : new DownloadOperation(package, outputPath);
                     op.OperationSucceeded += (_, _) =>
                         TelemetryHandler.DownloadPackage(package, TEL_OP_RESULT.SUCCESS, referral);
                     op.OperationFailed += (_, _) =>

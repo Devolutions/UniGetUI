@@ -420,6 +420,14 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 {
                     Text = CoreTools.Translate("Force install location parameter when updating packages with custom locations"),
                     SettingName = CoreSettings.K.WinGetForceLocationOnUpdate,
+                    CornerRadius = new CornerRadius(0),
+                    BorderThickness = new Thickness(1, 0, 1, 1),
+                });
+
+                ExtraControls.Children.Add(new CheckboxCard
+                {
+                    Text = CoreTools.Translate("Download full package manifest alongside the installer"),
+                    SettingName = CoreSettings.K.WinGetDownloadFullManifest,
                     CornerRadius = new CornerRadius(0, 0, 8, 8),
                     BorderThickness = new Thickness(1, 0, 1, 1),
                 });

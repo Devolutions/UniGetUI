@@ -1,5 +1,4 @@
 #if WINDOWS
-using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -63,33 +62,6 @@ public class WinGetManifestDownloadOperation : AbstractProcessOperation
     {
         var winget = (WinGet)_package.Manager;
         bool usePinget = winget.SelectedCliToolKind == WinGetCliToolKind.BundledPinget;
-        string executablePath = winget.Status.ExecutablePath;
-        string callArgs = winget.Status.ExecutableCallArgs;
-
-        // pinget download writes only the installer; the YAML manifests are produced
-        // only by the native winget CLI. When pinget is selected, try to swap in the
-        // system winget for this operation so we get the full manifest folder.
-        if (usePinget)
-        {
-            var (found, systemWinGetPath) = CoreTools.Which("winget.exe");
-            if (found)
-            {
-                Logger.Info(
-                    $"WinGetManifestDownloadOperation: pinget is the configured CLI but only the installer would be downloaded; "
-                    + $"using system winget at {systemWinGetPath} so YAML manifests are also written."
-                );
-                executablePath = systemWinGetPath;
-                callArgs = "";
-                usePinget = false;
-            }
-            else
-            {
-                Logger.Warn(
-                    "WinGetManifestDownloadOperation: pinget is the configured CLI and system winget was not found on PATH. "
-                    + "Only the installer file will be downloaded; manifest YAML files will not be produced."
-                );
-            }
-        }
 
         List<string> args = ["download"];
 
@@ -119,8 +91,9 @@ public class WinGetManifestDownloadOperation : AbstractProcessOperation
             }
         }
 
-        process.StartInfo.FileName = executablePath;
-        process.StartInfo.Arguments = (callArgs + " " + string.Join(" ", args)).TrimStart();
+        process.StartInfo.FileName = winget.Status.ExecutablePath;
+        process.StartInfo.Arguments =
+            winget.Status.ExecutableCallArgs + " " + string.Join(" ", args);
     }
 
     protected override Task<OperationVeredict> GetProcessVeredict(

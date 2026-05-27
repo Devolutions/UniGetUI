@@ -129,6 +129,21 @@ public partial class AutoUpdater
         return fallbackVersion;
     }
 
+    // Normalize trailing zero components so "2026.1.11" and "2026.1.11.0" compare equal.
+    internal static bool VersionsMatch(string a, string b)
+    {
+        string sa = a.Trim().TrimStart('v', 'V');
+        string sb = b.Trim().TrimStart('v', 'V');
+
+        if (Version.TryParse(sa, out Version? va) && Version.TryParse(sb, out Version? vb))
+        {
+            return CoreTools.NormalizeVersionForComparison(va)
+                .Equals(CoreTools.NormalizeVersionForComparison(vb));
+        }
+
+        return string.Equals(sa, sb, StringComparison.OrdinalIgnoreCase);
+    }
+
     internal static string NormalizeThumbprint(string thumbprint)
     {
         char[] normalized = thumbprint.ToLowerInvariant().Where(char.IsAsciiHexDigit).ToArray();

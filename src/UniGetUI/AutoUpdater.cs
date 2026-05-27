@@ -76,18 +76,18 @@ public partial class AutoUpdater
         }
     }
 
-    // Persists the current buffer to _updateLogPath. Caller MUST hold _updateLogLock.
-    // Failures are silently swallowed — a missing log file should never break the
-    // update flow itself.
+    // Tmp + rename so a kill mid-flush (installer terminates us during file replacement) can't leave a 0-byte file.
     private static void FlushUpdateLogToDiskNoLock()
     {
         if (_updateLogBuilder is null) return;
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_updateLogPath)!);
-            File.WriteAllText(_updateLogPath, _updateLogBuilder.ToString());
+            string tempPath = _updateLogPath + ".tmp";
+            File.WriteAllText(tempPath, _updateLogBuilder.ToString());
+            File.Move(tempPath, _updateLogPath, overwrite: true);
         }
-        catch { /* see comment above */ }
+        catch { }
     }
 
     private const string AttemptFinishedMarker = "=== Attempt finished:";
@@ -149,9 +149,15 @@ public partial class AutoUpdater
                 }
             }
 
-            if (targetVer is not null && targetVer == currentVer)
+            if (targetVer is null)
             {
-                Logger.Info($"Previous update attempt killed mid-flow but install succeeded (running version {currentVer} matches target). Marking as finished.");
+                Logger.Info("Update log has no recorded target version; skipping orphan-attempt banner.");
+                return;
+            }
+
+            if (VersionsMatch(targetVer, currentVer))
+            {
+                Logger.Info($"Previous update attempt killed mid-flow but install succeeded (running version {currentVer} matches target {targetVer}). Marking as finished.");
                 try
                 {
                     File.AppendAllText(
@@ -162,7 +168,7 @@ public partial class AutoUpdater
                 return;
             }
 
-            Logger.Warn($"Detected interrupted update attempt. Running={currentVer}, Target={targetVer ?? "(unknown)"}");
+            Logger.Warn($"Detected interrupted update attempt. Running={currentVer}, Target={targetVer}");
 
             ShowMessage_ThreadSafe(
                 CoreTools.Translate("Your last update attempt did not complete."),

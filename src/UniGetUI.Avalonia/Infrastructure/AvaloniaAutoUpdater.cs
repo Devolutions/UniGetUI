@@ -134,18 +134,18 @@ internal static partial class AvaloniaAutoUpdater
         }
     }
 
-    // Persists the current buffer to _updateLogPath. Caller MUST hold _updateLogLock.
-    // Failures are silently swallowed — a missing log file should never break the
-    // update flow itself.
+    // Tmp + rename so a kill mid-flush (installer terminates us during file replacement) can't leave a 0-byte file.
     private static void FlushUpdateLogToDiskNoLock()
     {
         if (_updateLogBuilder is null) return;
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_updateLogPath)!);
-            File.WriteAllText(_updateLogPath, _updateLogBuilder.ToString());
+            string tempPath = _updateLogPath + ".tmp";
+            File.WriteAllText(tempPath, _updateLogBuilder.ToString());
+            File.Move(tempPath, _updateLogPath, overwrite: true);
         }
-        catch { /* see comment above */ }
+        catch { }
     }
 
     private const string AttemptFinishedMarker = "=== Attempt finished:";
@@ -213,9 +213,15 @@ internal static partial class AvaloniaAutoUpdater
                 }
             }
 
-            if (targetVer is not null && targetVer == currentVer)
+            if (targetVer is null)
             {
-                Logger.Info($"Previous update attempt killed mid-flow but install succeeded (running version {currentVer} matches target). Marking as finished.");
+                Logger.Info("Update log has no recorded target version; skipping orphan-attempt banner.");
+                return;
+            }
+
+            if (VersionsMatch(targetVer, currentVer))
+            {
+                Logger.Info($"Previous update attempt killed mid-flow but install succeeded (running version {currentVer} matches target {targetVer}). Marking as finished.");
                 try
                 {
                     File.AppendAllText(
@@ -226,7 +232,7 @@ internal static partial class AvaloniaAutoUpdater
                 return;
             }
 
-            Logger.Warn($"Detected interrupted update attempt. Running={currentVer}, Target={targetVer ?? "(unknown)"}");
+            Logger.Warn($"Detected interrupted update attempt. Running={currentVer}, Target={targetVer}");
 
             RaiseStatus(
                 CoreTools.Translate("Your last update attempt did not complete."),
@@ -1218,6 +1224,21 @@ internal static partial class AvaloniaAutoUpdater
 
         LogUpdateWarn($"Could not parse version '{raw}', using fallback '{fallback}'");
         return fallback;
+    }
+
+    // Normalize trailing zero components so "2026.1.11" and "2026.1.11.0" compare equal.
+    private static bool VersionsMatch(string a, string b)
+    {
+        string sa = a.Trim().TrimStart('v', 'V');
+        string sb = b.Trim().TrimStart('v', 'V');
+
+        if (Version.TryParse(sa, out Version? va) && Version.TryParse(sb, out Version? vb))
+        {
+            return CoreTools.NormalizeVersionForComparison(va)
+                .Equals(CoreTools.NormalizeVersionForComparison(vb));
+        }
+
+        return string.Equals(sa, sb, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeThumbprint(string thumbprint) =>

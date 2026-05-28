@@ -92,6 +92,7 @@ public static partial class Settings
         DisableClassicMode,
         DisableInstallerHostChangeWarning,
         BunPreferLatestVersions,
+        UseLegacyTrayIcon,
 
         Test1,
         Test2,
@@ -195,6 +196,7 @@ public static partial class Settings
             K.DisableClassicMode => "DisableClassicMode",
             K.DisableInstallerHostChangeWarning => "DisableInstallerHostChangeWarning",
             K.BunPreferLatestVersions => "BunPreferLatestVersions",
+            K.UseLegacyTrayIcon => "UseLegacyTrayIcon",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

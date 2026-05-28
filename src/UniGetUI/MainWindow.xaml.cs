@@ -635,9 +635,10 @@ namespace UniGetUI.Interface
                     modifier += "_white";
                 }
 
+                string suffix = Settings.Get(Settings.K.UseLegacyTrayIcon) ? "_legacy" : "";
                 string FullIconPath = Path.Join(
                     CoreData.UniGetUIExecutableDirectory,
-                    "\\Assets\\Images\\tray" + modifier + ".ico"
+                    "\\Assets\\Images\\tray" + modifier + suffix + ".ico"
                 );
                 if (LastTrayIcon != FullIconPath)
                 {

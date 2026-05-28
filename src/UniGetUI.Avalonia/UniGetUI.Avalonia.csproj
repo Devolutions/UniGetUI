@@ -136,6 +136,17 @@
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_orange_white.ico" Link="Assets\tray_orange_white.ico" />
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_black.ico" Link="Assets\tray_turquoise_black.ico" />
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_white.ico" Link="Assets\tray_turquoise_white.ico" />
+        <!-- Legacy (pre-2026 redesign) tray icons, used when Settings.K.UseLegacyTrayIcon is on -->
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_black_legacy.ico" Link="Assets\tray_empty_black_legacy.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_white_legacy.ico" Link="Assets\tray_empty_white_legacy.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_blue_black_legacy.ico" Link="Assets\tray_blue_black_legacy.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_blue_white_legacy.ico" Link="Assets\tray_blue_white_legacy.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_green_black_legacy.ico" Link="Assets\tray_green_black_legacy.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_green_white_legacy.ico" Link="Assets\tray_green_white_legacy.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_orange_black_legacy.ico" Link="Assets\tray_orange_black_legacy.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_orange_white_legacy.ico" Link="Assets\tray_orange_white_legacy.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_black_legacy.ico" Link="Assets\tray_turquoise_black_legacy.ico" />
+        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_white_legacy.ico" Link="Assets\tray_turquoise_white_legacy.ico" />
         <AvaloniaResource Remove="Infrastructure\**" />
     </ItemGroup>
 

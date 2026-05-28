@@ -44,7 +44,13 @@
 
                 <settings:CheckboxCard SettingName="DisableSystemTray"
                                        Text="{t:Translate Close UniGetUI to the system tray}"
+                                       StateChangedCommand="{Binding RefreshSystemTrayCommand}"
                                        CornerRadius="8,8,0,0"/>
+
+                <settings:CheckboxCard SettingName="UseLegacyTrayIcon"
+                                       Text="{t:Translate Use the legacy (pre-2026) system tray icon}"
+                                       StateChangedCommand="{Binding RefreshSystemTrayCommand}"
+                                       BorderThickness="1,0,1,1"/>
 
                 <settings:ButtonCard x:Name="EditAutostartSettings"
                                      CornerRadius="0,0,8,8"

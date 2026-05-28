@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using global::Avalonia;
 using global::Avalonia.Controls;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
@@ -30,6 +31,10 @@ public partial class Interface_PViewModel : ViewModelBase
     [RelayCommand]
     private static void EditAutostartSettings()
         => CoreTools.Launch("ms-settings:startupapps");
+
+    [RelayCommand]
+    private static void RefreshSystemTray()
+        => MainWindow.Instance?.UpdateSystemTrayStatus();
 
     [RelayCommand]
     private async Task ResetIconCache(Visual? _)

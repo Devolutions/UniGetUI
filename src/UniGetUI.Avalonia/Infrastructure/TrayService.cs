@@ -79,8 +79,9 @@ internal sealed class TrayService : IDisposable
             _trayIcon.ToolTipText = tooltip + " - UniGetUI";
 
             modifier += IsTaskbarLight() ? "_black" : "_white";
+            string suffix = Settings.Get(Settings.K.UseLegacyTrayIcon) ? "_legacy" : "";
 
-            string uri = $"avares://UniGetUI.Avalonia/Assets/tray{modifier}.ico";
+            string uri = $"avares://UniGetUI.Avalonia/Assets/tray{modifier}{suffix}.ico";
             if (_lastIconUri == uri) return;
             _lastIconUri = uri;
 

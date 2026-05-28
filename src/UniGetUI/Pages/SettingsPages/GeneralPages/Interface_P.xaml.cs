@@ -104,6 +104,9 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
         private void DisableSystemTray_StateChanged(object sender, EventArgs e) =>
             MainApp.Instance.MainWindow.UpdateSystemTrayStatus();
 
+        private void UseLegacyTrayIcon_StateChanged(object sender, EventArgs e) =>
+            MainApp.Instance.MainWindow.UpdateSystemTrayStatus();
+
         private void ThemeSelector_ValueChanged(object sender, EventArgs e) =>
             MainApp.Instance.MainWindow.ApplyTheme();
 

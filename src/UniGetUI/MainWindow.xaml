@@ -113,35 +113,23 @@
           Grid.ColumnSpan="3"
           Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
         />
-        <StackPanel Grid.Row="1" Grid.Column="1" Padding="0,20,0,20" Orientation="Horizontal">
-          <Border
-            Margin="-500,0,20,0"
-            BorderBrush="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-            BorderThickness="500,0,0,0"
-            Canvas.ZIndex="1"
-          >
+        <!-- Splash: column/row ratios match the wordmark bounding box (x 245-480, y 78-193) in the 620x300 source SVG so the tagline cell lands directly below the wordmark. -->
+        <Grid Grid.Row="1" Grid.Column="1" Width="540">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="245*" />
+            <ColumnDefinition Width="235*" />
+            <ColumnDefinition Width="140*" />
+          </Grid.ColumnDefinitions>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="200*" />
+            <RowDefinition Height="100*" />
+          </Grid.RowDefinitions>
+          <Image Grid.ColumnSpan="3" Grid.RowSpan="2" Stretch="Uniform">
             <animations:Explicit.Animations>
               <animations:AnimationSet x:Name="InAnimation_Border">
                 <animations:TranslationAnimation
                   EasingMode="EaseOut"
-                  From="225,0"
-                  To="0,0"
-                  Duration="0:0:0.7"
-                />
-              </animations:AnimationSet>
-            </animations:Explicit.Animations>
-            <Image Width="180">
-              <Image.Source>
-                <BitmapImage UriSource="ms-appx:///Assets/Images/icon_unsquare.png" />
-              </Image.Source>
-            </Image>
-          </Border>
-          <Border Margin="0" Padding="0,10" HorizontalAlignment="Right">
-            <animations:Explicit.Animations>
-              <animations:AnimationSet x:Name="InAnimation_Text">
-                <animations:TranslationAnimation
-                  EasingMode="EaseOut"
-                  From="-225,0"
+                  From="0,40"
                   To="0,0"
                   Duration="0:0:0.7"
                 />
@@ -153,28 +141,32 @@
                 />
               </animations:AnimationSet>
             </animations:Explicit.Animations>
-            <StackPanel VerticalAlignment="Center" Orientation="Vertical">
-              <TextBlock
-                Name="UniGetUITitle"
-                Margin="0,-10,0,-20"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Center"
-                FontFamily="Segoe UI Variable Display"
-                FontSize="90"
-                FontWeight="ExtraBlack"
-                HorizontalTextAlignment="Right"
-                Text="UniGetUI"
-              />
-              <widgets:TranslatedTextBlock
-                HorizontalAlignment="Center"
-                VerticalAlignment="Bottom"
-                FontFamily="Segoe UI Variable"
-                FontSize="20"
-                Text="Package management made easy"
-              />
-            </StackPanel>
-          </Border>
-        </StackPanel>
+            <Image.Source>
+              <BitmapImage UriSource="ms-appx:///Assets/SplashScreen.png" />
+            </Image.Source>
+          </Image>
+          <widgets:TranslatedTextBlock
+            Grid.Column="1"
+            Grid.Row="1"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Margin="0,8,0,0"
+            FontFamily="Segoe UI Variable"
+            FontSize="15"
+            Text="Package management made easy"
+          >
+            <animations:Explicit.Animations>
+              <animations:AnimationSet x:Name="InAnimation_Text">
+                <animations:OpacityAnimation
+                  EasingMode="EaseOut"
+                  From="0"
+                  To="1"
+                  Duration="0:0:0.7"
+                />
+              </animations:AnimationSet>
+            </animations:Explicit.Animations>
+          </widgets:TranslatedTextBlock>
+        </Grid>
         <ProgressRing
           Name="LoadingIndicator"
           Grid.Row="1"

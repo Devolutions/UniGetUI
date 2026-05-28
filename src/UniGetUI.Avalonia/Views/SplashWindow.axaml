@@ -14,11 +14,30 @@
             BorderBrush="{DynamicResource AppBorderBrush}"
             BorderThickness="1"
             BoxShadow="0 8 32 0 #40000000"
-            Margin="16">
-        <Image x:Name="SplashImage"
-               Stretch="Uniform"
-               HorizontalAlignment="Center"
-               VerticalAlignment="Center"
-               Margin="24"/>
+            Margin="16"
+            ClipToBounds="True">
+        <!-- Column/row ratios match the wordmark bounding box (x 245-480, y 78-193) in the 620x300 SVG viewBox, so the tagline cell sits directly below the wordmark. -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="245*"/>
+                <ColumnDefinition Width="235*"/>
+                <ColumnDefinition Width="140*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="200*"/>
+                <RowDefinition Height="100*"/>
+            </Grid.RowDefinitions>
+            <Image x:Name="SplashImage"
+                   Grid.ColumnSpan="3"
+                   Grid.RowSpan="2"
+                   Stretch="Uniform"/>
+            <TextBlock x:Name="TaglineText"
+                       Grid.Column="1"
+                       Grid.Row="1"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Top"
+                       Margin="0,8,0,0"
+                       FontSize="15"/>
+        </Grid>
     </Border>
 </Window>

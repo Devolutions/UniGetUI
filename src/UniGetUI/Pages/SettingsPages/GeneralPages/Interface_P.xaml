@@ -64,7 +64,7 @@
         BorderThickness="1,0,1,1"
         SettingName="UseLegacyTrayIcon"
         StateChanged="UseLegacyTrayIcon_StateChanged"
-        Text="Use the legacy (pre-2026) system tray icon"
+        Text="Use the legacy system tray icon"
       />
       <widgets:ButtonCard
         BorderThickness="1,0,1,1"

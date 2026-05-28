@@ -113,18 +113,9 @@
           Grid.ColumnSpan="3"
           Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
         />
-        <!-- Splash: column/row ratios match the wordmark bounding box (x 245-480, y 78-193) in the 620x300 source SVG so the tagline cell lands directly below the wordmark. -->
-        <Grid Grid.Row="1" Grid.Column="1" Width="540">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="245*" />
-            <ColumnDefinition Width="235*" />
-            <ColumnDefinition Width="140*" />
-          </Grid.ColumnDefinitions>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="200*" />
-            <RowDefinition Height="100*" />
-          </Grid.RowDefinitions>
-          <Image Grid.ColumnSpan="3" Grid.RowSpan="2" Stretch="Uniform">
+        <!-- Splash: Height matches the 620:300 aspect ratio of SplashScreen.svg so the image fills the grid exactly. SvgImageSource is used so the host window's background shows through the transparent SVG. The tagline's 90px left margin shifts its centering from the image center (x=270) to the wordmark center (x≈315) within the 540-wide grid. -->
+        <Grid Grid.Row="1" Grid.Column="1" Width="540" Height="261">
+          <Image Stretch="Uniform">
             <animations:Explicit.Animations>
               <animations:AnimationSet x:Name="InAnimation_Border">
                 <animations:TranslationAnimation
@@ -142,17 +133,16 @@
               </animations:AnimationSet>
             </animations:Explicit.Animations>
             <Image.Source>
-              <BitmapImage UriSource="ms-appx:///Assets/SplashScreen.png" />
+              <SvgImageSource UriSource="ms-appx:///Assets/SplashScreen.svg" RasterizePixelWidth="540" RasterizePixelHeight="261" />
             </Image.Source>
           </Image>
           <widgets:TranslatedTextBlock
-            Grid.Column="1"
-            Grid.Row="1"
             HorizontalAlignment="Center"
             VerticalAlignment="Top"
-            Margin="0,8,0,0"
+            Margin="110,170,0,0"
             FontFamily="Segoe UI Variable"
             FontSize="15"
+            WrappingMode="NoWrap"
             Text="Package management made easy"
           >
             <animations:Explicit.Animations>

@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="620" height="300" viewBox="0 0 620 300">
-  <!-- Splash screen. Tagline excluded - to be rendered by app's localization layer below the wordmark. -->
-  <rect width="620" height="300" fill="#ffffff"/>
+  <!-- Splash screen. Tagline excluded - to be rendered by app's localization layer below the wordmark. Background is transparent so the host window's background shows through. -->
   <rect x="17" y="52" width="196" height="196" rx="36" fill="#e1f3ff"/>
   <g transform="translate(56.5, 92.5) scale(2.3770)">
     <g transform="translate(-11.805, -11.81)">

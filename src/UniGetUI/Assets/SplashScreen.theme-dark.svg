@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="620" height="300" viewBox="0 0 620 300">
-  <!-- Splash screen, dark theme. Tagline excluded - to be rendered by app's localization layer. -->
-  <rect width="620" height="300" fill="#000000"/>
+  <!-- Splash screen, dark theme. Tagline excluded - to be rendered by app's localization layer. Background is transparent so the host window's background shows through. -->
   <!-- Rounded tile -->
   <rect x="17" y="52" width="196" height="196" rx="36" fill="#001725"/>
   <!-- Cyan icon from devolutions-unigetui-icon-tray.svg -->

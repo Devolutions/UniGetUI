@@ -43,6 +43,7 @@ public partial class PackageDetailsWindow : Window
         _vm = new PackageDetailsViewModel(package, operation);
         DataContext = _vm;
         InitializeComponent();
+        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
 
         _vm.CloseRequested += (_, _) => Close();
         _vm.DetailsLoaded += (_, _) =>

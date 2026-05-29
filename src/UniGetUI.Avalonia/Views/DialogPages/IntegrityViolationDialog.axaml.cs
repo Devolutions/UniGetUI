@@ -8,6 +8,7 @@ public partial class IntegrityViolationDialog : Window
     public IntegrityViolationDialog()
     {
         InitializeComponent();
+        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         CloseButton.Click += (_, _) => Close();
     }
 

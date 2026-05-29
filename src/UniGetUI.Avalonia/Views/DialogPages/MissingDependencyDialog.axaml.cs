@@ -26,6 +26,7 @@ public partial class MissingDependencyDialog : Window
         _total = total;
 
         InitializeComponent();
+        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
 
         bool notFirstTime =
             Settings.GetDictionaryItem<string, string>(Settings.K.DependencyManagement, dep.Name)

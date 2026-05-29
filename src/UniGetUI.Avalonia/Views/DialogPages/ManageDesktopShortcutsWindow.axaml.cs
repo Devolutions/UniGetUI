@@ -12,6 +12,7 @@ public partial class ManageDesktopShortcutsWindow : Window
         var vm = new ManageDesktopShortcutsViewModel(shortcuts);
         DataContext = vm;
         InitializeComponent();
+        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         vm.CloseRequested += (_, _) => Close();
     }
 

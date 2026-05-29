@@ -36,6 +36,8 @@
                     <!-- Window structure -->
                     <SolidColorBrush x:Key="AppWindowBackground"         Color="#F3F3F3"/>
                     <SolidColorBrush x:Key="AppTitleBarBackground"       Color="#F3F3F3"/>
+                    <!-- Window/page surface; overridden to Transparent by Styles.WindowsMica when Mica is active -->
+                    <SolidColorBrush x:Key="MicaPageBackground"          Color="#F3F3F3"/>
                     <SolidColorBrush x:Key="AppSplitterBackground"       Color="#E5E5E5"/>
                     <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#EEEEEE"/>
                     <SolidColorBrush x:Key="AppBorderBrush"              Color="#E5E5E5"/>
@@ -97,6 +99,8 @@
                     <!-- Window structure -->
                     <SolidColorBrush x:Key="AppWindowBackground"         Color="#202020"/>
                     <SolidColorBrush x:Key="AppTitleBarBackground"       Color="#202020"/>
+                    <!-- Window/page surface; overridden to Transparent by Styles.WindowsMica when Mica is active -->
+                    <SolidColorBrush x:Key="MicaPageBackground"          Color="#202020"/>
                     <SolidColorBrush x:Key="AppSplitterBackground"       Color="#1A1A1A"/>
                     <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#1C1C1C"/>
                     <SolidColorBrush x:Key="AppBorderBrush"              Color="#353535"/>

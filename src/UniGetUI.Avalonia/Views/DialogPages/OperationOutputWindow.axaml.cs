@@ -15,6 +15,7 @@ public partial class OperationOutputWindow : Window
         var vm = new OperationOutputViewModel(operation);
         DataContext = vm;
         InitializeComponent();
+        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
 
         foreach (var line in vm.OutputLines)
             AppendLine(line);

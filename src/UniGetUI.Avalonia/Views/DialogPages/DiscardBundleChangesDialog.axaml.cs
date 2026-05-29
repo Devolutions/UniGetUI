@@ -10,6 +10,7 @@ public partial class DiscardBundleChangesDialog : Window
     public DiscardBundleChangesDialog()
     {
         InitializeComponent();
+        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         CancelButton.Click += (_, _) => Close();
         DiscardButton.Click += (_, _) => { Confirmed = true; Close(); };
     }

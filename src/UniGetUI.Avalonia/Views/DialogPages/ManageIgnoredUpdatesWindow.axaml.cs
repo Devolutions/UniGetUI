@@ -12,6 +12,7 @@ public partial class ManageIgnoredUpdatesWindow : Window
         var vm = new ManageIgnoredUpdatesViewModel();
         DataContext = vm;
         InitializeComponent();
+        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         vm.CloseRequested += (_, _) => Close();
     }
 

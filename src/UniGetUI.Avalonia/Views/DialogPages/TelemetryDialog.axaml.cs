@@ -11,6 +11,7 @@ public partial class TelemetryDialog : Window
     public TelemetryDialog()
     {
         InitializeComponent();
+        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
 
         Body2.Text = CoreTools.Translate("No personal information is collected nor sent, and the collected data is anonimized, so it can't be back-tracked to you.");
 

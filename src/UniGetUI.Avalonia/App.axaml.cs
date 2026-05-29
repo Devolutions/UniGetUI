@@ -1,8 +1,10 @@
+using System;
 using System.Diagnostics;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -24,6 +26,20 @@ public partial class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+
+        // Windows 11 Mica look is opt-in per environment: only merge the translucent
+        // surface overrides when Mica is actually usable (Win11 + transparency on).
+        // macOS, Linux, Windows 10, and transparency-off all keep the solid Styles.Common look.
+        if (MicaWindowHelper.IsMicaEnabled())
+        {
+            Resources.MergedDictionaries.Add(new ResourceInclude((Uri?)null)
+            {
+                Source = new Uri("avares://UniGetUI.Avalonia/Assets/Styles/Styles.WindowsMica.axaml")
+            });
+            // Give flyouts/menus/tooltips a native acrylic backdrop (DWM) so they blur + tint
+            // from behind and adapt to the theme.
+            MicaWindowHelper.EnableAcrylicPopups();
+        }
 #if AVALONIA_DIAGNOSTICS_ENABLED
         this.AttachDeveloperTools();
 #endif

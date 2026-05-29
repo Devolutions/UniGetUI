@@ -177,7 +177,7 @@
                               automation:AutomationProperties.AccessibilityView="Control"
                               automation:AutomationProperties.Name="{t:Translate Filters}"
                               automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Search}"
-                              Background="{DynamicResource AppWindowBackground}">
+                              Background="{DynamicResource MicaPageBackground}">
                     <StackPanel x:Name="SidePanelGrid" Spacing="8" Margin="0,0,0,8">
 
                         <!-- Sources expander -->
@@ -387,7 +387,7 @@
                           IsVisible="{Binding IsFilterPaneOpen}"
                           HorizontalAlignment="Stretch"
                           ResizeDirection="Columns"
-                          Background="{DynamicResource AppWindowBackground}"/>
+                          Background="{DynamicResource MicaPageBackground}"/>
 
             <!-- ===== OVERLAY BACKDROP (overlay mode only, dismisses pane on click) ===== -->
             <Border x:Name="FilterOverlayBackdrop"
@@ -544,15 +544,20 @@
                             </DataGrid.Columns>
                         </DataGrid>
 
-                        <!-- Select-all checkbox overlaid on the first column header (list mode only) -->
-                        <CheckBox IsChecked="{Binding AllPackagesChecked, Mode=TwoWay}"
-                                  IsVisible="{Binding IsListViewMode}"
-                                  Width="40" Height="32"
-                                  automation:AutomationProperties.Name="{t:Translate Select all}"
-                                  HorizontalAlignment="Left"
-                                  VerticalAlignment="Top"
-                                  Margin="8,0,0,0"
-                                  ZIndex="10"/>
+                        <!-- Select-all overlaid on the first column header (list mode only).
+                             Mirrors the row checkbox layout exactly: a 40px box at the column
+                             origin with the checkbox centered + the same Margin as the rows, so
+                             the boxes line up regardless of cell metrics. -->
+                        <Border IsVisible="{Binding IsListViewMode}"
+                                Width="40" Height="32"
+                                HorizontalAlignment="Left" VerticalAlignment="Top"
+                                Background="Transparent" ZIndex="10">
+                            <CheckBox IsChecked="{Binding AllPackagesChecked, Mode=TwoWay}"
+                                      automation:AutomationProperties.Name="{t:Translate Select all}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Margin="9,0,0,0"/>
+                        </Border>
 
                         <!-- ===== GRID VIEW ===== -->
                         <ScrollViewer IsVisible="{Binding IsGridViewMode}"
@@ -568,7 +573,8 @@
                                         <Border CornerRadius="4" Margin="4" Width="275" Height="56"
                                             automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
-                                                Background="{DynamicResource AppBorderBrush}" Padding="4">
+                                                Background="{DynamicResource SettingsCardBackground}"
+                                                BorderBrush="{DynamicResource SettingsCardBorderBrush}" BorderThickness="1" Padding="4">
                                             <Grid ColumnDefinitions="48,*,28" ColumnSpacing="4">
                                                 <Panel Grid.Column="0" Width="44" Height="44"
                                                        VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -639,14 +645,15 @@
                                         <Border CornerRadius="4" Margin="4" Width="128" Height="134"
                                             automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
-                                                Background="{DynamicResource AppBorderBrush}" Padding="4">
+                                                Background="{DynamicResource SettingsCardBackground}"
+                                                BorderBrush="{DynamicResource SettingsCardBorderBrush}" BorderThickness="1" Padding="4">
                                             <Grid RowDefinitions="22,60,30,15">
                                                 <CheckBox Grid.Row="0"
                                                           IsChecked="{Binding IsChecked, Mode=TwoWay}"
                                                           automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"
-                                                          Padding="0" Margin="-4,0,0,0"/>
+                                                          Padding="0" Margin="2,2,0,0"/>
                                                 <Button Grid.Row="0"
                                                         Click="CardOverflowButton_Click"
                                                         Width="22" Height="22" Padding="0"
@@ -724,7 +731,7 @@
                             CornerRadius="8"
                             BorderBrush="{DynamicResource AppBorderBrush}"
                             BorderThickness="1"
-                            Background="{DynamicResource AppWindowBackground}"
+                            Background="{DynamicResource MicaPageBackground}"
                             ClipToBounds="True">
                         <Grid ColumnDefinitions="*,64">
                             <TextBox x:Name="MegaQueryBlock"

@@ -16,6 +16,7 @@ public partial class OperationFailedDialog : Window
     public OperationFailedDialog(AbstractOperation operation)
     {
         InitializeComponent();
+        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         Title = operation.Metadata.FailureMessage;
 
         HeaderContent.Text =

@@ -63,6 +63,13 @@ public partial class MainWindow : Window
     private const uint SWP_NOACTIVATE = 0x0010;
     private const uint SWP_FRAMECHANGED = 0x0020;
 
+    // DWM attributes for the native Windows 11 Mica look: rounded corners and an
+    // accent-colored window border that tracks focus.
+    private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    private const int DWMWA_BORDER_COLOR = 34;
+    private const int DWMWCP_ROUND = 2;
+    private const int DWMWA_COLOR_NONE = unchecked((int)0xFFFFFFFE);
+
     private bool _focusSidebarSelectionOnNextPageChange;
     private TrayService? _trayService;
     private bool _allowClose;
@@ -123,6 +130,8 @@ public partial class MainWindow : Window
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
             }
         }
+
+        SetupMicaAndAccentBorder();
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)
@@ -250,6 +259,12 @@ public partial class MainWindow : Window
             WindowDecorations = WindowDecorations.BorderOnly;
             ExtendClientAreaToDecorationsHint = true;
             ExtendClientAreaTitleBarHeightHint = -1;
+            // Request the Win11 Mica backdrop only when it should actually be used
+            // (Windows 11 + "Transparency effects" enabled). Otherwise leave the default
+            // so the window stays solid. The transparent-background switch happens in
+            // SetupMicaAndAccentBorder() once the native handle exists.
+            if (MicaWindowHelper.IsMicaEnabled())
+                TransparencyLevelHint = new[] { WindowTransparencyLevel.Mica };
             TitleBarGrid.ClearValue(HeightProperty);
             TitleBarGrid.Height = 44;
             HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
@@ -618,6 +633,41 @@ public partial class MainWindow : Window
             CoreTools.Translate(isMaximized ? "Restore" : "Maximize"));
     }
 
+    // Applies the Windows 11 Mica look when it's actually usable (Win11 + transparency on):
+    // a transparent window so the backdrop shows, native rounded corners, and no accent
+    // border (it reads as out of place on the large main window). Otherwise the window keeps
+    // its solid background. Must run after the native handle exists (OnOpened); Windows-only.
+    private void SetupMicaAndAccentBorder()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        if (TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
+            return;
+
+        if (!MicaWindowHelper.IsMicaEnabled())
+        {
+            // No Mica (Windows 10, transparency off, etc.): keep the solid window background.
+            // Styles.WindowsMica is not merged in this case, so the surfaces stay opaque too.
+            if (this.TryFindResource("AppWindowBackground", ActualThemeVariant, out var bg) && bg is IBrush brush)
+                Background = brush;
+            return;
+        }
+
+        // The custom NCCALCSIZE frame keeps WS_THICKFRAME, so DWM still has a frame to round.
+        int corner = DWMWCP_ROUND;
+        NativeMethods.DwmSetWindowAttribute(handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, sizeof(int));
+
+        // Transparent window + transparent MicaPageBackground (from Styles.WindowsMica) let
+        // the backdrop show through the chrome and page area.
+        Background = Brushes.Transparent;
+
+        // Suppress the window border colour so the main window doesn't get the accent edge
+        // (the dialogs keep it via MicaWindowHelper).
+        int noBorder = DWMWA_COLOR_NONE;
+        NativeMethods.DwmSetWindowAttribute(handle, DWMWA_BORDER_COLOR, ref noBorder, sizeof(int));
+    }
+
     private static nint OnWindowsWndProc(nint hWnd, uint msg, nint wParam, nint lParam, ref bool handled)
     {
         // Force client = full window rect. Avalonia's ExtendClientArea handler only overrides
@@ -728,6 +778,9 @@ public partial class MainWindow : Window
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool GetMonitorInfo(nint hMonitor, ref MONITORINFO lpmi);
+
+        [DllImport("dwmapi.dll")]
+        public static extern int DwmSetWindowAttribute(nint hwnd, int attr, ref int value, int size);
 
         [StructLayout(LayoutKind.Sequential)]
         public struct STYLESTRUCT

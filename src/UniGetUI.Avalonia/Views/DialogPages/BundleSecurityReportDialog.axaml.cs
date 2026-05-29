@@ -9,6 +9,7 @@ public partial class BundleSecurityReportDialog : Window
     public BundleSecurityReportDialog(BundleReport report)
     {
         InitializeComponent();
+        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
 
         var sb = new System.Text.StringBuilder();
         foreach (var (pkgId, entries) in report.Contents)

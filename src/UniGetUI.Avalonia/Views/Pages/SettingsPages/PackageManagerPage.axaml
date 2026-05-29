@@ -26,6 +26,19 @@
             <Setter Property="Background"   Value="{DynamicResource StatusInfoBackground}"/>
             <Setter Property="BorderBrush"  Value="{DynamicResource StatusInfoBorderBrush}"/>
         </Style>
+        <!-- Chrome-less hyperlink button (no fill/border in any state) -->
+        <Style Selector="Button.link /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.link:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,10">
@@ -55,7 +68,10 @@
                                Opacity="0.85" TextWrapping="Wrap"/>
                     <Button IsVisible="{Binding ShowVersionVisible}"
                             Command="{Binding ShowVersionCommand}"
+                            Classes="link"
                             HorizontalAlignment="Left"
+                            Background="Transparent"
+                            BorderThickness="0"
                             Padding="0"
                             automation:AutomationProperties.Name="{Binding ShowVersionLabel}">
                         <TextBlock Text="{Binding ShowVersionLabel}" Classes="hyperlink"

@@ -1,0 +1,89 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Windows 11 Mica overrides. Merged into Application.Resources ONLY when Mica is
+        actually active (Windows 11 + "Transparency effects" on) — see App.Initialize().
+        On macOS, Linux, Windows 10, or when transparency is off, this is never merged,
+        so the app keeps the solid surfaces defined in Styles.Common.axaml.
+
+        These keys make the window/page/dialog/card surfaces translucent so the Mica
+        backdrop shows through and the surfaces inherit its (wallpaper-derived) tint.
+    -->
+    <ResourceDictionary.ThemeDictionaries>
+
+        <ResourceDictionary x:Key="Light">
+            <!-- Window/page surface goes transparent so Mica shows behind chrome + page -->
+            <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
+            <!-- Cards / panels: translucent white layers over the (light) Mica -->
+            <SolidColorBrush x:Key="SettingsCardBackground"      Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#14000000"/>
+            <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#99FFFFFF"/>
+            <SolidColorBrush x:Key="AppSplitterBackground"       Color="#18000000"/>
+            <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="AppBorderBrush"              Color="#18000000"/>
+            <SolidColorBrush x:Key="AppBadgeBackground"          Color="#99FFFFFF"/>
+            <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#80FFFFFF"/>
+            <!-- Flyouts / menus / dropdowns / tooltips: DWM Mica backdrop with the card tint over it -->
+            <SolidColorBrush x:Key="FlyoutPresenterBackground"     Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="ComboBoxDropDownBackground"    Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="ToolTipBackground"             Color="#80FFFFFF"/>
+            <!-- Expander chrome -->
+            <SolidColorBrush x:Key="ExpanderHeaderBackground"            Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#99FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed"     Color="#A6FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundDisabled"    Color="#40FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderContentBackground"           Color="Transparent"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBorderBrush"           Color="#14000000"/>
+            <SolidColorBrush x:Key="ExpanderContentBorderBrush"          Color="#14000000"/>
+            <!-- Tab headers (selected tab matches the content panel so they read as one surface) -->
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelected"              Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselected"            Color="Transparent"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselectedPointerOver" Color="#0F000000"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelectedPointerOver"   Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselectedPressed"     Color="#08000000"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelectedPressed"       Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundDisabled"             Color="Transparent"/>
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
+            <!-- Cards / panels: translucent dark layers; ~40% so the wallpaper-tinted Mica bleeds through -->
+            <SolidColorBrush x:Key="SettingsCardBackground"      Color="#662D2D2D"/>
+            <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#26FFFFFF"/>
+            <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#66383838"/>
+            <SolidColorBrush x:Key="AppSplitterBackground"       Color="#66000000"/>
+            <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#66202020"/>
+            <SolidColorBrush x:Key="AppBorderBrush"              Color="#33FFFFFF"/>
+            <SolidColorBrush x:Key="AppBadgeBackground"          Color="#66383838"/>
+            <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#662C2C2C"/>
+            <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#66393939"/>
+            <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#66181818"/>
+            <!-- Flyouts / menus / dropdowns / tooltips: MicaWindowHelper gives the popup window the same
+                 DWM Mica backdrop the app uses; this tint matches the cards so menus read identically -->
+            <SolidColorBrush x:Key="FlyoutPresenterBackground"     Color="#662D2D2D"/>
+            <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#662D2D2D"/>
+            <SolidColorBrush x:Key="ComboBoxDropDownBackground"    Color="#662D2D2D"/>
+            <SolidColorBrush x:Key="ToolTipBackground"             Color="#662D2D2D"/>
+            <!-- Expander chrome -->
+            <SolidColorBrush x:Key="ExpanderHeaderBackground"            Color="#662D2D2D"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#802D2D2D"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed"     Color="#8C2D2D2D"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundDisabled"    Color="#402D2D2D"/>
+            <SolidColorBrush x:Key="ExpanderContentBackground"           Color="Transparent"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBorderBrush"           Color="#26FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderContentBorderBrush"          Color="#26FFFFFF"/>
+            <!-- Tab headers -->
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelected"              Color="#662C2C2C"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselected"            Color="Transparent"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselectedPointerOver" Color="#1AFFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelectedPointerOver"   Color="#662C2C2C"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselectedPressed"     Color="#0FFFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelectedPressed"       Color="#662C2C2C"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundDisabled"             Color="Transparent"/>
+        </ResourceDictionary>
+
+    </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

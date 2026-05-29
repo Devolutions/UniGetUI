@@ -17,6 +17,7 @@ public partial class InstallOptionsWindow : Window
         var vm = new InstallOptionsViewModel(package, operation, options);
         DataContext = vm;
         InitializeComponent();
+        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         vm.CloseRequested += (_, _) => Close();
     }
 

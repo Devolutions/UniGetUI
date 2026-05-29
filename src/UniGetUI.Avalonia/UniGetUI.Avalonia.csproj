@@ -164,6 +164,8 @@
       <Compile Include="Infrastructure\WindowsAppNotificationBridge.cs" />
       <Compile Include="Infrastructure\TrayService.cs" />
       <Compile Include="Infrastructure\MicaWindowHelper.cs" />
+      <Compile Include="Infrastructure\EntrancePageTransition.cs" />
+      <Compile Include="Infrastructure\DirectionalSlideTransition.cs" />
       <Compile Include="Infrastructure\MacOsNotificationBridge.cs" />
       <Compile Include="Infrastructure\Secrets.cs" />
        <Compile Include="Infrastructure\AsyncCommand.cs" />

@@ -6,6 +6,7 @@
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+        xmlns:infra="using:UniGetUI.Avalonia.Infrastructure"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="750"
@@ -54,12 +55,17 @@
                     <ContentControl Content="{Binding WinGetWarningBanner}"/>
                     <ContentControl Content="{Binding TelemetryWarner}"/>
                 </StackPanel>
-                <ContentControl Grid.Row="1"
+                <TransitioningContentControl Grid.Row="1"
                                 Content="{Binding CurrentPageContent}"
                                 automation:AutomationProperties.AccessibilityView="Control"
                                 automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Main}"
                                 HorizontalContentAlignment="Stretch"
-                                VerticalContentAlignment="Stretch"/>
+                                VerticalContentAlignment="Stretch">
+                    <!-- Page-switch animation: fade + subtle slide-up (WinUI Frame entrance feel) -->
+                    <TransitioningContentControl.PageTransition>
+                        <infra:EntrancePageTransition Duration="0:0:0.22" VerticalOffset="28"/>
+                    </TransitioningContentControl.PageTransition>
+                </TransitioningContentControl>
             </Grid>
 
             <!-- ── GridSplitter (only visible when operations are present) ── -->

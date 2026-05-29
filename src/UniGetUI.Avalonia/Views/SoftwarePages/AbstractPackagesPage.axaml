@@ -168,10 +168,14 @@
               Grid.Row="2"
               ColumnDefinitions="220,4,*">
 
-            <!-- ===== FILTER PANE ===== -->
-                <ScrollViewer x:Name="SidePanel"
-                              Grid.Column="0"
-                              IsVisible="{Binding IsFilterPaneOpen}"
+            <!-- ===== FILTER PANE =====
+                 SidePanel is a Border (the grid child the code-behind positions) so it can cast a
+                 BoxShadow — the WinUI elevated filter-panel shadow (most visible in overlay mode). -->
+                <Border x:Name="SidePanel"
+                        Grid.Column="0"
+                        IsVisible="{Binding IsFilterPaneOpen}"
+                        BoxShadow="3 0 14 0 #40000000">
+                <ScrollViewer x:Name="SidePanelScroller"
                               HorizontalScrollBarVisibility="Disabled"
                               Padding="0,8,4,0"
                               automation:AutomationProperties.AccessibilityView="Control"
@@ -381,6 +385,7 @@
 
                     </StackPanel>
                 </ScrollViewer>
+                </Border>
             <!-- ===== DRAG SPLITTER ===== -->
             <GridSplitter x:Name="FilterSplitter"
                           Grid.Column="1"

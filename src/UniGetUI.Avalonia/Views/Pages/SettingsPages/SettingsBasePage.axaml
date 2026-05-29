@@ -53,13 +53,14 @@
             </StackPanel>
         </Border>
 
-        <!-- Row 2: Content frame -->
-        <ContentControl x:Name="Frame"
+        <!-- Row 2: Content frame — sub-pages slide in horizontally (WinUI SlideNavigationTransition) -->
+        <TransitioningContentControl x:Name="Frame"
                         Grid.Row="2"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
                         HorizontalContentAlignment="Stretch"
-                        VerticalContentAlignment="Stretch"/>
+                        VerticalContentAlignment="Stretch"
+                        ClipToBounds="True"/>
 
     </Grid>
 

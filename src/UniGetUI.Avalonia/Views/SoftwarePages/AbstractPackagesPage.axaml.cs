@@ -373,11 +373,12 @@ public abstract partial class AbstractPackagesPage : UserControl,
     // ─── Card overflow button (Grid / Icons view) ─────────────────────────────
     private void CardOverflowButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Button { DataContext: PackageWrapper wrapper }) return;
+        if (sender is not Button { DataContext: PackageWrapper wrapper } button) return;
         PackageList.SelectedItem = wrapper;
         if (_contextMenu is null) return;
         WhenShowingContextMenu(wrapper.Package);
-        _contextMenu.Open(sender as Control);
+        _contextMenu.PlacementTarget = button;
+        _contextMenu.Open();
         e.Handled = true;
     }
 

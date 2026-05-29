@@ -250,24 +250,32 @@
                                                 CornerRadius="6"
                                                 ClipToBounds="True"
                                                 VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal">
+                                            <StackPanel Orientation="Horizontal" Height="30">
                                                 <Button Content="{Binding ButtonText}"
                                                         Command="{Binding ButtonCommand}"
                                                         automation:AutomationProperties.Name="{Binding ButtonText}"
-                                                        Padding="12,6"
+                                                        Height="30"
+                                                        Padding="14,0"
                                                         CornerRadius="0"
-                                                        FontSize="12"/>
+                                                        FontSize="12"
+                                                        VerticalContentAlignment="Center"
+                                                        HorizontalContentAlignment="Center"/>
                                                 <Border Width="1"
                                                         VerticalAlignment="Stretch"
                                                     automation:AutomationProperties.AccessibilityView="Raw"
                                                         Background="{DynamicResource AppBorderBrush}"
                                                         Opacity="0.3"/>
                                                 <Button Width="32"
-                                                        Padding="4"
+                                                        Height="30"
+                                                        Padding="0"
                                                         CornerRadius="0"
+                                                        VerticalContentAlignment="Center"
+                                                        HorizontalContentAlignment="Center"
                                                     automation:AutomationProperties.Name="{t:Translate More}"
                                                         Flyout="{Binding OpMenu}">
                                                     <TextBlock Text="⋯" FontSize="14"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
                                                                automation:AutomationProperties.AccessibilityView="Raw"/>
                                                 </Button>
                                             </StackPanel>

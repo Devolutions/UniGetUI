@@ -10,10 +10,12 @@
     <string>UniGetUI</string>
     <key>CFBundleExecutable</key>
     <string>UniGetUI.Avalonia</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
+    <!-- CFBundleIconName (Assets.car, compiled from AppIcon.icon) drives the macOS 26 appearance
+         styling; CFBundleIconFile (UniGetUI.icns) is the static fallback for macOS < 26. -->
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
+    <key>CFBundleIconFile</key>
+    <string>UniGetUI</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>

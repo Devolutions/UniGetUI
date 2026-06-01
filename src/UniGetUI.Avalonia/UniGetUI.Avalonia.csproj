@@ -56,6 +56,8 @@
         <MakeDir Directories="$(_MacBundleContents)/Resources" />
         <!-- Info.plist (declares CFBundleIconName=AppIcon); version is a dev placeholder. -->
         <Exec Command="sed 's|@VERSION@|0.0.0-dev|g' '$(_MacScriptsDir)/Info.plist' &gt; '$(_MacBundleContents)/Info.plist'" />
+        <!-- Static .icns fallback (CFBundleIconFile) for macOS &lt; 26. -->
+        <Copy SourceFiles="$(_MacScriptsDir)/UniGetUI.icns" DestinationFolder="$(_MacBundleContents)/Resources" />
         <!-- Compile the Icon Composer icon into Assets.car (+ AppIcon.icns). Needs full Xcode's
              actool; if it is unavailable the build still succeeds (the icon is just absent). -->
         <Exec Command="xcrun actool '$(_MacScriptsDir)/AppIcon.icon' --compile '$(_MacBundleContents)/Resources' --app-icon AppIcon --output-partial-info-plist '$(IntermediateOutputPath)appicon-partial.plist' --platform macosx --minimum-deployment-target 12.0 --notices --warnings"

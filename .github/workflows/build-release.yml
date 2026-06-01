@@ -415,6 +415,8 @@ jobs:
             --platform macosx \
             --minimum-deployment-target 12.0 \
             --errors --warnings
+          # Static .icns fallback for macOS < 26 (CFBundleIconFile) and the dmg volume icon.
+          cp scripts/macos/UniGetUI.icns "${APP_BUNDLE}/Contents/Resources/"
 
           if [ "$DRY_RUN" = "false" ]; then
             ENTITLEMENTS="scripts/macos/Entitlements.plist"
@@ -439,7 +441,7 @@ jobs:
 
           create-dmg \
             --volname "UniGetUI" \
-            --volicon "${APP_BUNDLE}/Contents/Resources/AppIcon.icns" \
+            --volicon "scripts/macos/UniGetUI.icns" \
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 128 \

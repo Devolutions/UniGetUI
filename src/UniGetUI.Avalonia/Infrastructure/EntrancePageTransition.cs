@@ -23,8 +23,7 @@ public sealed class EntrancePageTransition : IPageTransition
     public async Task Start(Visual? from, Visual? to, bool forward, CancellationToken cancellationToken)
     {
         // Drop the outgoing page immediately so only the incoming page animates in.
-        if (from is not null)
-            from.Opacity = 0;
+        from?.Opacity = 0;
 
         if (to is null)
             return;
@@ -64,8 +63,7 @@ public sealed class EntrancePageTransition : IPageTransition
         finally
         {
             // Restore even if cancelled, so the presenter is never reused while stranded invisible.
-            if (from is not null)
-                from.Opacity = 1;
+            from?.Opacity = 1;
         }
     }
 }

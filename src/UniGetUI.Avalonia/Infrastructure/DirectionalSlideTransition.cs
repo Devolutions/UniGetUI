@@ -61,8 +61,7 @@ public sealed class DirectionalSlideTransition : IPageTransition
             from.IsVisible = false;
             from.RenderTransform = null;
         }
-        if (to is not null)
-            to.RenderTransform = null;
+        to?.RenderTransform = null;
     }
 
     private static void HideScrollBars(Visual? root, List<ScrollViewer> hidden)

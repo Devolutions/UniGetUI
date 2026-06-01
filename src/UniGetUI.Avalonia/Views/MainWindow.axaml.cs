@@ -912,7 +912,7 @@ public partial class MainWindow : Window
         _ = QuitApplicationAsync();
     }
 
-    private async Task QuitApplicationAsync()
+    private static async Task QuitApplicationAsync()
     {
         try
         {

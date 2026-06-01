@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -30,18 +31,27 @@ public partial class App : Application
         // surface overrides when Mica is actually usable (Win11 + transparency on).
         // macOS, Linux, Windows 10, and transparency-off all keep the solid Styles.Common look.
         if (MicaWindowHelper.IsMicaEnabled())
-        {
-            Resources.MergedDictionaries.Add(new ResourceInclude((Uri?)null)
-            {
-                Source = new Uri("avares://UniGetUI.Avalonia/Assets/Styles/Styles.WindowsMica.axaml")
-            });
-            // Give flyouts/menus/tooltips a native acrylic backdrop (DWM) so they blur + tint
-            // from behind and adapt to the theme.
-            MicaWindowHelper.EnableAcrylicPopups();
-        }
+            ApplyWindowsMicaStyling();
 #if AVALONIA_DIAGNOSTICS_ENABLED
         this.AttachDeveloperTools();
 #endif
+    }
+
+    // ResourceInclude is flagged with RequiresUnreferencedCode because, in general, it can load
+    // resources from other assemblies that trimming might remove. Styles.WindowsMica.axaml is an
+    // avares resource embedded in THIS assembly, so it is never trimmed — the warning is safe to
+    // suppress here. (It can't be declared in XAML because the merge is conditional at runtime.)
+    [UnconditionalSuppressMessage("Trimming", "IL2026",
+        Justification = "Styles.WindowsMica.axaml is an avares resource in this assembly and is not trimmed.")]
+    private void ApplyWindowsMicaStyling()
+    {
+        Resources.MergedDictionaries.Add(new ResourceInclude((Uri?)null)
+        {
+            Source = new Uri("avares://UniGetUI.Avalonia/Assets/Styles/Styles.WindowsMica.axaml")
+        });
+        // Give flyouts/menus/tooltips a native acrylic backdrop (DWM) so they blur + tint
+        // from behind and adapt to the theme.
+        MicaWindowHelper.EnableAcrylicPopups();
     }
 
     public override void OnFrameworkInitializationCompleted()

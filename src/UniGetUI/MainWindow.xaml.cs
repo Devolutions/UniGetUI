@@ -629,9 +629,6 @@ namespace UniGetUI.Interface
                 bool light = theme == ApplicationTheme.Light;
                 string tone = light ? "_black" : "_white";
 
-                }
-                else
-                {
                 string style = Settings.GetValue(Settings.K.TrayIconStyle);
                 if (style.Length == 0) style = "colored";
 

@@ -22,8 +22,7 @@ public sealed class EntrancePageTransition : IPageTransition
 
     public async Task Start(Visual? from, Visual? to, bool forward, CancellationToken cancellationToken)
     {
-        // Drop the outgoing page immediately (no cross-fade) so the two pages never overlap;
-        // only the incoming page animates in, matching the WinUI Frame entrance.
+        // Drop the outgoing page immediately so only the incoming page animates in.
         if (from is not null)
             from.Opacity = 0;
 
@@ -57,10 +56,16 @@ public sealed class EntrancePageTransition : IPageTransition
                 },
             },
         };
-        await enter.RunAsync(to, cancellationToken);
 
-        // Restore the outgoing page's opacity so it renders normally if reused later.
-        if (from is not null)
-            from.Opacity = 1;
+        try
+        {
+            await enter.RunAsync(to, cancellationToken);
+        }
+        finally
+        {
+            // Restore even if cancelled, so the presenter is never reused while stranded invisible.
+            if (from is not null)
+                from.Opacity = 1;
+        }
     }
 }

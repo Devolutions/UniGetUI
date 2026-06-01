@@ -37,15 +37,32 @@ public sealed class DirectionalSlideTransition : IPageTransition
         HideScrollBars(from, hidden);
         HideScrollBars(to, hidden);
 
-        var tasks = new List<Task>();
-        if (from is not null)
-            tasks.Add(Slide(from, 0d, -sign * width, cancellationToken));
-        if (to is not null)
-            tasks.Add(Slide(to, sign * width, 0d, cancellationToken));
-        await Task.WhenAll(tasks);
+        try
+        {
+            var tasks = new List<Task>();
+            if (from is not null)
+                tasks.Add(Slide(from, 0d, -sign * width, cancellationToken));
+            if (to is not null)
+                tasks.Add(Slide(to, sign * width, 0d, cancellationToken));
+            await Task.WhenAll(tasks);
+        }
+        finally
+        {
+            foreach (var sv in hidden)
+                sv.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+        }
 
-        foreach (var sv in hidden)
-            sv.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+        if (cancellationToken.IsCancellationRequested)
+            return;
+
+        // Hide before clearing the transform so the outgoing page never snaps back on-screen.
+        if (from is not null)
+        {
+            from.IsVisible = false;
+            from.RenderTransform = null;
+        }
+        if (to is not null)
+            to.RenderTransform = null;
     }
 
     private static void HideScrollBars(Visual? root, List<ScrollViewer> hidden)

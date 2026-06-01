@@ -59,12 +59,12 @@
         StateChanged="DisableSystemTray_StateChanged"
         Text="Close UniGetUI to the system tray"
       />
-      <widgets:CheckboxCard
-        x:Name="UseLegacyTrayIcon"
+      <widgets:ComboboxCard
+        x:Name="TrayIconStyleSelector"
         BorderThickness="1,0,1,1"
-        SettingName="UseLegacyTrayIcon"
-        StateChanged="UseLegacyTrayIcon_StateChanged"
-        Text="Use the legacy system tray icon"
+        SettingName="TrayIconStyle"
+        Text="System tray icon style:"
+        ValueChanged="TrayIconStyleSelector_ValueChanged"
       />
       <widgets:ButtonCard
         BorderThickness="1,0,1,1"

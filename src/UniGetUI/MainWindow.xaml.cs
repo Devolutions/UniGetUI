@@ -626,19 +626,24 @@ namespace UniGetUI.Interface
                     theme = registryValue > 0 ? ApplicationTheme.Light : ApplicationTheme.Dark;
                 }
 
-                if (theme == ApplicationTheme.Light)
-                {
-                    modifier += "_black";
+                bool light = theme == ApplicationTheme.Light;
+                string tone = light ? "_black" : "_white";
+
                 }
                 else
                 {
-                    modifier += "_white";
-                }
+                string style = Settings.GetValue(Settings.K.TrayIconStyle);
+                if (style.Length == 0) style = "colored";
 
-                string suffix = Settings.Get(Settings.K.UseLegacyTrayIcon) ? "_legacy" : "";
+                string iconFile = style switch
+                {
+                    "monochrome" => "tray_monochrome" + modifier + (light ? "_light" : "_dark") + ".ico",
+                    "legacy" => "tray" + modifier + tone + "_legacy.ico",
+                    _ => "tray" + modifier + tone + ".ico",
+                };
                 string FullIconPath = Path.Join(
                     CoreData.UniGetUIExecutableDirectory,
-                    "\\Assets\\Images\\tray" + modifier + suffix + ".ico"
+                    "\\Assets\\Images\\" + iconFile
                 );
                 if (LastTrayIcon != FullIconPath)
                 {

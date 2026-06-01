@@ -16,6 +16,12 @@ public partial class Interface_PViewModel : ViewModelBase
     public bool IsWindows { get; } = OperatingSystem.IsWindows();
 
     /// <summary>
+    /// The tray icon style is user-selectable on Windows and Linux only; macOS menu-bar icons are
+    /// always monochrome, so the selector is hidden there.
+    /// </summary>
+    public bool ShowTrayIconStyleSelector { get; } = !OperatingSystem.IsMacOS();
+
+    /// <summary>
     /// True when the user is enrolled in the beta program. In that case the modern UI is forced
     /// and the classic-mode toggle should be disabled.
     /// </summary>

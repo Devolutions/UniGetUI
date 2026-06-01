@@ -43,5 +43,19 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         StartupPageSelector.SettingName = CoreSettings.K.StartupPage;
         StartupPageSelector.Text = CoreTools.Translate("UniGetUI startup page:");
         StartupPageSelector.ShowAddedItems();
+
+        // macOS menu-bar icons are always monochrome, so the selector is hidden there (see VM).
+        if (!OperatingSystem.IsMacOS())
+        {
+            if (CoreSettings.GetValue(CoreSettings.K.TrayIconStyle) == "")
+                CoreSettings.SetValue(CoreSettings.K.TrayIconStyle, "monochrome");
+
+            TrayIconStyleSelector.AddItem(CoreTools.Translate("Colored"), "colored");
+            TrayIconStyleSelector.AddItem(CoreTools.Translate("Monochrome"), "monochrome");
+            TrayIconStyleSelector.AddItem(CoreTools.Translate("Legacy"), "legacy");
+            TrayIconStyleSelector.SettingName = CoreSettings.K.TrayIconStyle;
+            TrayIconStyleSelector.Text = CoreTools.Translate("System tray icon style:");
+            TrayIconStyleSelector.ShowAddedItems();
+        }
     }
 }

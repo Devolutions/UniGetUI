@@ -40,6 +40,16 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
             StartupPageSelector.AddItem(CoreTools.AutoTranslated("Package Bundles"), "bundles");
             StartupPageSelector.AddItem(CoreTools.AutoTranslated("Settings"), "settings");
             StartupPageSelector.ShowAddedItems();
+
+            if (Settings.GetValue(Settings.K.TrayIconStyle) == "")
+            {
+                Settings.SetValue(Settings.K.TrayIconStyle, "monochrome");
+            }
+
+            TrayIconStyleSelector.AddItem(CoreTools.AutoTranslated("Colored"), "colored");
+            TrayIconStyleSelector.AddItem(CoreTools.AutoTranslated("Monochrome"), "monochrome");
+            TrayIconStyleSelector.AddItem(CoreTools.AutoTranslated("Legacy"), "legacy");
+            TrayIconStyleSelector.ShowAddedItems();
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -104,7 +114,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
         private void DisableSystemTray_StateChanged(object sender, EventArgs e) =>
             MainApp.Instance.MainWindow.UpdateSystemTrayStatus();
 
-        private void UseLegacyTrayIcon_StateChanged(object sender, EventArgs e) =>
+        private void TrayIconStyleSelector_ValueChanged(object sender, EventArgs e) =>
             MainApp.Instance.MainWindow.UpdateSystemTrayStatus();
 
         private void ThemeSelector_ValueChanged(object sender, EventArgs e) =>

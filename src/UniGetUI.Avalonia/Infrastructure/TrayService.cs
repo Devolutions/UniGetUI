@@ -40,7 +40,7 @@ internal sealed class TrayService : IDisposable
         {
             _trayIcon.IsVisible = !Settings.Get(Settings.K.DisableSystemTray);
 
-            string modifier;
+            string status;
             string tooltip;
 
             bool anyRunning = AvaloniaOperationRegistry.Operations.Any(
@@ -50,38 +50,47 @@ internal sealed class TrayService : IDisposable
 
             if (anyRunning)
             {
-                modifier = "_blue";
+                status = "blue";
                 tooltip = CoreTools.Translate("Operation in progress");
             }
             else if (AvaloniaOperationRegistry.ErrorsOccurred > 0)
             {
-                modifier = "_orange";
+                status = "orange";
                 tooltip = CoreTools.Translate("Attention required");
             }
             else if (AvaloniaOperationRegistry.RestartRequired)
             {
-                modifier = "_turquoise";
+                status = "turquoise";
                 tooltip = CoreTools.Translate("Restart required");
             }
             else if (updatesCount > 0)
             {
-                modifier = "_green";
+                status = "green";
                 tooltip = updatesCount == 1
                     ? CoreTools.Translate("1 update is available")
                     : CoreTools.Translate("{0} updates are available", updatesCount);
             }
             else
             {
-                modifier = "_empty";
+                status = "empty";
                 tooltip = CoreTools.Translate("Everything is up to date");
             }
 
             _trayIcon.ToolTipText = tooltip + " - UniGetUI";
 
-            modifier += IsTaskbarLight() ? "_black" : "_white";
-            string suffix = Settings.Get(Settings.K.UseLegacyTrayIcon) ? "_legacy" : "";
+            bool light = IsTaskbarLight();
+            string tone = light ? "_black" : "_white";
 
-            string uri = $"avares://UniGetUI.Avalonia/Assets/tray{modifier}{suffix}.ico";
+            // monochrome icons can't be tinted by parts, so for those we ship pre-composited
+            // assets: a monochrome base glyph matching the taskbar appearance with the
+            // colour-coded status dot kept intact (drawn non-template on macOS).
+            string uri = ResolveStyle() switch
+            {
+                "monochrome" => $"avares://UniGetUI.Avalonia/Assets/tray_monochrome_{status}_{(light ? "light" : "dark")}.ico",
+                "legacy" => $"avares://UniGetUI.Avalonia/Assets/tray_{status}{tone}_legacy.ico",
+                _ => $"avares://UniGetUI.Avalonia/Assets/tray_{status}{tone}.ico",
+            };
+
             if (_lastIconUri == uri) return;
             _lastIconUri = uri;
 
@@ -93,6 +102,20 @@ internal sealed class TrayService : IDisposable
             Logger.Error("Failed to update tray icon status:");
             Logger.Error(ex);
         }
+    }
+
+    // Tray icon style chosen by the user (Interface preferences). macOS menu-bar icons are always
+    // monochrome (HIG), so the style is fixed there and the selector is hidden; on Windows/Linux it
+    // is user-selectable and defaults to monochrome.
+    private static string ResolveStyle()
+    {
+        if (OperatingSystem.IsMacOS())
+            return "monochrome";
+
+        string style = Settings.GetValue(Settings.K.TrayIconStyle);
+        if (style.Length == 0)
+            style = "monochrome";
+        return style;
     }
 
     private static bool IsTaskbarLight()

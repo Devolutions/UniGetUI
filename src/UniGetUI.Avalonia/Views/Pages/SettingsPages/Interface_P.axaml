@@ -47,9 +47,9 @@
                                        StateChangedCommand="{Binding RefreshSystemTrayCommand}"
                                        CornerRadius="8,8,0,0"/>
 
-                <settings:CheckboxCard SettingName="UseLegacyTrayIcon"
-                                       Text="{t:Translate Use the legacy system tray icon}"
-                                       StateChangedCommand="{Binding RefreshSystemTrayCommand}"
+                <settings:ComboboxCard x:Name="TrayIconStyleSelector"
+                                       IsVisible="{Binding ShowTrayIconStyleSelector}"
+                                       ValueChangedCommand="{Binding RefreshSystemTrayCommand}"
                                        BorderThickness="1,0,1,1"/>
 
                 <settings:ButtonCard x:Name="EditAutostartSettings"

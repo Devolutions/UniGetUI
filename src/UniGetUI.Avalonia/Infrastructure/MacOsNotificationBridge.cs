@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
@@ -201,56 +200,4 @@ internal static class MacOsNotificationBridge
 
     private static string AppleScriptString(string s) =>
         "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
-
-    // ── Dock icon ──────────────────────────────────────────────────────────
-
-    public static void SetDockIcon(byte[] pngBytes)
-    {
-        try
-        {
-            var handle = GCHandle.Alloc(pngBytes, GCHandleType.Pinned);
-            try
-            {
-                IntPtr nsData = MsgSendBytes(
-                    objc_getClass("NSData"), Sel("dataWithBytes:length:"),
-                    handle.AddrOfPinnedObject(), pngBytes.Length);
-
-                IntPtr nsImage = MsgSend(
-                    MsgSend(objc_getClass("NSImage"), Sel("alloc")),
-                    Sel("initWithData:"), nsData);
-
-                IntPtr nsApp = MsgSend(objc_getClass("NSApplication"), Sel("sharedApplication"));
-                MsgSend(nsApp, Sel("setApplicationIconImage:"), nsImage);
-                MsgSend(nsImage, Sel("autorelease"));
-            }
-            finally
-            {
-                handle.Free();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn("Failed to set macOS dock icon");
-            Logger.Warn(ex);
-        }
-    }
-
-    private static IntPtr Sel(string name) => sel_registerName(name);
-
-    // ── ObjC runtime P/Invoke (used by SetDockIcon) ────────────────────────
-
-    [DllImport("/usr/lib/libobjc.A.dylib")]
-    private static extern IntPtr objc_getClass(string name);
-
-    [DllImport("/usr/lib/libobjc.A.dylib")]
-    private static extern IntPtr sel_registerName(string name);
-
-    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
-    private static extern IntPtr MsgSend(IntPtr receiver, IntPtr sel);
-
-    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
-    private static extern IntPtr MsgSend(IntPtr receiver, IntPtr sel, IntPtr arg);
-
-    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
-    private static extern IntPtr MsgSendBytes(IntPtr receiver, IntPtr sel, IntPtr bytes, nint length);
 }

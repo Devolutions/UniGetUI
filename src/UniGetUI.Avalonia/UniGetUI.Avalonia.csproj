@@ -37,6 +37,31 @@
         <PingetCliExecutablePath>$(PingetCliPackageNativePath)\pinget.exe</PingetCliExecutablePath>
     </PropertyGroup>
 
+    <!-- macOS Debug: build straight into a .app bundle so the Dock icon (and its Default/Dark/
+         Tinted/Clear styling) is provided by the system from the bundle's AppIcon, exactly like a
+         packaged release. Without this a bare-exe dev run has no bundle and shows a blank icon. -->
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$(Configuration)' == 'Debug'">
+        <MacAppBundleDir>$(MSBuildProjectDirectory)/bin/$(Configuration)/$(TargetFramework)/UniGetUI.app</MacAppBundleDir>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+        <OutputPath>$(MacAppBundleDir)/Contents/MacOS/</OutputPath>
+    </PropertyGroup>
+
+    <Target Name="AssembleMacDebugAppBundle" AfterTargets="Build"
+            Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$(Configuration)' == 'Debug'">
+        <PropertyGroup>
+            <_MacBundleContents>$(MacAppBundleDir)/Contents</_MacBundleContents>
+            <_MacScriptsDir>$(MSBuildProjectDirectory)/../../scripts/macos</_MacScriptsDir>
+        </PropertyGroup>
+        <MakeDir Directories="$(_MacBundleContents)/Resources" />
+        <!-- Info.plist (declares CFBundleIconName=AppIcon); version is a dev placeholder. -->
+        <Exec Command="sed 's|@VERSION@|0.0.0-dev|g' '$(_MacScriptsDir)/Info.plist' &gt; '$(_MacBundleContents)/Info.plist'" />
+        <!-- Compile the Icon Composer icon into Assets.car (+ AppIcon.icns). Needs full Xcode's
+             actool; if it is unavailable the build still succeeds (the icon is just absent). -->
+        <Exec Command="xcrun actool '$(_MacScriptsDir)/AppIcon.icon' --compile '$(_MacBundleContents)/Resources' --app-icon AppIcon --output-partial-info-plist '$(IntermediateOutputPath)appicon-partial.plist' --platform macosx --minimum-deployment-target 12.0 --notices --warnings"
+              ContinueOnError="true" />
+    </Target>
+
     <PropertyGroup Condition="'$(EnableAvaloniaDiagnostics)' == 'true'">
         <DefineConstants>$(DefineConstants);AVALONIA_DIAGNOSTICS_ENABLED</DefineConstants>
     </PropertyGroup>

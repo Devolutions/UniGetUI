@@ -405,7 +405,16 @@ jobs:
           sed "s|@VERSION@|${VERSION}|g" \
             scripts/macos/Info.plist \
             > "${APP_BUNDLE}/Contents/Info.plist"
-          cp scripts/macos/UniGetUI.icns "${APP_BUNDLE}/Contents/Resources/"
+          # Compile the appearance-aware app icon (Default/Dark/Tinted/Clear) from the Icon Composer
+          # .icon into the bundle: produces Assets.car + AppIcon.icns. Info.plist already declares
+          # CFBundleIconName=AppIcon, so macOS renders the appearance styles itself (incl. when closed).
+          xcrun actool scripts/macos/AppIcon.icon \
+            --compile "${APP_BUNDLE}/Contents/Resources" \
+            --app-icon AppIcon \
+            --output-partial-info-plist "$(mktemp).plist" \
+            --platform macosx \
+            --minimum-deployment-target 12.0 \
+            --errors --warnings
 
           if [ "$DRY_RUN" = "false" ]; then
             ENTITLEMENTS="scripts/macos/Entitlements.plist"
@@ -430,7 +439,7 @@ jobs:
 
           create-dmg \
             --volname "UniGetUI" \
-            --volicon "scripts/macos/UniGetUI.icns" \
+            --volicon "${APP_BUNDLE}/Contents/Resources/AppIcon.icns" \
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 128 \

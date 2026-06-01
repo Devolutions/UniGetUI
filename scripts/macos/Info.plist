@@ -11,7 +11,9 @@
     <key>CFBundleExecutable</key>
     <string>UniGetUI.Avalonia</string>
     <key>CFBundleIconFile</key>
-    <string>UniGetUI</string>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>

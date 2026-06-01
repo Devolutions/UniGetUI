@@ -5,7 +5,6 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Markup.Xaml.Styling;
-using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 #if AVALONIA_DIAGNOSTICS_ENABLED
@@ -97,11 +96,11 @@ public partial class App : Application
     {
         if (OperatingSystem.IsMacOS())
         {
+            // The Dock icon (incl. Default/Dark/Tinted/Clear styling) is provided by the .app bundle's
+            // AppIcon (scripts/macos/AppIcon.icon → Assets.car, via CFBundleIconName) and rendered by
+            // the system — for packaged releases and for Debug builds, which also build into a .app
+            // (see UniGetUI.Avalonia.csproj). There is nothing to do at runtime.
             ProcessEnvironmentConfigurator.PrepareForCurrentPlatform();
-            using var stream = AssetLoader.Open(new Uri("avares://UniGetUI.Avalonia/Assets/icon.png"));
-            using var ms = new MemoryStream();
-            stream.CopyTo(ms);
-            MacOsNotificationBridge.SetDockIcon(ms.ToArray());
         }
         else
         {

@@ -32,8 +32,8 @@ internal static class WindowsAppNotificationBridge
 
     private static readonly string[] _assemblyCandidates =
     {
-        "Microsoft.Windows.AppNotifications",
-        "Microsoft.WindowsAppSDK",
+        "Microsoft.Windows.AppNotifications.Projection",
+        "Microsoft.Windows.AppNotifications.Builder.Projection",
     };
 
     public static bool ShowProgress(AbstractOperation operation)
@@ -384,9 +384,6 @@ internal static class WindowsAppNotificationBridge
                     return _isRegistered;
                 }
 
-                managerType.GetMethod("Register", BindingFlags.Public | BindingFlags.Instance)
-                    ?.Invoke(_managerDefault, null);
-
                 _removeByTagAsyncMethod = managerType.GetMethod(
                     "RemoveByTagAsync",
                     BindingFlags.Public | BindingFlags.Instance,
@@ -415,6 +412,14 @@ internal static class WindowsAppNotificationBridge
                     var lambda = Expression.Lambda(handlerType, body, invokeParams);
                     notifEventInfo.AddEventHandler(_managerDefault, lambda.Compile());
                 }
+
+                managerType.GetMethod(
+                    "Register",
+                    BindingFlags.Public | BindingFlags.Instance,
+                    binder: null,
+                    types: Type.EmptyTypes,
+                    modifiers: null)
+                    ?.Invoke(_managerDefault, null);
 
                 _isRegistered = _showMethod is not null;
             }
@@ -495,9 +500,19 @@ internal static class WindowsAppNotificationBridge
 
     private static object InvokeFluent(object instance, string methodName, params object?[] args)
     {
-        return instance.GetType().GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance)
-            ?.Invoke(instance, args)
-            ?? instance;
+        Type type = instance.GetType();
+        Type[] argTypes = args.Select(a => a?.GetType() ?? typeof(object)).ToArray();
+
+        MethodInfo? method = type.GetMethod(
+                methodName,
+                BindingFlags.Public | BindingFlags.Instance,
+                binder: null,
+                types: argTypes,
+                modifiers: null)
+            ?? type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(m => m.Name == methodName && m.GetParameters().Length == args.Length);
+
+        return method?.Invoke(instance, args) ?? instance;
     }
 
     private static void SetPropertyIfPresent(object instance, string propertyName, object value)

@@ -518,8 +518,10 @@ public partial class PackagesPageViewModel : ViewModelBase
 
         if (FilteredPackages.Count == 0)
         {
+            // Don't show the "no packages" message while a reload is in progress; the list is
+            // momentarily empty and the message would flash misleadingly.
             BackgroundText = string.IsNullOrWhiteSpace(query) ? NoPackagesText : NoMatchesText;
-            BackgroundTextVisible = !MegaQueryBoxEnabled || !string.IsNullOrWhiteSpace(query);
+            BackgroundTextVisible = !Loader.IsLoading && (!MegaQueryBoxEnabled || !string.IsNullOrWhiteSpace(query));
         }
         else
         {
@@ -533,7 +535,6 @@ public partial class PackagesPageViewModel : ViewModelBase
         if (!Loader.IsLoading && (!Loader.IsLoaded
             || reason is ReloadReason.External or ReloadReason.Manual or ReloadReason.Automated))
         {
-            Loader.ClearPackages(emitFinishSignal: false);
             await Loader.ReloadPackages();
         }
     }

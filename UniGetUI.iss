@@ -129,16 +129,21 @@ begin
 
 end;
 
+function GetCurrentProcessId: Cardinal; external 'GetCurrentProcessId@kernel32.dll stdcall';
+
 function UpdateMarkerPath(): String;
 begin
     Result := ExpandConstant('{app}\.unigetui-update-in-progress');
 end;
 
-// Marker telling any UniGetUI launched mid-copy to abort. Name MUST match UpdateInProgressGuard.MarkerFileName.
+// Marker holds our PID; the app blocks only while this installer runs. Name MUST match UpdateInProgressGuard.MarkerFileName.
 procedure WriteUpdateMarker;
+var
+    Pid: Int64;
 begin
     ForceDirectories(ExpandConstant('{app}'));
-    SaveStringToFile(UpdateMarkerPath(), 'update-in-progress', False);
+    Pid := GetCurrentProcessId;
+    SaveStringToFile(UpdateMarkerPath(), IntToStr(Pid), False);
 end;
 
 procedure RemoveUpdateMarker;

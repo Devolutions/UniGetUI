@@ -126,6 +126,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     public readonly bool MegaQueryBoxEnabled;
     public readonly bool DisableFilterOnQueryChange;
     public readonly bool DisableReload;
+    public readonly bool LoadsOnStart;
     public readonly bool RoleIsUpdateLike;
     public bool SimilarSearchEnabled { get; private set; }
     public readonly string NoPackagesText;
@@ -206,6 +207,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         DisableFilterOnQueryChange = data.DisableFilterOnQueryChange;
         MegaQueryBoxEnabled = data.MegaQueryBlockEnabled;
         DisableReload = data.DisableReload;
+        LoadsOnStart = !data.DisableAutomaticPackageLoadOnStart;
         _showLastCheckedTime = data.ShowLastLoadTime;
         NoPackagesText = data.NoPackages_BackgroundText;
         NoMatchesText = data.NoMatches_BackgroundText;
@@ -516,12 +518,17 @@ public partial class PackagesPageViewModel : ViewModelBase
         UpdateSubtitle();
         PackageCountUpdated?.Invoke();
 
-        if (FilteredPackages.Count == 0)
+        bool loadingOrPending = Loader.IsLoading || (LoadsOnStart && !Loader.IsLoaded);
+
+        if (loadingOrPending && FilteredPackages.Count == 0)
         {
-            // Don't show the "no packages" message while a reload is in progress; the list is
-            // momentarily empty and the message would flash misleadingly.
+            BackgroundText = _stillLoadingSubtitle;
+            BackgroundTextVisible = true;
+        }
+        else if (FilteredPackages.Count == 0)
+        {
             BackgroundText = string.IsNullOrWhiteSpace(query) ? NoPackagesText : NoMatchesText;
-            BackgroundTextVisible = !Loader.IsLoading && (!MegaQueryBoxEnabled || !string.IsNullOrWhiteSpace(query));
+            BackgroundTextVisible = !MegaQueryBoxEnabled || !string.IsNullOrWhiteSpace(query);
         }
         else
         {
@@ -828,7 +835,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     // ─── Subtitle ─────────────────────────────────────────────────────────────
     public void UpdateSubtitle()
     {
-        if (Loader.IsLoading)
+        if (Loader.IsLoading || (LoadsOnStart && !Loader.IsLoaded))
         {
             Subtitle = _stillLoadingSubtitle;
             return;

@@ -828,9 +828,19 @@ public partial class MainWindow : Window
     private void CloseButton_Click(object? sender, RoutedEventArgs e)
         => Close();
 
+    // Manual title-bar drag state. Only used for touch/pen on Windows (see TitleBar_PointerPressed),
+    // where Avalonia's BeginMoveDrag drives an OS modal loop the finger can't feed. Bound to the
+    // owning pointer so a second contact can't hijack or end an in-progress drag.
+    private IPointer? _titleBarDragPointer;
+    private Point _titleBarDragOrigin;
+
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        // Manual drag only on Windows + touch/pen. Mouse keeps the OS move (Aero Snap), and on
+        // macOS/Linux the native BeginMoveDrag already handles touch (and Wayland forbids self-positioning).
+        bool manualDrag = OperatingSystem.IsWindows() && e.Pointer.Type != PointerType.Mouse;
+
+        if (!manualDrag && !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             return;
 
         if (e.ClickCount == 2)
@@ -841,7 +851,52 @@ public partial class MainWindow : Window
             return;
         }
 
-        BeginMoveDrag(e);
+        if (!manualDrag)
+        {
+            BeginMoveDrag(e);
+            return;
+        }
+
+        // Touch/pen on Windows: move the window manually (issue #4866).
+        if (_titleBarDragPointer is not null || WindowState == WindowState.Maximized)
+            return;
+
+        _titleBarDragPointer = e.Pointer;
+        _titleBarDragOrigin = e.GetPosition(this);
+        e.Pointer.Capture(TitleBarDragArea);
+        e.Handled = true;
+    }
+
+    private void TitleBar_PointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (e.Pointer != _titleBarDragPointer)
+            return;
+
+        Vector delta = e.GetPosition(this) - _titleBarDragOrigin;
+        if (delta.X == 0 && delta.Y == 0)
+            return;
+
+        // GetPosition is in DIPs relative to the window; Position is in screen pixels. The grab
+        // origin stays fixed: once the window follows, the pointer returns to it, so deltas converge.
+        double scale = RenderScaling;
+        Position += new PixelVector((int)(delta.X * scale), (int)(delta.Y * scale));
+        e.Handled = true;
+    }
+
+    private void TitleBar_PointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (e.Pointer != _titleBarDragPointer)
+            return;
+
+        _titleBarDragPointer = null;
+        e.Pointer.Capture(null);
+        e.Handled = true;
+    }
+
+    private void TitleBar_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        if (e.Pointer == _titleBarDragPointer)
+            _titleBarDragPointer = null;
     }
 
     private void SearchBox_KeyDown(object? sender, KeyEventArgs e)

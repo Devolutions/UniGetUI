@@ -312,10 +312,14 @@
 
             <!-- Drag area — sits behind everything so interactive controls still work -->
             <Border Grid.Column="0" Grid.ColumnSpan="3"
+                    x:Name="TitleBarDragArea"
                     Background="{DynamicResource MicaPageBackground}"
                     automation:AutomationProperties.AccessibilityView="Raw"
                     IsHitTestVisible="True"
-                    PointerPressed="TitleBar_PointerPressed"/>
+                    PointerPressed="TitleBar_PointerPressed"
+                    PointerMoved="TitleBar_PointerMoved"
+                    PointerReleased="TitleBar_PointerReleased"
+                    PointerCaptureLost="TitleBar_PointerCaptureLost"/>
 
             <!-- Left: hamburger + app name -->
             <StackPanel x:Name="HamburgerPanel"

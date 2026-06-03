@@ -21,7 +21,6 @@ internal static class MicaWindowHelper
     private const int DWMWA_BORDER_COLOR = 34;
     private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
     private const int DWMWCP_ROUND = 2;
-    private const int DWMSBT_MAINWINDOW = 2; // Mica — for long-lived windows (dialogs)
     private const int DWMSBT_TRANSIENTWINDOW = 3; // Acrylic — for transient surfaces (menus/flyouts); Mica won't paint on these
     private const int DWMWA_COLOR_DEFAULT = unchecked((int)0xFFFFFFFF);
 

@@ -29,7 +29,10 @@ DefaultDirName="{autopf64}\UniGetUI"
 DisableProgramGroupPage=yes
 DisableDirPage=no
 DirExistsWarning=no
-CloseApplications=no
+; Force-close any process holding files we overwrite (backstop for the kill in PrepareToInstall).
+CloseApplications=force
+CloseApplicationsFilter=*.exe,*.dll
+RestartApplications=no
 ; Default to per-user install mode and let the dialog opt into all-users installs when needed.
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
@@ -97,19 +100,65 @@ begin
   WizardForm.Bevel1.Visible := True;
 end;
 
-procedure TaskKill(FileName: String);
+// Kills all instances of an image and loops until none remain (taskkill returns 0 while killing, 128 when none left).
+procedure TaskKillWait(FileName: String);
 var
-  ResultCode: Integer;
+  ResultCode, Attempts: Integer;
 begin
-    Exec('taskkill.exe', '/f /im ' + '"' + FileName + '"', '', SW_HIDE,
-     ewWaitUntilTerminated, ResultCode);
+    Attempts := 0;
+    repeat
+        if not Exec('taskkill.exe', '/f /im "' + FileName + '"', '', SW_HIDE,
+            ewWaitUntilTerminated, ResultCode) then
+            Break;
+        if ResultCode <> 0 then
+            Break;
+        Sleep(500);
+        Attempts := Attempts + 1;
+    until Attempts >= 10;
 end;
 
 procedure KillRunningApps;
 begin
-    TaskKill('WingetUI.exe');
-    TaskKill('UniGetUI.exe');
-    TaskKill('UniGetUI.Avalonia.exe');
+    TaskKillWait('WingetUI.exe');
+    TaskKillWait('UniGetUI.exe');
+    TaskKillWait('UniGetUI.Avalonia.exe');
+    // Elevator (gsudo cache) and pinget live in {app} and lock their own files.
+    TaskKillWait('UniGetUI Elevator.exe');
+    TaskKillWait('pinget.exe');
+    Sleep(1000); // let the OS release file handles before copying
+
+end;
+
+function UpdateMarkerPath(): String;
+begin
+    Result := ExpandConstant('{app}\.unigetui-update-in-progress');
+end;
+
+// Marker telling any UniGetUI launched mid-copy to abort. Name MUST match UpdateInProgressGuard.MarkerFileName.
+procedure WriteUpdateMarker;
+begin
+    ForceDirectories(ExpandConstant('{app}'));
+    SaveStringToFile(UpdateMarkerPath(), 'update-in-progress', False);
+end;
+
+procedure RemoveUpdateMarker;
+begin
+    DeleteFile(UpdateMarkerPath());
+end;
+
+// Runs before any file is copied: shut everything down, then mark the copy window.
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+    KillRunningApps;
+    WriteUpdateMarker;
+    Result := '';
+end;
+
+// Clear the marker once the copy is done, before the post-install launch.
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+    if CurStep = ssPostInstall then
+        RemoveUpdateMarker;
 end;
 
 function CmdLineParamExists(const Value: string): Boolean;
@@ -132,6 +181,8 @@ procedure ExitProcess(exitCode:integer);
 
 procedure DeinitializeSetup();
 begin
+    RemoveUpdateMarker; // also clear on abort, before ssPostInstall
+
     if (CustomExitCode <> 0) then
     begin
         DelTree(ExpandConstant('{tmp}'), True, True, True);
@@ -215,8 +266,8 @@ Root: HKA; Subkey: "Software\Classes\UniGetUI.PackageBundle\shell\open\command";
 Source: "{srcexe}"; DestDir: "{app}"; DestName: "UniGetUI.Installer.exe"; Flags: external ignoreversion; Tasks: regularinstall; Check: not CmdLineParamExists('/NoDeployInstaller');
 ; Deploy integrity tree
 Source: "unigetui_bin\IntegrityTree.json"; DestDir: "{app}"; Flags: createallsubdirs ignoreversion recursesubdirs;
-; Deploy executable files
-Source: "unigetui_bin\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion; BeforeInstall: KillRunningApps;
+; Deploy executable files (running instances already killed in PrepareToInstall).
+Source: "unigetui_bin\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion;
 Source: "unigetui_bin\*"; DestDir: "{app}"; Flags: createallsubdirs ignoreversion recursesubdirs;
 ; Make installation portable (if required)
 Source: "InstallerExtras\ForceUniGetUIPortable"; DestDir: "{app}"; Tasks: portableinstall

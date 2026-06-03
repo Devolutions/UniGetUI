@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
 using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Core.Data;
 
 namespace UniGetUI.Avalonia;
 
@@ -12,6 +13,17 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // Bail out if the installer is mid-swap (try/catch so the guard never blocks a normal launch).
+        try
+        {
+            if (UpdateInProgressGuard.IsUpdateInProgress())
+            {
+                Environment.ExitCode = 0;
+                return;
+            }
+        }
+        catch { }
+
         AvaloniaAppHost.Run(args);
     }
 

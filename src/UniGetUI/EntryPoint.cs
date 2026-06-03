@@ -51,6 +51,13 @@ namespace UniGetUI
                     Environment.ExitCode = WinUiHeadlessHost.RunAsync(args).GetAwaiter().GetResult();
                     return;
                 }
+                else if (UpdateInProgressGuard.IsUpdateInProgress())
+                {
+                    // Update is replacing install files; the installer relaunches us when done.
+                    Logger.Warn("An update is replacing install files; aborting UI startup until it completes.");
+                    Environment.ExitCode = 0;
+                    return;
+                }
                 else if (!ModernAppLauncher.IsClassicModeEnabled())
                 {
                     ModernAppLauncher.Launch(args);

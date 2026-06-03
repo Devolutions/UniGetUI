@@ -833,6 +833,7 @@ public partial class MainWindow : Window
     // owning pointer so a second contact can't hijack or end an in-progress drag.
     private IPointer? _titleBarDragPointer;
     private Point _titleBarDragOrigin;
+    private bool _restoreThenDrag;   // press began while maximized → restore on first real move
 
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
@@ -858,11 +859,13 @@ public partial class MainWindow : Window
         }
 
         // Touch/pen on Windows: move the window manually (issue #4866).
-        if (_titleBarDragPointer is not null || WindowState == WindowState.Maximized)
+        if (_titleBarDragPointer is not null)
             return;
 
         _titleBarDragPointer = e.Pointer;
         _titleBarDragOrigin = e.GetPosition(this);
+        // Dragging a maximized window restores it first (matches the native mouse gesture).
+        _restoreThenDrag = WindowState == WindowState.Maximized;
         e.Pointer.Capture(TitleBarDragArea);
         e.Handled = true;
     }
@@ -873,14 +876,50 @@ public partial class MainWindow : Window
             return;
 
         Vector delta = e.GetPosition(this) - _titleBarDragOrigin;
+
+        // Started on a maximized window: ignore tiny jitter (so a tap doesn't restore), then
+        // restore-and-reposition under the finger before the normal drag takes over.
+        if (_restoreThenDrag)
+        {
+            if (Math.Abs(delta.X) < 4 && Math.Abs(delta.Y) < 4)
+                return;
+            RestoreForTouchDrag(e.GetPosition(this));
+            e.Handled = true;
+            return;
+        }
+
         if (delta.X == 0 && delta.Y == 0)
             return;
 
-        // GetPosition is in DIPs relative to the window; Position is in screen pixels. The grab
-        // origin stays fixed: once the window follows, the pointer returns to it, so deltas converge.
+        // GetPosition is window-relative and Position is in screen pixels; scale converts between
+        // them. Closed loop: the origin stays fixed and delta is re-measured against the moved
+        // window each event, so the sub-pixel remainder is held in the geometry and re-applied
+        // rather than accumulating. Round (not truncate) to keep the residual symmetric and <0.5px.
         double scale = RenderScaling;
-        Position += new PixelVector((int)(delta.X * scale), (int)(delta.Y * scale));
+        Position += new PixelVector((int)Math.Round(delta.X * scale), (int)Math.Round(delta.Y * scale));
         e.Handled = true;
+    }
+
+    // Restores a maximized window mid-drag and re-anchors it under the finger, matching the native
+    // mouse gesture. The finger's screen point and its horizontal fraction of the title bar are
+    // captured while still maximized; after WindowState.Normal the window is placed so that same
+    // fraction of the (now restored) width sits under the finger. On Win32 the restore is
+    // synchronous — ShowWindow sends WM_SIZE inline, so Bounds already reflects the restored size.
+    private void RestoreForTouchDrag(Point grab)
+    {
+        double fraction = Bounds.Width > 0 ? Math.Clamp(grab.X / Bounds.Width, 0, 1) : 0.5;
+        double titleY = grab.Y;
+        PixelPoint fingerScreen = this.PointToScreen(grab);
+
+        _restoreThenDrag = false;
+        WindowState = WindowState.Normal;
+
+        double scale = RenderScaling;
+        var origin = new Point(fraction * Bounds.Width, titleY);
+        Position = fingerScreen - new PixelVector(
+            (int)Math.Round(origin.X * scale),
+            (int)Math.Round(origin.Y * scale));
+        _titleBarDragOrigin = origin;
     }
 
     private void TitleBar_PointerReleased(object? sender, PointerReleasedEventArgs e)
@@ -889,6 +928,7 @@ public partial class MainWindow : Window
             return;
 
         _titleBarDragPointer = null;
+        _restoreThenDrag = false;
         e.Pointer.Capture(null);
         e.Handled = true;
     }
@@ -896,7 +936,10 @@ public partial class MainWindow : Window
     private void TitleBar_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
         if (e.Pointer == _titleBarDragPointer)
+        {
             _titleBarDragPointer = null;
+            _restoreThenDrag = false;
+        }
     }
 
     private void SearchBox_KeyDown(object? sender, KeyEventArgs e)

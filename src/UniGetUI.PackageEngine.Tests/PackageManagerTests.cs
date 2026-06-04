@@ -146,6 +146,21 @@ public sealed class PackageManagerTests : IDisposable
     }
 
     [Fact]
+    public void GetExecutableFileUsesSavedPathWhenNoCandidatesExistAndCustomPathsAreEnabled()
+    {
+        var manager = CreateManager();
+        var customPath = CreateExecutable("custom-only.exe");
+        manager.SetCandidateExecutableFiles();
+        EnableCustomManagerPaths();
+        Settings.SetDictionaryItem<string, string>(Settings.K.ManagerPaths, manager.Name, customPath);
+
+        var executable = manager.GetExecutableFile();
+
+        Assert.True(executable.Item1);
+        Assert.Equal(customPath, executable.Item2);
+    }
+
+    [Fact]
     public void GetExecutableFileIgnoresSavedPathWhenCustomPathsAreDisabled()
     {
         var manager = CreateManager();
@@ -197,7 +212,7 @@ public sealed class PackageManagerTests : IDisposable
     }
 
     [Fact]
-    public void GetExecutableFileFallsBackWhenSavedPathIsNotACandidate()
+    public void GetExecutableFileUsesSavedPathWhenSavedPathIsNotACandidate()
     {
         var manager = CreateManager();
         var first = CreateExecutable("outside-a.exe");
@@ -214,7 +229,7 @@ public sealed class PackageManagerTests : IDisposable
         var executable = manager.GetExecutableFile();
 
         Assert.True(executable.Item1);
-        Assert.Equal(first, executable.Item2);
+        Assert.Equal(outsideCandidateList, executable.Item2);
     }
 
     [Fact]

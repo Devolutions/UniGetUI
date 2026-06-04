@@ -33,7 +33,8 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
             if (options.PreRelease)
                 parameters.Add("-AllowPrerelease");
 
-            if (!package.OverridenOptions.PowerShell_DoNotSetScopeParameter)
+            // Update-Module (PowerShellGet) has no -Scope parameter; only Install-Module accepts it
+            if (operation is OperationType.Install && !package.OverridenOptions.PowerShell_DoNotSetScopeParameter)
             {
                 if (
                     package.OverridenOptions.Scope == PackageScope.Global
@@ -65,6 +66,10 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
                 _ => options.CustomParameters_Install,
             }
         );
+
+        // Windows PowerShell 5.x defaults to TLS 1.0/1.1, which the PowerShell Gallery rejects; force TLS 1.2 so gallery operations can connect under -NoProfile
+        if (operation is not OperationType.Uninstall)
+            parameters.Insert(0, "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;");
 
         return parameters;
     }

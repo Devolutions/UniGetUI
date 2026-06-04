@@ -23,11 +23,11 @@ public sealed class BunManagerTests
     }
 
     /// <summary>
-    /// Tests parsing of JSON search results from 'bun search &lt;query&gt; --json'.
+    /// Tests parsing of the npm registry search response (registry.npmjs.org/-/v1/search).
     /// Verifies that multiple packages with different names and versions are correctly parsed.
     /// </summary>
     [Fact]
-    public void ParseSearchOutputParsesJsonArray()
+    public void ParseSearchOutputParsesRegistryResponse()
     {
         var manager = new Bun();
 
@@ -297,13 +297,13 @@ public sealed class BunManagerTests
     }
 
     /// <summary>
-    /// Tests that search returns empty list for empty JSON array input.
+    /// Tests that search returns empty list for an empty registry response.
     /// </summary>
     [Fact]
-    public void ParseSearchOutputReturnsEmptyForEmptyArray()
+    public void ParseSearchOutputReturnsEmptyForEmptyResults()
     {
         var manager = new Bun();
-        var packages = Bun.ParseSearchOutput("[]", manager.DefaultSource, manager);
+        var packages = Bun.ParseSearchOutput("""{"objects":[],"total":0}""", manager.DefaultSource, manager);
 
         Assert.Empty(packages);
     }

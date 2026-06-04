@@ -54,32 +54,29 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
         protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
         {
-            using Process p = new()
+            // Bun has no `search` subcommand; it resolves packages from the npm registry.
+            // Query the registry's search endpoint directly (the same data npm search uses).
+            INativeTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
+            string url = "https://registry.npmjs.org/-/v1/search?size=100&text=" + Uri.EscapeDataString(query);
+            logger.Log($"Querying the npm registry: {url}");
+
+            try
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = Status.ExecutablePath,
-                    Arguments = Status.ExecutableCallArgs + " search \"" + query + "\" --json",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    RedirectStandardInput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    StandardOutputEncoding = System.Text.Encoding.UTF8
-                }
-            };
+                using HttpClient client = new(CoreTools.GenericHttpClientParameters);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
+                string strContents = client.GetStringAsync(url).GetAwaiter().GetResult();
+                logger.Log(strContents);
 
-            IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages, p);
-            p.Start();
-
-            string strContents = p.StandardOutput.ReadToEnd();
-            logger.AddToStdOut(strContents);
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
-            p.WaitForExit();
-            logger.Close(p.ExitCode);
-
-            return ParseSearchOutput(strContents, DefaultSource, this);
+                var packages = ParseSearchOutput(strContents, DefaultSource, this);
+                logger.Close(0);
+                return packages;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e);
+                logger.Close(1);
+                return [];
+            }
         }
 
         protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
@@ -146,6 +143,18 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
         protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe()
         {
+            // `bun pm ls --global` is a no-op for the --global flag: Bun ignores it and walks
+            // up from the working directory to the nearest lockfile. List the dedicated global
+            // package.json by running from that directory instead, mirroring GetAvailableUpdates_UnSafe.
+            string globalDir = GetGlobalPackagesDirectory(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
+            if (!HasGlobalPackageManifest(globalDir))
+            {
+                Logger.Info($"Bun: Skipping installed package detection because {globalDir} is missing package.json");
+                return [];
+            }
+
             List<Package> Packages = [];
 
             using Process p = new()
@@ -153,13 +162,13 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = Status.ExecutablePath,
-                    Arguments = Status.ExecutableCallArgs + " pm ls --global",
+                    Arguments = Status.ExecutableCallArgs + " pm ls",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     RedirectStandardInput = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    WorkingDirectory = globalDir,
                     StandardOutputEncoding = System.Text.Encoding.UTF8
                 }
             };
@@ -186,7 +195,16 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
         }
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles()
-            => CoreTools.WhichMultiple(OperatingSystem.IsWindows() ? "bun.exe" : "bun");
+        {
+            if (!OperatingSystem.IsWindows())
+                return CoreTools.WhichMultiple("bun");
+
+            // The official installer ships bun.exe, but `npm i -g bun` only puts a bun.cmd
+            // wrapper on the PATH (the real bun.exe stays inside node_modules). Search both.
+            List<string> candidates = [.. CoreTools.WhichMultiple("bun.exe")];
+            candidates.AddRange(CoreTools.WhichMultiple("bun.cmd"));
+            return candidates;
+        }
 
         internal static string GetGlobalPackagesDirectory(string userProfile)
             => Path.Combine(userProfile, ".bun", "install", "global");
@@ -209,7 +227,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = Status.ExecutablePath,
-                    Arguments = Status.ExecutableCallArgs + "--version",
+                    Arguments = Status.ExecutableCallArgs + " --version",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -225,8 +243,8 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
         }
 
         /// <summary>
-        /// Parses JSON search results from 'bun search &lt;query&gt; --json'.
-        /// Each result object contains 'name' and 'version' fields.
+        /// Parses the npm registry search response (https://registry.npmjs.org/-/v1/search).
+        /// The payload is { "objects": [ { "package": { "name", "version" } } ] }.
         /// </summary>
         internal static IReadOnlyList<Package> ParseSearchOutput(
             string output,
@@ -239,11 +257,12 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
             try
             {
-                JsonArray? results = JsonNode.Parse(output) as JsonArray;
+                JsonArray? results = (JsonNode.Parse(output) as JsonObject)?["objects"] as JsonArray;
                 foreach (JsonNode? entry in results ?? [])
                 {
-                    string? id = entry?["name"]?.ToString();
-                    string? version = entry?["version"]?.ToString();
+                    JsonNode? pkg = entry?["package"];
+                    string? id = pkg?["name"]?.ToString();
+                    string? version = pkg?["version"]?.ToString();
                     if (id is not null && version is not null)
                     {
                         packages.Add(new Package(CoreTools.FormatAsName(id), id, version, source, manager));

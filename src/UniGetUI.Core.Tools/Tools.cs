@@ -53,6 +53,52 @@ namespace UniGetUI.Core.Tools
         }
 
         /// <summary>
+        /// Accelerates a GitHub download URL by rewriting it through a configured accelerator
+        /// (e.g., a self-hosted xget-src Cloudflare Worker or ghproxy-style service).
+        /// Only transforms URLs from known GitHub domains when GitHub acceleration is enabled.
+        /// </summary>
+        /// <param name="url">The original download URL</param>
+        /// <returns>The accelerated URL if applicable, or the original URL otherwise</returns>
+        public static Uri? AccelerateDownloadUrl(Uri? url)
+        {
+            if (url is null)
+                return null;
+
+            if (!Settings.Get(Settings.K.EnableGitHubAcceleration))
+                return url;
+
+            string acceleratorBase = Settings.GetValue(Settings.K.GitHubAcceleratorUrl);
+            if (string.IsNullOrWhiteSpace(acceleratorBase))
+                return url;
+
+            string original = url.ToString();
+
+            // Map GitHub domains to xget-src platform keys.
+            // For github.com, the key is "gh". For subdomains like raw.githubusercontent.com,
+            // the key is the full hostname (as used by xget-src and similar proxies).
+            var domainMappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["https://github.com/"] = "gh",
+                ["https://raw.githubusercontent.com/"] = "raw.githubusercontent.com",
+                ["https://objects.githubusercontent.com/"] = "objects.githubusercontent.com",
+                ["https://release-assets.githubusercontent.com/"] = "release-assets.githubusercontent.com",
+            };
+
+            foreach (var kvp in domainMappings)
+            {
+                if (original.StartsWith(kvp.Key, StringComparison.OrdinalIgnoreCase))
+                {
+                    string path = original[kvp.Key.Length..];
+                    var accelerated = new Uri($"{acceleratorBase.TrimEnd('/')}/{kvp.Value}/{path.TrimStart('/')}");
+                    Logger.Debug($"GitHub acceleration: {original} -> {accelerated}");
+                    return accelerated;
+                }
+            }
+
+            return url;
+        }
+
+        /// <summary>
         /// Translate a string to the current language
         /// </summary>
         /// <param name="text">The string to translate</param>
@@ -328,6 +374,8 @@ namespace UniGetUI.Core.Tools
             if (url is null)
                 return 0;
 
+            url = AccelerateDownloadUrl(url) ?? url;
+
             try
             {
                 using HttpClient client = new(CoreTools.GenericHttpClientParameters);
@@ -347,6 +395,8 @@ namespace UniGetUI.Core.Tools
 
         public static string GetFileName(Uri url)
         {
+            url = AccelerateDownloadUrl(url) ?? url;
+
             try
             {
                 var handler = CoreTools.GenericHttpClientParameters;

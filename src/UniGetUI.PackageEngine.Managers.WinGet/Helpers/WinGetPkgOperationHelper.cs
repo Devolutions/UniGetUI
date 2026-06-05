@@ -29,6 +29,54 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     public WinGetPkgOperationHelper(WinGet manager)
         : base(manager) { }
 
+    /// <summary>
+    /// Checks whether GitHub acceleration is applicable for this package.
+    /// Returns true if the installer URL is from a GitHub domain and
+    /// acceleration is enabled (the actual download is done by
+    /// XGetInstallerDownloadOperation as a pre-operation).
+    /// </summary>
+    private static bool IsAccelerationApplicable(IPackage package, OperationType operation)
+    {
+        if (operation is not OperationType.Update)
+            return false;
+
+        if (!Settings.Get(Settings.K.EnableGitHubAcceleration))
+            return false;
+
+        string? acceleratorBase = Settings.GetValue(Settings.K.GitHubAcceleratorUrl);
+        if (string.IsNullOrWhiteSpace(acceleratorBase))
+            return false;
+
+        try
+        {
+            package.Details.Load().GetAwaiter().GetResult();
+        }
+        catch
+        {
+            Logger.Warn($"GitHub acceleration: failed to load details for {package.Id}");
+            return false;
+        }
+
+        Uri? installerUrl = package.Details.InstallerUrl;
+        if (installerUrl is null)
+            return false;
+
+        string urlStr = installerUrl.ToString();
+        bool isGitHub = urlStr.StartsWith("https://github.com/", StringComparison.OrdinalIgnoreCase)
+            || urlStr.StartsWith("https://raw.githubusercontent.com/", StringComparison.OrdinalIgnoreCase)
+            || urlStr.StartsWith("https://objects.githubusercontent.com/", StringComparison.OrdinalIgnoreCase)
+            || urlStr.StartsWith("https://release-assets.githubusercontent.com/", StringComparison.OrdinalIgnoreCase);
+
+        if (!isGitHub)
+            return false;
+
+        Uri? accelerated = CoreTools.AccelerateDownloadUrl(installerUrl);
+        if (accelerated is null || accelerated == installerUrl)
+            return false;
+
+        return true;
+    }
+
     protected override IReadOnlyList<string> _getOperationParameters(
         IPackage package,
         InstallOptions options,
@@ -40,6 +88,12 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         // --interactive are accepted on install/uninstall but rejected on upgrade.
         bool usePinget =
             ((WinGet)Manager).SelectedCliToolKind == WinGetCliToolKind.BundledPinget;
+
+        // GitHub acceleration: signal that local installer should be used
+        if (IsAccelerationApplicable(package, operation))
+        {
+            return ["--accelerated-local-install"];
+        }
 
         List<string> parameters =
         [
@@ -242,6 +296,17 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         int returnCode
     )
     {
+        // Local accelerated installer: simple 0=success, non-zero=failure
+        if (package.OverridenOptions.AcceleratedInstallerPath is not null)
+        {
+            if (returnCode == 0)
+            {
+                MarkUpgradeAsDone(package);
+                return OperationVeredict.Success;
+            }
+            return OperationVeredict.Failure;
+        }
+
         // See https://github.com/microsoft/winget-cli/blob/master/doc/windows/package-manager/winget/returnCodes.md for reference
         uint uintCode = (uint)returnCode;
 

@@ -1120,12 +1120,19 @@ internal static partial class AvaloniaAutoUpdater
             throw new InvalidOperationException($"Download URL is not allowed: {url}");
         }
 
-        LogUpdateDebug($"Downloading installer from {url}");
+        // Apply GitHub URL acceleration if configured (security check uses original URL)
+        string acceleratedUrl = CoreTools.AccelerateDownloadUrl(new Uri(url))?.ToString() ?? url;
+
+        LogUpdateDebug(
+            acceleratedUrl != url
+                ? $"Downloading installer from {acceleratedUrl} (accelerated from {url})"
+                : $"Downloading installer from {url}"
+        );
         using HttpClient client = new(CreateHttpClientHandler(overrides));
         client.Timeout = TimeSpan.FromSeconds(600);
         client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
 
-        HttpResponseMessage response = await client.GetAsync(url);
+        HttpResponseMessage response = await client.GetAsync(acceleratedUrl);
         response.EnsureSuccessStatusCode();
 
         using FileStream fs = new(destination, FileMode.OpenOrCreate);
@@ -1137,7 +1144,7 @@ internal static partial class AvaloniaAutoUpdater
     // ------------------------------------------------------------------ HTTP client
     private static HttpClientHandler CreateHttpClientHandler(UpdaterOverrides overrides)
     {
-        var handler = new HttpClientHandler();
+        HttpClientHandler handler = CoreTools.GenericHttpClientParameters;
         if (overrides.DisableTlsValidation)
         {
             LogUpdateWarn("Registry override: TLS certificate validation is disabled for updater requests.");

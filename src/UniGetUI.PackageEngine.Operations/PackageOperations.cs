@@ -38,7 +38,7 @@ namespace UniGetUI.PackageEngine.Operations
         )
             : base(
                 !IgnoreParallelInstalls,
-                _getPreInstallOps(options, role, req),
+                _getPreInstallOps(options, role, package, req),
                 _getPostInstallOps(options, role, package)
             )
         {
@@ -99,16 +99,67 @@ namespace UniGetUI.PackageEngine.Operations
                 + Package.OverridenOptions.ToString();
         }
 
+        private static (string exe, string args) GetInstallerExecInfo(string? installerType, string localPath)
+        {
+            string quoted = $"\"{localPath}\"";
+            return installerType?.ToLowerInvariant() switch
+            {
+                "msi" or "wix" => ("msiexec", $"/i {quoted} /quiet /norestart"),
+                "msix" => ("powershell", $"-NoProfile -Command \"Add-AppxPackage -Path {quoted}\""),
+                "inno" => (localPath, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /NORUN"),
+                "nullsoft" or "nsis" => (localPath, "/S"),
+                "burn" => (localPath, "/quiet /norestart"),
+                _ => (localPath, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART"),
+            };
+        }
+
         protected sealed override void PrepareProcessStartInfo()
         {
             bool IsAdmin = CoreTools.IsAdministrator();
             Package.SetTag(PackageTag.OnQueue);
+
+            // GitHub acceleration: run pre-downloaded local installer directly
+            if (Package.OverridenOptions.AcceleratedInstallerPath is not null)
+            {
+                var (exe, args) = GetInstallerExecInfo(
+                    Package.OverridenOptions.AcceleratedInstallerType,
+                    Package.OverridenOptions.AcceleratedInstallerPath);
+
+                if (RequiresAdminRights() && IsAdmin is false)
+                {
+                    IsAdmin = true;
+                    if (
+                        OperatingSystem.IsLinux()
+                        || Settings.Get(Settings.K.DoCacheAdminRights)
+                        || Settings.Get(Settings.K.DoCacheAdminRightsForBatches)
+                    )
+                    {
+                        RequestCachingOfUACPrompt();
+                    }
+
+                    process.StartInfo.FileName = CoreData.ElevatorPath;
+                    process.StartInfo.Arguments =
+                        $"{CoreData.ElevatorArgs} \"{exe}\" {args}".TrimStart();
+                }
+                else
+                {
+                    process.StartInfo.FileName = exe;
+                    process.StartInfo.Arguments = args;
+                }
+
+                ApplyCapabilities(
+                    IsAdmin,
+                    Options.InteractiveInstallation,
+                    (Options.SkipHashCheck && Role is not OperationType.Uninstall),
+                    Package.OverridenOptions.Scope ?? Options.InstallationScope
+                );
+                return;
+            }
+
             string operation_args = string.Join(
                 " ",
                 Package.Manager.OperationHelper.GetParameters(Package, Options, Role)
             );
-            string FileName,
-                Arguments;
 
             if (RequiresAdminRights() && IsAdmin is false)
             {
@@ -122,23 +173,20 @@ namespace UniGetUI.PackageEngine.Operations
                     RequestCachingOfUACPrompt();
                 }
 
-                FileName = CoreData.ElevatorPath;
-                Arguments =
+                process.StartInfo.FileName = CoreData.ElevatorPath;
+                process.StartInfo.Arguments =
                     $"{CoreData.ElevatorArgs} \"{Package.Manager.Status.ExecutablePath}\" {Package.Manager.Status.ExecutableCallArgs} {operation_args}".TrimStart();
             }
             else
             {
-                FileName = Package.Manager.Status.ExecutablePath;
-                Arguments = $"{Package.Manager.Status.ExecutableCallArgs} {operation_args}";
+                process.StartInfo.FileName = Package.Manager.Status.ExecutablePath;
+                process.StartInfo.Arguments = $"{Package.Manager.Status.ExecutableCallArgs} {operation_args}";
             }
 
             if (IsAdmin && IsWinGetManager(Package.Manager))
             {
                 RedirectWinGetTempFolder();
             }
-
-            process.StartInfo.FileName = FileName;
-            process.StartInfo.Arguments = Arguments;
 
             ApplyCapabilities(
                 IsAdmin,
@@ -238,12 +286,28 @@ namespace UniGetUI.PackageEngine.Operations
         private static IReadOnlyList<InnerOperation> _getPreInstallOps(
             InstallOptions opts,
             OperationType role,
+            IPackage package,
             AbstractOperation? preReq = null
         )
         {
             List<InnerOperation> l = new();
             if (preReq is not null)
                 l.Add(new(preReq, true));
+
+            // GitHub acceleration: pre-download installer before running winget
+            if (
+                role is OperationType.Update
+                && Settings.Get(Settings.K.EnableGitHubAcceleration)
+                && !string.IsNullOrWhiteSpace(Settings.GetValue(Settings.K.GitHubAcceleratorUrl))
+            )
+            {
+                l.Add(
+                    new InnerOperation(
+                        new XGetInstallerDownloadOperation(package),
+                        mustSucceed: true
+                    )
+                );
+            }
 
             foreach (var process in opts.KillBeforeOperation)
                 l.Add(new InnerOperation(new KillProcessOperation(process), mustSucceed: false));

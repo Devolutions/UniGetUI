@@ -94,6 +94,8 @@ public static partial class Settings
         DisableInstallerHostChangeWarning,
         BunPreferLatestVersions,
         TrayIconStyle,
+        EnableGitHubAcceleration,
+        GitHubAcceleratorUrl,
 
         Test1,
         Test2,
@@ -199,6 +201,8 @@ public static partial class Settings
             K.DisableInstallerHostChangeWarning => "DisableInstallerHostChangeWarning",
             K.BunPreferLatestVersions => "BunPreferLatestVersions",
             K.TrayIconStyle => "TrayIconStyle",
+            K.EnableGitHubAcceleration => "EnableGitHubAcceleration",
+            K.GitHubAcceleratorUrl => "GitHubAcceleratorUrl",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

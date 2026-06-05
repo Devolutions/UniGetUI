@@ -97,10 +97,22 @@ public class DownloadOperation : AbstractOperation
                 downloadLocation = Path.Join(downloadLocation, fileName);
             }
 
-            Line($"Download URL found at {downloadUrl} ", LineType.Information);
+            // Apply GitHub URL acceleration if configured
+            Uri acceleratedUrl = CoreTools.AccelerateDownloadUrl(downloadUrl)
+                ?? downloadUrl
+                ?? throw new InvalidOperationException("Download URL was null after acceleration fallback");
+            if (acceleratedUrl != downloadUrl!)
+            {
+                Line($"Download URL accelerated to {acceleratedUrl} ", LineType.Information);
+            }
+            else
+            {
+                Line($"Download URL found at {downloadUrl} ", LineType.Information);
+            }
+
             using var httpClient = new HttpClient(CoreTools.GenericHttpClientParameters);
             using var response = await httpClient.GetAsync(
-                downloadUrl,
+                acceleratedUrl,
                 HttpCompletionOption.ResponseHeadersRead
             );
 

@@ -174,6 +174,34 @@
         StateChanged="ShowRestartBanner"
         Text="Wait for the device to be connected to the internet before attempting to do tasks that require internet connectivity."
       />
+
+      <UserControl Height="16" />
+
+      <widgets:TranslatedTextBlock Margin="4,32,4,8" FontWeight="SemiBold" Text="GitHub download acceleration" />
+
+      <widgets:CheckboxCard
+        x:Name="EnableGitHubAcceleration"
+        CornerRadius="8,8,0,0"
+        SettingName="EnableGitHubAcceleration"
+        Text="Accelerate GitHub downloads using a proxy or mirror service"
+      >
+        <widgets:CheckboxCard.Description>
+          <widgets:TranslatedTextBlock Text="Rewrites GitHub download URLs (github.com, raw.githubusercontent.com) through an accelerator service for faster downloads in restricted network environments" />
+        </widgets:CheckboxCard.Description>
+      </widgets:CheckboxCard>
+
+      <widgets:TextboxCard
+        BorderThickness="1,0,1,1"
+        CornerRadius="0,0,8,8"
+        IsEnabled="{x:Bind EnableGitHubAcceleration._checkbox.IsOn, Mode=OneWay}"
+        Placeholder="https://xget.example.com"
+        SettingName="GitHubAcceleratorUrl"
+        Text="Accelerator server URL"
+      >
+        <widgets:TextboxCard.Description>
+          <widgets:TranslatedTextBlock Text="The base URL of the accelerator service (e.g., a self-hosted xget-src instance or a GitHub proxy). Example: https://xget.example.com" />
+        </widgets:TextboxCard.Description>
+      </widgets:TextboxCard>
     </StackPanel>
   </ScrollViewer>
 </Page>

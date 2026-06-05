@@ -639,12 +639,19 @@ public partial class AutoUpdater
             throw new InvalidOperationException($"Download URL is not allowed: {downloadUrl}");
         }
 
-        LogUpdateDebug($"Downloading installer from {downloadUrl} to {installerLocation}");
+        // Apply GitHub URL acceleration if configured (security check uses original URL)
+        string acceleratedUrl = CoreTools.AccelerateDownloadUrl(new Uri(downloadUrl))?.ToString() ?? downloadUrl;
+
+        LogUpdateDebug(
+            acceleratedUrl != downloadUrl
+                ? $"Downloading installer from {acceleratedUrl} (accelerated from {downloadUrl}) to {installerLocation}"
+                : $"Downloading installer from {downloadUrl} to {installerLocation}"
+        );
         using (HttpClient client = new(CreateHttpClientHandler(updaterOverrides)))
         {
             client.Timeout = TimeSpan.FromSeconds(600);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            HttpResponseMessage result = await client.GetAsync(downloadUrl);
+            HttpResponseMessage result = await client.GetAsync(acceleratedUrl);
             result.EnsureSuccessStatusCode();
             using FileStream fs = new(installerLocation, FileMode.OpenOrCreate);
             await result.Content.CopyToAsync(fs);

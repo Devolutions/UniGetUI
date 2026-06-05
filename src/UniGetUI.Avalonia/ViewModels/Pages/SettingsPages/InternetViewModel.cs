@@ -23,11 +23,13 @@ public partial class InternetViewModel : ViewModelBase
 
     [ObservableProperty] private bool _isProxyEnabled;
     [ObservableProperty] private bool _isProxyAuthEnabled;
+    [ObservableProperty] private bool _isGitHubAccelerationEnabled;
 
     public InternetViewModel()
     {
         _isProxyEnabled = CoreSettings.Get(CoreSettings.K.EnableProxy);
         _isProxyAuthEnabled = CoreSettings.Get(CoreSettings.K.EnableProxyAuth);
+        _isGitHubAccelerationEnabled = CoreSettings.Get(CoreSettings.K.EnableGitHubAcceleration);
     }
 
     public SettingsCard BuildCredentialsCard()
@@ -194,6 +196,12 @@ public partial class InternetViewModel : ViewModelBase
     {
         IsProxyAuthEnabled = CoreSettings.Get(CoreSettings.K.EnableProxyAuth);
         ApplyProxyToProcess();
+    }
+
+    [RelayCommand]
+    private void RefreshGitHubAccelerationEnabled()
+    {
+        IsGitHubAccelerationEnabled = CoreSettings.Get(CoreSettings.K.EnableGitHubAcceleration);
     }
 
     [RelayCommand]

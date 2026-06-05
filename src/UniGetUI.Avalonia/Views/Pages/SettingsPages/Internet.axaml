@@ -56,6 +56,26 @@
                                    Text="{t:Translate Wait for the device to be connected to the internet before attempting to do tasks that require internet connectivity.}"
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    CornerRadius="8"/>
+
+            <Border Height="16"/>
+
+            <settings:TranslatedTextBlock Text="GitHub download acceleration"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <settings:CheckboxCard SettingName="EnableGitHubAcceleration"
+                                   Text="{t:Translate Accelerate GitHub downloads using a proxy or mirror service}"
+                                   Description="{t:Translate Text='Rewrites GitHub download URLs (github.com, raw.githubusercontent.com) through an accelerator service for faster downloads in restricted network environments'}"
+                                   StateChangedCommand="{Binding RefreshGitHubAccelerationEnabledCommand}"
+                                   CornerRadius="8,8,0,0"/>
+
+            <settings:TextboxCard SettingName="GitHubAcceleratorUrl"
+                                  Text="{t:Translate Accelerator server URL}"
+                                  Placeholder="https://xget.example.com"
+                                  CornerRadius="0,0,8,8"
+                                  BorderThickness="1,0,1,1"
+                                  IsEnabled="{Binding IsGitHubAccelerationEnabled}"/>
         </StackPanel>
     </ScrollViewer>
 

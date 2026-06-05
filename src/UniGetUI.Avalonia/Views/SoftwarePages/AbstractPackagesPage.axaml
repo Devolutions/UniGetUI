@@ -169,15 +169,15 @@
               ColumnDefinitions="220,4,*">
 
             <!-- ===== FILTER PANE =====
-                 SidePanel is a Border (the grid child the code-behind positions) so it can cast a
-                 BoxShadow — the WinUI elevated filter-panel shadow (most visible in overlay mode). -->
+                 SidePanel is the Border the code-behind positions (inline vs overlay mode). -->
                 <Border x:Name="SidePanel"
                         Grid.Column="0"
                         IsVisible="{Binding IsFilterPaneOpen}"
-                        BoxShadow="3 0 14 0 #40000000">
+                        CornerRadius="8"
+                        ClipToBounds="True">
                 <ScrollViewer x:Name="SidePanelScroller"
                               HorizontalScrollBarVisibility="Disabled"
-                              Padding="0,8,4,0"
+                              Padding="4,8,4,0"
                               automation:AutomationProperties.AccessibilityView="Control"
                               automation:AutomationProperties.Name="{t:Translate Filters}"
                               automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Search}"
@@ -344,7 +344,7 @@
                                   Background="{DynamicResource SettingsCardBackground}">
                             <Expander.Header>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg" Width="16" Height="16" VerticalAlignment="Center"/>
+                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search_filled.svg" Width="16" Height="16" VerticalAlignment="Center"/>
                                     <TextBlock Text="{t:Translate Search mode}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Expander.Header>

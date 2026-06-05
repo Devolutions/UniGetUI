@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" version="1.1" viewBox="0 0 32 32">
+  <!-- Filled magnifier matching the Sources/Filter icon family weight -->
+  <path fill="#010101" d="M2,13 a11,11 0 1,0 22,0 a11,11 0 1,0 -22,0 Z M6.5,13 a6.5,6.5 0 1,1 13,0 a6.5,6.5 0 1,1 -13,0 Z"/>
+  <path fill="#010101" d="M22.12,17.88 L30.62,26.38 L26.38,30.62 L17.88,22.12 Z"/>
+</svg>

@@ -9,7 +9,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
              x:DataType="vm:SidebarViewModel"
-             MinWidth="72">
+             MinWidth="64">
 
     <Grid RowDefinitions="*,Auto">
 

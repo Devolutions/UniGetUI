@@ -60,7 +60,7 @@ public partial class SidebarViewModel : ViewModelBase
         OnPropertyChanged(nameof(BundlesBadgeCompactVisible));
     }
 
-    public double PaneWidth => IsPaneOpen ? 250 : 72;
+    public double PaneWidth => IsPaneOpen ? 250 : 64;
 
     public bool UpdatesBadgeExpandedVisible => UpdatesBadgeVisible && IsPaneOpen;
     public bool UpdatesBadgeCompactVisible => UpdatesBadgeVisible && !IsPaneOpen;

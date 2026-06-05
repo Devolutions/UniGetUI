@@ -109,8 +109,8 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-            <!-- Logs link card -->
-            <settings:SettingsPageButton x:Name="ManagerLogs" CornerRadius="8,8,0,0"/>
+            <!-- Logs link card (standalone; Pip overrides to a top tile when the alias warning shows) -->
+            <settings:SettingsPageButton x:Name="ManagerLogs" CornerRadius="8"/>
 
             <!-- Python App Execution Alias warning (pip only) -->
             <settings:SettingsCard x:Name="AppExecutionAliasWarning"

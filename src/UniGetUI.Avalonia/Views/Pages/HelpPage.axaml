@@ -10,50 +10,75 @@
              mc:Ignorable="d"
              x:DataType="vm:HelpPageViewModel">
 
+    <UserControl.Styles>
+        <!-- Nav buttons: same as the toolbar's main action button (Button#MainToolbarButton) -->
+        <Style Selector="Button.nav">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <!-- Disabled: keep the card background (not the gray disabled brush), just fade it -->
+        <Style Selector="Button.nav:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+        </Style>
+        <Style Selector="Button.nav:disabled">
+            <Setter Property="Opacity" Value="0.5"/>
+        </Style>
+        <!-- Non-nav buttons: flat/transparent like the toolbar -->
+        <Style Selector="Button.flat">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+    </UserControl.Styles>
+
     <Grid RowDefinitions="Auto,2,*" Margin="8,4,8,8">
 
         <!-- Toolbar -->
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" Margin="0,0,0,6">
 
             <Button Grid.Column="0"
                     x:Name="BackButton"
+                    Classes="nav"
                     Width="35" Height="35" Padding="6"
                     CornerRadius="4,0,0,4"
                     automation:AutomationProperties.Name="{t:Translate Go back}"
                     Click="BackButton_Click">
                 <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/backward.svg"
-                                  Foreground="White" Width="16" Height="16"/>
+                                  Width="16" Height="16"/>
             </Button>
 
             <Button Grid.Column="1"
                     x:Name="ForwardButton"
+                    Classes="nav"
                     Width="35" Height="35" Padding="6"
                     CornerRadius="0"
                     automation:AutomationProperties.Name="{t:Translate Go forward}"
                     Click="ForwardButton_Click">
                 <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/forward.svg"
-                                  Foreground="White" Width="16" Height="16"/>
+                                  Width="16" Height="16"/>
             </Button>
 
             <Button Grid.Column="2"
+                    Classes="nav"
                     Width="35" Height="35" Padding="6"
                     CornerRadius="0"
                     automation:AutomationProperties.Name="{t:Translate Go to home page}"
                     Click="HomeButton_Click">
                 <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/home.svg"
-                                  Foreground="White" Width="16" Height="16"/>
+                                  Width="16" Height="16"/>
             </Button>
 
             <Button Grid.Column="3"
+                    Classes="nav"
                     Width="35" Height="35" Padding="6"
                     CornerRadius="0,4,4,0"
                     automation:AutomationProperties.Name="{t:Translate Reload page}"
                     Click="ReloadButton_Click">
                 <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/reload.svg"
-                                  Foreground="White" Width="16" Height="16"/>
+                                  Width="16" Height="16"/>
             </Button>
 
             <Button Grid.Column="5"
+                    Classes="flat"
                     Height="35"
                     Command="{Binding OpenInBrowserCommand}"
                     automation:AutomationProperties.Name="{t:Translate View page on browser}">
@@ -83,7 +108,7 @@
                     Spacing="12" IsVisible="False">
             <TextBlock Text="{t:Translate The built-in browser is not supported on Linux yet.}"
                        TextAlignment="Center" TextWrapping="Wrap" MaxWidth="400"/>
-            <Button HorizontalAlignment="Center" Command="{Binding OpenInBrowserCommand}">
+            <Button Classes="flat" HorizontalAlignment="Center" Command="{Binding OpenInBrowserCommand}">
                 <TextBlock Text="{t:Translate Open in browser}"
                            automation:AutomationProperties.AccessibilityView="Raw"/>
             </Button>

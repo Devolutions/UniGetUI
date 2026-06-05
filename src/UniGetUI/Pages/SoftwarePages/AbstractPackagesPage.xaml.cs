@@ -697,7 +697,6 @@ namespace UniGetUI.Interface
                 )
             )
             {
-                Loader.ClearPackages(emitFinishSignal: false);
                 await Loader.ReloadPackages();
             }
         }

@@ -144,11 +144,16 @@ namespace UniGetUI.PackageEngine.PackageLoader
                     return;
                 }
 
-                ClearPackages(emitFinishSignal: false);
                 LoadOperationIdentifier = new Random().Next();
                 int current_identifier = LoadOperationIdentifier;
                 IsLoading = true;
                 StartedLoading?.Invoke(this, EventArgs.Empty);
+
+                // Clear packages only after signaling the load started, so the UI shows the
+                // loading state instead of briefly flashing the "no packages found" message.
+                PackageReference.Clear();
+                IsLoaded = false;
+                InvokePackagesChangedEvent(false, [], []);
 
                 if (REQUIRES_INTERNET)
                 {

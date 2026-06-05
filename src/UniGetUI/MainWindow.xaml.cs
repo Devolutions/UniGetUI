@@ -68,6 +68,7 @@ namespace UniGetUI.Interface
 
             LoadTrayMenu();
             ApplyTheme();
+            ApplySplashImage();
             ApplyProxyVariableToProcess();
             _applySubtitleToWindow();
 
@@ -704,6 +705,13 @@ namespace UniGetUI.Interface
         {
             AppWindow.Show();
             Activate();
+        }
+
+        private void ApplySplashImage()
+        {
+            bool dark = MainApp.Instance.ThemeListener.CurrentTheme == ApplicationTheme.Dark;
+            string asset = dark ? "SplashScreen.theme-dark.png" : "SplashScreen.png";
+            SplashImage.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri($"ms-appx:///Assets/{asset}"));
         }
 
         public void ApplyTheme()

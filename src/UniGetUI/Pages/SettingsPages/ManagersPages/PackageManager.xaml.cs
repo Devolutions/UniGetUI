@@ -128,6 +128,9 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
             ExecutableComboBox.IsEnabled = SecureSettings.Get(
                 SecureSettings.K.AllowCustomManagerPaths
             );
+            BrowseExecutableButton.IsEnabled = SecureSettings.Get(
+                SecureSettings.K.AllowCustomManagerPaths
+            );
 
             InstallOptionsPanel.Description = new InstallOptions_Manager(Manager);
             InstallOptionsPanel.Padding = new(18, 24, 18, 24);
@@ -613,12 +616,22 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
             ExecutableComboBox.Items.Clear();
             foreach (var path in Manager.FindCandidateExecutableFiles())
             {
-                ExecutableComboBox.Items.Add(path);
+                AddExecutableComboBoxItem(path);
             }
-            string selectedValue =
+            string configuredValue =
                 Settings.GetDictionaryItem<string, string>(Settings.K.ManagerPaths, Manager.Name)
                 ?? "";
+            string selectedValue = configuredValue;
+            if (!string.IsNullOrEmpty(configuredValue) && File.Exists(configuredValue))
+            {
+                AddExecutableComboBoxItem(configuredValue);
+            }
             if (string.IsNullOrEmpty(selectedValue))
+            {
+                var exe = Manager.GetExecutableFile();
+                selectedValue = exe.Item1 ? exe.Item2 : "";
+            }
+            else if (!File.Exists(selectedValue))
             {
                 var exe = Manager.GetExecutableFile();
                 selectedValue = exe.Item1 ? exe.Item2 : "";
@@ -699,15 +712,48 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
 
         private void ExecutableComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (string.IsNullOrEmpty(ExecutableComboBox.SelectedValue.ToString()))
+            if (ExecutableComboBox.SelectedValue?.ToString() is not { Length: > 0 } selectedValue)
                 return;
 
             Settings.SetDictionaryItem(
                 Settings.K.ManagerPaths,
                 Manager!.Name,
-                ExecutableComboBox.SelectedValue.ToString()
+                selectedValue
             );
             _ = ReloadPackageManager();
+        }
+
+        private void BrowseExecutableButton_Click(object sender, RoutedEventArgs e) =>
+            _ = _browseExecutableButton_Click();
+
+        private async Task _browseExecutableButton_Click()
+        {
+            if (Manager is null)
+                return;
+
+            ExternalLibraries.Pickers.FileOpenPicker picker = new(
+                MainApp.Instance.MainWindow.GetWindowHandle()
+            );
+            string file = picker.Show(["*.exe"]);
+            if (file == string.Empty)
+                return;
+
+            Settings.SetDictionaryItem(Settings.K.ManagerPaths, Manager.Name, file);
+            await ReloadPackageManager();
+        }
+
+        private void AddExecutableComboBoxItem(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            foreach (object? item in ExecutableComboBox.Items)
+            {
+                if (string.Equals(item?.ToString(), path, StringComparison.OrdinalIgnoreCase))
+                    return;
+            }
+
+            ExecutableComboBox.Items.Add(path);
         }
 
         private void GoToSecureSettingsBtn_Click(object sender, RoutedEventArgs e)

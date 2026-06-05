@@ -1,17 +1,27 @@
-[
-    {
-        "name": "typescript",
-        "version": "5.3.3",
-        "description": "TypeScript is a language for application scale JavaScript development"
-    },
-    {
-        "name": "lodash",
-        "version": "4.17.21",
-        "description": "Lodash modular utilities."
-    },
-    {
-        "name": "@types/node",
-        "version": "20.10.6",
-        "description": "TypeScript definitions for Node.js"
-    }
-]
+{
+    "objects": [
+        {
+            "package": {
+                "name": "typescript",
+                "version": "5.3.3",
+                "description": "TypeScript is a language for application scale JavaScript development"
+            }
+        },
+        {
+            "package": {
+                "name": "lodash",
+                "version": "4.17.21",
+                "description": "Lodash modular utilities."
+            }
+        },
+        {
+            "package": {
+                "name": "@types/node",
+                "version": "20.10.6",
+                "description": "TypeScript definitions for Node.js"
+            }
+        }
+    ],
+    "total": 3,
+    "time": "Mon Jun 04 2026 00:00:00 GMT+0000"
+}

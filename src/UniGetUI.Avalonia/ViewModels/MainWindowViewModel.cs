@@ -324,7 +324,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public void NavigateTo(PageType newPage_t, bool toHistory = true)
     {
         if (newPage_t is PageType.About) { _ = ShowAboutDialog(); return; }
-        if (newPage_t is PageType.Quit) { (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown(); return; }
+        if (newPage_t is PageType.Quit) { MainWindow.Instance?.QuitApplication(); return; }
 
         if (_currentPage == newPage_t)
         {

@@ -122,6 +122,24 @@ public partial class App : Application
         AvaloniaAppHost.SecondaryInstanceArgsReceived += args =>
             HandleSecondaryInstanceArgs(mainWindow, args);
 
+        desktop.ShutdownRequested += (_, e) =>
+        {
+            if (mainWindow.IsQuitting)
+                return;
+
+            e.Cancel = true;
+            mainWindow.QuitApplication();
+        };
+
+        if (Current?.TryGetFeature<IActivatableLifetime>() is { } activatable)
+        {
+            activatable.Activated += (_, e) =>
+            {
+                if (e.Kind == ActivationKind.Reopen)
+                    mainWindow.ShowFromTray();
+            };
+        }
+
         if (CoreData.WasDaemon)
         {
             // Start silently: hide the window on first open only.

@@ -1,8 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -73,6 +73,7 @@ public partial class MainWindow : Window
     private bool _focusSidebarSelectionOnNextPageChange;
     private TrayService? _trayService;
     private bool _allowClose;
+    private int _isQuitting;
 
     public enum RuntimeNotificationLevel
     {
@@ -136,18 +137,23 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
-        if (!_allowClose && !Settings.Get(Settings.K.DisableSystemTray))
+        if (!_allowClose && (OperatingSystem.IsMacOS() || !Settings.Get(Settings.K.DisableSystemTray)))
         {
             e.Cancel = true;
             Hide();
             return;
         }
 
+        e.Cancel = true;
+        QuitApplication();
+    }
+
+    private void ReleaseWindowResources()
+    {
         SaveGeometryNow();
         AvaloniaAutoUpdater.ReleaseLockForAutoupdate_Window = true;
         _trayService?.Dispose();
         _trayService = null;
-        base.OnClosing(e);
     }
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
@@ -1004,14 +1010,25 @@ public partial class MainWindow : Window
         Activate();
     }
 
+    public bool IsQuitting => Interlocked.CompareExchange(ref _isQuitting, 0, 0) == 1;
+
     public void QuitApplication()
     {
+        if (Interlocked.Exchange(ref _isQuitting, 1) == 1)
+            return;
+
         _allowClose = true;
+        ReleaseWindowResources();
+
+        if (IsVisible)
+            Hide();
+
         _ = QuitApplicationAsync();
     }
 
     private static async Task QuitApplicationAsync()
     {
+        Logger.Warn("Quitting UniGetUI");
         try
         {
             await AvaloniaBootstrapper.StopIpcApiAsync().WaitAsync(TimeSpan.FromSeconds(5));
@@ -1026,9 +1043,7 @@ public partial class MainWindow : Window
             Logger.Error(ex);
         }
 
-        Dispatcher.UIThread.Post(() =>
-            (global::Avalonia.Application.Current?.ApplicationLifetime
-                as IClassicDesktopStyleApplicationLifetime)?.Shutdown());
+        Environment.Exit(0);
     }
 
     public static void ApplyProxyVariableToProcess()

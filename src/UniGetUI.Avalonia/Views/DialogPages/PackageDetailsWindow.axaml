@@ -253,9 +253,11 @@
                                 Spacing="8">
                         <Border CornerRadius="8" ClipToBounds="True"
                                 x:Name="ScreenshotsBorder"
-                                Background="#000000"
                                 Height="320">
                             <Panel>
+                                <!-- Black letterbox only behind actual screenshots; the empty-state
+                                     banner below composites over the themed window background instead. -->
+                                <Border Background="#000000" IsVisible="{Binding HasScreenshots}"/>
                                 <Carousel x:Name="ScreenshotsCarousel"
                                           IsVisible="{Binding HasScreenshots}"
                                           ItemsSource="{Binding Screenshots}"

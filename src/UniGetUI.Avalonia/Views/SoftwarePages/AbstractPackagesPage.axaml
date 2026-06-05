@@ -575,7 +575,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="pkg:PackageWrapper">
-                                        <Border CornerRadius="4" Margin="4" Width="275" Height="56"
+                                        <Border CornerRadius="4" Margin="4" Width="275" Height="70"
                                             automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
                                                 Background="{DynamicResource SettingsCardBackground}"
@@ -611,20 +611,23 @@
                                                                FontSize="11" Opacity="0.5"
                                                                TextTrimming="CharacterEllipsis"/>
                                                 </StackPanel>
-                                                <!-- Col 2: checkbox (top) + overflow button (bottom) -->
+                                                <!-- Col 2: checkbox (top) + overflow button (bottom). The taller card leaves
+                                                     room to stack them without overlap. -->
                                                 <Panel Grid.Column="2">
                                                     <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
                                                               automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                               VerticalAlignment="Top"
                                                               HorizontalAlignment="Center"
+                                                              MinHeight="0"
                                                               Padding="0"/>
                                                     <Button Click="CardOverflowButton_Click"
-                                                            Width="22" Height="22" Padding="0"
+                                                            Width="26" Height="26" Padding="0"
+                                                            MinWidth="0" MinHeight="0"
                                                             VerticalAlignment="Bottom"
                                                             HorizontalAlignment="Center"
                                                             Background="Transparent" BorderThickness="0"
                                                             automation:AutomationProperties.Name="{t:Translate More options}">
-                                                        <TextBlock Text="···" FontSize="16"
+                                                        <TextBlock Text="···" FontSize="20"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"/>
                                                     </Button>
@@ -647,28 +650,33 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="pkg:PackageWrapper">
-                                        <Border CornerRadius="4" Margin="4" Width="128" Height="134"
+                                        <Border CornerRadius="4" Margin="4" Width="128" Height="142"
                                             automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
                                                 Background="{DynamicResource SettingsCardBackground}"
                                                 BorderBrush="{DynamicResource SettingsCardBorderBrush}" BorderThickness="1" Padding="4">
-                                            <Grid RowDefinitions="22,60,30,15">
+                                            <Grid RowDefinitions="30,57,30,15">
                                                 <CheckBox Grid.Row="0"
                                                           IsChecked="{Binding IsChecked, Mode=TwoWay}"
                                                           automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                           HorizontalAlignment="Left"
-                                                          VerticalAlignment="Top"
-                                                          Padding="0" Margin="2,2,0,0"/>
+                                                          VerticalAlignment="Center"
+                                                          MinHeight="0"
+                                                          Padding="0" Margin="2,0,0,0"/>
                                                 <Button Grid.Row="0"
                                                         Click="CardOverflowButton_Click"
-                                                        Width="22" Height="22" Padding="0"
+                                                        Width="26" Height="24" Padding="0"
+                                                        MinWidth="0" MinHeight="0"
                                                         HorizontalAlignment="Right"
-                                                        VerticalAlignment="Top"
+                                                        VerticalAlignment="Center"
+                                                        HorizontalContentAlignment="Center"
+                                                        VerticalContentAlignment="Center"
                                                         Background="Transparent" BorderThickness="0"
                                                         automation:AutomationProperties.Name="{t:Translate More options}">
-                                                    <TextBlock Text="···" FontSize="16"
+                                                    <TextBlock Text="···" FontSize="20"
                                                                HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"/>
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,-3,0,0"/>
                                                 </Button>
                                                 <Panel Grid.Row="1" Width="64" Height="64"
                                                        Margin="0,-8,0,4"
@@ -743,7 +751,7 @@
                                      Grid.Column="0"
                                      Padding="16,0,10,0"
                                      VerticalContentAlignment="Center"
-                                     CornerRadius="0"
+                                     CornerRadius="7,0,0,7"
                                      BorderThickness="0"
                                      Background="Transparent"
                                      FontSize="40"

@@ -12,13 +12,15 @@
 
     <Grid RowDefinitions="Auto,Auto,*">
 
-        <!-- Row 0: Header -->
-        <StackPanel Grid.Row="0"
-                    Orientation="Horizontal"
-                    VerticalAlignment="Center"
-                    Margin="16,12,16,8">
+        <!-- Row 0: Header. Title is left-aligned to the settings cards (40px), with the back
+             button sitting in the gutter to its left. -->
+        <Grid Grid.Row="0"
+              VerticalAlignment="Center"
+              Margin="0,12,16,8">
             <Button Command="{Binding BackCommand}"
-                    Margin="0,0,12,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Margin="4,0,0,0"
                     Padding="4"
                     Background="Transparent"
                     BorderThickness="0"
@@ -30,8 +32,9 @@
                        FontSize="26"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center"
+                       Margin="40,0,0,0"
                        automation:AutomationProperties.HeadingLevel="1"/>
-        </StackPanel>
+        </Grid>
 
         <!-- Row 1: Restart-required banner -->
         <Border x:Name="RestartBannerBorder"

@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using UniGetUI.Avalonia.Views.Controls;
 using ICommand = System.Windows.Input.ICommand;
 
 namespace UniGetUI.Avalonia.Views.Controls.Settings;
@@ -23,7 +24,7 @@ public class SettingsCard : UserControl
     private readonly ContentControl _descriptionPresenter;
     private readonly ContentControl _contentPresenter;
     private readonly StackPanel _descriptionRow;
-    private readonly TextBlock _chevron;
+    private readonly SvgIcon _chevron;
 
     // ── Styled properties ──────────────────────────────────────────────────
     public static readonly StyledProperty<object?> HeaderProperty =
@@ -178,10 +179,11 @@ public class SettingsCard : UserControl
             Margin = new Thickness(16, 0, 0, 0),
         };
 
-        _chevron = new TextBlock
+        _chevron = new SvgIcon
         {
-            Text = "›",
-            FontSize = 20,
+            Path = "avares://UniGetUI.Avalonia/Assets/Symbols/forward.svg",
+            Width = 16,
+            Height = 16,
             VerticalAlignment = VerticalAlignment.Center,
             Opacity = 0.6,
             Margin = new Thickness(8, 0, 0, 0),

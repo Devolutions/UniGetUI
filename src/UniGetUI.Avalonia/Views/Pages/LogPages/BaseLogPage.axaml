@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.LogPages"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -44,6 +45,7 @@
             </StackPanel>
 
             <Button Grid.Column="5"
+                    Margin="0,0,12,0"
                     Command="{Binding ReloadCommand}"
                     automation:AutomationProperties.Name="{t:Translate Reload log}">
                 <TextBlock Text="{t:Translate Reload log}"
@@ -54,24 +56,9 @@
         <!-- Log content -->
         <Border Grid.Row="1"
                 CornerRadius="8"
+                ClipToBounds="True"
                 Background="{DynamicResource ApplicationPageBackgroundThemeBrush}">
-            <ScrollViewer x:Name="MainScroller"
-                          HorizontalScrollBarVisibility="Disabled"
-                          VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding LogLines}"
-                              Margin="8">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="vm:LogLineItem">
-                            <SelectableTextBlock Text="{Binding Text}"
-                                                 Foreground="{Binding Foreground}"
-                                                 FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
-                                                 FontSize="12"
-                                                 TextWrapping="Wrap"
-                                                 Margin="0,1"/>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            <controls:LogTextEditor x:Name="LogEditor"/>
         </Border>
 
     </Grid>

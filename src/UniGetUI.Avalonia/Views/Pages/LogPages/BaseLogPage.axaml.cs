@@ -1,4 +1,4 @@
-using Avalonia;
+using System.Collections.Specialized;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
@@ -11,6 +11,7 @@ namespace UniGetUI.Avalonia.Views.Pages.LogPages;
 public partial class BaseLogPage : UserControl, IEnterLeaveListener, IKeyboardShortcutListener
 {
     protected readonly BaseLogPageViewModel ViewModel;
+    private bool _rebuildQueued;
 
     protected BaseLogPage(BaseLogPageViewModel viewModel)
     {
@@ -21,6 +22,22 @@ public partial class BaseLogPage : UserControl, IEnterLeaveListener, IKeyboardSh
         ViewModel.CopyTextRequested += OnCopyTextRequested;
         ViewModel.ExportTextRequested += OnExportTextRequested;
         ViewModel.ScrollToBottomRequested += OnScrollToBottomRequested;
+        ViewModel.LogLines.CollectionChanged += OnLogLinesChanged;
+
+        LogEditor.SetLines(ViewModel.LogLines);
+    }
+
+    // LoadLog clears and re-adds the lines one by one, firing many events; coalesce them into a
+    // single rebuild on the next dispatcher pass instead of rebuilding the document each time.
+    private void OnLogLinesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (_rebuildQueued) return;
+        _rebuildQueued = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _rebuildQueued = false;
+            LogEditor.SetLines(ViewModel.LogLines);
+        }, DispatcherPriority.Background);
     }
 
     private async void OnCopyTextRequested(object? sender, string text)
@@ -51,10 +68,7 @@ public partial class BaseLogPage : UserControl, IEnterLeaveListener, IKeyboardSh
 
     private void OnScrollToBottomRequested(object? sender, EventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
-        {
-            MainScroller.Offset = new Vector(MainScroller.Offset.X, double.MaxValue);
-        }, DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(LogEditor.ScrollToBottom, DispatcherPriority.Background);
     }
 
     public void OnEnter() => ViewModel.LoadLog();
@@ -63,7 +77,7 @@ public partial class BaseLogPage : UserControl, IEnterLeaveListener, IKeyboardSh
 
     public void ReloadTriggered() => ViewModel.LoadLog(isReload: true);
 
-    public void SelectAllTriggered() { }
+    public void SelectAllTriggered() => LogEditor.SelectAll();
 
     public void SearchTriggered() { }
 

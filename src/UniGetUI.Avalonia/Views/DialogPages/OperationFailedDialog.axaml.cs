@@ -1,9 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Documents;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using UniGetUI.Avalonia.ViewModels.Pages.LogPages;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Operations;
@@ -30,8 +30,7 @@ public partial class OperationFailedDialog : Window
         var normalBrush = Application.Current?.FindResource("SystemControlForegroundBaseHighBrush") as IBrush
                           ?? Brushes.White;
 
-        var inlines = OutputText.Inlines ??= new InlineCollection();
-        bool first = true;
+        var lines = new List<LogLineItem>();
         foreach (var (text, type) in operation.GetOutput())
         {
             IBrush brush = type switch
@@ -40,10 +39,9 @@ public partial class OperationFailedDialog : Window
                 AbstractOperation.LineType.VerboseDetails => debugBrush,
                 _ => normalBrush,
             };
-            if (!first) inlines.Add(new LineBreak());
-            inlines.Add(new Run(text) { Foreground = brush });
-            first = false;
+            lines.Add(new LogLineItem(text, brush));
         }
+        OutputText.SetLines(lines);
 
         var closeButton = new Button
         {
@@ -64,7 +62,7 @@ public partial class OperationFailedDialog : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
-        Dispatcher.UIThread.Post(OutputScroll.ScrollToEnd, DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(OutputText.ScrollToBottom, DispatcherPriority.Background);
     }
 
     private Control BuildRetryButton(AbstractOperation operation)

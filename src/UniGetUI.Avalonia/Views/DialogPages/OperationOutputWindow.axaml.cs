@@ -1,6 +1,5 @@
 using System.Collections.Specialized;
 using Avalonia.Controls;
-using Avalonia.Controls.Documents;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels.DialogPages;
 using UniGetUI.Avalonia.ViewModels.Pages.LogPages;
@@ -17,9 +16,7 @@ public partial class OperationOutputWindow : Window
         InitializeComponent();
         UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
 
-        foreach (var line in vm.OutputLines)
-            AppendLine(line);
-
+        OutputText.SetLines(vm.OutputLines);
         vm.OutputLines.CollectionChanged += OnOutputLinesChanged;
     }
 
@@ -29,28 +26,20 @@ public partial class OperationOutputWindow : Window
         {
             if (e.Action == NotifyCollectionChangedAction.Reset)
             {
-                OutputText.Inlines?.Clear();
+                OutputText.ClearLines();
             }
             else if (e.NewItems is not null)
             {
                 foreach (LogLineItem item in e.NewItems)
-                    AppendLine(item);
+                    OutputText.AppendLine(item);
             }
-            OutputScroll.ScrollToEnd();
+            OutputText.ScrollToBottom();
         }, DispatcherPriority.Background);
-    }
-
-    private void AppendLine(LogLineItem line)
-    {
-        var inlines = OutputText.Inlines ??= new InlineCollection();
-        if (inlines.Count > 0)
-            inlines.Add(new LineBreak());
-        inlines.Add(new Run(line.Text) { Foreground = line.Foreground });
     }
 
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
-        OutputScroll.ScrollToEnd();
+        OutputText.ScrollToBottom();
     }
 }

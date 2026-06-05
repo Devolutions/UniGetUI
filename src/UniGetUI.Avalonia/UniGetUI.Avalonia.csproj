@@ -126,6 +126,7 @@
 
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="12.0.4" />
+        <PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
         <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.0.0" />
         <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />

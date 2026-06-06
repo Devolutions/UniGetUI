@@ -296,7 +296,7 @@ namespace UniGetUI.PackageEngine.Operations
 
             // GitHub acceleration: pre-download installer before running winget
             if (
-                role is OperationType.Update
+                (role is OperationType.Update or OperationType.Install)
                 && Settings.Get(Settings.K.EnableGitHubAcceleration)
                 && !string.IsNullOrWhiteSpace(Settings.GetValue(Settings.K.GitHubAcceleratorUrl))
             )

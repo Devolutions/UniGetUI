@@ -61,7 +61,7 @@ public class XGetInstallerDownloadOperation : AbstractOperation
                 LineType.Information
             );
 
-            await _package.Details.Load();
+            await _package.Details.Load().ConfigureAwait(false);
 
             Uri? installerUrl = _package.Details.InstallerUrl;
             if (installerUrl is null)
@@ -91,7 +91,7 @@ public class XGetInstallerDownloadOperation : AbstractOperation
             string tempDir = Path.Join(Path.GetTempPath(), "UniGetUI", "xget", safeId);
             Directory.CreateDirectory(tempDir);
 
-            string? fileName = await _package.GetInstallerFileName();
+            string? fileName = await _package.GetInstallerFileName().ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(fileName))
             {
                 string ext = installerType switch
@@ -120,14 +120,14 @@ public class XGetInstallerDownloadOperation : AbstractOperation
             httpClient.Timeout = TimeSpan.FromMinutes(10);
 
             using var response = await httpClient.GetAsync(
-                accelerated, HttpCompletionOption.ResponseHeadersRead);
+                accelerated, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
 
             response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? -1L;
             var canReportProgress = totalBytes > 0;
 
-            using var contentStream = await response.Content.ReadAsStreamAsync();
+            using var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             using var fileStream = new FileStream(
                 localPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
 
@@ -136,9 +136,9 @@ public class XGetInstallerDownloadOperation : AbstractOperation
             int bytesRead;
             int oldProgress = -1;
 
-            while ((bytesRead = await contentStream.ReadAsync(buffer)) > 0)
+            while ((bytesRead = await contentStream.ReadAsync(buffer).ConfigureAwait(false)) > 0)
             {
-                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
                 totalRead += bytesRead;
 
                 if (canReportProgress)

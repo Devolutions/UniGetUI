@@ -37,7 +37,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     /// </summary>
     private static bool IsAccelerationApplicable(IPackage package, OperationType operation)
     {
-        if (operation is not OperationType.Update)
+        if (operation is not (OperationType.Update or OperationType.Install))
             return false;
 
         if (!Settings.Get(Settings.K.EnableGitHubAcceleration))
@@ -301,7 +301,8 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         {
             if (returnCode == 0)
             {
-                MarkUpgradeAsDone(package);
+                if (operation is OperationType.Update)
+                    MarkUpgradeAsDone(package);
                 return OperationVeredict.Success;
             }
             return OperationVeredict.Failure;

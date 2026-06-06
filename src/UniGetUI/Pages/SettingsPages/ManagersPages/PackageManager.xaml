@@ -75,14 +75,23 @@
               FontSize="12"
               FontWeight="SemiBold"
               Opacity="0.7"
-              Text="Not finding the file you are looking for? Make sure it has been added to path."
+              Text="Not finding the file you are looking for? Browse to it or make sure it has been added to PATH."
             />
             <ComboBox
               x:Name="ExecutableComboBox"
               Grid.Row="1"
-              Grid.ColumnSpan="2"
+              Grid.Column="0"
               HorizontalAlignment="Stretch"
             />
+            <Button
+              x:Name="BrowseExecutableButton"
+              Grid.Row="1"
+              Grid.Column="1"
+              Padding="12,4"
+              Click="BrowseExecutableButton_Click"
+            >
+              <widgets:TranslatedTextBlock Text="Browse..." />
+            </Button>
             <widgets:TranslatedTextBlock
               x:Name="ExeFileWarningText"
               Grid.Row="2"

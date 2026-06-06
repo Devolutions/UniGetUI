@@ -194,15 +194,16 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public Tuple<bool, string> GetExecutableFile()
         {
             var candidates = FindCandidateExecutableFiles();
-            if (candidates.Count == 0)
-            {
-                // No paths were found
-                return new(false, "");
-            }
 
             // If custom package manager paths are DISABLED, get the first one (as old UniGetUI did) and return it.
             if (!SecureSettings.Get(SecureSettings.K.AllowCustomManagerPaths))
             {
+                if (candidates.Count == 0)
+                {
+                    // No paths were found
+                    return new(false, "");
+                }
+
                 return new(true, candidates[0]);
             }
             else
@@ -214,32 +215,33 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 // If there is no executable selection for this package manager
                 if (string.IsNullOrEmpty(exeSelection))
                 {
+                    if (candidates.Count == 0)
+                    {
+                        // No paths were found
+                        return new(false, "");
+                    }
+
                     return new(true, candidates[0]);
                 }
                 else if (!File.Exists(exeSelection))
                 {
                     Logger.Error(
-                        $"The selected executable path {exeSelection} for manager {Name} does not exist, the default one will be used..."
+                        $"The selected executable path {exeSelection} for manager {Name} does not exist, the default one will be used if available..."
                     );
-                    return new(true, candidates[0]);
                 }
 
-                // While technically executables that are not in the path should work,
-                // since detection of executables will be performed on the found paths, it is more consistent
-                // to throw an error when a non-found executable is used. Furthermore, doing this we can filter out
-                // any invalid paths or files.
-                if (candidates.Select(x => x.ToLower()).Contains(exeSelection.ToLower()))
+                else
                 {
                     return new(true, exeSelection);
                 }
-                else
+
+                if (candidates.Count == 0)
                 {
-                    Logger.Error(
-                        $"The selected executable path {exeSelection} for manager {Name} was not found among the candidates "
-                            + $"(executables found are [{string.Join(',', candidates)}]), the default will be used..."
-                    );
-                    return new(true, candidates[0]);
+                    // No paths were found
+                    return new(false, "");
                 }
+
+                return new(true, candidates[0]);
             }
         }
 

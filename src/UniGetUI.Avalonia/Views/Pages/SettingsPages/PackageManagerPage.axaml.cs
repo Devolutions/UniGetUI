@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
@@ -78,7 +79,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
 
         var execHint = new TextBlock
         {
-            Text = CoreTools.Translate("Not finding the file you are looking for? Make sure it has been added to path."),
+            Text = CoreTools.Translate("Not finding the file you are looking for? Browse to it or make sure it has been added to PATH."),
             FontSize = 12,
             FontWeight = FontWeight.SemiBold,
             Opacity = 0.7,
@@ -90,10 +91,17 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         var execCombo = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
         AutomationProperties.SetName(execCombo, CoreTools.Translate("Select the executable to be used. The following list shows the executables found by UniGetUI"));
         foreach (var path in manager.FindCandidateExecutableFiles())
-            execCombo.Items.Add(path);
+            AddExecutablePathItem(execCombo, path);
 
         string savedPath = CoreSettings.GetDictionaryItem<string, string>(CoreSettings.K.ManagerPaths, manager.Name) ?? "";
+        if (!string.IsNullOrEmpty(savedPath) && File.Exists(savedPath))
+            AddExecutablePathItem(execCombo, savedPath);
         if (string.IsNullOrEmpty(savedPath))
+        {
+            var (found, path) = manager.GetExecutableFile();
+            savedPath = found ? path : "";
+        }
+        else if (!File.Exists(savedPath))
         {
             var (found, path) = manager.GetExecutableFile();
             savedPath = found ? path : "";
@@ -106,8 +114,36 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 ViewModel.OnExecutableSelected(selected);
         };
         Grid.SetRow(execCombo, 1);
-        Grid.SetColumnSpan(execCombo, 2);
+        Grid.SetColumn(execCombo, 0);
         execGrid.Children.Add(execCombo);
+
+        var browseExecutableButton = new Button
+        {
+            Content = CoreTools.Translate("Browse..."),
+            IsEnabled = customPathsAllowed,
+            Margin = new Thickness(8, 0, 0, 0),
+        };
+        browseExecutableButton.Click += async (_, _) =>
+        {
+            if (TopLevel.GetTopLevel(this) is not { } topLevel) return;
+            var files = await topLevel.StorageProvider.OpenFilePickerAsync(
+                new FilePickerOpenOptions
+                {
+                    AllowMultiple = false,
+                    Title = CoreTools.Translate("Select executable"),
+                    FileTypeFilter = GetExecutableFileTypeFilter(),
+                });
+            if (files is not [{ } file]) return;
+
+            string? path = file.TryGetLocalPath();
+            if (string.IsNullOrWhiteSpace(path)) return;
+
+            AddExecutablePathItem(execCombo, path);
+            execCombo.SelectedItem = path;
+        };
+        Grid.SetRow(browseExecutableButton, 1);
+        Grid.SetColumn(browseExecutableButton, 1);
+        execGrid.Children.Add(browseExecutableButton);
 
         if (!customPathsAllowed)
         {
@@ -340,6 +376,34 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 "If Python cannot be found or is not listing packages but is installed on the system, " +
                 "you may need to disable the \"python.exe\" App Execution Alias in the settings.");
         }
+    }
+
+    private static IReadOnlyList<FilePickerFileType> GetExecutableFileTypeFilter()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return [new FilePickerFileType(CoreTools.Translate("All files")) { Patterns = ["*"] }];
+        }
+
+        return
+        [
+            new FilePickerFileType(CoreTools.Translate("Executable")) { Patterns = ["*.exe"] },
+            new FilePickerFileType(CoreTools.Translate("All files")) { Patterns = ["*"] },
+        ];
+    }
+
+    private static void AddExecutablePathItem(ComboBox comboBox, string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        foreach (object? item in comboBox.Items)
+        {
+            if (string.Equals(item?.ToString(), path, StringComparison.OrdinalIgnoreCase))
+                return;
+        }
+
+        comboBox.Items.Add(path);
     }
 
     private void BuildExtraControls(CheckboxCard_Dict disableNotifsCard)

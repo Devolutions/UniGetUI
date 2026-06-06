@@ -1,8 +1,8 @@
 {
   "package_count": {
-    "total": 12409,
-    "done": 5930,
-    "packages_with_icon": 5930,
+    "total": 12411,
+    "done": 5933,
+    "packages_with_icon": 5933,
     "packages_with_screenshot": 1368,
     "total_screenshots": 4140
   },
@@ -42105,7 +42105,15 @@
       "images": []
     },
     "tenacity": {
-      "icon": "https://codeberg.org/tenacityteam/tenacity/raw/branch/main/images/icons/48x48/tenacity.png",
+      "icon": "",
+      "images": []
+    },
+    "Chocolatey.tenacity": {
+      "icon": "https://community.chocolatey.org/content/packageimages/tenacity.1.3.4.20250612.png",
+      "images": []
+    },
+    "Winget.TenacityTeam.Tenacity": {
+      "icon": "https://community.chocolatey.org/content/packageimages/tenacity.1.3.4.20250612.png",
       "images": []
     },
     "tencentdocs": {
@@ -54577,7 +54585,7 @@
       "images": []
     },
     "starlette": {
-      "icon": "https://i.postimg.cc/2y15VgpK/starlette.png",
+      "icon": "https://raw.githubusercontent.com/encode/starlette/master/docs/img/starlette.svg",
       "images": []
     },
     "trio": {

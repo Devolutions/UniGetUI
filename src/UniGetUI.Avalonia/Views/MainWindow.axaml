@@ -366,6 +366,8 @@
                              FontSize="15"
                              CornerRadius="0"
                              BorderThickness="0"
+                             VerticalContentAlignment="Center"
+                             Padding="8,0,4,0"
                              Background="Transparent"
                              PlaceholderText="{Binding GlobalSearchPlaceholder}"
                              IsEnabled="{Binding GlobalSearchEnabled}"

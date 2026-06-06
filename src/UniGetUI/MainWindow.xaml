@@ -113,9 +113,9 @@
           Grid.ColumnSpan="3"
           Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
         />
-        <!-- Splash: Height matches the 620:300 aspect ratio of SplashScreen.svg so the image fills the grid exactly. SvgImageSource is used so the host window's background shows through the transparent SVG. The tagline's 90px left margin shifts its centering from the image center (x=270) to the wordmark center (x≈315) within the 540-wide grid. -->
+        <!-- Splash: 540x261 keeps the 620:300 aspect ratio of the artwork. Source is a transparent PNG set theme-aware in code-behind (SvgImageSource renders blank here). The tagline's 90px left margin shifts its centering to the wordmark center (x≈315) within the 540-wide grid. -->
         <Grid Grid.Row="1" Grid.Column="1" Width="540" Height="261">
-          <Image Stretch="Uniform">
+          <Image x:Name="SplashImage" Stretch="Uniform">
             <animations:Explicit.Animations>
               <animations:AnimationSet x:Name="InAnimation_Border">
                 <animations:TranslationAnimation
@@ -132,9 +132,6 @@
                 />
               </animations:AnimationSet>
             </animations:Explicit.Animations>
-            <Image.Source>
-              <SvgImageSource UriSource="ms-appx:///Assets/SplashScreen.svg" RasterizePixelWidth="540" RasterizePixelHeight="261" />
-            </Image.Source>
           </Image>
           <widgets:TranslatedTextBlock
             HorizontalAlignment="Center"

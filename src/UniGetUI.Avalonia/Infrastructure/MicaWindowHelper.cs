@@ -21,7 +21,7 @@ internal static class MicaWindowHelper
     private const int DWMWA_BORDER_COLOR = 34;
     private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
     private const int DWMWCP_ROUND = 2;
-    private const int DWMSBT_MAINWINDOW = 2; // Mica — same backdrop as the rest of the app, so menus match
+    private const int DWMSBT_TRANSIENTWINDOW = 3; // Acrylic — for transient surfaces (menus/flyouts); Mica won't paint on these
     private const int DWMWA_COLOR_DEFAULT = unchecked((int)0xFFFFFFFF);
 
     private static bool _acrylicPopupsHooked;
@@ -69,15 +69,28 @@ internal static class MicaWindowHelper
             return;
         _acrylicPopupsHooked = true;
 
-        // Every flyout/menu/tooltip/combo popup is hosted in a PopupRoot; style it as it loads.
+        // In-app flyouts/menus/tooltips/combo popups are hosted in a PopupRoot; style each as it loads.
         Control.LoadedEvent.AddClassHandler<PopupRoot>((root, _) => ApplyAcrylicToPopup(root));
+
+        // The system-tray context menu is NOT a PopupRoot — Avalonia hosts it in its own Window
+        // (Avalonia.Win32.TrayIconImpl.TrayPopupRoot), so it misses the handler above and would
+        // render with no backdrop (transparent over the desktop). Catch it by type name and apply
+        // the same acrylic treatment. The other Windows (MainWindow/dialogs) are handled via Apply().
+        Control.LoadedEvent.AddClassHandler<Window>((win, _) =>
+        {
+            if (win.GetType().Name == "TrayPopupRoot")
+                ApplyAcrylicToPopup(win);
+        });
     }
 
-    private static void ApplyAcrylicToPopup(PopupRoot root)
+    private static void ApplyAcrylicToPopup(TopLevel root)
     {
-        // Transparent surface so the DWM acrylic shows; the presenter backgrounds are also
-        // transparent (Styles.WindowsMica) so only the acrylic + menu items are painted.
-        root.TransparencyLevelHint = new[] { WindowTransparencyLevel.Transparent };
+        // Request acrylic (not Transparent): the Transparent level makes a layered window, and DWM
+        // system backdrops never paint on those — so the popup ended up fully see-through with only
+        // the presenter tint, unreadable when shown over the desktop (e.g. the tray menu). AcrylicBlur
+        // gives a composited window DWM can actually fill. This path only runs when Mica is enabled
+        // (Win11 + transparency effects), so acrylic is always available here.
+        root.TransparencyLevelHint = new[] { WindowTransparencyLevel.AcrylicBlur, WindowTransparencyLevel.Blur };
         root.Background = Brushes.Transparent;
 
         if (root.TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
@@ -85,7 +98,7 @@ internal static class MicaWindowHelper
 
         int corner = DWMWCP_ROUND;
         NativeMethods.DwmSetWindowAttribute(handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, sizeof(int));
-        int backdrop = DWMSBT_MAINWINDOW;
+        int backdrop = DWMSBT_TRANSIENTWINDOW;
         NativeMethods.DwmSetWindowAttribute(handle, DWMWA_SYSTEMBACKDROP_TYPE, ref backdrop, sizeof(int));
     }
 

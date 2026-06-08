@@ -114,6 +114,13 @@ internal sealed class ScoopPkgOperationHelper : BasePkgOperationHelper
             return OperationVeredict.AutoRetry;
         }
 
+        // Scoop can't resolve shims through the fresh 'current' junction in some contexts; an elevated (trusted) junction fixes it. See #4892
+        if (package.OverridenOptions.RunAsAdministrator != true && returnCode is not 0 && output_string.Contains("Can't shim"))
+        {
+            package.OverridenOptions.RunAsAdministrator = true;
+            return OperationVeredict.AutoRetry;
+        }
+
         if (output_string.Contains("ERROR") || returnCode is not 0)
             return OperationVeredict.Failure;
 

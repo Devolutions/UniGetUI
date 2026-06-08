@@ -301,6 +301,51 @@ public sealed class ScoopManagerTests : IDisposable
         OperationAssert.HasVeredict(success, OperationVeredict.Success);
     }
 
+    [Fact]
+    public void OperationResultRetriesElevatedOnShimResolutionFailure()
+    {
+        var manager = new Scoop();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithOptions(new OverridenInstallationOptions(runAsAdministrator: false))
+            .Build();
+
+        var retry = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            ["Creating shim for 'notepad++'.", "Can't shim 'notepad++.exe': File doesn't exist."],
+            1
+        );
+
+        OperationAssert.HasVeredict(retry, OperationVeredict.AutoRetry);
+        Assert.True(package.OverridenOptions.RunAsAdministrator);
+
+        // Already elevated: the same failure must not loop, it should surface as a plain failure
+        var failure = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            ["Can't shim 'notepad++.exe': File doesn't exist."],
+            1
+        );
+        OperationAssert.HasVeredict(failure, OperationVeredict.Failure);
+    }
+
+    [Fact]
+    public void OperationResultDoesNotRetryShimMessageOnSuccess()
+    {
+        var manager = new Scoop();
+        var package = new PackageBuilder().WithManager(manager).Build();
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            ["Creating shim for 'tool'.", "Can't shim is mentioned but the operation succeeded"],
+            0
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Success);
+    }
+
     private static Scoop CreateManagerWithKnownSources(params string[] sourceNames)
     {
         var manager = new Scoop();

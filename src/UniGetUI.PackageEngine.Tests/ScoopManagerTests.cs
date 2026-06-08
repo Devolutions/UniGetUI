@@ -346,6 +346,27 @@ public sealed class ScoopManagerTests : IDisposable
         OperationAssert.HasVeredict(veredict, OperationVeredict.Success);
     }
 
+    [Fact]
+    public void OperationResultDoesNotElevateShimFailureWhenElevationProhibited()
+    {
+        Settings.Set(Settings.K.ProhibitElevation, true);
+        var manager = new Scoop();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithOptions(new OverridenInstallationOptions(runAsAdministrator: false))
+            .Build();
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            ["Can't shim 'notepad++.exe': File doesn't exist."],
+            1
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.False(package.OverridenOptions.RunAsAdministrator);
+    }
+
     private static Scoop CreateManagerWithKnownSources(params string[] sourceNames)
     {
         var manager = new Scoop();

@@ -61,7 +61,10 @@ namespace UniGetUI.Interface
             ExtendsContentIntoTitleBar = true;
             AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
             SetTitleBar(MainContentGrid);
-            MainContentGrid.ActualThemeChanged += (_, _) => ApplyTitleBarButtonColors();
+            // System theme changed at runtime: re-sync the cached theme, title bar and tray icon
+            MainContentGrid.ActualThemeChanged += (_, _) => { ApplyTheme(); UpdateSystemTrayStatus(); };
+            // Tray icon follows the system theme even when the app theme is fixed
+            MainApp.Instance.ThemeListener.ThemeChanged += (_) => DispatcherQueue.TryEnqueue(UpdateSystemTrayStatus);
             AppWindow.SetIcon(
                 Path.Join(CoreData.UniGetUIExecutableDirectory, "Assets", "Images", "icon.ico")
             );

@@ -73,9 +73,15 @@
       />
       <widgets:CheckboxCard
         BorderThickness="1,0,1,1"
-        CornerRadius="0,0,8,8"
+        CornerRadius="0"
         SettingName="EnableUniGetUIBeta"
         Text="Install prerelease versions of UniGetUI"
+      />
+      <widgets:CheckboxCard
+        BorderThickness="1,0,1,1"
+        CornerRadius="0,0,8,8"
+        SettingName="DisableReleaseNotesOnUpdate"
+        Text="Show the release notes after UniGetUI is updated"
       />
 
       <widgets:TranslatedTextBlock Margin="4,32,4,8" FontWeight="SemiBold" Text="Telemetry" />

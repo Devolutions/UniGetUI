@@ -252,7 +252,27 @@ public partial class MainWindowViewModel : ViewModelBase
             TelemetryWarner.IsOpen = true;
         }
 
-        LoadDefaultPage();
+        if (WasUpdatedSinceLastRun() && !Settings.Get(Settings.K.DisableReleaseNotesOnUpdate))
+        {
+            NavigateTo(PageType.ReleaseNotes);
+        }
+        else
+        {
+            LoadDefaultPage();
+        }
+    }
+
+    // Returns true the first time the app runs after being updated to a newer build
+    private static bool WasUpdatedSinceLastRun()
+    {
+        _ = int.TryParse(Settings.GetValue(Settings.K.LastKnownBuildNumber), out int lastBuild);
+
+        if (lastBuild != CoreData.BuildNumber)
+        {
+            Settings.SetValue(Settings.K.LastKnownBuildNumber, CoreData.BuildNumber.ToString());
+        }
+
+        return lastBuild != 0 && lastBuild < CoreData.BuildNumber;
     }
 
     private void OnAnnouncementRequested(object? _, AccessibilityAnnouncement announcement)

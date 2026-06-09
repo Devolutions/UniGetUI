@@ -34,6 +34,11 @@
 
             <settings:CheckboxCard SettingName="EnableUniGetUIBeta"
                                    Text="{t:Translate Install prerelease versions of UniGetUI}"
+                                   CornerRadius="0"
+                                   BorderThickness="1,0,1,1"/>
+
+            <settings:CheckboxCard SettingName="DisableReleaseNotesOnUpdate"
+                                   Text="{t:Translate Show the release notes after UniGetUI is updated}"
                                    CornerRadius="0,0,8,8"
                                    BorderThickness="1,0,1,1"/>
 

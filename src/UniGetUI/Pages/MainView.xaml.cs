@@ -193,6 +193,8 @@ namespace UniGetUI.Interface
                 DialogHelper.ShowTelemetryBanner();
             }
 
+            ShowReleaseNotesIfUpdated();
+
             if (!Settings.Get(Settings.K.CollapseNavMenuOnWideScreen))
             {
                 NavView.IsPaneOpen = true;
@@ -371,6 +373,23 @@ namespace UniGetUI.Interface
 
         private void ReleaseNotesMenu_Click(object sender, RoutedEventArgs e) =>
             _ = DialogHelper.ShowReleaseNotes();
+
+        // Show the changelog the first time the app runs after being updated to a newer build
+        private static void ShowReleaseNotesIfUpdated()
+        {
+            _ = int.TryParse(Settings.GetValue(Settings.K.LastKnownBuildNumber), out int lastBuild);
+
+            if (lastBuild != 0 && lastBuild < CoreData.BuildNumber
+                && !Settings.Get(Settings.K.DisableReleaseNotesOnUpdate))
+            {
+                _ = DialogHelper.ShowReleaseNotes();
+            }
+
+            if (lastBuild != CoreData.BuildNumber)
+            {
+                Settings.SetValue(Settings.K.LastKnownBuildNumber, CoreData.BuildNumber.ToString());
+            }
+        }
 
         private void CheckForUpdates_Click(object sender, RoutedEventArgs e)
         {

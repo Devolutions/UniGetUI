@@ -95,6 +95,8 @@ public static partial class Settings
         BunPreferLatestVersions,
         TrayIconStyle,
         RedactUsernameInLog,
+        DisableReleaseNotesOnUpdate,
+        LastKnownBuildNumber,
 
         Test1,
         Test2,
@@ -201,6 +203,8 @@ public static partial class Settings
             K.BunPreferLatestVersions => "BunPreferLatestVersions",
             K.TrayIconStyle => "TrayIconStyle",
             K.RedactUsernameInLog => "RedactUsernameInLog",
+            K.DisableReleaseNotesOnUpdate => "DisableReleaseNotesOnUpdate",
+            K.LastKnownBuildNumber => "LastKnownBuildNumber",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

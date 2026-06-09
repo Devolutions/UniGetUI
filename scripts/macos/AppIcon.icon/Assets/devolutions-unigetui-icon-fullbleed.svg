@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Full-bleed square variant of the Devolutions UniGetUI icon for macOS Icon Composer.
+     The bands extend edge-to-edge (no own rounded corners) so the system applies the
+     squircle/Liquid-Glass shape. The grey download arrow is centred. -->
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" width="72" height="72" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 72 72">
+  <defs>
+    <radialGradient id="rg0" cx="3.037" cy="57.459" fx="3.037" fy="57.459" r="121.444" gradientTransform="translate(73) rotate(-180) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset=".008" stop-color="#90ffff"/><stop offset=".079" stop-color="#81f8fa"/><stop offset=".213" stop-color="#5de5ed"/><stop offset=".339" stop-color="#35d2e0"/></radialGradient>
+    <radialGradient id="rg1" cx="15.197" cy="42.817" fx="-20.033" fy="36.517" r="122.054" gradientTransform="translate(73) rotate(-180) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset=".032" stop-color="#00f3f4"/><stop offset=".447" stop-color="#048ea7"/></radialGradient>
+    <radialGradient id="rg2" cx="11.522" cy="28.78" fx="11.522" fy="28.78" r="74.953" gradientTransform="translate(73) rotate(-180) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset=".182" stop-color="#348da2"/><stop offset=".833" stop-color="#126176"/></radialGradient>
+    <linearGradient id="lg" x1="-23.954" y1="3.056" x2="69.823" y2="19.591" gradientTransform="translate(73) rotate(-180) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset=".18" stop-color="#25839a"/><stop offset=".555" stop-color="#265564"/></linearGradient>
+    <radialGradient id="rg3" cx="59.232" cy="65.22" fx="59.232" fy="65.22" r="325.339" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d0d0d0"/><stop offset=".637" stop-color="#c1c1c1"/><stop offset=".922" stop-color="#bababa"/></radialGradient>
+  </defs>
+  <rect x="0" y="0" width="72" height="18.5" fill="url(#lg)"/>
+  <rect x="0" y="18" width="72" height="18.5" fill="url(#rg2)"/>
+  <rect x="0" y="36" width="72" height="18.5" fill="url(#rg1)"/>
+  <rect x="0" y="54" width="72" height="18" fill="url(#rg0)"/>
+  <path fill="url(#rg3)" d="M54.25,34.99l-4.385-4.385c-.807-.807-2.116-.807-2.923,0l-5.941,5.941V0h-10v36.547l-5.941-5.941c-.807-.807-2.116-.807-2.923,0l-4.385,4.385c-.807.807-.807,2.116,0,2.923l14.556,14.557c2.04,2.04,5.347,2.04,7.386,0l14.556-14.557c.807-.807.807-2.116,0-2.923Z"/>
+</svg>

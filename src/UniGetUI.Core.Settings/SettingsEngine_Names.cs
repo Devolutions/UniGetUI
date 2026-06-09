@@ -93,7 +93,6 @@ public static partial class Settings
         DisableClassicMode,
         DisableInstallerHostChangeWarning,
         BunPreferLatestVersions,
-        TrayIconStyle,
         RedactUsernameInLog,
 
         Test1,
@@ -199,7 +198,6 @@ public static partial class Settings
             K.DisableClassicMode => "DisableClassicMode",
             K.DisableInstallerHostChangeWarning => "DisableInstallerHostChangeWarning",
             K.BunPreferLatestVersions => "BunPreferLatestVersions",
-            K.TrayIconStyle => "TrayIconStyle",
             K.RedactUsernameInLog => "RedactUsernameInLog",
 
             K.Test1 => "TestSetting1",

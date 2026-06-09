@@ -1,10 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="620" height="300" viewBox="0 0 620 300">
+  <defs>
+    <style>.ic-st0{fill:url(#ic-rg0);}.ic-st1{fill:url(#ic-lg);}.ic-st2{fill:url(#ic-rg1);}.ic-st3{fill:url(#ic-rg3);}.ic-st4{fill:url(#ic-rg2);}</style>
+    <radialGradient id="ic-rg0" cx="3.037" cy="57.459" fx="3.037" fy="57.459" r="121.444" gradientTransform="translate(73) rotate(-180) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset=".008" stop-color="#90ffff"/><stop offset=".079" stop-color="#81f8fa"/><stop offset=".213" stop-color="#5de5ed"/><stop offset=".339" stop-color="#35d2e0"/></radialGradient>
+    <radialGradient id="ic-rg1" cx="15.197" cy="42.817" fx="-20.033" fy="36.517" r="122.054" gradientTransform="translate(73) rotate(-180) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset=".032" stop-color="#00f3f4"/><stop offset=".447" stop-color="#048ea7"/></radialGradient>
+    <radialGradient id="ic-rg2" cx="11.522" cy="28.78" fx="11.522" fy="28.78" r="74.953" gradientTransform="translate(73) rotate(-180) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset=".182" stop-color="#348da2"/><stop offset=".833" stop-color="#126176"/></radialGradient>
+    <linearGradient id="ic-lg" x1="-23.954" y1="3.056" x2="69.823" y2="19.591" gradientTransform="translate(73) rotate(-180) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset=".18" stop-color="#25839a"/><stop offset=".555" stop-color="#265564"/></linearGradient>
+    <radialGradient id="ic-rg3" cx="59.232" cy="65.22" fx="59.232" fy="65.22" r="325.339" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d0d0d0"/><stop offset=".637" stop-color="#c1c1c1"/><stop offset=".922" stop-color="#bababa"/></radialGradient>
+  </defs>
   <!-- Splash screen. Tagline excluded - to be rendered by app's localization layer below the wordmark. Background is transparent so the host window's background shows through. -->
-  <rect x="17" y="52" width="196" height="196" rx="36" fill="#e1f3ff"/>
-  <g transform="translate(56.5, 92.5) scale(2.3770)">
-    <g transform="translate(-11.805, -11.81)">
-      <path fill="#009eff" d="M57.275,44.66c.01-.95-.588-1.788-1.486-2.086l-5.964-1.988,5.914-1.773c.908-.279,1.525-1.105,1.535-2.054.01-.949-.588-1.788-1.486-2.086l-12.415-4.138,5.06-5.06-3.142-3.142-7.07,7.07V12.053h-4.444v17.35l-7.07-7.07-3.142,3.142,5.06,5.06-12.411,4.137c-.901.299-1.499,1.137-1.489,2.086.01.949.626,1.775,1.548,2.059l5.901,1.769-5.96,1.987c-.901.299-1.499,1.137-1.489,2.086s.626,1.775,1.548,2.059l5.901,1.769-5.96,1.987c-.901.299-1.499,1.137-1.489,2.086s.626,1.775,1.548,2.059l15.898,4.765c1.253.375,2.541.563,3.829.563s2.576-.188,3.827-.563l15.912-4.769c.908-.28,1.525-1.105,1.535-2.054.01-.95-.588-1.788-1.486-2.086l-5.964-1.988,5.914-1.773c.908-.28,1.525-1.105,1.535-2.054ZM31.748,33.658l.976.976c.875.875,2.038,1.357,3.276,1.357s2.401-.482,3.275-1.357l.976-.976,8.962,2.987-10.52,3.153c-1.762.53-3.625.53-5.387,0l-10.519-3.153,8.962-2.987ZM32.171,43.582c1.253.375,2.541.563,3.829.563s2.576-.188,3.827-.563l3.419-1.025,5.966,1.988-10.52,3.153c-1.762.53-3.625.529-5.387,0l-10.519-3.153,5.937-1.979-.007-.02,3.454,1.035ZM49.212,52.446l-10.52,3.153c-1.762.529-3.625.529-5.387,0l-10.519-3.153,5.937-1.979-.007-.02,3.454,1.035c1.253.375,2.541.563,3.829.563s2.576-.188,3.827-.563l3.419-1.025,5.966,1.988Z"/>
-    </g>
+  <g transform="translate(17, 52) scale(2.722222)">
+    <path class="ic-st0" d="M6,54h60v8c0,5.519-4.481,10-10,10H16c-5.519,0-10-4.481-10-10v-8h0Z"/>
+    <path class="ic-st2" d="M66,36v18s0,8,0,8c0-4.418-3.582-8-8-8H6v-18h60Z"/>
+    <path class="ic-st4" d="M66,18v18s0,8,0,8c0-4.418-3.582-8-8-8H6v-18h60Z"/>
+    <path class="ic-st1" d="M16,0h40c5.523,0,10,4.477,10,10v8s0,8,0,8c0-4.418-3.582-8-8-8H6v-8C6,4.477,10.477,0,16,0Z"/>
+    <path class="ic-st3" d="M54.25,34.99l-4.385-4.385c-.807-.807-2.116-.807-2.923,0l-5.941,5.941V0h-10v36.547l-5.941-5.941c-.807-.807-2.116-.807-2.923,0l-4.385,4.385c-.807.807-.807,2.116,0,2.923l14.556,14.557c2.04,2.04,5.347,2.04,7.386,0l14.556-14.557c.807-.807.807-2.116,0-2.923Z"/>
   </g>
   <g transform="translate(244.73, 75.88) scale(2.653)">
     <g transform="translate(-72, -14)">

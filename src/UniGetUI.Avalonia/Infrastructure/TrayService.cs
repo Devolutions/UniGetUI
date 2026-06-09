@@ -81,15 +81,7 @@ internal sealed class TrayService : IDisposable
             bool light = IsTaskbarLight();
             string tone = light ? "_black" : "_white";
 
-            // monochrome icons can't be tinted by parts, so for those we ship pre-composited
-            // assets: a monochrome base glyph matching the taskbar appearance with the
-            // colour-coded status dot kept intact (drawn non-template on macOS).
-            string uri = ResolveStyle() switch
-            {
-                "monochrome" => $"avares://UniGetUI.Avalonia/Assets/tray_monochrome_{status}_{(light ? "light" : "dark")}.ico",
-                "legacy" => $"avares://UniGetUI.Avalonia/Assets/tray_{status}{tone}_legacy.ico",
-                _ => $"avares://UniGetUI.Avalonia/Assets/tray_{status}{tone}.ico",
-            };
+            string uri = $"avares://UniGetUI.Avalonia/Assets/tray_{status}{tone}_legacy.ico";
 
             if (_lastIconUri == uri) return;
             _lastIconUri = uri;
@@ -102,20 +94,6 @@ internal sealed class TrayService : IDisposable
             Logger.Error("Failed to update tray icon status:");
             Logger.Error(ex);
         }
-    }
-
-    // Tray icon style chosen by the user (Interface preferences). macOS menu-bar icons are always
-    // monochrome (HIG), so the style is fixed there and the selector is hidden; on Windows/Linux it
-    // is user-selectable and defaults to monochrome.
-    private static string ResolveStyle()
-    {
-        if (OperatingSystem.IsMacOS())
-            return "monochrome";
-
-        string style = Settings.GetValue(Settings.K.TrayIconStyle);
-        if (style.Length == 0)
-            style = "monochrome";
-        return style;
     }
 
     private static bool IsTaskbarLight()

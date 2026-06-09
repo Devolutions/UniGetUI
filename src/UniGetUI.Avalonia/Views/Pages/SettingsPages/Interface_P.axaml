@@ -47,12 +47,6 @@
                                        StateChangedCommand="{Binding RefreshSystemTrayCommand}"
                                        CornerRadius="8,8,0,0"/>
 
-                <settings:ComboboxCard x:Name="TrayIconStyleSelector"
-                                       IsVisible="{Binding ShowTrayIconStyleSelector}"
-                                       ValueChangedCommand="{Binding RefreshSystemTrayCommand}"
-                                       CornerRadius="0"
-                                       BorderThickness="1,0,1,1"/>
-
                 <settings:ButtonCard x:Name="EditAutostartSettings"
                                      CornerRadius="0,0,8,8"
                                      BorderThickness="1,0,1,1"

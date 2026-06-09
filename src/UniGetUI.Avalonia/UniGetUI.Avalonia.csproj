@@ -169,18 +169,7 @@
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\package_color.png" Link="Assets\package_color.png" />
         <AvaloniaResource Include="..\UniGetUI\Assets\SplashScreen.png" Link="Assets\SplashScreen.png" />
         <AvaloniaResource Include="..\UniGetUI\Assets\SplashScreen.theme-dark.png" Link="Assets\SplashScreen.theme-dark.png" />
-        <!-- Tray status icon variants -->
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_black.ico" Link="Assets\tray_empty_black.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_white.ico" Link="Assets\tray_empty_white.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_blue_black.ico" Link="Assets\tray_blue_black.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_blue_white.ico" Link="Assets\tray_blue_white.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_green_black.ico" Link="Assets\tray_green_black.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_green_white.ico" Link="Assets\tray_green_white.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_orange_black.ico" Link="Assets\tray_orange_black.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_orange_white.ico" Link="Assets\tray_orange_white.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_black.ico" Link="Assets\tray_turquoise_black.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_white.ico" Link="Assets\tray_turquoise_white.ico" />
-        <!-- Legacy (pre-2026 redesign) tray icons, used when the tray icon style is set to "legacy" -->
+        <!-- Tray status icon variants: status colour encoded by the corner dot; light/dark tone per taskbar theme. -->
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_black_legacy.ico" Link="Assets\tray_empty_black_legacy.ico" />
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_white_legacy.ico" Link="Assets\tray_empty_white_legacy.ico" />
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_blue_black_legacy.ico" Link="Assets\tray_blue_black_legacy.ico" />
@@ -191,19 +180,6 @@
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_orange_white_legacy.ico" Link="Assets\tray_orange_white_legacy.ico" />
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_black_legacy.ico" Link="Assets\tray_turquoise_black_legacy.ico" />
         <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_white_legacy.ico" Link="Assets\tray_turquoise_white_legacy.ico" />
-        <!-- Monochrome composite tray icons: monochrome base glyph (white for a dark taskbar/menu
-             bar, black for a light one) with the colour-coded status dot preserved. macOS menu-bar
-             icons can't be partially tinted, so these are pre-composited and drawn non-template. -->
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_monochrome_empty_dark.ico" Link="Assets\tray_monochrome_empty_dark.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_monochrome_empty_light.ico" Link="Assets\tray_monochrome_empty_light.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_monochrome_blue_dark.ico" Link="Assets\tray_monochrome_blue_dark.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_monochrome_blue_light.ico" Link="Assets\tray_monochrome_blue_light.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_monochrome_green_dark.ico" Link="Assets\tray_monochrome_green_dark.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_monochrome_green_light.ico" Link="Assets\tray_monochrome_green_light.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_monochrome_orange_dark.ico" Link="Assets\tray_monochrome_orange_dark.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_monochrome_orange_light.ico" Link="Assets\tray_monochrome_orange_light.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_monochrome_turquoise_dark.ico" Link="Assets\tray_monochrome_turquoise_dark.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_monochrome_turquoise_light.ico" Link="Assets\tray_monochrome_turquoise_light.ico" />
         <AvaloniaResource Remove="Infrastructure\**" />
     </ItemGroup>
 

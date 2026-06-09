@@ -633,15 +633,7 @@ namespace UniGetUI.Interface
                 bool light = theme == ApplicationTheme.Light;
                 string tone = light ? "_black" : "_white";
 
-                string style = Settings.GetValue(Settings.K.TrayIconStyle);
-                if (style.Length == 0) style = "colored";
-
-                string iconFile = style switch
-                {
-                    "monochrome" => "tray_monochrome" + modifier + (light ? "_light" : "_dark") + ".ico",
-                    "legacy" => "tray" + modifier + tone + "_legacy.ico",
-                    _ => "tray" + modifier + tone + ".ico",
-                };
+                string iconFile = "tray" + modifier + tone + "_legacy.ico";
                 string FullIconPath = Path.Join(
                     CoreData.UniGetUIExecutableDirectory,
                     "\\Assets\\Images\\" + iconFile

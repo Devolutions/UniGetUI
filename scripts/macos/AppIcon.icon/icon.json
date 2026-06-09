@@ -1,8 +1,8 @@
 {
   "fill" : {
     "linear-gradient" : [
-      "display-p3:1.00000,0.99646,0.99994,1.00000",
-      "display-p3:0.96783,0.93622,0.94438,1.00000"
+      "display-p3:0.10196,0.30196,0.36863,1.00000",
+      "display-p3:0.20784,0.82353,0.87843,1.00000"
     ],
     "orientation" : {
       "start" : {
@@ -11,7 +11,7 @@
       },
       "stop" : {
         "x" : 0.5,
-        "y" : 0.7
+        "y" : 1
       }
     }
   },
@@ -22,13 +22,13 @@
           "blend-mode" : "normal",
           "glass" : false,
           "hidden" : false,
-          "image-name" : "devolutions-unigetui-icon.svg",
+          "image-name" : "devolutions-unigetui-icon-fullbleed.svg",
           "name" : "devolutions-unigetui-icon",
           "position" : {
-            "scale" : 16,
+            "scale" : 14.222222,
             "translation-in-points" : [
-              18.7109375,
-              -22.06000000000006
+              0,
+              0
             ]
           }
         }
@@ -38,7 +38,7 @@
         "opacity" : 0.5
       },
       "translucency" : {
-        "enabled" : true,
+        "enabled" : false,
         "value" : 0.5
       }
     }

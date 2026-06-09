@@ -25,8 +25,8 @@ public sealed class EntrancePageTransition : IPageTransition
         // Honor "reduce motion": hide the outgoing page and show the incoming one instantly, no overlap.
         if (MotionPreference.ReducedMotion)
         {
-            if (from is not null) from.Opacity = 0;
-            if (to is not null) to.Opacity = 1;
+            from?.Opacity = 0;
+            to?.Opacity = 1;
             return;
         }
 

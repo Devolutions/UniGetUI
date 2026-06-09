@@ -22,6 +22,14 @@ public sealed class EntrancePageTransition : IPageTransition
 
     public async Task Start(Visual? from, Visual? to, bool forward, CancellationToken cancellationToken)
     {
+        // Honor "reduce motion": hide the outgoing page and show the incoming one instantly, no overlap.
+        if (MotionPreference.ReducedMotion)
+        {
+            if (from is not null) from.Opacity = 0;
+            if (to is not null) to.Opacity = 1;
+            return;
+        }
+
         // Drop the outgoing page immediately so only the incoming page animates in.
         from?.Opacity = 0;
 

@@ -45,6 +45,10 @@ public partial class PackageDetailsWindow : Window
         InitializeComponent();
         UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
 
+        // Honor the OS "reduce motion" preference: drop the screenshot slide animation.
+        if (MotionPreference.ReducedMotion)
+            ScreenshotsCarousel.PageTransition = null;
+
         _vm.CloseRequested += (_, _) => Close();
         _vm.DetailsLoaded += (_, _) =>
         {

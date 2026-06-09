@@ -29,6 +29,14 @@ public sealed class DirectionalSlideTransition : IPageTransition
 
     public async Task Start(Visual? from, Visual? to, bool forward, CancellationToken cancellationToken)
     {
+        // Honor the OS "reduce motion" preference: swap pages instantly, no slide.
+        if (MotionPreference.ReducedMotion)
+        {
+            if (from is not null) { from.IsVisible = false; from.RenderTransform = null; }
+            to?.RenderTransform = null;
+            return;
+        }
+
         double sign = Reverse ? -1d : 1d;
         double width = (to ?? from)?.GetVisualParent()?.Bounds.Width
                        ?? (to ?? from)?.Bounds.Width ?? 0d;

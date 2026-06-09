@@ -99,6 +99,7 @@ public abstract partial class AbstractOperation : IDisposable
 
     protected void Line(string line, LineType type)
     {
+        line = Logger.Redact(line);
         if (type != LineType.ProgressIndicator)
             LogList.Add((line, type));
         LogLineAdded?.Invoke(this, (line, type));

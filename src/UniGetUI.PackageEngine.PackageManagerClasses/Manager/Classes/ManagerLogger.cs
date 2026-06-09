@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using UniGetUI.Core.Logging;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 
@@ -285,6 +286,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             result.Add("0——————————————————————————————————————————");
             result.Add("0");
 
+            for (int i = 0; i < result.Count; i++)
+                result[i] = Logger.Redact(result[i]);
+
             if (verbose)
             {
                 return CachedVerboseMessage = result;
@@ -437,6 +441,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             result.Add("0");
             result.Add("0——————————————————————————————————————————");
             result.Add("0");
+
+            for (int i = 0; i < result.Count; i++)
+                result[i] = Logger.Redact(result[i]);
 
             if (verbose)
             {

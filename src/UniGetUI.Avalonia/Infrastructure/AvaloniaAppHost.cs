@@ -54,6 +54,8 @@ public static class AvaloniaAppHost
                 Welcome to UniGetUI Version {CoreData.VersionName}
             """;
 
+        Logger.RedactUsername = Core.SettingsEngine.Settings.Get(Core.SettingsEngine.Settings.K.RedactUsernameInLog);
+
         Logger.ImportantInfo(textart);
         Logger.ImportantInfo("  ");
         Logger.ImportantInfo($"Build {CoreData.BuildNumber}");

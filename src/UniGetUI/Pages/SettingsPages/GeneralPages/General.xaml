@@ -87,6 +87,17 @@
         Text="Manage telemetry settings"
       />
 
+      <widgets:TranslatedTextBlock Margin="4,32,4,8" FontWeight="SemiBold" Text="Privacy" />
+
+      <widgets:CheckboxCard
+        x:Name="RedactUsernameCheckbox"
+        CornerRadius="8"
+        SettingName="RedactUsernameInLog"
+        StateChanged="RedactUsername_StateChanged"
+        Text="Hide my username from the logs"
+        WarningText="Replaces your username with **** in the logs. Restart UniGetUI to also hide it from already-recorded entries."
+      />
+
       <widgets:TranslatedTextBlock
         Margin="4,32,4,8"
         FontWeight="SemiBold"

@@ -88,5 +88,12 @@ public partial class GeneralViewModel : ViewModelBase
     private void ShowRestartRequired() => RestartRequired?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand]
+    private void ToggleRedactUsername()
+    {
+        Logger.RedactUsername = CoreSettings.Get(CoreSettings.K.RedactUsernameInLog);
+        OnRestartRequired();
+    }
+
+    [RelayCommand]
     private void NavigateToInterface() => NavigationRequested?.Invoke(this, typeof(Interface_P));
 }

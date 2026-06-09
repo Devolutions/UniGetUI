@@ -72,6 +72,12 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
         private void ManageTelemetrySettings_Click(object sender, EventArgs e) =>
             _ = DialogHelper.ShowTelemetryDialog();
 
+        private void RedactUsername_StateChanged(object sender, EventArgs e)
+        {
+            Logger.RedactUsername = RedactUsernameCheckbox.Checked;
+            ShowRestartBanner(this, e);
+        }
+
         private void ImportSettings_Click(object sender, EventArgs e) => _ = _importSettings();
 
         private async Task _importSettings()

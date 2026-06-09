@@ -48,6 +48,17 @@
                                  Command="{Binding ShowTelemetryDialogCommand}"
                                  CommandParameter="{Binding $self}"/>
 
+            <settings:TranslatedTextBlock Text="Privacy"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <settings:CheckboxCard SettingName="RedactUsernameInLog"
+                                   CornerRadius="8"
+                                   Text="{t:Translate Hide my username from the logs}"
+                                   WarningText="{t:Translate Text='Replaces your username with **** in the logs. Restart UniGetUI to also hide it from already-recorded entries.'}"
+                                   StateChangedCommand="{Binding ToggleRedactUsernameCommand}"/>
+
             <settings:TranslatedTextBlock Text="Manage UniGetUI settings"
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"

@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia;
@@ -214,6 +215,8 @@ public static class CrashHandler
         {
             // ignore
         }
+
+        Error_String = Logger.Redact(Error_String);
 
         Console.WriteLine(Error_String);
 

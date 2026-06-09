@@ -71,7 +71,7 @@ public partial class AutoUpdater
         lock (_updateLogLock)
         {
             if (_updateLogBuilder is null) return;
-            _updateLogBuilder.AppendLine($"[{DateTime.Now:HH:mm:ss}] [{severity}] {message}");
+            _updateLogBuilder.AppendLine($"[{DateTime.Now:HH:mm:ss}] [{severity}] {Logger.Redact(message)}");
             FlushUpdateLogToDiskNoLock();
         }
     }

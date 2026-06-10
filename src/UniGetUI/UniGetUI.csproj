@@ -286,6 +286,12 @@
         <PRIResource Remove="Intereface\**" />
     </ItemGroup>
     <ItemGroup>
+        <!-- WinUI default content deploys these to the build output but not to publish, leaving the
+             installed (unpackaged) app with no splash image. Force them into the publish output. -->
+        <Content Update="Assets\SplashScreen.png" CopyToPublishDirectory="PreserveNewest" />
+        <Content Update="Assets\SplashScreen.theme-dark.png" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+    <ItemGroup>
         <None Update="Assets\Images\*.png">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

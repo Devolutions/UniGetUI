@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Enums;
@@ -332,6 +333,35 @@ public sealed class PackageOperationsTests
         );
     }
 
+    [Fact]
+    public void UsernameRedactionAppliesToDisplayOutputButNeverToResultParsingOutput()
+    {
+        // Regression: result parsing must see raw output; only display (GetOutput) may redact.
+        var username = Environment.UserName;
+        if (string.IsNullOrEmpty(username))
+            return;
+
+        using var operation = new LoggingStubOperation();
+        var rawLine = $"Error: the operation was canceled by C:\\Users\\{username}\\app";
+        operation.EmitLine(rawLine, AbstractOperation.LineType.Information);
+
+        bool previous = Logger.RedactUsername;
+        Logger.RedactUsername = true;
+        try
+        {
+            var parsingOutput = operation.RawOutputForTests();
+            var displayOutput = operation.GetOutput();
+
+            Assert.Contains(parsingOutput, l => l.Item1 == rawLine);
+            Assert.DoesNotContain(displayOutput, l => l.Item1.Contains(username));
+            Assert.Contains(displayOutput, l => l.Item1.Contains("****"));
+        }
+        finally
+        {
+            Logger.RedactUsername = previous;
+        }
+    }
+
     private static IReadOnlyList<AbstractOperation.InnerOperation> GetInnerOperations(
         AbstractOperation operation,
         string fieldName
@@ -461,6 +491,23 @@ public sealed class PackageOperationsTests
         {
             return Task.FromResult(_veredict);
         }
+    }
+
+    private sealed class LoggingStubOperation : AbstractOperation
+    {
+        public LoggingStubOperation()
+            : base(queue_enabled: false) { }
+
+        public void EmitLine(string line, LineType type) => Line(line, type);
+
+        public IReadOnlyList<(string, LineType)> RawOutputForTests() => GetRawOutput();
+
+        protected override void ApplyRetryAction(string retryMode) { }
+
+        protected override Task<OperationVeredict> PerformOperation()
+            => Task.FromResult(OperationVeredict.Success);
+
+        public override Task<Uri> GetOperationIcon() => Task.FromResult(new Uri("about:blank"));
     }
 
     private sealed class StubOperation : AbstractOperation

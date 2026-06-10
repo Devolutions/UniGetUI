@@ -99,15 +99,19 @@ public abstract partial class AbstractOperation : IDisposable
 
     protected void Line(string line, LineType type)
     {
-        line = Logger.Redact(line);
+        // LogList stays raw: it is the source of truth for result parsing. Only display redacts.
         if (type != LineType.ProgressIndicator)
             LogList.Add((line, type));
-        LogLineAdded?.Invoke(this, (line, type));
+        LogLineAdded?.Invoke(this, (Logger.Redact(line), type));
     }
+
+    protected IReadOnlyList<(string, LineType)> GetRawOutput() => LogList;
 
     public IReadOnlyList<(string, LineType)> GetOutput()
     {
-        return LogList;
+        if (!Logger.RedactUsername)
+            return LogList;
+        return LogList.Select(l => (Logger.Redact(l.Item1), l.Item2)).ToList();
     }
 
     public async Task MainThread()

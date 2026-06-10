@@ -185,8 +185,9 @@ public abstract class AbstractProcessOperation : AbstractOperation
         if (ProcessKilled)
             return OperationVeredict.Canceled;
 
+        // Raw output: redacting here would corrupt the phrases result detection matches on.
         List<string> output = new();
-        foreach (var line in GetOutput())
+        foreach (var line in GetRawOutput())
         {
             if (line.Item2 is LineType.VerboseDetails && line.Item1 == "-----------------------")
                 output.Clear();

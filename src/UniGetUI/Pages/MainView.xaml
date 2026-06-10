@@ -407,6 +407,16 @@
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="15" />
         </Grid.ColumnDefinitions>
+        <TextBlock
+          Name="OperationCountLabel"
+          Grid.Column="0"
+          Margin="4,0,0,0"
+          VerticalAlignment="Center"
+          FontSize="12"
+          Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+          IsHitTestVisible="False"
+          TextTrimming="CharacterEllipsis"
+        />
         <HyperlinkButton
           Name="ExpandCollapseOpList"
           AutomationProperties.Name="Expand or collapse operation list"

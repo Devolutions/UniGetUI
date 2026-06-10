@@ -22,6 +22,7 @@ using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.PackageLoader;
+using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.ViewModels;
 
@@ -66,6 +67,41 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _operationsPanelExpanded = true;
+
+    private readonly List<AbstractOperation> _operationBatch = new();
+
+    public string OperationsHeaderText
+    {
+        get
+        {
+            int total = _operationBatch.Count;
+            if (total == 0)
+                return CoreTools.Translate("Operations");
+            int completed = _operationBatch.Count(o =>
+                o.Status is OperationStatus.Succeeded or OperationStatus.Failed or OperationStatus.Canceled);
+            return CoreTools.Translate("{0} of {1} operations completed", completed, total);
+        }
+    }
+
+    private void AddToBatch(AbstractOperation op)
+    {
+        if (_operationBatch.Count > 0
+            && _operationBatch.All(o => o.Status is not (OperationStatus.InQueue or OperationStatus.Running)))
+        {
+            foreach (var old in _operationBatch)
+                old.StatusChanged -= OnOperationStatusChanged;
+            _operationBatch.Clear();
+        }
+
+        if (!_operationBatch.Contains(op))
+        {
+            _operationBatch.Add(op);
+            op.StatusChanged += OnOperationStatusChanged;
+        }
+    }
+
+    private void OnOperationStatusChanged(object? sender, OperationStatus e)
+        => Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(OperationsHeaderText)));
 
     [RelayCommand]
     private void ToggleOperationsPanel() => OperationsPanelExpanded = !OperationsPanelExpanded;
@@ -221,8 +257,14 @@ public partial class MainWindowViewModel : ViewModelBase
         AvaloniaAutoUpdater.CheckForOrphanedUpdateAttempt();
 
         // Keep OperationsPanelVisible in sync with the live operations list
-        Operations.CollectionChanged += (_, _) =>
+        Operations.CollectionChanged += (_, e) =>
+        {
+            if (e.NewItems is not null)
+                foreach (OperationViewModel vm in e.NewItems)
+                    AddToBatch(vm.Operation);
             OperationsPanelVisible = Operations.Count > 0;
+            OnPropertyChanged(nameof(OperationsHeaderText));
+        };
 
         if (OperatingSystem.IsWindows() && CoreTools.IsAdministrator() && !Settings.Get(Settings.K.AlreadyWarnedAboutAdmin))
         {

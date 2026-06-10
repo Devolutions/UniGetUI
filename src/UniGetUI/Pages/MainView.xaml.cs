@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using UniGetUI.Controls;
+using UniGetUI.Controls.OperationWidgets;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -185,8 +186,13 @@ namespace UniGetUI.Interface
             }
 
             UpdateOperationsLayout();
-            MainApp.Operations._operationList.CollectionChanged += (_, _) =>
+            MainApp.Operations._operationList.CollectionChanged += (_, e) =>
+            {
+                if (e.NewItems is not null)
+                    foreach (OperationControl c in e.NewItems)
+                        AddToBatch(c.Operation);
                 UpdateOperationsLayout();
+            };
 
             if (!Settings.Get(Settings.K.ShownTelemetryBanner))
             {
@@ -478,6 +484,38 @@ namespace UniGetUI.Interface
                 OperationSplitterMenuButton.Visibility = Visibility.Collapsed;
             }
             ResizingOPLayout = false;
+            UpdateOperationCount();
+        }
+
+        private readonly List<AbstractOperation> _operationBatch = new();
+
+        private void AddToBatch(AbstractOperation op)
+        {
+            if (_operationBatch.Count > 0
+                && _operationBatch.All(o => o.Status is not (OperationStatus.InQueue or OperationStatus.Running)))
+            {
+                foreach (var old in _operationBatch)
+                    old.StatusChanged -= OnAnyOperationStatusChanged;
+                _operationBatch.Clear();
+            }
+
+            if (!_operationBatch.Contains(op))
+            {
+                _operationBatch.Add(op);
+                op.StatusChanged += OnAnyOperationStatusChanged;
+            }
+        }
+
+        private void OnAnyOperationStatusChanged(object? sender, OperationStatus e)
+            => DispatcherQueue.TryEnqueue(UpdateOperationCount);
+
+        private void UpdateOperationCount()
+        {
+            int total = _operationBatch.Count;
+            int completed = _operationBatch.Count(o =>
+                o.Status is OperationStatus.Succeeded or OperationStatus.Failed or OperationStatus.Canceled);
+            OperationCountLabel.Text =
+                total > 0 ? CoreTools.Translate("{0} of {1} operations completed", completed, total) : "";
         }
 
         private void OperationScrollView_SizeChanged(object sender, SizeChangedEventArgs e)

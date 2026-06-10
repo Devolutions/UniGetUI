@@ -112,7 +112,7 @@
                         </Button>
 
                         <TextBlock Grid.Column="1"
-                                   Text="{t:Translate Operations}"
+                                   Text="{Binding OperationsHeaderText}"
                                    FontSize="11" Opacity="0.6"
                                    VerticalAlignment="Center"
                                    Margin="4,0,0,0"/>

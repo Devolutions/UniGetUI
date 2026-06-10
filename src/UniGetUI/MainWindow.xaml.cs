@@ -706,7 +706,9 @@ namespace UniGetUI.Interface
         {
             bool dark = MainApp.Instance.ThemeListener.CurrentTheme == ApplicationTheme.Dark;
             string asset = dark ? "SplashScreen.theme-dark.png" : "SplashScreen.png";
-            SplashImage.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri($"ms-appx:///Assets/{asset}"));
+            string path = Path.Join(CoreData.UniGetUIExecutableDirectory, "Assets", asset);
+            if (File.Exists(path))
+                SplashImage.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(path));
         }
 
         public void ApplyTheme()

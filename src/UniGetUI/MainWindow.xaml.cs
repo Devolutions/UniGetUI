@@ -707,8 +707,14 @@ namespace UniGetUI.Interface
             bool dark = MainApp.Instance.ThemeListener.CurrentTheme == ApplicationTheme.Dark;
             string asset = dark ? "SplashScreen.theme-dark.png" : "SplashScreen.png";
             string path = Path.Join(CoreData.UniGetUIExecutableDirectory, "Assets", asset);
-            if (File.Exists(path))
-                SplashImage.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(path));
+            if (!File.Exists(path)) return;
+
+            // BitmapImage can't load file:// URIs and ms-appx folds ".theme-dark" into a PRI
+            // theme qualifier, so load the bytes and decode from a stream instead.
+            var bitmap = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage();
+            using (var stream = File.OpenRead(path))
+                bitmap.SetSource(stream.AsRandomAccessStream());
+            SplashImage.Source = bitmap;
         }
 
         public void ApplyTheme()

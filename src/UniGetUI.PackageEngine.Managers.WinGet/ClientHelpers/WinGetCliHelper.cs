@@ -40,6 +40,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
     public IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
     {
+        using var _cliLock = WinGet.AcquireCliLock();
         List<Package> Packages = [];
         using Process p = new()
         {
@@ -175,6 +176,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
     public IReadOnlyList<Package> GetInstalledPackages_UnSafe()
     {
+        using var _cliLock = WinGet.AcquireCliLock();
         List<Package> Packages = [];
         using Process p = new()
         {
@@ -307,6 +309,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
     public IReadOnlyList<Package> FindPackages_UnSafe(string query)
     {
+        using var _cliLock = WinGet.AcquireCliLock();
         List<Package> Packages = [];
         using Process p = new()
         {
@@ -435,6 +438,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
     public IReadOnlyList<string> GetInstallableVersions_Unsafe(IPackage package)
     {
+        using var _cliLock = WinGet.AcquireCliLock();
         using Process p = new()
         {
             StartInfo = new ProcessStartInfo
@@ -498,6 +502,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
     public IReadOnlyList<IManagerSource> GetSources_UnSafe()
     {
+        using var _cliLock = WinGet.AcquireCliLock();
         List<IManagerSource> sources = [];
 
         using Process p = new()

@@ -59,6 +59,35 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
         internal WinGetCliToolKind SelectedCliToolKind { get; private set; } =
             WinGetCliToolKind.SystemWinGet;
 
+        // winget's local index isn't safe under concurrent process access: a `source update` (writer)
+        // running alongside list/upgrade/search (readers) yields partial or empty results. The COM
+        // backend serialized this implicitly; the CLI backends (winget.exe / pinget.exe) must do it
+        // explicitly. Reentrant (Monitor) so same-thread nested invocations don't self-deadlock.
+        private static readonly object _cliInvocationLock = new();
+
+        // Safety valve: never wait on the CLI lock longer than this, so a hung process can't freeze all WinGet queries.
+        private static readonly TimeSpan CliLockTimeout = TimeSpan.FromSeconds(120);
+
+        internal static IDisposable AcquireCliLock()
+        {
+            bool taken = false;
+            Monitor.TryEnter(_cliInvocationLock, CliLockTimeout, ref taken);
+            if (!taken)
+                Logger.Warn("WinGet CLI lock not acquired within timeout; proceeding unserialized to avoid a hang.");
+            return new CliLockReleaser(taken);
+        }
+
+        private sealed class CliLockReleaser(bool taken) : IDisposable
+        {
+            private bool _released;
+            public void Dispose()
+            {
+                if (_released || !taken) return;
+                _released = true;
+                Monitor.Exit(_cliInvocationLock);
+            }
+        }
+
         public WinGet()
         {
             Capabilities = new ManagerCapabilities
@@ -719,6 +748,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
         public override void RefreshPackageIndexes()
         {
+            using var _cliLock = AcquireCliLock();
             using Process p = new()
             {
                 StartInfo = new ProcessStartInfo

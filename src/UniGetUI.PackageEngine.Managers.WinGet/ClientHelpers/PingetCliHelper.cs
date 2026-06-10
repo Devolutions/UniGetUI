@@ -178,6 +178,7 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
 
     private T RunJson<T>(LoggableTaskType taskType, string arguments)
     {
+        using var _cliLock = WinGet.AcquireCliLock();
         using Process process = new()
         {
             StartInfo = new ProcessStartInfo

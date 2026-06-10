@@ -149,6 +149,7 @@ internal sealed class PingetCliPackageDetailsProvider(string cliExecutablePath)
 
     private string RunPinget(IReadOnlyList<string> arguments, INativeTaskLogger logger)
     {
+        using var _cliLock = WinGet.AcquireCliLock();
         using Process process = new()
         {
             StartInfo = new ProcessStartInfo

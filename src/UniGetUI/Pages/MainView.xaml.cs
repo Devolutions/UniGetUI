@@ -175,7 +175,7 @@ namespace UniGetUI.Interface
             }
 
             if (
-                !PEInterface.Chocolatey.Status.Found
+                PEInterface.Chocolatey is { Status.Found: false }
                 && Chocolatey.HasLegacyBundledInstallation()
                 && !Settings.Get(Settings.K.AlreadyWarnedAboutChocolateyMigration)
             )

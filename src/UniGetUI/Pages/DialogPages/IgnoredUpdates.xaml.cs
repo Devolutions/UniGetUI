@@ -44,11 +44,14 @@ namespace UniGetUI.Interface
 
             foreach (var (ignoredId, version) in rawIgnoredPackages)
             {
-                IPackageManager manager = PEInterface.WinGet; // Manager by default
+                IPackageManager? manager = PEInterface.WinGet; // Manager by default
                 if (ManagerNameReference.ContainsKey(ignoredId.Split("\\")[0]))
                 {
                     manager = ManagerNameReference[ignoredId.Split("\\")[0]];
                 }
+
+                if (manager is null)
+                    continue;
 
                 ignoredPackages.Add(
                     new IgnoredPackageEntry(

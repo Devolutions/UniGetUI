@@ -85,6 +85,10 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
             else
                 throw new InvalidCastException("The specified type was not a package manager!");
 
+            // The manager failed to construct at startup (see PEInterface): there is nothing to configure.
+            if (Manager is null)
+                return;
+
             ReapplyProperties?.Invoke(this, new());
 
             ApplyManagerState();

@@ -33,57 +33,78 @@ namespace UniGetUI.PackageEngine
     {
         private const int ManagerLoadTimeout = 60; // 60 seconds timeout for Package Manager initialization (in seconds)
 #if WINDOWS
-        public static readonly WinGet WinGet = new();
-        public static readonly Scoop Scoop = new();
-        public static readonly Chocolatey Chocolatey = new();
+        public static readonly WinGet? WinGet = Create(() => new WinGet());
+        public static readonly Scoop? Scoop = Create(() => new Scoop());
+        public static readonly Chocolatey? Chocolatey = Create(() => new Chocolatey());
 #endif
-        public static readonly Npm Npm = new();
-        public static readonly Bun Bun = new();
-        public static readonly Pip Pip = new();
-        public static readonly DotNet DotNet = new();
-        public static readonly PowerShell7 PowerShell7 = new();
+        public static readonly Npm? Npm = Create(() => new Npm());
+        public static readonly Bun? Bun = Create(() => new Bun());
+        public static readonly Pip? Pip = Create(() => new Pip());
+        public static readonly DotNet? DotNet = Create(() => new DotNet());
+        public static readonly PowerShell7? PowerShell7 = Create(() => new PowerShell7());
 #if WINDOWS
-        public static readonly PowerShell PowerShell = new();
+        public static readonly PowerShell? PowerShell = Create(() => new PowerShell());
 #endif
-        public static readonly Cargo Cargo = new();
-        public static readonly Vcpkg Vcpkg = new();
+        public static readonly Cargo? Cargo = Create(() => new Cargo());
+        public static readonly Vcpkg? Vcpkg = Create(() => new Vcpkg());
 #if !WINDOWS
-        public static readonly Apt Apt = new();
-        public static readonly Dnf Dnf = new();
-        public static readonly Pacman Pacman = new();
-        public static readonly Homebrew Homebrew = new();
-        public static readonly Snap Snap = new();
-        public static readonly Flatpak Flatpak = new();
+        public static readonly Apt? Apt = Create(() => new Apt());
+        public static readonly Dnf? Dnf = Create(() => new Dnf());
+        public static readonly Pacman? Pacman = Create(() => new Pacman());
+        public static readonly Homebrew? Homebrew = Create(() => new Homebrew());
+        public static readonly Snap? Snap = Create(() => new Snap());
+        public static readonly Flatpak? Flatpak = Create(() => new Flatpak());
 #endif
 
         public static readonly IPackageManager[] Managers = CreateManagers();
 
+        // A single manager that fails to construct must not take down the whole engine (and with it
+        // the app, via TypeInitializationException). Log it and leave the field null; CreateManagers
+        // drops nulls so the rest of the managers stay usable.
+        private static T? Create<T>(Func<T> factory) where T : class, IPackageManager
+        {
+            try
+            {
+                return factory();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to construct package manager {typeof(T).Name}; it will be unavailable this session.");
+                Logger.Error(ex);
+                return null;
+            }
+        }
+
         private static IPackageManager[] CreateManagers()
         {
-            List<IPackageManager> managers = [Npm, Bun, Pip, Cargo, Vcpkg, DotNet, PowerShell7];
+            List<IPackageManager?> candidates = [Npm, Bun, Pip, Cargo, Vcpkg, DotNet, PowerShell7];
 #if WINDOWS
-            managers.InsertRange(0, [WinGet, Scoop, Chocolatey]);
-            managers.Add(PowerShell);
+            candidates.InsertRange(0, [WinGet, Scoop, Chocolatey]);
+            candidates.Add(PowerShell);
 #else
-            managers.Insert(0, Homebrew);
+            candidates.Insert(0, Homebrew);
             if (OperatingSystem.IsLinux())
             {
                 var families = ReadLinuxDistroFamilies();
                 // If /etc/os-release is unreadable, include both as a safe fallback.
                 bool unknown = families.Count == 0;
                 if (unknown || families.Contains("debian") || families.Contains("ubuntu"))
-                    managers.Add(Apt);
+                    candidates.Add(Apt);
                 if (unknown || families.Contains("fedora") || families.Contains("rhel") || families.Contains("centos"))
-                    managers.Add(Dnf);
+                    candidates.Add(Dnf);
                 if (unknown || families.Contains("arch"))
-                    managers.Add(Pacman);
+                    candidates.Add(Pacman);
                 if (unknown || families.Contains("ubuntu") || families.Contains("debian") || families.Contains("fedora") || families.Contains("arch"))
                 {
-                    managers.Add(Snap);
-                    managers.Add(Flatpak);
+                    candidates.Add(Snap);
+                    candidates.Add(Flatpak);
                 }
             }
 #endif
+            List<IPackageManager> managers = [];
+            foreach (IPackageManager? manager in candidates)
+                if (manager is not null)
+                    managers.Add(manager);
             return [.. managers];
         }
 

@@ -182,6 +182,8 @@ public static class CrashHandler
                     {{e.StackTrace?.Replace("\n", "\n        ")}}
             """;
 
+        Exception originalException = e;
+
         try
         {
             int i = 0;
@@ -210,6 +212,19 @@ public static class CrashHandler
             {
                 Error_String += $"\n\n\nNo inner exceptions found";
             }
+        }
+        catch
+        {
+            // ignore
+        }
+
+        // Authoritative fallback: ToString() recurses through every inner exception (and all of an
+        // AggregateException's inners) with their stack traces. The walk above only follows the single
+        // .InnerException chain, so it can drop the real cause of e.g. a TypeInitializationException.
+        try
+        {
+            Error_String += "\n\n\n———————————————————————————————————————————————————————————\n"
+                + "Full exception detail (ToString):\n" + originalException;
         }
         catch
         {

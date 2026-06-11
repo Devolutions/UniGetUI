@@ -1011,7 +1011,7 @@ namespace UniGetUI.Interface.SoftwarePages
                 $commands= @(
                     {{string.Join(
                     ",\n    ",
-                    commands.Select(x => $"'cmd.exe /C {x.Replace("'", "''")}'")
+                    commands.Select(x => $"'{x.Replace("'", "''")}'")
                 )}}
                 )
 

@@ -70,6 +70,7 @@ namespace UniGetUI.Services
                 var oauthLoginUrl = _client.Oauth.GetGitHubLoginUrl(request);
 
                 codeFromAPI = null;
+                LoginWasCancelled = false;
                 if (loginBackend is not null)
                 {
                     try
@@ -85,6 +86,7 @@ namespace UniGetUI.Services
                 }
                 loginBackend = new GHAuthApiRunner();
                 loginBackend.OnLogin += BackgroundApiOnOnLogin;
+                loginBackend.OnCancelled += BackgroundApiOnCancelled;
                 await loginBackend.Start();
 
                 bool launchSucceeded = await Launcher.LaunchUriAsync(oauthLoginUrl);
@@ -96,8 +98,15 @@ namespace UniGetUI.Services
                 }
 
                 DateTime timeoutAt = DateTime.UtcNow.Add(LoginTimeout);
-                while (codeFromAPI is null && DateTime.UtcNow < timeoutAt)
+                while (codeFromAPI is null && !LoginWasCancelled && DateTime.UtcNow < timeoutAt)
                     await Task.Delay(100);
+
+                if (LoginWasCancelled)
+                {
+                    Logger.Warn("GitHub sign-in was cancelled by the user.");
+                    AuthStatusChanged?.Invoke(this, EventArgs.Empty);
+                    return false;
+                }
 
                 if (string.IsNullOrEmpty(codeFromAPI))
                 {
@@ -123,6 +132,7 @@ namespace UniGetUI.Services
                     try
                     {
                         loginBackend.OnLogin -= BackgroundApiOnOnLogin;
+                        loginBackend.OnCancelled -= BackgroundApiOnCancelled;
                         await loginBackend.Stop();
                         loginBackend.Dispose();
                     }
@@ -140,9 +150,21 @@ namespace UniGetUI.Services
 
         private string? codeFromAPI;
 
+        /// <summary>
+        /// True when the most recent <see cref="SignInAsync"/> ended because the user cancelled the
+        /// authorization on GitHub (as opposed to an error). Callers use this to avoid showing an
+        /// error message for a deliberate cancellation.
+        /// </summary>
+        public bool LoginWasCancelled { get; private set; }
+
         private void BackgroundApiOnOnLogin(object? sender, string c)
         {
             codeFromAPI = c;
+        }
+
+        private void BackgroundApiOnCancelled(object? sender, string error)
+        {
+            LoginWasCancelled = true;
         }
 
         private bool HasConfiguredOAuthClient()

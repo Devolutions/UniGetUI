@@ -15,6 +15,7 @@ internal sealed class GHAuthApiRunner : IDisposable
     private const int Port = 58642;
 
     public event EventHandler<string>? OnLogin;
+    public event EventHandler<string>? OnCancelled;
 
     private TcpListener? _listener;
     private CancellationTokenSource? _cts;
@@ -51,13 +52,19 @@ internal sealed class GHAuthApiRunner : IDisposable
                 int read = await stream.ReadAsync(buffer);
                 string requestLine = Encoding.ASCII.GetString(buffer, 0, read).Split("\r\n")[0];
 
-                string? code = ExtractCode(requestLine);
-                string body = code is null
-                    ? "<html><body><h1>Authentication failed</h1></body></html>"
-                    : SuccessPage;
+                string? code = ExtractParam(requestLine, "code");
+                string? error = ExtractParam(requestLine, "error");
+
+                // GitHub redirects here with an "error" parameter when the user cancels/denies authorization.
+                bool isCallback = code is not null || error is not null;
+                string body = code is not null
+                    ? ResultPage("Authentication successful")
+                    : error is not null
+                        ? ResultPage("Authentication cancelled")
+                        : "<html><body><h1>Authentication failed</h1></body></html>";
 
                 var response = Encoding.UTF8.GetBytes(
-                    $"HTTP/1.1 {(code is null ? "400 Bad Request" : "200 OK")}\r\n" +
+                    $"HTTP/1.1 {(isCallback ? "200 OK" : "400 Bad Request")}\r\n" +
                     "Content-Type: text/html; charset=utf-8\r\n" +
                     $"Content-Length: {Encoding.UTF8.GetByteCount(body)}\r\n" +
                     "Connection: close\r\n\r\n" +
@@ -70,6 +77,11 @@ internal sealed class GHAuthApiRunner : IDisposable
                     Logger.ImportantInfo("[AUTH API] Received authentication code from GitHub");
                     OnLogin?.Invoke(this, code);
                 }
+                else if (error is not null)
+                {
+                    Logger.Warn($"[AUTH API] GitHub authentication was cancelled or failed (error: {error})");
+                    OnCancelled?.Invoke(this, error);
+                }
             }
         }
         catch (Exception ex)
@@ -78,7 +90,7 @@ internal sealed class GHAuthApiRunner : IDisposable
         }
     }
 
-    private static string? ExtractCode(string requestLine)
+    private static string? ExtractParam(string requestLine, string key)
     {
         // requestLine looks like: GET /?code=XXXX&state=YYYY HTTP/1.1
         int q = requestLine.IndexOf('?');
@@ -89,14 +101,14 @@ internal sealed class GHAuthApiRunner : IDisposable
         foreach (var pair in query.Split('&'))
         {
             var kv = pair.Split('=', 2);
-            if (kv.Length == 2 && kv[0] == "code" && kv[1].Length > 0)
+            if (kv.Length == 2 && kv[0] == key && kv[1].Length > 0)
                 return Uri.UnescapeDataString(kv[1]);
         }
         return null;
     }
 
-    private const string SuccessPage =
-        """
+    private static string ResultPage(string title) =>
+        $$"""
         <html><style>
             div {
                 display: flex;
@@ -111,7 +123,7 @@ internal sealed class GHAuthApiRunner : IDisposable
             window.close();
         </script><div>
             <title>UniGetUI authentication</title>
-            <h1>Authentication successful</h1>
+            <h1>{{title}}</h1>
             <p>You can now close this window and return to UniGetUI</p>
         </div></html>
         """;

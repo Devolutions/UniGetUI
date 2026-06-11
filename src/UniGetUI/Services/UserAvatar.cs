@@ -71,7 +71,7 @@ namespace UniGetUI.Services
                 }
 
                 bool success = await client.SignInAsync();
-                if (!success)
+                if (!success && !client.LoginWasCancelled)
                 {
                     DialogHelper.ShowDismissableBalloon(
                         CoreTools.Translate("Failed"),
@@ -115,6 +115,8 @@ namespace UniGetUI.Services
                 IsIndeterminate = true,
                 Width = 24,
                 Height = 24,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
             };
         }
 

@@ -223,7 +223,7 @@ namespace UniGetUI.Pages.SettingsPages.GeneralPages
             UpdateCloudControlsEnabled();
 
             bool success = await _authService.SignInAsync();
-            if (!success)
+            if (!success && !_authService.LoginWasCancelled)
             {
                 DialogHelper.ShowDismissableBalloon(
                     CoreTools.Translate("Failed"),

@@ -38,6 +38,7 @@ internal sealed class GitHubAuthService
 
     private GHAuthApiRunner? _loginBackend;
     private string? _codeFromApi;
+    private bool _loginWasCancelled;
 
     public async Task<bool> SignInAsync()
     {
@@ -61,16 +62,25 @@ internal sealed class GitHubAuthService
             var oauthLoginUrl = _client.Oauth.GetGitHubLoginUrl(request);
 
             _codeFromApi = null;
+            _loginWasCancelled = false;
             await StopLoginBackend();
             _loginBackend = new GHAuthApiRunner();
             _loginBackend.OnLogin += BackgroundApiOnOnLogin;
+            _loginBackend.OnCancelled += BackgroundApiOnCancelled;
             await _loginBackend.Start();
 
             CoreTools.Launch(oauthLoginUrl.ToString());
 
             DateTime timeoutAt = DateTime.UtcNow.Add(LoginTimeout);
-            while (_codeFromApi is null && DateTime.UtcNow < timeoutAt)
+            while (_codeFromApi is null && !_loginWasCancelled && DateTime.UtcNow < timeoutAt)
                 await Task.Delay(100);
+
+            if (_loginWasCancelled)
+            {
+                Logger.Warn("GitHub sign-in was cancelled by the user.");
+                AuthStatusChanged?.Invoke(this, EventArgs.Empty);
+                return false;
+            }
 
             if (string.IsNullOrEmpty(_codeFromApi))
             {
@@ -100,12 +110,18 @@ internal sealed class GitHubAuthService
         _codeFromApi = code;
     }
 
+    private void BackgroundApiOnCancelled(object? sender, string error)
+    {
+        _loginWasCancelled = true;
+    }
+
     private async Task StopLoginBackend()
     {
         if (_loginBackend is null) return;
         try
         {
             _loginBackend.OnLogin -= BackgroundApiOnOnLogin;
+            _loginBackend.OnCancelled -= BackgroundApiOnCancelled;
             await _loginBackend.Stop();
             _loginBackend.Dispose();
         }

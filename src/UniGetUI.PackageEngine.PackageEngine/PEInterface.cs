@@ -69,8 +69,15 @@ namespace UniGetUI.PackageEngine
             }
             catch (Exception ex)
             {
-                Logger.Error($"Failed to construct package manager {typeof(T).Name}; it will be unavailable this session.");
-                Logger.Error(ex);
+                // Logging runs inside its own guard: this method must never throw, or it would
+                // re-trigger the TypeInitializationException it exists to prevent (it runs from
+                // a static field initializer).
+                try
+                {
+                    Logger.Error($"Failed to construct package manager {typeof(T).Name}; it will be unavailable this session.");
+                    Logger.Error(ex);
+                }
+                catch { /* swallow: never let static initialization fail */ }
                 return null;
             }
         }

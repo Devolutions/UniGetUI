@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Avalonia;
+using Avalonia.Threading;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
@@ -67,6 +68,11 @@ public static class AvaloniaAppHost
         Logger.ImportantInfo($"Elevated: {CoreTools.IsAdministrator()}");
         Logger.ImportantInfo($"Packaged (MSIX): {CoreTools.IsPackagedApp()}");
         Logger.ImportantInfo($"Args: {(args.Length > 0 ? string.Join(" ", args) : "(none)")}");
+
+        // Bind Avalonia's UI-thread dispatcher to this (main/STA) thread before the single-instance
+        // listener starts: if a second instance connects mid-startup, the listener's Dispatcher.UIThread.Post
+        // would otherwise bind it to the worker thread and make Win32Platform.Initialize throw.
+        _ = Dispatcher.UIThread;
 
         if (!TryRegisterSingleInstance(args))
         {

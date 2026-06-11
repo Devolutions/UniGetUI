@@ -8,6 +8,7 @@ internal static partial class Secrets
      *          Seeing errors? Build the project (maybe twice)
      */
     public static partial string GetGitHubClientId();
+    public static partial string GetGitHubClientSecret();
     public static partial string GetOpenSearchUsername();
     public static partial string GetOpenSearchPassword();
     /* ------------------------------------------------------------------------ */

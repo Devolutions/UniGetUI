@@ -207,6 +207,7 @@
        <Compile Include="Infrastructure\AvaloniaBootstrapper.cs" />
        <Compile Include="Infrastructure\AvaloniaPackageOperationHelper.cs" />
       <Compile Include="Infrastructure\GitHubAuthService.cs" />
+      <Compile Include="Infrastructure\GHAuthApiRunner.cs" />
       <Compile Include="Infrastructure\GitHubCloudBackupService.cs" />
       <Compile Include="Infrastructure\HeadlessDaemonHost.cs" />
       <Compile Include="Infrastructure\HeadlessModeOptions.cs" />

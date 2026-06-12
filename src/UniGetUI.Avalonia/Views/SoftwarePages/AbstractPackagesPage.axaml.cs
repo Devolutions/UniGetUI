@@ -24,6 +24,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
     private readonly ContextMenu? _contextMenu;
     private double _savedFilterPaneWidth = 220;
     private bool _isOverlayMode;
+    private IDisposable? _sidePanelBgBinding;
 
     protected AbstractPackagesPage(PackagesPageData data)
     {
@@ -349,16 +350,22 @@ public abstract partial class AbstractPackagesPage : UserControl,
             SidePanel.Width = _savedFilterPaneWidth;
             SidePanel.HorizontalAlignment = HorizontalAlignment.Left;
 
+            // Floating over content needs an opaque surface (the page surface is transparent under Mica).
+            _sidePanelBgBinding ??= SidePanel.Bind(Border.BackgroundProperty, this.GetResourceObservable("AppWindowBackground"));
+
             // Semi-transparent backdrop covers the package list behind the pane.
             FilterOverlayBackdrop.IsVisible = open;
         }
         else
         {
-            // Inline mode: pane sits beside the package list.
+            // Inline mode: pane sits beside the package list and blends with the Mica page surface.
             Grid.SetColumnSpan(SidePanel, 1);
             SidePanel.ZIndex = 0;
             SidePanel.Width = double.NaN;
             SidePanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+            _sidePanelBgBinding?.Dispose();
+            _sidePanelBgBinding = null;
+            SidePanel.Background = null;
             FilterOverlayBackdrop.IsVisible = false;
 
             FilteringPanel.ColumnDefinitions[0].Width = open

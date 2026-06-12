@@ -18,6 +18,8 @@
                     <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColorDark3}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorDark1}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorDisabledBrush"  Color="#5C000000"/>
+                    <!-- Hyperlinks: fixed blue, decoupled from the accent so links stay readable over accent-tinted Mica -->
+                    <SolidColorBrush x:Key="HyperlinkForeground"               Color="#1C5FB8"/>
                     <!-- Text fill -->
                     <SolidColorBrush x:Key="TextFillColorPrimaryBrush"   Color="#E4000000"/>
                     <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#9E000000"/>
@@ -81,6 +83,7 @@
                     <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColorLight3}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorLight2}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorDisabledBrush"  Color="#5CFFFFFF"/>
+                    <SolidColorBrush x:Key="HyperlinkForeground"               Color="#A6D4FF"/>
                     <!-- Text fill -->
                     <SolidColorBrush x:Key="TextFillColorPrimaryBrush"   Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#C5FFFFFF"/>

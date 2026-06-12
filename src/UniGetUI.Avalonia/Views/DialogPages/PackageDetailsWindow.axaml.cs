@@ -399,9 +399,10 @@ public partial class PackageDetailsWindow : Window
         host.Children.Add(tb);
     }
 
-    private static IBrush LinkBrush =>
-        Application.Current?.Resources["AccentTextFillColorPrimaryBrush"] as IBrush
-        ?? new SolidColorBrush(Color.FromArgb(255, 0, 120, 212));
+    private IBrush LinkBrush =>
+        this.TryFindResource("HyperlinkForeground", ActualThemeVariant, out var res) && res is IBrush b
+            ? b
+            : new SolidColorBrush(Color.FromArgb(255, 0, 120, 212));
 
     private static void OpenUrl(string url)
     {

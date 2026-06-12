@@ -10,19 +10,18 @@ namespace UniGetUI.Avalonia.Infrastructure;
 
 /// <summary>
 /// Gives a standard Avalonia <see cref="Window"/> the native Windows 11 look:
-/// the Mica backdrop (whole-window), rounded corners, and an accent-colored border
-/// that follows focus. Windows-only and gated on Windows 11; a no-op elsewhere, so
+/// the Mica backdrop (whole-window) and rounded corners. The window border is left
+/// at the OS default, so it only shows an accent color if the user enabled that in
+/// Personalization. Windows-only and gated on Windows 11; a no-op elsewhere, so
 /// the window keeps its opaque look when Mica isn't available.
 /// Used by the secondary windows/dialogs; MainWindow has its own (custom-frame) variant.
 /// </summary>
 internal static class MicaWindowHelper
 {
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
-    private const int DWMWA_BORDER_COLOR = 34;
     private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
     private const int DWMWCP_ROUND = 2;
     private const int DWMSBT_TRANSIENTWINDOW = 3; // Acrylic — for transient surfaces (menus/flyouts); Mica won't paint on these
-    private const int DWMWA_COLOR_DEFAULT = unchecked((int)0xFFFFFFFF);
 
     private static bool _acrylicPopupsHooked;
 
@@ -44,20 +43,7 @@ internal static class MicaWindowHelper
                 NativeMethods.DwmSetWindowAttribute(handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, sizeof(int));
             }
             window.Background = Brushes.Transparent;
-            ApplyBorderAccent(window, window.IsActive);
         };
-
-        window.GetObservable(WindowBase.IsActiveProperty).Subscribe(active => ApplyBorderAccent(window, active));
-
-        if (Application.Current?.PlatformSettings is { } settings)
-        {
-            void Handler(object? s, PlatformColorValues e)
-            {
-                if (window.IsActive) ApplyBorderAccent(window, true);
-            }
-            settings.ColorValuesChanged += Handler;
-            window.Closed += (_, _) => settings.ColorValuesChanged -= Handler;
-        }
     }
 
     // Gives flyouts / menus / combo dropdowns / tooltips a native Win11 acrylic backdrop:
@@ -100,22 +86,6 @@ internal static class MicaWindowHelper
         NativeMethods.DwmSetWindowAttribute(handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, sizeof(int));
         int backdrop = DWMSBT_TRANSIENTWINDOW;
         NativeMethods.DwmSetWindowAttribute(handle, DWMWA_SYSTEMBACKDROP_TYPE, ref backdrop, sizeof(int));
-    }
-
-    // Accent-coloured window border that follows focus (kept on the dialogs).
-    private static void ApplyBorderAccent(Window window, bool active)
-    {
-        if (window.TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
-            return;
-
-        int colorRef = DWMWA_COLOR_DEFAULT;
-        if (active)
-        {
-            Color accent = Application.Current?.PlatformSettings?.GetColorValues().AccentColor1
-                           ?? Colors.Transparent;
-            colorRef = accent.R | (accent.G << 8) | (accent.B << 16); // Color -> COLORREF (0x00BBGGRR)
-        }
-        NativeMethods.DwmSetWindowAttribute(handle, DWMWA_BORDER_COLOR, ref colorRef, sizeof(int));
     }
 
     /// <summary>

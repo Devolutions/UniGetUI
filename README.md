@@ -14,7 +14,7 @@
 UniGetUI is an intuitive GUI for the most common CLI package managers on Windows 10 and 11, including [WinGet](https://learn.microsoft.com/en-us/windows/package-manager/), [Scoop](https://scoop.sh/), [Chocolatey](https://chocolatey.org/), [pip](https://pypi.org/), [npm](https://www.npmjs.com/), [Bun](https://bun.sh/), [.NET Tool](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-tool-install), [PowerShell Gallery](https://www.powershellgallery.com/), and more.
 With UniGetUI, you can discover, install, update, and uninstall software from multiple package managers through one interface.
 
-![image](https://github.com/user-attachments/assets/7cb447ca-ee8b-4bce-8561-b9332fb0139a)
+![image](media/UniGetUI-Image.png)
 View more screenshots [here](#screenshots)
 
 Check out the [Package Managers](#package-managers) section for more details!
@@ -138,8 +138,6 @@ UniGetUI translations are maintained directly in this repository. For the curren
 ![image](media/UniGetUI_8.png)
 
 ![image](media/UniGetUI_9.png)
-
-![image](media/UniGetUI_10.png)
 
 
 ## Contributions

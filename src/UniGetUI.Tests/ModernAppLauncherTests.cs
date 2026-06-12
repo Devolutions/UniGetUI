@@ -1,6 +1,6 @@
+using System.Runtime.InteropServices;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
-using System.Runtime.InteropServices;
 
 namespace UniGetUI.Tests;
 

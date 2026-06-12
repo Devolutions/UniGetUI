@@ -40,7 +40,7 @@
       <UserControl Height="16" />
       <widgets:CheckboxCard
         CornerRadius="8"
-        SettingName="DisableClassicMode"
+        SettingName="UseClassicMode"
         StateChanged="ShowRestartBanner"
         Text="Use classic mode"
         WarningText="Restart UniGetUI to apply this change"

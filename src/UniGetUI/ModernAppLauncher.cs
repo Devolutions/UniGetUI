@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 
@@ -10,7 +11,7 @@ internal static class ModernAppLauncher
     internal const string ModernAppExecutableName = "UniGetUI.Avalonia.exe";
 
     public static bool IsClassicModeEnabled() =>
-        !Settings.Get(Settings.K.DisableClassicMode) && !Settings.Get(Settings.K.EnableUniGetUIBeta);
+        Settings.Get(Settings.K.UseClassicMode) && !Settings.Get(Settings.K.EnableUniGetUIBeta);
 
     public static void Launch(string[] args)
     {
@@ -89,7 +90,8 @@ internal static class ModernAppLauncher
                             ModernAppExecutableName,
                             SearchOption.AllDirectories
                         )
-                        .OrderByDescending(File.GetLastWriteTimeUtc)
+                        .OrderByDescending(IsCurrentRuntimeCandidate)
+                        .ThenByDescending(File.GetLastWriteTimeUtc)
                 )
                 {
                     yield return candidate;
@@ -98,5 +100,23 @@ internal static class ModernAppLauncher
 
             directory = directory.Parent;
         }
+    }
+
+    private static bool IsCurrentRuntimeCandidate(string candidate)
+    {
+        string runtimeIdentifier = RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.X64 => "win-x64",
+            Architecture.Arm64 => "win-arm64",
+            Architecture.X86 => "win-x86",
+            Architecture.Arm => "win-arm",
+            _ => "",
+        };
+
+        return runtimeIdentifier.Length > 0
+            && candidate.Contains(
+                $"{Path.DirectorySeparatorChar}{runtimeIdentifier}{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase
+            );
     }
 }

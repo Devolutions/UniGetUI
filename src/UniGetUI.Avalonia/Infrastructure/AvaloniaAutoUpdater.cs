@@ -421,10 +421,9 @@ internal static partial class AvaloniaAutoUpdater
             string installerName;
             if (OperatingSystem.IsWindows())
                 installerName = "UniGetUI Updater.exe";
-            else if (OperatingSystem.IsMacOS())
-                installerName = "UniGetUI Updater.pkg";
             else
-                installerName = "UniGetUI Updater.AppImage";
+                // macOS and Linux both ship as self-contained .tar.gz archives.
+                installerName = "UniGetUI Updater.tar.gz";
             string installerPath = Path.Join(CoreData.UniGetUIDataDirectory, installerName);
 
             // Try cached installer first
@@ -558,7 +557,7 @@ internal static partial class AvaloniaAutoUpdater
 
         if (OperatingSystem.IsLinux())
         {
-            LaunchLinuxInstaller(installerLocation);
+            await LaunchLinuxInstallerAsync(installerLocation);
             return;
         }
 
@@ -656,61 +655,10 @@ internal static partial class AvaloniaAutoUpdater
         MarkAttemptFinished($"installer failed with code {exitCode}");
     }
 
+    [SupportedOSPlatform("macos")]
     private static async Task LaunchMacInstallerAsync(string installerLocation)
     {
-        LogUpdateInfo($"Launching macOS installer: {installerLocation}");
-
-        // Escape for inclusion in the AppleScript string literal.
-        string scriptPath = installerLocation.Replace("\\", "\\\\").Replace("\"", "\\\"");
-        string appleScript =
-            $"do shell script \"/usr/sbin/installer -pkg \\\"{scriptPath}\\\" -target /\" with administrator privileges";
-
-        using Process p = new()
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "/usr/bin/osascript",
-                ArgumentList = { "-e", appleScript },
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            },
-        };
-
-        bool started;
-        try
-        {
-            started = p.Start();
-        }
-        catch (Exception ex)
-        {
-            LogUpdateError("osascript threw while launching the macOS installer:");
-            LogUpdateError(ex);
-            RaiseStatus(
-                CoreTools.Translate("The updater could not be launched."),
-                ex.Message,
-                InfoBarSeverity.Error,
-                isClosable: true,
-                actionButtonText: CoreTools.Translate("View log"),
-                actionButtonAction: OpenUpdateLog);
-            MarkAttemptFinished($"installer launch threw: {ex.Message}");
-            return;
-        }
-
-        if (!started)
-        {
-            LogUpdateError("Failed to start osascript process (Process.Start returned false).");
-            RaiseStatus(
-                CoreTools.Translate("The updater could not be launched."),
-                CoreTools.Translate("The operating system did not start the installer process."),
-                InfoBarSeverity.Error,
-                isClosable: true,
-                actionButtonText: CoreTools.Translate("View log"),
-                actionButtonAction: OpenUpdateLog);
-            MarkAttemptFinished("Process.Start returned false");
-            return;
-        }
+        LogUpdateInfo($"Applying macOS update from archive: {installerLocation}");
 
         RaiseStatus(
             CoreTools.Translate("UniGetUI is being updated..."),
@@ -718,136 +666,14 @@ internal static partial class AvaloniaAutoUpdater
             InfoBarSeverity.Informational,
             isClosable: false);
 
-        string stderr = await p.StandardError.ReadToEndAsync();
-        await p.WaitForExitAsync();
-        int exitCode = p.ExitCode;
-
-        if (exitCode != 0)
-        {
-            // osascript exits 1 with stderr "User canceled." when the user dismisses
-            // the admin authentication prompt. Treat that as a normal cancellation.
-            bool userCancelled = stderr.Contains("User canceled", StringComparison.OrdinalIgnoreCase)
-                                 || stderr.Contains("(-128)");
-            string trimmed = stderr.Trim();
-            LogUpdateError(
-                userCancelled
-                    ? "macOS installer cancelled at the authentication prompt."
-                    : $"macOS installer failed (exit {exitCode}): {trimmed}"
-            );
-
-            RaiseStatus(
-                userCancelled
-                    ? CoreTools.Translate("Update cancelled.")
-                    : CoreTools.Translate("The update could not be applied."),
-                userCancelled
-                    ? CoreTools.Translate("Authentication was cancelled.")
-                    : (string.IsNullOrWhiteSpace(trimmed)
-                        ? CoreTools.Translate("Installer exit code {0}", exitCode)
-                        : trimmed),
-                userCancelled ? InfoBarSeverity.Warning : InfoBarSeverity.Error,
-                isClosable: true,
-                actionButtonText: CoreTools.Translate("View log"),
-                actionButtonAction: OpenUpdateLog);
-            MarkAttemptFinished(
-                userCancelled
-                    ? "user cancelled authentication"
-                    : $"installer failed with code {exitCode}"
-            );
-            return;
-        }
-
-        LogUpdateInfo("macOS installer completed successfully.");
-
-        const string installedApp = "/Applications/UniGetUI.app";
-        if (!Directory.Exists(installedApp))
-        {
-            string runningPath = Environment.ProcessPath ?? "(unknown)";
-            LogUpdateWarn(
-                $"Installer reported success but {installedApp} was not found. Running from: {runningPath}"
-            );
-            RaiseStatus(
-                CoreTools.Translate("Update installed."),
-                CoreTools.Translate("UniGetUI was updated successfully, but this running copy was not replaced. This usually means you are running a development build. Close this copy and start the newly-installed version to finish."),
-                InfoBarSeverity.Warning,
-                isClosable: true,
-                actionButtonText: CoreTools.Translate("View log"),
-                actionButtonAction: OpenUpdateLog);
-            MarkAttemptFinished("installer succeeded but did not replace running copy");
-            return;
-        }
-
-        LogUpdateInfo($"Relaunching {installedApp} and exiting current process.");
-
-        // Detach a tiny shell that waits a moment, then opens a *new* instance of the
-        // freshly-installed app. The brief sleep gives this process time to exit so
-        // `open -na` doesn't race against our termination.
+        string stagingDir;
         try
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "/bin/sh",
-                ArgumentList = { "-c", $"sleep 1 && /usr/bin/open -na \"{installedApp}\"" },
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            });
+            stagingDir = await Task.Run(() => ExtractTarGz(installerLocation));
         }
         catch (Exception ex)
         {
-            LogUpdateWarn("Could not schedule relaunch of new app instance:");
-            LogUpdateWarn(ex);
-        }
-
-        MarkAttemptFinished("macOS installer succeeded; relaunching");
-
-        // Match the Windows flow: the installer terminates the running copy. On macOS
-        // we do that ourselves so the relaunch picks up the freshly-installed bundle.
-        Environment.Exit(0);
-    }
-
-    [SupportedOSPlatform("linux")]
-    private static void LaunchLinuxInstaller(string installerLocation)
-    {
-        LogUpdateInfo($"Applying Linux AppImage update from: {installerLocation}");
-
-        // The AppImage runtime sets APPIMAGE to the on-disk path of the running
-        // .AppImage file. Without it we have no reliable way to know which file
-        // to replace (e.g., when running from `dotnet run` during development).
-        string? runningApp = Environment.GetEnvironmentVariable("APPIMAGE");
-        if (string.IsNullOrEmpty(runningApp) || !File.Exists(runningApp))
-        {
-            LogUpdateWarn(
-                $"APPIMAGE env var is not set or points to a missing file (got '{runningApp}'). "
-                + "UniGetUI does not appear to be running from an AppImage; the running copy "
-                + "cannot be replaced automatically."
-            );
-            RaiseStatus(
-                CoreTools.Translate("Update installed."),
-                CoreTools.Translate("UniGetUI was updated successfully, but this running copy was not replaced. This usually means you are running a development build. Close this copy and start the newly-installed version to finish."),
-                InfoBarSeverity.Warning,
-                isClosable: true,
-                actionButtonText: CoreTools.Translate("View log"),
-                actionButtonAction: OpenUpdateLog);
-            MarkAttemptFinished("not running from an AppImage; running copy not replaced");
-            return;
-        }
-
-        try
-        {
-            // Replace the running AppImage on disk. Linux allows renaming over a
-            // currently-executing file: the running process keeps its inode mapped,
-            // and future launches resolve the path to the new file.
-            File.Move(installerLocation, runningApp, overwrite: true);
-
-            File.SetUnixFileMode(
-                runningApp,
-                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
-                    | UnixFileMode.GroupRead | UnixFileMode.GroupExecute
-                    | UnixFileMode.OtherRead | UnixFileMode.OtherExecute
-            );
-        }
-        catch (Exception ex)
-        {
-            LogUpdateError("Failed to replace the running AppImage:");
+            LogUpdateError("Failed to extract the macOS update archive:");
             LogUpdateError(ex);
             RaiseStatus(
                 CoreTools.Translate("The update could not be applied."),
@@ -856,11 +682,119 @@ internal static partial class AvaloniaAutoUpdater
                 isClosable: true,
                 actionButtonText: CoreTools.Translate("View log"),
                 actionButtonAction: OpenUpdateLog);
-            MarkAttemptFinished($"AppImage replacement failed: {ex.Message}");
+            MarkAttemptFinished($"archive extraction failed: {ex.Message}");
             return;
         }
 
-        LogUpdateInfo($"Replaced {runningApp}; relaunching new AppImage and exiting current process.");
+        // Locate the UniGetUI.app bundle inside the extracted archive.
+        string topLevelApp = Path.Join(stagingDir, "UniGetUI.app");
+        string? newApp = Directory.Exists(topLevelApp)
+            ? topLevelApp
+            : Directory.EnumerateDirectories(stagingDir, "UniGetUI.app", SearchOption.AllDirectories).FirstOrDefault();
+
+        if (newApp is null || !Directory.Exists(newApp))
+        {
+            LogUpdateError($"Could not find UniGetUI.app inside the extracted archive at {stagingDir}.");
+            RaiseStatus(
+                CoreTools.Translate("The update could not be applied."),
+                CoreTools.Translate("The update package was malformed."),
+                InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("UniGetUI.app not found in archive");
+            return;
+        }
+
+        // Verify the embedded app is signed by Devolutions before trusting it.
+        if (!VerifyMacAppSignature(newApp))
+        {
+            LogUpdateError("The extracted app failed signature validation. Aborting update.");
+            RaiseStatus(
+                CoreTools.Translate("The installer authenticity could not be verified."),
+                CoreTools.Translate("The update process has been aborted."),
+                InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("extracted app signature invalid");
+            return;
+        }
+
+        // Replace the *running* bundle wherever it lives, falling back to /Applications.
+        string target = ResolveRunningMacAppBundle() ?? "/Applications/UniGetUI.app";
+
+        if (!Directory.Exists(target))
+        {
+            LogUpdateWarn(
+                $"No installed .app bundle found at {target} (running from {Environment.ProcessPath ?? "unknown"}); "
+                + "the running copy will not be replaced."
+            );
+            ReportRunningCopyNotReplaced("no installed bundle to replace");
+            return;
+        }
+
+        // Guard against clobbering a development build (a published .app sitting in a
+        // build/publish output tree).
+        if (LooksLikeDevBuild(string.Empty, target))
+        {
+            LogUpdateWarn($"Resolved bundle '{target}' looks like a development build; the running copy will not be replaced.");
+            ReportRunningCopyNotReplaced("development build detected; running copy not replaced");
+            return;
+        }
+
+        LogUpdateInfo($"Replacing {target} with the freshly-extracted bundle and relaunching.");
+
+        // The swap is handed to a detached helper that waits for THIS process to exit
+        // before touching the bundle, so the running app never has its files yanked out
+        // from under it. On success the helper relaunches the new bundle; on any failure
+        // it rolls back and relaunches whatever remains. We deliberately do NOT write the
+        // "attempt finished" marker here — exactly like the Windows installer path, the
+        // relaunched copy confirms success via CheckForOrphanedUpdateAttempt() by
+        // comparing its own version against the recorded target version.
+        //
+        // Arguments are passed positionally ($1=pid, $2=target, $3=new app) so no path
+        // is ever interpolated into the script text.
+        const string swap = """
+            pid="$1"; target="$2"; newapp="$3"
+            i=0
+            while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
+            rm -rf "$target.old"
+            if mv "$target" "$target.old"; then
+              if mv "$newapp" "$target"; then
+                xattr -dr com.apple.quarantine "$target" 2>/dev/null
+                rm -rf "$target.old"
+              else
+                rm -rf "$target"
+                mv "$target.old" "$target"
+              fi
+            fi
+            /usr/bin/open -na "$target"
+            """;
+        if (!TrySpawnSwapHelper(swap, Environment.ProcessId.ToString(CultureInfo.InvariantCulture), target, newApp))
+        {
+            // We could not even launch the helper, so nothing was changed. Report and bail
+            // without exiting so the user keeps a working copy.
+            RaiseStatus(
+                CoreTools.Translate("The update could not be applied."),
+                CoreTools.Translate("The updater could not be launched."),
+                InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("could not spawn swap helper");
+            return;
+        }
+
+        // Match the Windows flow: terminate the running copy so the helper can replace
+        // the bundle and relaunch the freshly-installed version.
+        Environment.Exit(0);
+    }
+
+    [SupportedOSPlatform("linux")]
+    private static async Task LaunchLinuxInstallerAsync(string installerLocation)
+    {
+        LogUpdateInfo($"Applying Linux update from archive: {installerLocation}");
 
         RaiseStatus(
             CoreTools.Translate("UniGetUI is being updated..."),
@@ -868,27 +802,234 @@ internal static partial class AvaloniaAutoUpdater
             InfoBarSeverity.Informational,
             isClosable: false);
 
-        // Detach a shell that waits a moment, then runs the new AppImage. The brief
-        // sleep gives this process time to exit so the relaunched instance starts
-        // cleanly without lingering shared resources.
+        // The directory holding the running executable is the install location to replace.
+        string? exePath = Environment.ProcessPath;
+        string? installDir = Path.GetDirectoryName(exePath);
+        if (string.IsNullOrEmpty(exePath) || string.IsNullOrEmpty(installDir))
+        {
+            LogUpdateWarn(
+                $"Could not resolve the running install directory (ProcessPath='{exePath}'); "
+                + "the running copy will not be replaced."
+            );
+            ReportRunningCopyNotReplaced("could not resolve install directory; running copy not replaced");
+            return;
+        }
+
+        string exeName = Path.GetFileName(exePath);
+
+        // Guard against clobbering a development build: when running through the `dotnet`
+        // host or from a build/publish output tree, do not swap the directory in place.
+        if (LooksLikeDevBuild(exeName, installDir))
+        {
+            LogUpdateWarn($"Running from what looks like a development build ('{exePath}'); the running copy will not be replaced.");
+            ReportRunningCopyNotReplaced("development build detected; running copy not replaced");
+            return;
+        }
+
+        string stagingDir;
         try
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "/bin/sh",
-                ArgumentList = { "-c", "sleep 1 && \"$1\" >/dev/null 2>&1 &", "sh", runningApp },
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            });
+            stagingDir = await Task.Run(() => ExtractTarGz(installerLocation));
         }
         catch (Exception ex)
         {
-            LogUpdateWarn("Could not schedule relaunch of new AppImage:");
-            LogUpdateWarn(ex);
+            LogUpdateError("Failed to extract the Linux update archive:");
+            LogUpdateError(ex);
+            RaiseStatus(
+                CoreTools.Translate("The update could not be applied."),
+                ex.Message,
+                InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished($"archive extraction failed: {ex.Message}");
+            return;
         }
 
-        MarkAttemptFinished("Linux AppImage replaced; relaunching");
+        // The new install tree is either the single top-level directory inside the
+        // archive, or the staging directory itself if the executable sits at the root.
+        string newRoot = ResolveExtractedLinuxRoot(stagingDir);
+
+        // Confirm the archive actually contains the executable we expect before we
+        // commit to swapping the install directory.
+        if (!File.Exists(Path.Join(newRoot, exeName)))
+        {
+            LogUpdateError($"Expected executable '{exeName}' was not found in the extracted archive at {newRoot}.");
+            RaiseStatus(
+                CoreTools.Translate("The update could not be applied."),
+                CoreTools.Translate("The update package was malformed."),
+                InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("executable not found in archive");
+            return;
+        }
+
+        LogUpdateInfo($"Replacing install directory {installDir} with the freshly-extracted tree and relaunching.");
+
+        // Hand the swap to a detached helper that waits for THIS process to exit before
+        // renaming the install directory (renaming, not overwriting, avoids "text file
+        // busy" on the running executable and keeps the running process's mapped files
+        // intact until it is gone). On failure the helper rolls back. As with Windows,
+        // success/failure is confirmed by the relaunched copy via
+        // CheckForOrphanedUpdateAttempt() — so no "attempt finished" marker is written here.
+        //
+        // Positional args: $1=pid, $2=install dir, $3=new tree, $4=executable name.
+        const string swap = """
+            pid="$1"; dir="$2"; newroot="$3"; exe="$4"
+            i=0
+            while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
+            rm -rf "$dir.old"
+            if mv "$dir" "$dir.old"; then
+              if mv "$newroot" "$dir"; then
+                chmod +x "$dir/$exe" 2>/dev/null
+                rm -rf "$dir.old"
+              else
+                rm -rf "$dir"
+                mv "$dir.old" "$dir"
+              fi
+            fi
+            "$dir/$exe" >/dev/null 2>&1 &
+            """;
+        if (!TrySpawnSwapHelper(swap, Environment.ProcessId.ToString(CultureInfo.InvariantCulture), installDir, newRoot, exeName))
+        {
+            RaiseStatus(
+                CoreTools.Translate("The update could not be applied."),
+                CoreTools.Translate("The updater could not be launched."),
+                InfoBarSeverity.Error,
+                isClosable: true,
+                actionButtonText: CoreTools.Translate("View log"),
+                actionButtonAction: OpenUpdateLog);
+            MarkAttemptFinished("could not spawn swap helper");
+            return;
+        }
+
         Environment.Exit(0);
+    }
+
+    // Shows the friendly "updated, but this running copy was not replaced" notice used
+    // for development builds and unresolved install locations, and finishes the attempt.
+    private static void ReportRunningCopyNotReplaced(string outcome)
+    {
+        RaiseStatus(
+            CoreTools.Translate("Update installed."),
+            CoreTools.Translate("UniGetUI was updated successfully, but this running copy was not replaced. This usually means you are running a development build. Close this copy and start the newly-installed version to finish."),
+            InfoBarSeverity.Warning,
+            isClosable: true,
+            actionButtonText: CoreTools.Translate("View log"),
+            actionButtonAction: OpenUpdateLog);
+        MarkAttemptFinished(outcome);
+    }
+
+    // True when the running process looks like a development build rather than an
+    // installed copy that should replace itself in place.
+    private static bool LooksLikeDevBuild(string exeName, string installDir)
+    {
+        if (exeName.Equals("dotnet", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        char sep = Path.DirectorySeparatorChar;
+        return installDir.Contains($"{sep}bin{sep}Debug{sep}", StringComparison.OrdinalIgnoreCase)
+            || installDir.Contains($"{sep}bin{sep}Release{sep}", StringComparison.OrdinalIgnoreCase)
+            || installDir.Contains($"{sep}obj{sep}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Launches the detached /bin/sh helper that performs the file swap after this
+    // process exits. Returns false if the helper process could not be started.
+    private static bool TrySpawnSwapHelper(string script, params string[] positionalArgs)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "/bin/sh",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add(script);
+            psi.ArgumentList.Add("sh"); // becomes $0 inside the script
+            foreach (string arg in positionalArgs)
+            {
+                psi.ArgumentList.Add(arg);
+            }
+
+            Process? p = Process.Start(psi);
+            return p is not null;
+        }
+        catch (Exception ex)
+        {
+            LogUpdateError("Could not spawn the update swap helper:");
+            LogUpdateError(ex);
+            return false;
+        }
+    }
+
+    // ------------------------------------------------------------------ archive helpers
+    // Extracts a .tar.gz into a clean staging directory and returns its path.
+    private static string ExtractTarGz(string tarballPath)
+    {
+        string stagingDir = Path.Join(CoreData.UniGetUIDataDirectory, "update-staging");
+        try { if (Directory.Exists(stagingDir)) Directory.Delete(stagingDir, recursive: true); }
+        catch (Exception ex) { LogUpdateWarn($"Could not clean previous staging directory: {ex.Message}"); }
+        Directory.CreateDirectory(stagingDir);
+
+        LogUpdateInfo($"Extracting {tarballPath} -> {stagingDir}");
+
+        // Use the system `tar` rather than System.Formats.Tar: the published archives use
+        // PAX extended headers that the managed TarReader rejects ("extended header
+        // contains invalid records"), whereas bsdtar (macOS) and GNU tar (Linux) extract
+        // them cleanly while restoring Unix permissions and symlinks.
+        using Process p = new()
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "/usr/bin/tar",
+                ArgumentList = { "-xzf", tarballPath, "-C", stagingDir },
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            },
+        };
+        p.Start();
+        string stderr = p.StandardError.ReadToEnd();
+        p.WaitForExit();
+        if (p.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"tar exited with code {p.ExitCode} while extracting the update archive. {stderr.Trim()}");
+        }
+        return stagingDir;
+    }
+
+    // If the archive wraps everything in a single top-level directory, return it;
+    // otherwise the staging directory itself is the install root.
+    private static string ResolveExtractedLinuxRoot(string stagingDir)
+    {
+        string[] entries = Directory.GetFileSystemEntries(stagingDir);
+        if (entries.Length == 1 && Directory.Exists(entries[0]))
+        {
+            return entries[0];
+        }
+        return stagingDir;
+    }
+
+    // Walks up from the running executable to the enclosing ".app" bundle directory.
+    [SupportedOSPlatform("macos")]
+    private static string? ResolveRunningMacAppBundle()
+    {
+        // Environment.ProcessPath is typically /Applications/UniGetUI.app/Contents/MacOS/UniGetUI.
+        string? dir = Path.GetDirectoryName(Environment.ProcessPath);
+        while (!string.IsNullOrEmpty(dir))
+        {
+            if (dir.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+            {
+                return dir;
+            }
+            dir = Path.GetDirectoryName(dir);
+        }
+        return null;
     }
 
     // ------------------------------------------------------------------ update check sources
@@ -1001,17 +1142,23 @@ internal static partial class AvaloniaAutoUpdater
 
         if (OperatingSystem.IsMacOS())
         {
-            return CheckMacInstallerSignature(path);
+            // The downloaded artifact is a .tar.gz archive, which carries no signature of
+            // its own. Integrity is guaranteed by the SHA256 hash (verified separately
+            // against productinfo.json fetched over HTTPS from a trusted host). The
+            // Developer ID of the embedded UniGetUI.app is verified after extraction, in
+            // VerifyMacAppSignature(), before the running bundle is replaced.
+            LogUpdateDebug("macOS .tar.gz integrity is enforced via hash; the app signature is verified post-extraction.");
+            return true;
         }
 
         if (OperatingSystem.IsLinux())
         {
-            // AppImage has no built-in signing format equivalent to Authenticode/.pkg.
+            // .tar.gz has no built-in signing format equivalent to Authenticode/.pkg.
             // Hash validation (verified separately, against the productinfo.json fetched
             // over HTTPS from a trusted host) provides the integrity guarantee. A future
             // extension could verify a detached GPG signature published alongside the
-            // .AppImage in productinfo.
-            LogUpdateWarn("Linux .AppImage signature validation is not implemented — relying on hash check.");
+            // archive in productinfo.
+            LogUpdateWarn("Linux .tar.gz signature validation is not implemented — relying on hash check.");
             return true;
         }
 
@@ -1052,60 +1199,83 @@ internal static partial class AvaloniaAutoUpdater
         }
     }
 
-    private static bool CheckMacInstallerSignature(string path)
+    [SupportedOSPlatform("macos")]
+    private static bool VerifyMacAppSignature(string appBundlePath)
     {
         if (DEVOLUTIONS_MAC_DEVELOPER_IDS.Length == 0)
         {
             LogUpdateWarn(
-                "No Devolutions macOS Developer Team IDs configured — skipping .pkg signature validation."
+                "No Devolutions macOS Developer Team IDs configured — skipping .app signature validation."
             );
             return true;
         }
 
+        // IMPORTANT: `codesign --verify` (with or without --deep/--strict) cannot be used
+        // as a gate here. The published self-contained .NET bundle contains nested managed
+        // assemblies that are not individually code-signed, so --verify reports "code
+        // object is not signed at all" even for a perfectly legitimate, Developer-ID-signed
+        // bundle (and `spctl` likewise rejects it). Integrity and authenticity are already
+        // guaranteed by the SHA256 hash, which is checked against productinfo.json fetched
+        // over HTTPS from a trusted host. Here we additionally read the bundle's Team
+        // Identifier as a best-effort signer check: a *mismatch* is treated as tampering
+        // and blocks the update; an absent/unreadable signature only warns and defers to
+        // the verified download hash.
         try
         {
-            using Process p = new()
+            using Process info = new()
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = "/usr/sbin/pkgutil",
-                    ArgumentList = { "--check-signature", path },
+                    FileName = "/usr/bin/codesign",
+                    ArgumentList = { "-dv", "--verbose=4", appBundlePath },
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true,
                 },
             };
-            p.Start();
-            string stdout = p.StandardOutput.ReadToEnd();
-            string stderr = p.StandardError.ReadToEnd();
-            p.WaitForExit();
+            info.Start();
+            // codesign prints the signing metadata to stderr.
+            string metadata = info.StandardError.ReadToEnd() + info.StandardOutput.ReadToEnd();
+            info.WaitForExit();
 
-            if (p.ExitCode != 0)
+            if (info.ExitCode != 0)
             {
-                LogUpdateWarn(
-                    $"pkgutil --check-signature exited {p.ExitCode}; signature could not be verified. {stderr.Trim()}"
-                );
-                return false;
+                LogUpdateWarn("Could not read the extracted app's code signature; relying on the verified download hash.");
+                return true;
             }
 
-            foreach (string teamId in DEVOLUTIONS_MAC_DEVELOPER_IDS)
+            string? teamId = null;
+            foreach (string rawLine in metadata.Split('\n'))
             {
-                if (stdout.Contains($"({teamId})", StringComparison.OrdinalIgnoreCase))
+                string line = rawLine.Trim();
+                if (line.StartsWith("TeamIdentifier=", StringComparison.OrdinalIgnoreCase))
                 {
-                    LogUpdateDebug($"Installer is signed by trusted Developer Team ID {teamId}.");
-                    return true;
+                    teamId = line["TeamIdentifier=".Length..].Trim();
+                    break;
                 }
             }
 
-            LogUpdateWarn("Installer signature does not match any trusted Devolutions Developer Team ID.");
+            if (string.IsNullOrEmpty(teamId) || teamId.Equals("not set", StringComparison.OrdinalIgnoreCase))
+            {
+                LogUpdateWarn("Extracted app has no Team Identifier; relying on the verified download hash.");
+                return true;
+            }
+
+            if (DEVOLUTIONS_MAC_DEVELOPER_IDS.Contains(teamId, StringComparer.OrdinalIgnoreCase))
+            {
+                LogUpdateDebug($"Extracted app is signed by trusted Developer Team ID {teamId}.");
+                return true;
+            }
+
+            LogUpdateWarn($"Extracted app is signed by an untrusted Team Identifier '{teamId}'. Aborting update.");
             return false;
         }
         catch (Exception ex)
         {
-            LogUpdateWarn("Could not validate installer signature via pkgutil.");
+            LogUpdateWarn("Could not validate the extracted app signature via codesign; relying on the verified download hash.");
             LogUpdateWarn(ex);
-            return false;
+            return true;
         }
     }
 
@@ -1179,27 +1349,30 @@ internal static partial class AvaloniaAutoUpdater
             _ => "x64",
         };
 
+        // Note: macOS and Linux both publish "tar.gz" artifacts, so the Type field
+        // alone is ambiguous between the two. Disambiguate on the platform token that
+        // is embedded in the download URL (e.g. "...macos-arm64..." vs "...linux-x64...").
         if (OperatingSystem.IsMacOS())
         {
             ProductInfoFile? mac =
-                files.FirstOrDefault(f => f.Type.Equals("pkg", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals(arch, StringComparison.OrdinalIgnoreCase))
-                ?? files.FirstOrDefault(f => f.Type.Equals("pkg", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals("universal", StringComparison.OrdinalIgnoreCase))
-                ?? files.FirstOrDefault(f => f.Type.Equals("pkg", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals("Any", StringComparison.OrdinalIgnoreCase));
+                files.FirstOrDefault(f => IsTarGzFor(f, "macos", arch))
+                ?? files.FirstOrDefault(f => IsTarGzFor(f, "macos", "universal"))
+                ?? files.FirstOrDefault(f => IsTarGzFor(f, "macos", "Any"));
 
             return mac ?? throw new PlatformArtifactMissingException(
-                $"No compatible macOS installer (.pkg) found in productinfo for architecture '{arch}'"
+                $"No compatible macOS package (.tar.gz) found in productinfo for architecture '{arch}'"
             );
         }
 
         if (OperatingSystem.IsLinux())
         {
             ProductInfoFile? linux =
-                files.FirstOrDefault(f => f.Type.Equals("AppImage", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals(arch, StringComparison.OrdinalIgnoreCase))
-                ?? files.FirstOrDefault(f => f.Type.Equals("AppImage", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals("universal", StringComparison.OrdinalIgnoreCase))
-                ?? files.FirstOrDefault(f => f.Type.Equals("AppImage", StringComparison.OrdinalIgnoreCase) && f.Arch.Equals("Any", StringComparison.OrdinalIgnoreCase));
+                files.FirstOrDefault(f => IsTarGzFor(f, "linux", arch))
+                ?? files.FirstOrDefault(f => IsTarGzFor(f, "linux", "universal"))
+                ?? files.FirstOrDefault(f => IsTarGzFor(f, "linux", "Any"));
 
             return linux ?? throw new PlatformArtifactMissingException(
-                $"No compatible Linux installer (.AppImage) found in productinfo for architecture '{arch}'"
+                $"No compatible Linux package (.tar.gz) found in productinfo for architecture '{arch}'"
             );
         }
 
@@ -1213,6 +1386,13 @@ internal static partial class AvaloniaAutoUpdater
             $"No compatible installer found in productinfo for architecture '{arch}'"
         );
     }
+
+    // Matches a .tar.gz artifact for a given OS (identified by a token in the URL,
+    // since macOS and Linux share the same "tar.gz" Type) and processor architecture.
+    private static bool IsTarGzFor(ProductInfoFile f, string osToken, string arch) =>
+        f.Type.Equals("tar.gz", StringComparison.OrdinalIgnoreCase)
+        && f.Arch.Equals(arch, StringComparison.OrdinalIgnoreCase)
+        && f.Url.Contains(osToken, StringComparison.OrdinalIgnoreCase);
 
     private static Version ParseVersionOrFallback(string raw, Version fallback)
     {

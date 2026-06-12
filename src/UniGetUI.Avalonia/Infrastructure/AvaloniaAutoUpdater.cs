@@ -967,15 +967,21 @@ internal static partial class AvaloniaAutoUpdater
     }
 
     // ------------------------------------------------------------------ archive helpers
-    // Extracts a .tar.gz into a clean staging directory and returns its path.
+    // Extracts a .tar.gz into a fresh per-attempt staging directory and returns its path.
     private static string ExtractTarGz(string tarballPath)
     {
-        string stagingDir = Path.Join(CoreData.UniGetUIDataDirectory, "update-staging");
-        try { if (Directory.Exists(stagingDir)) Directory.Delete(stagingDir, recursive: true); }
-        catch (Exception ex) { LogUpdateWarn($"Could not clean previous staging directory: {ex.Message}"); }
+        string stagingRoot = Path.Join(CoreData.UniGetUIDataDirectory, "update-staging");
+        Directory.CreateDirectory(stagingRoot);
+        PruneStaleStagingDirs(stagingRoot);
+
+        // A unique subdirectory per attempt: update checks can run concurrently (the
+        // background loop and a manual check), so a single shared directory would let two
+        // attempts delete/overwrite each other's contents mid-extraction.
+        string stagingDir = Path.Join(stagingRoot, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(stagingDir);
 
-        LogUpdateInfo($"Extracting {tarballPath} -> {stagingDir}");
+        string tar = ResolveTarExecutable();
+        LogUpdateInfo($"Extracting {tarballPath} -> {stagingDir} (using '{tar}')");
 
         // Use the system `tar` rather than System.Formats.Tar: the published archives use
         // PAX extended headers that the managed TarReader rejects ("extended header
@@ -985,7 +991,7 @@ internal static partial class AvaloniaAutoUpdater
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName = "/usr/bin/tar",
+                FileName = tar,
                 ArgumentList = { "-xzf", tarballPath, "-C", stagingDir },
                 UseShellExecute = false,
                 RedirectStandardError = true,
@@ -1001,6 +1007,46 @@ internal static partial class AvaloniaAutoUpdater
                 $"tar exited with code {p.ExitCode} while extracting the update archive. {stderr.Trim()}");
         }
         return stagingDir;
+    }
+
+    // Resolves the `tar` executable. Prefers the standard FHS locations, then defers to a
+    // bare name so the OS resolves it from PATH (covers Nix and other non-FHS layouts;
+    // Process searches PATH for an unrooted file name when UseShellExecute is false).
+    private static string ResolveTarExecutable()
+    {
+        foreach (string candidate in new[] { "/usr/bin/tar", "/bin/tar" })
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+        return "tar";
+    }
+
+    // Best-effort removal of staging directories left behind by previous runs. Only
+    // touches directories old enough that no in-flight attempt could still be using them,
+    // so it never races a concurrent extraction.
+    private static void PruneStaleStagingDirs(string stagingRoot)
+    {
+        try
+        {
+            foreach (string dir in Directory.EnumerateDirectories(stagingRoot))
+            {
+                try
+                {
+                    if (DateTime.Now - Directory.GetLastWriteTime(dir) > TimeSpan.FromHours(1))
+                    {
+                        Directory.Delete(dir, recursive: true);
+                    }
+                }
+                catch { /* leftover will be retried next time */ }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogUpdateWarn($"Could not prune stale staging directories: {ex.Message}");
+        }
     }
 
     // If the archive wraps everything in a single top-level directory, return it;
@@ -1235,9 +1281,12 @@ internal static partial class AvaloniaAutoUpdater
                 },
             };
             info.Start();
-            // codesign prints the signing metadata to stderr.
-            string metadata = info.StandardError.ReadToEnd() + info.StandardOutput.ReadToEnd();
+            // codesign prints the signing metadata to stderr, but read both streams
+            // concurrently so a full pipe on one stream can never deadlock the updater.
+            Task<string> stderrTask = info.StandardError.ReadToEndAsync();
+            Task<string> stdoutTask = info.StandardOutput.ReadToEndAsync();
             info.WaitForExit();
+            string metadata = stderrTask.GetAwaiter().GetResult() + stdoutTask.GetAwaiter().GetResult();
 
             if (info.ExitCode != 0)
             {

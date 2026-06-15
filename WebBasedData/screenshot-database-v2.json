@@ -27176,8 +27176,21 @@
       "images": []
     },
     "myfamilytree": {
-      "icon": "",
-      "images": []
+      "icon": "https://chronoplexsoftware.com/images/mft.png",
+      "images": [
+        "https://chronoplexsoftware.com/myfamilytree/screenshots/screenshot_1a.webp",
+        "https://chronoplexsoftware.com/myfamilytree/screenshots/screenshot_2a.webp",
+        "https://chronoplexsoftware.com/myfamilytree/screenshots/screenshot_3a.webp",
+        "https://chronoplexsoftware.com/myfamilytree/screenshots/screenshot_4a.webp",
+        "https://chronoplexsoftware.com/myfamilytree/screenshots/screenshot_5a.webp",
+        "https://chronoplexsoftware.com/myfamilytree/screenshots/screenshot_6a.webp",
+        "https://chronoplexsoftware.com/myfamilytree/screenshots/screenshot_7a.webp",
+        "https://chronoplexsoftware.com/myfamilytree/screenshots/screenshot_9a.webp",
+        "https://chronoplexsoftware.com/myfamilytree/screenshots/screenshot_10a.webp",
+        "https://chronoplexsoftware.com/myfamilytree/screenshots/screenshot_11a.webp",
+        "https://chronoplexsoftware.com/myfamilytree/screenshots/screenshot_12a.webp",
+        "https://chronoplexsoftware.com/myfamilytree/screenshots/screenshot_3h.webp"
+      ]
     },
     "myharmony": {
       "icon": "",

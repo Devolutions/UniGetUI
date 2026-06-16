@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
@@ -82,6 +83,30 @@ namespace UniGetUI.Core.Tools
         {
             LanguageEngine = new LanguageEngine(ForceLanguage);
             LoadStaticTranslation();
+        }
+
+        /// <summary>
+        /// Translates a string into the operating system's UI language, independently of the
+        /// language currently selected in UniGetUI. Used for the "System language" entry of the
+        /// language selector so it appears in the language it would actually resolve to.
+        /// Falls back to the current app language if the system language cannot be loaded.
+        /// </summary>
+        public static string TranslateInSystemLanguage(string text)
+        {
+            try
+            {
+                string systemLocale = CultureInfo.CurrentUICulture.ToString().Replace("-", "_");
+                if (string.IsNullOrWhiteSpace(systemLocale))
+                    systemLocale = "en";
+
+                return new LanguageEngine(systemLocale).Translate(text);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("Could not translate string into the system language; falling back to the app language");
+                Logger.Warn(ex);
+                return Translate(text);
+            }
         }
 
         private static void LoadStaticTranslation()

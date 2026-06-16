@@ -34,8 +34,14 @@ public sealed partial class General : UserControl, ISettingsPage
             if (key != "en" && LanguageData.TranslationPercentages.TryGetValue(key, out var pct))
                 langDict[key] = langDict[key] + " (" + pct + ")";
         }
+        // The "System language" entry is shown in the OS language (the language it actually
+        // resolves to), not in the currently-selected app language. AutoTranslated keeps the
+        // string discoverable by the translation tooling.
+        string systemLanguageLabel = CoreTools.TranslateInSystemLanguage(CoreTools.AutoTranslated("System language"));
         foreach (var entry in langDict)
-            LanguageSelector.AddItem(entry.Value, entry.Key, false);
+            LanguageSelector.AddItem(
+                entry.Key == "default" ? systemLanguageLabel : entry.Value,
+                entry.Key, false);
         LanguageSelector.SettingName = CoreSettings.K.PreferredLanguage;
         LanguageSelector.Text = CoreTools.Translate("UniGetUI display language:");
         LanguageSelector.ShowAddedItems();

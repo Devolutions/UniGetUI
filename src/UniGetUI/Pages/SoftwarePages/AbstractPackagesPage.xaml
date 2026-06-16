@@ -681,8 +681,8 @@
           HorizontalAlignment="Left"
           x:FieldModifier="protected"
           DefaultLabelPosition="Right"
-          IsDynamicOverflowEnabled="False"
-          OverflowButtonVisibility="Collapsed"
+          IsDynamicOverflowEnabled="True"
+          OverflowButtonVisibility="Auto"
         />
       </Grid>
     </Grid>

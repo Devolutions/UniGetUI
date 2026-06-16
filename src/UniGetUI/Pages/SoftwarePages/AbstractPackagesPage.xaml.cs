@@ -1663,6 +1663,7 @@ namespace UniGetUI.Interface
 
         private bool? _pageIsWide;
         private bool? _titleHidden;
+        private bool? _toolbarLabelsHidden;
 
         private void ABSTRACT_PAGE_SizeChanged(object sender, SizeChangedEventArgs e)
         {
@@ -1697,6 +1698,25 @@ namespace UniGetUI.Interface
                 {
                     MainTitle.FontSize = 24;
                     _pageIsWide = true;
+                }
+            }
+
+            // Collapse the menu bar labels to icon-only on narrow windows so the buttons
+            // stay reachable instead of being clipped off the right edge.
+            if (ActualWidth < 900)
+            {
+                if (_toolbarLabelsHidden != true)
+                {
+                    _toolbarLabelsHidden = true;
+                    ToolBar.DefaultLabelPosition = CommandBarDefaultLabelPosition.Collapsed;
+                }
+            }
+            else
+            {
+                if (_toolbarLabelsHidden != false)
+                {
+                    _toolbarLabelsHidden = false;
+                    ToolBar.DefaultLabelPosition = CommandBarDefaultLabelPosition.Right;
                 }
             }
         }

@@ -174,6 +174,11 @@ public partial class PackagesPageViewModel : ViewModelBase
     public AvaloniaList<SourceTreeNode> SourceNodes { get; } = new();
     public AvaloniaList<object> ToolBarItems { get; } = new();
 
+    // Labels of toolbar buttons that can be hidden to collapse the menu bar to icon-only
+    // on narrow windows (buttons created with showLabel: false are never tracked here).
+    private readonly List<TextBlock> _collapsibleToolbarLabels = new();
+    private bool _toolbarLabelsCollapsed;
+
     // ─── Internal state ───────────────────────────────────────────────────────
     private string _searchQuery = "";
     public string QueryBackup { get; set; } = "";
@@ -280,12 +285,15 @@ public partial class PackagesPageViewModel : ViewModelBase
         content.Children.Add(icon);
         if (showLabel)
         {
-            content.Children.Add(new TextBlock
+            var labelBlock = new TextBlock
             {
                 Text = label,
                 FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center,
-            });
+                IsVisible = !_toolbarLabelsCollapsed,
+            };
+            content.Children.Add(labelBlock);
+            _collapsibleToolbarLabels.Add(labelBlock);
         }
 
         var btn = new Button
@@ -300,6 +308,18 @@ public partial class PackagesPageViewModel : ViewModelBase
         btn.Click += (_, _) => onClick();
         ToolBarItems.Add(btn);
         return btn;
+    }
+
+    /// <summary>
+    /// Collapses the menu bar to icon-only (or restores labels) on narrow windows,
+    /// mirroring the WinUI CommandBar's DefaultLabelPosition behavior.
+    /// </summary>
+    public void SetToolbarLabelsCollapsed(bool collapsed)
+    {
+        if (_toolbarLabelsCollapsed == collapsed) return;
+        _toolbarLabelsCollapsed = collapsed;
+        foreach (var label in _collapsibleToolbarLabels)
+            label.IsVisible = !collapsed;
     }
 
     /// <summary>Adds a thin vertical separator to the toolbar.</summary>
@@ -807,6 +827,14 @@ public partial class PackagesPageViewModel : ViewModelBase
     public bool IsListViewMode => ViewMode == PackageViewMode.List;
     public bool IsGridViewMode => ViewMode == PackageViewMode.Grid;
     public bool IsIconsViewMode => ViewMode == PackageViewMode.Icons;
+
+    // Width of each grid-view card slot. The code-behind recomputes this from the available
+    // viewport width so cards stretch to fill the row then reflow, matching WinUI's
+    // UniformGridLayout (ItemsStretch=Fill, MinItemWidth=275) instead of leaving dead space.
+    [ObservableProperty] private double _gridCardWidth = 275;
+
+    // Same idea for the icons view: stretch tiles to fill the row then reflow (min 128px).
+    [ObservableProperty] private double _iconCardWidth = 128;
 
     // Shim for SelectedIndex="{Binding ViewModeIndex}" in AXAML (ListBox requires int)
     public int ViewModeIndex

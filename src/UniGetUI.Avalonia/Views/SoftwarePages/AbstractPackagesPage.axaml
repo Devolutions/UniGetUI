@@ -465,7 +465,7 @@
                                 </DataGridTemplateColumn>
                                 <DataGridTemplateColumn Tag="Name" SortMemberPath="Package.Name"
                                                         Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).NameHeaderText}"
-                                                        Width="2*">
+                                                        Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0"
@@ -489,7 +489,7 @@
                                 </DataGridTemplateColumn>
                                 <DataGridTemplateColumn Tag="Id" SortMemberPath="Package.Id"
                                                         Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).IdHeaderText}"
-                                                        Width="2*">
+                                                        Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
@@ -567,15 +567,17 @@
                         <!-- ===== GRID VIEW ===== -->
                         <ScrollViewer IsVisible="{Binding IsGridViewMode}"
                                       HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl ItemsSource="{Binding FilteredPackages}">
+                            <ItemsControl x:Name="GridViewItems" ItemsSource="{Binding FilteredPackages}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <WrapPanel Orientation="Horizontal"/>
+                                        <WrapPanel Orientation="Horizontal"
+                                                   ItemWidth="{Binding GridCardWidth}"/>
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="pkg:PackageWrapper">
-                                        <Border CornerRadius="4" Margin="4" Width="275" Height="70"
+                                        <Border CornerRadius="4" Margin="4" Height="70"
+                                            HorizontalAlignment="Stretch"
                                             automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
                                                 Background="{DynamicResource SettingsCardBackground}"
@@ -642,15 +644,17 @@
                         <!-- ===== ICONS VIEW ===== -->
                         <ScrollViewer IsVisible="{Binding IsIconsViewMode}"
                                       HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl ItemsSource="{Binding FilteredPackages}">
+                            <ItemsControl x:Name="IconsViewItems" ItemsSource="{Binding FilteredPackages}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <WrapPanel Orientation="Horizontal"/>
+                                        <WrapPanel Orientation="Horizontal"
+                                                   ItemWidth="{Binding IconCardWidth}"/>
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="pkg:PackageWrapper">
-                                        <Border CornerRadius="4" Margin="4" Width="128" Height="142"
+                                        <Border CornerRadius="4" Margin="4" Height="142"
+                                            HorizontalAlignment="Stretch"
                                             automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
                                                 Background="{DynamicResource SettingsCardBackground}"

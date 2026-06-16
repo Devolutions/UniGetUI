@@ -111,6 +111,18 @@ public abstract partial class AbstractPackagesPage : UserControl,
         FilteringPanel.GetObservable(BoundsProperty)
             .Subscribe(bounds => OnFilteringPanelWidthChanged(bounds.Width));
 
+        // Responsive: collapse the menu bar to icon-only on narrow windows so the
+        // toolbar buttons stay reachable instead of overflowing (mirrors WinUI).
+        this.GetObservable(BoundsProperty)
+            .Subscribe(bounds => ViewModel.SetToolbarLabelsCollapsed(bounds.Width < 900));
+
+        // Grid/icons views: stretch cards to fill each row then reflow (mirrors WinUI's
+        // UniformGridLayout) instead of leaving wasted space to the right.
+        GridViewItems.GetObservable(BoundsProperty)
+            .Subscribe(bounds => UpdateGridCardWidth(bounds.Width));
+        IconsViewItems.GetObservable(BoundsProperty)
+            .Subscribe(bounds => UpdateIconCardWidth(bounds.Width));
+
         // Overlay backdrop dismisses the filter pane when tapped.
         FilterOverlayBackdrop.PointerPressed += (_, _) => ViewModel.IsFilterPaneOpen = false;
 
@@ -133,6 +145,25 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
         // Apply the initial filter-pane state (AXAML defaults to 220px open).
         UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
+    }
+
+    // Recompute the grid-view card slot width: fit as many >=275px columns as possible,
+    // then divide the row evenly among them so cards stretch to fill (WinUI parity).
+    private void UpdateGridCardWidth(double availableWidth)
+    {
+        if (availableWidth <= 0) return;
+        const double minSlotWidth = 275 + 8; // 275px card + 4px margin per side
+        int columns = Math.Max(1, (int)(availableWidth / minSlotWidth));
+        ViewModel.GridCardWidth = Math.Floor(availableWidth / columns);
+    }
+
+    // Same as UpdateGridCardWidth, for the smaller icon tiles (>=128px columns).
+    private void UpdateIconCardWidth(double availableWidth)
+    {
+        if (availableWidth <= 0) return;
+        const double minSlotWidth = 128 + 8; // 128px tile + 4px margin per side
+        int columns = Math.Max(1, (int)(availableWidth / minSlotWidth));
+        ViewModel.IconCardWidth = Math.Floor(availableWidth / columns);
     }
 
     // ─── UI-only: focus the package list ─────────────────────────────────────

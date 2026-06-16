@@ -23,6 +23,10 @@ namespace UniGetUI.Avalonia.Infrastructure;
 /// </summary>
 internal static partial class AvaloniaAutoUpdater
 {
+    private const string INSTALLER_VALIDATION_FAILURE_MARKER_SUFFIX = ".validation-failed";
+    private static readonly TimeSpan INSTALLER_VALIDATION_FAILURE_RETRY_DELAY =
+        TimeSpan.FromHours(24);
+
     // ------------------------------------------------------------------ constants
     private const string REGISTRY_PATH = @"Software\Devolutions\UniGetUI";
     private const string DEFAULT_PRODUCTINFO_URL = "https://devolutions.net/productinfo.json";
@@ -433,12 +437,32 @@ internal static partial class AvaloniaAutoUpdater
                 && CheckInstallerSignerThumbprint(installerPath, overrides)
             )
             {
+                ClearInstallerValidationFailure(GetInstallerValidationFailureMarkerPath(installerPath));
                 LogUpdateInfo("Cached valid installer found, preparing to launch...");
                 return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch, manualCheck);
             }
 
-            // Delete invalid/outdated cached copy
-            try { File.Delete(installerPath); } catch { }
+            string installerValidationFailureMarkerPath =
+                GetInstallerValidationFailureMarkerPath(installerPath);
+            DeleteFileIfExists(installerPath, "invalid cached installer");
+
+            if (
+                !manualCheck
+                && IsInstallerValidationFailureSuppressed(
+                    installerValidationFailureMarkerPath,
+                    candidate.VersionName,
+                    candidate.InstallerHash,
+                    candidate.InstallerDownloadUrl,
+                    DateTime.UtcNow
+                )
+            )
+            {
+                LogUpdateWarn(
+                    $"Skipping installer download for version {candidate.VersionName}; a matching installer failed authenticity validation recently."
+                );
+                MarkAttemptFinished("installer download skipped after recent validation failure");
+                return true;
+            }
 
             RaiseStatus(
                 CoreTools.Translate(
@@ -456,9 +480,19 @@ internal static partial class AvaloniaAutoUpdater
                 && CheckInstallerSignerThumbprint(installerPath, overrides)
             )
             {
+                ClearInstallerValidationFailure(installerValidationFailureMarkerPath);
                 LogUpdateInfo("Downloaded installer is valid, preparing to launch...");
                 return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch, manualCheck);
             }
+
+            RecordInstallerValidationFailure(
+                installerValidationFailureMarkerPath,
+                candidate.VersionName,
+                candidate.InstallerHash,
+                candidate.InstallerDownloadUrl,
+                DateTime.UtcNow
+            );
+            DeleteFileIfExists(installerPath, "installer that failed authenticity validation");
 
             LogUpdateError("Installer authenticity could not be verified. Aborting update.");
             RaiseStatus(
@@ -469,7 +503,7 @@ internal static partial class AvaloniaAutoUpdater
                 actionButtonText: CoreTools.Translate("View log"),
                 actionButtonAction: OpenUpdateLog);
             MarkAttemptFinished("authenticity verification failed");
-            return false;
+            return !manualCheck;
         }
         catch (PlatformArtifactMissingException ex)
         {
@@ -508,6 +542,108 @@ internal static partial class AvaloniaAutoUpdater
     }
 
     // ------------------------------------------------------------------ update flow
+    internal static string GetInstallerValidationFailureMarkerPath(string installerPath)
+    {
+        return installerPath + INSTALLER_VALIDATION_FAILURE_MARKER_SUFFIX;
+    }
+
+    internal static void RecordInstallerValidationFailure(
+        string markerPath,
+        string versionName,
+        string installerHash,
+        string installerDownloadUrl,
+        DateTime utcNow
+    )
+    {
+        string? markerDirectory = Path.GetDirectoryName(markerPath);
+        if (!string.IsNullOrEmpty(markerDirectory))
+        {
+            Directory.CreateDirectory(markerDirectory);
+        }
+
+        File.WriteAllLines(
+            markerPath,
+            [
+                versionName,
+                installerHash,
+                installerDownloadUrl,
+                utcNow.ToString("O", CultureInfo.InvariantCulture),
+            ]
+        );
+    }
+
+    internal static bool IsInstallerValidationFailureSuppressed(
+        string markerPath,
+        string versionName,
+        string installerHash,
+        string installerDownloadUrl,
+        DateTime utcNow
+    )
+    {
+        if (!File.Exists(markerPath))
+        {
+            return false;
+        }
+
+        string[] marker = File.ReadAllLines(markerPath);
+        if (marker.Length < 4)
+        {
+            return false;
+        }
+
+        if (!string.Equals(marker[0], versionName, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!string.Equals(marker[1], installerHash, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!string.Equals(marker[2], installerDownloadUrl, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (
+            !DateTime.TryParse(
+                marker[3],
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind,
+                out DateTime failureTimeUtc
+            )
+        )
+        {
+            return false;
+        }
+
+        return utcNow - failureTimeUtc.ToUniversalTime()
+            < INSTALLER_VALIDATION_FAILURE_RETRY_DELAY;
+    }
+
+    private static void ClearInstallerValidationFailure(string markerPath)
+    {
+        DeleteFileIfExists(markerPath, "installer validation failure marker");
+    }
+
+    private static void DeleteFileIfExists(string path, string description)
+    {
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            LogUpdateWarn($"Could not delete {description} at '{path}': {ex.Message}");
+        }
+    }
+
     private static async Task<bool> PrepareAndLaunchAsync(
         string installerPath,
         string versionName,
@@ -1347,7 +1483,7 @@ internal static partial class AvaloniaAutoUpdater
         HttpResponseMessage response = await client.GetAsync(url);
         response.EnsureSuccessStatusCode();
 
-        using FileStream fs = new(destination, FileMode.OpenOrCreate);
+        using FileStream fs = new(destination, FileMode.Create);
         await response.Content.CopyToAsync(fs);
 
         LogUpdateDebug("Installer download complete.");

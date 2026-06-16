@@ -76,6 +76,72 @@ public sealed class AutoUpdaterTests
         Assert.Equal("abcdef1234", AutoUpdater.NormalizeThumbprint("AB:CD ef-12_34"));
     }
 
+    [Fact]
+    public void InstallerValidationFailureMarker_SuppressesMatchingRecentFailureOnly()
+    {
+        string markerPath = Path.Join(
+            Path.GetTempPath(),
+            $"{Guid.NewGuid():N}.validation-failed"
+        );
+        DateTime now = DateTime.UtcNow;
+
+        try
+        {
+            AutoUpdater.RecordInstallerValidationFailure(
+                markerPath,
+                "2026.2.1.0",
+                "ABC123",
+                "https://cdn.devolutions.net/download/UniGetUI.exe",
+                now.AddHours(-1)
+            );
+
+            Assert.True(
+                AutoUpdater.IsInstallerValidationFailureSuppressed(
+                    markerPath,
+                    "2026.2.1.0",
+                    "abc123",
+                    "https://cdn.devolutions.net/download/UniGetUI.exe",
+                    now
+                )
+            );
+
+            Assert.False(
+                AutoUpdater.IsInstallerValidationFailureSuppressed(
+                    markerPath,
+                    "2026.2.1.0",
+                    "different-hash",
+                    "https://cdn.devolutions.net/download/UniGetUI.exe",
+                    now
+                )
+            );
+
+            AutoUpdater.RecordInstallerValidationFailure(
+                markerPath,
+                "2026.2.1.0",
+                "ABC123",
+                "https://cdn.devolutions.net/download/UniGetUI.exe",
+                now.AddHours(-25)
+            );
+
+            Assert.False(
+                AutoUpdater.IsInstallerValidationFailureSuppressed(
+                    markerPath,
+                    "2026.2.1.0",
+                    "ABC123",
+                    "https://cdn.devolutions.net/download/UniGetUI.exe",
+                    now
+                )
+            );
+        }
+        finally
+        {
+            if (File.Exists(markerPath))
+            {
+                File.Delete(markerPath);
+            }
+        }
+    }
+
 #if DEBUG
     [Fact]
     public void RegistryHelpers_ParseTrimmedStringsAndTruthyValues()

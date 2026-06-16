@@ -351,6 +351,8 @@ public partial class AutoUpdater
                     CoreData.UniGetUIDataDirectory,
                     "UniGetUI Updater.exe"
                 );
+                string installerValidationFailureMarkerPath =
+                    GetInstallerValidationFailureMarkerPath(InstallerPath);
 
                 if (
                     File.Exists(InstallerPath)
@@ -362,6 +364,7 @@ public partial class AutoUpdater
                     && CheckInstallerSignerThumbprint(InstallerPath, updaterOverrides)
                 )
                 {
+                    ClearInstallerValidationFailure(installerValidationFailureMarkerPath);
                     LogUpdateInfo($"A cached valid installer was found, launching update process...");
                     return await PrepairToLaunchInstaller(
                         InstallerPath,
@@ -371,7 +374,25 @@ public partial class AutoUpdater
                     );
                 }
 
-                File.Delete(InstallerPath);
+                DeleteFileIfExists(InstallerPath, "invalid cached installer");
+
+                if (
+                    !ManualCheck
+                    && IsInstallerValidationFailureSuppressed(
+                        installerValidationFailureMarkerPath,
+                        updateCandidate.VersionName,
+                        updateCandidate.InstallerHash,
+                        updateCandidate.InstallerDownloadUrl,
+                        DateTime.UtcNow
+                    )
+                )
+                {
+                    LogUpdateWarn(
+                        $"Skipping installer download for version {updateCandidate.VersionName}; a matching installer failed authenticity validation recently."
+                    );
+                    MarkAttemptFinished("installer download skipped after recent validation failure");
+                    return true;
+                }
 
                 ShowMessage_ThreadSafe(
                     CoreTools.Translate(
@@ -398,6 +419,7 @@ public partial class AutoUpdater
                     ) && CheckInstallerSignerThumbprint(InstallerPath, updaterOverrides)
                 )
                 {
+                    ClearInstallerValidationFailure(installerValidationFailureMarkerPath);
                     LogUpdateInfo("The downloaded installer is valid, launching update process...");
                     return await PrepairToLaunchInstaller(
                         InstallerPath,
@@ -407,6 +429,15 @@ public partial class AutoUpdater
                     );
                 }
 
+                RecordInstallerValidationFailure(
+                    installerValidationFailureMarkerPath,
+                    updateCandidate.VersionName,
+                    updateCandidate.InstallerHash,
+                    updateCandidate.InstallerDownloadUrl,
+                    DateTime.UtcNow
+                );
+                DeleteFileIfExists(InstallerPath, "installer that failed authenticity validation");
+
                 ShowMessage_ThreadSafe(
                     CoreTools.Translate("The installer authenticity could not be verified."),
                     CoreTools.Translate("The update process has been aborted."),
@@ -415,7 +446,7 @@ public partial class AutoUpdater
                     CreateViewLogButton()
                 );
                 MarkAttemptFinished("authenticity verification failed");
-                return false;
+                return !ManualCheck;
             }
 
             if (Verbose)
@@ -646,7 +677,7 @@ public partial class AutoUpdater
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
             HttpResponseMessage result = await client.GetAsync(downloadUrl);
             result.EnsureSuccessStatusCode();
-            using FileStream fs = new(installerLocation, FileMode.OpenOrCreate);
+            using FileStream fs = new(installerLocation, FileMode.Create);
             await result.Content.CopyToAsync(fs);
         }
         LogUpdateDebug("The download has finished successfully");

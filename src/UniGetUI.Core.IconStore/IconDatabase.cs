@@ -11,6 +11,9 @@ namespace UniGetUI.Core.IconEngine
     /// </summary>
     public class IconDatabase
     {
+        private const string ICON_DATABASE_FILE_NAME = "Icon Database.json";
+        private static readonly TimeSpan ICON_DATABASE_REFRESH_INTERVAL = TimeSpan.FromDays(1);
+
         public struct IconCount
         {
             public int PackagesWithIconCount = 0;
@@ -40,16 +43,31 @@ namespace UniGetUI.Core.IconEngine
         /// </summary>
         public async Task LoadIconAndScreenshotsDatabaseAsync()
         {
+            string IconsAndScreenshotsFile = GetIconsAndScreenshotsFile();
+            bool hasCustomDownloadUrl = Settings.Get(Settings.K.IconDataBaseURL);
+            if (
+                !hasCustomDownloadUrl
+                && IsCachedDatabaseFresh(IconsAndScreenshotsFile, DateTime.UtcNow)
+            )
+            {
+                Logger.Debug("Using cached icons and screenshots database; refresh is not due yet");
+                await LoadFromCacheAsync();
+                if (__icon_count.PackagesWithIconCount > 0)
+                {
+                    return;
+                }
+
+                Logger.Warn(
+                    "Cached icons and screenshots database could not be loaded; refreshing it"
+                );
+            }
+
             try
             {
-                string IconsAndScreenshotsFile = Path.Join(
-                    CoreData.UniGetUICacheDirectory_Data,
-                    "Icon Database.json"
-                );
                 Uri DownloadUrl = new(
                     "https://github.com/Devolutions/UniGetUI/raw/refs/heads/main/WebBasedData/screenshot-database-v2.json"
                 );
-                if (Settings.Get(Settings.K.IconDataBaseURL))
+                if (hasCustomDownloadUrl)
                 {
                     DownloadUrl = new Uri(Settings.GetValue(Settings.K.IconDataBaseURL));
                 }
@@ -58,7 +76,7 @@ namespace UniGetUI.Core.IconEngine
                 {
                     client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
                     string fileContents = await client.GetStringAsync(DownloadUrl);
-                    await File.WriteAllTextAsync(IconsAndScreenshotsFile, fileContents);
+                    await WriteCacheFileAsync(IconsAndScreenshotsFile, fileContents);
                 }
 
                 Logger.ImportantInfo("Downloaded new icons and screenshots successfully!");
@@ -79,14 +97,34 @@ namespace UniGetUI.Core.IconEngine
             await LoadFromCacheAsync();
         }
 
+        internal static bool IsCachedDatabaseFresh(string path, DateTime utcNow)
+        {
+            if (!File.Exists(path))
+            {
+                return false;
+            }
+
+            DateTime lastWriteTimeUtc = File.GetLastWriteTimeUtc(path);
+            return utcNow - lastWriteTimeUtc < ICON_DATABASE_REFRESH_INTERVAL;
+        }
+
+        private static string GetIconsAndScreenshotsFile()
+        {
+            return Path.Join(CoreData.UniGetUICacheDirectory_Data, ICON_DATABASE_FILE_NAME);
+        }
+
+        private static async Task WriteCacheFileAsync(string path, string contents)
+        {
+            string temporaryPath = path + ".tmp";
+            await File.WriteAllTextAsync(temporaryPath, contents);
+            File.Move(temporaryPath, path, overwrite: true);
+        }
+
         public async Task LoadFromCacheAsync()
         {
             try
             {
-                string IconsAndScreenshotsFile = Path.Join(
-                    CoreData.UniGetUICacheDirectory_Data,
-                    "Icon Database.json"
-                );
+                string IconsAndScreenshotsFile = GetIconsAndScreenshotsFile();
                 IconScreenshotDatabase_v2 JsonData =
                     IconStoreJson.DeserializeIconDatabase(
                         await File.ReadAllTextAsync(IconsAndScreenshotsFile)

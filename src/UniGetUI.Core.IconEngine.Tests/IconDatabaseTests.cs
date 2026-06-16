@@ -50,5 +50,29 @@ namespace UniGetUI.Core.IconEngine.Tests
             );
             Assert.Empty(nonexistent_screenshots);
         }
+
+        [Fact]
+        public void TestCachedDatabaseFreshness()
+        {
+            string path = Path.Join(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            try
+            {
+                File.WriteAllText(path, "{}");
+                DateTime now = DateTime.UtcNow;
+
+                File.SetLastWriteTimeUtc(path, now.AddHours(-23));
+                Assert.True(IconDatabase.IsCachedDatabaseFresh(path, now));
+
+                File.SetLastWriteTimeUtc(path, now.AddHours(-25));
+                Assert.False(IconDatabase.IsCachedDatabaseFresh(path, now));
+            }
+            finally
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+        }
     }
 }

@@ -11,8 +11,6 @@ namespace UniGetUI;
 public partial class AutoUpdater
 {
     private const string INSTALLER_VALIDATION_FAILURE_MARKER_SUFFIX = ".validation-failed";
-    private static readonly TimeSpan INSTALLER_VALIDATION_FAILURE_RETRY_DELAY =
-        TimeSpan.FromHours(24);
 
     private const string REGISTRY_PATH = @"Software\Devolutions\UniGetUI";
     private const string DEFAULT_PRODUCTINFO_URL = "https://devolutions.net/productinfo.json";
@@ -159,81 +157,6 @@ public partial class AutoUpdater
     internal static string GetInstallerValidationFailureMarkerPath(string installerPath)
     {
         return installerPath + INSTALLER_VALIDATION_FAILURE_MARKER_SUFFIX;
-    }
-
-    internal static void RecordInstallerValidationFailure(
-        string markerPath,
-        string versionName,
-        string installerHash,
-        string installerDownloadUrl,
-        DateTime utcNow
-    )
-    {
-        string? markerDirectory = Path.GetDirectoryName(markerPath);
-        if (!string.IsNullOrEmpty(markerDirectory))
-        {
-            Directory.CreateDirectory(markerDirectory);
-        }
-
-        File.WriteAllLines(
-            markerPath,
-            [
-                versionName,
-                installerHash,
-                installerDownloadUrl,
-                utcNow.ToString("O", CultureInfo.InvariantCulture),
-            ]
-        );
-    }
-
-    internal static bool IsInstallerValidationFailureSuppressed(
-        string markerPath,
-        string versionName,
-        string installerHash,
-        string installerDownloadUrl,
-        DateTime utcNow
-    )
-    {
-        if (!File.Exists(markerPath))
-        {
-            return false;
-        }
-
-        string[] marker = File.ReadAllLines(markerPath);
-        if (marker.Length < 4)
-        {
-            return false;
-        }
-
-        if (!string.Equals(marker[0], versionName, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (!string.Equals(marker[1], installerHash, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (!string.Equals(marker[2], installerDownloadUrl, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        if (
-            !DateTime.TryParse(
-                marker[3],
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.RoundtripKind,
-                out DateTime failureTimeUtc
-            )
-        )
-        {
-            return false;
-        }
-
-        return utcNow - failureTimeUtc.ToUniversalTime()
-            < INSTALLER_VALIDATION_FAILURE_RETRY_DELAY;
     }
 
     private static void ClearInstallerValidationFailure(string markerPath)

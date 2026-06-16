@@ -24,8 +24,6 @@ namespace UniGetUI.Avalonia.Infrastructure;
 internal static partial class AvaloniaAutoUpdater
 {
     private const string INSTALLER_VALIDATION_FAILURE_MARKER_SUFFIX = ".validation-failed";
-    private static readonly TimeSpan INSTALLER_VALIDATION_FAILURE_RETRY_DELAY =
-        TimeSpan.FromHours(24);
 
     // ------------------------------------------------------------------ constants
     private const string REGISTRY_PATH = @"Software\Devolutions\UniGetUI";
@@ -374,10 +372,10 @@ internal static partial class AvaloniaAutoUpdater
                 return;
             }
 
-            bool success = await CheckAndInstallUpdatesAsync(autoLaunch: isFirstLaunch);
+            await CheckAndInstallUpdatesAsync(autoLaunch: isFirstLaunch);
             isFirstLaunch = false;
 
-            await Task.Delay(TimeSpan.FromMinutes(success ? 60 : 10));
+            await Task.Delay(UpdaterDownloadEngine.DefaultAutomaticUpdateCheckInterval);
         }
     }
 
@@ -429,6 +427,11 @@ internal static partial class AvaloniaAutoUpdater
                 // macOS and Linux both ship as self-contained .tar.gz archives.
                 installerName = "UniGetUI Updater.tar.gz";
             string installerPath = Path.Join(CoreData.UniGetUIDataDirectory, installerName);
+            UpdaterDownloadIdentity installerIdentity = new(
+                candidate.VersionName,
+                candidate.InstallerHash,
+                candidate.InstallerDownloadUrl
+            );
 
             // Try cached installer first
             if (
@@ -438,29 +441,41 @@ internal static partial class AvaloniaAutoUpdater
             )
             {
                 ClearInstallerValidationFailure(GetInstallerValidationFailureMarkerPath(installerPath));
+                UpdaterDownloadEngine.ClearFailureState(
+                    UpdaterDownloadEngine.GetFailureStatePath(installerPath),
+                    message => LogUpdateWarn(message)
+                );
                 LogUpdateInfo("Cached valid installer found, preparing to launch...");
                 return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch, manualCheck);
             }
 
             string installerValidationFailureMarkerPath =
                 GetInstallerValidationFailureMarkerPath(installerPath);
-            DeleteFileIfExists(installerPath, "invalid cached installer");
+            string installerDownloadFailureStatePath =
+                UpdaterDownloadEngine.GetFailureStatePath(installerPath);
+            if (File.Exists(installerPath))
+            {
+                LogUpdateWarn(
+                    "Cached installer is invalid; it will be kept until a replacement is validated."
+                );
+            }
 
             if (
                 !manualCheck
-                && IsInstallerValidationFailureSuppressed(
-                    installerValidationFailureMarkerPath,
-                    candidate.VersionName,
-                    candidate.InstallerHash,
-                    candidate.InstallerDownloadUrl,
-                    DateTime.UtcNow
+                && UpdaterDownloadEngine.IsFailureBackoffActive(
+                    installerDownloadFailureStatePath,
+                    installerIdentity,
+                    DateTime.UtcNow,
+                    out TimeSpan remainingBackoff,
+                    out UpdaterDownloadFailureState? failureState,
+                    message => LogUpdateWarn(message)
                 )
             )
             {
                 LogUpdateWarn(
-                    $"Skipping installer download for version {candidate.VersionName}; a matching installer failed authenticity validation recently."
+                    $"Skipping installer download for version {candidate.VersionName}; previous {failureState?.FailureClass ?? "download"} failure is backed off for {remainingBackoff:g}."
                 );
-                MarkAttemptFinished("installer download skipped after recent validation failure");
+                MarkAttemptFinished("installer download skipped by failure backoff");
                 return true;
             }
 
@@ -473,26 +488,58 @@ internal static partial class AvaloniaAutoUpdater
                 isClosable: false);
 
             LogUpdateInfo("Downloading installer...");
-            await DownloadInstallerAsync(candidate.InstallerDownloadUrl, installerPath, overrides);
+            string downloadedInstallerPath;
+            try
+            {
+                downloadedInstallerPath = await DownloadInstallerAsync(
+                    candidate.InstallerDownloadUrl,
+                    installerPath,
+                    overrides,
+                    installerIdentity
+                );
+            }
+            catch (Exception ex)
+            {
+                UpdaterDownloadEngine.RecordFailure(
+                    installerDownloadFailureStatePath,
+                    installerIdentity,
+                    "download",
+                    DateTime.UtcNow,
+                    message => LogUpdateWarn(message)
+                );
+                LogUpdateWarn($"Installer download failed: {ex.Message}");
+                throw;
+            }
 
             if (
-                await CheckInstallerHashAsync(installerPath, candidate.InstallerHash, overrides)
-                && CheckInstallerSignerThumbprint(installerPath, overrides)
+                await CheckInstallerHashAsync(downloadedInstallerPath, candidate.InstallerHash, overrides)
+                && CheckInstallerSignerThumbprint(downloadedInstallerPath, overrides)
             )
             {
+                UpdaterDownloadEngine.PromotePartialDownload(
+                    installerPath,
+                    message => LogUpdateWarn(message)
+                );
                 ClearInstallerValidationFailure(installerValidationFailureMarkerPath);
+                UpdaterDownloadEngine.ClearFailureState(
+                    installerDownloadFailureStatePath,
+                    message => LogUpdateWarn(message)
+                );
                 LogUpdateInfo("Downloaded installer is valid, preparing to launch...");
                 return await PrepareAndLaunchAsync(installerPath, candidate.VersionName, autoLaunch, manualCheck);
             }
 
-            RecordInstallerValidationFailure(
-                installerValidationFailureMarkerPath,
-                candidate.VersionName,
-                candidate.InstallerHash,
-                candidate.InstallerDownloadUrl,
-                DateTime.UtcNow
+            UpdaterDownloadEngine.RecordFailure(
+                installerDownloadFailureStatePath,
+                installerIdentity,
+                "validation",
+                DateTime.UtcNow,
+                message => LogUpdateWarn(message)
             );
-            DeleteFileIfExists(installerPath, "installer that failed authenticity validation");
+            UpdaterDownloadEngine.DeletePartialDownload(
+                installerPath,
+                message => LogUpdateWarn(message)
+            );
 
             LogUpdateError("Installer authenticity could not be verified. Aborting update.");
             RaiseStatus(
@@ -545,81 +592,6 @@ internal static partial class AvaloniaAutoUpdater
     internal static string GetInstallerValidationFailureMarkerPath(string installerPath)
     {
         return installerPath + INSTALLER_VALIDATION_FAILURE_MARKER_SUFFIX;
-    }
-
-    internal static void RecordInstallerValidationFailure(
-        string markerPath,
-        string versionName,
-        string installerHash,
-        string installerDownloadUrl,
-        DateTime utcNow
-    )
-    {
-        string? markerDirectory = Path.GetDirectoryName(markerPath);
-        if (!string.IsNullOrEmpty(markerDirectory))
-        {
-            Directory.CreateDirectory(markerDirectory);
-        }
-
-        File.WriteAllLines(
-            markerPath,
-            [
-                versionName,
-                installerHash,
-                installerDownloadUrl,
-                utcNow.ToString("O", CultureInfo.InvariantCulture),
-            ]
-        );
-    }
-
-    internal static bool IsInstallerValidationFailureSuppressed(
-        string markerPath,
-        string versionName,
-        string installerHash,
-        string installerDownloadUrl,
-        DateTime utcNow
-    )
-    {
-        if (!File.Exists(markerPath))
-        {
-            return false;
-        }
-
-        string[] marker = File.ReadAllLines(markerPath);
-        if (marker.Length < 4)
-        {
-            return false;
-        }
-
-        if (!string.Equals(marker[0], versionName, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (!string.Equals(marker[1], installerHash, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (!string.Equals(marker[2], installerDownloadUrl, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        if (
-            !DateTime.TryParse(
-                marker[3],
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.RoundtripKind,
-                out DateTime failureTimeUtc
-            )
-        )
-        {
-            return false;
-        }
-
-        return utcNow - failureTimeUtc.ToUniversalTime()
-            < INSTALLER_VALIDATION_FAILURE_RETRY_DELAY;
     }
 
     private static void ClearInstallerValidationFailure(string markerPath)
@@ -1465,10 +1437,11 @@ internal static partial class AvaloniaAutoUpdater
     }
 
     // ------------------------------------------------------------------ download
-    private static async Task DownloadInstallerAsync(
+    private static async Task<string> DownloadInstallerAsync(
         string url,
         string destination,
-        UpdaterOverrides overrides)
+        UpdaterOverrides overrides,
+        UpdaterDownloadIdentity identity)
     {
         if (!IsSourceUrlAllowed(url, overrides.AllowUnsafeUrls))
         {
@@ -1479,14 +1452,18 @@ internal static partial class AvaloniaAutoUpdater
         using HttpClient client = new(CreateHttpClientHandler(overrides));
         client.Timeout = TimeSpan.FromSeconds(600);
         client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
+        using CancellationTokenSource downloadTimeout = new(TimeSpan.FromSeconds(600));
 
-        HttpResponseMessage response = await client.GetAsync(url);
-        response.EnsureSuccessStatusCode();
-
-        using FileStream fs = new(destination, FileMode.Create);
-        await response.Content.CopyToAsync(fs);
+        UpdaterDownloadResult result = await UpdaterDownloadEngine.DownloadInstallerPartAsync(
+            client,
+            identity,
+            destination,
+            message => LogUpdateDebug(message),
+            downloadTimeout.Token
+        );
 
         LogUpdateDebug("Installer download complete.");
+        return result.PartialPath;
     }
 
     // ------------------------------------------------------------------ HTTP client

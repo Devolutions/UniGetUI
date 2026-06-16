@@ -477,7 +477,6 @@
   "Restart UniGetUI to apply this change": "Reštartujte UniGetUI, aby sa táto zmena prejavila",
   "The classic UI is disabled for beta testers": "Klasické používateľské rozhranie je pre beta testerov vypnuté",
   "Close UniGetUI to the system tray": "Zatvárať UniGetUI do systémovej lišty",
-  "Use the legacy system tray icon": "Použiť staršiu ikonu v systémovej lište",
   "Manage UniGetUI autostart behaviour": "Spravovať správanie automatického spúšťania UniGetUI",
   "Show package icons on package lists": "Zobraziť ikonky balíčkov na zozname balíčkov",
   "Clear cache": "Vymazať vyrovnávaciu pamäť",

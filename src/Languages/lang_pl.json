@@ -477,7 +477,6 @@
   "Restart UniGetUI to apply this change": "Uruchom ponownie UniGetUI, aby zastosować tę zmianę",
   "The classic UI is disabled for beta testers": "Klasyczny interfejs użytkownika jest wyłączony dla beta testerów",
   "Close UniGetUI to the system tray": "Zamknij UniGetUI do paska zadań",
-  "Use the legacy system tray icon": "Użyj starej ikony na pasku zadań",
   "Manage UniGetUI autostart behaviour": "Zarządzaj zachowaniem autostartu UniGetUI",
   "Show package icons on package lists": "Pokaż ikony pakietu na liście pakietów",
   "Clear cache": "Wyczyść pamięć podręczną",

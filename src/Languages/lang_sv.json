@@ -477,7 +477,6 @@
   "Restart UniGetUI to apply this change": "Starta om UniGetUI för att tillämpa den här ändringen",
   "The classic UI is disabled for beta testers": "Det klassiska användargränssnittet är inaktiverat för betatestare",
   "Close UniGetUI to the system tray": "Stäng ned UniGetUI till systemfältet",
-  "Use the legacy system tray icon": "Använd den äldre systemfältsikonen",
   "Manage UniGetUI autostart behaviour": "Hantera UniGetUI:s autostartbeteende",
   "Show package icons on package lists": "Visa paketikoner på paketlistan",
   "Clear cache": "Rensa cache",

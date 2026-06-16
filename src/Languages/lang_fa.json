@@ -477,7 +477,6 @@
   "Restart UniGetUI to apply this change": "برای اعمال این تغییر، UniGetUI را دوباره راه‌اندازی کنید",
   "The classic UI is disabled for beta testers": "رابط کاربری کلاسیک برای آزمایش‌کنندگان بتا غیرفعال است",
   "Close UniGetUI to the system tray": "بستن UniGetUI و انتقال به نوار سیستم",
-  "Use the legacy system tray icon": "استفاده از نماد قدیمی سینی سیستم",
   "Manage UniGetUI autostart behaviour": "مدیریت رفتار شروع خودکار UniGetUI",
   "Show package icons on package lists": "نمایش آیکون‌های بسته در لیست‌های بسته",
   "Clear cache": "پاک کردن حافظه پنهان",

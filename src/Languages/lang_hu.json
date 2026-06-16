@@ -477,7 +477,6 @@
   "Restart UniGetUI to apply this change": "Indítsa újra az UniGetUI-t a módosítás alkalmazásához",
   "The classic UI is disabled for beta testers": "A klasszikus felület le van tiltva a bétatesztelők számára",
   "Close UniGetUI to the system tray": "Az UniGetUI bezárása a tálcára",
-  "Use the legacy system tray icon": "A régi tálcaikon használata",
   "Manage UniGetUI autostart behaviour": "Az UniGetUI automatikus indítási viselkedésének kezelése",
   "Show package icons on package lists": "Csomag ikonok megjelenítése a csomaglistákon",
   "Clear cache": "Gyors.tár törlése",

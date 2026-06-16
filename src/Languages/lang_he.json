@@ -477,7 +477,6 @@
   "Restart UniGetUI to apply this change": "הפעל מחדש את UniGetUI כדי להחיל שינוי זה",
   "The classic UI is disabled for beta testers": "ממשק המשתמש הקלאסי מושבת עבור בודקי בטא",
   "Close UniGetUI to the system tray": "מזער את UniGetUI למגש המערכת",
-  "Use the legacy system tray icon": "השתמש בסמל מגש המערכת הישן",
   "Manage UniGetUI autostart behaviour": "נהל את אופן ההפעלה האוטומטית של UniGetUI",
   "Show package icons on package lists": "הצג סמלי חבילות ברשימות חבילות",
   "Clear cache": "נקה מטמון",

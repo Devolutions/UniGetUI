@@ -477,7 +477,6 @@
   "Restart UniGetUI to apply this change": "આ ફેરફાર લાગુ કરવા માટે UniGetUI ફરી શરૂ કરો",
   "The classic UI is disabled for beta testers": "બીટા પરીક્ષકો માટે ક્લાસિક UI અક્ષમ છે",
   "Close UniGetUI to the system tray": "UniGetUI ને system tray માં બંધ કરો",
-  "Use the legacy system tray icon": "જૂનું સિસ્ટમ ટ્રે આયકન વાપરો",
   "Manage UniGetUI autostart behaviour": "UniGetUI autostart વર્તન સંચાલિત કરો",
   "Show package icons on package lists": "package lists માં package icons બતાવો",
   "Clear cache": "cache સાફ કરો",

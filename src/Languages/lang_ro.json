@@ -477,7 +477,6 @@
   "Restart UniGetUI to apply this change": "Repornește UniGetUI pentru a aplica această modificare",
   "The classic UI is disabled for beta testers": "Interfața clasică este dezactivată pentru testerii beta",
   "Close UniGetUI to the system tray": "Închide UniGetUI în tăvița sistemului",
-  "Use the legacy system tray icon": "Folosește pictograma veche din zona de notificări",
   "Manage UniGetUI autostart behaviour": "Administrează comportamentul de pornire automată al UniGetUI",
   "Show package icons on package lists": "Afișează pictogramele pachetelor în listele de pachete",
   "Clear cache": "Golește cache-ul",

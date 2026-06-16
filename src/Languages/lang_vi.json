@@ -477,7 +477,6 @@
   "Restart UniGetUI to apply this change": "Khởi động lại UniGetUI để áp dụng thay đổi này",
   "The classic UI is disabled for beta testers": "Giao diện cổ điển bị tắt đối với người thử nghiệm beta",
   "Close UniGetUI to the system tray": "Đóng UniGetUI vào khay hệ thống.",
-  "Use the legacy system tray icon": "Sử dụng biểu tượng khay hệ thống cũ",
   "Manage UniGetUI autostart behaviour": "Quản lý hành vi tự khởi động của UniGetUI",
   "Show package icons on package lists": "Hiển thị biểu tượng gói trên danh sách gói",
   "Clear cache": "Xóa bộ nhớ đệm",

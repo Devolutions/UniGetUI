@@ -477,7 +477,6 @@
   "Restart UniGetUI to apply this change": "Start UniGetUI opnieuw om deze wijziging toe te passen",
   "The classic UI is disabled for beta testers": "De klassieke gebruikersinterface is uitgeschakeld voor bètatesters",
   "Close UniGetUI to the system tray": "UniGetUI sluiten naar het systeemvak",
-  "Use the legacy system tray icon": "Het oude systeemvakpictogram gebruiken",
   "Manage UniGetUI autostart behaviour": "Automatisch starten van UniGetUI beheren",
   "Show package icons on package lists": "Pakketpictogrammen weergeven in pakketlijsten",
   "Clear cache": "Buffer wissen",

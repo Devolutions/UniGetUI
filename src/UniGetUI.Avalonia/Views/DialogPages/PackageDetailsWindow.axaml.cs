@@ -12,6 +12,7 @@ using Avalonia.Threading;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.DialogPages;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine.Enums;
@@ -297,106 +298,146 @@ public partial class PackageDetailsWindow : Window
 
     private void AddInlineRow(StackPanel host, string label, Uri? url)
     {
-        var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
-        var inlines = tb.Inlines ??= new InlineCollection();
-        inlines.Add(new Run(label + ": ") { FontWeight = FontWeight.Bold });
-
         if (url is null)
         {
+            var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
+            var inlines = tb.Inlines ??= new InlineCollection();
+            inlines.Add(new Run(label + ": ") { FontWeight = FontWeight.Bold });
             inlines.Add(new Run(_vm.LabelNotAvailable)
             {
                 Foreground = NotAvailableBrush,
                 FontStyle = FontStyle.Italic,
             });
+            host.Children.Add(tb);
+            return;
         }
-        else
-        {
-            inlines.Add(new Run(url.ToString())
-            {
-                Foreground = LinkBrush,
-                TextDecorations = TextDecorations.Underline,
-            });
-            tb.Cursor = new Cursor(StandardCursorType.Hand);
-            tb.PointerPressed += (_, e) =>
-            {
-                if (e.GetCurrentPoint(tb).Properties.IsLeftButtonPressed)
-                    OpenUrl(url.ToString());
-            };
-        }
-        host.Children.Add(tb);
+
+        host.Children.Add(BuildLinkRow(BoldLabel(label + ": "), url.ToString()));
     }
 
     private void AddLicenseRow(StackPanel host)
     {
-        var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
-        var inlines = tb.Inlines ??= new InlineCollection();
-        inlines.Add(new Run(_vm.LabelLicense + ": ") { FontWeight = FontWeight.Bold });
-
         bool hasName = !string.IsNullOrEmpty(_vm.LicenseName);
         bool hasUrl = _vm.LicenseUrl is not null;
 
+        if (!hasUrl)
+        {
+            // No link: render as a plain selectable line with the usual cursor.
+            var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
+            var inlines = tb.Inlines ??= new InlineCollection();
+            inlines.Add(new Run(_vm.LabelLicense + ": ") { FontWeight = FontWeight.Bold });
+            if (hasName)
+                inlines.Add(new Run(_vm.LicenseName!));
+            else
+                inlines.Add(new Run(_vm.LabelNotAvailable)
+                {
+                    Foreground = NotAvailableBrush,
+                    FontStyle = FontStyle.Italic,
+                });
+            host.Children.Add(tb);
+            return;
+        }
+
+        var labelBlock = new SelectableTextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            VerticalAlignment = VerticalAlignment.Top,
+        };
+        var labelInlines = labelBlock.Inlines ??= new InlineCollection();
+        labelInlines.Add(new Run(_vm.LabelLicense + ": ") { FontWeight = FontWeight.Bold });
         if (hasName)
-            inlines.Add(new Run(_vm.LicenseName!));
+            labelInlines.Add(new Run(_vm.LicenseName! + " "));
 
-        if (hasUrl)
-        {
-            if (hasName) inlines.Add(new Run(" "));
-            var url = _vm.LicenseUrl!.ToString();
-            inlines.Add(new Run(url)
-            {
-                Foreground = LinkBrush,
-                TextDecorations = TextDecorations.Underline,
-            });
-            tb.Cursor = new Cursor(StandardCursorType.Hand);
-            tb.PointerPressed += (_, e) =>
-            {
-                if (e.GetCurrentPoint(tb).Properties.IsLeftButtonPressed)
-                    OpenUrl(url);
-            };
-        }
-        else if (!hasName)
-        {
-            inlines.Add(new Run(_vm.LabelNotAvailable)
-            {
-                Foreground = NotAvailableBrush,
-                FontStyle = FontStyle.Italic,
-            });
-        }
-
-        host.Children.Add(tb);
+        host.Children.Add(BuildLinkRow(labelBlock, _vm.LicenseUrl!.ToString()));
     }
 
     private void AddDownloadRow(StackPanel host)
     {
-        var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
-        var inlines = tb.Inlines ??= new InlineCollection();
-
         if (_vm.CanDownloadInstaller && !_vm.IsLoading)
         {
-            inlines.Add(new Run(_vm.LabelDownloadInstaller)
-            {
-                Foreground = LinkBrush,
-                TextDecorations = TextDecorations.Underline,
-                FontWeight = FontWeight.SemiBold,
-            });
+            var panel = new StackPanel { Orientation = Orientation.Horizontal };
+            var link = CreateLinkBlock(_vm.LabelDownloadInstaller, DownloadInstaller);
+            link.FontWeight = FontWeight.SemiBold;
+            panel.Children.Add(link);
             if (!string.IsNullOrEmpty(_vm.InstallerSize))
-                inlines.Add(new Run($" ({_vm.InstallerSize})"));
-            tb.Cursor = new Cursor(StandardCursorType.Hand);
-            tb.PointerPressed += (_, e) =>
-            {
-                if (e.GetCurrentPoint(tb).Properties.IsLeftButtonPressed)
-                    DownloadInstaller();
-            };
+                panel.Children.Add(new SelectableTextBlock { Text = $" ({_vm.InstallerSize})" });
+            host.Children.Add(panel);
         }
         else
         {
-            inlines.Add(new Run(_vm.LabelInstallerNotAvailable)
+            host.Children.Add(new SelectableTextBlock
             {
+                Text = _vm.LabelInstallerNotAvailable,
                 Foreground = NotAvailableBrush,
                 FontStyle = FontStyle.Italic,
             });
         }
-        host.Children.Add(tb);
+    }
+
+    private static SelectableTextBlock BoldLabel(string text) => new()
+    {
+        Text = text,
+        FontWeight = FontWeight.Bold,
+        VerticalAlignment = VerticalAlignment.Top,
+    };
+
+    /// <summary>"Label: url" laid out so a long URL wraps under itself; only the URL is the link.</summary>
+    private Grid BuildLinkRow(Control label, string url)
+    {
+        var grid = new Grid
+        {
+            ColumnDefinitions =
+            [
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(new GridLength(1, GridUnitType.Star)),
+            ],
+        };
+        Grid.SetColumn(label, 0);
+        var link = CreateLinkBlock(url, () => OpenUrl(url));
+        link.TextWrapping = TextWrapping.Wrap;
+        Grid.SetColumn(link, 1);
+        grid.Children.Add(label);
+        grid.Children.Add(link);
+        return grid;
+    }
+
+    /// <summary>A selectable, copyable hyperlink. The hand cursor and activation cover only this text.</summary>
+    private SelectableTextBlock CreateLinkBlock(string text, Action activate)
+    {
+        var link = new SelectableTextBlock
+        {
+            Text = text,
+            Foreground = LinkBrush,
+            TextDecorations = TextDecorations.Underline,
+            Cursor = new Cursor(StandardCursorType.Hand),
+        };
+        AttachLinkActivation(link, activate);
+        return link;
+    }
+
+    /// <summary>Activate on a clean click, but let a press-and-drag run the text selection instead.</summary>
+    private static void AttachLinkActivation(Control link, Action activate)
+    {
+        Point press = default;
+        bool tracking = false;
+
+        link.AddHandler(InputElement.PointerPressedEvent, (_, e) =>
+        {
+            if (e.GetCurrentPoint(link).Properties.IsLeftButtonPressed)
+            {
+                tracking = true;
+                press = e.GetPosition(link);
+            }
+        }, RoutingStrategies.Bubble, handledEventsToo: true);
+
+        link.AddHandler(InputElement.PointerReleasedEvent, (_, e) =>
+        {
+            if (!tracking) return;
+            tracking = false;
+            var moved = e.GetPosition(link) - press;
+            if (Math.Abs(moved.X) <= 4 && Math.Abs(moved.Y) <= 4)
+                activate();
+        }, RoutingStrategies.Bubble, handledEventsToo: true);
     }
 
     private IBrush LinkBrush =>
@@ -408,8 +449,15 @@ public partial class PackageDetailsWindow : Window
     {
         if (string.IsNullOrEmpty(url) || !url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             return;
-        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
-        catch { }
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Failed to open URL: {url}");
+            Logger.Error(ex);
+        }
     }
 
     private void DownloadInstaller()

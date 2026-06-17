@@ -86,7 +86,7 @@
                     automation:AutomationProperties.Name="{t:Translate Operations}"
                     automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Region}"
                     Background="{DynamicResource AppOperationsPanelBackground}">
-                <Grid RowDefinitions="Auto,Auto">
+                <Grid RowDefinitions="Auto,*">
 
                     <!-- Toolbar: expand/collapse + bulk-ops menu -->
                     <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto"
@@ -144,7 +144,6 @@
                     <!-- Operations list (hidden when panel is collapsed) -->
                     <ScrollViewer Grid.Row="1"
                                   IsVisible="{Binding OperationsPanelExpanded}"
-                                  MaxHeight="220"
                                   HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding Operations}"

@@ -75,6 +75,9 @@ public partial class MainWindow : Window
     private bool _allowClose;
     private int _isQuitting;
 
+    // Last user-chosen height (px) of the operations panel; restored when re-expanded.
+    private double _operationsPanelHeight = 240;
+
     public enum RuntimeNotificationLevel
     {
         Progress,
@@ -98,6 +101,8 @@ public partial class MainWindow : Window
 
         KeyDown += Window_KeyDown;
         ViewModel.CurrentPageChanged += OnCurrentPageChanged;
+        ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+        UpdateOperationsPanelRow();
 
         Resized += (_, _) => _ = SaveGeometryAsync();
         PositionChanged += (_, _) => _ = SaveGeometryAsync();
@@ -220,6 +225,37 @@ public partial class MainWindow : Window
             var sidebar = this.GetVisualDescendants().OfType<SidebarView>().FirstOrDefault();
             sidebar?.FocusSelectedItem();
         }, DispatcherPriority.Background);
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(MainWindowViewModel.OperationsPanelExpanded)
+                           or nameof(MainWindowViewModel.OperationsPanelVisible))
+            UpdateOperationsPanelRow();
+    }
+
+    // Drive the operations-panel grid row: a resizable pixel height while the panel is
+    // open, Auto otherwise so it collapses to just the toolbar (or vanishes when empty).
+    // The GridSplitter writes the row height directly, so we read it back to preserve the
+    // user's chosen size across collapse/expand.
+    private void UpdateOperationsPanelRow()
+    {
+        if (MainContentGrid.RowDefinitions.Count < 3)
+            return;
+
+        RowDefinition row = MainContentGrid.RowDefinitions[2];
+        if (ViewModel.OperationsPanelVisible && ViewModel.OperationsPanelExpanded)
+        {
+            row.MinHeight = 80;
+            row.Height = new GridLength(_operationsPanelHeight, GridUnitType.Pixel);
+        }
+        else
+        {
+            if (row.Height.IsAbsolute && row.Height.Value > 0)
+                _operationsPanelHeight = row.Height.Value;
+            row.MinHeight = 0;
+            row.Height = GridLength.Auto;
+        }
     }
 
     private void SetupTitleBar()

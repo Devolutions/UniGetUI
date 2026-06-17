@@ -131,14 +131,14 @@ public class InstalledPackagesPage : AbstractPackagesPage
     {
         var menuUninstall = new MenuItem
         {
-            Header = CoreTools.Translate("Uninstall"),
+            Header = ShortcutHeader(CoreTools.Translate("Uninstall"), MainActionShortcut),
             Icon = LoadMenuIcon("delete"),
         };
         menuUninstall.Click += (_, _) => _ = LaunchUninstall([SelectedItem!]);
 
         _menuInstallationOptions = new MenuItem
         {
-            Header = CoreTools.Translate("Uninstall options"),
+            Header = ShortcutHeader(CoreTools.Translate("Uninstall options"), OptionsShortcut),
             Icon = LoadMenuIcon("options"),
         };
         _menuInstallationOptions.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
@@ -203,7 +203,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
 
         _menuDetails = new MenuItem
         {
-            Header = CoreTools.Translate("Package details"),
+            Header = ShortcutHeader(CoreTools.Translate("Package details"), DetailsShortcut),
             Icon = LoadMenuIcon("info_round"),
         };
         _menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);

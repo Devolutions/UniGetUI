@@ -127,10 +127,10 @@ public class PackageBundlesPage : AbstractPackagesPage
     // ─── Context menu ─────────────────────────────────────────────────────────
     protected override ContextMenu? GenerateContextMenu()
     {
-        _menuInstall = new MenuItem { Header = CoreTools.Translate("Install"), Icon = LoadMenuIcon("download") };
+        _menuInstall = new MenuItem { Header = ShortcutHeader(CoreTools.Translate("Install"), MainActionShortcut), Icon = LoadMenuIcon("download") };
         _menuInstall.Click += (_, _) => _ = ImportAndInstallPackage(SelectedItem is { } p ? [p] : []);
 
-        _menuInstallOptions = new MenuItem { Header = CoreTools.Translate("Install options"), Icon = LoadMenuIcon("options") };
+        _menuInstallOptions = new MenuItem { Header = ShortcutHeader(CoreTools.Translate("Install options"), OptionsShortcut), Icon = LoadMenuIcon("options") };
         _menuInstallOptions.Click += (_, _) =>
         {
             if (SelectedItem is ImportedPackage imported)
@@ -163,7 +163,7 @@ public class PackageBundlesPage : AbstractPackagesPage
             }
         };
 
-        _menuDetails = new MenuItem { Header = CoreTools.Translate("Package details"), Icon = LoadMenuIcon("info_round") };
+        _menuDetails = new MenuItem { Header = ShortcutHeader(CoreTools.Translate("Package details"), DetailsShortcut), Icon = LoadMenuIcon("info_round") };
         _menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);
 
         var menu = new ContextMenu();

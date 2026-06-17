@@ -79,8 +79,9 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // Double-click a list row → show details
         PackageList.DoubleTapped += (_, _) => _ = ShowDetailsForPackage(SelectedItem);
 
-        // Keyboard shortcuts on the package list
-        PackageList.KeyDown += PackageList_KeyDown;
+        // Keyboard shortcuts on the package list. Handled on the tunnel route (and even when
+        // already handled) because the DataGrid swallows Enter on the bubble route otherwise.
+        PackageList.AddHandler(KeyDownEvent, PackageList_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
 
         // Type-to-search: printable characters typed while the list is focused
         // redirect focus + the typed character to the global search box.
@@ -287,6 +288,34 @@ public abstract partial class AbstractPackagesPage : UserControl,
     {
         if (e.Key == Key.Enter || e.Key == Key.Return)
             ViewModel.SubmitSearch();
+    }
+
+    // Accelerator hints shown in package context menus; handling lives in PackageList_KeyDown below.
+    // Rendered manually (not via MenuItem.InputGesture) because Avalonia's Key enum aliases
+    // Enter→Return and would display "Return" instead of WinUI's "Enter".
+    protected const string MainActionShortcut = "Ctrl+Enter";
+    protected const string OptionsShortcut = "Alt+Enter";
+    protected const string DetailsShortcut = "Enter";
+
+    /// <summary>Builds a menu header with the label on the left and a dimmed, right-aligned shortcut hint.</summary>
+    protected static Control ShortcutHeader(string label, string shortcut)
+    {
+        var grid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        grid.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
+        var hint = new TextBlock
+        {
+            Text = shortcut,
+            Opacity = 0.6,
+            Margin = new Thickness(24, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        Grid.SetColumn(hint, 1);
+        grid.Children.Add(hint);
+        return grid;
     }
 
     private void PackageList_KeyDown(object? sender, KeyEventArgs e)

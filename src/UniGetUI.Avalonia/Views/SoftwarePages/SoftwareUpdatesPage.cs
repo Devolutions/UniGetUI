@@ -109,14 +109,14 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     {
         var menuUpdate = new MenuItem
         {
-            Header = CoreTools.Translate("Update"),
+            Header = ShortcutHeader(CoreTools.Translate("Update"), MainActionShortcut),
             Icon = LoadMenuIcon("update"),
         };
         menuUpdate.Click += (_, _) => _ = LaunchUpdate([SelectedItem!]);
 
         var menuUpdateOptions = new MenuItem
         {
-            Header = CoreTools.Translate("Update options"),
+            Header = ShortcutHeader(CoreTools.Translate("Update options"), OptionsShortcut),
             Icon = LoadMenuIcon("options"),
         };
         menuUpdateOptions.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
@@ -233,7 +233,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
 
         var menuDetails = new MenuItem
         {
-            Header = CoreTools.Translate("Package details"),
+            Header = ShortcutHeader(CoreTools.Translate("Package details"), DetailsShortcut),
             Icon = LoadMenuIcon("info_round"),
         };
         menuDetails.Click += (_, _) => _ = ShowDetailsForPackage(SelectedItem);

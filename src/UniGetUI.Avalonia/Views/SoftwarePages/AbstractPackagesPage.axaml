@@ -51,6 +51,19 @@
          <Setter Property="Width" Value="10"/>
          <Setter Property="Height" Value="2"/>
       </Style>
+      <!-- Mega query box focus: WinUI-style accent underline across the whole box, instead of a
+           full-border accent or the field swapping to its focused (black) background. -->
+      <Style Selector="Border#MegaQueryUnderline">
+         <Setter Property="Opacity" Value="0"/>
+         <Setter Property="Transitions">
+            <Transitions>
+               <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
+            </Transitions>
+         </Setter>
+      </Style>
+      <Style Selector="Border#MegaQueryContainer:focus-within Border#MegaQueryUnderline">
+         <Setter Property="Opacity" Value="1"/>
+      </Style>
    </UserControl.Styles>
 
    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="8,8,8,8">
@@ -742,7 +755,8 @@
                       RowDefinitions="*,64,*"
                       ColumnDefinitions="*,8*,64,*">
                     <!-- Single outer border unifies the search field and search button so the seam between them is invisible. -->
-                    <Border Grid.Row="1"
+                    <Border x:Name="MegaQueryContainer"
+                            Grid.Row="1"
                             Grid.Column="1"
                             Grid.ColumnSpan="2"
                             CornerRadius="8"
@@ -750,31 +764,49 @@
                             BorderThickness="1"
                             Background="{DynamicResource MicaPageBackground}"
                             ClipToBounds="True">
-                        <Grid ColumnDefinitions="*,64">
-                            <TextBox x:Name="MegaQueryBlock"
-                                     Grid.Column="0"
-                                     Padding="16,0,10,0"
-                                     VerticalContentAlignment="Center"
-                                     CornerRadius="7,0,0,7"
-                                     BorderThickness="0"
-                                     Background="Transparent"
-                                     FontSize="40"
-                                     PlaceholderText="{t:Translate Search for packages}"
-                                     automation:AutomationProperties.Name="{t:Translate Search for packages}"
-                                     Text="{Binding MegaQueryText, Mode=TwoWay}"
-                                     KeyDown="MegaQueryBlock_KeyDown"/>
-                            <Button x:Name="MegaFindButton"
-                                    Grid.Column="1"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Stretch"
-                                    CornerRadius="0"
-                                    BorderThickness="0"
-                                    Background="Transparent"
-                                    automation:AutomationProperties.Name="{t:Translate Search for packages}"
-                                    Command="{Binding SubmitSearch}">
-                                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg" Width="40" Height="40"/>
-                            </Button>
-                        </Grid>
+                        <Panel>
+                            <Grid ColumnDefinitions="*,64">
+                                <TextBox x:Name="MegaQueryBlock"
+                                         Grid.Column="0"
+                                         Padding="16,0,10,0"
+                                         VerticalContentAlignment="Center"
+                                         CornerRadius="0"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         FontSize="40"
+                                         PlaceholderText="{t:Translate Search for packages}"
+                                         automation:AutomationProperties.Name="{t:Translate Search for packages}"
+                                         Text="{Binding MegaQueryText, Mode=TwoWay}"
+                                         KeyDown="MegaQueryBlock_KeyDown">
+                                    <!-- Keep the field on the container fill (no focused/hover black swap)
+                                         and drop its own focus underline; the container owns both. -->
+                                    <TextBox.Resources>
+                                        <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+                                        <SolidColorBrush x:Key="TextControlBackground" Color="Transparent"/>
+                                        <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent"/>
+                                        <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent"/>
+                                    </TextBox.Resources>
+                                </TextBox>
+                                <Button x:Name="MegaFindButton"
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"
+                                        CornerRadius="0"
+                                        BorderThickness="0"
+                                        Background="Transparent"
+                                        automation:AutomationProperties.Name="{t:Translate Search for packages}"
+                                        Command="{Binding SubmitSearch}">
+                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg" Width="40" Height="40"/>
+                                </Button>
+                            </Grid>
+                            <!-- WinUI focus underline: accent line across the bottom of the whole box -->
+                            <Border x:Name="MegaQueryUnderline"
+                                    VerticalAlignment="Bottom"
+                                    Height="2"
+                                    Margin="1,0,1,0"
+                                    IsHitTestVisible="False"
+                                    Background="{DynamicResource SystemAccentColor}"/>
+                        </Panel>
                     </Border>
                 </Grid>
 

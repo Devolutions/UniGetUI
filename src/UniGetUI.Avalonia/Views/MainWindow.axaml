@@ -17,6 +17,20 @@
         MinWidth="700"
         MinHeight="500">
     <Window.Styles>
+        <!-- Global search box focus: a WinUI-style accent underline that spans the whole box
+             (field + button) along the bottom, instead of recoloring the entire border. Toggled
+             via styles (opacity) so the .focus-within setter wins over the base. -->
+        <Style Selector="Border#SearchFocusUnderline">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border#GlobalSearchContainer:focus-within Border#SearchFocusUnderline">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
         <!-- Nav flyout cross-fade. The flyout's icons sit exactly over the static rail's icons, so
              fading (rather than sliding) keeps the icons perfectly aligned — only the labels fade
              in/out, reading as a clean expand/collapse with no second nav appearing and no gap.
@@ -430,48 +444,71 @@
                            VerticalAlignment="Center"/>
             </StackPanel>
 
-            <!-- Centre: search box — vertically centred, no platform-specific margin -->
+            <!-- Centre: search box — vertically centred, no platform-specific margin.
+                 Taller, rounded pill; the whole bar (field + button) clips to the rounded
+                 corners and shares a single accent focus border (see Window.Styles). -->
             <Border Grid.Column="1"
+                    x:Name="GlobalSearchContainer"
                     VerticalAlignment="Center"
-                    Margin="0,5,0,0"
-                    Height="30"
-                    CornerRadius="4"
+                    Margin="0,0,40,0"
+                    Height="32"
+                    CornerRadius="5"
                     BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
                     Background="{DynamicResource AppBadgeBackground}"
                     ClipToBounds="True"
                     automation:AutomationProperties.AccessibilityView="Control">
-                <Grid ColumnDefinitions="300,30">
-                    <TextBox x:Name="GlobalSearchBox"
-                             Grid.Column="0"
-                             MinHeight="20"
-                             FontSize="15"
-                             CornerRadius="3,0,0,3"
-                             BorderThickness="0"
-                             VerticalContentAlignment="Center"
-                             Padding="8,0,4,0"
-                             Background="Transparent"
-                             PlaceholderText="{Binding GlobalSearchPlaceholder}"
-                             IsEnabled="{Binding GlobalSearchEnabled}"
-                             automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
-                             automation:AutomationProperties.AcceleratorKey="Ctrl+F"
-                             Text="{Binding GlobalSearchText}"
-                             KeyDown="SearchBox_KeyDown"/>
-                    <Button Grid.Column="1"
-                            HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"
-                            Padding="3"
-                            CornerRadius="0"
-                            BorderThickness="0"
-                            Background="Transparent"
-                            IsEnabled="{Binding GlobalSearchEnabled}"
-                            automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
-                            Command="{Binding SubmitGlobalSearchCommand}">
-                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg"
-                                          Width="18"
-                                          Height="18"/>
-                    </Button>
-                </Grid>
+                <Panel>
+                    <Grid ColumnDefinitions="320,38">
+                        <TextBox x:Name="GlobalSearchBox"
+                                 Grid.Column="0"
+                                 MinHeight="20"
+                                 FontSize="15"
+                                 CornerRadius="0"
+                                 BorderThickness="0"
+                                 VerticalContentAlignment="Center"
+                                 Padding="12,0,4,0"
+                                 Background="Transparent"
+                                 PlaceholderText="{Binding GlobalSearchPlaceholder}"
+                                 IsEnabled="{Binding GlobalSearchEnabled}"
+                                 automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
+                                 automation:AutomationProperties.AcceleratorKey="Ctrl+F"
+                                 Text="{Binding GlobalSearchText}"
+                                 KeyDown="SearchBox_KeyDown">
+                            <!-- Suppress the TextBox's own focus underline AND its focused/hover
+                                 background swap (which otherwise turns the field black on focus while
+                                 the button keeps the container fill). The container owns the fill and
+                                 the focus highlight (SearchFocusUnderline) instead. -->
+                            <TextBox.Resources>
+                                <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+                                <SolidColorBrush x:Key="TextControlBackground" Color="Transparent"/>
+                                <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent"/>
+                                <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent"/>
+                            </TextBox.Resources>
+                        </TextBox>
+                        <Button Grid.Column="1"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Padding="3"
+                                CornerRadius="0"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                IsEnabled="{Binding GlobalSearchEnabled}"
+                                automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
+                                Command="{Binding SubmitGlobalSearchCommand}">
+                            <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg"
+                                              Width="18"
+                                              Height="18"/>
+                        </Button>
+                    </Grid>
+                    <!-- WinUI focus underline: 2px accent line across the bottom of the whole box -->
+                    <Border x:Name="SearchFocusUnderline"
+                            VerticalAlignment="Bottom"
+                            Height="2"
+                            Margin="1,0,1,0"
+                            IsHitTestVisible="False"
+                            Background="{DynamicResource SystemAccentColor}"/>
+                </Panel>
             </Border>
 
             <!-- Right column: Linux window buttons on the far right -->

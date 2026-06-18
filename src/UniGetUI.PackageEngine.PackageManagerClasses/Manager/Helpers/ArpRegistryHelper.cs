@@ -20,11 +20,18 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
         private static Dictionary<string, string>? _index; // normalized DisplayName -> install folder
         private static long _indexBuiltAt = long.MinValue;
 
-        private static readonly (RegistryKey Hive, string SubKey)[] UninstallRoots =
+        private const string UninstallSubKey =
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+
+        // Open both registry views explicitly (instead of relying on process bitness + a hard-coded
+        // WOW6432Node path) so 64-bit and 32-bit entries are indexed regardless of the process arch,
+        // including per-user 32-bit apps under HKCU.
+        private static readonly (RegistryHive Hive, RegistryView View)[] UninstallRoots =
         [
-            (Registry.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"),
-            (Registry.LocalMachine, @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"),
-            (Registry.CurrentUser, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"),
+            (RegistryHive.LocalMachine, RegistryView.Registry64),
+            (RegistryHive.LocalMachine, RegistryView.Registry32),
+            (RegistryHive.CurrentUser, RegistryView.Registry64),
+            (RegistryHive.CurrentUser, RegistryView.Registry32),
         ];
 
         /// <summary>
@@ -72,15 +79,13 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
             if (bits.Length < 4)
                 return null;
 
-            var hive = bits[1] == "Machine" ? Registry.LocalMachine : Registry.CurrentUser;
-            var subKey = "SOFTWARE";
-            if (bits[2] == "X86")
-                subKey += @"\WOW6432Node";
-            subKey += @"\Microsoft\Windows\CurrentVersion\Uninstall\" + bits[3];
+            var hive = bits[1] == "Machine" ? RegistryHive.LocalMachine : RegistryHive.CurrentUser;
+            var view = bits[2] == "X86" ? RegistryView.Registry32 : RegistryView.Registry64;
 
             try
             {
-                using var entry = hive.OpenSubKey(subKey);
+                using var baseKey = RegistryKey.OpenBaseKey(hive, view);
+                using var entry = baseKey.OpenSubKey(UninstallSubKey + "\\" + bits[3]);
                 return entry is null ? null : ReadLocation(entry);
             }
             catch
@@ -107,11 +112,12 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
         {
             var map = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            foreach (var (hive, subKey) in UninstallRoots)
+            foreach (var (hive, view) in UninstallRoots)
             {
                 try
                 {
-                    using var root = hive.OpenSubKey(subKey);
+                    using var baseKey = RegistryKey.OpenBaseKey(hive, view);
+                    using var root = baseKey.OpenSubKey(UninstallSubKey);
                     if (root is null)
                         continue;
 
@@ -155,23 +161,36 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
         /// </summary>
         private static string? ReadLocation(RegistryKey entry)
         {
-            if (entry.GetValue("InstallLocation") is string rawLocation)
+            // Registry values can contain unexpanded environment variables (e.g. %ProgramFiles%),
+            // so expand before testing/returning any path.
+            if (entry.GetValue("InstallLocation") is string rawLocation && rawLocation.Length > 0)
             {
-                var location = rawLocation.Trim().Trim('"').TrimEnd('\\');
+                var location = Environment
+                    .ExpandEnvironmentVariables(rawLocation)
+                    .Trim()
+                    .Trim('"')
+                    .TrimEnd('\\');
                 if (location.Length > 0 && Directory.Exists(location))
                     return location;
             }
 
             if (entry.GetValue("DisplayIcon") is string displayIcon && displayIcon.Length > 0)
             {
-                var dir = DirectoryOf(displayIcon.Split(',')[0].Trim().Trim('"'));
-                if (dir is not null)
+                var iconPath = Environment
+                    .ExpandEnvironmentVariables(displayIcon)
+                    .Split(',')[0]
+                    .Trim()
+                    .Trim('"');
+                var dir = DirectoryOf(iconPath);
+                // MSI cached icons live under C:\Windows\Installer; never treat a system folder as
+                // an install location.
+                if (dir is not null && !IsSystemDirectory(dir))
                     return dir;
             }
 
             if (entry.GetValue("UninstallString") is string uninstall && uninstall.Length > 0)
             {
-                var exe = ExtractExecutable(uninstall);
+                var exe = ExtractExecutable(Environment.ExpandEnvironmentVariables(uninstall));
                 if (exe is not null
                     && !Path.GetFileName(exe).Equals("msiexec.exe", StringComparison.OrdinalIgnoreCase))
                 {

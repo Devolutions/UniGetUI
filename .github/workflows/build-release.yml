@@ -397,7 +397,7 @@ jobs:
           set -euo pipefail
           VERSION='${{ needs.preflight.outputs.package-version }}'
           APP_BUNDLE="UniGetUI.app"
-          APP_EXECUTABLE="UniGetUI.Avalonia"
+          APP_EXECUTABLE="UniGetUI"
           DRY_RUN='${{ needs.preflight.outputs.dry-run }}'
 
           rm -rf "${APP_BUNDLE}" output

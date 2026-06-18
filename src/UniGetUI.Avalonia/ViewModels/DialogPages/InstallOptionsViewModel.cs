@@ -433,7 +433,7 @@ public partial class InstallOptionsViewModel : ObservableObject
     private static readonly HttpClient _iconHttp = new(CoreTools.GenericHttpClientParameters);
 
     private static readonly Uri _fallbackIconUri =
-        new("avares://UniGetUI.Avalonia/Assets/package_color.png");
+        new("avares://UniGetUI/Assets/package_color.png");
 
     private async Task LoadIconAsync()
     {

@@ -319,7 +319,7 @@ public partial class PackageDetailsViewModel : ObservableObject
         try
         {
             using var stream = AssetLoader.Open(
-                new Uri("avares://UniGetUI.Avalonia/Assets/package_color.png"));
+                new Uri("avares://UniGetUI/Assets/package_color.png"));
             PackageIcon = new Bitmap(stream);
         }
         catch { }

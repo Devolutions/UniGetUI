@@ -208,7 +208,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     {
         PageName = data.PageName;
         PageTitle = data.PageTitle;
-        PageIconPath = $"avares://UniGetUI.Avalonia/Assets/Symbols/{data.IconName}.svg";
+        PageIconPath = $"avares://UniGetUI/Assets/Symbols/{data.IconName}.svg";
         DisableFilterOnQueryChange = data.DisableFilterOnQueryChange;
         MegaQueryBoxEnabled = data.MegaQueryBlockEnabled;
         DisableReload = data.DisableReload;
@@ -275,7 +275,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     {
         var icon = new SvgIcon
         {
-            Path = $"avares://UniGetUI.Avalonia/Assets/Symbols/{svgName}.svg",
+            Path = $"avares://UniGetUI/Assets/Symbols/{svgName}.svg",
             Width = 20,
             Height = 20,
             VerticalAlignment = VerticalAlignment.Center,

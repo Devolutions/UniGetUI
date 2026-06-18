@@ -228,7 +228,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
     // ─── Helper: create a 16×16 SvgIcon for use as a menu item icon ───────────
     protected static SvgIcon LoadMenuIcon(string svgName) => new()
     {
-        Path = $"avares://UniGetUI.Avalonia/Assets/Symbols/{svgName}.svg",
+        Path = $"avares://UniGetUI/Assets/Symbols/{svgName}.svg",
         Width = 16,
         Height = 16,
     };
@@ -237,7 +237,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
     /// <summary>Sets the icon and text of the primary action button.</summary>
     protected void SetMainButton(string svgName, string label, Action onClick)
     {
-        MainToolbarButtonIcon.Path = $"avares://UniGetUI.Avalonia/Assets/Symbols/{svgName}.svg";
+        MainToolbarButtonIcon.Path = $"avares://UniGetUI/Assets/Symbols/{svgName}.svg";
         MainToolbarButtonText.Text = label;
         AutomationProperties.SetName(MainToolbarButton, label);
         MainToolbarButton.Click += (_, _) => onClick();

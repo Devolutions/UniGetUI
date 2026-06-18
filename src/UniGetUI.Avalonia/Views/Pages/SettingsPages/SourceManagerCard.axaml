@@ -39,7 +39,7 @@
                     Padding="6"
                     ToolTip.Tip="{t:Translate Reload sources}"
                     automation:AutomationProperties.Name="{t:Translate Reload sources}">
-                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/reload.svg"
+                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg"
                                   Width="16" Height="16"
                                   Foreground="{DynamicResource TextControlForeground}"/>
             </Button>
@@ -73,7 +73,7 @@
                                     Spacing="8"
                                     Margin="10,0,4,0"
                                     VerticalAlignment="Center">
-                            <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
                                               Width="16" Height="16"
                                               Foreground="{DynamicResource TextControlForeground}"/>
                             <TextBlock Text="{Binding Name}"
@@ -99,7 +99,7 @@
                                 automation:AutomationProperties.Name="{t:Translate Delete source}"
                                 Command="{Binding #Root.((vm:SourceManagerCardViewModel)DataContext).DeleteSourceCommand}"
                                 CommandParameter="{Binding}">
-                            <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/delete.svg"
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/delete.svg"
                                               Width="16" Height="16"
                                               Foreground="{DynamicResource TextControlForeground}"/>
                         </Button>

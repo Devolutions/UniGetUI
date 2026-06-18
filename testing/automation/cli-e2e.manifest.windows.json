@@ -3,7 +3,7 @@
   "daemon": {
     "kind": "avalonia-dll",
     "project": "UniGetUI.Avalonia\\UniGetUI.Avalonia.csproj",
-    "assemblyName": "UniGetUI.Avalonia"
+    "assemblyName": "UniGetUI"
   },
   "transport": {
     "kind": "named-pipe",

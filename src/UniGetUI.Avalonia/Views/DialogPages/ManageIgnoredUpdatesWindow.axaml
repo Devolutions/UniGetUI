@@ -158,22 +158,22 @@
                                 </Grid.ColumnDefinitions>
 
                                 <controls:SvgIcon Grid.Column="0" Width="24" Height="24" VerticalAlignment="Center"
-                                                  Path="avares://UniGetUI.Avalonia/Assets/Symbols/package.svg"/>
+                                                  Path="avares://UniGetUI/Assets/Symbols/package.svg"/>
                                 <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="2,0"
                                            Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"/>
 
                                 <controls:SvgIcon Grid.Column="2" Width="24" Height="24" VerticalAlignment="Center"
-                                                  Path="avares://UniGetUI.Avalonia/Assets/Symbols/id.svg"/>
+                                                  Path="avares://UniGetUI/Assets/Symbols/id.svg"/>
                                 <TextBlock Grid.Column="3" VerticalAlignment="Center" Margin="2,0"
                                            Text="{Binding Id}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Id}"/>
 
                                 <controls:SvgIcon Grid.Column="4" Width="24" Height="24" VerticalAlignment="Center"
-                                                  Path="avares://UniGetUI.Avalonia/Assets/Symbols/version.svg"/>
+                                                  Path="avares://UniGetUI/Assets/Symbols/version.svg"/>
                                 <TextBlock Grid.Column="5" VerticalAlignment="Center" Margin="2,0"
                                            Text="{Binding VersionDisplay}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding VersionDisplay}"/>
 
                                 <controls:SvgIcon Grid.Column="6" Width="24" Height="24" VerticalAlignment="Center"
-                                                  Path="avares://UniGetUI.Avalonia/Assets/Symbols/upgradable.svg"/>
+                                                  Path="avares://UniGetUI/Assets/Symbols/upgradable.svg"/>
                                 <TextBlock Grid.Column="7" VerticalAlignment="Center" Margin="2,0"
                                            Text="{Binding NewVersion}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding NewVersion}"/>
 
@@ -187,7 +187,7 @@
                                         Command="{Binding RemoveCommand}"
                                         automation:AutomationProperties.Name="{Binding RemoveAutomationName}"
                                         ToolTip.Tip="{t:Translate Text='Remove from list'}">
-                                    <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/delete.svg"
+                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/delete.svg"
                                                       Width="16" Height="16"/>
                                 </Button>
                             </Grid>

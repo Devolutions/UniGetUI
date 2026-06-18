@@ -88,12 +88,7 @@ New-Item $BinDir -ItemType Directory | Out-Null
 # Move published output into unigetui_bin
 Get-ChildItem $PublishDir | Move-Item -Destination $BinDir -Force
 
-$AvaloniaAppHostPath = Join-Path $BinDir "UniGetUI.Avalonia.exe"
 $WindowsAppHostPath = Join-Path $BinDir "UniGetUI.exe"
-if (Test-Path $AvaloniaAppHostPath) {
-    Move-Item $AvaloniaAppHostPath $WindowsAppHostPath -Force
-}
-
 if (-not (Test-Path $WindowsAppHostPath)) {
     throw "Windows app host was not produced at $WindowsAppHostPath"
 }

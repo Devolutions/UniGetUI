@@ -181,7 +181,7 @@ public class SettingsCard : UserControl
 
         _chevron = new SvgIcon
         {
-            Path = "avares://UniGetUI.Avalonia/Assets/Symbols/forward.svg",
+            Path = "avares://UniGetUI/Assets/Symbols/forward.svg",
             Width = 16,
             Height = 16,
             VerticalAlignment = VerticalAlignment.Center,

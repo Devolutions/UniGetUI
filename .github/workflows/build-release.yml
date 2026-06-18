@@ -201,10 +201,6 @@ jobs:
           New-Item "unigetui_bin" -ItemType Directory | Out-Null
           Get-ChildItem $PublishDir | Move-Item -Destination "unigetui_bin" -Force
 
-          if (Test-Path "unigetui_bin/UniGetUI.Avalonia.exe") {
-            Move-Item "unigetui_bin/UniGetUI.Avalonia.exe" "unigetui_bin/UniGetUI.exe" -Force
-          }
-
           if (-not (Test-Path "unigetui_bin/UniGetUI.exe")) {
             throw "Windows app host was not produced at unigetui_bin/UniGetUI.exe"
           }

@@ -33,7 +33,7 @@
                          ToolTip.Tip="{t:Translate Discover Packages}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
-                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/DiscoverPackage.svg" Width="24" Height="24" VerticalAlignment="Center" />
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/DiscoverPackage.svg" Width="24" Height="24" VerticalAlignment="Center" />
                         <TextBlock Text="{t:Translate Discover Packages}"
                                    FontSize="14"
                                    FontWeight="Normal"
@@ -58,7 +58,7 @@
                          ToolTip.Tip="{t:Translate Software Updates}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
-                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/update.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/update.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                         <TextBlock Text="{t:Translate Software Updates}"
                                    FontSize="14"
                                    FontWeight="SemiBold"
@@ -100,7 +100,7 @@
                          ToolTip.Tip="{t:Translate Installed Packages}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
-                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/InstalledPackages.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/InstalledPackages.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                         <TextBlock Text="{t:Translate Installed Packages}"
                                    FontSize="14"
                                    FontWeight="SemiBold"
@@ -125,7 +125,7 @@
                          ToolTip.Tip="{t:Translate Package Bundles}">
                 <Panel>
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
-                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/PackagesBundle.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/PackagesBundle.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                         <TextBlock Text="{t:Translate Package Bundles}"
                                    FontSize="14"
                                    FontWeight="SemiBold"
@@ -166,7 +166,7 @@
                              automation:AutomationProperties.AcceleratorKey="Ctrl+5"
                              ToolTip.Tip="{t:Translate Settings}">
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
-                        <controls:SvgIcon x:Name="SettingsIcon" Path="avares://UniGetUI.Avalonia/Assets/Symbols/settings.svg" Width="24" Height="24" VerticalAlignment="Center" RenderTransformOrigin="50%,50%"/>
+                        <controls:SvgIcon x:Name="SettingsIcon" Path="avares://UniGetUI/Assets/Symbols/settings.svg" Width="24" Height="24" VerticalAlignment="Center" RenderTransformOrigin="50%,50%"/>
                         <TextBlock Text="{t:Translate Settings}" FontSize="14" VerticalAlignment="Center"
                                    IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                     </StackPanel>
@@ -178,7 +178,7 @@
                              automation:AutomationProperties.AcceleratorKey="Ctrl+6"
                              ToolTip.Tip="{t:Translate Package Managers}">
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
-                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/clipboard_list.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/clipboard_list.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                         <TextBlock Text="{t:Translate Package Managers}" FontSize="14" VerticalAlignment="Center"
                                    IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                     </StackPanel>
@@ -198,34 +198,34 @@
                     <FlyoutBase.AttachedFlyout>
                         <MenuFlyout Placement="RightEdgeAlignedTop">
                         <MenuItem Header="{t:Translate UniGetUI Log}" Command="{Binding RequestNavigationCommand}" CommandParameter="OwnLog">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/buggy.svg" Width="16" Height="16"/></MenuItem.Icon>
+                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/buggy.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
                         <MenuItem Header="{t:Translate Package Manager logs}" Command="{Binding RequestNavigationCommand}" CommandParameter="ManagerLog">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/console.svg" Width="16" Height="16"/></MenuItem.Icon>
+                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/console.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
                         <MenuItem Header="{t:Translate Operation history}" Command="{Binding RequestNavigationCommand}" CommandParameter="OperationHistory">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/history.svg" Width="16" Height="16"/></MenuItem.Icon>
+                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/history.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
                         <Separator/>
                         <MenuItem Header="{Binding VersionLabel}" IsEnabled="False">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/info_round.svg" Width="16" Height="16"/></MenuItem.Icon>
+                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/info_round.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
                         <MenuItem Header="{t:Translate Release notes}" Command="{Binding RequestNavigationCommand}" CommandParameter="ReleaseNotes">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/megaphone.svg" Width="16" Height="16"/></MenuItem.Icon>
+                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/megaphone.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
                         <MenuItem Header="{t:Translate Check for UniGetUI updates}" Command="{Binding CheckForUpdatesCommand}">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/update.svg" Width="16" Height="16"/></MenuItem.Icon>
+                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/update.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
                         <Separator/>
                         <MenuItem Header="{t:Translate Help}" Command="{Binding RequestNavigationCommand}" CommandParameter="Help">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/help.svg" Width="16" Height="16"/></MenuItem.Icon>
+                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/help.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
                         <MenuItem Header="{t:Translate About}" Command="{Binding RequestNavigationCommand}" CommandParameter="About">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/info_round.svg" Width="16" Height="16"/></MenuItem.Icon>
+                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/info_round.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
                         <Separator/>
                         <MenuItem Header="{t:Translate Quit UniGetUI}" Command="{Binding RequestNavigationCommand}" CommandParameter="Quit">
-                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/close_round.svg" Width="16" Height="16"/></MenuItem.Icon>
+                            <MenuItem.Icon><controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/close_round.svg" Width="16" Height="16"/></MenuItem.Icon>
                         </MenuItem>
                         </MenuFlyout>
                     </FlyoutBase.AttachedFlyout>

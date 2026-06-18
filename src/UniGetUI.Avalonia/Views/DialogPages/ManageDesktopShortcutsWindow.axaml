@@ -128,7 +128,7 @@
                                 <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
                                     <StackPanel Orientation="Horizontal" Spacing="6"
                                                 VerticalAlignment="Center" Margin="0,0,4,0">
-                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/id.svg"
+                                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/id.svg"
                                                           Width="16" Height="16" VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis"
@@ -144,7 +144,7 @@
                                 <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
                                     <StackPanel Orientation="Horizontal" Spacing="6"
                                                 VerticalAlignment="Center" Margin="0,0,4,0">
-                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/open_folder.svg"
+                                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/open_folder.svg"
                                                           Width="16" Height="16" VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis"
@@ -166,7 +166,7 @@
                                             Command="{Binding OpenCommand}"
                                             ToolTip.Tip="{t:Translate Text='Open in explorer'}"
                                             automation:AutomationProperties.Name="{t:Translate Text='Open in explorer'}">
-                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/launch.svg"
+                                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/launch.svg"
                                                           Width="16" Height="16"/>
                                     </Button>
                                 </DataTemplate>
@@ -184,7 +184,7 @@
                                             Command="{Binding RemoveCommand}"
                                             ToolTip.Tip="{t:Translate Text='Remove from list'}"
                                             automation:AutomationProperties.Name="{t:Translate Text='Remove from list'}">
-                                        <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/delete.svg"
+                                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/delete.svg"
                                                           Width="16" Height="16"/>
                                     </Button>
                                 </DataTemplate>

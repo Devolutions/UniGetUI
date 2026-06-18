@@ -54,7 +54,7 @@ public sealed partial class OperationViewModel : ViewModelBase
     [ObservableProperty] private IImage? _packageIcon;
 
     private static readonly Uri _fallbackIconUri =
-        new("avares://UniGetUI.Avalonia/Assets/package_color.png");
+        new("avares://UniGetUI/Assets/package_color.png");
 
     public OperationViewModel(AbstractOperation operation)
     {
@@ -86,21 +86,21 @@ public sealed partial class OperationViewModel : ViewModelBase
                 if (badges.AsAdministrator)
                     Badges.Add(new(
                         CoreTools.Translate("Administrator privileges"),
-                        "avares://UniGetUI.Avalonia/Assets/Symbols/uac.svg",
+                        "avares://UniGetUI/Assets/Symbols/uac.svg",
                         CoreTools.Translate("This operation is running with administrator privileges."),
                         ""
                     ));
                 if (badges.Interactive)
                     Badges.Add(new(
                         CoreTools.Translate("Interactive operation"),
-                        "avares://UniGetUI.Avalonia/Assets/Symbols/interactive.svg",
+                        "avares://UniGetUI/Assets/Symbols/interactive.svg",
                         CoreTools.Translate("This operation is running interactively."),
                         CoreTools.Translate("You will likely need to interact with the installer.")
                     ));
                 if (badges.SkipHashCheck)
                     Badges.Add(new(
                         CoreTools.Translate("Integrity checks skipped"),
-                        "avares://UniGetUI.Avalonia/Assets/Symbols/checksum.svg",
+                        "avares://UniGetUI/Assets/Symbols/checksum.svg",
                         CoreTools.Translate("Integrity checks will not be performed during this operation."),
                         CoreTools.Translate("Proceed at your own risk.")
                     ));
@@ -286,7 +286,7 @@ public sealed partial class OperationViewModel : ViewModelBase
             Command = new SyncCommand(action),
             Icon = new SvgIcon
             {
-                Path = $"avares://UniGetUI.Avalonia/Assets/Symbols/{svgName}",
+                Path = $"avares://UniGetUI/Assets/Symbols/{svgName}",
                 Width = 16,
                 Height = 16,
             },

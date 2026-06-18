@@ -17,7 +17,7 @@
         <TargetFrameworks />
         <OutputType>WinExe</OutputType>
         <RootNamespace>UniGetUI.Avalonia</RootNamespace>
-        <AssemblyName>UniGetUI.Avalonia</AssemblyName>
+        <AssemblyName>UniGetUI</AssemblyName>
         <ApplicationIcon>..\SharedAssets\icon.ico</ApplicationIcon>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <ApplicationManifest Condition="$([MSBuild]::IsOSPlatform('Windows'))">app.manifest</ApplicationManifest>

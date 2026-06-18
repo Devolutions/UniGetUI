@@ -81,7 +81,7 @@ internal sealed class TrayService : IDisposable
             bool light = IsTaskbarLight();
             string tone = light ? "_black" : "_white";
 
-            string uri = $"avares://UniGetUI.Avalonia/Assets/tray_{status}{tone}_legacy.ico";
+            string uri = $"avares://UniGetUI/Assets/tray_{status}{tone}_legacy.ico";
 
             if (_lastIconUri == uri) return;
             _lastIconUri = uri;

@@ -59,6 +59,6 @@ public partial class SettingsPageButton : SettingsCard
             IconType.ClipboardList => "clipboard_list",
             _ => icon.ToString().ToLower(),
         };
-        return $"avares://UniGetUI.Avalonia/Assets/Symbols/{name}.svg";
+        return $"avares://UniGetUI/Assets/Symbols/{name}.svg";
     }
 }

@@ -184,7 +184,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         // ── Current path card
         var copyIcon = new SvgIcon
         {
-            Path = "avares://UniGetUI.Avalonia/Assets/Symbols/copy.svg",
+            Path = "avares://UniGetUI/Assets/Symbols/copy.svg",
             Width = 24,
             Height = 24,
         };

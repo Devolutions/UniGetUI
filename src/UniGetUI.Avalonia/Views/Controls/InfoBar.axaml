@@ -86,7 +86,7 @@
                     Background="Transparent"
                     BorderThickness="0"
                     CornerRadius="4">
-                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/cross.svg"
+                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/cross.svg"
                                   Width="10" Height="10"/>
             </Button>
 

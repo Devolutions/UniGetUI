@@ -42,7 +42,7 @@
                     CornerRadius="4,0,0,4"
                     automation:AutomationProperties.Name="{t:Translate Go back}"
                     Click="BackButton_Click">
-                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/backward.svg"
+                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/backward.svg"
                                   Width="16" Height="16"/>
             </Button>
 
@@ -53,7 +53,7 @@
                     CornerRadius="0"
                     automation:AutomationProperties.Name="{t:Translate Go forward}"
                     Click="ForwardButton_Click">
-                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/forward.svg"
+                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/forward.svg"
                                   Width="16" Height="16"/>
             </Button>
 
@@ -63,7 +63,7 @@
                     CornerRadius="0"
                     automation:AutomationProperties.Name="{t:Translate Go to home page}"
                     Click="HomeButton_Click">
-                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/home.svg"
+                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/home.svg"
                                   Width="16" Height="16"/>
             </Button>
 
@@ -73,7 +73,7 @@
                     CornerRadius="0,4,4,0"
                     automation:AutomationProperties.Name="{t:Translate Reload page}"
                     Click="ReloadButton_Click">
-                <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/reload.svg"
+                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg"
                                   Width="16" Height="16"/>
             </Button>
 

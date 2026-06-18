@@ -26,7 +26,7 @@
                     BorderThickness="0"
                     automation:AutomationProperties.Name="{t:Translate Go back}">
                 <controls:SvgIcon Width="24" Height="24"
-                                  Path="avares://UniGetUI.Avalonia/Assets/Symbols/backward.svg"/>
+                                  Path="avares://UniGetUI/Assets/Symbols/backward.svg"/>
             </Button>
             <TextBlock Text="{Binding Title}"
                        FontSize="24"

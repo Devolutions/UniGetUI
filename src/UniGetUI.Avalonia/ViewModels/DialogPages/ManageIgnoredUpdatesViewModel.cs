@@ -129,7 +129,7 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
             "pacman" => "pacman",
             _ => "ms_store",
         };
-        return $"avares://UniGetUI.Avalonia/Assets/Symbols/{name}.svg";
+        return $"avares://UniGetUI/Assets/Symbols/{name}.svg";
     }
 }
 

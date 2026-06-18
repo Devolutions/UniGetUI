@@ -504,7 +504,7 @@
                                 IsEnabled="{Binding GlobalSearchEnabled}"
                                 automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
                                 Command="{Binding SubmitGlobalSearchCommand}">
-                            <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/search.svg"
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/search.svg"
                                               Width="18"
                                               Height="18"/>
                         </Button>

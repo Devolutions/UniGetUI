@@ -47,7 +47,7 @@ public partial class App : Application
     {
         Resources.MergedDictionaries.Add(new ResourceInclude((Uri?)null)
         {
-            Source = new Uri("avares://UniGetUI.Avalonia/Assets/Styles/Styles.WindowsMica.axaml")
+            Source = new Uri("avares://UniGetUI/Assets/Styles/Styles.WindowsMica.axaml")
         });
         // Give flyouts/menus/tooltips a native acrylic backdrop (DWM) so they blur + tint
         // from behind and adapt to the theme.

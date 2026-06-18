@@ -179,6 +179,31 @@ begin
     end;
 end;
 
+function IsMSStoreInstall: Boolean;
+begin
+  Result := CmdLineParamExists('/MSStore');
+end;
+
+function ShouldInstallVCRedist: Boolean;
+begin
+  Result := not (CmdLineParamExists('/NoVCRedist') or IsMSStoreInstall);
+end;
+
+function ShouldInstallEdgeWebView: Boolean;
+begin
+  Result := not (CmdLineParamExists('/NoEdgeWebView') or IsMSStoreInstall);
+end;
+
+function ShouldLaunchAfterInstall: Boolean;
+begin
+  Result := not (CmdLineParamExists('/NoAutoStart') or IsMSStoreInstall);
+end;
+
+function ShouldSuppressRunOnStartup: Boolean;
+begin
+  Result := CmdLineParamExists('/NoRunOnStartup') or IsMSStoreInstall;
+end;
+
 var CustomExitCode: integer;
 
 procedure ExitProcess(exitCode:integer);
@@ -228,11 +253,11 @@ end;
 function InitializeSetup: Boolean;
 begin
   try
-    if not CmdLineParamExists('/NoVCRedist') then
+    if ShouldInstallVCRedist then
     begin
       Dependency_AddVC2015To2022;
     end;
-    if not CmdLineParamExists('/NoEdgeWebView') then
+    if ShouldInstallEdgeWebView then
     begin
       Dependency_AddWebView2;
     end;
@@ -251,7 +276,7 @@ Name: "regularinstall\desktopicon"; Description: "{cm:RegDesktopIcon}"; GroupDes
 
 [Registry]
 Root: HKCU; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "WingetUI"; ValueData: """{app}\UniGetUI.exe"" --daemon"; Flags: uninsdeletevalue noerror; Tasks: regularinstall;
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"; ValueType: binary; ValueName: "WingetUI"; ValueData: "03"; Flags: uninsdeletevalue; Tasks: regularinstall; Check: CmdLineParamExists('/NoRunOnStartup');
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"; ValueType: binary; ValueName: "WingetUI"; ValueData: "03"; Flags: uninsdeletevalue; Tasks: regularinstall; Check: ShouldSuppressRunOnStartup;
 
 // Register the unigetui:// deep link
 Root: HKA; Subkey: "Software\Classes\unigetui"; ValueType: "string"; ValueData: "URL:UniGetUI Protocol"; Flags: uninsdeletekey; Tasks: regularinstall;
@@ -284,7 +309,7 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: re
 
 [Run]
 ; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File -NonInteractive ""{tmp}\EnsureWinGet.ps1"""; StatusMsg: "Ensuring WinGet is properly installed... (this may take a while)"; WorkingDir: {app}; Check: not CmdLineParamExists('/NoWinGet'); Flags: runhidden
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: runasoriginaluser nowait postinstall; Check: not CmdLineParamExists('/NoAutoStart');
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: runasoriginaluser nowait postinstall; Check: ShouldLaunchAfterInstall;
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--migrate-wingetui-to-unigetui"; StatusMsg: "Removing old icons...";
 
 

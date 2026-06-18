@@ -259,3 +259,4 @@ The installer is Inno Setup based. It supports the standard [Inno Setup command-
 | `/NoChocolatey` | Deprecated no-op kept for compatibility. |
 | `/EnableSystemChocolatey` | Deprecated no-op kept for compatibility. |
 | `/NoWinGet` | Do not install WinGet and Microsoft.WinGet.Client if they are missing. |
+| `/MSStore` | Microsoft Store install mode: skip the MSVC and WebView2 dependency installers, do not launch UniGetUI after installation, and disable startup at login. Use with `/CURRENTUSER` to select user-local scope. |

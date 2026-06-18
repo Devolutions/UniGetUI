@@ -235,14 +235,6 @@ public static class AvaloniaOperationRegistry
 
         if (OperatingSystem.IsMacOS() && MacOsNotificationBridge.ShowSuccess(op))
             return;
-
-        if (TryGetMainWindow() is not { } mainWindow)
-            return;
-
-        mainWindow.ShowRuntimeNotification(
-            title,
-            message,
-            UniGetUI.Avalonia.Views.MainWindow.RuntimeNotificationLevel.Success);
     }
 
     private static void ShowOperationFailureNotification(AbstractOperation op)

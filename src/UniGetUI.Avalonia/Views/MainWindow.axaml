@@ -22,14 +22,22 @@
              via styles (opacity) so the .focus-within setter wins over the base. -->
         <Style Selector="Border#SearchFocusUnderline">
             <Setter Property="Opacity" Value="0"/>
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
             <Setter Property="Transitions">
                 <Transitions>
                     <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
                 </Transitions>
             </Setter>
         </Style>
+        <!-- Hover: subtle neutral underline (WinUI shows a lighter line on pointer-over). -->
+        <Style Selector="Border#GlobalSearchContainer:pointerover Border#SearchFocusUnderline">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </Style>
+        <!-- Focus: accent underline (declared after hover so it wins when both apply). -->
         <Style Selector="Border#GlobalSearchContainer:focus-within Border#SearchFocusUnderline">
             <Setter Property="Opacity" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
         </Style>
         <!-- Nav flyout cross-fade. The flyout's icons sit exactly over the static rail's icons, so
              fading (rather than sliding) keeps the icons perfectly aligned — only the labels fade
@@ -506,8 +514,7 @@
                             VerticalAlignment="Bottom"
                             Height="2"
                             Margin="1,0,1,0"
-                            IsHitTestVisible="False"
-                            Background="{DynamicResource SystemAccentColor}"/>
+                            IsHitTestVisible="False"/>
                 </Panel>
             </Border>
 

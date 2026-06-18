@@ -166,11 +166,13 @@ jobs:
         working-directory: src
         shell: pwsh
         run: |
+          dotnet build-server shutdown
           # Retry once to handle flaky tests (e.g. TaskRecyclerTests uses Random)
-          dotnet test UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Platform=x64
+          dotnet test UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Platform=x64 /p:UseSharedCompilation=false /m:1
           if ($LASTEXITCODE -ne 0) {
             Write-Host "::warning::First test run failed, retrying..."
-            dotnet test UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Platform=x64
+            dotnet build-server shutdown
+            dotnet test UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Platform=x64 /p:UseSharedCompilation=false /m:1
             if ($LASTEXITCODE -ne 0) { exit 1 }
           }
 

@@ -68,10 +68,12 @@ jobs:
 
     - name: Build Avalonia Windows solution
       working-directory: src
-      run: dotnet build UniGetUI.Windows.slnx --no-restore --verbosity minimal /p:Platform=x64
+      run: |
+        dotnet build-server shutdown
+        dotnet build UniGetUI.Windows.slnx --no-restore --verbosity minimal /p:Platform=x64 /p:UseSharedCompilation=false /m:1
 
     - name: Run Tests
       working-directory: src
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: dotnet test UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Platform=x64
+      run: dotnet test UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Platform=x64 /p:UseSharedCompilation=false /m:1

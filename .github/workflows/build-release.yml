@@ -178,15 +178,20 @@ jobs:
         shell: pwsh
         run: |
           $Platform = '${{ matrix.platform }}'
-          [xml]$BuildProps = Get-Content "src/Directory.Build.props"
-          $PortableTargetFramework = @($BuildProps.Project.PropertyGroup | Where-Object { $_.PortableTargetFramework } | Select-Object -First 1).PortableTargetFramework
-          $WindowsTargetPlatformVersion = @($BuildProps.Project.PropertyGroup | Where-Object { $_.WindowsTargetPlatformVersion } | Select-Object -First 1).WindowsTargetPlatformVersion
+          $TargetFramework = (
+            dotnet msbuild src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj `
+              /nologo `
+              -getProperty:TargetFramework `
+              /p:Configuration=Release `
+              /p:Platform=$Platform `
+              /p:RuntimeIdentifier=win-$Platform |
+              Select-Object -Last 1
+          ).Trim()
 
-          if ([string]::IsNullOrWhiteSpace($PortableTargetFramework) -or [string]::IsNullOrWhiteSpace($WindowsTargetPlatformVersion)) {
-            throw "Could not resolve the target framework from src/Directory.Build.props"
+          if ([string]::IsNullOrWhiteSpace($TargetFramework)) {
+            throw "Could not resolve the Avalonia target framework from MSBuild"
           }
 
-          $TargetFramework = "$PortableTargetFramework-windows$WindowsTargetPlatformVersion"
           dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj /noLogo /p:Configuration=Release /p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform -v m
           if ($LASTEXITCODE -ne 0) { throw "dotnet publish Avalonia failed" }
 

@@ -1,4 +1,6 @@
 using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -7,6 +9,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Transformation;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;
@@ -25,6 +28,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
     private double _savedFilterPaneWidth = 220;
     private bool _isOverlayMode;
     private IDisposable? _sidePanelBgBinding;
+    private CancellationTokenSource? _filterPaneAnimCts;
 
     protected AbstractPackagesPage(PackagesPageData data)
     {
@@ -59,7 +63,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
             if (args.PropertyName is nameof(PackagesPageViewModel.IsFilterPaneOpen))
             {
                 SyncFiltersButtonName();
-                UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
+                UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen, animate: true);
             }
         };
         SyncFiltersButtonName();
@@ -146,6 +150,19 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
         // Apply the initial filter-pane state (AXAML defaults to 220px open).
         UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
+
+        // Attach the pane slide AFTER the initial state so launch doesn't animate. The pane slides
+        // via a compositor RenderTransform (clipped by FilteringPanel) instead of width-tweening the
+        // column, which reflowed the package list every frame and felt laggy.
+        SidePanel.Transitions = new Transitions
+        {
+            new TransformOperationsTransition
+            {
+                Property = Visual.RenderTransformProperty,
+                Duration = TimeSpan.FromMilliseconds(200),
+                Easing = new SplineEasing(0.1, 0.9, 0.2, 1.0),
+            }
+        };
     }
 
     // Recompute the grid-view card slot width: fit as many >=275px columns as possible,
@@ -394,12 +411,14 @@ public abstract partial class AbstractPackagesPage : UserControl,
             UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
     }
 
-    private void UpdateFilterPaneColumn(bool open)
+    private void UpdateFilterPaneColumn(bool open, bool animate = false)
     {
         if (FilteringPanel.ColumnDefinitions.Count < 2) return;
 
         if (_isOverlayMode)
         {
+            _filterPaneAnimCts?.Cancel();
+
             // Package list fills full width; filter pane and splitter take no space.
             FilteringPanel.ColumnDefinitions[0].Width = new GridLength(0);
             FilteringPanel.ColumnDefinitions[1].Width = new GridLength(0);
@@ -409,6 +428,8 @@ public abstract partial class AbstractPackagesPage : UserControl,
             SidePanel.ZIndex = 10;
             SidePanel.Width = _savedFilterPaneWidth;
             SidePanel.HorizontalAlignment = HorizontalAlignment.Left;
+            SidePanel.IsVisible = open;
+            SetSidePanelTransformInstant(0);
 
             // Floating over content needs an opaque surface (the page surface is transparent under Mica).
             _sidePanelBgBinding ??= SidePanel.Bind(Border.BackgroundProperty, this.GetResourceObservable("AppWindowBackground"));
@@ -428,13 +449,74 @@ public abstract partial class AbstractPackagesPage : UserControl,
             SidePanel.Background = null;
             FilterOverlayBackdrop.IsVisible = false;
 
-            FilteringPanel.ColumnDefinitions[0].Width = open
-                ? new GridLength(_savedFilterPaneWidth)
-                : new GridLength(0);
-            FilteringPanel.ColumnDefinitions[1].Width = open
-                ? new GridLength(4)
-                : new GridLength(0);
+            if (animate)
+            {
+                AnimateInlineFilterPane(open);
+            }
+            else
+            {
+                _filterPaneAnimCts?.Cancel();
+                SidePanel.IsVisible = open;
+                SetSidePanelTransformInstant(open ? 0 : -_savedFilterPaneWidth);
+                FilteringPanel.ColumnDefinitions[0].Width = open ? new GridLength(_savedFilterPaneWidth) : new GridLength(0);
+                FilteringPanel.ColumnDefinitions[1].Width = open ? new GridLength(4) : new GridLength(0);
+            }
         }
+    }
+
+    // Reserve/release the inline pane's column in one step (a single reflow, not a per-frame tween),
+    // and slide the pane itself in/out via a compositor RenderTransform (clipped by FilteringPanel) —
+    // tweening the column width reflowed the package list every frame and felt laggy. The toolbar
+    // buttons still slide via their MinWidth transition.
+    private async void AnimateInlineFilterPane(bool open)
+    {
+        _filterPaneAnimCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _filterPaneAnimCts = cts;
+
+        var col0 = FilteringPanel.ColumnDefinitions[0];
+        var col1 = FilteringPanel.ColumnDefinitions[1];
+
+        if (open)
+        {
+            // Reserve the column (one reflow), then slide the pane in from -width to 0.
+            col0.Width = new GridLength(_savedFilterPaneWidth);
+            col1.Width = new GridLength(4);
+            SidePanel.IsVisible = true;
+            SidePanel.RenderTransform = TranslateX(0);
+        }
+        else
+        {
+            // Reclaim the list width in one reflow NOW and float the pane over the list, then slide
+            // the floating pane out — otherwise the list sits beside an empty gap and only snaps to
+            // full width when the slide ends. Inline positioning is restored on the next open by
+            // UpdateFilterPaneColumn.
+            double w = _savedFilterPaneWidth;
+            Grid.SetColumnSpan(SidePanel, 3);
+            SidePanel.ZIndex = 10;
+            SidePanel.Width = w;
+            SidePanel.HorizontalAlignment = HorizontalAlignment.Left;
+            _sidePanelBgBinding ??= SidePanel.Bind(Border.BackgroundProperty, this.GetResourceObservable("AppWindowBackground"));
+            col0.Width = new GridLength(0);
+            col1.Width = new GridLength(0);
+
+            SidePanel.RenderTransform = TranslateX(-w);
+            try { await Task.Delay(210, cts.Token); }
+            catch (TaskCanceledException) { return; }
+            SidePanel.IsVisible = false;
+        }
+    }
+
+    private static ITransform TranslateX(double x)
+        => TransformOperations.Parse(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"translateX({x}px)"));
+
+    // Set the pane transform without triggering the slide transition (for initial/mode-change states).
+    private void SetSidePanelTransformInstant(double translateX)
+    {
+        var transitions = SidePanel.Transitions;
+        SidePanel.Transitions = null;
+        SidePanel.RenderTransform = TranslateX(translateX);
+        SidePanel.Transitions = transitions;
     }
 
     // ─── Card overflow button (Grid / Icons view) ─────────────────────────────

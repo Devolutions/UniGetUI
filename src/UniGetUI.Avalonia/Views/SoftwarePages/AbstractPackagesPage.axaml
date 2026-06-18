@@ -116,6 +116,13 @@
                  with the package list when the pane is open, and collapse next to the Filters button when closed. -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,0"
                         MinWidth="{Binding FilterPaneColumnWidth}">
+                <!-- Animate the reserved width so opening/closing the filter pane slides the
+                     action buttons into place instead of snapping them sideways. -->
+                <StackPanel.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="MinWidth" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                    </Transitions>
+                </StackPanel.Transitions>
                 <ToggleButton x:Name="ToggleFiltersButton"
                               Classes="filter-toggle"
                               Height="40"
@@ -179,13 +186,13 @@
         <!-- ==================== MAIN CONTENT (filter pane + package list) ==================== -->
         <Grid x:Name="FilteringPanel"
               Grid.Row="2"
+              ClipToBounds="True"
               ColumnDefinitions="220,4,*">
 
             <!-- ===== FILTER PANE =====
                  SidePanel is the Border the code-behind positions (inline vs overlay mode). -->
                 <Border x:Name="SidePanel"
                         Grid.Column="0"
-                        IsVisible="{Binding IsFilterPaneOpen}"
                         CornerRadius="8"
                         ClipToBounds="True">
                 <ScrollViewer x:Name="SidePanelScroller"

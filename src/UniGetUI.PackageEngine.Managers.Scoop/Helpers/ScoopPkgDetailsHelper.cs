@@ -289,13 +289,29 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 
         protected override string? GetInstallLocation_UnSafe(IPackage package)
         {
-            return Path.Join(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "scoop",
-                "apps",
-                package.Id,
-                "current"
-            );
+            // Honor custom Scoop roots (SCOOP / SCOOP_GLOBAL) and both user and global installs,
+            // returning the first that actually exists.
+            string?[] roots =
+            [
+                Environment.GetEnvironmentVariable("SCOOP"),
+                Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "scoop"),
+                Environment.GetEnvironmentVariable("SCOOP_GLOBAL"),
+                Path.Join(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "scoop"
+                ),
+            ];
+
+            foreach (var root in roots)
+            {
+                if (string.IsNullOrEmpty(root))
+                    continue;
+                var path = Path.Join(root, "apps", package.Id, "current");
+                if (Directory.Exists(path))
+                    return path;
+            }
+
+            return null;
         }
 
         protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)

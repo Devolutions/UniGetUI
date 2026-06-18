@@ -115,11 +115,9 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
             var VcpkgInstalledPath = Path.Join(rootPath, "installed", package.Id.Split(":")[1]);
             return Directory.Exists(PackagePath)
                 ? PackagePath
-                : (
-                    Directory.Exists(VcpkgInstalledPath)
-                        ? VcpkgInstalledPath
-                        : Path.GetDirectoryName(PackageId)
-                );
+                : Directory.Exists(VcpkgInstalledPath)
+                    ? VcpkgInstalledPath
+                    : null;
         }
 
         protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)

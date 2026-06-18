@@ -94,11 +94,21 @@ namespace UniGetUI.PackageEngine.Managers.Choco
                     return path_with_id;
             }
 
-            return Path.Join(
-                Path.GetDirectoryName(Manager.Status.ExecutablePath),
-                "lib",
-                package.Id
-            );
+            // Chocolatey keeps each package under <ChocolateyInstall>\lib\<id>. Resolve the root
+            // from the environment variable, falling back to the executable's folder (stepping out
+            // of the \bin shim folder when choco.exe is found there).
+            string? chocoRoot = Environment.GetEnvironmentVariable("ChocolateyInstall");
+            if (string.IsNullOrEmpty(chocoRoot))
+            {
+                var exeDir = Path.GetDirectoryName(Manager.Status.ExecutablePath);
+                chocoRoot =
+                    exeDir is not null
+                    && Path.GetFileName(exeDir).Equals("bin", StringComparison.OrdinalIgnoreCase)
+                        ? Path.GetDirectoryName(exeDir)
+                        : exeDir;
+            }
+
+            return chocoRoot is null ? null : Path.Join(chocoRoot, "lib", package.Id);
         }
     }
 }

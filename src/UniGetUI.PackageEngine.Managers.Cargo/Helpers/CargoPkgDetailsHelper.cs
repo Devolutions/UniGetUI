@@ -77,11 +77,14 @@ internal sealed class CargoPkgDetailsHelper(Cargo manager) : BasePkgDetailsHelpe
 
     protected override string? GetInstallLocation_UnSafe(IPackage package)
     {
-        return Path.Join(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".cargo",
-            "bin"
-        );
+        // Cargo installs binaries into $CARGO_HOME/bin (default ~/.cargo/bin).
+        var cargoHome = Environment.GetEnvironmentVariable("CARGO_HOME");
+        if (string.IsNullOrEmpty(cargoHome))
+            cargoHome = Path.Join(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".cargo"
+            );
+        return Path.Join(cargoHome, "bin");
     }
 
     protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)

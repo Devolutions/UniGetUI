@@ -79,7 +79,23 @@ internal sealed class FlatpakPkgDetailsHelper : BasePkgDetailsHelper
         => Array.Empty<Uri>();
 
     protected override string? GetInstallLocation_UnSafe(IPackage package)
-        => $"/var/lib/flatpak/app/{package.Id}";
+    {
+        // System-wide installs live under /var/lib/flatpak, per-user installs under
+        // ~/.local/share/flatpak. Return whichever actually contains the app.
+        foreach (var baseDir in new[]
+        {
+            "/var/lib/flatpak",
+            Path.Join(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".local", "share", "flatpak"),
+        })
+        {
+            var path = Path.Join(baseDir, "app", package.Id);
+            if (Directory.Exists(path))
+                return path;
+        }
+        return null;
+    }
 
     protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)
         => throw new InvalidOperationException("Flatpak does not support installing arbitrary versions");

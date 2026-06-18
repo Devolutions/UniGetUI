@@ -104,13 +104,16 @@ internal sealed class HomebrewPkgDetailsHelper : BasePkgDetailsHelper
 
     protected override string? GetInstallLocation_UnSafe(IPackage package)
     {
-        // Formulae: /opt/homebrew/Cellar/<name>  (Apple Silicon)
-        //           /usr/local/Cellar/<name>       (Intel)
-        foreach (var prefix in new[] { "/opt/homebrew", "/usr/local" })
+        // Apple Silicon prefix is /opt/homebrew, Intel/Linux is /usr/local (or /home/linuxbrew).
+        // Formulae live under Cellar/<name>, casks under Caskroom/<token>.
+        foreach (var prefix in new[] { "/opt/homebrew", "/usr/local", "/home/linuxbrew/.linuxbrew" })
         {
-            var path = Path.Join(prefix, "Cellar", package.Id);
-            if (Directory.Exists(path))
-                return path;
+            foreach (var kind in new[] { "Cellar", "Caskroom" })
+            {
+                var path = Path.Join(prefix, kind, package.Id);
+                if (Directory.Exists(path))
+                    return path;
+            }
         }
         return null;
     }

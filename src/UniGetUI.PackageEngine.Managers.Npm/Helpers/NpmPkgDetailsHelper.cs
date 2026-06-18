@@ -176,9 +176,10 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                     "node_modules",
                     package.Id
                 );
+            // ApplicationData already resolves to the Roaming folder; npm's default global prefix
+            // is %AppData%\npm, so global modules live under %AppData%\npm\node_modules.
             return Path.Join(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "Roaming",
                 "npm",
                 "node_modules",
                 package.Id

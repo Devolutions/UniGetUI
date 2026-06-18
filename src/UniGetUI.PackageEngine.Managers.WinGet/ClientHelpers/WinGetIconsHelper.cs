@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Net;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Microsoft.Management.Deployment;
 using Microsoft.Win32;
 using UniGetUI.Core.IconEngine;
@@ -207,5 +209,157 @@ internal static class WinGetIconsHelper
             return new CacheableIcon(displayIcon);
 
         return null;
+    }
+
+    private const long MsixCacheTtlMs = 30_000;
+    private static readonly Lock _msixLock = new();
+    private static Dictionary<string, string>? _msixIndex; // normalized name -> install path
+    private static long _msixBuiltAt = long.MinValue;
+
+    /// <summary>
+    /// Resolves an MSIX/Store package whose full name is encoded in the Id (Microsoft Store
+    /// source). Cheap — no package enumeration.
+    /// </summary>
+    public static string? GetMsixLocationFromId(IPackage package)
+    {
+        if (!package.Id.StartsWith("MSIX\\", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var fullName = package.Id["MSIX\\".Length..];
+        foreach (
+            var root in new[]
+            {
+                Path.Join(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                    "WindowsApps",
+                    fullName
+                ),
+                Path.Join(
+                    Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                    "SystemApps",
+                    fullName
+                ),
+            }
+        )
+            if (Directory.Exists(root))
+                return root;
+
+        return null;
+    }
+
+    /// <summary>
+    /// Resolves an MSIX/Store package by matching it against the installed AppX packages. These do
+    /// not appear in the "Add/Remove programs" registry, so this enumerates them via the platform
+    /// API (cached). Used as a last resort because the enumeration has a cost.
+    /// </summary>
+    public static string? GetMsixLocationByName(IPackage package)
+    {
+        var index = GetMsixIndex();
+        if (index.Count == 0)
+            return null;
+
+        string[] candidates = [NormalizeMsix(package.Id), NormalizeMsix(package.Name)];
+
+        // Exact match first (most reliable).
+        foreach (var candidate in candidates)
+            if (candidate.Length >= 3 && index.TryGetValue(candidate, out var location))
+                return location;
+
+        // Then a length-guarded fuzzy match (prefix or containment) to bridge identity/display-name
+        // differences, e.g. winget "Microsoft.AppInstaller" / "App Installer" vs the MSIX identity
+        // "Microsoft.DesktopAppInstaller". Only reached as a last resort, over the small MSIX set.
+        foreach (var candidate in candidates)
+        {
+            if (candidate.Length < 6)
+                continue;
+            foreach (var (key, location) in index)
+                if (
+                    key.StartsWith(candidate, StringComparison.Ordinal)
+                    || candidate.StartsWith(key, StringComparison.Ordinal)
+                    || key.Contains(candidate, StringComparison.Ordinal)
+                )
+                    return location;
+        }
+
+        return null;
+    }
+
+    private static Dictionary<string, string> GetMsixIndex()
+    {
+        lock (_msixLock)
+        {
+            var now = Environment.TickCount64;
+            if (_msixIndex is null || now - _msixBuiltAt > MsixCacheTtlMs)
+            {
+                _msixIndex = BuildMsixIndex();
+                _msixBuiltAt = now;
+            }
+            return _msixIndex;
+        }
+    }
+
+    private const string AppxRepositoryKey =
+        @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages";
+
+    private static Dictionary<string, string> BuildMsixIndex()
+    {
+        // Read MSIX install locations straight from the AppModel repository registry rather than the
+        // WinRT PackageManager API: the latter fails to activate inside this process (the WinGet COM
+        // interop reconfigures process-wide COM security), whereas the registry is always readable.
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        try
+        {
+            using var root = Registry.CurrentUser.OpenSubKey(AppxRepositoryKey);
+            if (root is null)
+                return map;
+
+            foreach (var packageFullName in root.GetSubKeyNames())
+            {
+                try
+                {
+                    using var entry = root.OpenSubKey(packageFullName);
+                    if (entry?.GetValue("PackageRootFolder") is not string path)
+                        continue;
+                    if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+                        continue;
+
+                    // Full name is "<Name>_<version>_<arch>__<publisherHash>".
+                    AddMsixKey(map, packageFullName.Split('_')[0], path);
+
+                    if (
+                        entry.GetValue("DisplayName") is string displayName
+                        && !displayName.StartsWith("ms-resource:", StringComparison.OrdinalIgnoreCase)
+                    )
+                        AddMsixKey(map, displayName, path);
+                }
+                catch
+                {
+                    // Skip unreadable entries.
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug($"Could not read installed MSIX packages from the registry: {ex.Message}");
+        }
+        return map;
+    }
+
+    private static void AddMsixKey(Dictionary<string, string> map, string? key, string path)
+    {
+        var normalized = NormalizeMsix(key);
+        if (normalized.Length >= 3 && !map.ContainsKey(normalized))
+            map[normalized] = path;
+    }
+
+    private static string NormalizeMsix(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "";
+        var sb = new StringBuilder(value.Length);
+        foreach (var c in value)
+            if (char.IsLetterOrDigit(c))
+                sb.Append(char.ToLowerInvariant(c));
+        return sb.ToString();
     }
 }

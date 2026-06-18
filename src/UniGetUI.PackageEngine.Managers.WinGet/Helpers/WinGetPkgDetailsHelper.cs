@@ -42,6 +42,26 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
         protected override string? GetInstallLocation_UnSafe(IPackage package)
         {
+            // Packages from the local "Add/Remove programs" source encode their exact registry key
+            // in the Id, so their install location can be read straight from that ARP entry. The
+            // generic name-based ARP lookup is handled by the base helper as a fallback.
+            if (package.Source is LocalWinGetSource { Type: LocalWinGetSource.Type_t.LocalPC })
+            {
+                var encodedLocation = ArpRegistryHelper.GetLocationFromEncodedId(package.Id);
+                if (encodedLocation is not null)
+                    return encodedLocation;
+            }
+
+            // MSIX/Store packages from the Microsoft Store source encode their full name in the Id.
+            var msixFromId = WinGetIconsHelper.GetMsixLocationFromId(package);
+            if (msixFromId is not null)
+                return msixFromId;
+
+            // Match against Add/Remove programs by name before the heavier lookups below.
+            var arpByName = ArpRegistryHelper.ResolveByName(package.Name, package.Id);
+            if (arpByName is not null)
+                return arpByName;
+
             foreach (
                 var base_path in new[]
                 {
@@ -84,7 +104,9 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                     return path_with_source;
             }
 
-            return null;
+            // Last resort: enumerate installed MSIX packages (has a cost, so only reached when
+            // nothing cheaper matched — e.g. Store apps surfaced through the winget catalog).
+            return WinGetIconsHelper.GetMsixLocationByName(package);
         }
 
         protected override IReadOnlyList<Uri> GetScreenshots_UnSafe(IPackage package)

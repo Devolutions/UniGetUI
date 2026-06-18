@@ -188,8 +188,13 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
                     Logger.Warn(
                         $"Path returned by the package manager \"{path}\" did not exist while loading package install location for package Id={package.Id} with Manager={package.Manager.Name}"
                     );
-                    return null;
+                    path = null;
                 }
+
+                // Manager-agnostic fallback: most Windows installers register an "Add/Remove
+                // programs" entry regardless of which manager ran them, so try to locate the
+                // package there when the manager's own logic came up empty. No-op on non-Windows.
+                path ??= ArpRegistryHelper.ResolveByName(package.Name, package.Id);
 
                 return path;
             }

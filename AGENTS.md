@@ -2,17 +2,18 @@
 
 ## Project Overview
 
-UniGetUI is a WinUI 3 desktop app (C#/.NET 10, Windows App SDK) providing a GUI for CLI package managers (WinGet, Scoop, Chocolatey, Pip, Npm, .NET Tool, PowerShell Gallery, Cargo, Vcpkg).
+UniGetUI is an Avalonia desktop app (C#/.NET 10) providing a GUI for CLI package managers (WinGet, Scoop, Chocolatey, Pip, Npm, .NET Tool, PowerShell Gallery, Cargo, Vcpkg).
 
 Solution entry points:
-- `src/UniGetUI.Windows.slnx` - official Windows solution; builds the WinUI 3 launcher/classic app and the Avalonia app
-- `src/UniGetUI.Avalonia.slnx` - experimental cross-platform Avalonia port
+- `src/UniGetUI.Windows.slnx` - official Windows solution; builds the Avalonia app and Windows-specific package-manager integrations
+- `src/UniGetUI.Avalonia.slnx` - cross-platform Avalonia solution
 
 ## Architecture
 
 The codebase follows a **layered, modular structure** with ~40 projects:
 
-- **`UniGetUI/`** - WinUI 3 entry point, XAML pages, controls, and app shell (`EntryPoint.cs`, `MainWindow.xaml`)
+- **`UniGetUI.Avalonia/`** - Avalonia entry point, AXAML pages, controls, and app shell (`Program.cs`, `Views/MainWindow.axaml`)
+- **`SharedAssets/`** - shared app icons, symbols, splash images, and utility scripts used by packaging
 - **`UniGetUI.Core.*`** - Shared infrastructure: `Logger`, `Settings`, `Tools` (includes `CoreTools.Translate()`), `IconEngine`, `LanguageEngine`
 - **`UniGetUI.PackageEngine.Interfaces`** - Contracts: `IPackageManager`, `IPackage`, `IManagerSource`, `IPackageDetails`
 - **`UniGetUI.PackageEngine.PackageManagerClasses`** - Base implementations: `PackageManager` (abstract), `Package`, helpers (`BasePkgDetailsHelper`, `BasePkgOperationHelper`, `BaseSourceHelper`)
@@ -41,15 +42,15 @@ The constructor sets `Capabilities`, `Properties`, and wires the helpers. See `s
 
 ```shell
 # Restore & test (from src/)
-dotnet restore
-dotnet test --verbosity q --nologo
+dotnet restore UniGetUI.Windows.slnx
+dotnet test UniGetUI.Windows.slnx --verbosity q --nologo /p:Platform=x64
 
 # Publish release build
-dotnet publish src/UniGetUI/UniGetUI.csproj /p:Configuration=Release /p:Platform=x64
+dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj /p:Configuration=Release /p:Platform=x64 -p:RuntimeIdentifier=win-x64
 ```
 
 - Target framework: `net10.0-windows10.0.26100.0` (min `10.0.19041`)
-- Build generates secrets via `src/UniGetUI/Services/generate-secrets.ps1` and integrity tree via `scripts/generate-integrity-tree.ps1`
+- Build generates secrets via `src/UniGetUI.Avalonia/Infrastructure/generate-secrets.ps1` and integrity tree via `scripts/generate-integrity-tree.ps1`
 - Self-contained, publish-trimmed (partial), Windows App SDK self-contained
 - Tests use **xUnit** (`[Fact]`, `Assert.*`)
 
@@ -95,7 +96,7 @@ Use `CoreTools.Translate("text")` for all user-facing strings. Parameterized: `C
 | Purpose | Path |
 |---|---|
 | Windows solution | `src/UniGetUI.Windows.slnx` |
-| Experimental cross-platform solution | `src/UniGetUI.Avalonia.slnx` |
+| Cross-platform solution | `src/UniGetUI.Avalonia.slnx` |
 | Shared build props | `src/Directory.Build.props` |
 | Version info | `src/SharedAssemblyInfo.cs` |
 | Manager interface | `src/UniGetUI.PackageEngine.Interfaces/IPackageManager.cs` |

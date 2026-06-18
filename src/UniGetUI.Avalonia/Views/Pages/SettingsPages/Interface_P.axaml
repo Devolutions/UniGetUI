@@ -28,15 +28,6 @@
 
             <Border Height="16"/>
 
-            <settings:CheckboxCard SettingName="UseClassicMode"
-                                   Text="{t:Translate Use classic mode}"
-                                   WarningText="{t:Translate Restart UniGetUI to apply this change}"
-                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
-                                   IsEnabled="{Binding !IsBetaTester}"
-                                   IsVisible="{Binding IsWindows}"
-                                   ToolTip.Tip="{t:Translate The classic UI is disabled for beta testers}"
-                                   CornerRadius="8"/>
-
              <StackPanel x:Name="SystemTraySection" Orientation="Vertical">
                 <settings:TranslatedTextBlock Text="UniGetUI on the background and system tray"
                                               FontSize="14"

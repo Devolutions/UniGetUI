@@ -210,7 +210,7 @@ function Get-DaemonCommand {
     }
 
     switch ([string]$manifest.daemon.kind) {
-        'winui-exe' {
+        'windows-exe' {
             $daemonExe = if ($env:UNIGETUI_DAEMON_EXE) {
                 $env:UNIGETUI_DAEMON_EXE
             }
@@ -218,7 +218,7 @@ function Get-DaemonCommand {
                 Find-BuiltArtifact -ProjectDirectory (Split-Path $daemonProject -Parent) -FileName "$($manifest.daemon.assemblyName).exe"
             }
             if ([string]::IsNullOrWhiteSpace($daemonExe) -or -not (Test-Path $daemonExe)) {
-                throw "WinUI headless executable was not found. Expected $($manifest.daemon.assemblyName).exe under $(Split-Path $daemonProject -Parent)\bin\$configuration"
+                throw "Windows headless executable was not found. Expected $($manifest.daemon.assemblyName).exe under $(Split-Path $daemonProject -Parent)\bin\$configuration"
             }
 
             return @{

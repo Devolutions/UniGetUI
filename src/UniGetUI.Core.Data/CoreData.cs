@@ -9,7 +9,7 @@ namespace UniGetUI.Core.Data
         private const string GitHubReleasePageBaseUrl = "https://github.com/Devolutions/UniGetUI/releases/tag/";
         private const string GitHubReleaseApiBaseUrl = "https://api.github.com/repos/Devolutions/UniGetUI/releases/tags/";
         private const string BundledModernAppDirectoryName = "Avalonia";
-        private const string ClassicExecutableName = "UniGetUI.exe";
+        private const string WindowsExecutableName = "UniGetUI.exe";
         private const string BundledPingetExecutableName = "pinget.exe";
         public const string ReleaseNotesUrl = "https://devolutions.net/unigetui/release-notes/";
 
@@ -654,7 +654,7 @@ namespace UniGetUI.Core.Data
             Func<string, bool> directoryExists
         )
         {
-            return fileExists(Path.Join(directory, ClassicExecutableName))
+            return fileExists(Path.Join(directory, WindowsExecutableName))
                    || fileExists(Path.Join(directory, BundledPingetExecutableName))
                    || fileExists(Path.Join(directory, "IntegrityTree.json"))
                    || directoryExists(Path.Join(directory, "Assets", "Utilities"))

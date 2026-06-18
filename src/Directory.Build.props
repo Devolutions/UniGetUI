@@ -47,7 +47,7 @@
 
     <PropertyGroup>
         <EnableAvaloniaDiagnostics>false</EnableAvaloniaDiagnostics>
-        <EnableAvaloniaDiagnostics Condition="'$(Configuration)' == 'Debug'">true</EnableAvaloniaDiagnostics>
+        <EnableAvaloniaDiagnostics Condition="'$(Configuration)' == '' or '$(Configuration)' == 'Debug'">true</EnableAvaloniaDiagnostics>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Release'">

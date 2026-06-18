@@ -9,9 +9,13 @@ internal static class AvaloniaCliHandler
 
     public static int? HandlePreUiArgs(string[] args)
     {
+        SharedPreUiCommandExitCodes exitCodes = OperatingSystem.IsWindows()
+            ? SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            : SharedPreUiCommandDispatcher.PortableCliExitCodes;
+
         return SharedPreUiCommandDispatcher.TryHandle(
             args,
-            SharedPreUiCommandDispatcher.AvaloniaExitCodes
+            exitCodes
         );
     }
 }

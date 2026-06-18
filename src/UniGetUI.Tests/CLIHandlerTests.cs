@@ -2,6 +2,7 @@ using System.Text.Json;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
+using UniGetUI.Shared;
 
 namespace UniGetUI.Tests;
 
@@ -38,7 +39,10 @@ public sealed class CLIHandlerTests : IDisposable
     [Fact]
     public void ImportSettings_ReturnsNoSuchFileWhenInputIsMissing()
     {
-        int result = CLIHandler.ImportSettings(["unigetui", CLIHandler.IMPORT_SETTINGS, Path.Combine(_testRoot, "missing.json")]);
+        int result = SharedPreUiCommandDispatcher.ImportSettings(
+            ["unigetui", SharedPreUiCommandDispatcher.ImportSettingsArgument, Path.Combine(_testRoot, "missing.json")],
+            SharedPreUiCommandDispatcher.WindowsCliExitCodes
+        );
 
         Assert.Equal(-1073741809, result);
     }
@@ -50,12 +54,24 @@ public sealed class CLIHandlerTests : IDisposable
         Settings.Set(Settings.K.FreshBoolSetting, true);
         Settings.SetValue(Settings.K.FreshValue, "before-export");
 
-        Assert.Equal(0, CLIHandler.ExportSettings(["unigetui", CLIHandler.EXPORT_SETTINGS, exportPath]));
+        Assert.Equal(
+            0,
+            SharedPreUiCommandDispatcher.ExportSettings(
+                ["unigetui", SharedPreUiCommandDispatcher.ExportSettingsArgument, exportPath],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            )
+        );
 
         Settings.Set(Settings.K.FreshBoolSetting, false);
         Settings.SetValue(Settings.K.FreshValue, "after-export");
 
-        Assert.Equal(0, CLIHandler.ImportSettings(["unigetui", CLIHandler.IMPORT_SETTINGS, exportPath]));
+        Assert.Equal(
+            0,
+            SharedPreUiCommandDispatcher.ImportSettings(
+                ["unigetui", SharedPreUiCommandDispatcher.ImportSettingsArgument, exportPath],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            )
+        );
         Assert.True(Settings.Get(Settings.K.FreshBoolSetting));
         Assert.Equal("before-export", Settings.GetValue(Settings.K.FreshValue));
 
@@ -67,13 +83,36 @@ public sealed class CLIHandlerTests : IDisposable
     [Fact]
     public void EnableDisableAndSetValue_MutateSettings()
     {
-        Assert.Equal(0, CLIHandler.EnableSetting(["unigetui", CLIHandler.ENABLE_SETTING, nameof(Settings.K.Test1)]));
+        Assert.Equal(
+            0,
+            SharedPreUiCommandDispatcher.EnableSetting(
+                ["unigetui", SharedPreUiCommandDispatcher.EnableSettingArgument, nameof(Settings.K.Test1)],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            )
+        );
         Assert.True(Settings.Get(Settings.K.Test1));
 
-        Assert.Equal(0, CLIHandler.SetSettingsValue(["unigetui", CLIHandler.SET_SETTING_VAL, nameof(Settings.K.FreshValue), "cli-value"]));
+        Assert.Equal(
+            0,
+            SharedPreUiCommandDispatcher.SetSettingValue(
+                [
+                    "unigetui",
+                    SharedPreUiCommandDispatcher.SetSettingValueArgument,
+                    nameof(Settings.K.FreshValue),
+                    "cli-value",
+                ],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            )
+        );
         Assert.Equal("cli-value", Settings.GetValue(Settings.K.FreshValue));
 
-        Assert.Equal(0, CLIHandler.DisableSetting(["unigetui", CLIHandler.DISABLE_SETTING, nameof(Settings.K.Test1)]));
+        Assert.Equal(
+            0,
+            SharedPreUiCommandDispatcher.DisableSetting(
+                ["unigetui", SharedPreUiCommandDispatcher.DisableSettingArgument, nameof(Settings.K.Test1)],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            )
+        );
         Assert.False(Settings.Get(Settings.K.Test1));
     }
 
@@ -85,8 +124,9 @@ public sealed class CLIHandlerTests : IDisposable
 
         Assert.Equal(
             0,
-            CLIHandler.EnableSecureSettingForUser(
-                ["unigetui", CLIHandler.ENABLE_SECURE_SETTING_FOR_USER, user, setting]
+            SharedPreUiCommandDispatcher.EnableSecureSettingForUser(
+                ["unigetui", SecureSettings.Args.ENABLE_FOR_USER, user, setting],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
             )
         );
         Assert.True(
@@ -101,8 +141,9 @@ public sealed class CLIHandlerTests : IDisposable
 
         Assert.Equal(
             0,
-            CLIHandler.DisableSecureSettingForUser(
-                ["unigetui", CLIHandler.DISABLE_SECURE_SETTING_FOR_USER, user, setting]
+            SharedPreUiCommandDispatcher.DisableSecureSettingForUser(
+                ["unigetui", SecureSettings.Args.DISABLE_FOR_USER, user, setting],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
             )
         );
         Assert.False(

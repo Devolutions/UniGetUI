@@ -62,11 +62,11 @@ jobs:
     - name: Check whitespace formatting
       run: dotnet format whitespace src --folder --verify-no-changes --verbosity minimal
 
-    - name: Check code style formatting (Windows solution)
+    - name: Check code style formatting (Avalonia Windows solution)
       working-directory: src
       run: dotnet format style UniGetUI.Windows.slnx --no-restore --verify-no-changes --verbosity minimal
 
-    - name: Build Windows solution
+    - name: Build Avalonia Windows solution
       working-directory: src
       run: dotnet build UniGetUI.Windows.slnx --no-restore --verbosity minimal /p:Platform=x64
 
@@ -75,4 +75,3 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
       run: dotnet test UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Platform=x64
-

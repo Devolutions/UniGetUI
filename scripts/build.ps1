@@ -38,7 +38,7 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $SrcDir = Join-Path $RepoRoot "src"
 $WindowsSolution = Join-Path $SrcDir "UniGetUI.Windows.slnx"
-$PublishProject = Join-Path $SrcDir "UniGetUI" "UniGetUI.csproj"
+$PublishProject = Join-Path $SrcDir "UniGetUI.Avalonia" "UniGetUI.Avalonia.csproj"
 $BinDir = Join-Path $RepoRoot "unigetui_bin"
 $BuildPropsPath = Join-Path $SrcDir "Directory.Build.props"
 [xml] $BuildProps = Get-Content $BuildPropsPath
@@ -50,7 +50,7 @@ if ([string]::IsNullOrWhiteSpace($PortableTargetFramework) -or [string]::IsNullO
 }
 
 $TargetFramework = "$PortableTargetFramework-windows$WindowsTargetPlatformVersion"
-$PublishDir = Join-Path $SrcDir "UniGetUI" "bin" $Platform $Configuration $TargetFramework "win-$Platform" "publish"
+$PublishDir = Join-Path $SrcDir "UniGetUI.Avalonia" "bin" $Platform $Configuration $TargetFramework "win-$Platform" "publish"
 
 # --- Version stamping ---
 if ($Version) {
@@ -77,9 +77,9 @@ if (-not $SkipTests) {
 Write-Host "`n=== Publishing $Configuration|$Platform ===" -ForegroundColor Cyan
 dotnet clean $WindowsSolution -v m --nologo /p:Platform=$Platform
 
-dotnet publish $PublishProject /noLogo /p:Configuration=$Configuration /p:Platform=$Platform --ignore-failed-sources -v m
+dotnet publish $PublishProject /noLogo /p:Configuration=$Configuration /p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform --ignore-failed-sources -v m
 if ($LASTEXITCODE -ne 0) {
-    throw "dotnet publish WinUI failed with exit code $LASTEXITCODE"
+    throw "dotnet publish Avalonia failed with exit code $LASTEXITCODE"
 }
 
 # --- Stage binaries ---
@@ -87,6 +87,16 @@ if (Test-Path $BinDir) { Remove-Item $BinDir -Recurse -Force }
 New-Item $BinDir -ItemType Directory | Out-Null
 # Move published output into unigetui_bin
 Get-ChildItem $PublishDir | Move-Item -Destination $BinDir -Force
+
+$AvaloniaAppHostPath = Join-Path $BinDir "UniGetUI.Avalonia.exe"
+$WindowsAppHostPath = Join-Path $BinDir "UniGetUI.exe"
+if (Test-Path $AvaloniaAppHostPath) {
+    Move-Item $AvaloniaAppHostPath $WindowsAppHostPath -Force
+}
+
+if (-not (Test-Path $WindowsAppHostPath)) {
+    throw "Windows app host was not produced at $WindowsAppHostPath"
+}
 
 # Keep smaller symbols for useful local crash source information, and prune oversized ones.
 $MaxShippedPdbSizeBytes = 1MB

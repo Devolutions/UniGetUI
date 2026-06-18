@@ -187,14 +187,22 @@ jobs:
           }
 
           $TargetFramework = "$PortableTargetFramework-windows$WindowsTargetPlatformVersion"
-          dotnet publish src/UniGetUI/UniGetUI.csproj /noLogo /p:Configuration=Release /p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform -v m
-          if ($LASTEXITCODE -ne 0) { throw "dotnet publish WinUI failed" }
+          dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj /noLogo /p:Configuration=Release /p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform -v m
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish Avalonia failed" }
 
           # Stage binaries
-          $PublishDir = "src/UniGetUI/bin/$Platform/Release/$TargetFramework/win-$Platform/publish"
+          $PublishDir = "src/UniGetUI.Avalonia/bin/$Platform/Release/$TargetFramework/win-$Platform/publish"
           if (Test-Path "unigetui_bin") { Remove-Item "unigetui_bin" -Recurse -Force }
           New-Item "unigetui_bin" -ItemType Directory | Out-Null
           Get-ChildItem $PublishDir | Move-Item -Destination "unigetui_bin" -Force
+
+          if (Test-Path "unigetui_bin/UniGetUI.Avalonia.exe") {
+            Move-Item "unigetui_bin/UniGetUI.Avalonia.exe" "unigetui_bin/UniGetUI.exe" -Force
+          }
+
+          if (-not (Test-Path "unigetui_bin/UniGetUI.exe")) {
+            throw "Windows app host was not produced at unigetui_bin/UniGetUI.exe"
+          }
 
           $MaxShippedPdbSizeBytes = 1MB
           $PdbsToRemove = Get-ChildItem "unigetui_bin" -Filter "*.pdb" -File -Recurse | Where-Object {

@@ -81,7 +81,7 @@ param(
     [string] $Url           = 'https://github.com/Devolutions/UniGetUI',
     [string] $AppExecutableName = 'UniGetUI.Avalonia',
     [string] $LauncherName      = 'unigetui',
-    [string] $IconSourcePath    = (Join-Path $PSScriptRoot '..\src\UniGetUI\Assets\Images\icon.png')
+    [string] $IconSourcePath    = (Join-Path $PSScriptRoot '..' 'src' 'SharedAssets' 'Assets' 'Images' 'icon.png')
 )
 
 $ErrorActionPreference = 'Stop'

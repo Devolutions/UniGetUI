@@ -1497,7 +1497,8 @@ internal static partial class AvaloniaAutoUpdater
             return false;
         }
 
-        return uri.Host.EndsWith("devolutions.net", StringComparison.OrdinalIgnoreCase)
+        return uri.Host.Equals("devolutions.net", StringComparison.OrdinalIgnoreCase)
+            || uri.Host.EndsWith(".devolutions.net", StringComparison.OrdinalIgnoreCase)
             || uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
             || uri.Host.Equals("objects.githubusercontent.com", StringComparison.OrdinalIgnoreCase)
             || uri.Host.Equals("release-assets.githubusercontent.com", StringComparison.OrdinalIgnoreCase);

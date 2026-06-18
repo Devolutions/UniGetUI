@@ -1,9 +1,9 @@
 {
   "name": "windows-headless-ipc",
   "daemon": {
-    "kind": "winui-exe",
-    "project": "UniGetUI\\UniGetUI.csproj",
-    "assemblyName": "UniGetUI"
+    "kind": "avalonia-dll",
+    "project": "UniGetUI.Avalonia\\UniGetUI.Avalonia.csproj",
+    "assemblyName": "UniGetUI.Avalonia"
   },
   "transport": {
     "kind": "named-pipe",

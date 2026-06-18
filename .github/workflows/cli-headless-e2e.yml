@@ -21,10 +21,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Windows (WinUI 3)
+          - name: Windows (Avalonia)
             os: windows-latest
             solution: UniGetUI.Windows.slnx
-            daemon_project: UniGetUI/UniGetUI.csproj
+            daemon_project: UniGetUI.Avalonia/UniGetUI.Avalonia.csproj
             daemon_build_args: '-p:Platform=x64'
             manifest: testing/automation/cli-e2e.manifest.windows.json
           - name: Linux (Avalonia)

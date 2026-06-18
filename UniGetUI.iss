@@ -44,7 +44,7 @@ SignTool=azsign
 SignedUninstaller=yes
 SignedUninstallerDir=InstallerExtras\
 MinVersion=10.0
-SetupIconFile=src\UniGetUI\Assets\Images\icon.ico
+SetupIconFile=src\SharedAssets\Assets\Images\icon.ico
 UninstallDisplayIcon={app}\UniGetUI.exe
 Compression=lzma
 SolidCompression=yes
@@ -290,6 +290,16 @@ Root: HKA; Subkey: "Software\Classes\UniGetUI.PackageBundle"; ValueType: string;
 Root: HKA; Subkey: "Software\Classes\UniGetUI.PackageBundle\DefaultIcon"; ValueType: string; ValueData: "{app}\{#MyAppExeName},0"; Flags: uninsdeletekey; Tasks: regularinstall;
 Root: HKA; Subkey: "Software\Classes\UniGetUI.PackageBundle\shell\open\command"; ValueType: string; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Flags: uninsdeletekey; Tasks: regularinstall;
 
+
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\Avalonia"
+Type: filesandordirs; Name: "{app}\Assets"
+Type: files; Name: "{app}\UniGetUI.Avalonia.exe"
+Type: files; Name: "{app}\*.dll"
+Type: files; Name: "{app}\*.pdb"
+Type: files; Name: "{app}\*.pri"
+Type: files; Name: "{app}\*.xbf"
+Type: files; Name: "{app}\*.json"
 
 [Files]
 ; Deploy installer for autorepair jobs (unless disabled)

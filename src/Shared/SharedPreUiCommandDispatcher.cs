@@ -1,3 +1,4 @@
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
@@ -14,7 +15,7 @@ internal readonly record struct SharedPreUiCommandExitCodes(
 
 internal static class SharedPreUiCommandDispatcher
 {
-    internal static readonly SharedPreUiCommandExitCodes WinUiExitCodes = new(
+    internal static readonly SharedPreUiCommandExitCodes WindowsCliExitCodes = new(
         Success: 0,
         Failed: -1,
         InvalidParameter: -1073741811,
@@ -22,7 +23,7 @@ internal static class SharedPreUiCommandDispatcher
         UnknownSettingsKey: -2
     );
 
-    internal static readonly SharedPreUiCommandExitCodes AvaloniaExitCodes = new(
+    internal static readonly SharedPreUiCommandExitCodes PortableCliExitCodes = new(
         Success: 0,
         Failed: 1,
         InvalidParameter: 2,
@@ -30,14 +31,17 @@ internal static class SharedPreUiCommandDispatcher
         UnknownSettingsKey: 4
     );
 
-    private const string HelpArgument = "--help";
-    private const string ImportSettingsArgument = "--import-settings";
-    private const string ExportSettingsArgument = "--export-settings";
-    private const string EnableSettingArgument = "--enable-setting";
-    private const string DisableSettingArgument = "--disable-setting";
-    private const string SetSettingValueArgument = "--set-setting-value";
-    private const string EnableSecureSettingArgument = "--enable-secure-setting";
-    private const string DisableSecureSettingArgument = "--disable-secure-setting";
+    internal const string HelpArgument = "--help";
+    internal const string ImportSettingsArgument = "--import-settings";
+    internal const string ExportSettingsArgument = "--export-settings";
+    internal const string EnableSettingArgument = "--enable-setting";
+    internal const string DisableSettingArgument = "--disable-setting";
+    internal const string SetSettingValueArgument = "--set-setting-value";
+    internal const string EnableSecureSettingArgument = "--enable-secure-setting";
+    internal const string DisableSecureSettingArgument = "--disable-secure-setting";
+    internal const string MigrateWingetUIToUniGetUIArgument = "--migrate-wingetui-to-unigetui";
+    internal const string UninstallWingetUIArgument = "--uninstall-wingetui";
+    internal const string UninstallUniGetUIArgument = "--uninstall-unigetui";
 
     private const string EnableSecureSettingForUserArgument = SecureSettings.Args.ENABLE_FOR_USER;
     private const string DisableSecureSettingForUserArgument = SecureSettings.Args.DISABLE_FOR_USER;
@@ -92,6 +96,16 @@ internal static class SharedPreUiCommandDispatcher
         if (args.Contains(DisableSecureSettingForUserArgument))
         {
             return DisableSecureSettingForUser(args, exitCodes);
+        }
+
+        if (args.Contains(MigrateWingetUIToUniGetUIArgument))
+        {
+            return MigrateWingetUIToUniGetUI();
+        }
+
+        if (args.Contains(UninstallWingetUIArgument) || args.Contains(UninstallUniGetUIArgument))
+        {
+            return exitCodes.Success;
         }
 
         return null;
@@ -286,6 +300,73 @@ internal static class SharedPreUiCommandDispatcher
         }
         catch (Exception ex)
         {
+            return ex.HResult;
+        }
+    }
+
+    public static int MigrateWingetUIToUniGetUI()
+    {
+        try
+        {
+            string[] basePaths =
+            [
+                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
+            ];
+
+            foreach (string path in basePaths)
+            {
+                foreach (
+                    string oldWingetUIIcon in new[]
+                    {
+                        "WingetUI.lnk",
+                        "WingetUI .lnk",
+                        "UniGetUI (formerly WingetUI) .lnk",
+                        "UniGetUI (formerly WingetUI).lnk",
+                    }
+                )
+                {
+                    try
+                    {
+                        string oldFile = Path.Join(path, oldWingetUIIcon);
+                        string newFile = Path.Join(path, "UniGetUI.lnk");
+                        if (!File.Exists(oldFile))
+                        {
+                            continue;
+                        }
+
+                        if (File.Exists(newFile))
+                        {
+                            Logger.Info(
+                                "Deleting shortcut "
+                                    + oldFile
+                                    + " since new shortcut already exists"
+                            );
+                            File.Delete(oldFile);
+                        }
+                        else
+                        {
+                            Logger.Info("Moving shortcut to " + newFile);
+                            File.Move(oldFile, newFile);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warn(
+                            $"An error occurred while migrating the shortcut {Path.Join(path, oldWingetUIIcon)}"
+                        );
+                        Logger.Warn(ex);
+                    }
+                }
+            }
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex);
             return ex.HResult;
         }
     }

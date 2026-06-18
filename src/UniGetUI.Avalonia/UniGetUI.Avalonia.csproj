@@ -18,7 +18,7 @@
         <OutputType>WinExe</OutputType>
         <RootNamespace>UniGetUI.Avalonia</RootNamespace>
         <AssemblyName>UniGetUI.Avalonia</AssemblyName>
-        <ApplicationIcon>..\UniGetUI\icon.ico</ApplicationIcon>
+        <ApplicationIcon>..\SharedAssets\icon.ico</ApplicationIcon>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <ApplicationManifest Condition="$([MSBuild]::IsOSPlatform('Windows'))">app.manifest</ApplicationManifest>
         <PublishTrimmed>true</PublishTrimmed>
@@ -51,6 +51,14 @@
         <PingetCliRuntimeIdentifier Condition="'$(PingetCliRuntimeIdentifier)' == ''">win-x64</PingetCliRuntimeIdentifier>
         <PingetCliPackageNativePath>$(PkgDevolutions_Pinget_Cli_Rust)\runtimes\$(PingetCliRuntimeIdentifier)\native</PingetCliPackageNativePath>
         <PingetCliExecutablePath>$(PingetCliPackageNativePath)\pinget.exe</PingetCliExecutablePath>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+        <ElevatorPackageArchitecture Condition="'$(Platform)' == 'arm64'">arm64</ElevatorPackageArchitecture>
+        <ElevatorPackageArchitecture Condition="'$(ElevatorPackageArchitecture)' == ''">x64</ElevatorPackageArchitecture>
+        <ElevatorPackageNativePath>$(PkgDevolutions_UniGetUI_Elevator)\runtimes\win-$(ElevatorPackageArchitecture)\native</ElevatorPackageNativePath>
+        <ElevatorPackageExePath>$(ElevatorPackageNativePath)\UniGetUI Elevator.exe</ElevatorPackageExePath>
+        <ElevatorPackageDllPath>$(ElevatorPackageNativePath)\getfilesiginforedist.dll</ElevatorPackageDllPath>
     </PropertyGroup>
 
     <!-- macOS Debug: build straight into a .app bundle so the Dock icon (and its Default/Dark/
@@ -112,6 +120,21 @@
     </Target>
 
     <Target
+        Name="EnsureBundledElevatorFromNuGet"
+        BeforeTargets="PrepareForBuild"
+        Condition="'$(DesignTimeBuild)' != 'true' and $([MSBuild]::IsOSPlatform('Windows')) and '$(Configuration)' != 'Debug'"
+    >
+        <Error
+            Condition="!Exists('$(ElevatorPackageExePath)')"
+            Text="NuGet elevator executable not found at '$(ElevatorPackageExePath)'. Ensure package restore has completed for Devolutions.UniGetUI.Elevator."
+        />
+        <Error
+            Condition="!Exists('$(ElevatorPackageDllPath)')"
+            Text="NuGet elevator dependency DLL not found at '$(ElevatorPackageDllPath)'. Ensure package restore has completed for Devolutions.UniGetUI.Elevator."
+        />
+    </Target>
+
+    <Target
         Name="RemoveAvaloniaPublishSymbols"
         AfterTargets="ComputeFilesToPublish"
         Condition="'$(IncludeAvaloniaPublishSymbols)' != 'true'"
@@ -137,6 +160,7 @@
         <PackageReference Include="Octokit" Version="14.0.0" />
         <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.0" />
         <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
+        <PackageReference Include="Devolutions.UniGetUI.Elevator" Version="2.6.1.3" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
         <PackageReference Include="Devolutions.Pinget.Cli.Rust" Version="0.9.0" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" />
     </ItemGroup>
 
@@ -159,27 +183,33 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- SVG symbol icons (shared with WinUI project) -->
-        <AvaloniaResource Include="..\UniGetUI\Assets\Symbols\*.svg" Link="Assets\Symbols\%(Filename)%(Extension)" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Symbols\*.svg" Link="Assets\Symbols\%(Filename)%(Extension)" />
 
-        <AvaloniaResource Include="..\UniGetUI\icon.ico" Link="Assets\icon.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\icon.png" Link="Assets\icon.png" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\icon_unsquare.png" Link="Assets\icon_unsquare.png" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\package_color.png" Link="Assets\package_color.png" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\SplashScreen.png" Link="Assets\SplashScreen.png" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\SplashScreen.theme-dark.png" Link="Assets\SplashScreen.theme-dark.png" />
+        <AvaloniaResource Include="..\SharedAssets\icon.ico" Link="Assets\icon.ico" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\icon.png" Link="Assets\icon.png" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\icon_unsquare.png" Link="Assets\icon_unsquare.png" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\package_color.png" Link="Assets\package_color.png" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\SplashScreen.png" Link="Assets\SplashScreen.png" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\SplashScreen.theme-dark.png" Link="Assets\SplashScreen.theme-dark.png" />
         <!-- Tray status icon variants: status colour encoded by the corner dot; light/dark tone per taskbar theme. -->
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_black_legacy.ico" Link="Assets\tray_empty_black_legacy.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_empty_white_legacy.ico" Link="Assets\tray_empty_white_legacy.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_blue_black_legacy.ico" Link="Assets\tray_blue_black_legacy.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_blue_white_legacy.ico" Link="Assets\tray_blue_white_legacy.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_green_black_legacy.ico" Link="Assets\tray_green_black_legacy.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_green_white_legacy.ico" Link="Assets\tray_green_white_legacy.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_orange_black_legacy.ico" Link="Assets\tray_orange_black_legacy.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_orange_white_legacy.ico" Link="Assets\tray_orange_white_legacy.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_black_legacy.ico" Link="Assets\tray_turquoise_black_legacy.ico" />
-        <AvaloniaResource Include="..\UniGetUI\Assets\Images\tray_turquoise_white_legacy.ico" Link="Assets\tray_turquoise_white_legacy.ico" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\tray_empty_black_legacy.ico" Link="Assets\tray_empty_black_legacy.ico" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\tray_empty_white_legacy.ico" Link="Assets\tray_empty_white_legacy.ico" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\tray_blue_black_legacy.ico" Link="Assets\tray_blue_black_legacy.ico" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\tray_blue_white_legacy.ico" Link="Assets\tray_blue_white_legacy.ico" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\tray_green_black_legacy.ico" Link="Assets\tray_green_black_legacy.ico" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\tray_green_white_legacy.ico" Link="Assets\tray_green_white_legacy.ico" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\tray_orange_black_legacy.ico" Link="Assets\tray_orange_black_legacy.ico" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\tray_orange_white_legacy.ico" Link="Assets\tray_orange_white_legacy.ico" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\tray_turquoise_black_legacy.ico" Link="Assets\tray_turquoise_black_legacy.ico" />
+        <AvaloniaResource Include="..\SharedAssets\Assets\Images\tray_turquoise_white_legacy.ico" Link="Assets\tray_turquoise_white_legacy.ico" />
         <AvaloniaResource Remove="Infrastructure\**" />
+    </ItemGroup>
+
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+        <Content Include="..\SharedAssets\Assets\Utilities\*.cmd" Link="Assets\Utilities\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <Content Include="..\SharedAssets\Assets\Utilities\*.ps1" Link="Assets\Utilities\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <Content Include="$(ElevatorPackageExePath)" Link="Assets\Utilities\UniGetUI Elevator.exe" Condition="Exists('$(ElevatorPackageExePath)')" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" Pack="false" />
+        <Content Include="$(ElevatorPackageDllPath)" Link="Assets\Utilities\getfilesiginforedist.dll" Condition="Exists('$(ElevatorPackageDllPath)')" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" Pack="false" />
     </ItemGroup>
 
     <ItemGroup>

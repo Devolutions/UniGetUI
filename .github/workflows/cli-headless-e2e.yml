@@ -83,11 +83,14 @@ jobs:
             '--configuration',
             '${{ env.CONFIGURATION }}',
             '--verbosity',
-            'minimal'
+            'minimal',
+            '/p:UseSharedCompilation=false',
+            '/m:1'
           )
           if ('${{ matrix.daemon_build_args }}') {
             $args += '${{ matrix.daemon_build_args }}'
           }
+          dotnet build-server shutdown
           dotnet @args
 
       - name: Upgrade pip tooling

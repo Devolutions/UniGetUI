@@ -4,10 +4,12 @@
              xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
              xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:local="using:UniGetUI.Avalonia.Views"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
+             x:Name="SidebarRoot"
              x:DataType="vm:SidebarViewModel"
              MinWidth="64">
 
@@ -36,13 +38,16 @@
                                    FontSize="16"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
-                                   IsVisible="{Binding IsPaneOpen}"/>
+                                   IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                     </StackPanel>
                     <ProgressBar IsIndeterminate="True"
                                  IsVisible="{Binding DiscoverIsLoading}"
                                  Height="2"
+                                 Width="32"
+                                 MinWidth="0"
+                                 HorizontalAlignment="Left"
                                  VerticalAlignment="Bottom"
-                                 Margin="8,0"/>
+                                 Margin="4,0,0,2"/>
                 </Panel>
             </ListBoxItem>
 
@@ -58,26 +63,15 @@
                                    FontSize="16"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
-                                   IsVisible="{Binding IsPaneOpen}"/>
-                        <!-- Updates badge (expanded) -->
-                        <Border Background="{DynamicResource SystemAccentColor}"
-                                CornerRadius="10"
-                                Padding="6,1"
-                                IsVisible="{Binding UpdatesBadgeExpandedVisible}"
-                                VerticalAlignment="Center">
-                            <TextBlock Text="{Binding UpdatesBadgeCount}"
-                                       FontSize="11"
-                                       FontWeight="Bold"
-                                       Foreground="White"/>
-                        </Border>
+                                   IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                     </StackPanel>
-                    <!-- Updates badge (compact overlay) -->
+                    <!-- Update count bubble (InfoBadge-style), anchored to the icon's top-right in both rail and flyout -->
                     <Border Background="{DynamicResource SystemAccentColor}"
                             CornerRadius="8"
                             Padding="3,1"
                             MinWidth="16"
                             Height="16"
-                            IsVisible="{Binding UpdatesBadgeCompactVisible}"
+                            IsVisible="{Binding UpdatesBadgeVisible}"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Top"
                             Margin="26,3,0,0">
@@ -91,8 +85,11 @@
                     <ProgressBar IsIndeterminate="True"
                                  IsVisible="{Binding UpdatesIsLoading}"
                                  Height="2"
+                                 Width="32"
+                                 MinWidth="0"
+                                 HorizontalAlignment="Left"
                                  VerticalAlignment="Bottom"
-                                 Margin="8,0"/>
+                                 Margin="4,0,0,2"/>
                 </Panel>
             </ListBoxItem>
 
@@ -108,13 +105,16 @@
                                    FontSize="16"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
-                                   IsVisible="{Binding IsPaneOpen}"/>
+                                   IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                     </StackPanel>
                     <ProgressBar IsIndeterminate="True"
                                  IsVisible="{Binding InstalledIsLoading}"
                                  Height="2"
+                                 Width="32"
+                                 MinWidth="0"
+                                 HorizontalAlignment="Left"
                                  VerticalAlignment="Bottom"
-                                 Margin="8,0"/>
+                                 Margin="4,0,0,2"/>
                 </Panel>
             </ListBoxItem>
 
@@ -130,27 +130,14 @@
                                    FontSize="16"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
-                                   IsVisible="{Binding IsPaneOpen}"/>
-                        <!-- Unsaved changes badge (expanded) -->
-                        <Border Background="{DynamicResource SystemFillColorCautionBrush}"
-                                CornerRadius="10"
-                                Width="16"
-                                Height="16"
-                                IsVisible="{Binding BundlesBadgeExpandedVisible}"
-                                VerticalAlignment="Center">
-                            <TextBlock Text="!"
-                                       FontSize="10"
-                                       FontWeight="Bold"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </Border>
+                                   IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                     </StackPanel>
-                    <!-- Unsaved changes badge (compact overlay dot) -->
+                    <!-- Unsaved changes dot, anchored to the icon's top-right in both rail and flyout -->
                     <Border Background="{DynamicResource SystemFillColorCautionBrush}"
                             CornerRadius="5"
                             Width="10"
                             Height="10"
-                            IsVisible="{Binding BundlesBadgeCompactVisible}"
+                            IsVisible="{Binding BundlesBadgeVisible}"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Top"
                             Margin="28,5,0,0"/>
@@ -177,7 +164,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/settings.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                     <TextBlock Text="{t:Translate Settings}" FontSize="16" VerticalAlignment="Center"
-                               IsVisible="{Binding IsPaneOpen}"/>
+                               IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                 </StackPanel>
             </Button>
 
@@ -195,7 +182,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <controls:SvgIcon Path="avares://UniGetUI.Avalonia/Assets/Symbols/clipboard_list.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                     <TextBlock Text="{t:Translate Package Managers}" FontSize="16" VerticalAlignment="Center"
-                               IsVisible="{Binding IsPaneOpen}"/>
+                               IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                 </StackPanel>
             </Button>
 
@@ -211,7 +198,7 @@
                     <TextBlock Text="···" FontSize="20" Width="24" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
                                automation:AutomationProperties.AccessibilityView="Raw"/>
                     <TextBlock Text="{t:Translate More}" FontSize="16" VerticalAlignment="Center"
-                               IsVisible="{Binding IsPaneOpen}"/>
+                               IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                 </StackPanel>
                 <Button.Flyout>
                     <MenuFlyout Placement="RightEdgeAlignedTop">

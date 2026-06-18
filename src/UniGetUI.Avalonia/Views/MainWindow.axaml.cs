@@ -96,11 +96,14 @@ public partial class MainWindow : Window
         DataContext = new MainWindowViewModel();
         InitializeComponent();
         SetupTitleBar();
+        SetupResponsiveRail();
 
         RestoreGeometry();
 
         KeyDown += Window_KeyDown;
         ViewModel.CurrentPageChanged += OnCurrentPageChanged;
+        // Title-bar back button: visible whenever there's somewhere to go back to (mirrors WinUI's TitleBar.IsBackButtonVisible).
+        ViewModel.CanGoBackChanged += (_, canGoBack) => BackButton.IsVisible = canGoBack;
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         UpdateOperationsPanelRow();
 
@@ -216,6 +219,9 @@ public partial class MainWindow : Window
 
     private void OnCurrentPageChanged(object? sender, PageType pageType)
     {
+        // Like WinUI's NavigationView: picking a page collapses the sliding flyout back to the rail.
+        ViewModel.Sidebar.IsPaneOpen = false;
+
         if (!_focusSidebarSelectionOnNextPageChange)
             return;
 
@@ -226,6 +232,8 @@ public partial class MainWindow : Window
             sidebar?.FocusSelectedItem();
         }, DispatcherPriority.Background);
     }
+
+    private void BackButton_Click(object? sender, RoutedEventArgs e) => ViewModel.NavigateBack();
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -240,10 +248,10 @@ public partial class MainWindow : Window
     // user's chosen size across collapse/expand.
     private void UpdateOperationsPanelRow()
     {
-        if (MainContentGrid.RowDefinitions.Count < 3)
+        if (ContentRoot.RowDefinitions.Count < 3)
             return;
 
-        RowDefinition row = MainContentGrid.RowDefinitions[2];
+        RowDefinition row = ContentRoot.RowDefinitions[2];
         if (ViewModel.OperationsPanelVisible && ViewModel.OperationsPanelExpanded)
         {
             row.MinHeight = 80;
@@ -257,6 +265,21 @@ public partial class MainWindow : Window
             row.Height = GridLength.Auto;
         }
     }
+
+    // ─── Navigation rail (responsive) ─────────────────────────────────────────
+    // The always-visible icon rail shows on roomy windows and collapses below 800px so narrow
+    // windows give the content full width (the hamburger + sliding flyout still provide nav).
+    private void SetupResponsiveRail()
+        => MainContentRoot.GetObservable(BoundsProperty)
+            .Subscribe(b =>
+            {
+                if (b.Width <= 0) return;
+                NavRail.IsVisible = b.Width >= 800;
+            });
+
+    // Light-dismiss: clicking outside the open flyout closes it (no darkening — the layer is transparent).
+    private void FlyoutDismiss_PointerPressed(object? sender, PointerPressedEventArgs e)
+        => ViewModel.Sidebar.IsPaneOpen = false;
 
     private void SetupTitleBar()
     {
@@ -278,8 +301,8 @@ public partial class MainWindow : Window
                 {
                     TitleBarGrid.ClearValue(HeightProperty);
                     TitleBarGrid.Height = 44;
-                    MainContentGrid.ClearValue(MarginProperty);
-                    MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
+                    MainContentRoot.ClearValue(MarginProperty);
+                    MainContentRoot.Margin = new Thickness(0, 44, 0, 0);
                     HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
                 }
                 else
@@ -288,7 +311,7 @@ public partial class MainWindow : Window
                     {
                         RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor) { AncestorType = typeof(Window) },
                     });
-                    MainContentGrid.Bind(MarginProperty, new Binding("WindowDecorationMargin")
+                    MainContentRoot.Bind(MarginProperty, new Binding("WindowDecorationMargin")
                     {
                         RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor) { AncestorType = typeof(Window) },
                     });
@@ -311,7 +334,7 @@ public partial class MainWindow : Window
             TitleBarGrid.Height = 44;
             HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
             WindowButtons.IsVisible = true;
-            MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
+            MainContentRoot.Margin = new Thickness(0, 44, 0, 0);
             this.GetObservable(WindowStateProperty).Subscribe(state =>
             {
                 UpdateMaximizeButtonState(state == WindowState.Maximized);
@@ -328,7 +351,7 @@ public partial class MainWindow : Window
             TitleBarGrid.Height = 44;
             HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
             WindowButtons.IsVisible = !useNativeDecorations;
-            MainContentGrid.Margin = new Thickness(0, 44, 0, 0);
+            MainContentRoot.Margin = new Thickness(0, 44, 0, 0);
             // Keep maximize icon in sync with window state
             this.GetObservable(WindowStateProperty).Subscribe(state =>
             {

@@ -47,20 +47,26 @@ public partial class SidebarViewModel : ViewModelBase
     private bool _installedIsLoading;
 
     // ─── Pane open/closed ─────────────────────────────────────────────────────
+    // Starts collapsed: the pane is a floating overlay in every size class (see MainWindow's
+    // adaptive logic), so there is no persistent open-on-launch state.
     [ObservableProperty]
-    private bool isPaneOpen = !Settings.Get(Settings.K.CollapseNavMenuOnWideScreen);
+    private bool isPaneOpen;
+
+    // Only persist the open/closed choice as the "collapse on wide screen" preference
+    // while the pane is inline (Expanded mode). In the overlay modes used on smaller
+    // windows, opening/closing is transient and must not overwrite the saved preference.
+    // The MainWindow's adaptive logic keeps this in sync with the SplitView display mode.
+    public bool PersistPaneCollapsePreference { get; set; } = true;
 
     partial void OnIsPaneOpenChanged(bool value)
     {
-        Settings.Set(Settings.K.CollapseNavMenuOnWideScreen, !value);
-        OnPropertyChanged(nameof(PaneWidth));
+        if (PersistPaneCollapsePreference)
+            Settings.Set(Settings.K.CollapseNavMenuOnWideScreen, !value);
         OnPropertyChanged(nameof(UpdatesBadgeExpandedVisible));
         OnPropertyChanged(nameof(UpdatesBadgeCompactVisible));
         OnPropertyChanged(nameof(BundlesBadgeExpandedVisible));
         OnPropertyChanged(nameof(BundlesBadgeCompactVisible));
     }
-
-    public double PaneWidth => IsPaneOpen ? 250 : 64;
 
     public bool UpdatesBadgeExpandedVisible => UpdatesBadgeVisible && IsPaneOpen;
     public bool UpdatesBadgeCompactVisible => UpdatesBadgeVisible && !IsPaneOpen;

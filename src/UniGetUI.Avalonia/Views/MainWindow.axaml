@@ -16,17 +16,34 @@
         Width="1450"
         MinWidth="700"
         MinHeight="500">
+    <Window.Styles>
+        <!-- Nav flyout cross-fade. The flyout's icons sit exactly over the static rail's icons, so
+             fading (rather than sliding) keeps the icons perfectly aligned — only the labels fade
+             in/out, reading as a clean expand/collapse with no second nav appearing and no gap.
+             Opacity is GPU-composited, so it stays smooth. States are set via styles (not a local
+             value, which would beat the .open setter). -->
+        <Style Selector="Border#NavFlyout">
+            <Setter Property="Opacity" Value="0"/>
+        </Style>
+        <Style Selector="Border#NavFlyout.open">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+    </Window.Styles>
     <Panel>
-        <!-- Main content pushed below the native title bar -->
-        <Grid x:Name="MainContentGrid"
-              ColumnDefinitions="Auto,*"
-              RowDefinitions="*,4,Auto"
+        <!-- Main content pushed below the native title bar.
+             Navigation is a static icon rail (always laid out, never animated) plus a sliding
+             flyout (NavFlyout, below) that translates in over the content on the GPU compositor.
+             Nothing re-lays-out during the slide, which keeps it smooth. -->
+        <Grid x:Name="MainContentRoot"
+              Margin="{Binding $parent[Window].WindowDecorationMargin}"
               Background="{DynamicResource MicaPageBackground}"
-              Margin="{Binding $parent[Window].WindowDecorationMargin}">
+              ColumnDefinitions="Auto,*">
 
-            <!-- ── Sidebar (spans all rows) ── -->
-            <ContentControl Grid.Column="0" Grid.RowSpan="3"
-                            Width="{Binding Sidebar.PaneWidth}"
+            <!-- ── Icon rail (always visible ≥800px; collapsed below) ── -->
+            <ContentControl x:Name="NavRail"
+                            Grid.Column="0"
+                            Width="64"
+                            ClipToBounds="True"
                             Content="{Binding Sidebar}"
                             automation:AutomationProperties.AccessibilityView="Control"
                             automation:AutomationProperties.Name="{t:Translate Navigation panel}"
@@ -35,13 +52,16 @@
                             VerticalContentAlignment="Stretch">
                 <ContentControl.DataTemplates>
                     <DataTemplate DataType="vm:SidebarViewModel">
-                        <views:SidebarView/>
+                        <views:SidebarView ShowLabels="False"/>
                     </DataTemplate>
                 </ContentControl.DataTemplates>
             </ContentControl>
 
+            <!-- ── Content: banners + page + operations ── -->
+            <Grid x:Name="ContentRoot" Grid.Column="1" RowDefinitions="*,4,Auto">
+
             <!-- ── Banners + page content ── -->
-            <Grid Grid.Column="1" Grid.Row="0" RowDefinitions="Auto,*" Margin="0,10">
+            <Grid Grid.Row="0" RowDefinitions="Auto,*" Margin="0,10">
                 <StackPanel Grid.Row="0"
                             Spacing="0"
                             automation:AutomationProperties.AccessibilityView="Control">
@@ -69,7 +89,7 @@
             </Grid>
 
             <!-- ── GridSplitter (only visible when operations are present) ── -->
-            <GridSplitter Grid.Column="1" Grid.Row="1"
+            <GridSplitter Grid.Row="1"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch"
                           IsVisible="{Binding OperationsPanelVisible}"
@@ -78,7 +98,7 @@
                           Opacity="0.8"/>
 
             <!-- ── Operations panel ── -->
-            <Border Grid.Column="1" Grid.Row="2"
+            <Border Grid.Row="2"
                     IsVisible="{Binding OperationsPanelVisible}"
                     BorderThickness="0,1,0,0"
                     BorderBrush="{DynamicResource AppBorderBrush}"
@@ -289,6 +309,47 @@
                 </Grid>
             </Border>
 
+            </Grid>
+
+            <!-- ── Light-dismiss layer: transparent (no darkening), closes the flyout on outside click ── -->
+            <Border x:Name="FlyoutDismiss"
+                    Grid.Column="0" Grid.ColumnSpan="2"
+                    Background="Transparent"
+                    ZIndex="9"
+                    IsVisible="{Binding Sidebar.IsPaneOpen}"
+                    automation:AutomationProperties.AccessibilityView="Raw"
+                    PointerPressed="FlyoutDismiss_PointerPressed"/>
+
+            <!-- ── Sliding nav flyout: full labeled pane, parked off-screen, slid in via GPU translate ── -->
+            <Border x:Name="NavFlyout"
+                    Grid.Column="0" Grid.ColumnSpan="2"
+                    Width="250"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Stretch"
+                    ZIndex="10"
+                    Background="{DynamicResource AppWindowBackground}"
+                    IsHitTestVisible="{Binding Sidebar.IsPaneOpen}"
+                    Classes.open="{Binding Sidebar.IsPaneOpen}">
+                <Border.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.18">
+                            <DoubleTransition.Easing>
+                                <SplineEasing X1="0.1" Y1="0.9" X2="0.2" Y2="1.0"/>
+                            </DoubleTransition.Easing>
+                        </DoubleTransition>
+                    </Transitions>
+                </Border.Transitions>
+                <ContentControl Content="{Binding Sidebar}"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch">
+                    <ContentControl.DataTemplates>
+                        <DataTemplate DataType="vm:SidebarViewModel">
+                            <views:SidebarView ShowLabels="True"/>
+                        </DataTemplate>
+                    </ContentControl.DataTemplates>
+                </ContentControl>
+            </Border>
+
         </Grid>
 
         <TextBlock x:Name="LiveAnnouncementHost"
@@ -329,6 +390,25 @@
                         Margin="65,0,8,0"
                         Spacing="8"
                         Opacity="0.6">
+                <!-- Back button — appears once there is navigation history (mirrors WinUI's title-bar back). -->
+                <Button x:Name="BackButton"
+                        Width="32" Height="32"
+                        Padding="4"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        CornerRadius="4"
+                        IsVisible="False"
+                        automation:AutomationProperties.Name="{t:Translate Go back}"
+                        ToolTip.Tip="{t:Translate Go back}"
+                        Click="BackButton_Click">
+                    <Path Width="16" Height="14"
+                          Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                          StrokeThickness="1.5"
+                          StrokeLineCap="Round"
+                          StrokeJoin="Round"
+                          automation:AutomationProperties.AccessibilityView="Raw"
+                          Data="M7,1 L1,7 L7,13 M1,7 H15"/>
+                </Button>
                 <Button Width="32" Height="32"
                         Padding="4"
                         Background="Transparent"
@@ -337,9 +417,12 @@
                         automation:AutomationProperties.Name="{t:Translate Toggle navigation panel}"
                         ToolTip.Tip="{t:Translate Toggle navigation panel}"
                         Command="{Binding ToggleSidebarCommand}">
-                    <PathIcon Width="14" Height="14"
-                              automation:AutomationProperties.AccessibilityView="Raw"
-                              Data="M1,1 H15 V3 H1 Z M1,7 H15 V9 H1 Z M1,13 H15 V15 H1 Z"/>
+                    <Path Width="16" Height="14"
+                          Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                          StrokeThickness="1.5"
+                          StrokeLineCap="Round"
+                          automation:AutomationProperties.AccessibilityView="Raw"
+                          Data="M0,1 H16 M0,7 H16 M0,13 H16"/>
                 </Button>
                 <TextBlock Text="{Binding TitleBarText}"
                            FontSize="13"

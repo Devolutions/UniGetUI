@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using UniGetUI.Avalonia.ViewModels;
@@ -7,6 +8,20 @@ namespace UniGetUI.Avalonia.Views;
 public partial class SidebarView : BaseView<SidebarViewModel>
 {
     private bool _lastNavItemSelectionWasAuto;
+
+    /// <summary>
+    /// Whether the nav item text labels are shown. False renders an icon-only rail; true renders the
+    /// full labeled pane. Decoupled from the view-model's pane state so the same view can be used both
+    /// as the always-visible rail and as the sliding flyout simultaneously.
+    /// </summary>
+    public static readonly StyledProperty<bool> ShowLabelsProperty =
+        AvaloniaProperty.Register<SidebarView, bool>(nameof(ShowLabels), defaultValue: true);
+
+    public bool ShowLabels
+    {
+        get => GetValue(ShowLabelsProperty);
+        set => SetValue(ShowLabelsProperty, value);
+    }
 
     public SidebarView()
     {

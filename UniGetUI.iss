@@ -294,6 +294,7 @@ Root: HKA; Subkey: "Software\Classes\UniGetUI.PackageBundle\shell\open\command";
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\Avalonia"
 Type: filesandordirs; Name: "{app}\Assets"
+Type: files; Name: "{app}\WingetUI.exe"
 Type: files; Name: "{app}\UniGetUI.Avalonia.exe"
 Type: files; Name: "{app}\*.dll"
 Type: files; Name: "{app}\*.pdb"

@@ -111,9 +111,6 @@ if ($PdbsToRemove.Count -gt 0) {
     Write-Host ("Removed {0} oversized PDBs above {1:N2} MiB ({2:N2} MiB total)." -f $PdbsToRemove.Count, ($MaxShippedPdbSizeBytes / 1MB), ($RemovedPdbBytes / 1MB))
 }
 
-# WingetUI.exe alias for backward compat
-Copy-Item (Join-Path $BinDir "UniGetUI.exe") (Join-Path $BinDir "WingetUI.exe") -Force
-
 # --- Package output ---
 if (Test-Path $OutputPath) { Remove-Item $OutputPath -Recurse -Force }
 New-Item $OutputPath -ItemType Directory | Out-Null

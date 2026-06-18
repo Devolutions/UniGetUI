@@ -215,9 +215,6 @@ jobs:
             Write-Host ("Removed {0} oversized PDBs above {1:N2} MiB ({2:N2} MiB total)." -f $PdbsToRemove.Count, ($MaxShippedPdbSizeBytes / 1MB), ($RemovedPdbBytes / 1MB))
           }
 
-          # Backward-compat alias
-          Copy-Item "unigetui_bin/UniGetUI.exe" "unigetui_bin/WingetUI.exe" -Force
-
       - name: Code-sign binaries
         if: ${{ fromJSON(needs.preflight.outputs.dry-run) == false }}
         shell: pwsh

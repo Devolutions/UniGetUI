@@ -847,4 +847,5 @@
   "Choose how many operations shoulds be performed in parallel": "Виберіть, скільки операцій слід виконувати паралельно",
   "Something went wrong while launching the updater.": "Щось пішло не так при запуску програми оновлення.",
   "Please try again later": "Будь ласка, спробуйте ще раз пізніше"
+  "Show the release notes after UnigetUI is updated": "Показати примітки до випуску після оновлення UnigetUI"
 }

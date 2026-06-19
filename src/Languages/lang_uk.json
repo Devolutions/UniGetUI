@@ -4,8 +4,8 @@
   "Enabled": "Увімкнено",
   "Disabled": "Вимкнено",
   "Privacy": "Конфіденційність",
-  "Hide my username from the logs": "Приховати моє ім'я користувача в журналах",
-  "Replaces your username with **** in the logs. Restart UniGetUI to also hide it from already-recorded entries.": "Замінює ваше ім'я користувача на **** у журналах. Перезапустіть UniGetUI, щоб також приховати його у вже записаних записах.",
+  "Hide my username from the logs": "Приховати моє ім'я у журналах",
+  "Replaces your username with **** in the logs. Restart UniGetUI to also hide it from already-recorded entries.": "Замінює ваше ім'я на **** у журналах. Перезапустіть UniGetUI, щоб також приховати його у вже записаних записах.",
   "Your last update attempt did not complete.": "Остання спроба оновлення не завершилася.",
   "UniGetUI could not confirm whether the update succeeded. Open the log to see what happened.": "UniGetUI не вдалося підтвердити, чи оновлення виконано успішно. Відкрийте журнал, щоб переглянути, що сталося.",
   "View log": "Переглянути журнал",
@@ -483,7 +483,7 @@
   "Select upgradable packages by default": "Вибирати пакети, що можна оновити, за замовчуванням",
   "Light": "Світла",
   "Dark": "Темна",
-  "Follow system color scheme": "Дотримуватися колірної схеми системи",
+  "Follow system color scheme": "Системна",
   "Application theme:": "Тема програми:",
   "UniGetUI startup page:": "Початковий екран UniGetUI:",
   "Proxy settings": "Налаштування проксі",
@@ -847,4 +847,5 @@
   "Choose how many operations shoulds be performed in parallel": "Виберіть, скільки операцій слід виконувати паралельно",
   "Something went wrong while launching the updater.": "Щось пішло не так при запуску програми оновлення.",
   "Please try again later": "Будь ласка, спробуйте ще раз пізніше"
+  "Show the release notes after UnigetUI is updated": "Показати примітки до випуску після оновлення UnigetUI"
 }

@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Resolve build parameters
         id: info
@@ -101,7 +101,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate GitHub OAuth secrets
         shell: pwsh
@@ -331,7 +331,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install .NET
         uses: actions/setup-dotnet@v5
@@ -371,7 +371,7 @@ jobs:
 
       - name: Check out Devolutions/actions
         if: ${{ runner.os == 'macOS' && fromJSON(needs.preflight.outputs.dry-run) == false }}
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: Devolutions/actions
           ref: v1
@@ -611,7 +611,7 @@ jobs:
 
       - name: Check out Devolutions/actions
         if: ${{ fromJSON(needs.preflight.outputs.dry-run) == false }}
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: Devolutions/actions
           ref: v1

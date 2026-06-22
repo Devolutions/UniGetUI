@@ -18,6 +18,29 @@ namespace UniGetUI.Core.Data
         {
             get => __code_page ??= GetCodePage();
         }
+
+        private static Encoding? __console_encoding;
+        // The encoding CLIs that don't force UTF-8 (e.g. Chocolatey) actually emit their console output in.
+        public static Encoding ConsoleEncoding
+        {
+            get
+            {
+                if (__console_encoding is not null)
+                    return __console_encoding;
+                try
+                {
+                    Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+                    __console_encoding = Encoding.GetEncoding(CODE_PAGE);
+                }
+                catch (Exception e)
+                {
+                    Logger.Warn($"Could not resolve console code page {CODE_PAGE}, falling back to UTF-8");
+                    Logger.Warn(e);
+                    __console_encoding = Encoding.UTF8;
+                }
+                return __console_encoding;
+            }
+        }
         public const string VersionName = "2026.1.0"; // Do not modify this line, use file scripts/set-version.ps1
         public const int BuildNumber = 106; // Do not modify this line, use file scripts/set-version.ps1
 

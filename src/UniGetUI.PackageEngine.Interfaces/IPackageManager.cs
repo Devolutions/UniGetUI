@@ -1,3 +1,4 @@
+using System.Text;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
@@ -20,6 +21,12 @@ namespace UniGetUI.PackageEngine.Interfaces
         public IPackageDetailsHelper DetailsHelper { get; }
         public IPackageOperationHelper OperationHelper { get; }
         public IReadOnlyList<ManagerDependency> Dependencies { get; }
+
+        /// <summary>
+        /// The text encoding this manager's CLI emits its output in. Defaults to UTF-8; managers
+        /// whose CLI emits in the system console code page (e.g. Chocolatey) must override this.
+        /// </summary>
+        public Encoding OutputEncoding { get; }
 
         /// <summary>
         /// Initializes the Package Manager (asynchronously). Must be run before using any other method of the manager.

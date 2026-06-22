@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
@@ -18,6 +19,9 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
 {
     public class Chocolatey : BaseNuGet
     {
+        // Chocolatey emits its output in the system console code page, not UTF-8.
+        public override Encoding OutputEncoding => CoreData.ConsoleEncoding;
+
         public static readonly string[] FALSE_PACKAGE_IDS =
         [
             "Directory",
@@ -265,7 +269,8 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
                     RedirectStandardInput = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                    StandardOutputEncoding = OutputEncoding,
+                    StandardErrorEncoding = OutputEncoding,
                 },
             };
 
@@ -300,7 +305,8 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
                     RedirectStandardInput = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                    StandardOutputEncoding = OutputEncoding,
+                    StandardErrorEncoding = OutputEncoding,
                 },
             };
 
@@ -368,7 +374,8 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true,
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                    StandardOutputEncoding = OutputEncoding,
+                    StandardErrorEncoding = OutputEncoding,
                 },
             };
             process.Start();

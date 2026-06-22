@@ -139,6 +139,8 @@ namespace UniGetUI.PackageEngine.Operations
 
             process.StartInfo.FileName = FileName;
             process.StartInfo.Arguments = Arguments;
+            process.StartInfo.StandardOutputEncoding = Package.Manager.OutputEncoding;
+            process.StartInfo.StandardErrorEncoding = Package.Manager.OutputEncoding;
 
             ApplyCapabilities(
                 IsAdmin,

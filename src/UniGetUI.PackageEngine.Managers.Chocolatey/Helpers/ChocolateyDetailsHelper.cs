@@ -42,7 +42,8 @@ namespace UniGetUI.PackageEngine.Managers.Choco
                     RedirectStandardError = true,
                     RedirectStandardInput = true,
                     CreateNoWindow = true,
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                    StandardOutputEncoding = Manager.OutputEncoding,
+                    StandardErrorEncoding = Manager.OutputEncoding,
                 },
             };
 

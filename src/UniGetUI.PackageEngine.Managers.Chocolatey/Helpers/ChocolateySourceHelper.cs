@@ -65,7 +65,8 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
                     RedirectStandardInput = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                    StandardOutputEncoding = Manager.OutputEncoding,
+                    StandardErrorEncoding = Manager.OutputEncoding,
                 },
             };
 

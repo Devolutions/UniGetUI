@@ -1,3 +1,4 @@
+using System.Text;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
@@ -41,6 +42,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public IMultiSourceHelper SourcesHelper { get; protected set; } = new NullSourceHelper();
         public IPackageDetailsHelper DetailsHelper { get; protected set; } = null!;
         public IPackageOperationHelper OperationHelper { get; protected set; } = null!;
+        public virtual Encoding OutputEncoding => Encoding.UTF8;
 
         private readonly bool _baseConstructorCalled;
         private bool _ready;

@@ -19,5 +19,6 @@
 
     <ItemGroup>
         <PackageReference Include="YamlDotNet" Version="17.0.1" />
+        <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.5" />
     </ItemGroup>
 </Project>

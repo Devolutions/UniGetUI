@@ -10,6 +10,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using UniGetUI.Avalonia.Extensions;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Pages;
@@ -128,7 +129,7 @@ public partial class MainWindow : Window
 
         Resized += (_, _) => _ = SaveGeometryAsync();
         PositionChanged += (_, _) => _ = SaveGeometryAsync();
-        this.GetObservable(WindowStateProperty).Subscribe(state => { _ = SaveGeometryAsync(); });
+        this.GetObservable(WindowStateProperty).SubscribeValue(state => { _ = SaveGeometryAsync(); });
 
         _trayService = new TrayService(this);
         _trayService.UpdateStatus();
@@ -290,7 +291,7 @@ public partial class MainWindow : Window
     // windows give the content full width (the hamburger + sliding flyout still provide nav).
     private void SetupResponsiveRail()
         => MainContentRoot.GetObservable(BoundsProperty)
-            .Subscribe(b =>
+            .SubscribeValue(b =>
             {
                 if (b.Width <= 0) return;
                 NavRail.IsVisible = b.Width >= 800;
@@ -314,7 +315,7 @@ public partial class MainWindow : Window
             // collapses to 0, which would clip the search box and hamburger. Use a fixed
             // title bar height in that state, and drop the traffic-light reservation
             // since the traffic lights aren't shown either.
-            this.GetObservable(WindowStateProperty).Subscribe(state =>
+            this.GetObservable(WindowStateProperty).SubscribeValue(state =>
             {
                 if (state == WindowState.FullScreen)
                 {
@@ -354,7 +355,7 @@ public partial class MainWindow : Window
             HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
             WindowButtons.IsVisible = true;
             MainContentRoot.Margin = new Thickness(0, 44, 0, 0);
-            this.GetObservable(WindowStateProperty).Subscribe(state =>
+            this.GetObservable(WindowStateProperty).SubscribeValue(state =>
             {
                 UpdateMaximizeButtonState(state == WindowState.Maximized);
             });
@@ -372,7 +373,7 @@ public partial class MainWindow : Window
             WindowButtons.IsVisible = !useNativeDecorations;
             MainContentRoot.Margin = new Thickness(0, 44, 0, 0);
             // Keep maximize icon in sync with window state
-            this.GetObservable(WindowStateProperty).Subscribe(state =>
+            this.GetObservable(WindowStateProperty).SubscribeValue(state =>
             {
                 UpdateMaximizeButtonState(state == WindowState.Maximized);
             });

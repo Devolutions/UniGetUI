@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using UniGetUI.Avalonia.Extensions;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
@@ -134,7 +135,7 @@ public partial class SecureCheckboxCard : SettingsCard
         _checkbox.IsCheckedChanged += (s, e) => _ = _checkbox_Toggled();
 
         this.GetObservable(IsEnabledProperty)
-            .Subscribe(enabled => _warningBlock.Opacity = enabled ? 1 : 0.2);
+            .SubscribeValue(enabled => _warningBlock.Opacity = enabled ? 1 : 0.2);
 
         // The Devolutions SettingsCard measures the Header with infinite width, so
         // TextWrapping alone won't constrain the warning block. We fix it by updating

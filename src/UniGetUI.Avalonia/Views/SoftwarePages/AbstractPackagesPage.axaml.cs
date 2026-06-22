@@ -11,6 +11,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Transformation;
 using Avalonia.Threading;
+using UniGetUI.Avalonia.Extensions;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.SettingsEngine;
@@ -95,7 +96,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // Using ColumnDefinition.WidthProperty fires every drag step, not just on release.
         FilteringPanel.ColumnDefinitions[0]
             .GetObservable(ColumnDefinition.WidthProperty)
-            .Subscribe(width =>
+            .SubscribeValue(width =>
             {
                 if (_isOverlayMode || !ViewModel.IsFilterPaneOpen) return;
                 if (width.IsAbsolute && width.Value >= 100)
@@ -114,19 +115,19 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
         // Responsive: switch between inline and overlay modes based on content width.
         FilteringPanel.GetObservable(BoundsProperty)
-            .Subscribe(bounds => OnFilteringPanelWidthChanged(bounds.Width));
+            .SubscribeValue(bounds => OnFilteringPanelWidthChanged(bounds.Width));
 
         // Responsive: collapse the menu bar to icon-only on narrow windows so the
         // toolbar buttons stay reachable instead of overflowing (mirrors WinUI).
         this.GetObservable(BoundsProperty)
-            .Subscribe(bounds => ViewModel.SetToolbarLabelsCollapsed(bounds.Width < 900));
+            .SubscribeValue(bounds => ViewModel.SetToolbarLabelsCollapsed(bounds.Width < 900));
 
         // Grid/icons views: stretch cards to fill each row then reflow (mirrors WinUI's
         // UniformGridLayout) instead of leaving wasted space to the right.
         GridViewItems.GetObservable(BoundsProperty)
-            .Subscribe(bounds => UpdateGridCardWidth(bounds.Width));
+            .SubscribeValue(bounds => UpdateGridCardWidth(bounds.Width));
         IconsViewItems.GetObservable(BoundsProperty)
-            .Subscribe(bounds => UpdateIconCardWidth(bounds.Width));
+            .SubscribeValue(bounds => UpdateIconCardWidth(bounds.Width));
 
         // Overlay backdrop dismisses the filter pane when tapped.
         FilterOverlayBackdrop.PointerPressed += (_, _) => ViewModel.IsFilterPaneOpen = false;

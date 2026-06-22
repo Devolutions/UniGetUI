@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.PackageEngine.Enums;

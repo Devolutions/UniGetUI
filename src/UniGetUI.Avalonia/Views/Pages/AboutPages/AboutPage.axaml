@@ -27,7 +27,7 @@
                        FontSize="14"
                        TextWrapping="Wrap"/>
 
-            <TextBlock Text="{Binding VersionText}"
+            <SelectableTextBlock Text="{Binding VersionText}"
                        FontSize="15"
                        FontWeight="SemiBold"
                        Margin="0,10"/>

@@ -490,7 +490,7 @@
             <StackPanel Spacing="6">
                 <TextBlock Text="{Binding CommandPreviewLabel}" Opacity="0.7"/>
                 <Border Background="{DynamicResource AppDialogDarkBackground}" CornerRadius="4" Padding="8">
-                    <TextBlock Text="{Binding CommandPreview}"
+                    <SelectableTextBlock Text="{Binding CommandPreview}"
                                automation:AutomationProperties.Name="{Binding CommandPreviewLabel}"
                                FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                FontSize="14"

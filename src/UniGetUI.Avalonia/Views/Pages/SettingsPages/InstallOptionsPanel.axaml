@@ -135,7 +135,7 @@
                                 Command="{Binding ResetLocationCommand}"
                                 IsEnabled="{Binding LocationResetEnabled}"/>
                     </Grid>
-                    <TextBlock Text="{Binding LocationText}"
+                    <SelectableTextBlock Text="{Binding LocationText}"
                                FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                FontSize="14"
                                Opacity="0.6"

@@ -83,7 +83,7 @@
                                        MinWidth="120"/>
                         </StackPanel>
                         <!-- URL -->
-                        <TextBlock Grid.Column="2"
+                        <SelectableTextBlock Grid.Column="2"
                                    Text="{Binding Url}"
                                    VerticalAlignment="Center"
                                    Classes="hyperlink"

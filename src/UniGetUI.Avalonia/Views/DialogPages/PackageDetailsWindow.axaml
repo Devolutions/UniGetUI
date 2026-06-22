@@ -146,7 +146,7 @@
                                        FontFamily="Segoe UI Variable Display"
                                        TextWrapping="Wrap"
                                        automation:AutomationProperties.HeadingLevel="1"/>
-                            <TextBlock Text="{Binding SourceDisplay}"
+                            <SelectableTextBlock Text="{Binding SourceDisplay}"
                                        FontSize="13" Opacity="0.65"/>
                         </StackPanel>
                     </Grid>

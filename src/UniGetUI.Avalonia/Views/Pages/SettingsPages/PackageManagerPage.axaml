@@ -78,7 +78,7 @@
                         <TextBlock Text="{Binding ShowVersionLabel}" Classes="hyperlink"
                                    automation:AutomationProperties.AccessibilityView="Raw"/>
                     </Button>
-                    <TextBlock Text="{Binding VersionText}"
+                    <SelectableTextBlock Text="{Binding VersionText}"
                                IsVisible="{Binding VersionTextVisible}"
                                FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                FontSize="14"

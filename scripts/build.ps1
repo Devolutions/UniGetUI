@@ -21,8 +21,10 @@
 .PARAMETER Version
     Version string to stamp into the build (e.g. "3.3.7"). If not provided,
     the current version from SharedAssemblyInfo.cs is used.
-#>
 
+.PARAMETER MaxInstallerCompression
+    Use the strongest Inno Setup compression settings for the installer.
+#>
 [CmdletBinding()]
 param(
     [string] $Configuration = "Release",
@@ -30,6 +32,7 @@ param(
     [string] $OutputPath = (Join-Path $PSScriptRoot ".." "output"),
     [switch] $SkipTests,
     [switch] $SkipInstaller,
+    [switch] $MaxInstallerCompression,
     [string] $Version
 )
 
@@ -143,7 +146,13 @@ if (-not $SkipInstaller) {
             $IssContentNoSign = $IssContentNoSign -Replace '(?m)^SignedUninstaller=yes', 'SignedUninstaller=no'
             Set-Content $IssPath $IssContentNoSign -NoNewline
 
-            & $IsccPath $IssPath /F"$InstallerBaseName" /O"$OutputPath"
+            $IsccArgs = @($IssPath, "/F$InstallerBaseName", "/O$OutputPath")
+            if ($MaxInstallerCompression) {
+                Write-Host "Using lzma/ultra64 installer compression."
+                $IsccArgs = @('/DInstallerCompression=lzma/ultra64') + $IsccArgs
+            }
+
+            & $IsccPath @IsccArgs
             if ($LASTEXITCODE -ne 0) {
                 throw "Inno Setup failed with exit code $LASTEXITCODE"
             }

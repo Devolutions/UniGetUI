@@ -260,7 +260,13 @@ jobs:
             Set-Content $IssPath $issContentNoSign -NoNewline
 
             $InstallerBaseName = "UniGetUI.Installer.$Platform"
-            & ISCC.exe $IssPath /F"$InstallerBaseName" /O"$OutputDir"
+            $IsccArgs = @($IssPath, "/F$InstallerBaseName", "/O$OutputDir")
+            if ([System.Boolean]::Parse('${{ needs.preflight.outputs.dry-run }}') -eq $false) {
+              Write-Host "Using lzma/ultra64 installer compression for release build."
+              $IsccArgs = @('/DInstallerCompression=lzma/ultra64') + $IsccArgs
+            }
+
+            & ISCC.exe @IsccArgs
             if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
           }
           finally {

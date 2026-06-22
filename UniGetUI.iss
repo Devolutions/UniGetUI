@@ -6,6 +6,9 @@
 #define MyAppPublisher "Devolutions Inc."
 #define MyAppURL "https://github.com/Devolutions/UniGetUI"
 #define MyAppExeName "UniGetUI.exe"
+#ifndef InstallerCompression
+#define InstallerCompression "lzma"
+#endif
 
 #define public Dependency_Path_NetCoreCheck "InstallerExtras\"
 #include "InstallerExtras\CodeDependencies.iss"
@@ -46,7 +49,7 @@ SignedUninstallerDir=InstallerExtras\
 MinVersion=10.0
 SetupIconFile=src\SharedAssets\Assets\Images\icon.ico
 UninstallDisplayIcon={app}\UniGetUI.exe
-Compression=lzma
+Compression={#InstallerCompression}
 SolidCompression=yes
 WizardStyle=modern dynamic
 WizardImageFile=InstallerExtras\installer-banner.png

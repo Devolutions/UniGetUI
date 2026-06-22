@@ -97,6 +97,21 @@ Name: "Ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 #include "InstallerExtras\CustomMessages.iss"
 
 [Code]
+var
+  PreserveAutostartDisabled: Boolean;
+
+// StartupApproved stores the on/off state in the first byte's low bit (03 = off).
+function IsAutostartDisabledByUser: Boolean;
+var
+  Data: AnsiString;
+begin
+  Result := False;
+  if RegQueryBinaryValue(HKEY_CURRENT_USER,
+       'Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run',
+       'WingetUI', Data) then
+    Result := (Length(Data) >= 1) and ((Ord(Data[1]) and 1) = 1);
+end;
+
 procedure InitializeWizard;
 begin
   WizardForm.Bevel.Visible := False;
@@ -157,6 +172,8 @@ end;
 // Runs before any file is copied: shut everything down, then mark the copy window.
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
+    // Capture before [Registry] rewrites the Run key, so updates keep the user's choice.
+    PreserveAutostartDisabled := IsAutostartDisabledByUser;
     KillRunningApps;
     WriteUpdateMarker;
     Result := '';
@@ -204,7 +221,7 @@ end;
 
 function ShouldSuppressRunOnStartup: Boolean;
 begin
-  Result := CmdLineParamExists('/NoRunOnStartup') or IsMSStoreInstall;
+  Result := CmdLineParamExists('/NoRunOnStartup') or IsMSStoreInstall or PreserveAutostartDisabled;
 end;
 
 var CustomExitCode: integer;

@@ -51,6 +51,23 @@ public partial class MainWindow : Window
     private const uint WM_STYLECHANGING = 0x007C;
     private const uint WM_GETMINMAXINFO = 0x0024;
     private const uint WM_NCCALCSIZE = 0x0083;
+    // Snap Layouts: DWM shows the maximize flyout only when WM_NCHITTEST reports HTMAXBUTTON
+    // over the button. That routes the button's input through non-client messages, so the
+    // click and hover/press visuals are driven from the WndProc below (the Avalonia Button
+    // no longer sees pointer events there).
+    private const uint WM_NCHITTEST = 0x0084;
+    private const uint WM_NCMOUSEMOVE = 0x00A0;
+    private const uint WM_NCMOUSELEAVE = 0x02A2;
+    private const uint WM_NCLBUTTONDOWN = 0x00A1;
+    private const uint WM_NCLBUTTONUP = 0x00A2;
+    private const uint WM_NCLBUTTONDBLCLK = 0x00A3;
+    private const uint WM_MOUSEMOVE = 0x0200;
+    private const uint WM_SYSCOMMAND = 0x0112;
+    private const nint SC_MAXIMIZE = 0xF030;
+    private const nint SC_RESTORE = 0xF120;
+    private const int HTMAXBUTTON = 9;
+    private const uint TME_LEAVE = 0x0002;
+    private const uint TME_NONCLIENT = 0x0010;
     private const int GWL_STYLE = -16;
     private const uint WS_CAPTION = 0x00C00000;
     private const uint WS_THICKFRAME = 0x00040000;
@@ -71,6 +88,8 @@ public partial class MainWindow : Window
     private const int DWMWA_COLOR_NONE = unchecked((int)0xFFFFFFFE);
 
     private bool _focusSidebarSelectionOnNextPageChange;
+    private bool _maxButtonHover;
+    private bool _maxButtonPressed;
     private TrayService? _trayService;
     private bool _allowClose;
     private int _isQuitting;
@@ -698,6 +717,53 @@ public partial class MainWindow : Window
             CoreTools.Translate(isMaximized ? "Restore" : "Maximize"));
     }
 
+    // True when the WM_NCHITTEST screen point (physical px in lParam) falls within the maximize
+    // button's bounds — the area for which we claim HTMAXBUTTON so Snap Layouts can attach.
+    private bool HitTestMaximizeButton(nint lParam)
+    {
+        if (!MaximizeButton.IsVisible)
+            return false;
+        try
+        {
+            int x = unchecked((short)(lParam.ToInt64() & 0xFFFF));
+            int y = unchecked((short)((lParam.ToInt64() >> 16) & 0xFFFF));
+            PixelPoint topLeft = MaximizeButton.PointToScreen(new Point(0, 0));
+            PixelPoint bottomRight = MaximizeButton.PointToScreen(
+                new Point(MaximizeButton.Bounds.Width, MaximizeButton.Bounds.Height));
+            return x >= topLeft.X && x < bottomRight.X && y >= topLeft.Y && y < bottomRight.Y;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // Emulates the button's pointer-over/pressed fill (lost once input is non-client) using the
+    // same Fluent brushes the neighbouring min/close buttons use, so the row stays consistent.
+    private void SetMaximizeButtonVisual(bool hover, bool pressed)
+    {
+        _maxButtonHover = hover;
+        _maxButtonPressed = pressed;
+
+        string? key = pressed ? "ButtonBackgroundPressed" : hover ? "ButtonBackgroundPointerOver" : null;
+        if (key is not null && this.TryFindResource(key, ActualThemeVariant, out var res) && res is IBrush brush)
+            MaximizeButton.Background = brush;
+        else
+            MaximizeButton.Background = Brushes.Transparent;
+    }
+
+    private static void TrackNonClientMouseLeave(nint hWnd)
+    {
+        var tme = new NativeMethods.TRACKMOUSEEVENT
+        {
+            cbSize = (uint)Marshal.SizeOf<NativeMethods.TRACKMOUSEEVENT>(),
+            dwFlags = TME_LEAVE | TME_NONCLIENT,
+            hwndTrack = hWnd,
+            dwHoverTime = 0,
+        };
+        NativeMethods.TrackMouseEvent(ref tme);
+    }
+
     // Applies the Windows 11 Mica look when it's actually usable (Win11 + transparency on):
     // a transparent window so the backdrop shows, native rounded corners, and no accent
     // border (it reads as out of place on the large main window). Otherwise the window keeps
@@ -735,6 +801,60 @@ public partial class MainWindow : Window
 
     private static nint OnWindowsWndProc(nint hWnd, uint msg, nint wParam, nint lParam, ref bool handled)
     {
+        // ── Snap Layouts: report HTMAXBUTTON over the custom maximize button so Win11 shows the
+        // layout flyout, and emulate hover/press/click since input now arrives as NC messages. ──
+        if (Instance is { } self && self.WindowButtons.IsVisible)
+        {
+            switch (msg)
+            {
+                case WM_NCHITTEST:
+                    if (self.HitTestMaximizeButton(lParam))
+                    {
+                        handled = true;
+                        return HTMAXBUTTON;
+                    }
+                    break;
+
+                case WM_NCMOUSEMOVE:
+                    if (wParam == HTMAXBUTTON)
+                    {
+                        self.SetMaximizeButtonVisual(hover: true, self._maxButtonPressed);
+                        TrackNonClientMouseLeave(hWnd);
+                        handled = true;
+                        return 0;
+                    }
+                    self.SetMaximizeButtonVisual(hover: false, pressed: false);
+                    break;
+
+                case WM_MOUSEMOVE:
+                    if (self._maxButtonHover)
+                        self.SetMaximizeButtonVisual(hover: false, pressed: false);
+                    break;
+
+                case WM_NCMOUSELEAVE:
+                    self.SetMaximizeButtonVisual(hover: false, pressed: false);
+                    break;
+
+                case WM_NCLBUTTONDOWN when wParam == HTMAXBUTTON:
+                    self.SetMaximizeButtonVisual(hover: true, pressed: true);
+                    handled = true;
+                    return 0;
+
+                case WM_NCLBUTTONUP when wParam == HTMAXBUTTON:
+                    bool wasPressed = self._maxButtonPressed;
+                    self.SetMaximizeButtonVisual(hover: true, pressed: false);
+                    if (wasPressed)
+                        NativeMethods.PostMessage(hWnd, WM_SYSCOMMAND,
+                            self.WindowState == WindowState.Maximized ? SC_RESTORE : SC_MAXIMIZE, 0);
+                    handled = true;
+                    return 0;
+
+                case WM_NCLBUTTONDBLCLK when wParam == HTMAXBUTTON:
+                    handled = true;   // the down/up pair already toggled; swallow the follow-up dblclk
+                    return 0;
+            }
+        }
+
         // Force client = full window rect. Avalonia's ExtendClientArea handler only overrides
         // the top inset, leaving the WS_THICKFRAME left/right/bottom resize border as glass.
         if (msg == WM_NCCALCSIZE && wParam.ToInt64() != 0)
@@ -835,6 +955,14 @@ public partial class MainWindow : Window
 
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool PostMessage(nint hWnd, uint Msg, nint wParam, nint lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool TrackMouseEvent(ref TRACKMOUSEEVENT lpEventTrack);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool AdjustWindowRectExForDpi(ref RECT lpRect, uint dwStyle, [MarshalAs(UnmanagedType.Bool)] bool bMenu, uint dwExStyle, uint dpi);
 
         [DllImport("user32.dll")]
@@ -859,6 +987,15 @@ public partial class MainWindow : Window
         {
             public int X;
             public int Y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct TRACKMOUSEEVENT
+        {
+            public uint cbSize;
+            public uint dwFlags;
+            public nint hwndTrack;
+            public uint dwHoverTime;
         }
 
         [StructLayout(LayoutKind.Sequential)]

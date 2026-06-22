@@ -43,6 +43,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         DisableFilterOnQueryChange = false,
         DisableReload = false,
         NoPackages_BackgroundText = CoreTools.Translate("Hooray! No updates were found."),
+        NoPackages_ImagePath = "avares://UniGetUI/Assets/Images/relax.png",
         NoPackages_SourcesText = CoreTools.Translate("Everything is up to date"),
         NoPackages_SubtitleText_Base = CoreTools.Translate("Everything is up to date"),
         MainSubtitle_StillLoading = CoreTools.Translate("Loading packages"),

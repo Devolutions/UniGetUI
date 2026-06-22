@@ -8,6 +8,8 @@ using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -55,6 +57,7 @@ public struct PackagesPageData
     public string IconName;   // SVG filename without extension, e.g. "search"
 
     public string NoPackages_BackgroundText;
+    public string NoPackages_ImagePath;   // optional avares:// illustration shown when no packages are present
     public string NoPackages_SourcesText;
     public string NoPackages_SubtitleText_Base;
     public string MainSubtitle_StillLoading;
@@ -145,6 +148,9 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private string _subtitle = "";
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _backgroundTextVisible;
+    [ObservableProperty] private bool _loadingImageVisible;
+    [ObservableProperty] private Bitmap? _noPackagesImage;
+    [ObservableProperty] private bool _noPackagesImageVisible;
     [ObservableProperty] private string _backgroundText = "";
     [ObservableProperty] private bool _sourcesPlaceholderVisible = true;
     [ObservableProperty] private bool _sourcesTreeVisible;
@@ -216,6 +222,11 @@ public partial class PackagesPageViewModel : ViewModelBase
         _showLastCheckedTime = data.ShowLastLoadTime;
         NoPackagesText = data.NoPackages_BackgroundText;
         NoMatchesText = data.NoMatches_BackgroundText;
+        if (!string.IsNullOrEmpty(data.NoPackages_ImagePath))
+        {
+            using var stream = AssetLoader.Open(new Uri(data.NoPackages_ImagePath));
+            NoPackagesImage = new Bitmap(stream);
+        }
         _noPackagesSubtitleBase = data.NoPackages_SubtitleText_Base;
         _stillLoadingSubtitle = data.MainSubtitle_StillLoading;
         SimilarSearchEnabled = !data.DisableSuggestedResultsRadio;
@@ -544,15 +555,22 @@ public partial class PackagesPageViewModel : ViewModelBase
         {
             BackgroundText = _stillLoadingSubtitle;
             BackgroundTextVisible = true;
+            LoadingImageVisible = true;
+            NoPackagesImageVisible = false;
         }
         else if (FilteredPackages.Count == 0)
         {
-            BackgroundText = string.IsNullOrWhiteSpace(query) ? NoPackagesText : NoMatchesText;
-            BackgroundTextVisible = !MegaQueryBoxEnabled || !string.IsNullOrWhiteSpace(query);
+            bool noQuery = string.IsNullOrWhiteSpace(query);
+            BackgroundText = noQuery ? NoPackagesText : NoMatchesText;
+            BackgroundTextVisible = !MegaQueryBoxEnabled || !noQuery;
+            LoadingImageVisible = false;
+            NoPackagesImageVisible = noQuery && BackgroundTextVisible && NoPackagesImage is not null;
         }
         else
         {
             BackgroundTextVisible = false;
+            LoadingImageVisible = false;
+            NoPackagesImageVisible = false;
         }
     }
 

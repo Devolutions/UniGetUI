@@ -50,6 +50,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         DisableFilterOnQueryChange = false,
         DisableReload = false,
         NoPackages_BackgroundText = CoreTools.Translate("No packages were found"),
+        NoPackages_ImagePath = "avares://UniGetUI/Assets/Images/maurice_penseur.png",
         NoPackages_SourcesText = CoreTools.Translate("No packages were found"),
         NoPackages_SubtitleText_Base = CoreTools.Translate("No packages were found"),
         MainSubtitle_StillLoading = CoreTools.Translate("Loading packages"),

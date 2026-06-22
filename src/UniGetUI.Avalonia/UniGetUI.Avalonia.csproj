@@ -189,6 +189,9 @@
         <AvaloniaResource Include="..\SharedAssets\Assets\Images\icon.png" Link="Assets\icon.png" />
         <AvaloniaResource Include="..\SharedAssets\Assets\Images\icon_unsquare.png" Link="Assets\icon_unsquare.png" />
         <AvaloniaResource Include="..\SharedAssets\Assets\Images\package_color.png" Link="Assets\package_color.png" />
+        <AvaloniaResource Include="Assets\Images\jetpack_Maurice2-blue.png" />
+        <AvaloniaResource Include="Assets\Images\relax.png" />
+        <AvaloniaResource Include="Assets\Images\maurice_penseur.png" />
         <AvaloniaResource Include="..\SharedAssets\Assets\SplashScreen.png" Link="Assets\SplashScreen.png" />
         <AvaloniaResource Include="..\SharedAssets\Assets\SplashScreen.theme-dark.png" Link="Assets\SplashScreen.theme-dark.png" />
         <!-- Tray status icon variants: status colour encoded by the corner dot; light/dark tone per taskbar theme. -->

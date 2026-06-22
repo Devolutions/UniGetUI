@@ -62,6 +62,7 @@ public class PackageBundlesPage : AbstractPackagesPage
         DisableFilterOnQueryChange = false,
         DisableReload = true,
         NoPackages_BackgroundText = CoreTools.Translate("Add packages or open an existing package bundle"),
+        NoPackages_ImagePath = "avares://UniGetUI/Assets/Images/maurice_penseur.png",
         NoPackages_SourcesText = CoreTools.Translate("Add packages to start"),
         NoPackages_SubtitleText_Base = CoreTools.Translate("The current bundle has no packages. Add some packages to get started"),
         MainSubtitle_StillLoading = CoreTools.Translate("Loading packages"),

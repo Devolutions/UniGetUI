@@ -795,17 +795,30 @@
                             </ItemsControl>
                         </ScrollViewer>
 
-                        <!-- Background text (no packages / no matches) -->
-                        <TextBlock x:Name="BackgroundText"
-                                   VerticalAlignment="Center"
+                        <!-- Background text (no packages / no matches), with a loading illustration above it -->
+                        <StackPanel VerticalAlignment="Center"
+                                    HorizontalAlignment="Center"
+                                    Spacing="16">
+                            <Image Source="avares://UniGetUI/Assets/Images/jetpack_Maurice2-blue.png"
+                                   Width="360"
+                                   Stretch="Uniform"
                                    HorizontalAlignment="Center"
-                                   FontSize="30"
-                                   FontWeight="Bold"
-                                   Opacity="0.5"
-                                   TextAlignment="Center"
-                                   TextWrapping="Wrap"
-                                   Text="{Binding BackgroundText}"
-                                   IsVisible="{Binding BackgroundTextVisible}"/>
+                                   IsVisible="{Binding LoadingImageVisible}"/>
+                            <Image Source="{Binding NoPackagesImage}"
+                                   Width="260"
+                                   Stretch="Uniform"
+                                   HorizontalAlignment="Center"
+                                   IsVisible="{Binding NoPackagesImageVisible}"/>
+                            <TextBlock x:Name="BackgroundText"
+                                       HorizontalAlignment="Center"
+                                       FontSize="30"
+                                       FontWeight="Bold"
+                                       Opacity="0.5"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding BackgroundText}"
+                                       IsVisible="{Binding BackgroundTextVisible}"/>
+                        </StackPanel>
                     </Panel>
                 </Grid>
                 </Border>

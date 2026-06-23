@@ -308,8 +308,12 @@ public partial class MainWindow : Window
             // macOS: extend into the native title bar area.
             // WindowDecorationMargin.Top drives TitleBarGrid.Height via binding.
             // Traffic lights sit on the left → keep the 65 px HamburgerPanel margin.
+            // Request a 44 px title bar (matching Windows/Linux) instead of the default
+            // ~28 px one: the default is shorter than the 32 px search pill, so the
+            // centred pill overflowed upward and hugged the top of the window. macOS
+            // vertically centres the traffic lights in the taller bar.
             ExtendClientAreaToDecorationsHint = true;
-            ExtendClientAreaTitleBarHeightHint = -1;
+            ExtendClientAreaTitleBarHeightHint = 44;
 
             // In fullscreen the native title bar is hidden and WindowDecorationMargin
             // collapses to 0, which would clip the search box and hamburger. Use a fixed

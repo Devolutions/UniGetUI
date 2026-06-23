@@ -24,6 +24,7 @@ public partial class OperationOutputWindow : Window
     {
         Dispatcher.UIThread.Post(() =>
         {
+            bool wasAtBottom = OutputText.IsScrolledToBottom;
             if (e.Action == NotifyCollectionChangedAction.Reset)
             {
                 OutputText.ClearLines();
@@ -33,7 +34,9 @@ public partial class OperationOutputWindow : Window
                 foreach (LogLineItem item in e.NewItems)
                     OutputText.AppendLine(item);
             }
-            OutputText.ScrollToBottom();
+            // Only follow new output if the user hadn't scrolled up to read earlier lines.
+            if (wasAtBottom)
+                OutputText.ScrollToBottom();
         }, DispatcherPriority.Background);
     }
 

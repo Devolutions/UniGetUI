@@ -158,7 +158,6 @@ public partial class PackageDetailsWindow : Window
             MainGrid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
 
             ScreenshotsBorder.Height = _vm.HasScreenshots ? 320 : 150;
-            InstallOptionsExpander.IsExpanded = true;
         }
         else
         {
@@ -169,7 +168,6 @@ public partial class PackageDetailsWindow : Window
             MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
 
             ScreenshotsBorder.Height = _vm.HasScreenshots ? 225 : 130;
-            InstallOptionsExpander.IsExpanded = false;
         }
     }
 

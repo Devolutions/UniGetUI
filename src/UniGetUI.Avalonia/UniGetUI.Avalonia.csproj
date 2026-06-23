@@ -25,25 +25,15 @@
         <TrimMode>partial</TrimMode>
         <PublishSingleFile>false</PublishSingleFile>
         <IncludeAvaloniaPublishSymbols>false</IncludeAvaloniaPublishSymbols>
-        <AppxGeneratePriEnabled>false</AppxGeneratePriEnabled>
-        <AppxGeneratePrisForPortableLibrariesEnabled>false</AppxGeneratePrisForPortableLibrariesEnabled>
     </PropertyGroup>
 
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-        <WindowsPackageType>None</WindowsPackageType>
-        <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
-        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-        <EnableCoreMrtTooling>false</EnableCoreMrtTooling>
         <NoWarn>$(NoWarn);MVVMTK0045</NoWarn>
         <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
         <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(Platform)' == 'arm64'">win-arm64</RuntimeIdentifier>
         <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and ('$(Platform)' == 'x64' or '$(Platform)' == 'x86')">win-$(Platform)</RuntimeIdentifier>
         <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
     </PropertyGroup>
-
-    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-        <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
-    </ItemGroup>
 
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
         <PingetCliRuntimeIdentifier Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</PingetCliRuntimeIdentifier>
@@ -227,6 +217,8 @@
       <Compile Include="Infrastructure\AvaloniaOperationRegistry.cs" />
       <Compile Include="Infrastructure\AppRestartHelper.cs" />
       <Compile Include="Infrastructure\WindowsAppNotificationBridge.cs" />
+      <Compile Include="Infrastructure\Win32ToastNotifier.cs" />
+      <Compile Include="Infrastructure\AppShortcutAumidStamper.cs" />
       <Compile Include="Infrastructure\TrayService.cs" />
       <Compile Include="Infrastructure\MicaWindowHelper.cs" />
       <Compile Include="Infrastructure\EntrancePageTransition.cs" />
@@ -366,22 +358,4 @@
     <ItemGroup>
       <Folder Include="Models\" />
     </ItemGroup>
-
-   <!-- Prune unused WinUI XAML framework .mui locale satellites.
-        UniGetUI is Avalonia-based and never surfaces WinUI framework control strings;
-        the Windows resource loader silently falls back to en-us when a culture's .mui
-        is absent. -->
-   <Target Name="ExcludeUnusedWinUIMuiResources"
-           AfterTargets="ComputeFilesToPublish"
-           BeforeTargets="CopyFilesToPublishDirectory"
-           Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-     <ItemGroup>
-       <_UnusedMuiResources
-           Include="@(ResolvedFileToPublish)"
-           Condition="'%(ResolvedFileToPublish.Extension)' == '.mui'
-               and '%(ResolvedFileToPublish.RelativePath)' != 'en-us\%(ResolvedFileToPublish.Filename)%(ResolvedFileToPublish.Extension)'
-               and ('%(ResolvedFileToPublish.Filename)' == 'Microsoft.ui.xaml.dll' or '%(ResolvedFileToPublish.Filename)' == 'Microsoft.UI.Xaml.Phone.dll')" />
-       <ResolvedFileToPublish Remove="@(_UnusedMuiResources)" />
-     </ItemGroup>
-   </Target>
- </Project>
+</Project>

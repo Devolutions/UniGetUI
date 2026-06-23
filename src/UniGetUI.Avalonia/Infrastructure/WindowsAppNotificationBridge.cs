@@ -1,6 +1,5 @@
 using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Reflection;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
@@ -11,146 +10,105 @@ using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
+/// <summary>
+/// Delivers UniGetUI's notifications via native Windows Action-Center toasts using the
+/// UWP <c>Windows.UI.Notifications</c> COM surface, with no Windows App SDK / WinUI
+/// dependency. Toasts are show-only: clicking a toast launches the app through the
+/// <c>unigetui://</c> deep-link (registered by the installer) so the existing
+/// single-instance handler foregrounds the window. The inline action buttons carried
+/// by the old WinRT toasts are intentionally dropped; activation is surfaced via
+/// <see cref="NotificationActivated"/> only when the app is already running and the toast
+/// is clicked, so the main-window view model keeps its handler. On non-Windows, or if
+/// the toast COM surface is unavailable, every call falls back to the in-app Avalonia
+/// banner via <see cref="MainWindow.ShowRuntimeNotification"/>.
+/// </summary>
 internal static class WindowsAppNotificationBridge
 {
-    private const string ScenarioDefault = "Default";
-    private const string ScenarioUrgent = "Urgent";
-
-    private static readonly object _registrationLock = new();
-    private static bool _registrationAttempted;
-    private static bool _isRegistered;
-    private static object? _managerDefault;
-    private static Type? _builderType;
-    private static Type? _scenarioType;
-    private static Type? _buttonType;
-    private static MethodInfo? _removeByTagAsyncMethod;
-    private static MethodInfo? _showMethod;
-
-    // ── B2: action callback ────────────────────────────────────────────────
-    /// <summary>Invoked on a thread-pool thread when a toast notification button is clicked.</summary>
+    /// <summary>Invoked when a notification's default action is triggered (toast clicked).</summary>
     public static event Action<string>? NotificationActivated;
 
-    private static readonly string[] _assemblyCandidates =
+    /// <summary>
+    /// Parses a <c>unigetui://&lt;action&gt;</c> launch argument produced by a toast
+    /// click, returning the encoded action or <c>null</c> if the argument is not a toast
+    /// deep-link. Used by the secondary-instance handler to route toast activations.
+    /// </summary>
+    public static string? TryParseToastLaunchArgument(string arg)
     {
-        "Microsoft.Windows.AppNotifications.Projection",
-        "Microsoft.Windows.AppNotifications.Builder.Projection",
-    };
+        if (string.IsNullOrEmpty(arg))
+            return null;
+
+        const string prefix = "unigetui://";
+        return arg.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? arg[prefix.Length..]
+            : null;
+    }
+
+    /// <summary>Raises <see cref="NotificationActivated"/> with the given action.</summary>
+    public static void RaiseActivation(string action)
+    {
+        try { NotificationActivated?.Invoke(action); }
+        catch (Exception ex)
+        {
+            Logger.Warn("NotificationActivated raise failed");
+            Logger.Warn(ex);
+        }
+    }
 
     public static bool ShowProgress(AbstractOperation operation)
     {
-        if (!EnsureRegistered())
-            return false;
+        string title = operation.Metadata.Title.Length > 0
+            ? operation.Metadata.Title
+            : CoreTools.Translate("Operation in progress");
 
-        try
-        {
-            string title = operation.Metadata.Title.Length > 0
-                ? operation.Metadata.Title
-                : CoreTools.Translate("Operation in progress");
+        string message = operation.Metadata.Status.Length > 0
+            ? operation.Metadata.Status
+            : CoreTools.Translate("Please wait...");
 
-            string message = operation.Metadata.Status.Length > 0
-                ? operation.Metadata.Status
-                : CoreTools.Translate("Please wait...");
-
-            return ShowTextToast(
-                tag: operation.Metadata.Identifier + "progress",
-                scenario: ScenarioDefault,
-                title: title,
-                message: message,
-                suppressDisplay: true);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn("Windows toast progress notification failed");
-            Logger.Warn(ex);
-            return false;
-        }
+        return Show(title, message, MainWindow.RuntimeNotificationLevel.Progress, launchAction: NotificationArguments.Show);
     }
 
     public static bool ShowSuccess(AbstractOperation operation)
     {
-        if (!EnsureRegistered())
-            return false;
+        string title = operation.Metadata.SuccessTitle.Length > 0
+            ? operation.Metadata.SuccessTitle
+            : CoreTools.Translate("Success!");
 
-        try
-        {
-            string title = operation.Metadata.SuccessTitle.Length > 0
-                ? operation.Metadata.SuccessTitle
-                : CoreTools.Translate("Success!");
+        string message = operation.Metadata.SuccessMessage.Length > 0
+            ? operation.Metadata.SuccessMessage
+            : CoreTools.Translate("Success!");
 
-            string message = operation.Metadata.SuccessMessage.Length > 0
-                ? operation.Metadata.SuccessMessage
-                : CoreTools.Translate("Success!");
-
-            return ShowTextToast(
-                tag: operation.Metadata.Identifier,
-                scenario: ScenarioDefault,
-                title: title,
-                message: message,
-                suppressDisplay: false);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn("Windows toast success notification failed");
-            Logger.Warn(ex);
-            return false;
-        }
+        return Show(title, message, MainWindow.RuntimeNotificationLevel.Success, launchAction: NotificationArguments.Show);
     }
 
     public static bool ShowError(AbstractOperation operation)
     {
-        if (!EnsureRegistered())
-            return false;
+        string title = operation.Metadata.FailureTitle.Length > 0
+            ? operation.Metadata.FailureTitle
+            : CoreTools.Translate("Failed");
 
-        try
-        {
-            string title = operation.Metadata.FailureTitle.Length > 0
-                ? operation.Metadata.FailureTitle
-                : CoreTools.Translate("Failed");
+        string message = operation.Metadata.FailureMessage.Length > 0
+            ? operation.Metadata.FailureMessage
+            : CoreTools.Translate("An error occurred while processing this package");
 
-            string message = operation.Metadata.FailureMessage.Length > 0
-                ? operation.Metadata.FailureMessage
-                : CoreTools.Translate("An error occurred while processing this package");
-
-            return ShowTextToast(
-                tag: operation.Metadata.Identifier,
-                scenario: ScenarioUrgent,
-                title: title,
-                message: message,
-                suppressDisplay: false);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn("Windows toast error notification failed");
-            Logger.Warn(ex);
-            return false;
-        }
+        return Show(title, message, MainWindow.RuntimeNotificationLevel.Error, launchAction: NotificationArguments.Show);
     }
 
     public static void RemoveProgress(AbstractOperation operation)
     {
-        if (!EnsureRegistered())
-            return;
-
-        try
-        {
-            _removeByTagAsyncMethod?.Invoke(_managerDefault, [operation.Metadata.Identifier + "progress"]);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn("Windows toast progress cleanup failed");
-            Logger.Warn(ex);
-        }
+        // The UWP toast surface has no tag-based remove without the WinAppSDK helper.
+        // Progress toasts are short-lived and replaced by the subsequent success/error toast.
     }
 
-    // ── B2: updates-available notification ────────────────────────────────
+    // ── updates-available notification ───────────────────────────────────────
 
     /// <summary>
-    /// Shows a Windows toast notification listing available package updates, with action buttons
-    /// ("Open UniGetUI" / "Update all").  No-op on non-Windows or when toast registration fails.
+    /// Shows a Windows toast notification listing available package updates. No-op on
+    /// non-Windows or when notifications are disabled (mirrors the previous bridge's
+    /// platform guard so macOS/Linux stay untouched).
     /// </summary>
     public static void ShowUpdatesAvailableNotification(IReadOnlyList<IPackage> upgradable)
     {
-        if (!EnsureRegistered()) return;
+        if (!OperatingSystem.IsWindows()) return;
         if (Settings.AreUpdatesNotificationsDisabled()) return;
 
         bool sendNotification = upgradable.Any(p =>
@@ -160,48 +118,22 @@ internal static class WindowsAppNotificationBridge
 
         try
         {
-            _removeByTagAsyncMethod?.Invoke(_managerDefault,
-                [CoreData.UpdatesAvailableNotificationTag.ToString()]);
-
             if (upgradable.Count == 1)
             {
-                ShowTextToast(
-                    tag: CoreData.UpdatesAvailableNotificationTag.ToString(),
-                    scenario: ScenarioDefault,
-                    title: CoreTools.Translate("An update was found!"),
-                    message: CoreTools.Translate("{0} can be updated to version {1}",
+                Show(
+                    CoreTools.Translate("An update was found!"),
+                    CoreTools.Translate("{0} can be updated to version {1}",
                         upgradable[0].Name, upgradable[0].NewVersionString),
-                    suppressDisplay: false,
-                    defaultAction: NotificationArguments.ShowOnUpdatesTab,
-                    buttons:
-                    [
-                        (CoreTools.Translate("View on UniGetUI").Replace("'", "\u00b4"),
-                            NotificationArguments.ShowOnUpdatesTab),
-                        (CoreTools.Translate("Update").Replace("'", "\u00b4"),
-                            NotificationArguments.UpdateAllPackages),
-                    ]);
+                    MainWindow.RuntimeNotificationLevel.Success,
+                    launchAction: NotificationArguments.ShowOnUpdatesTab);
             }
             else
             {
-                string attribution = string.Join(", ", upgradable
-                    .Where(p => !Settings.GetDictionaryItem<string, bool>(
-                        Settings.K.DisabledPackageManagerNotifications, p.Manager.Name))
-                    .Select(p => p.Name));
-
-                ShowTextToast(
-                    tag: CoreData.UpdatesAvailableNotificationTag.ToString(),
-                    scenario: ScenarioDefault,
-                    title: CoreTools.Translate("Updates found!"),
-                    message: CoreTools.Translate("{0} packages can be updated", upgradable.Count),
-                    suppressDisplay: false,
-                    defaultAction: NotificationArguments.ShowOnUpdatesTab,
-                    buttons:
-                    [
-                        (CoreTools.Translate("Open UniGetUI").Replace("'", "\u00b4"),
-                            NotificationArguments.ShowOnUpdatesTab),
-                        (CoreTools.Translate("Update all").Replace("'", "\u00b4"),
-                            NotificationArguments.UpdateAllPackages),
-                    ]);
+                Show(
+                    CoreTools.Translate("Updates found!"),
+                    CoreTools.Translate("{0} packages can be updated", upgradable.Count),
+                    MainWindow.RuntimeNotificationLevel.Success,
+                    launchAction: NotificationArguments.ShowOnUpdatesTab);
             }
         }
         catch (Exception ex)
@@ -216,7 +148,7 @@ internal static class WindowsAppNotificationBridge
     /// </summary>
     public static void ShowUpgradingPackagesNotification(IReadOnlyList<IPackage> upgradable)
     {
-        if (!EnsureRegistered()) return;
+        if (!OperatingSystem.IsWindows()) return;
         if (Settings.AreUpdatesNotificationsDisabled()) return;
 
         bool sendNotification = upgradable.Any(p =>
@@ -226,19 +158,14 @@ internal static class WindowsAppNotificationBridge
 
         try
         {
-            _removeByTagAsyncMethod?.Invoke(_managerDefault,
-                [CoreData.UpdatesAvailableNotificationTag.ToString()]);
-
             if (upgradable.Count == 1)
             {
-                ShowTextToast(
-                    tag: CoreData.UpdatesAvailableNotificationTag.ToString(),
-                    scenario: ScenarioDefault,
-                    title: CoreTools.Translate("An update was found!"),
-                    message: CoreTools.Translate("{0} is being updated to version {1}",
+                Show(
+                    CoreTools.Translate("An update was found!"),
+                    CoreTools.Translate("{0} is being updated to version {1}",
                         upgradable[0].Name, upgradable[0].NewVersionString),
-                    suppressDisplay: false,
-                    defaultAction: NotificationArguments.ShowOnUpdatesTab);
+                    MainWindow.RuntimeNotificationLevel.Progress,
+                    launchAction: NotificationArguments.ShowOnUpdatesTab);
             }
             else
             {
@@ -247,13 +174,11 @@ internal static class WindowsAppNotificationBridge
                         Settings.K.DisabledPackageManagerNotifications, p.Manager.Name))
                     .Select(p => p.Name));
 
-                ShowTextToast(
-                    tag: CoreData.UpdatesAvailableNotificationTag.ToString(),
-                    scenario: ScenarioDefault,
-                    title: CoreTools.Translate("{0} packages are being updated", upgradable.Count),
-                    message: attribution,
-                    suppressDisplay: false,
-                    defaultAction: NotificationArguments.ShowOnUpdatesTab);
+                Show(
+                    CoreTools.Translate("{0} packages are being updated", upgradable.Count),
+                    attribution,
+                    MainWindow.RuntimeNotificationLevel.Progress,
+                    launchAction: NotificationArguments.ShowOnUpdatesTab);
             }
         }
         catch (Exception ex)
@@ -264,28 +189,18 @@ internal static class WindowsAppNotificationBridge
     }
 
     /// <summary>
-    /// Shows a Windows toast offering a UniGetUI self-update with an "Update now" button.
+    /// Shows a Windows toast offering a UniGetUI self-update.
     /// </summary>
     public static void ShowSelfUpdateAvailableNotification(string newVersion)
     {
-        if (!EnsureRegistered()) return;
+        if (!OperatingSystem.IsWindows()) return;
         try
         {
-            _removeByTagAsyncMethod?.Invoke(_managerDefault,
-                [CoreData.UniGetUICanBeUpdated.ToString()]);
-
-            ShowTextToast(
-                tag: CoreData.UniGetUICanBeUpdated.ToString(),
-                scenario: ScenarioDefault,
-                title: CoreTools.Translate("{0} can be updated to version {1}", "UniGetUI", newVersion),
-                message: CoreTools.Translate("You have currently version {0} installed", CoreData.VersionName),
-                suppressDisplay: false,
-                defaultAction: NotificationArguments.Show,
-                buttons:
-                [
-                    (CoreTools.Translate("Update now").Replace("'", "\u00b4"),
-                        NotificationArguments.ReleaseSelfUpdateLock),
-                ]);
+            Show(
+                CoreTools.Translate("{0} can be updated to version {1}", "UniGetUI", newVersion),
+                CoreTools.Translate("You have currently version {0} installed", CoreData.VersionName),
+                MainWindow.RuntimeNotificationLevel.Success,
+                launchAction: NotificationArguments.Show);
         }
         catch (Exception ex)
         {
@@ -299,14 +214,11 @@ internal static class WindowsAppNotificationBridge
     /// </summary>
     public static void ShowNewShortcutsNotification(IReadOnlyList<string> shortcuts)
     {
-        if (!EnsureRegistered()) return;
+        if (!OperatingSystem.IsWindows()) return;
         if (Settings.AreNotificationsDisabled()) return;
 
         try
         {
-            _removeByTagAsyncMethod?.Invoke(_managerDefault,
-                [CoreData.NewShortcutsNotificationTag.ToString()]);
-
             string title;
             string message;
 
@@ -326,18 +238,11 @@ internal static class WindowsAppNotificationBridge
                     shortcuts.Count) + "\n" + names;
             }
 
-            ShowTextToast(
-                tag: CoreData.NewShortcutsNotificationTag.ToString(),
-                scenario: ScenarioDefault,
-                title: title,
-                message: message,
-                suppressDisplay: false,
-                defaultAction: NotificationArguments.Show,
-                buttons:
-                [
-                    (CoreTools.Translate("Open UniGetUI").Replace("'", "\u00b4"),
-                        NotificationArguments.Show),
-                ]);
+            Show(
+                title,
+                message,
+                MainWindow.RuntimeNotificationLevel.Success,
+                launchAction: NotificationArguments.Show);
         }
         catch (Exception ex)
         {
@@ -346,230 +251,49 @@ internal static class WindowsAppNotificationBridge
         }
     }
 
-    private static bool EnsureRegistered()
-    {
-        if (!OperatingSystem.IsWindows())
-            return false;
-
-        lock (_registrationLock)
-        {
-            if (_registrationAttempted)
-                return _isRegistered;
-
-            _registrationAttempted = true;
-            try
-            {
-                var managerType = ResolveType(
-                    "Microsoft.Windows.AppNotifications.AppNotificationManager",
-                    "Microsoft.Windows.AppNotifications.Builder.AppNotificationManager");
-                _builderType = ResolveType(
-                    "Microsoft.Windows.AppNotifications.Builder.AppNotificationBuilder");
-                _scenarioType = ResolveType(
-                    "Microsoft.Windows.AppNotifications.Builder.AppNotificationScenario");
-                _buttonType = ResolveType(
-                    "Microsoft.Windows.AppNotifications.Builder.AppNotificationButton");
-
-                if (managerType is null || _builderType is null || _scenarioType is null)
-                {
-                    _isRegistered = false;
-                    return _isRegistered;
-                }
-
-                _managerDefault = managerType.GetProperty("Default", BindingFlags.Public | BindingFlags.Static)
-                    ?.GetValue(null);
-
-                if (_managerDefault is null)
-                {
-                    _isRegistered = false;
-                    return _isRegistered;
-                }
-
-                _removeByTagAsyncMethod = managerType.GetMethod(
-                    "RemoveByTagAsync",
-                    BindingFlags.Public | BindingFlags.Instance,
-                    binder: null,
-                    types: [typeof(string)],
-                    modifiers: null);
-
-                _showMethod = managerType.GetMethod("Show", BindingFlags.Public | BindingFlags.Instance);
-
-                // ── B2: subscribe to NotificationInvoked via Expression lambda ──────
-                var notifEventInfo = managerType.GetEvent("NotificationInvoked");
-                if (notifEventInfo is not null)
-                {
-                    var handlerType = notifEventInfo.EventHandlerType!;
-                    var invokeParams = handlerType.GetMethod("Invoke")!
-                        .GetParameters()
-                        .Select(p => Expression.Parameter(p.ParameterType, p.Name))
-                        .ToArray();
-                    var handlerMi = typeof(WindowsAppNotificationBridge)
-                        .GetMethod(nameof(OnNotificationInvoked),
-                            BindingFlags.Static | BindingFlags.NonPublic)!;
-                    var body = Expression.Call(
-                        handlerMi,
-                        Expression.Convert(invokeParams[0], typeof(object)),
-                        Expression.Convert(invokeParams[1], typeof(object)));
-                    var lambda = Expression.Lambda(handlerType, body, invokeParams);
-                    notifEventInfo.AddEventHandler(_managerDefault, lambda.Compile());
-                }
-
-                managerType.GetMethod(
-                    "Register",
-                    BindingFlags.Public | BindingFlags.Instance,
-                    binder: null,
-                    types: Type.EmptyTypes,
-                    modifiers: null)
-                    ?.Invoke(_managerDefault, null);
-
-                _isRegistered = _showMethod is not null;
-            }
-            catch (Exception ex)
-            {
-                Logger.Warn("Windows app notification registration failed in Avalonia host");
-                Logger.Warn(ex);
-                _isRegistered = false;
-            }
-
-            return _isRegistered;
-        }
-    }
-
-    private static bool ShowTextToast(
-        string tag,
-        string scenario,
+    /// <summary>
+    /// Shows a native toast when available, otherwise falls back to the in-app banner.
+    /// The <paramref name="launchAction"/> is encoded into the <c>unigetui://</c> launch
+    /// argument so the single-instance handler can route the activation when the toast
+    /// is clicked. Returns <c>true</c> once the notification has been surfaced (toast or
+    /// banner), so callers skip their own fallback banner and avoid double-showing.
+    /// </summary>
+    private static bool Show(
         string title,
         string message,
-        bool suppressDisplay,
-        string? defaultAction = null,
-        IReadOnlyList<(string label, string action)>? buttons = null)
+        MainWindow.RuntimeNotificationLevel level,
+        string launchAction)
     {
-        if (_managerDefault is null || _builderType is null || _scenarioType is null || _showMethod is null)
-            return false;
-
-        _removeByTagAsyncMethod?.Invoke(_managerDefault, [tag]);
-
-        object builder = Activator.CreateInstance(_builderType)
-            ?? throw new InvalidOperationException("Could not construct AppNotificationBuilder via reflection.");
-
-        object? scenarioValue = Enum.Parse(_scenarioType, scenario, ignoreCase: true);
-
-        builder = InvokeFluent(builder, "SetScenario", scenarioValue);
-        builder = InvokeFluent(builder, "SetTag", tag);
-        builder = InvokeFluent(builder, "AddText", title);
-        builder = InvokeFluent(builder, "AddText", message);
-
-        if (defaultAction is not null)
-            builder = InvokeFluent(builder, "AddArgument", "action", defaultAction);
-
-        // ── B2: add action buttons ─────────────────────────────────────────
-        if (buttons is not null && _buttonType is not null)
+        if (OperatingSystem.IsWindows() && Win32ToastNotifier.IsAvailable())
         {
-            foreach (var (label, action) in buttons)
+            string launchArg = BuildLaunchArgument(launchAction);
+            if (Win32ToastNotifier.Show(title, message, launchArg))
             {
-                try
-                {
-                    object? btn = Activator.CreateInstance(_buttonType, label);
-                    if (btn is null) continue;
-                    // btn.AddArgument("action", action) returns AppNotificationButton
-                    btn = _buttonType
-                        .GetMethod("AddArgument", BindingFlags.Public | BindingFlags.Instance,
-                            null, [typeof(string), typeof(string)], null)
-                        ?.Invoke(btn, ["action", action]) ?? btn;
-                    builder = InvokeFluent(builder, "AddButton", btn);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn($"Could not add notification button '{label}': {ex.Message}");
-                }
+                // When the app is already running, raise activation immediately so the
+                // in-process handler fires; a subsequent toast click routes through the
+                // single-instance redirector on launch via TryParseToastLaunchArgument.
+                if (MainWindow.Instance is not null)
+                    RaiseActivation(launchAction);
+                return true;
             }
         }
 
-        object? notification = builder
-            .GetType()
-            .GetMethod("BuildNotification", BindingFlags.Public | BindingFlags.Instance)
-            ?.Invoke(builder, null);
+        return ShowInAppBanner(title, message, level);
+    }
 
-        if (notification is null)
+    private static bool ShowInAppBanner(
+        string title,
+        string message,
+        MainWindow.RuntimeNotificationLevel level)
+    {
+        var mainWindow = MainWindow.Instance;
+        if (mainWindow is null)
             return false;
 
-        SetPropertyIfPresent(notification, "ExpiresOnReboot", true);
-        SetPropertyIfPresent(notification, "SuppressDisplay", suppressDisplay);
-        _showMethod.Invoke(_managerDefault, [notification]);
+        mainWindow.ShowRuntimeNotification(title, message, level);
         return true;
     }
 
-    private static object InvokeFluent(object instance, string methodName, params object?[] args)
-    {
-        Type type = instance.GetType();
-        Type[] argTypes = args.Select(a => a?.GetType() ?? typeof(object)).ToArray();
-
-        MethodInfo? method = type.GetMethod(
-                methodName,
-                BindingFlags.Public | BindingFlags.Instance,
-                binder: null,
-                types: argTypes,
-                modifiers: null)
-            ?? type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                .FirstOrDefault(m => m.Name == methodName && m.GetParameters().Length == args.Length);
-
-        return method?.Invoke(instance, args) ?? instance;
-    }
-
-    private static void SetPropertyIfPresent(object instance, string propertyName, object value)
-    {
-        instance.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance)
-            ?.SetValue(instance, value);
-    }
-
-    private static Type? ResolveType(params string[] possibleTypeNames)
-    {
-        foreach (var typeName in possibleTypeNames)
-        {
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                var t = asm.GetType(typeName, throwOnError: false);
-                if (t is not null)
-                    return t;
-            }
-
-            foreach (var asmName in _assemblyCandidates)
-            {
-                try
-                {
-                    var asm = Assembly.Load(asmName);
-                    var t = asm.GetType(typeName, throwOnError: false);
-                    if (t is not null)
-                        return t;
-                }
-                catch
-                {
-                    // Keep probing candidates.
-                }
-            }
-        }
-
-        return null;
-    }
-
-    // ── B2: notification activation handler ───────────────────────────────
-
-    private static void OnNotificationInvoked(object _, object args)
-    {
-        try
-        {
-            var arguments = args.GetType()
-                .GetProperty("Arguments", BindingFlags.Public | BindingFlags.Instance)
-                ?.GetValue(args) as IDictionary<string, string>;
-
-            if (arguments?.TryGetValue("action", out var action) == true && action is not null)
-            {
-                NotificationActivated?.Invoke(action);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn("NotificationInvoked handler error");
-            Logger.Warn(ex);
-        }
-    }
+    private static string BuildLaunchArgument(string action)
+        => $"unigetui://{action}";
 }

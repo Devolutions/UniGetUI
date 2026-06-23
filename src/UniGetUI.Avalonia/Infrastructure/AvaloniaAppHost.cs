@@ -69,6 +69,10 @@ public static class AvaloniaAppHost
         Logger.ImportantInfo($"Packaged (MSIX): {CoreTools.IsPackagedApp()}");
         Logger.ImportantInfo($"Args: {(args.Length > 0 ? string.Join(" ", args) : "(none)")}");
 
+        // Stamp the AUMID onto the Start Menu shortcut so the shell surfaces toasts. The
+        // installer cannot write the property-store value directly; this is idempotent.
+        AppShortcutAumidStamper.EnsureStamped();
+
         // Bind Avalonia's UI-thread dispatcher to this (main/STA) thread before the single-instance
         // listener starts: if a second instance connects mid-startup, the listener's Dispatcher.UIThread.Post
         // would otherwise bind it to the worker thread and make Win32Platform.Initialize throw.

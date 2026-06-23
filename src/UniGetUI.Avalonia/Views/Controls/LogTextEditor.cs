@@ -81,6 +81,9 @@ public class LogTextEditor : TextEditor
 
     public void ScrollToBottom() => ScrollToEnd();
 
+    // True when the view is pinned to the last line; used to keep auto-scroll from fighting a manual scroll-up.
+    public bool IsScrolledToBottom => ExtentHeight - ViewportHeight - VerticalOffset <= 1.0;
+
     // AvaloniaEdit auto-links URLs; its default link brush is too dark to read on the dark theme.
     private void UpdateLinkColor()
     {

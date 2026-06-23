@@ -363,4 +363,22 @@
     <ItemGroup>
       <Folder Include="Models\" />
     </ItemGroup>
+
+   <!-- Prune unused WinUI XAML framework .mui locale satellites.
+        UniGetUI is Avalonia-based and never surfaces WinUI framework control strings;
+        the Windows resource loader silently falls back to en-us when a culture's .mui
+        is absent. -->
+   <Target Name="ExcludeUnusedWinUIMuiResources"
+           AfterTargets="ComputeFilesToPublish"
+           BeforeTargets="CopyFilesToPublishDirectory"
+           Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+     <ItemGroup>
+       <_UnusedMuiResources
+           Include="@(ResolvedFileToPublish)"
+           Condition="'%(ResolvedFileToPublish.Extension)' == '.mui'
+               and '%(ResolvedFileToPublish.RelativePath)' != 'en-us\%(ResolvedFileToPublish.Filename)%(ResolvedFileToPublish.Extension)'
+               and ('%(ResolvedFileToPublish.Filename)' == 'Microsoft.ui.xaml.dll' or '%(ResolvedFileToPublish.Filename)' == 'Microsoft.UI.Xaml.Phone.dll')" />
+       <ResolvedFileToPublish Remove="@(_UnusedMuiResources)" />
+     </ItemGroup>
+   </Target>
  </Project>

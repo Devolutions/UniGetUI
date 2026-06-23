@@ -72,7 +72,7 @@
            full-border accent or the field swapping to its focused (black) background. -->
       <Style Selector="Border#MegaQueryUnderline">
          <Setter Property="Opacity" Value="0"/>
-         <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
+         <Setter Property="Background" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
          <Setter Property="Transitions">
             <Transitions>
                <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>

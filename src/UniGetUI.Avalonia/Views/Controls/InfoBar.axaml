@@ -27,7 +27,10 @@
 
     <Border x:Name="BodyBorder"
             IsVisible="{Binding IsOpen}"
-            BorderThickness="0,1,0,1"
+            BorderThickness="1"
+            CornerRadius="6"
+            ClipToBounds="True"
+            Margin="12,4"
             automation:AutomationProperties.AccessibilityView="Control"
             automation:AutomationProperties.Name="{Binding Title}"
             automation:AutomationProperties.HelpText="{Binding Message}"

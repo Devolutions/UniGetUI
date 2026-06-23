@@ -118,10 +118,31 @@ public class SettingsCard : UserControl
         set => _border.CornerRadius = value;
     }
 
+    // Base (unfocused) thickness as assigned by the consumer. Grouped cards use a
+    // partial thickness like "1,0,1,1" to share a divider with the card above; we
+    // must remember it so we can restore it when focus leaves.
+    private Thickness _baseBorderThickness = new(1);
+
     public new Thickness BorderThickness
     {
         get => _border.BorderThickness;
-        set => _border.BorderThickness = value;
+        set
+        {
+            _baseBorderThickness = value;
+            // While focused the border is forced complete (see GotFocus); don't clobber it.
+            if (!_border.Classes.Contains("settings-card-focused"))
+                _border.BorderThickness = value;
+        }
+    }
+
+    // A focused card needs a border on all four sides, even when its base thickness omits
+    // the top (grouped cards). The accent focus style can't supply this: BorderThickness is
+    // a local value on _border, which wins over the style setter — so we set it here instead.
+    private static Thickness FocusedBorderThickness(Thickness baseThickness)
+    {
+        double t = Math.Max(Math.Max(baseThickness.Left, baseThickness.Right),
+                            Math.Max(baseThickness.Top, baseThickness.Bottom));
+        return new Thickness(Math.Max(t, 1));
     }
 
     // ── Constructor ────────────────────────────────────────────────────────
@@ -216,8 +237,17 @@ public class SettingsCard : UserControl
 
         PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
-        GotFocus += (_, _) => { if (_isClickEnabled) _border.Classes.Add("settings-card-focused"); };
-        LostFocus += (_, _) => _border.Classes.Remove("settings-card-focused");
+        GotFocus += (_, _) =>
+        {
+            if (!_isClickEnabled) return;
+            _border.Classes.Add("settings-card-focused");
+            _border.BorderThickness = FocusedBorderThickness(_baseBorderThickness);
+        };
+        LostFocus += (_, _) =>
+        {
+            _border.Classes.Remove("settings-card-focused");
+            _border.BorderThickness = _baseBorderThickness;
+        };
         SyncAutomationProperties();
     }
 

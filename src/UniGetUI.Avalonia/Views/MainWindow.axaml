@@ -22,7 +22,7 @@
              via styles (opacity) so the .focus-within setter wins over the base. -->
         <Style Selector="Border#SearchFocusUnderline">
             <Setter Property="Opacity" Value="0"/>
-            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
+            <Setter Property="Background" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
             <Setter Property="Transitions">
                 <Transitions>
                     <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>

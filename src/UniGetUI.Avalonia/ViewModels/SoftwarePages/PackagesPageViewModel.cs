@@ -260,6 +260,13 @@ public partial class PackagesPageViewModel : ViewModelBase
         // Use backing field to avoid writing to settings during construction.
         _isFilterPaneOpen = !Settings.GetDictionaryItem<string, bool>(Settings.K.HideToggleFilters, PageName);
 
+        // Restore per-page sort preferences (default: Name, ascending).
+        int savedSortField = Settings.GetDictionaryItem<string, int>(Settings.K.PackageListSortFieldIndex, PageName);
+        if (savedSortField is < 0 or > 4 || (savedSortField is 3 && !RoleIsUpdateLike))
+            savedSortField = 0;
+        SortFieldIndex = savedSortField;
+        SortAscending = !Settings.GetDictionaryItem<string, bool>(Settings.K.PackageListSortDescending, PageName);
+
         _localPackagesNode.PackageName = CoreTools.Translate("Local");
 
         if (Loader.IsLoading)
@@ -606,12 +613,14 @@ public partial class PackagesPageViewModel : ViewModelBase
         });
         OnPropertyChanged(nameof(SortFieldName));
         FilterPackages();
+        Settings.SetDictionaryItem(Settings.K.PackageListSortFieldIndex, PageName, value);
     }
 
     partial void OnSortAscendingChanged(bool value)
     {
         FilteredPackages.SetSortDirection(value);
         FilterPackages();
+        Settings.SetDictionaryItem(Settings.K.PackageListSortDescending, PageName, !value);
     }
 
     // ─── Selection ────────────────────────────────────────────────────────────

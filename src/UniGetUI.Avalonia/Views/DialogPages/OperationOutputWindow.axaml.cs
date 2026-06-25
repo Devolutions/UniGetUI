@@ -29,6 +29,12 @@ public partial class OperationOutputWindow : Window
             {
                 OutputText.ClearLines();
             }
+            else if (e.Action == NotifyCollectionChangedAction.Replace && e.NewItems is not null)
+            {
+                // A progress indicator repainting in place: overwrite the last rendered line.
+                foreach (LogLineItem item in e.NewItems)
+                    OutputText.ReplaceLastLine(item);
+            }
             else if (e.NewItems is not null)
             {
                 foreach (LogLineItem item in e.NewItems)

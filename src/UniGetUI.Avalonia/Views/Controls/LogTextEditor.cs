@@ -73,6 +73,21 @@ public class LogTextEditor : TextEditor
         Document.Insert(Document.TextLength, sb.ToString());
     }
 
+    // Overwrites the last physical line in place instead of appending, so carriage-return progress
+    // redraws (installer spinners) repaint a single line rather than flooding the view.
+    public void ReplaceLastLine(LogLineItem line)
+    {
+        if (Document.TextLength == 0 || _lineColors.Count == 0)
+        {
+            AppendLine(line);
+            return;
+        }
+
+        DocumentLine last = Document.GetLineByNumber(Document.LineCount);
+        Document.Replace(last.Offset, last.Length, line.Text);
+        _lineColors[^1] = line.Foreground;
+    }
+
     public void ClearLines()
     {
         _lineColors.Clear();

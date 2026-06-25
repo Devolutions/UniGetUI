@@ -18,6 +18,8 @@ public partial class OperationOutputViewModel : ObservableObject
     private readonly IBrush _debugBrush;
     private readonly IBrush _normalBrush;
 
+    private readonly ProgressLineCollapser _collapser = new();
+
     public OperationOutputViewModel(AbstractOperation operation)
     {
         var theme = Application.Current?.ActualThemeVariant ?? ThemeVariant.Default;
@@ -28,10 +30,22 @@ public partial class OperationOutputViewModel : ObservableObject
         Title = operation.Metadata.Title;
 
         foreach (var (text, type) in operation.GetOutput())
-            OutputLines.Add(MakeLine(text, type));
+            AddOrCollapseLine(text, type);
 
         operation.LogLineAdded += (_, ev) =>
-            Dispatcher.UIThread.Post(() => OutputLines.Add(MakeLine(ev.Item1, ev.Item2)));
+            Dispatcher.UIThread.Post(() => AddOrCollapseLine(ev.Item1, ev.Item2));
+    }
+
+    // Progress indicators (carriage-return redraws like installer spinners) overwrite the previous
+    // line instead of stacking up, mirroring how a terminal repaints in place. The first
+    // non-progress line that follows settles into that same line.
+    private void AddOrCollapseLine(string text, AbstractOperation.LineType type)
+    {
+        LogLineItem item = MakeLine(text, type);
+        if (_collapser.Next(type) is ProgressLineCollapser.Fold.ReplaceLast && OutputLines.Count > 0)
+            OutputLines[^1] = item;
+        else
+            OutputLines.Add(item);
     }
 
     private static IBrush LookupBrush(string key, ThemeVariant theme, IBrush fallback)

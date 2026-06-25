@@ -71,7 +71,9 @@ public static class AvaloniaAppHost
 
         // Stamp the AUMID onto the Start Menu shortcut so the shell surfaces toasts. The
         // installer cannot write the property-store value directly; this is idempotent.
+#if WINDOWS
         AppShortcutAumidStamper.EnsureStamped();
+#endif
 
         // Bind Avalonia's UI-thread dispatcher to this (main/STA) thread before the single-instance
         // listener starts: if a second instance connects mid-startup, the listener's Dispatcher.UIThread.Post

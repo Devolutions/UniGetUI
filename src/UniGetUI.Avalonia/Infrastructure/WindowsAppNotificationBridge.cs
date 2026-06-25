@@ -264,6 +264,7 @@ internal static class WindowsAppNotificationBridge
         MainWindow.RuntimeNotificationLevel level,
         string launchAction)
     {
+#if WINDOWS
         if (OperatingSystem.IsWindows() && Win32ToastNotifier.IsAvailable())
         {
             string launchArg = BuildLaunchArgument(launchAction);
@@ -277,6 +278,7 @@ internal static class WindowsAppNotificationBridge
                 return true;
             }
         }
+#endif
 
         return ShowInAppBanner(title, message, level);
     }

@@ -1,3 +1,4 @@
+#if WINDOWS
 using System;
 using System.Runtime.InteropServices;
 using UniGetUI.Core.Logging;
@@ -133,3 +134,4 @@ internal static class Win32ToastNotifier
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern int SetCurrentProcessExplicitAppUserModelID(string appUserModelID);
 }
+#endif

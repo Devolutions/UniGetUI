@@ -878,6 +878,144 @@ public sealed class WinGetManagerTests : IDisposable
         }
     }
 
+    [Fact]
+    public void WinGetUpdateNotApplicableRetriesOnceWithoutScopeAndArchitecture()
+    {
+        // Regression test for #4954: a package whose only installer is x86 (e.g. Bulk Crap
+        // Uninstaller) reports "update not applicable" when we force --architecture/--scope.
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Klocman.BulkCrapUninstaller")
+            .WithVersion("6.1")
+            .WithNewVersion("6.2")
+            .Build();
+        package.OverridenOptions.Scope = PackageScope.Machine;
+        var options = new InstallOptions { Architecture = "x64" };
+
+        // The forced constraints are present on the first attempt.
+        var firstAttempt = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+        Assert.Contains("--scope", firstAttempt);
+        Assert.Contains("--architecture", firstAttempt);
+
+        // An "update not applicable" result triggers a single relaxed retry.
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A15002B)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.AutoRetry);
+        Assert.True(package.OverridenOptions.WinGet_DropArchAndScope);
+
+        // The relaxed retry drops both constraints, matching the WinGet CLI default.
+        var retryAttempt = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+        Assert.DoesNotContain("--scope", retryAttempt);
+        Assert.DoesNotContain("--architecture", retryAttempt);
+    }
+
+    [Fact]
+    public void WinGetUpdateNotApplicableDoesNotRetryASecondTime()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Klocman.BulkCrapUninstaller")
+            .WithVersion("6.1")
+            .WithNewVersion("6.2")
+            .Build();
+        package.OverridenOptions.Scope = PackageScope.Machine;
+        package.OverridenOptions.WinGet_DropArchAndScope = true; // the relaxed retry already happened
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A15002B)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+    }
+
+    [Fact]
+    public void WinGetUpdateNotApplicableFailsWhenThereIsNothingToRelax()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A15002B)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.False(package.OverridenOptions.WinGet_DropArchAndScope);
+    }
+
+    [Fact]
+    public void WinGetUpdateNotApplicableViaPingetRetriesWithoutScopeAndArchitecture()
+    {
+        // Bundled pinget signals "not applicable" with a non-zero exit code and a
+        // "No applicable installer found" message instead of WinGet's 0x8A15002B.
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("JRSoftware.InnoSetup")
+            .WithVersion("6.7.1")
+            .WithNewVersion("6.7.3")
+            .Build();
+        package.OverridenOptions.Scope = PackageScope.Machine;
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [
+                "Selecting applicable installer for this system...",
+                "  Error upgrading JRSoftware.InnoSetup: No applicable installer found",
+            ],
+            1
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.AutoRetry);
+        Assert.True(package.OverridenOptions.WinGet_DropArchAndScope);
+    }
+
+    [Fact]
+    public void WinGetGenericPingetFailureDoesNotRetry()
+    {
+        // A non-zero pinget exit without the "No applicable installer found" message
+        // is a real failure and must not be mistaken for the not-applicable case.
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("JRSoftware.InnoSetup")
+            .WithVersion("6.7.1")
+            .WithNewVersion("6.7.3")
+            .Build();
+        package.OverridenOptions.Scope = PackageScope.Machine;
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            ["error: download failed"],
+            1
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.False(package.OverridenOptions.WinGet_DropArchAndScope);
+    }
+
     private static void SetCliToolKind(WinGet manager, WinGetCliToolKind kind)
     {
         typeof(WinGet)

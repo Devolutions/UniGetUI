@@ -178,11 +178,11 @@ internal static class AppShortcutAumidStamper
     internal struct PropVariant
     {
         private ushort vt;
-        private ushort reserved1;
-        private ushort reserved2;
-        private ushort reserved3;
+        private readonly ushort reserved1;
+        private readonly ushort reserved2;
+        private readonly ushort reserved3;
         private IntPtr value1;
-        private IntPtr value2;
+        private readonly IntPtr value2;
 
         public PropVariant(string value)
         {

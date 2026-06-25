@@ -97,6 +97,7 @@ internal static class WindowsAppNotificationBridge
     {
         // The UWP toast surface has no tag-based remove without the WinAppSDK helper.
         // Progress toasts are short-lived and replaced by the subsequent success/error toast.
+        _ = operation;
     }
 
     // ── updates-available notification ───────────────────────────────────────

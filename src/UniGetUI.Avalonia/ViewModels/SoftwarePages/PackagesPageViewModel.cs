@@ -200,7 +200,6 @@ public partial class PackagesPageViewModel : ViewModelBase
     // ─── Events (replace abstract methods) ───────────────────────────────────
     public event Action<ReloadReason>? PackagesLoaded;
     public event Action? PackageCountUpdated;
-    public event Action<IPackage>? ShowingContextMenu;
     public event Action? FocusListRequested;
 
     // ─── Events: view-side dialog/navigation requests ─────────────────────────

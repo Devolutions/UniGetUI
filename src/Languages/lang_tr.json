@@ -846,5 +846,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "UniGetUI otomatik başlatma davranışını yönet",
   "Choose how many operations shoulds be performed in parallel": "Aynı anda kaç işlemin yürütüleceğini seçin",
   "Something went wrong while launching the updater.": "Güncelleyici başlatılırken bir şeyler ters gitti.",
-  "Please try again later": "Lütfen daha sonra tekrar deneyin"
+  "Please try again later": "Lütfen daha sonra tekrar deneyin",
+  "Show the release notes after UniGetUI is updated": "UniGetUI güncellendikten sonra sürüm notlarını göster"
 }

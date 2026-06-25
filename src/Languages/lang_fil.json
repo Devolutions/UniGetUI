@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Pamahalaan ang awtomatikong pagsisimula ng UniGetUI",
   "Choose how many operations shoulds be performed in parallel": "Piliin kung ilang operasyon ang dapat isagawa nang sabay-sabay",
   "Something went wrong while launching the updater.": "Nagkaroon ng problema habang pinapatakbo ang updater.",
-  "Please try again later": "Pakisubukang muli mamaya"
+  "Please try again later": "Pakisubukang muli mamaya",
+  "Show the release notes after UniGetUI is updated": "Ipakita ang mga release note pagkatapos ma-update ang UniGetUI"
 }

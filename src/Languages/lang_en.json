@@ -841,5 +841,6 @@
   "Error": "Error",
   "Log in failed: ": "Log in failed: ",
   "Log out failed: ": "Log out failed: ",
-  "Package backup settings": "Package backup settings"
+  "Package backup settings": "Package backup settings",
+  "Show the release notes after UniGetUI is updated": "Show the release notes after UniGetUI is updated"
 }

@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Automatisch opstartgedrag van UniGetUI beheren",
   "Choose how many operations shoulds be performed in parallel": "Kies hoeveel bewerkingen parallel moeten worden uitgevoerd",
   "Something went wrong while launching the updater.": "Er ging iets mis bij het starten van de updater.",
-  "Please try again later": "Probeer het later nog eens"
+  "Please try again later": "Probeer het later nog eens",
+  "Show the release notes after UniGetUI is updated": "Toon de release-opmerkingen nadat UniGetUI is bijgewerkt"
 }

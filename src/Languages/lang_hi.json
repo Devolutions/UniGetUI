@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "UniGetUI के ऑटोस्टार्ट व्यवहार को प्रबंधित करें",
   "Choose how many operations shoulds be performed in parallel": "चुनें कि कितनी कार्रवाइयाँ समानांतर में की जानी चाहिए",
   "Something went wrong while launching the updater.": "अपडेटर लॉन्च करते समय कुछ गलत हो गई।",
-  "Please try again later": "कृपया बाद में पुन: प्रयास करें"
+  "Please try again later": "कृपया बाद में पुन: प्रयास करें",
+  "Show the release notes after UniGetUI is updated": "UniGetUI अपडेट होने के बाद रिलीज नोट्स दिखाएं"
 }

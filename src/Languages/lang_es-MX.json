@@ -841,5 +841,6 @@
   "Error": "Error",
   "Log in failed: ": "Error al iniciar sesión: ",
   "Log out failed: ": "Error al cerrar sesión: ",
-  "Package backup settings": "Ajustes de respaldo de paquetes"
+  "Package backup settings": "Ajustes de respaldo de paquetes",
+  "Show the release notes after UniGetUI is updated": "Mostrar las notas de la versión después de actualizar UniGetUI"
 }

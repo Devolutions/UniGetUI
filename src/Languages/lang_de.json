@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Autostartverhalten von UniGetUI verwalten",
   "Choose how many operations shoulds be performed in parallel": "Wählen Sie aus, wie viele Vorgänge parallel ausgeführt werden sollen",
   "Something went wrong while launching the updater.": "Beim Updater-Start lief etwas schief.",
-  "Please try again later": "Versuchen Sie es bitte später noch einmal"
+  "Please try again later": "Versuchen Sie es bitte später noch einmal",
+  "Show the release notes after UniGetUI is updated": "Versionshinweise anzeigen, nachdem UniGetUI aktualisiert wurde"
 }

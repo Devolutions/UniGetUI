@@ -846,5 +846,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Menaxho sjelljen e nisjes automatike të UniGetUI",
   "Choose how many operations shoulds be performed in parallel": "Zgjidh sa operacione duhet të kryhen paralelisht",
   "Something went wrong while launching the updater.": "Diçka shkoi gabim gjatë nisjes së përditësuesit.",
-  "Please try again later": "Të lutem provo përsëri më vonë"
+  "Please try again later": "Të lutem provo përsëri më vonë",
+  "Show the release notes after UniGetUI is updated": "Shfaq shënimet e botimit pasi UniGetUI të jetë përditësuar"
 }

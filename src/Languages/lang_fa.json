@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "مدیریت رفتار اجرای خودکار UniGetUI",
   "Choose how many operations shoulds be performed in parallel": "انتخاب کنید چند عملیات به‌صورت هم‌زمان انجام شوند",
   "Something went wrong while launching the updater.": "هنگام اجرای به‌روزرسان، مشکلی پیش آمد.",
-  "Please try again later": "لطفاً بعداً دوباره تلاش کنید"
+  "Please try again later": "لطفاً بعداً دوباره تلاش کنید",
+  "Show the release notes after UniGetUI is updated": "نمایش یادداشت‌های انتشار پس از به‌روزرسانی UniGetUI"
 }

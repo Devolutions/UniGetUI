@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Upravljanje ponašanjem automatskog pokretanja UniGetUI-ja",
   "Choose how many operations shoulds be performed in parallel": "Odaberite koliko se operacija treba izvršavati paralelno",
   "Something went wrong while launching the updater.": "Došlo je do pogreške prilikom pokretanja ažuriranja.",
-  "Please try again later": "Molim pokušajte ponovno kasnije"
+  "Please try again later": "Molim pokušajte ponovno kasnije",
+  "Show the release notes after UniGetUI is updated": "Prikaži napomene o izdanju nakon ažuriranja UniGetUI-a"
 }

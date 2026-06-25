@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "هەڵسوکەوتی خۆکار دەستپێکردنی UniGetUI بەڕێوەبەرە",
   "Choose how many operations shoulds be performed in parallel": "هەڵبژێرە چەند کردارێک دەبێت بە هاوکات ئەنجام بدرێن",
   "Something went wrong while launching the updater.": "کاتێک نوێکەرەوەکە دەستپێدەکرا شتێک هەڵە ڕوویدا.",
-  "Please try again later": "تکایە دواتر دووبارە هەوڵ بدەوە"
+  "Please try again later": "تکایە دواتر دووبارە هەوڵ بدەوە",
+  "Show the release notes after UniGetUI is updated": "پیشاندانی تێبینییەکانی وەشاندن دوای نوێکردنەوەی UniGetUI"
 }

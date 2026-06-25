@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Gestiona el comportament d'inici automàtic de l'UniGetUI",
   "Choose how many operations shoulds be performed in parallel": "Trieu quantes operacions s'han de fer en paral·lel",
   "Something went wrong while launching the updater.": "Quelcom ha anat malament en executar l'actualitzador.",
-  "Please try again later": "Proveu-ho més tard"
+  "Please try again later": "Proveu-ho més tard",
+  "Show the release notes after UniGetUI is updated": "Mostra les notes de publicació després d'actualitzar UniGetUI"
 }

@@ -846,5 +846,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Gestionează comportamentul de pornire automată al UniGetUI",
   "Choose how many operations shoulds be performed in parallel": "Alege câte operații să fie efectuate în paralel",
   "Something went wrong while launching the updater.": "Ceva nu a funcționat la lansarea actualizatorului.",
-  "Please try again later": "Te rog încearcă din nou mai târziu"
+  "Please try again later": "Te rog încearcă din nou mai târziu",
+  "Show the release notes after UniGetUI is updated": "Afișează informațiile versiunii după actualizarea UniGetUI"
 }

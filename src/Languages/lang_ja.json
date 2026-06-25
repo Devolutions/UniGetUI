@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "UniGetUI の自動起動動作を管理する",
   "Choose how many operations shoulds be performed in parallel": "並列で実行する操作数を選択してください",
   "Something went wrong while launching the updater.": "アップデータの起動中に問題が発生しました。",
-  "Please try again later": "後ほどもう一度お試しください。"
+  "Please try again later": "後ほどもう一度お試しください。",
+  "Show the release notes after UniGetUI is updated": "UniGetUIの更新後にリリースノートを表示する"
 }

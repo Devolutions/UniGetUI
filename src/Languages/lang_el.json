@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Διαχείριση συμπεριφοράς αυτόματης εκκίνησης του UniGetUI",
   "Choose how many operations shoulds be performed in parallel": "Επιλέξτε πόσες λειτουργίες πρέπει να εκτελούνται παράλληλα",
   "Something went wrong while launching the updater.": "Κάτι πήγε στραβά κατά το άνοιγμα του προγράμματος ενημέρωσης.",
-  "Please try again later": "Δοκιμάστε ξανά αργότερα"
+  "Please try again later": "Δοκιμάστε ξανά αργότερα",
+  "Show the release notes after UniGetUI is updated": "Εμφάνιση σημειώσεων έκδοσης μετά την ενημέρωση του UniGetUI"
 }

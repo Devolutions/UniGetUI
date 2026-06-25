@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "נהל את אופן ההפעלה האוטומטית של UniGetUI",
   "Choose how many operations shoulds be performed in parallel": "בחר כמה פעולות יבוצעו במקביל",
   "Something went wrong while launching the updater.": "משהו השתבש בעת הפעלת המעדכן.",
-  "Please try again later": "נסה שוב מאוחר יותר"
+  "Please try again later": "נסה שוב מאוחר יותר",
+  "Show the release notes after UniGetUI is updated": "הצג את הערות השחרור לאחר עדכון UniGetUI"
 }

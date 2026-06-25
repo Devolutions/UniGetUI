@@ -841,5 +841,6 @@
   "Error": "오류",
   "Log in failed: ": "로그인 실패: ",
   "Log out failed: ": "로그아웃 실패: ",
-  "Package backup settings": "패키지 백업 설정"
+  "Package backup settings": "패키지 백업 설정",
+  "Show the release notes after UniGetUI is updated": "UniGetUI 업데이트 후 릴리스 노트 표시"
 }

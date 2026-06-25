@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Valdyti „UniGetUI“ automatinio paleidimo elgseną",
   "Choose how many operations shoulds be performed in parallel": "Pasirinkite, kiek operacijų turi būti vykdoma lygiagrečiai",
   "Something went wrong while launching the updater.": "Kažkas įvyko negerai, bandant paleisti naujinį.",
-  "Please try again later": "Prašome pabandyti dar kartą, vėlesniu laiku"
+  "Please try again later": "Prašome pabandyti dar kartą, vėlesniu laiku",
+  "Show the release notes after UniGetUI is updated": "Rodyti išleidimo užrašus po UniGetUI atnaujinimo"
 }

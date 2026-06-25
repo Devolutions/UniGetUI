@@ -846,5 +846,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "UniGetUI ස්වයං ආරම්භ හැසිරීම කළමනාකරණය කරන්න",
   "Choose how many operations shoulds be performed in parallel": "එකවර ක්‍රියාත්මක කළ යුතු මෙහෙයුම් ගණන තෝරන්න",
   "Something went wrong while launching the updater.": "updater ආරම්භ කිරීමේදී යම් දෙයක් වැරදී ගියේය.",
-  "Please try again later": "කරුණාකර පසුව නැවත උත්සාහ කරන්න"
+  "Please try again later": "කරුණාකර පසුව නැවත උත්සාහ කරන්න",
+  "Show the release notes after UniGetUI is updated": "UniGetUI යාවත්කාලීන වූ පසු නිකුතු සටහන් පෙන්වන්න"
 }

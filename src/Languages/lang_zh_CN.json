@@ -845,5 +845,6 @@
   "Package managers": "软件包管理器",
   "Manage UniGetUI autostart behaviour from the Settings app": "管理 UniGetUI 自动启动行为",
   "Something went wrong while launching the updater.": "在启动更新程序时出错。",
-  "Please try again later": "请稍后再试"
+  "Please try again later": "请稍后再试",
+  "Show the release notes after UniGetUI is updated": "在 UniGetUI 更新后显示发布说明"
 }

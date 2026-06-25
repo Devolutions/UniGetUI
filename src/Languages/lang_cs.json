@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Spravovat chování automatického spouštění UniGetUI",
   "Choose how many operations shoulds be performed in parallel": "Vyberte, kolik operací se má provádět souběžně",
   "Something went wrong while launching the updater.": "Při spouštění aktualizace se něco pokazilo.",
-  "Please try again later": "Zkuste to prosím později"
+  "Please try again later": "Zkuste to prosím později",
+  "Show the release notes after UniGetUI is updated": "Zobrazit poznámky k vydání po aktualizaci UniGetUI"
 }

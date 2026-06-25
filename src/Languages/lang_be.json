@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Кіраванне аўтазапускам UniGetUI",
   "Choose how many operations shoulds be performed in parallel": "Выберыце, колькі аперацый трэба выконваць паралельна",
   "Something went wrong while launching the updater.": "Памылка пры запуску абнаўлення.",
-  "Please try again later": "Паспрабуйце пазней"
+  "Please try again later": "Паспрабуйце пазней",
+  "Show the release notes after UniGetUI is updated": "Паказваць нататкі выпуску пасля абнаўлення UniGetUI"
 }

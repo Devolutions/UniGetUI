@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "A UniGetUI automatikus indításának kezelése",
   "Choose how many operations shoulds be performed in parallel": "Válassza ki, hány művelet fusson párhuzamosan",
   "Something went wrong while launching the updater.": "Valamilyen hiba történt a frissítő indítása közben.",
-  "Please try again later": "Kérjük próbálja később újra"
+  "Please try again later": "Kérjük próbálja később újra",
+  "Show the release notes after UniGetUI is updated": "Kiadási megjegyzések megjelenítése a UniGetUI frissítése után"
 }

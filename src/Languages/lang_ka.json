@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "UniGetUI-ის ავტომატური გაშვების ქცევის მართვა",
   "Choose how many operations shoulds be performed in parallel": "აირჩიეთ, რამდენი ოპერაცია უნდა შესრულდეს პარალელურად",
   "Something went wrong while launching the updater.": "რაღაც ჩაიშალა განმაახლებლის გაშვებისას",
-  "Please try again later": "გთხოვთ სცადოთ მოგვიანებით"
+  "Please try again later": "გთხოვთ სცადოთ მოგვიანებით",
+  "Show the release notes after UniGetUI is updated": "რელიზის ჩანაწერების ჩვენება UniGetUI-ის განახლების შემდეგ"
 }

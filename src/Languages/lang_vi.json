@@ -846,5 +846,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Quản lý hành vi tự khởi động của UniGetUI",
   "Choose how many operations shoulds be performed in parallel": "Chọn số thao tác nên được thực hiện song song",
   "Something went wrong while launching the updater.": "Đã xảy ra sự cố khi khởi động trình cập nhật.",
-  "Please try again later": "Vui lòng thử lại sau"
+  "Please try again later": "Vui lòng thử lại sau",
+  "Show the release notes after UniGetUI is updated": "Hiển thị ghi chú phát hành sau khi UniGetUI được cập nhật"
 }

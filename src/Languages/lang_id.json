@@ -845,5 +845,6 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "Kelola perilaku mulai otomatis UniGetUI",
   "Choose how many operations shoulds be performed in parallel": "Pilih berapa banyak operasi yang harus dilakukan secara paralel",
   "Something went wrong while launching the updater.": "Terjadi kesalahan saat meluncurkan pembaru.",
-  "Please try again later": "Silakan coba lagi nanti"
+  "Please try again later": "Silakan coba lagi nanti",
+  "Show the release notes after UniGetUI is updated": "Tampilkan catatan rilis setelah UniGetUI diperbarui"
 }

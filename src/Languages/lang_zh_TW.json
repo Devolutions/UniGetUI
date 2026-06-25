@@ -847,5 +847,6 @@
   "Choose how many operations shoulds be performed in parallel": "選擇要同時執行的操作數量",
   "Something went wrong while launching the updater.": "啟動更新程式時發生錯誤。",
   "Please try again later": "請稍後再試",
-  "Installer host changed since the installed version.\nOld: {0}\nNew: {1}\n\nThis is usually harmless (the publisher moved hosting), but can also indicate a hijacked package manifest. Verify the new source before upgrading.": "安裝程式主機在已安裝版本之後變更。\n舊版: {0}\n新版: {1}\n\n這通常無害（發布者移動了主機），但也可能表示套件描述檔已被劫持。更新前請驗證新來源。"
+  "Installer host changed since the installed version.\nOld: {0}\nNew: {1}\n\nThis is usually harmless (the publisher moved hosting), but can also indicate a hijacked package manifest. Verify the new source before upgrading.": "安裝程式主機在已安裝版本之後變更。\n舊版: {0}\n新版: {1}\n\n這通常無害（發布者移動了主機），但也可能表示套件描述檔已被劫持。更新前請驗證新來源。",
+  "Show the release notes after UniGetUI is updated": "在 UniGetUI 更新後顯示版本更新說明"
 }

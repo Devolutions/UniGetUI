@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <!-- On Windows the engine's #if WINDOWS managers (WinGet/Scoop/Chocolatey) require the
+             Windows TFM, so the TUI follows the same single-TFM selection as UniGetUI.Avalonia. -->
+        <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WindowsTargetFramework)</TargetFramework>
+        <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">$(PortableTargetFramework)</TargetFramework>
+        <TargetFrameworks />
+        <OutputType>Exe</OutputType>
+        <RootNamespace>UniGetUI.Tui</RootNamespace>
+        <AssemblyName>UniGetUI.Tui</AssemblyName>
+        <!-- The UI is built entirely in C# (no AXAML), so compiled bindings are irrelevant here;
+             keep parity with the Consolonia fork projects which opt out under Avalonia 12. -->
+        <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+        <!-- The TUI owns the console; never spawn or attach a GUI window. -->
+        <PublishSingleFile>false</PublishSingleFile>
+        <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="12.0.4" />
+        <PackageReference Include="Avalonia.Skia" Version="12.0.4" />
+    </ItemGroup>
+
+    <!-- UniGetUI engine projects (headless subset: no IpcApi / Telemetry, those are GUI-only). -->
+    <ItemGroup>
+        <ProjectReference Include="..\UniGetUI.Core.Data\UniGetUI.Core.Data.csproj" />
+        <ProjectReference Include="..\UniGetUI.Core.LanguageEngine\UniGetUI.Core.LanguageEngine.csproj" />
+        <ProjectReference Include="..\UniGetUI.Core.Logger\UniGetUI.Core.Logging.csproj" />
+        <ProjectReference Include="..\UniGetUI.Core.SecureSettings\UniGetUI.Core.SecureSettings.csproj" />
+        <ProjectReference Include="..\UniGetUI.Core.Settings\UniGetUI.Core.Settings.csproj" />
+        <ProjectReference Include="..\UniGetUI.Core.Tools\UniGetUI.Core.Tools.csproj" />
+        <ProjectReference Include="..\UniGetUI.Interface.Enums\UniGetUI.Interface.Enums.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.PackageEngine\UniGetUI.PackageEngine.PEInterface.csproj" />
+    </ItemGroup>
+
+    <!-- Forked Consolonia (Avalonia 12 / .NET 10).  Referenced by relative path to the local spike
+         clone for now; M7 will convert this to a git submodule under src/external/Consolonia. -->
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\_unigetui_spikes\Consolonia\src\Consolonia\Consolonia.csproj" />
+        <ProjectReference Include="..\..\..\_unigetui_spikes\Consolonia\src\Consolonia.Fonts\Consolonia.Fonts.csproj" />
+        <ProjectReference Include="..\..\..\_unigetui_spikes\Consolonia\src\Consolonia.ManagedWindows\Consolonia.ManagedWindows.csproj" />
+    </ItemGroup>
+
+</Project>

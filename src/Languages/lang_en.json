@@ -471,6 +471,8 @@
   "System language": "System language",
   "Is your language missing or incomplete?": "Is your language missing or incomplete?",
   "Appearance": "Appearance",
+  "Rendering": "Rendering",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Automatically switch to software rendering when Windows has no hardware GPU",
   "UniGetUI on the background and system tray": "UniGetUI on the background and system tray",
   "Package lists": "Package lists",
   "Use classic mode": "Use classic mode",

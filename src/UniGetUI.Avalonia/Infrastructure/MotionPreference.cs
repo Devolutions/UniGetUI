@@ -23,7 +23,13 @@ internal static class MotionPreference
         get
         {
             if (OperatingSystem.IsWindows())
+            {
+                if (WindowsAvaloniaRenderingPolicy.ShouldReduceMotion)
+                    return true;
+
                 return GetWindowsReducedMotion();
+            }
+
             return _cachedUnix ??= GetUnixReducedMotion();
         }
     }

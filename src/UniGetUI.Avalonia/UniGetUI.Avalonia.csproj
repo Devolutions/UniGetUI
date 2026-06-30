@@ -239,6 +239,7 @@
        <Compile Include="Infrastructure\RelayCommand.cs" />
        <Compile Include="Infrastructure\SingleInstanceRedirector.cs" />
        <Compile Include="Infrastructure\UninstallConfirmationDialog.cs" />
+       <Compile Include="Infrastructure\WindowsAvaloniaRenderingPolicy.cs" />
        <Compile Update="App.axaml.cs">
          <DependentUpon>App.axaml</DependentUpon>
        </Compile>

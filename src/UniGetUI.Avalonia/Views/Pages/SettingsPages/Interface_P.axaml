@@ -28,6 +28,22 @@
 
             <Border Height="16"/>
 
+            <settings:TranslatedTextBlock Text="Rendering"
+                                         FontSize="14"
+                                         FontWeight="SemiBold"
+                                         Margin="44,32,4,8"
+                                         automation:AutomationProperties.HeadingLevel="2"
+                                         IsVisible="{Binding IsWindows}"/>
+
+            <settings:CheckboxCard SettingName="DisableAutoSoftwareRenderingOnGpuLessHosts"
+                                   Text="{t:Translate Automatically switch to software rendering when Windows has no hardware GPU}"
+                                   WarningText="{t:Translate Restart UniGetUI to apply this change}"
+                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
+                                   CornerRadius="8"
+                                   IsVisible="{Binding IsWindows}"/>
+
+            <Border Height="16"/>
+
              <StackPanel x:Name="SystemTraySection" Orientation="Vertical">
                 <settings:TranslatedTextBlock Text="UniGetUI on the background and system tray"
                                               FontSize="14"

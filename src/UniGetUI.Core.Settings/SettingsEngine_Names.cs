@@ -97,6 +97,7 @@ public static partial class Settings
         RedactUsernameInLog,
         DisableReleaseNotesOnUpdate,
         LastKnownBuildNumber,
+        DisableAutoSoftwareRenderingOnGpuLessHosts,
 
         Test1,
         Test2,
@@ -205,6 +206,7 @@ public static partial class Settings
             K.RedactUsernameInLog => "RedactUsernameInLog",
             K.DisableReleaseNotesOnUpdate => "DisableReleaseNotesOnUpdate",
             K.LastKnownBuildNumber => "LastKnownBuildNumber",
+            K.DisableAutoSoftwareRenderingOnGpuLessHosts => "DisableAutoSoftwareRenderingOnGpuLessHosts",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

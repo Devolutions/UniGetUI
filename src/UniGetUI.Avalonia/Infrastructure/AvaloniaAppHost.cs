@@ -1,5 +1,8 @@
 using System.Runtime.InteropServices;
 using Avalonia;
+#if WINDOWS
+using Avalonia.Win32;
+#endif
 using Avalonia.Threading;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
@@ -89,9 +92,22 @@ public static class AvaloniaAppHost
     }
 
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .LogToTrace();
+    {
+        AppBuilder builder = AppBuilder.Configure<App>()
+            .UsePlatformDetect();
+
+#if WINDOWS
+        if (WindowsAvaloniaRenderingPolicy.ShouldUseSoftwareRendering)
+        {
+            builder = builder.With(new Win32PlatformOptions
+            {
+                RenderingMode = [Win32RenderingMode.Software],
+            });
+        }
+#endif
+
+        return builder.LogToTrace();
+    }
 
     private static bool ShouldPrepareCliConsole(IReadOnlyList<string> args)
     {

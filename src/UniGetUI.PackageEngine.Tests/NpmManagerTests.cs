@@ -152,6 +152,100 @@ public sealed class NpmManagerTests
     }
 
     [Fact]
+    public void OperationHelperReconstructsAliasSyntaxForUpdate()
+    {
+        // `npm outdated --json` reports npm-aliased dependencies (package.json entries like
+        // "eslint-v9": "npm:eslint@^9.39.4") with this exact "localName:targetName@targetRange"
+        // shape as the package id -- see Npm.ParseAvailableUpdatesOutput.
+        var manager = new Npm();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("eslint-v9:eslint@^9.39.4")
+            .WithVersion("9.39.4")
+            .WithNewVersion("10.6.0")
+            .Build();
+        var options = new InstallOptions();
+
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+        Assert.Equal(
+            [
+                "install",
+                OperatingSystem.IsWindows()
+                    ? "'eslint-v9@npm:eslint@10.6.0'"
+                    : "eslint-v9@npm:eslint@10.6.0",
+            ],
+            parameters
+        );
+    }
+
+    [Fact]
+    public void OperationHelperReconstructsAliasSyntaxForScopedTarget()
+    {
+        // The alias target itself can be scoped (e.g. "npm:@babel/core@^7.20.0"), which contains
+        // its own '@'. Splitting on the *last* '@' must still separate the scoped target name
+        // from the version, not the scope prefix from the rest of the name.
+        var manager = new Npm();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("babel-core-legacy:@babel/core@^7.20.0")
+            .WithVersion("7.20.0")
+            .WithNewVersion("7.28.0")
+            .Build();
+        var options = new InstallOptions();
+
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+        Assert.Equal(
+            [
+                "install",
+                OperatingSystem.IsWindows()
+                    ? "'babel-core-legacy@npm:@babel/core@7.28.0'"
+                    : "babel-core-legacy@npm:@babel/core@7.28.0",
+            ],
+            parameters
+        );
+    }
+
+    [Fact]
+    public void OperationHelperUsesLocalNameForAliasUninstall()
+    {
+        var manager = new Npm();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("eslint-v9:eslint@^9.39.4")
+            .WithVersion("9.39.4")
+            .Build();
+        var options = new InstallOptions();
+
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Uninstall);
+
+        Assert.Equal(["uninstall", "eslint-v9"], parameters);
+    }
+
+    [Fact]
+    public void OperationHelperLeavesOrdinaryPackageIdsUntouched()
+    {
+        // Sanity check: ordinary (non-aliased) package ids never contain a colon, so the alias
+        // path must not be reachable for them.
+        var manager = new Npm();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("contoso-tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        var options = new InstallOptions();
+
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+        Assert.Equal(
+            ["install", OperatingSystem.IsWindows() ? "'contoso-tool@2.0.0'" : "contoso-tool@2.0.0"],
+            parameters
+        );
+    }
+
+    [Fact]
     public void OperationHelperReturnsSuccessOnlyForZeroExitCode()
     {
         var manager = new Npm();

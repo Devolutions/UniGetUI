@@ -45,6 +45,8 @@ public partial class InstallOptionsViewModel : ObservableObject
     public string ParamsInstallLabel { get; } = CoreTools.Translate("Custom install arguments:");
     public string ParamsUpdateLabel { get; } = CoreTools.Translate("Custom update arguments:");
     public string ParamsUninstallLabel { get; } = CoreTools.Translate("Custom uninstall arguments:");
+    public string CliArgsHintLabel { get; } = CoreTools.Translate("These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.");
+    public string CopyInstallArgsLabel { get; } = CoreTools.Translate("Copy install arguments to update and uninstall");
     public string PreInstallLabel { get; } = CoreTools.Translate("Pre-install command:");
     public string PostInstallLabel { get; } = CoreTools.Translate("Post-install command:");
     public string AbortInstallLabel { get; } = CoreTools.Translate("Abort install if pre-install command fails");
@@ -362,6 +364,13 @@ public partial class InstallOptionsViewModel : ObservableObject
 
     [RelayCommand]
     private void ResetLocation() => LocationText = "";
+
+    [RelayCommand]
+    private void CopyInstallArgsToOthers()
+    {
+        ParamsUpdate = ParamsInstall;
+        ParamsUninstall = ParamsInstall;
+    }
 
     /// <summary>Unlocks the options by turning off "follow default options" (matches WinUI).</summary>
     [RelayCommand]

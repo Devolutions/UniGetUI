@@ -77,6 +77,8 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
     public string InstallArgsLabel { get; } = CoreTools.Translate("Custom install arguments:");
     public string UpdateArgsLabel { get; } = CoreTools.Translate("Custom update arguments:");
     public string UninstallArgsLabel { get; } = CoreTools.Translate("Custom uninstall arguments:");
+    public string CliArgsHintLabel { get; } = CoreTools.Translate("These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.");
+    public string CopyInstallArgsLabel { get; } = CoreTools.Translate("Copy install arguments to update and uninstall");
     public string ResetLabel { get; } = CoreTools.Translate("Reset");
     public string ApplyLabel { get; } = CoreTools.Translate("Apply");
     public string CliDisabledLabel { get; } = CoreTools.Translate("For security reasons, custom command-line arguments are disabled by default. Go to UniGetUI security settings to change this.");
@@ -283,6 +285,16 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
     [RelayCommand]
     private void NavigateToAdministrator() =>
         NavigateToAdministratorRequested?.Invoke(this, EventArgs.Empty);
+
+    // ── CLI args convenience ─────────────────────────────────────────────────
+
+    [RelayCommand]
+    private void CopyInstallArgsToOthers()
+    {
+        CustomUpdate = CustomInstall;
+        CustomUninstall = CustomInstall;
+        HasChanges = true;
+    }
 
     // ── Mark changed ─────────────────────────────────────────────────────────
 

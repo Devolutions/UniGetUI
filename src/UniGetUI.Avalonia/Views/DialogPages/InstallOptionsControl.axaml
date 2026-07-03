@@ -259,6 +259,12 @@
                                        Command="{Binding GoToSecuritySettingsCommand}"
                                        HorizontalAlignment="Left" Padding="0" FontWeight="SemiBold"/>
 
+                      <TextBlock Text="{Binding CliArgsHintLabel}"
+                                 IsVisible="{Binding CliEnabled}"
+                                 TextWrapping="Wrap"
+                                 Opacity="0.7"
+                                 FontSize="12"/>
+
                       <Grid ColumnDefinitions="*,2*"
                             RowDefinitions="Auto,Auto,Auto"
                             ColumnSpacing="8" RowSpacing="8"
@@ -291,6 +297,13 @@
                                  FontSize="14"/>
 
                       </Grid>
+
+                      <HyperlinkButton Content="{Binding CopyInstallArgsLabel}"
+                                       IsVisible="{Binding CliEnabled}"
+                                       automation:AutomationProperties.Name="{Binding CopyInstallArgsLabel}"
+                                       Command="{Binding CopyInstallArgsToOthersCommand}"
+                                       Padding="0"
+                                       HorizontalAlignment="Left"/>
                     </StackPanel>
                 </Border>
             </TabItem>

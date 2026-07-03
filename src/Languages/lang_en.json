@@ -112,6 +112,8 @@
   "Custom install arguments:": "Custom install arguments:",
   "Custom update arguments:": "Custom update arguments:",
   "Custom uninstall arguments:": "Custom uninstall arguments:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.",
+  "Copy install arguments to update and uninstall": "Copy install arguments to update and uninstall",
   "Pre-install command:": "Pre-install command:",
   "Post-install command:": "Post-install command:",
   "Abort install if pre-install command fails": "Abort install if pre-install command fails",

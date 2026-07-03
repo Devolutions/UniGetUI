@@ -159,11 +159,17 @@
                     </Button>
 
                     <!-- CLI arguments: always shown, disabled by security setting -->
+                    <TextBlock Text="{Binding CliArgsHintLabel}"
+                               IsVisible="{Binding CliSectionEnabled}"
+                               TextWrapping="Wrap"
+                               Opacity="0.7"
+                               FontSize="12"
+                               Margin="0,8,0,0"/>
                     <Grid ColumnDefinitions="*,2*"
                           RowDefinitions="Auto,Auto,Auto"
                           RowSpacing="8"
                           ColumnSpacing="8"
-                          Margin="0,8,0,0">
+                          Margin="0,4,0,0">
                         <TextBlock x:Name="InstallArgsLabelBlock"
                                    Grid.Row="0" Grid.Column="0"
                                    Text="{Binding InstallArgsLabel}"
@@ -206,6 +212,18 @@
                                    x:Name="CustomUninstallBox"
                                    automation:AutomationProperties.LabeledBy="{Binding #UninstallArgsLabelBlock}"/>
                     </Grid>
+
+                    <Button IsVisible="{Binding CliSectionEnabled}"
+                            HorizontalAlignment="Left"
+                            Command="{Binding CopyInstallArgsToOthersCommand}"
+                            automation:AutomationProperties.Name="{Binding CopyInstallArgsLabel}"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="0"
+                            Margin="0,4,0,0">
+                        <TextBlock Text="{Binding CopyInstallArgsLabel}" Classes="hyperlink"
+                                   automation:AutomationProperties.AccessibilityView="Raw"/>
+                    </Button>
 
                 </StackPanel>
             </Border>

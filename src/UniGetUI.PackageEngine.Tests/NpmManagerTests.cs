@@ -246,6 +246,39 @@ public sealed class NpmManagerTests
     }
 
     [Fact]
+    public void DetailsHelperUsesAliasLocalNameForInstallLocation()
+    {
+        var manager = new Npm();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("eslint-v9:eslint@^9.39.4")
+            .WithVersion("9.39.4")
+            .WithOptions(new OverridenInstallationOptions(PackageScope.Local))
+            .Build();
+        string expectedLocation = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            "node_modules",
+            "eslint-v9"
+        );
+        bool existed = Directory.Exists(expectedLocation);
+        Directory.CreateDirectory(expectedLocation);
+
+        try
+        {
+            var location = manager.DetailsHelper.GetInstallLocation(package);
+
+            Assert.Equal(expectedLocation, location);
+        }
+        finally
+        {
+            if (!existed)
+            {
+                Directory.Delete(expectedLocation, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void OperationHelperReturnsSuccessOnlyForZeroExitCode()
     {
         var manager = new Npm();

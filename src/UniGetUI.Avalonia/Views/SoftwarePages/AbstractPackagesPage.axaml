@@ -848,7 +848,8 @@
                                          BorderThickness="0"
                                          Background="Transparent"
                                          FontSize="28"
-                                         FontWeight="SemiBold"
+                                         FontWeight="Normal"
+                                         PlaceholderForeground="{DynamicResource MegaQueryPlaceholderForeground}"
                                          PlaceholderText="{t:Translate Search for packages}"
                                          automation:AutomationProperties.Name="{t:Translate Search for packages}"
                                          Text="{Binding MegaQueryText, Mode=TwoWay}"
@@ -860,6 +861,8 @@
                                         <SolidColorBrush x:Key="TextControlBackground" Color="Transparent"/>
                                         <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent"/>
                                         <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent"/>
+                                        <!-- Fluent dims placeholders to 0.5; WinUI showed them at full secondary-text brightness. -->
+                                        <x:Double x:Key="TextControlPlaceholderOpacity">1</x:Double>
                                     </TextBox.Resources>
                                 </TextBox>
                                 <Button x:Name="MegaFindButton"

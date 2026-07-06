@@ -27,6 +27,10 @@
                     <SolidColorBrush x:Key="TextFillColorPrimaryBrush"   Color="#E4000000"/>
                     <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#9E000000"/>
                     <SolidColorBrush x:Key="TextFillColorTertiaryBrush"  Color="#72000000"/>
+                    <!-- Search-box placeholders. The big Discover field uses larger (thicker-stroked) text, so it
+                         gets a lighter light-theme value to read as the same weight as the compact title-bar field. -->
+                    <SolidColorBrush x:Key="SearchBoxPlaceholderForeground"   Color="#72000000"/>
+                    <SolidColorBrush x:Key="MegaQueryPlaceholderForeground"   Color="#52000000"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5C000000"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#FFFFFFFF"/>
                     <!-- Text on accent -->
@@ -102,6 +106,10 @@
                     <SolidColorBrush x:Key="TextFillColorPrimaryBrush"   Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#C5FFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorTertiaryBrush"  Color="#87FFFFFF"/>
+                    <!-- Search-box placeholders. Dark theme keeps the brighter value that matched WinUI; both fields
+                         share it since thick-stroke heaviness only reads as darker on light backgrounds. -->
+                    <SolidColorBrush x:Key="SearchBoxPlaceholderForeground"   Color="#C5FFFFFF"/>
+                    <SolidColorBrush x:Key="MegaQueryPlaceholderForeground"   Color="#C5FFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5DFFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#E4000000"/>
                     <!-- Text on accent -->

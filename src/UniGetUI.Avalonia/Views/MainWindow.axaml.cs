@@ -115,6 +115,7 @@ public partial class MainWindow : Window
         DataContext = new MainWindowViewModel();
         InitializeComponent();
         SetupTitleBar();
+        SetupTitleBarFocusOpacity();
         SetupResponsiveRail();
 
         RestoreGeometry();
@@ -299,6 +300,14 @@ public partial class MainWindow : Window
     // Light-dismiss: clicking outside the open flyout closes it (no darkening — the layer is transparent).
     private void FlyoutDismiss_PointerPressed(object? sender, PointerPressedEventArgs e)
         => ViewModel.Sidebar.IsPaneOpen = false;
+
+    // Title-bar caption follows window focus (WinUI behaviour): full opacity — white title — when active, dimmed when not.
+    private void SetupTitleBarFocusOpacity()
+        => this.GetObservable(IsActiveProperty).SubscribeValue(active =>
+        {
+            HamburgerPanel.Opacity = active ? 1.0 : 0.6;
+            WindowButtons.Opacity = active ? 1.0 : 0.55;
+        });
 
     private void SetupTitleBar()
     {

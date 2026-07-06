@@ -410,8 +410,8 @@
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
                         Margin="65,0,8,0"
-                        Spacing="8"
-                        Opacity="0.6">
+                        Spacing="8">
+                <!-- Opacity follows window focus (see SetupTitleBarFocusOpacity): white title when active, dimmed when not. -->
                 <!-- Back button — appears once there is navigation history (mirrors WinUI's title-bar back). -->
                 <Button x:Name="BackButton"
                         Width="32" Height="32"
@@ -477,6 +477,7 @@
                                  VerticalContentAlignment="Center"
                                  Padding="12,0,4,0"
                                  Background="Transparent"
+                                 PlaceholderForeground="{DynamicResource SearchBoxPlaceholderForeground}"
                                  PlaceholderText="{Binding GlobalSearchPlaceholder}"
                                  IsEnabled="{Binding GlobalSearchEnabled}"
                                  automation:AutomationProperties.Name="{Binding GlobalSearchPlaceholder}"
@@ -492,6 +493,8 @@
                                 <SolidColorBrush x:Key="TextControlBackground" Color="Transparent"/>
                                 <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent"/>
                                 <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent"/>
+                                <!-- Fluent dims placeholders to 0.5; WinUI showed them at full secondary-text brightness. -->
+                                <x:Double x:Key="TextControlPlaceholderOpacity">1</x:Double>
                             </TextBox.Resources>
                         </TextBox>
                         <Button Grid.Column="1"
@@ -528,7 +531,6 @@
                             VerticalAlignment="Center"
                             Margin="0,0,4,0"
                             Spacing="0"
-                            Opacity="0.55"
                             IsVisible="False">
                     <!-- Minimize: horizontal line -->
                     <Button Width="46" Height="32" Padding="0"

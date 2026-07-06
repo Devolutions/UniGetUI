@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using Avalonia.Controls;
 using UniGetUI.Core.Logging;
 using CoreSettings = global::UniGetUI.Core.SettingsEngine.Settings;
@@ -37,6 +39,7 @@ internal static class WindowsAvaloniaRenderingPolicy
 
     public static bool ShouldReduceMotion => ShouldUseSoftwareRendering;
 
+    [SupportedOSPlatform("windows")]
     private static bool HasHardwareGpu
     {
         get
@@ -55,6 +58,9 @@ internal static class WindowsAvaloniaRenderingPolicy
         }
     }
 
+    [SupportedOSPlatform("windows")]
+    [UnconditionalSuppressMessage("Trimming", "IL2050",
+        Justification = "The DXGI COM interfaces are declared in full and referenced directly here, so their members are preserved by trimming.")]
     private static bool DetectHardwareGpu()
     {
         try

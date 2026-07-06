@@ -1,11 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 23.0.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
-<style type="text/css">
-	.st0{fill:#010101;}
-</style>
-<ellipse class="st0" cx="16" cy="6.5" rx="11" ry="4.5"/>
-<path class="st0" d="M5,10.1V13c0,0.9,7,8,7,8v7c0,1.1,1.8,2,4,2v0c0,0,0,0,0,0c0,0,0,0,0,0s0,0,0,0c0,0,0,0,0,0v0c2.2,0,4-0.9,4-2
-	v-7c0,0,7-7.1,7-8v-2.9C24.6,12,20.3,13,16,13S7.4,12,5,10.1z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Filters: filter funnel outline (matches the original Segoe filter glyph shape; drawn geometry, not extracted) -->
+  <path d="M4.45,6.85 L4.45,6.85 Q3.00,5.20 5.20,5.20 L18.80,5.20 Q21.00,5.20 19.55,6.85 L14.53,12.55 Q13.60,13.60 13.60,15.00 L13.60,19.20 Q13.60,20.40 12.40,20.40 L11.60,20.40 Q10.40,20.40 10.40,19.20 L10.40,15.00 Q10.40,13.60 9.47,12.55 Z M7.94,13.53 L7.94,13.53 Q8.60,14.28 8.60,15.28 L8.60,21.20 Q8.60,22.20 9.60,22.20 L14.70,22.20 Q15.40,22.20 15.40,21.50 L15.40,14.98 Q15.40,14.28 15.86,13.75 L24.52,3.93 Q24.98,3.40 24.28,3.40 L-0.28,3.40 Q-0.98,3.40 -0.52,3.93 Z" fill="#181818"/>
 </svg>

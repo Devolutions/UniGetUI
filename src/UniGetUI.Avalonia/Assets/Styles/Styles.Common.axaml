@@ -188,6 +188,7 @@
          neutral fill plus a vertical accent pill on the left edge. The content presenter is named
          ContentHost (not PART_ContentPresenter) so the base theme's accent-fill setters don't apply. -->
     <Style Selector="ListBoxItem.nav-item">
+        <Setter Property="Margin" Value="0,2"/>
         <Setter Property="Template">
             <ControlTemplate>
                 <Panel>

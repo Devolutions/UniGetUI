@@ -32,7 +32,7 @@
                          automation:AutomationProperties.AcceleratorKey="Ctrl+1"
                          ToolTip.Tip="{t:Translate Discover Packages}">
                 <Panel>
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,8">
                         <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/DiscoverPackage.svg" Width="24" Height="24" VerticalAlignment="Center" />
                         <TextBlock Text="{t:Translate Discover Packages}"
                                    FontSize="14"
@@ -57,7 +57,7 @@
                          automation:AutomationProperties.AcceleratorKey="Ctrl+2"
                          ToolTip.Tip="{t:Translate Software Updates}">
                 <Panel>
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,8">
                         <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/update.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                         <TextBlock Text="{t:Translate Software Updates}"
                                    FontSize="14"
@@ -74,7 +74,7 @@
                             IsVisible="{Binding UpdatesBadgeVisible}"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Top"
-                            Margin="26,3,0,0">
+                            Margin="26,5,0,0">
                         <TextBlock Text="{Binding UpdatesBadgeCount}"
                                    FontSize="9"
                                    FontWeight="Bold"
@@ -99,7 +99,7 @@
                          automation:AutomationProperties.AcceleratorKey="Ctrl+3"
                          ToolTip.Tip="{t:Translate Installed Packages}">
                 <Panel>
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,8">
                         <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/InstalledPackages.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                         <TextBlock Text="{t:Translate Installed Packages}"
                                    FontSize="14"
@@ -124,7 +124,7 @@
                          automation:AutomationProperties.AcceleratorKey="Ctrl+4"
                          ToolTip.Tip="{t:Translate Package Bundles}">
                 <Panel>
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,8">
                         <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/PackagesBundle.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                         <TextBlock Text="{t:Translate Package Bundles}"
                                    FontSize="14"
@@ -140,7 +140,7 @@
                             IsVisible="{Binding BundlesBadgeVisible}"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Top"
-                            Margin="28,5,0,0"/>
+                            Margin="28,7,0,0"/>
                 </Panel>
             </ListBoxItem>
 
@@ -165,7 +165,7 @@
                              automation:AutomationProperties.Name="{t:Translate Settings}"
                              automation:AutomationProperties.AcceleratorKey="Ctrl+5"
                              ToolTip.Tip="{t:Translate Settings}">
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,8">
                         <controls:SvgIcon x:Name="SettingsIcon" Path="avares://UniGetUI/Assets/Symbols/settings.svg" Width="24" Height="24" VerticalAlignment="Center" RenderTransformOrigin="50%,50%"/>
                         <TextBlock Text="{t:Translate Settings}" FontSize="14" VerticalAlignment="Center"
                                    IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
@@ -177,8 +177,8 @@
                              automation:AutomationProperties.Name="{t:Translate Package Managers}"
                              automation:AutomationProperties.AcceleratorKey="Ctrl+6"
                              ToolTip.Tip="{t:Translate Package Managers}">
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
-                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/clipboard_list.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,8">
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package_managers.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                         <TextBlock Text="{t:Translate Package Managers}" FontSize="14" VerticalAlignment="Center"
                                    IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                     </StackPanel>
@@ -189,7 +189,7 @@
                 <ListBoxItem x:Name="MoreNavBtn" Tag="More" Classes="nav-item" Padding="4,2" CornerRadius="6"
                              automation:AutomationProperties.Name="{t:Translate More}"
                              ToolTip.Tip="{t:Translate More}">
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,6">
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,8">
                         <TextBlock Text="···" FontSize="20" Width="24" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
                                    automation:AutomationProperties.AccessibilityView="Raw"/>
                         <TextBlock Text="{t:Translate More}" FontSize="14" VerticalAlignment="Center"

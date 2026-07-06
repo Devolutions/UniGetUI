@@ -66,11 +66,13 @@
             <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#66393939"/>
             <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#66181818"/>
             <!-- Flyouts / menus / dropdowns / tooltips: MicaWindowHelper gives the popup window a DWM
-                 acrylic backdrop (transient surfaces can't use Mica); this tint matches the cards -->
-            <SolidColorBrush x:Key="FlyoutPresenterBackground"     Color="#662D2D2D"/>
-            <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#662D2D2D"/>
-            <SolidColorBrush x:Key="ComboBoxDropDownBackground"    Color="#662D2D2D"/>
-            <SolidColorBrush x:Key="ToolTipBackground"             Color="#662D2D2D"/>
+                 acrylic backdrop (transient surfaces can't use Mica). Kept mostly opaque so the surface
+                 stays readably dark even when the popup floats over bright content (e.g. the release-notes
+                 WebView) — a lighter tint let the white page wash the menu out (#5007) -->
+            <SolidColorBrush x:Key="FlyoutPresenterBackground"     Color="#BF2D2D2D"/>
+            <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#BF2D2D2D"/>
+            <SolidColorBrush x:Key="ComboBoxDropDownBackground"    Color="#BF2D2D2D"/>
+            <SolidColorBrush x:Key="ToolTipBackground"             Color="#BF2D2D2D"/>
             <!-- Expander chrome -->
             <SolidColorBrush x:Key="ExpanderHeaderBackground"            Color="#662D2D2D"/>
             <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#802D2D2D"/>

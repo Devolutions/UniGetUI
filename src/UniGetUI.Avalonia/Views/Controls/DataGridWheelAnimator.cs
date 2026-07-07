@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using UniGetUI.Avalonia.Infrastructure;
 
 namespace UniGetUI.Avalonia.Views.Controls;
 
@@ -40,7 +41,8 @@ public sealed class DataGridWheelAnimator
 
     private void OnWheel(object? sender, PointerWheelEventArgs e)
     {
-        if (e.Delta.Y == 0 || e.KeyModifiers == KeyModifiers.Shift) return;
+        // Fall back to the native instant scroll for horizontal/shift, or when reduced motion is on.
+        if (e.Delta.Y == 0 || e.KeyModifiers == KeyModifiers.Shift || MotionPreference.ReducedMotion) return;
 
         _pending += e.Delta.Y * WheelStep;
         e.Handled = true;

@@ -91,7 +91,7 @@
       </Style>
    </UserControl.Styles>
 
-   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="8,8,8,8">
+   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="8,6,8,8">
 
         <!-- ==================== HEADER ==================== -->
         <Grid Name="MainHeader"

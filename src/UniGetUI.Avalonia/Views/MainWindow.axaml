@@ -83,7 +83,7 @@
             <Grid x:Name="ContentRoot" Grid.Column="1" RowDefinitions="*,4,Auto">
 
             <!-- ── Banners + page content ── -->
-            <Grid Grid.Row="0" RowDefinitions="Auto,*" Margin="0,10">
+            <Grid Grid.Row="0" RowDefinitions="Auto,*" Margin="0,0,0,10">
                 <StackPanel Grid.Row="0"
                             Spacing="0"
                             automation:AutomationProperties.AccessibilityView="Control">

@@ -123,7 +123,7 @@ public class DWMThreadHelper
             hThread,
             ThreadQuerySetWin32StartAddress,
             ref adress,
-            Marshal.SizeOf(typeof(IntPtr)),
+            Marshal.SizeOf<IntPtr>(),
             out _
         );
         if (status != 0)

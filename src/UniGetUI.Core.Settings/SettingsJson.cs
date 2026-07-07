@@ -70,6 +70,10 @@ internal static class SettingsJson
         "Trimming",
         "IL2026",
         Justification = "Runtime settings use generated metadata for known app types; this fallback preserves generic settings tests and extension scenarios outside trimmed app paths.")]
+    [UnconditionalSuppressMessage(
+        "AotCompatibility",
+        "IL3050",
+        Justification = "This reflection fallback is only used when generated metadata is unavailable; NativeAOT app paths rely on source-generated metadata for the known settings types.")]
     private static string SerializeListWithReflection<T>(List<T> value)
     {
         return JsonSerializer.Serialize(value, Settings.SerializationOptions);
@@ -79,6 +83,10 @@ internal static class SettingsJson
         "Trimming",
         "IL2026",
         Justification = "Runtime settings use generated metadata for known app types; this fallback preserves generic settings tests and extension scenarios outside trimmed app paths.")]
+    [UnconditionalSuppressMessage(
+        "AotCompatibility",
+        "IL3050",
+        Justification = "This reflection fallback is only used when generated metadata is unavailable; NativeAOT app paths rely on source-generated metadata for the known settings types.")]
     private static List<T>? DeserializeListWithReflection<T>(string json)
     {
         return JsonSerializer.Deserialize<List<T>>(json, Settings.SerializationOptions);
@@ -88,6 +96,10 @@ internal static class SettingsJson
         "Trimming",
         "IL2026",
         Justification = "Runtime settings use generated metadata for known app types; this fallback preserves generic settings tests and extension scenarios outside trimmed app paths.")]
+    [UnconditionalSuppressMessage(
+        "AotCompatibility",
+        "IL3050",
+        Justification = "This reflection fallback is only used when generated metadata is unavailable; NativeAOT app paths rely on source-generated metadata for the known settings types.")]
     private static string SerializeDictionaryWithReflection<KeyT, ValueT>(
         Dictionary<KeyT, ValueT> value
     )
@@ -100,6 +112,10 @@ internal static class SettingsJson
         "Trimming",
         "IL2026",
         Justification = "Runtime settings use generated metadata for known app types; this fallback preserves generic settings tests and extension scenarios outside trimmed app paths.")]
+    [UnconditionalSuppressMessage(
+        "AotCompatibility",
+        "IL3050",
+        Justification = "This reflection fallback is only used when generated metadata is unavailable; NativeAOT app paths rely on source-generated metadata for the known settings types.")]
     private static Dictionary<KeyT, ValueT>? DeserializeDictionaryWithReflection<KeyT, ValueT>(
         string json
     )

@@ -95,3 +95,22 @@ jobs:
           /p:TrimmerSingleWarn=false `
           /p:UseSharedCompilation=false `
           --verbosity minimal
+
+    - name: Report NativeAOT publish warnings
+      working-directory: src
+      shell: pwsh
+      continue-on-error: true
+      run: |
+        dotnet build-server shutdown
+        dotnet publish UniGetUI.Avalonia/UniGetUI.Avalonia.csproj `
+          --no-restore `
+          --configuration Release `
+          --runtime win-x64 `
+          --self-contained true `
+          --output "${{ runner.temp }}\unigetui-nativeaot-publish" `
+          /m:1 `
+          /p:Platform=x64 `
+          /p:PublishProfile=Win-x64-NativeAot `
+          /p:TrimmerSingleWarn=false `
+          /p:UseSharedCompilation=false `
+          --verbosity minimal

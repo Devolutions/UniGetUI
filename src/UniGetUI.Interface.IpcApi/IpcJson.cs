@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Http;
+using System.Threading;
 
 namespace UniGetUI.Interface;
 
@@ -24,6 +25,14 @@ internal static class IpcJson
         return JsonSerializer.Deserialize(json, GetTypeInfo<T>());
     }
 
+    internal static JsonTypeInfo<T> GetTypeInfo<T>()
+    {
+        return (JsonTypeInfo<T>?)IpcJsonContext.Default.GetTypeInfo(typeof(T))
+            ?? throw new InvalidOperationException(
+                $"IPC JSON metadata for {typeof(T).FullName} was not generated."
+            );
+    }
+
     public static HttpContent CreateContent<T>(T value)
     {
         return new StringContent(
@@ -38,13 +47,21 @@ internal static class IpcJson
         response.ContentType = "application/json; charset=utf-8";
         return response.WriteAsync(Serialize(value));
     }
+}
 
-    private static JsonTypeInfo<T> GetTypeInfo<T>()
+internal static class IpcHttpResponseJsonExtensions
+{
+    internal static Task WriteAsJsonAsync<TValue>(
+        this HttpResponse response,
+        TValue value,
+        JsonSerializerOptions? options,
+        CancellationToken cancellationToken = default)
     {
-        return (JsonTypeInfo<T>?)IpcJsonContext.Default.GetTypeInfo(typeof(T))
-            ?? throw new InvalidOperationException(
-                $"IPC JSON metadata for {typeof(T).FullName} was not generated."
-            );
+        ArgumentNullException.ThrowIfNull(response);
+        JsonTypeInfo<TValue>? typeInfo = options?.GetTypeInfo(typeof(TValue)) as JsonTypeInfo<TValue>;
+        string json = JsonSerializer.Serialize(value, typeInfo ?? IpcJson.GetTypeInfo<TValue>());
+        response.ContentType = "application/json; charset=utf-8";
+        return response.WriteAsync(json, cancellationToken);
     }
 }
 

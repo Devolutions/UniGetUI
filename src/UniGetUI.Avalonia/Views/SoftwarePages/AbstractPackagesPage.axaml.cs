@@ -92,6 +92,9 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // redirect focus + the typed character to the global search box.
         PackageList.TextInput += PackageList_TextInput;
 
+        // Ease wheel scrolling to a stop instead of jumping per notch (WinUI-like feel).
+        DataGridWheelAnimator.Attach(PackageList);
+
         // Snap-close when splitter is dragged below the minimum (inline mode only).
         // Using ColumnDefinition.WidthProperty fires every drag step, not just on release.
         FilteringPanel.ColumnDefinitions[0]

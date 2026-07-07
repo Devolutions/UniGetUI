@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml.Linq;
@@ -82,24 +83,44 @@ public class SvgIcon : Control
 
     private void OnThemeChanged(object? sender, EventArgs e) => InvalidateVisual();
 
+    // Parsed SVGs are immutable static assets referenced by a small fixed set of URIs, yet the
+    // same icon is realized thousands of times as the DataGrid recycles rows during scrolling.
+    // Memoizing the parse keeps scrolling from re-opening and re-parsing assets on the UI thread.
+    private sealed record ParsedSvg(IReadOnlyList<Geometry> Geometries, double ViewBoxWidth, double ViewBoxHeight);
+    private static readonly ConcurrentDictionary<string, ParsedSvg> _cache = new();
+
     private void LoadSvg(string? uri)
     {
-        _geometries.Clear();
-        _viewBoxWidth = 24;
-        _viewBoxHeight = 24;
-
         if (string.IsNullOrEmpty(uri))
         {
+            _geometries.Clear();
+            _viewBoxWidth = 24;
+            _viewBoxHeight = 24;
             InvalidateVisual();
             return;
         }
+
+        ParsedSvg parsed = _cache.GetOrAdd(uri, ParseSvg);
+        _geometries.Clear();
+        _geometries.AddRange(parsed.Geometries);
+        _viewBoxWidth = parsed.ViewBoxWidth;
+        _viewBoxHeight = parsed.ViewBoxHeight;
+
+        InvalidateMeasure();
+        InvalidateVisual();
+    }
+
+    private static ParsedSvg ParseSvg(string uri)
+    {
+        var geometries = new List<Geometry>();
+        double viewBoxWidth = 24, viewBoxHeight = 24;
 
         try
         {
             using Stream stream = AssetLoader.Open(new Uri(uri));
             XDocument doc = XDocument.Load(stream);
             XElement? svg = doc.Root;
-            if (svg is null) return;
+            if (svg is null) return new ParsedSvg(geometries, viewBoxWidth, viewBoxHeight);
 
             string? vb = svg.Attribute("viewBox")?.Value;
             if (vb != null)
@@ -111,8 +132,8 @@ public class SvgIcon : Control
                     double.TryParse(parts[3], System.Globalization.NumberStyles.Any,
                         System.Globalization.CultureInfo.InvariantCulture, out double h))
                 {
-                    _viewBoxWidth = w;
-                    _viewBoxHeight = h;
+                    viewBoxWidth = w;
+                    viewBoxHeight = h;
                 }
             }
             else if (
@@ -121,8 +142,8 @@ public class SvgIcon : Control
                 double.TryParse(svg.Attribute("height")?.Value, System.Globalization.NumberStyles.Any,
                     System.Globalization.CultureInfo.InvariantCulture, out double svgH))
             {
-                _viewBoxWidth = svgW;
-                _viewBoxHeight = svgH;
+                viewBoxWidth = svgW;
+                viewBoxHeight = svgH;
             }
 
             XNamespace ns = "http://www.w3.org/2000/svg";
@@ -131,7 +152,7 @@ public class SvgIcon : Control
                 string? d = el.Attribute("d")?.Value;
                 if (!string.IsNullOrEmpty(d))
                 {
-                    try { _geometries.Add(Geometry.Parse(d)); }
+                    try { geometries.Add(Geometry.Parse(d)); }
                     catch { /* skip malformed path data */ }
                 }
             }
@@ -146,7 +167,7 @@ public class SvgIcon : Control
                     double.TryParse(el.Attribute("ry")?.Value, System.Globalization.NumberStyles.Any,
                         System.Globalization.CultureInfo.InvariantCulture, out double ry))
                 {
-                    _geometries.Add(new EllipseGeometry(new Rect(cx - rx, cy - ry, rx * 2, ry * 2)));
+                    geometries.Add(new EllipseGeometry(new Rect(cx - rx, cy - ry, rx * 2, ry * 2)));
                 }
             }
         }
@@ -155,8 +176,7 @@ public class SvgIcon : Control
             // Silently ignore missing or unreadable assets
         }
 
-        InvalidateMeasure();
-        InvalidateVisual();
+        return new ParsedSvg(geometries, viewBoxWidth, viewBoxHeight);
     }
 
     private static readonly IBrush _darkFg = new SolidColorBrush(Color.Parse("#E8E8E8"));

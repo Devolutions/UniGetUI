@@ -14,7 +14,6 @@
     <ItemGroup>
         <Compile Remove="Generated Files\**\*.cs" />
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
-        <PackageReference Include="Octokit" Version="14.0.0" />
         <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
     </ItemGroup>
 

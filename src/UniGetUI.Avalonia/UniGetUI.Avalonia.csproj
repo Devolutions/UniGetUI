@@ -22,13 +22,14 @@
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <ApplicationManifest Condition="$([MSBuild]::IsOSPlatform('Windows'))">app.manifest</ApplicationManifest>
         <PublishTrimmed>true</PublishTrimmed>
-        <TrimMode>partial</TrimMode>
+        <TrimMode>full</TrimMode>
         <PublishSingleFile>false</PublishSingleFile>
         <IncludeAvaloniaPublishSymbols>false</IncludeAvaloniaPublishSymbols>
     </PropertyGroup>
 
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-        <NoWarn>$(NoWarn);MVVMTK0045</NoWarn>
+        <!-- Parameterized windows/base views are directly constructed in code, not through the runtime XAML loader. -->
+        <NoWarn>$(NoWarn);MVVMTK0045;AVLN3001</NoWarn>
         <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
         <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(Platform)' == 'arm64'">win-arm64</RuntimeIdentifier>
         <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and ('$(Platform)' == 'x64' or '$(Platform)' == 'x86')">win-$(Platform)</RuntimeIdentifier>
@@ -147,7 +148,6 @@
         <PackageReference Include="Devolutions.AvaloniaTheme.Linux" Version="2026.3.11" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
         <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta3" Condition="'$(EnableAvaloniaDiagnostics)' == 'true'" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
-        <PackageReference Include="Octokit" Version="14.0.0" />
         <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.0" />
         <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
         <PackageReference Include="Devolutions.UniGetUI.Elevator" Version="2.6.1.3" GeneratePathProperty="true" ExcludeAssets="build;buildTransitive;native" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />

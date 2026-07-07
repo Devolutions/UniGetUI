@@ -77,3 +77,21 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
       run: dotnet test UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Platform=x64 /p:UseSharedCompilation=false /m:1
+
+    - name: Report full-trim publish warnings
+      working-directory: src
+      shell: pwsh
+      continue-on-error: true
+      run: |
+        dotnet build-server shutdown
+        dotnet publish UniGetUI.Avalonia/UniGetUI.Avalonia.csproj `
+          --no-restore `
+          --configuration Release `
+          --runtime win-x64 `
+          --self-contained true `
+          --output "${{ runner.temp }}\unigetui-full-trim-publish" `
+          /p:Platform=x64 `
+          /p:TrimMode=full `
+          /p:TrimmerSingleWarn=false `
+          /p:UseSharedCompilation=false `
+          --verbosity minimal

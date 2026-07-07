@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    x:Class="UniGetUI.Avalonia.Assets.Styles.WindowsMicaStyles">
     <!--
         Windows 11 Mica overrides. Merged into Application.Resources ONLY when Mica is
         actually active (Windows 11 + "Transparency effects" on) — see App.Initialize().

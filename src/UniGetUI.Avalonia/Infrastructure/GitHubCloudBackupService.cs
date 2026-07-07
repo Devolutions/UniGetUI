@@ -1,7 +1,6 @@
-using Octokit;
-using UniGetUI.Core.Data;
 using UniGetUI.Core.SecureSettings;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
@@ -20,24 +19,21 @@ internal static class GitHubCloudBackupService
         public required string Display { get; init; }
     }
 
-    public static GitHubClient? CreateGitHubClient()
+    public static GitHubApiClient? CreateGitHubClient()
     {
         string? token = SecureGHTokenManager.GetToken();
         if (string.IsNullOrWhiteSpace(token))
             return null;
 
-        return new GitHubClient(new ProductHeaderValue("UniGetUI", CoreData.VersionName))
-        {
-            Credentials = new Credentials(token),
-        };
+        return new GitHubApiClient(token);
     }
 
     public static async Task<(string Login, string DisplayName)> GetCurrentUserAsync()
     {
-        var client = CreateGitHubClient()
+        using var client = CreateGitHubClient()
             ?? throw new InvalidOperationException(CoreTools.Translate("Log in to enable cloud backup"));
 
-        var user = await client.User.Current();
+        var user = await client.GetCurrentUserAsync();
         string login = user.Login ?? string.Empty;
         string displayName = string.IsNullOrWhiteSpace(user.Name) ? login : user.Name;
         return (login, displayName);
@@ -45,31 +41,26 @@ internal static class GitHubCloudBackupService
 
     public static async Task UploadPackageBundleAsync(string bundleContents)
     {
-        var client = CreateGitHubClient()
+        using var client = CreateGitHubClient()
             ?? throw new InvalidOperationException(CoreTools.Translate("Log in to enable cloud backup"));
 
-        var user = await client.User.Current();
-        var backupGist = await GetBackupGistAsync(client, user.Login, createIfMissing: true)
+        var backupGist = await GetBackupGistAsync(client, createIfMissing: true)
             ?? throw new InvalidOperationException(CoreTools.Translate("Backup Failed"));
 
         string fileKey = BuildGistFileKey();
-        var update = new GistUpdate { Description = GistDescription };
-
-        if (backupGist.Files.ContainsKey(fileKey))
-            update.Files[fileKey] = new GistFileUpdate { Content = bundleContents };
-        else
-            update.Files.Add(fileKey, new GistFileUpdate { Content = bundleContents });
-
-        await client.Gist.Edit(backupGist.Id, update);
+        await client.EditGistAsync(
+            backupGist.Id,
+            GistDescription,
+            new Dictionary<string, string> { [fileKey] = bundleContents }
+        );
     }
 
     public static async Task<IReadOnlyList<CloudBackupEntry>> GetAvailableBackupsAsync()
     {
-        var client = CreateGitHubClient()
+        using var client = CreateGitHubClient()
             ?? throw new InvalidOperationException(CoreTools.Translate("Log in to enable cloud backup"));
 
-        var user = await client.User.Current();
-        var backupGist = await GetBackupGistAsync(client, user.Login, createIfMissing: false);
+        var backupGist = await GetBackupGistAsync(client, createIfMissing: false);
         if (backupGist is null)
             return [];
 
@@ -85,16 +76,15 @@ internal static class GitHubCloudBackupService
 
     public static async Task<string> GetBackupContentsAsync(string backupKey)
     {
-        var client = CreateGitHubClient()
+        using var client = CreateGitHubClient()
             ?? throw new InvalidOperationException(CoreTools.Translate("Log in to enable cloud backup"));
 
-        var user = await client.User.Current();
-        var backupGist = await GetBackupGistAsync(client, user.Login, createIfMissing: false);
+        var backupGist = await GetBackupGistAsync(client, createIfMissing: false);
 
         if (backupGist is null)
             throw new KeyNotFoundException(CoreTools.Translate("Log in to enable cloud backup"));
 
-        var fullGist = await client.Gist.Get(backupGist.Id);
+        var fullGist = await client.GetGistAsync(backupGist.Id);
         var file = fullGist.Files.FirstOrDefault(f =>
             f.Key.StartsWith(PackageBackupStartingKey, StringComparison.Ordinal)
             && f.Key.EndsWith(backupKey, StringComparison.Ordinal));
@@ -105,18 +95,23 @@ internal static class GitHubCloudBackupService
         return file.Value.Content;
     }
 
-    private static async Task<Gist?> GetBackupGistAsync(GitHubClient client, string userLogin, bool createIfMissing)
+    private static async Task<GitHubGist?> GetBackupGistAsync(
+        GitHubApiClient client,
+        bool createIfMissing
+    )
     {
-        var candidates = await client.Gist.GetAllForUser(userLogin);
+        var candidates = await client.GetCurrentUserGistsAsync();
         var backupGist = candidates.FirstOrDefault(g =>
             g.Description?.EndsWith(GistDescriptionEndingKey, StringComparison.Ordinal) == true);
 
         if (backupGist is not null || !createIfMissing)
             return backupGist;
 
-        var newGist = new NewGist { Description = GistDescription, Public = false };
-        newGist.Files.Add("- UniGetUI Package Backups", ReadMeContents);
-        return await client.Gist.Create(newGist);
+        return await client.CreateGistAsync(
+            GistDescription,
+            isPublic: false,
+            new Dictionary<string, string> { ["- UniGetUI Package Backups"] = ReadMeContents }
+        );
     }
 
     private static string BuildGistFileKey()

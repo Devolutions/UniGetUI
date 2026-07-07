@@ -156,20 +156,24 @@ public partial class BackupViewModel : ViewModelBase
 
     private async Task GenerateLogoutState()
     {
-        var client = GitHubAuthService.CreateGitHubClient()
+        using var client = GitHubAuthService.CreateGitHubClient()
             ?? throw new InvalidOperationException("Authenticated but cannot create GitHub client.");
-        var user = await client.User.Current();
+        var user = await client.GetCurrentUserAsync();
 
         IsLoggedIn = true;
-        GitHubUserTitle = CoreTools.Translate("You are logged in as {0} (@{1})", user.Name, user.Login);
+        string displayName = string.IsNullOrWhiteSpace(user.Name) ? user.Login : user.Name;
+        GitHubUserTitle = CoreTools.Translate("You are logged in as {0} (@{1})", displayName, user.Login);
         GitHubUserSubtitle = CoreTools.Translate("Nice! Backups will be uploaded to a private gist on your account");
 
         try
         {
             using var http = new HttpClient(CoreTools.GenericHttpClientParameters);
-            var bytes = await http.GetByteArrayAsync(user.AvatarUrl);
-            using var ms = new MemoryStream(bytes);
-            GitHubAvatarBitmap = new Bitmap(ms);
+            if (!string.IsNullOrWhiteSpace(user.AvatarUrl))
+            {
+                var bytes = await http.GetByteArrayAsync(user.AvatarUrl);
+                using var ms = new MemoryStream(bytes);
+                GitHubAvatarBitmap = new Bitmap(ms);
+            }
         }
         catch (Exception ex)
         {

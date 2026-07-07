@@ -11,6 +11,7 @@ using Avalonia.Threading;
 #if AVALONIA_DIAGNOSTICS_ENABLED
 using Avalonia.Diagnostics;
 #endif
+using UniGetUI.Avalonia.Assets.Styles;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.DialogPages;
@@ -37,18 +38,9 @@ public partial class App : Application
 #endif
     }
 
-    // ResourceInclude is flagged with RequiresUnreferencedCode because, in general, it can load
-    // resources from other assemblies that trimming might remove. Styles.WindowsMica.axaml is an
-    // avares resource embedded in THIS assembly, so it is never trimmed — the warning is safe to
-    // suppress here. (It can't be declared in XAML because the merge is conditional at runtime.)
-    [UnconditionalSuppressMessage("Trimming", "IL2026",
-        Justification = "Styles.WindowsMica.axaml is an avares resource in this assembly and is not trimmed.")]
     private void ApplyWindowsMicaStyling()
     {
-        Resources.MergedDictionaries.Add(new ResourceInclude((Uri?)null)
-        {
-            Source = new Uri("avares://UniGetUI/Assets/Styles/Styles.WindowsMica.axaml")
-        });
+        Resources.MergedDictionaries.Add(new WindowsMicaStyles());
         // Give flyouts/menus/tooltips a native acrylic backdrop (DWM) so they blur + tint
         // from behind and adapt to the theme.
         MicaWindowHelper.EnableAcrylicPopups();

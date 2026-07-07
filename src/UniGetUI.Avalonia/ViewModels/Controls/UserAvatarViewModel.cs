@@ -1,10 +1,10 @@
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
-using Octokit;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface;
 using MvvmRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace UniGetUI.Avalonia.ViewModels.Controls;
@@ -57,10 +57,10 @@ public class UserAvatarViewModel : ViewModelBase
         {
             try
             {
-                var client = GitHubAuthService.CreateGitHubClient();
+                using var client = GitHubAuthService.CreateGitHubClient();
                 if (client is not null)
                 {
-                    User user = await client.User.Current();
+                    GitHubUser user = await client.GetCurrentUserAsync();
                     displayName = string.IsNullOrEmpty(user.Name)
                         ? $"@{user.Login}"
                         : $"{user.Name} (@{user.Login})";

@@ -1,5 +1,6 @@
 #if WINDOWS
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using UniGetUI.Core.Logging;
@@ -61,6 +62,10 @@ internal static class AppShortcutAumidStamper
         return File.Exists(commonPath) ? commonPath : null;
     }
 
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2072",
+        Justification = "ShellLink COM activation uses the shell-registered CLSID and COM interfaces declared below; it does not depend on app-owned constructors trimmed from this assembly.")]
     private static void StampIfMissing(string shortcutPath)
     {
         // ShellLink (CLSID 00021401-0000-0000-C000-000000000046) implements IPersistFile and

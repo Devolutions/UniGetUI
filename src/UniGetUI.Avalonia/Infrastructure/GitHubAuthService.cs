@@ -1,8 +1,8 @@
-using Octokit;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SecureSettings;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 
 namespace UniGetUI.Avalonia.Infrastructure;
@@ -15,25 +15,18 @@ internal sealed class GitHubAuthService
     private readonly string _gitHubClientId = Secrets.GetGitHubClientId();
     private readonly string _gitHubClientSecret = Secrets.GetGitHubClientSecret();
     private const string RedirectUri = "http://127.0.0.1:58642/";
-    private readonly GitHubClient _client;
 
     public static event EventHandler<EventArgs>? AuthStatusChanged;
 
-    public GitHubAuthService()
-    {
-        _client = new GitHubClient(new ProductHeaderValue("UniGetUI", CoreData.VersionName));
-    }
+    public GitHubAuthService() { }
 
-    public static GitHubClient? CreateGitHubClient()
+    public static GitHubApiClient? CreateGitHubClient()
     {
         var token = SecureGHTokenManager.GetToken();
         if (string.IsNullOrEmpty(token))
             return null;
 
-        return new GitHubClient(new ProductHeaderValue("UniGetUI", CoreData.VersionName))
-        {
-            Credentials = new Credentials(token),
-        };
+        return new GitHubApiClient(token);
     }
 
     private GHAuthApiRunner? _loginBackend;
@@ -53,13 +46,11 @@ internal sealed class GitHubAuthService
 
             Logger.Info("Initiating GitHub sign-in process using loopback redirect...");
 
-            var request = new OauthLoginRequest(_gitHubClientId)
-            {
-                Scopes = { "read:user", "gist" },
-                RedirectUri = new Uri(RedirectUri),
-            };
-
-            var oauthLoginUrl = _client.Oauth.GetGitHubLoginUrl(request);
+            var oauthLoginUrl = GitHubApiClient.GetOAuthLoginUrl(
+                _gitHubClientId,
+                new Uri(RedirectUri),
+                ["read:user", "gist"]
+            );
 
             _codeFromApi = null;
             _loginWasCancelled = false;
@@ -141,11 +132,13 @@ internal sealed class GitHubAuthService
     {
         try
         {
-            var tokenRequest = new OauthTokenRequest(_gitHubClientId, _gitHubClientSecret, code)
-            {
-                RedirectUri = new Uri(RedirectUri), // The same redirect_uri must be sent
-            };
-            var token = await _client.Oauth.CreateAccessToken(tokenRequest);
+            using var client = new GitHubApiClient();
+            var token = await client.CreateAccessTokenAsync(
+                _gitHubClientId,
+                _gitHubClientSecret,
+                code,
+                new Uri(RedirectUri)
+            );
 
             if (string.IsNullOrEmpty(token.AccessToken))
             {
@@ -157,11 +150,8 @@ internal sealed class GitHubAuthService
             Logger.Info("GitHub login successful. Storing access token.");
             SecureGHTokenManager.StoreToken(token.AccessToken);
 
-            var userClient = new GitHubClient(new ProductHeaderValue("UniGetUI"))
-            {
-                Credentials = new Credentials(token.AccessToken),
-            };
-            var user = await userClient.User.Current();
+            using var userClient = new GitHubApiClient(token.AccessToken);
+            var user = await userClient.GetCurrentUserAsync();
             if (user is not null)
             {
                 CoreSettings.SetValue(CoreSettings.K.GitHubUserLogin, user.Login);

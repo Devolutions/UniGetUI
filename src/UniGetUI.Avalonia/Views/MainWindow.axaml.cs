@@ -362,10 +362,10 @@ public partial class MainWindow : Window
             if (MicaWindowHelper.IsMicaEnabled())
                 TransparencyLevelHint = new[] { WindowTransparencyLevel.Mica };
             TitleBarGrid.ClearValue(HeightProperty);
-            TitleBarGrid.Height = 44;
+            TitleBarGrid.Height = 50;
             HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
             WindowButtons.IsVisible = true;
-            MainContentRoot.Margin = new Thickness(0, 44, 0, 0);
+            MainContentRoot.Margin = new Thickness(0, 50, 0, 0);
             this.GetObservable(WindowStateProperty).SubscribeValue(state =>
             {
                 UpdateMaximizeButtonState(state == WindowState.Maximized);
@@ -871,6 +871,27 @@ public partial class MainWindow : Window
         // the top inset, leaving the WS_THICKFRAME left/right/bottom resize border as glass.
         if (msg == WM_NCCALCSIZE && wParam.ToInt64() != 0)
         {
+            // When maximized, Windows places the window so its resize border sits offscreen
+            // (top-left near (-frame, -frame)). Claiming the whole window rect as client then
+            // pushes the title bar's top few pixels off the monitor, clipping the search box
+            // so it hugs the top edge (#5013). While maximized, inset the client rect by the
+            // frame thickness so it fills exactly the visible monitor; keep the full-rect
+            // (borderless, extended) client otherwise.
+            if (NativeMethods.IsZoomed(hWnd))
+            {
+                uint dpi = NativeMethods.GetDpiForWindow(hWnd);
+                if (dpi == 0) dpi = 96;
+                var border = default(NativeMethods.RECT);
+                if (NativeMethods.AdjustWindowRectExForDpi(ref border, WS_THICKFRAME, false, 0, dpi))
+                {
+                    var p = Marshal.PtrToStructure<NativeMethods.NCCALCSIZE_PARAMS>(lParam);
+                    p.rgrc0.Left -= border.Left;
+                    p.rgrc0.Top -= border.Top;
+                    p.rgrc0.Right -= border.Right;
+                    p.rgrc0.Bottom -= border.Bottom;
+                    Marshal.StructureToPtr(p, lParam, false);
+                }
+            }
             handled = true;
             return 0;
         }
@@ -980,6 +1001,10 @@ public partial class MainWindow : Window
         [DllImport("user32.dll")]
         public static extern nint MonitorFromWindow(nint hwnd, uint dwFlags);
 
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool IsZoomed(nint hWnd);
+
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool GetMonitorInfo(nint hMonitor, ref MONITORINFO lpmi);
@@ -1036,6 +1061,16 @@ public partial class MainWindow : Window
             public RECT rcMonitor;
             public RECT rcWork;
             public uint dwFlags;
+        }
+
+        // rgrc is a RECT[3] laid out inline; only rgrc[0] (the proposed client rect) is needed here.
+        [StructLayout(LayoutKind.Sequential)]
+        public struct NCCALCSIZE_PARAMS
+        {
+            public RECT rgrc0;
+            public RECT rgrc1;
+            public RECT rgrc2;
+            public nint lppos;
         }
     }
 

@@ -808,8 +808,8 @@
                                     HorizontalAlignment="Center"
                                     Spacing="16">
                             <Image Source="avares://UniGetUI/Assets/Images/launcher.png"
-                                   MaxWidth="{Binding #PackageListHost.Bounds.Width, Converter={StaticResource ScaleClampConverter}, ConverterParameter=0.5|240}"
-                                   MaxHeight="{Binding #PackageListHost.Bounds.Height, Converter={StaticResource ScaleClampConverter}, ConverterParameter=0.45|240}"
+                                   MaxWidth="{Binding #PackageListHost.Bounds.Width, Converter={StaticResource ScaleClampConverter}, ConverterParameter=0.4|180}"
+                                   MaxHeight="{Binding #PackageListHost.Bounds.Height, Converter={StaticResource ScaleClampConverter}, ConverterParameter=0.4|180}"
                                    Stretch="Uniform"
                                    HorizontalAlignment="Center"
                                    IsVisible="{Binding LoadingImageVisible}"/>

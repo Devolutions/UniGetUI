@@ -462,8 +462,11 @@
                              HorizontalAlignment="Stretch"
                              Margin="1,0,1,0"/>
 
-                <!-- Package list container -->
+                <!-- Package list container. Hidden while the Discover hero search (MegaQuery) is
+                     shown: the list is empty then, and its column headers would otherwise collide
+                     with the centred search box when a banner + operations pane shrink the area (#5014). -->
                 <Border Margin="0,6,0,6"
+                        IsVisible="{Binding !MegaQueryVisible}"
                         CornerRadius="8"
                         BorderThickness="0"
                         Background="{DynamicResource PackageListBackground}">

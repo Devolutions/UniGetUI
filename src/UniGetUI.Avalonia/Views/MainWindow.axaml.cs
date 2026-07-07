@@ -94,6 +94,10 @@ public partial class MainWindow : Window
     private bool _allowClose;
     private int _isQuitting;
 
+    // Saved outer size (DIPs) awaiting a native, exact restore in OnOpened on Windows.
+    private double _pendingRestoreWidth;
+    private double _pendingRestoreHeight;
+
     // Last user-chosen height (px) of the operations panel; restored when re-expanded.
     private double _operationsPanelHeight = 240;
 
@@ -161,6 +165,21 @@ public partial class MainWindow : Window
         }
 
         SetupMicaAndAccentBorder();
+
+        // Restore the saved size as an exact outer rect in physical pixels. Because our
+        // WM_NCCALCSIZE keeps client == window rect, this round-trips with SaveGeometry with no
+        // frame drift, unlike Avalonia's Width/Height setter (see RestoreGeometry).
+        if (_pendingRestoreWidth > 0 && _pendingRestoreHeight > 0 && WindowState == WindowState.Normal
+            && TryGetPlatformHandle()?.Handle is { } sizeHandle && sizeHandle != 0)
+        {
+            uint dpi = NativeMethods.GetDpiForWindow(sizeHandle);
+            if (dpi == 0) dpi = 96;
+            double scale = dpi / 96.0;
+            NativeMethods.SetWindowPos(sizeHandle, 0, 0, 0,
+                (int)Math.Round(_pendingRestoreWidth * scale), (int)Math.Round(_pendingRestoreHeight * scale),
+                SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+        _pendingRestoreWidth = _pendingRestoreHeight = 0;
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)
@@ -660,6 +679,15 @@ public partial class MainWindow : Window
             Width = width;
             Height = height;
             Position = new PixelPoint(x, y);
+            // On Windows our WM_NCCALCSIZE makes the client rect equal the full window rect, so the
+            // saved size is the outer size. Avalonia's Width/Height setter re-adds WS_THICKFRAME via
+            // AdjustWindowRectEx, inflating the window a little on every restart; OnOpened restores
+            // the exact outer rect natively to cancel that drift.
+            if (OperatingSystem.IsWindows())
+            {
+                _pendingRestoreWidth = width;
+                _pendingRestoreHeight = height;
+            }
         }
         else
         {

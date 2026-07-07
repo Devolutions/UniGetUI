@@ -802,13 +802,13 @@
                         <StackPanel VerticalAlignment="Center"
                                     HorizontalAlignment="Center"
                                     Spacing="16">
-                            <Image Source="avares://UniGetUI/Assets/Images/jetpack_Maurice2-blue.png"
-                                   Width="360"
+                            <Image Source="avares://UniGetUI/Assets/Images/launcher.png"
+                                   Width="240"
                                    Stretch="Uniform"
                                    HorizontalAlignment="Center"
                                    IsVisible="{Binding LoadingImageVisible}"/>
                             <Image Source="{Binding NoPackagesImage}"
-                                   Width="260"
+                                   Width="180"
                                    Stretch="Uniform"
                                    HorizontalAlignment="Center"
                                    IsVisible="{Binding NoPackagesImageVisible}"/>

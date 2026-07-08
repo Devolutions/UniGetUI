@@ -24,6 +24,9 @@ public partial class BaseLogPage : UserControl, IEnterLeaveListener, IKeyboardSh
         ViewModel.ScrollToBottomRequested += OnScrollToBottomRequested;
         ViewModel.LogLines.CollectionChanged += OnLogLinesChanged;
 
+        // Line brushes are baked per theme at load time; reload so they follow a live theme switch.
+        ActualThemeVariantChanged += (_, _) => ViewModel.LoadLog();
+
         LogEditor.SetLines(ViewModel.LogLines);
     }
 

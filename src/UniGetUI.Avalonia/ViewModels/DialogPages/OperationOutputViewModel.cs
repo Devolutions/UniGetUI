@@ -14,26 +14,37 @@ public partial class OperationOutputViewModel : ObservableObject
     [ObservableProperty] private string _title = "";
     public ObservableCollection<LogLineItem> OutputLines { get; } = new();
 
-    private readonly IBrush _errorBrush;
-    private readonly IBrush _debugBrush;
-    private readonly IBrush _normalBrush;
+    private IBrush _errorBrush = Brushes.Transparent;
+    private IBrush _debugBrush = Brushes.Transparent;
+    private IBrush _normalBrush = Brushes.Transparent;
 
-    private readonly ProgressLineCollapser _collapser = new();
+    private readonly AbstractOperation _operation;
+    private ProgressLineCollapser _collapser = new();
 
     public OperationOutputViewModel(AbstractOperation operation)
+    {
+        _operation = operation;
+        Title = operation.Metadata.Title;
+
+        Rebuild();
+
+        operation.LogLineAdded += (_, ev) =>
+            Dispatcher.UIThread.Post(() => AddOrCollapseLine(ev.Item1, ev.Item2));
+    }
+
+    // Rebuilds every line with brushes for the current theme; called on construction and whenever
+    // the theme changes, so already-rendered output follows a live light/dark switch.
+    public void Rebuild()
     {
         var theme = Infrastructure.ThemeHelper.Variant;
         _errorBrush = LookupBrush("StatusErrorForeground", theme, new SolidColorBrush(Color.Parse("#c62828")));
         _debugBrush = LookupBrush("LogOutputVerboseForeground", theme, new SolidColorBrush(Color.Parse("#767676")));
         _normalBrush = LookupBrush("SystemControlForegroundBaseHighBrush", theme, Brushes.White);
 
-        Title = operation.Metadata.Title;
-
-        foreach (var (text, type) in operation.GetOutput())
+        OutputLines.Clear();
+        _collapser = new();
+        foreach (var (text, type) in _operation.GetOutput())
             AddOrCollapseLine(text, type);
-
-        operation.LogLineAdded += (_, ev) =>
-            Dispatcher.UIThread.Post(() => AddOrCollapseLine(ev.Item1, ev.Item2));
     }
 
     // Progress indicators (carriage-return redraws like installer spinners) overwrite the previous

@@ -14,8 +14,11 @@ namespace UniGetUI.Avalonia.Views.DialogPages;
 
 public partial class OperationFailedDialog : Window
 {
+    private readonly AbstractOperation _operation;
+
     public OperationFailedDialog(AbstractOperation operation)
     {
+        _operation = operation;
         InitializeComponent();
         UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         Title = operation.Metadata.FailureMessage;
@@ -26,25 +29,9 @@ public partial class OperationFailedDialog : Window
                 "Please see the Command-line Output or refer to the Operation History for further information about the issue."
             );
 
-        // Resolve against the actual theme variant; bare FindResource picks the light-theme
-        // foreground (near-black) even in dark mode, making normal lines unreadable (#5032).
-        var theme = Infrastructure.ThemeHelper.Variant;
-        var errorBrush = new SolidColorBrush(Color.Parse("#FF6B6B"));
-        var debugBrush = new SolidColorBrush(Color.Parse("#888888"));
-        var normalBrush = LookupBrush("SystemControlForegroundBaseHighBrush", theme, Brushes.White);
-
-        var lines = new List<LogLineItem>();
-        foreach (var (text, type) in operation.GetOutput())
-        {
-            IBrush brush = type switch
-            {
-                AbstractOperation.LineType.Error => errorBrush,
-                AbstractOperation.LineType.VerboseDetails => debugBrush,
-                _ => normalBrush,
-            };
-            lines.Add(new LogLineItem(text, brush));
-        }
-        OutputText.SetLines(lines);
+        PopulateOutput();
+        // Line brushes are baked per theme; recolor so they follow a live theme switch.
+        ActualThemeVariantChanged += (_, _) => PopulateOutput();
 
         var closeButton = new Button
         {
@@ -60,6 +47,29 @@ public partial class OperationFailedDialog : Window
         ButtonsLayout.Children.Add(closeButton);
         Grid.SetColumn(retryButton, 0);
         Grid.SetColumn(closeButton, 1);
+    }
+
+    private void PopulateOutput()
+    {
+        // Resolve against the actual theme variant; bare FindResource picks the light-theme
+        // foreground (near-black) even in dark mode, making normal lines unreadable (#5032).
+        var theme = Infrastructure.ThemeHelper.Variant;
+        var errorBrush = new SolidColorBrush(Color.Parse("#FF6B6B"));
+        var debugBrush = new SolidColorBrush(Color.Parse("#888888"));
+        var normalBrush = LookupBrush("SystemControlForegroundBaseHighBrush", theme, Brushes.White);
+
+        var lines = new List<LogLineItem>();
+        foreach (var (text, type) in _operation.GetOutput())
+        {
+            IBrush brush = type switch
+            {
+                AbstractOperation.LineType.Error => errorBrush,
+                AbstractOperation.LineType.VerboseDetails => debugBrush,
+                _ => normalBrush,
+            };
+            lines.Add(new LogLineItem(text, brush));
+        }
+        OutputText.SetLines(lines);
     }
 
     private static IBrush LookupBrush(string key, ThemeVariant theme, IBrush fallback)

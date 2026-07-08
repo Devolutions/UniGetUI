@@ -18,6 +18,9 @@ public partial class OperationOutputWindow : Window
 
         OutputText.SetLines(vm.OutputLines);
         vm.OutputLines.CollectionChanged += OnOutputLinesChanged;
+
+        // Recolor already-rendered output when the theme changes at runtime.
+        ActualThemeVariantChanged += (_, _) => vm.Rebuild();
     }
 
     private void OnOutputLinesChanged(object? sender, NotifyCollectionChangedEventArgs e)

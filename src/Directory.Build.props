@@ -54,7 +54,8 @@
         <Optimize>true</Optimize>
         <WholeProgramOptimization>true</WholeProgramOptimization>
         <TieredCompilation>true</TieredCompilation>
-        <PublishReadyToRun>true</PublishReadyToRun>
+        <!-- NativeAOT and ReadyToRun are mutually exclusive; ReadyToRun is only enabled when NativeAOT is not. -->
+        <PublishReadyToRun Condition="'$(PublishAot)' != 'true'">true</PublishReadyToRun>
         <EnableProfileOptimization>true</EnableProfileOptimization>
     </PropertyGroup>
 

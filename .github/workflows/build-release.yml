@@ -194,7 +194,13 @@ jobs:
             throw "Could not resolve the Avalonia target framework from MSBuild"
           }
 
-          dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj /noLogo /p:Configuration=Release /p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform -v m
+          dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj `
+            /noLogo `
+            /p:Configuration=Release `
+            /p:Platform=$Platform `
+            /p:RuntimeIdentifier=win-$Platform `
+            /p:PublishProfile=Win-$Platform-NativeAot `
+            -v m
           if ($LASTEXITCODE -ne 0) { throw "dotnet publish Avalonia failed" }
 
           # Stage binaries
@@ -285,6 +291,26 @@ jobs:
           Compress-Archive -Path "unigetui_bin/*" -DestinationPath "output/UniGetUI.$Platform.zip" -CompressionLevel Optimal
 
           # Installer is created in output during the previous step
+
+      - name: Capture artifact sizes
+        shell: pwsh
+        run: |
+          $Platform = '${{ matrix.platform }}'
+          $SizesFile = "output/sizes.$Platform.json"
+          $UncompressedSize = (Get-ChildItem "unigetui_bin" -Recurse -File | Measure-Object -Property Length -Sum).Sum
+          $Artifacts = Get-ChildItem "output" -File | Where-Object { $_.Name -ne "sizes.$Platform.json" } | ForEach-Object {
+            @{ Name = $_.Name; SizeBytes = $_.Length }
+          }
+          $Report = @{
+            Platform = $Platform
+            RuntimeIdentifier = "win-$Platform"
+            UncompressedSizeBytes = $UncompressedSize
+            Artifacts = $Artifacts
+            Timestamp = [DateTimeOffset]::UtcNow.ToString("o")
+          }
+          $Report | ConvertTo-Json -Depth 4 | Set-Content $SizesFile -Encoding UTF8
+          Write-Host "Artifact sizes saved to $SizesFile"
+          Get-Content $SizesFile
 
       - name: Code-sign installer
         if: ${{ fromJSON(needs.preflight.outputs.dry-run) == false }}
@@ -377,6 +403,7 @@ jobs:
             --configuration Release \
             --runtime ${{ matrix.runtime }} \
             --self-contained true \
+            /p:PublishProfile=${{ matrix.runtime }}-NativeAot \
             --output ../bin/${{ matrix.name }}
 
       - name: Install macOS packaging tools
@@ -534,6 +561,28 @@ jobs:
               -Iteration    $RpmIteration `
               -Architecture $RpmArch
 
+      - name: Capture artifact sizes
+        shell: pwsh
+        run: |
+          $Name = '${{ matrix.name }}'
+          $Runtime = '${{ matrix.runtime }}'
+          $SizesFile = "output/sizes.$Name.json"
+          $SourceDir = if ('${{ runner.os }}' -eq 'macOS') { "UniGetUI.app/Contents/MacOS" } else { "bin/$Name" }
+          $UncompressedSize = (Get-ChildItem $SourceDir -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+          $Artifacts = Get-ChildItem "output" -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne "sizes.$Name.json" } | ForEach-Object {
+            @{ Name = $_.Name; SizeBytes = $_.Length }
+          }
+          $Report = @{
+            Platform = $Name
+            RuntimeIdentifier = $Runtime
+            UncompressedSizeBytes = $UncompressedSize
+            Artifacts = $Artifacts
+            Timestamp = [DateTimeOffset]::UtcNow.ToString("o")
+          }
+          $Report | ConvertTo-Json -Depth 4 | Set-Content $SizesFile -Encoding UTF8
+          Write-Host "Artifact sizes saved to $SizesFile"
+          Get-Content $SizesFile
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -586,6 +635,39 @@ jobs:
 
           echo "::group::checksums"
           Get-Content $ChecksumFile
+          echo "::endgroup::"
+
+      - name: Generate consolidated size report
+        shell: pwsh
+        working-directory: output
+        run: |
+          $SizeFiles = Get-ChildItem -Path . -Recurse -File -Filter "sizes.*.json" | Sort-Object Name
+          if (-not $SizeFiles) {
+            Write-Host "No size files found."
+            return
+          }
+
+          $Rows = foreach ($file in $SizeFiles) {
+            $data = Get-Content $file.FullName -Raw | ConvertFrom-Json
+            $uncompressedMiB = [math]::Round($data.UncompressedSizeBytes / 1MB, 2)
+            foreach ($artifact in $data.Artifacts) {
+              [PSCustomObject]@{
+                Platform = $data.Platform
+                RID = $data.RuntimeIdentifier
+                Artifact = $artifact.Name
+                CompressedMiB = [math]::Round($artifact.SizeBytes / 1MB, 2)
+                UncompressedMiB = $uncompressedMiB
+              }
+            }
+          }
+
+          $SizeReportFile = Join-Path $PWD "sizes.md"
+          $Lines = @("# UniGetUI Release Artifact Sizes", "")
+          $Lines += $Rows | Format-Table -AutoSize | Out-String -Stream | Where-Object { $_.Trim() -ne '' }
+          Set-Content -Path $SizeReportFile -Value $Lines -Encoding utf8NoBOM
+
+          echo "::group::sizes"
+          Get-Content $SizeReportFile
           echo "::endgroup::"
 
       - name: Create GitHub Release

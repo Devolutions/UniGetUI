@@ -91,14 +91,15 @@ scoop install extras/unigetui
 choco install unigetui
 ```
 
-### Experimental NativeAOT build (Windows)
-For contributors and advanced validation, the repository includes an opt-in NativeAOT publish profile and a helper script:
+### NativeAOT builds
+
+Release packages are compiled with NativeAOT on all supported platforms (Windows, macOS, and Linux) for improved startup performance and a reduced attack surface. If you want to build the same configuration locally, the repository includes helper publish profiles and a script:
 
 ```powershell
-pwsh ./scripts/publish-nativeaot.ps1
+pwsh ./scripts/publish-nativeaot.ps1 -Platform x64   # or arm64
 ```
 
-This publishes `src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj` for `win-x64` as a self-contained NativeAOT build into `artifacts/nativeaot/win-x64/`. It does not replace the existing Release or installer flows.
+This publishes `src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj` as a self-contained NativeAOT build into `artifacts/nativeaot/win-<platform>/`.
 
 ### macOS
 

@@ -244,6 +244,23 @@ function Get-DaemonCommand {
                 PrefixArguments = @($resolvedDll)
             }
         }
+        'avalonia-native' {
+            $fileName = if ($runningOnWindows) { "$($manifest.daemon.assemblyName).exe" } else { $manifest.daemon.assemblyName }
+            $daemonNative = if ($env:UNIGETUI_DAEMON_EXE) {
+                $env:UNIGETUI_DAEMON_EXE
+            }
+            else {
+                Find-BuiltArtifact -ProjectDirectory (Split-Path $daemonProject -Parent) -FileName $fileName
+            }
+            if ([string]::IsNullOrWhiteSpace($daemonNative) -or -not (Test-Path $daemonNative)) {
+                throw "NativeAOT headless executable was not found. Expected $fileName under $(Split-Path $daemonProject -Parent)\bin\$configuration"
+            }
+
+            return @{
+                FilePath = (Resolve-Path $daemonNative).Path
+                WorkingDirectory = Split-Path (Resolve-Path $daemonNative).Path -Parent
+            }
+        }
         default {
             throw "Unsupported daemon kind $($manifest.daemon.kind)"
         }

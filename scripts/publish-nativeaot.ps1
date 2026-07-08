@@ -7,20 +7,21 @@
     Build configuration. Default: Release.
 
 .PARAMETER Platform
-    Target platform. Default: x64.
+    Target platform. Default: x64. Supported: x64, arm64.
 
 .PARAMETER OutputPath
     Directory for the published output. Default: ./artifacts/nativeaot/win-<platform>.
 
 .PARAMETER PublishProfileName
-    NativeAOT publish profile name. Default: Win-x64-NativeAot.
+    NativeAOT publish profile name. Default: Win-<platform>-NativeAot.
 #>
 [CmdletBinding()]
 param(
     [string] $Configuration = "Release",
+    [ValidateSet("x64", "arm64")]
     [string] $Platform = "x64",
     [string] $OutputPath = (Join-Path (Join-Path $PSScriptRoot "..") "artifacts/nativeaot/win-$Platform"),
-    [string] $PublishProfileName = "Win-x64-NativeAot"
+    [string] $PublishProfileName = "Win-$Platform-NativeAot"
 )
 
 $ErrorActionPreference = 'Stop'

@@ -27,6 +27,13 @@
         <IncludeAvaloniaPublishSymbols>false</IncludeAvaloniaPublishSymbols>
     </PropertyGroup>
 
+    <!-- NativeAOT is the default for release packages on all platforms. -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <PublishAot>true</PublishAot>
+        <!-- NativeAOT and ReadyToRun are mutually exclusive. -->
+        <PublishReadyToRun>false</PublishReadyToRun>
+    </PropertyGroup>
+
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
         <!-- Parameterized windows/base views are directly constructed in code, not through the runtime XAML loader. -->
         <NoWarn>$(NoWarn);MVVMTK0045;AVLN3001</NoWarn>

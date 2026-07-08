@@ -27,12 +27,26 @@ jobs:
             daemon_project: UniGetUI.Avalonia/UniGetUI.Avalonia.csproj
             daemon_build_args: '-p:Platform=x64'
             manifest: testing/automation/cli-e2e.manifest.windows.json
+          - name: Windows (NativeAOT)
+            os: windows-latest
+            solution: UniGetUI.Windows.slnx
+            daemon_project: UniGetUI.Avalonia/UniGetUI.Avalonia.csproj
+            daemon_publish_profile: Win-x64-NativeAot
+            daemon_build_args: '-p:Platform=x64'
+            manifest: testing/automation/cli-e2e.manifest.windows.json
           - name: Linux (Avalonia)
             os: ubuntu-latest
             solution: UniGetUI.Avalonia.slnx
             daemon_project: UniGetUI.Avalonia/UniGetUI.Avalonia.csproj
             daemon_build_args: ''
             manifest: testing/automation/cli-e2e.manifest.linux.json
+          - name: Linux (NativeAOT)
+            os: ubuntu-latest
+            solution: UniGetUI.Avalonia.slnx
+            daemon_project: UniGetUI.Avalonia/UniGetUI.Avalonia.csproj
+            daemon_publish_profile: linux-x64-NativeAot
+            daemon_build_args: ''
+            manifest: testing/automation/cli-e2e.manifest.linux-nativeaot.json
 
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -76,22 +90,66 @@ jobs:
         working-directory: src
         shell: pwsh
         run: |
-          $args = @(
-            'build',
-            '${{ matrix.daemon_project }}',
-            '--no-restore',
-            '--configuration',
-            '${{ env.CONFIGURATION }}',
-            '--verbosity',
-            'minimal',
-            '/p:UseSharedCompilation=false',
-            '/m:1'
-          )
-          if ('${{ matrix.daemon_build_args }}') {
-            $args += '${{ matrix.daemon_build_args }}'
-          }
+          $PublishProfile = '${{ matrix.daemon_publish_profile }}'
+          $BuildArgs = '${{ matrix.daemon_build_args }}'
+
           dotnet build-server shutdown
-          dotnet @args
+
+          if ($PublishProfile) {
+            $RuntimeIdentifier = $PublishProfile -replace '-NativeAot$', '' -replace '^Win-', 'win-' -replace '^linux-', 'linux-' -replace '^osx-', 'osx-'
+            $OutputPath = Join-Path (Resolve-Path '..') "artifacts/e2e-nativeaot/$RuntimeIdentifier"
+            New-Item -ItemType Directory -Force -Path $OutputPath | Out-Null
+
+            $args = @(
+              'publish',
+              '${{ matrix.daemon_project }}',
+              '--no-restore',
+              '--configuration',
+              '${{ env.CONFIGURATION }}',
+              '--runtime',
+              $RuntimeIdentifier,
+              '--self-contained',
+              'true',
+              '--output',
+              $OutputPath,
+              '--verbosity',
+              'minimal',
+              '/p:UseSharedCompilation=false',
+              '/m:1',
+              "/p:PublishProfile=$PublishProfile"
+            )
+            if ($BuildArgs) {
+              $args += $BuildArgs
+            }
+            dotnet @args
+
+            $exeName = if ('${{ runner.os }}' -eq 'Windows') { 'UniGetUI.exe' } else { 'UniGetUI' }
+            $daemonExe = Join-Path $OutputPath $exeName
+            if (-not (Test-Path $daemonExe)) {
+              throw "NativeAOT daemon executable was not produced at $daemonExe"
+            }
+            if ('${{ runner.os }}' -ne 'Windows') {
+              chmod +x $daemonExe
+            }
+            echo "UNIGETUI_DAEMON_EXE=$daemonExe" >> $Env:GITHUB_ENV
+          }
+          else {
+            $args = @(
+              'build',
+              '${{ matrix.daemon_project }}',
+              '--no-restore',
+              '--configuration',
+              '${{ env.CONFIGURATION }}',
+              '--verbosity',
+              'minimal',
+              '/p:UseSharedCompilation=false',
+              '/m:1'
+            )
+            if ($BuildArgs) {
+              $args += $BuildArgs
+            }
+            dotnet @args
+          }
 
       - name: Upgrade pip tooling
         shell: pwsh

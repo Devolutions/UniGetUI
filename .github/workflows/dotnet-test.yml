@@ -99,7 +99,6 @@ jobs:
     - name: Report NativeAOT publish warnings
       working-directory: src
       shell: pwsh
-      continue-on-error: true
       run: |
         dotnet build-server shutdown
         dotnet publish UniGetUI.Avalonia/UniGetUI.Avalonia.csproj `

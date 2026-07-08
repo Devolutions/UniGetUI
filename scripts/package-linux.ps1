@@ -79,7 +79,7 @@ param(
     [string] $Description   = 'UniGetUI - GUI for package managers',
     [string] $Maintainer    = 'Devolutions Inc. <support@devolutions.net>',
     [string] $Url           = 'https://github.com/Devolutions/UniGetUI',
-    [string] $AppExecutableName = 'UniGetUI.Avalonia',
+    [string] $AppExecutableName = 'UniGetUI',
     [string] $LauncherName      = 'unigetui',
     [string] $IconSourcePath    = (Join-Path $PSScriptRoot '..' 'src' 'SharedAssets' 'Assets' 'Images' 'icon.png')
 )
@@ -111,6 +111,11 @@ function New-LinuxIntegrationAssets {
     New-Item -ItemType Directory -Path $payloadDir -Force | Out-Null
     & /bin/cp -a "$SourceDir/." $payloadDir
     if ($LASTEXITCODE -ne 0) { throw "cp (payload staging) exited $LASTEXITCODE" }
+
+    $appExecutableFullPath = Join-Path $payloadDir $AppExecutableName
+    if (-not (Test-Path $appExecutableFullPath -PathType Leaf)) {
+        throw "App executable '$AppExecutableName' was not found in package payload '$payloadDir'"
+    }
 
     $launcherFullPath = Join-Path $StageRoot $LauncherPath.TrimStart('/')
     New-Item -ItemType Directory -Path (Split-Path $launcherFullPath -Parent) -Force | Out-Null

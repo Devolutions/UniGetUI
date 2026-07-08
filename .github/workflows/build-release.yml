@@ -371,9 +371,7 @@ jobs:
           - os: ubuntu-latest
             name: linux-arm64
             runtime: linux-arm64
-            # linux-arm64 is built on an x64 runner; NativeAOT cross-compilation is not
-            # available in the default runner image, so fall back to ReadyToRun/full-trim.
-            publish_profile: ''
+            publish_profile: linux-arm64-NativeAot
 
     steps:
       - name: Checkout
@@ -391,6 +389,53 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('global.json', 'src/**/*.csproj', 'src/**/*.props', 'src/**/*.targets', 'src/**/*.sln', 'src/**/*.slnx') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
+
+      - name: Install Linux arm64 NativeAOT toolchain
+        if: matrix.runtime == 'linux-arm64'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          . /etc/os-release
+          sudo dpkg --add-architecture arm64
+
+          # Keep the runner's default Ubuntu feeds bound to amd64, then add the
+          # Ubuntu Ports arm64 feed that provides the target CRT and zlib objects.
+          if compgen -G "/etc/apt/sources.list.d/*.sources" > /dev/null; then
+            for source in /etc/apt/sources.list.d/*.sources; do
+              if ! grep -q '^Architectures:' "$source"; then
+                sudo sed -i '/^Types: deb$/a Architectures: amd64' "$source"
+              fi
+            done
+          fi
+
+          if [ -f /etc/apt/sources.list ]; then
+            sudo sed -i -E '/^deb /s/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+          fi
+
+          sudo tee /etc/apt/sources.list.d/ubuntu-arm64.sources >/dev/null <<EOF
+          Types: deb
+          URIs: http://ports.ubuntu.com/ubuntu-ports/
+          Suites: ${VERSION_CODENAME} ${VERSION_CODENAME}-updates ${VERSION_CODENAME}-backports
+          Components: main restricted universe multiverse
+          Architectures: arm64
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+          Types: deb
+          URIs: http://ports.ubuntu.com/ubuntu-ports/
+          Suites: ${VERSION_CODENAME}-security
+          Components: main restricted universe multiverse
+          Architectures: arm64
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          EOF
+
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang \
+            llvm \
+            binutils-aarch64-linux-gnu \
+            gcc-aarch64-linux-gnu \
+            zlib1g-dev:arm64
 
       - name: Set version
         shell: pwsh
@@ -417,11 +462,6 @@ jobs:
           )
           if ($PublishProfile) {
             $PublishArgs += "/p:PublishProfile=$PublishProfile"
-          }
-          else {
-            # Fallback: explicitly disable NativeAOT. The hosted x64 runner cannot cross-compile
-            # NativeAOT for linux-arm64, so we keep the previous non-NativeAOT self-contained path.
-            $PublishArgs += '/p:PublishAot=false'
           }
           dotnet @PublishArgs
 

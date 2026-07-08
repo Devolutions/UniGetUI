@@ -501,6 +501,25 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void CreateCliHelperForSelectedCliToolUsesExplicitExecutablePath()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+
+        IWinGetManagerHelper helper = manager.CreateCliHelperForSelectedCliTool(
+            @"C:\WindowsApps\winget.exe"
+        );
+
+        var pathField = typeof(WinGetCliHelper).GetField(
+            "_cliExecutablePath",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
+        );
+
+        Assert.NotNull(pathField);
+        Assert.Equal(@"C:\WindowsApps\winget.exe", pathField.GetValue(helper));
+    }
+
+    [Fact]
     public void NativeWinGetHelperUsesSystemCliFallbackForInstalledPackagesWhenCompositeCatalogFails()
     {
         var manager = new TestableWinGet();

@@ -387,9 +387,14 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
         internal IWinGetManagerHelper CreateCliHelperForSelectedCliTool()
         {
+            return CreateCliHelperForSelectedCliTool(Status.ExecutablePath);
+        }
+
+        internal IWinGetManagerHelper CreateCliHelperForSelectedCliTool(string executablePath)
+        {
             return SelectedCliToolKind == WinGetCliToolKind.BundledPinget
-                ? new PingetCliHelper(this, Status.ExecutablePath)
-                : new WinGetCliHelper(this, Status.ExecutablePath);
+                ? new PingetCliHelper(this, executablePath)
+                : new WinGetCliHelper(this, executablePath);
         }
 
         protected override void _loadManagerExecutableFile(
@@ -449,7 +454,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 }
 
                 Logger.Warn("WinGet will resort to using WinGetCliHelper()");
-                WinGetHelper.Instance = CreateCliHelperForSelectedCliTool();
+                WinGetHelper.Instance = CreateCliHelperForSelectedCliTool(path);
             }
         }
 

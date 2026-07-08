@@ -404,6 +404,7 @@ jobs:
 
       - name: Publish
         working-directory: src
+        shell: pwsh
         run: |
           $PublishProfile = '${{ matrix.publish_profile }}'
           $PublishArgs = @(

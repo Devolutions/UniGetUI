@@ -200,6 +200,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
                 var uri = await Task.Run(Package.GetIconUrlIfAny).ConfigureAwait(false);
                 if (uri is null) { _iconCache[hash] = null; return; }
 
+                Bitmap? decoded;
                 if (uri.IsFile)
                 {
                     if (!IsSkiaDecodableExtension(uri.LocalPath))
@@ -209,16 +210,17 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
                         _iconCache[hash] = null;
                         return;
                     }
-                    bitmap = await Task.Run(() => new Bitmap(uri.LocalPath)).ConfigureAwait(false);
+                    decoded = await Task.Run(() => TryDecodeIcon(uri.LocalPath)).ConfigureAwait(false);
                 }
                 else if (uri.Scheme is "http" or "https")
                 {
                     var bytes = await _iconHttpClient.GetByteArrayAsync(uri).ConfigureAwait(false);
-                    using var ms = new MemoryStream(bytes);
-                    bitmap = new Bitmap(ms);
+                    decoded = TryDecodeIcon(bytes, uri.Host);
                 }
                 else { _iconCache[hash] = null; return; }
 
+                if (decoded is null) { _iconCache[hash] = null; return; }
+                bitmap = decoded;
                 _iconCache[hash] = bitmap;
             }
             finally
@@ -229,6 +231,24 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
             await Dispatcher.UIThread.InvokeAsync(() => IconBitmap = bitmap);
         }
         catch { _iconCache[hash] = null; }
+    }
+
+    // Icons come from a shared on-disk cache that can hold empty or partial entries after an
+    // interrupted download; decoding those throws. Skip them quietly instead of surfacing an error.
+    private static Bitmap? TryDecodeIcon(string filePath)
+    {
+        var info = new FileInfo(filePath);
+        if (!info.Exists || info.Length == 0) return null;
+        return TryDecodeIcon(() => new Bitmap(filePath), filePath);
+    }
+
+    private static Bitmap? TryDecodeIcon(byte[] bytes, string source)
+        => bytes.Length == 0 ? null : TryDecodeIcon(() => new Bitmap(new MemoryStream(bytes)), source);
+
+    private static Bitmap? TryDecodeIcon(Func<Bitmap> decode, string source)
+    {
+        try { return decode(); }
+        catch (Exception ex) { Logger.Debug($"Discarding undecodable icon '{source}': {ex.Message}"); return null; }
     }
 
     private static bool IsSkiaDecodableExtension(string path)

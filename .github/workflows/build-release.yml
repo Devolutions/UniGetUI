@@ -783,3 +783,54 @@ jobs:
           remote: releases
           source_path: Devolutions.UniGetUI.*
           working_directory: onedrive-staging
+
+  size-report:
+    name: Consolidated Size Report
+    runs-on: ubuntu-latest
+    needs: [preflight, build, build-avalonia]
+    if: always() && needs.build.result != 'cancelled' && needs.build-avalonia.result != 'cancelled'
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: output
+
+      - name: Generate consolidated size report
+        shell: pwsh
+        working-directory: output
+        run: |
+          $SizeFiles = Get-ChildItem -Path . -Recurse -File -Filter "sizes.*.json" | Sort-Object Name
+          if (-not $SizeFiles) {
+            Write-Host "No size files found."
+            return
+          }
+
+          $Rows = foreach ($file in $SizeFiles) {
+            $data = Get-Content $file.FullName -Raw | ConvertFrom-Json
+            $uncompressedMiB = [math]::Round($data.UncompressedSizeBytes / 1MB, 2)
+            foreach ($artifact in $data.Artifacts) {
+              [PSCustomObject]@{
+                Platform = $data.Platform
+                RID = $data.RuntimeIdentifier
+                Artifact = $artifact.Name
+                CompressedMiB = [math]::Round($artifact.SizeBytes / 1MB, 2)
+                UncompressedMiB = $uncompressedMiB
+              }
+            }
+          }
+
+          $SizeReportFile = Join-Path $PWD "sizes.md"
+          $Lines = @("# UniGetUI Release Artifact Sizes", "")
+          $Lines += $Rows | Format-Table -AutoSize | Out-String -Stream | Where-Object { $_.Trim() -ne '' }
+          Set-Content -Path $SizeReportFile -Value $Lines -Encoding utf8NoBOM
+
+          echo "::group::sizes"
+          Get-Content $SizeReportFile
+          echo "::endgroup::"
+
+      - name: Upload size report
+        uses: actions/upload-artifact@v7
+        with:
+          name: UniGetUI-size-report
+          path: output/sizes.md

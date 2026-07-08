@@ -43,5 +43,13 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         StartupPageSelector.SettingName = CoreSettings.K.StartupPage;
         StartupPageSelector.Text = CoreTools.Translate("UniGetUI startup page:");
         StartupPageSelector.ShowAddedItems();
+
+        NavMenuModeSelector.AddItem(CoreTools.Translate("Automatic"), "auto");
+        NavMenuModeSelector.AddItem(CoreTools.Translate("Docked open"), "docked");
+        NavMenuModeSelector.AddItem(CoreTools.Translate("Sliding overlay"), "overlay");
+        NavMenuModeSelector.SettingName = CoreSettings.K.NavMenuMode;
+        NavMenuModeSelector.Text = CoreTools.Translate("Navigation menu:");
+        NavMenuModeSelector.ShowAddedItems();
+        NavMenuModeSelector.ValueChanged += (_, _) => MainWindow.Instance?.RefreshNavigationMode();
     }
 }

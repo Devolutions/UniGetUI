@@ -259,7 +259,9 @@ public partial class MainWindow : Window
     private void OnCurrentPageChanged(object? sender, PageType pageType)
     {
         // Like WinUI's NavigationView: picking a page collapses the sliding flyout back to the rail.
-        ViewModel.Sidebar.IsPaneOpen = false;
+        // A docked pane stays put (it's a persistent inline pane, not a transient overlay).
+        if (!ViewModel.Sidebar.Docked)
+            ViewModel.Sidebar.IsPaneOpen = false;
 
         if (!_focusSidebarSelectionOnNextPageChange)
             return;
@@ -305,16 +307,20 @@ public partial class MainWindow : Window
         }
     }
 
-    // ─── Navigation rail (responsive) ─────────────────────────────────────────
-    // The always-visible icon rail shows on roomy windows and collapses below 800px so narrow
-    // windows give the content full width (the hamburger + sliding flyout still provide nav).
+    // ─── Navigation rail / docked pane (responsive) ────────────────────────────
+    // Feed the live window width to the sidebar, which resolves the layout mode and drives
+    // the NavRail / NavDock / overlay visibility bindings.
     private void SetupResponsiveRail()
         => MainContentRoot.GetObservable(BoundsProperty)
             .SubscribeValue(b =>
             {
                 if (b.Width <= 0) return;
-                NavRail.IsVisible = b.Width >= 800;
+                ViewModel.Sidebar.WindowWidth = b.Width;
             });
+
+    // Re-reads the NavMenuMode setting so the layout switch applies live from the settings page.
+    public void RefreshNavigationMode()
+        => ViewModel.Sidebar.Mode = SidebarViewModel.ParseMode(Settings.GetValue(Settings.K.NavMenuMode));
 
     // Light-dismiss: clicking outside the open flyout closes it (no darkening — the layer is transparent).
     private void FlyoutDismiss_PointerPressed(object? sender, PointerPressedEventArgs e)

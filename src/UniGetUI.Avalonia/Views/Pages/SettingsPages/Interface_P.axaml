@@ -23,8 +23,12 @@
                                    CornerRadius="8,8,0,0"/>
 
              <settings:ComboboxCard x:Name="StartupPageSelector"
-                                    CornerRadius="0,0,8,8"
+                                    CornerRadius="0"
                                     BorderThickness="1,0,1,1"/>
+
+            <settings:ComboboxCard x:Name="NavMenuModeSelector"
+                                   CornerRadius="0,0,8,8"
+                                   BorderThickness="1,0,1,1"/>
 
             <Border Height="16"/>
 

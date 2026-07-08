@@ -61,11 +61,12 @@
               Background="{DynamicResource MicaPageBackground}"
               ColumnDefinitions="Auto,*">
 
-            <!-- ── Icon rail (always visible ≥800px; collapsed below) ── -->
+            <!-- ── Icon rail (compact mode ≥800px, or docked-but-collapsed) ── -->
             <ContentControl x:Name="NavRail"
                             Grid.Column="0"
                             Width="64"
                             ClipToBounds="True"
+                            IsVisible="{Binding Sidebar.RailVisible}"
                             Content="{Binding Sidebar}"
                             automation:AutomationProperties.AccessibilityView="Control"
                             automation:AutomationProperties.Name="{t:Translate Navigation panel}"
@@ -75,6 +76,27 @@
                 <ContentControl.DataTemplates>
                     <DataTemplate DataType="vm:SidebarViewModel">
                         <views:SidebarView ShowLabels="False"/>
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
+
+            <!-- ── Docked labeled pane (Expanded ≥1600px, or NavMenuMode=Docked): sits inline, reflows content. ── -->
+            <ContentControl x:Name="NavDock"
+                            Grid.Column="0"
+                            Width="250"
+                            ClipToBounds="True"
+                            IsVisible="{Binding Sidebar.NavDockVisible}"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderThickness="0,0,1,0"
+                            Content="{Binding Sidebar}"
+                            automation:AutomationProperties.AccessibilityView="Control"
+                            automation:AutomationProperties.Name="{t:Translate Navigation panel}"
+                            automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Navigation}"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch">
+                <ContentControl.DataTemplates>
+                    <DataTemplate DataType="vm:SidebarViewModel">
+                        <views:SidebarView ShowLabels="True"/>
                     </DataTemplate>
                 </ContentControl.DataTemplates>
             </ContentControl>
@@ -338,7 +360,7 @@
                     Grid.Column="0" Grid.ColumnSpan="2"
                     Background="Transparent"
                     ZIndex="9"
-                    IsVisible="{Binding Sidebar.IsPaneOpen}"
+                    IsVisible="{Binding Sidebar.OverlayActive}"
                     automation:AutomationProperties.AccessibilityView="Raw"
                     PointerPressed="FlyoutDismiss_PointerPressed"/>
 
@@ -350,8 +372,8 @@
                     VerticalAlignment="Stretch"
                     ZIndex="10"
                     Background="{DynamicResource AppWindowBackground}"
-                    IsHitTestVisible="{Binding Sidebar.IsPaneOpen}"
-                    Classes.open="{Binding Sidebar.IsPaneOpen}">
+                    IsHitTestVisible="{Binding Sidebar.OverlayActive}"
+                    Classes.open="{Binding Sidebar.OverlayActive}">
                 <Border.Transitions>
                     <Transitions>
                         <DoubleTransition Property="Opacity" Duration="0:0:0.18">

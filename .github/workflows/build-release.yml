@@ -201,6 +201,8 @@ jobs:
             /p:RuntimeIdentifier=win-$Platform `
             /p:PublishProfile=Win-$Platform-NativeAot `
             /p:UseSharedCompilation=false `
+            /p:BuildInParallel=false `
+            /m:1 `
             -v m
           if ($LASTEXITCODE -ne 0) { throw "dotnet publish Avalonia failed" }
 

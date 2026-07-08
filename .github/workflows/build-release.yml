@@ -359,15 +359,21 @@ jobs:
           - os: macos-latest
             name: macos-arm64
             runtime: osx-arm64
+            publish_profile: osx-arm64-NativeAot
           - os: macos-latest
             name: macos-x64
             runtime: osx-x64
+            publish_profile: osx-x64-NativeAot
           - os: ubuntu-latest
             name: linux-x64
             runtime: linux-x64
+            publish_profile: linux-x64-NativeAot
           - os: ubuntu-latest
             name: linux-arm64
             runtime: linux-arm64
+            # linux-arm64 is built on an x64 runner; NativeAOT cross-compilation is not
+            # available in the default runner image, so fall back to ReadyToRun/full-trim.
+            publish_profile: ''
 
     steps:
       - name: Checkout
@@ -399,12 +405,23 @@ jobs:
       - name: Publish
         working-directory: src
         run: |
-          dotnet publish UniGetUI.Avalonia/UniGetUI.Avalonia.csproj \
-            --configuration Release \
-            --runtime ${{ matrix.runtime }} \
-            --self-contained true \
-            /p:PublishProfile=${{ matrix.runtime }}-NativeAot \
-            --output ../bin/${{ matrix.name }}
+          $PublishProfile = '${{ matrix.publish_profile }}'
+          $PublishArgs = @(
+            'publish',
+            'UniGetUI.Avalonia/UniGetUI.Avalonia.csproj',
+            '--configuration', 'Release',
+            '--runtime', '${{ matrix.runtime }}',
+            '--self-contained', 'true',
+            '--output', '../bin/${{ matrix.name }}'
+          )
+          if ($PublishProfile) {
+            $PublishArgs += "/p:PublishProfile=$PublishProfile"
+          }
+          else {
+            # Fallback: explicitly disable NativeAOT so the ReadyToRun release default is used.
+            $PublishArgs += '/p:PublishAot=false'
+          }
+          dotnet @PublishArgs
 
       - name: Install macOS packaging tools
         if: runner.os == 'macOS'

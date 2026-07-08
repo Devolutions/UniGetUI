@@ -34,7 +34,7 @@ public partial class InternetViewModel : ViewModelBase
     {
         _savingIndicator = new ProgressBar
         {
-            IsIndeterminate = true,
+            IsIndeterminate = false,
             Opacity = 0,
             Margin = new Thickness(0, -8, 0, 0),
         };
@@ -172,6 +172,7 @@ public partial class InternetViewModel : ViewModelBase
     {
         if (_usernameBox is null || _passwordBox is null || _savingIndicator is null) return;
         _savingIndicator.Opacity = 1;
+        _savingIndicator.IsIndeterminate = true;
         string u = _usernameBox.Text ?? "";
         string p = _passwordBox.Text ?? "";
         await Task.Delay(500);
@@ -180,6 +181,7 @@ public partial class InternetViewModel : ViewModelBase
         CoreSettings.SetProxyCredentials(u, p);
         InternetViewModel.ApplyProxyToProcess();
         _savingIndicator.Opacity = 0;
+        _savingIndicator.IsIndeterminate = false;
     }
 
     [RelayCommand]

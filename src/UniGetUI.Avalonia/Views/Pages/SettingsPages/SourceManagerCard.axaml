@@ -46,7 +46,7 @@
         </Grid>
 
         <!-- Loading indicator -->
-        <ProgressBar IsIndeterminate="True"
+        <ProgressBar IsIndeterminate="{Binding IsLoading}"
                      IsVisible="{Binding IsLoading}"
                      Height="4"/>
 

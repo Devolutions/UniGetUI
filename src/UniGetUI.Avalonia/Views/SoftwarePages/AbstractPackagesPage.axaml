@@ -459,7 +459,7 @@
 
                 <!-- Loading indicator -->
                 <ProgressBar x:Name="LoadingProgressBar"
-                             IsIndeterminate="True"
+                             IsIndeterminate="{Binding IsLoading}"
                              IsVisible="{Binding IsLoading}"
                              automation:AutomationProperties.Name="{t:Translate Loading}"
                              Height="4"

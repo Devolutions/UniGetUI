@@ -38,7 +38,7 @@
                             IsEnabled="{Binding !IsLoading}"
                             Margin="4,0,0,0"/>
                 </Grid>
-                <ProgressBar IsIndeterminate="True"
+                <ProgressBar IsIndeterminate="{Binding IsLoading}"
                              IsVisible="{Binding IsLoading}"
                              Height="4"/>
             </StackPanel>

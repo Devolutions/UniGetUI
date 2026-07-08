@@ -91,7 +91,7 @@
         <!-- Progress bar shown while navigating -->
         <ProgressBar Grid.Row="1"
                      x:Name="NavProgressBar"
-                     IsIndeterminate="True"
+                     IsIndeterminate="{Binding IsVisible, RelativeSource={RelativeSource Self}}"
                      IsVisible="False"
                      Height="2"
                      CornerRadius="0"

@@ -101,7 +101,7 @@
 
     <Grid>
         <!-- Loading indicator across the very top -->
-        <ProgressBar IsIndeterminate="True"
+        <ProgressBar IsIndeterminate="{Binding IsLoading}"
                      IsVisible="{Binding IsLoading}"
                      automation:AutomationProperties.Name="{Binding PackageName}"
                      VerticalAlignment="Top"

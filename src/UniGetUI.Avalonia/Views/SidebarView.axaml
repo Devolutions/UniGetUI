@@ -40,7 +40,7 @@
                                    VerticalAlignment="Center"
                                    IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                     </StackPanel>
-                    <ProgressBar IsIndeterminate="True"
+                    <ProgressBar IsIndeterminate="{Binding DiscoverIsLoading}"
                                  IsVisible="{Binding DiscoverIsLoading}"
                                  Height="2"
                                  Width="32"
@@ -82,7 +82,7 @@
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>
                     </Border>
-                    <ProgressBar IsIndeterminate="True"
+                    <ProgressBar IsIndeterminate="{Binding UpdatesIsLoading}"
                                  IsVisible="{Binding UpdatesIsLoading}"
                                  Height="2"
                                  Width="32"
@@ -107,7 +107,7 @@
                                    VerticalAlignment="Center"
                                    IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                     </StackPanel>
-                    <ProgressBar IsIndeterminate="True"
+                    <ProgressBar IsIndeterminate="{Binding InstalledIsLoading}"
                                  IsVisible="{Binding InstalledIsLoading}"
                                  Height="2"
                                  Width="32"

@@ -96,12 +96,14 @@ public partial class SecureCheckboxCard : SettingsCard
         };
         _loading = new ProgressBar
         {
-            IsIndeterminate = true,
+            IsIndeterminate = false,
             IsVisible = false,
             Width = 20,
             Height = 20,
             Margin = new Thickness(0, 0, 4, 0),
         };
+        // Keep the indeterminate clock off while hidden so it doesn't pin the render loop.
+        _loading.Bind(ProgressBar.IsIndeterminateProperty, _loading.GetObservable(Visual.IsVisibleProperty));
         _textblock = new TextBlock
         {
             VerticalAlignment = VerticalAlignment.Center,

@@ -419,7 +419,8 @@ jobs:
             $PublishArgs += "/p:PublishProfile=$PublishProfile"
           }
           else {
-            # Fallback: explicitly disable NativeAOT so the ReadyToRun release default is used.
+            # Fallback: explicitly disable NativeAOT. The hosted x64 runner cannot cross-compile
+            # NativeAOT for linux-arm64, so we keep the previous non-NativeAOT self-contained path.
             $PublishArgs += '/p:PublishAot=false'
           }
           dotnet @PublishArgs

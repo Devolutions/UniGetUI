@@ -22,7 +22,7 @@ public partial class OperationOutputViewModel : ObservableObject
 
     public OperationOutputViewModel(AbstractOperation operation)
     {
-        var theme = Application.Current?.ActualThemeVariant ?? ThemeVariant.Default;
+        var theme = Infrastructure.ThemeHelper.Variant;
         _errorBrush = LookupBrush("StatusErrorForeground", theme, new SolidColorBrush(Color.Parse("#c62828")));
         _debugBrush = LookupBrush("LogOutputVerboseForeground", theme, new SolidColorBrush(Color.Parse("#767676")));
         _normalBrush = LookupBrush("SystemControlForegroundBaseHighBrush", theme, Brushes.White);

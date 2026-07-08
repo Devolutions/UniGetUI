@@ -1,7 +1,5 @@
 using System.Collections.ObjectModel;
-using Avalonia;
 using Avalonia.Media;
-using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Core.Logging;
@@ -40,8 +38,7 @@ public abstract partial class BaseLogPageViewModel : ViewModels.ViewModelBase
 
     public void ClearLog() => LogLines.Clear();
 
-    protected static bool IsDark =>
-        Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
+    protected static bool IsDark => Infrastructure.ThemeHelper.IsDark;
 
     protected static IBrush GetSeverityBrush(LogEntry.SeverityLevel severity, bool isDark)
     {

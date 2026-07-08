@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels.Pages.LogPages;
 using UniGetUI.Core.Tools;
@@ -25,10 +26,12 @@ public partial class OperationFailedDialog : Window
                 "Please see the Command-line Output or refer to the Operation History for further information about the issue."
             );
 
+        // Resolve against the actual theme variant; bare FindResource picks the light-theme
+        // foreground (near-black) even in dark mode, making normal lines unreadable (#5032).
+        var theme = Infrastructure.ThemeHelper.Variant;
         var errorBrush = new SolidColorBrush(Color.Parse("#FF6B6B"));
         var debugBrush = new SolidColorBrush(Color.Parse("#888888"));
-        var normalBrush = Application.Current?.FindResource("SystemControlForegroundBaseHighBrush") as IBrush
-                          ?? Brushes.White;
+        var normalBrush = LookupBrush("SystemControlForegroundBaseHighBrush", theme, Brushes.White);
 
         var lines = new List<LogLineItem>();
         foreach (var (text, type) in operation.GetOutput())
@@ -57,6 +60,13 @@ public partial class OperationFailedDialog : Window
         ButtonsLayout.Children.Add(closeButton);
         Grid.SetColumn(retryButton, 0);
         Grid.SetColumn(closeButton, 1);
+    }
+
+    private static IBrush LookupBrush(string key, ThemeVariant theme, IBrush fallback)
+    {
+        if (Application.Current?.TryGetResource(key, theme, out var resource) == true && resource is IBrush brush)
+            return brush;
+        return fallback;
     }
 
     protected override void OnOpened(EventArgs e)

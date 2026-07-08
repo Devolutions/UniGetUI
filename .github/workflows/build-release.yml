@@ -465,6 +465,22 @@ jobs:
           }
           dotnet @PublishArgs
 
+      - name: Remove oversized Linux debug symbols
+        if: runner.os == 'Linux'
+        shell: pwsh
+        run: |
+          $PublishDir = "bin/${{ matrix.name }}"
+          $MaxDebugSymbolSizeBytes = 1MB
+          $DebugSymbolsToRemove = @(Get-ChildItem $PublishDir -Include "*.dbg", "*.pdb" -File -Recurse | Where-Object {
+            $_.Length -gt $MaxDebugSymbolSizeBytes
+          })
+
+          if ($DebugSymbolsToRemove.Count -gt 0) {
+            $RemovedDebugSymbolBytes = ($DebugSymbolsToRemove | Measure-Object -Property Length -Sum).Sum
+            $DebugSymbolsToRemove | Remove-Item -Force
+            Write-Host ("Removed {0} oversized Linux debug symbols above {1:N2} MiB ({2:N2} MiB total)." -f $DebugSymbolsToRemove.Count, ($MaxDebugSymbolSizeBytes / 1MB), ($RemovedDebugSymbolBytes / 1MB))
+          }
+
       - name: Install macOS packaging tools
         if: runner.os == 'macOS'
         run: brew install create-dmg

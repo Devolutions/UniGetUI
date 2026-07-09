@@ -23,9 +23,10 @@
             <Setter Property="Background"   Value="{DynamicResource StatusInfoBackground}"/>
             <Setter Property="BorderBrush"  Value="{DynamicResource StatusInfoBorderBrush}"/>
         </Style>
-        <!-- Toast entrance: slide in from the right + fade (runs on load). Animate
-             TranslateTransform.X, not RenderTransform (the latter has no Avalonia animator). -->
-        <Style Selector="Border#BodyBorder">
+        <!-- Toast entrance: slide in from the right + fade. Gated on the .animate-in class
+             (added in code-behind only when motion is allowed). Animate TranslateTransform.X,
+             not RenderTransform (the latter has no Avalonia animator). -->
+        <Style Selector="Border#BodyBorder.animate-in">
             <Style.Animations>
                 <Animation Duration="0:0:0.28" FillMode="Forward" Easing="CubicEaseOut">
                     <KeyFrame Cue="0%">

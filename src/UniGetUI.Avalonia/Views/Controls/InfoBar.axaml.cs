@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 
 namespace UniGetUI.Avalonia.Views.Controls;
@@ -17,6 +18,10 @@ public partial class InfoBar : UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+
+        // Play the slide-in entrance only when the OS isn't set to minimize motion.
+        if (!MotionPreference.ReducedMotion)
+            BodyBorder.Classes.Add("animate-in");
     }
 
     private InfoBarViewModel? _vm;

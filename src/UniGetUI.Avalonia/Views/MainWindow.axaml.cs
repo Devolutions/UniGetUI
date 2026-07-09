@@ -281,6 +281,25 @@ public partial class MainWindow : Window
         if (e.PropertyName is nameof(MainWindowViewModel.OperationsPanelExpanded)
                            or nameof(MainWindowViewModel.OperationsPanelVisible))
             UpdateOperationsPanelRow();
+
+        // Expanding the panel while an operation has failed jumps to that op (the failure
+        // badge on the chevron is what drew the user here).
+        if (e.PropertyName is nameof(MainWindowViewModel.OperationsPanelExpanded)
+            && ViewModel.OperationsPanelExpanded)
+            ScrollToFirstFailedOperation();
+    }
+
+    private void ScrollToFirstFailedOperation()
+    {
+        if (ViewModel.FirstFailedOperation is not { } failed)
+            return;
+
+        // Defer until the just-shown list has laid out its containers.
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (OperationsList.ContainerFromItem(failed) is Control container)
+                container.BringIntoView();
+        }, DispatcherPriority.Background);
     }
 
     // Drive the operations-panel grid row: a resizable pixel height while the panel is

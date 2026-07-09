@@ -204,7 +204,8 @@
                                   IsVisible="{Binding OperationsPanelExpanded}"
                                   HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding Operations}"
+                    <ItemsControl x:Name="OperationsList"
+                                  ItemsSource="{Binding Operations}"
                                   Margin="8,4,8,4">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:OperationViewModel">

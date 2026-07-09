@@ -75,6 +75,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public bool HasFailedOperations => Operations.Any(o => o.Operation.Status is OperationStatus.Failed);
 
+    public OperationViewModel? FirstFailedOperation =>
+        Operations.FirstOrDefault(o => o.Operation.Status is OperationStatus.Failed);
+
     // Red badge on the chevron when the panel is collapsed and an operation failed
     // (failures no longer pop a toast; expanded, the failure is already visible).
     public bool ShowFailedOperationBadge => OperationsPanelVisible && !OperationsPanelExpanded && HasFailedOperations;

@@ -7,6 +7,10 @@
     "total_screenshots": 4140
   },
   "icons_and_screenshots": {
+    "bbk1ng/agent-orch": {
+      "icon": "https://raw.githubusercontent.com/bbk1ng/agent-orch/main/docs/assets/orch-avatar.png",
+      "images": []
+    },
     "__test_entry_DO_NOT_EDIT_PLEASE": {
       "icon": "https://this.is.a.test/url/used_for/automated_unit_testing.png",
       "images": [

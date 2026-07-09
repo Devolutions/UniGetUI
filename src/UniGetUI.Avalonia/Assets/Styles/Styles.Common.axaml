@@ -85,6 +85,9 @@
                     <SolidColorBrush x:Key="SettingWarningTextForeground" Color="#9D5D00"/>
                     <!-- Operation log output text -->
                     <SolidColorBrush x:Key="LogOutputVerboseForeground"   Color="#5C5C5C"/>
+                    <!-- Toast: failure-badge red and drop shadow (light) -->
+                    <SolidColorBrush x:Key="ToastBadgeBrush"              Color="#C42B1C"/>
+                    <BoxShadows x:Key="ToastShadow">0 4 16 0 #33000000</BoxShadows>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <!-- Accent fills (lighter accents on dark bg) -->
@@ -164,6 +167,9 @@
                     <SolidColorBrush x:Key="SettingWarningTextForeground" Color="#FCE100"/>
                     <!-- Operation log output text -->
                     <SolidColorBrush x:Key="LogOutputVerboseForeground"   Color="#9D9D9D"/>
+                    <!-- Toast: failure-badge red and drop shadow (dark) -->
+                    <SolidColorBrush x:Key="ToastBadgeBrush"              Color="#FF5449"/>
+                    <BoxShadows x:Key="ToastShadow">0 4 18 0 #80000000</BoxShadows>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

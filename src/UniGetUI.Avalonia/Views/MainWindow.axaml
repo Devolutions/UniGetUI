@@ -160,7 +160,7 @@
                                           Data="M0,6 L5,0 L10,6"/>
                                 <!-- Failure badge: a failed op while the panel is collapsed -->
                                 <Ellipse Width="7" Height="7"
-                                         Fill="#E81123"
+                                         Fill="{DynamicResource ToastBadgeBrush}"
                                          HorizontalAlignment="Left"
                                          VerticalAlignment="Top"
                                          Margin="-3,-4,0,0"

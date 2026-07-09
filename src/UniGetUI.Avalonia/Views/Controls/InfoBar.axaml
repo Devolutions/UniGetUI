@@ -47,7 +47,7 @@
             BorderThickness="1"
             CornerRadius="6"
             ClipToBounds="True"
-            BoxShadow="0 4 16 0 #33000000"
+            BoxShadow="{DynamicResource ToastShadow}"
             automation:AutomationProperties.AccessibilityView="Control"
             automation:AutomationProperties.Name="{Binding Title}"
             automation:AutomationProperties.HelpText="{Binding Message}"

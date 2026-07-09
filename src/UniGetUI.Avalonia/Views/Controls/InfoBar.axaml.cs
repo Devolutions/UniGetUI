@@ -8,11 +8,12 @@ namespace UniGetUI.Avalonia.Views.Controls;
 
 public partial class InfoBar : UserControl
 {
-    // Icon path data for each severity
-    private const string InfoPath = "M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2Zm1,15H11V11h2Zm0-8H11V7h2Z";
-    private const string WarningPath = "M12,2,1,21H23Zm1,14H11V14h2Zm0-4H11V9h2Z";
-    private const string ErrorPath = "M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2Zm1,13H11V13h2Zm0-6H11V7h2Z";
-    private const string SuccessPath = "M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2ZM10,17,5,12l1.41-1.41L10,14.17l7.59-7.59L19,8Z";
+    // Severity glyphs reuse the app's shared round symbols (same SvgIcon-by-path convention
+    // as the rest of the app), tinted with the severity colour.
+    private const string InfoIcon = "avares://UniGetUI/Assets/Symbols/info_round.svg";
+    private const string WarningIcon = "avares://UniGetUI/Assets/Symbols/warning_round.svg";
+    private const string ErrorIcon = "avares://UniGetUI/Assets/Symbols/close_round.svg";
+    private const string SuccessIcon = "avares://UniGetUI/Assets/Symbols/success_round.svg";
 
     public InfoBar()
     {
@@ -62,16 +63,14 @@ public partial class InfoBar : UserControl
         };
         SeverityStrip.Background = new SolidColorBrush(stripColor);
 
-        // Icon shape
-        SeverityIcon.Data = Geometry.Parse(severity switch
+        // Icon (shared SVG asset, tinted with the severity colour)
+        SeverityIcon.Path = severity switch
         {
-            InfoBarSeverity.Warning => WarningPath,
-            InfoBarSeverity.Error => ErrorPath,
-            InfoBarSeverity.Success => SuccessPath,
-            _ => InfoPath,
-        });
-
-        // Icon foreground (solid, not theme-sensitive)
+            InfoBarSeverity.Warning => WarningIcon,
+            InfoBarSeverity.Error => ErrorIcon,
+            InfoBarSeverity.Success => SuccessIcon,
+            _ => InfoIcon,
+        };
         SeverityIcon.Foreground = new SolidColorBrush(stripColor);
     }
 }

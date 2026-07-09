@@ -63,10 +63,10 @@
                     Margin="12,12,4,0"
                     automation:AutomationProperties.AccessibilityView="Raw"
                     VerticalAlignment="Top">
-                <PathIcon x:Name="SeverityIcon"
-                          Width="16" Height="16"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center"/>
+                <controls:SvgIcon x:Name="SeverityIcon"
+                                  Width="16" Height="16"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
             </Border>
 
             <!-- Title + message -->

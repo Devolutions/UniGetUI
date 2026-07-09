@@ -208,8 +208,25 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
         if (!Toasts.Contains(toast))
+        {
             Toasts.Add(toast);
+            AnnounceToast(toast);
+        }
         ArmToastTimer(toast);
+    }
+
+    // Surface the toast to screen readers via the live region (assertive for errors so it
+    // interrupts, polite otherwise) — the toast's own automation name isn't announced on its own.
+    private static void AnnounceToast(InfoBarViewModel toast)
+    {
+        string message = string.IsNullOrEmpty(toast.Message)
+            ? toast.Title
+            : $"{toast.Title}. {toast.Message}";
+        AccessibilityAnnouncementService.Announce(
+            message,
+            toast.Severity is InfoBarSeverity.Error
+                ? AutomationLiveSetting.Assertive
+                : AutomationLiveSetting.Polite);
     }
 
     public void DismissToast(InfoBarViewModel toast)

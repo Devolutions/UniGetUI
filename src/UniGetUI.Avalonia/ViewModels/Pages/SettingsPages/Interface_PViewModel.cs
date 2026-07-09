@@ -34,6 +34,7 @@ public partial class Interface_PViewModel : ViewModelBase
     {
         try { Directory.Delete(CoreData.UniGetUICacheDirectory_Icons, true); }
         catch (Exception ex) { Logger.Error(ex); }
+        global::UniGetUI.PackageEngine.PackageClasses.PackageWrapper.ClearIconCache();
         RestartRequired?.Invoke(this, EventArgs.Empty);
         await LoadIconCacheSize();
     }

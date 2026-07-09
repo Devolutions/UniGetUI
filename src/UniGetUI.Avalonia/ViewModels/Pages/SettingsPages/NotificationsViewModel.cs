@@ -13,6 +13,11 @@ public partial class NotificationsViewModel : ViewModelBase
     /// <summary>True when the system-tray-disabled warning should be shown.</summary>
     public bool IsSystemTrayWarningVisible => !IsSystemTrayEnabled;
 
+    // Per-type notifications are delivered only by the Windows/macOS bridges; Linux has no
+    // delivery path, so the whole "Notification types" group is hidden there.
+    public bool AreNotificationTypesSupported { get; } =
+        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS();
+
     public NotificationsViewModel()
     {
         _isSystemTrayEnabled = !CoreSettings.Get(CoreSettings.K.DisableSystemTray);

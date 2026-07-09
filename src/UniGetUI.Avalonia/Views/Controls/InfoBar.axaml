@@ -23,6 +23,22 @@
             <Setter Property="Background"   Value="{DynamicResource StatusInfoBackground}"/>
             <Setter Property="BorderBrush"  Value="{DynamicResource StatusInfoBorderBrush}"/>
         </Style>
+        <!-- Toast entrance: slide in from the right + fade (runs on load). Animate
+             TranslateTransform.X, not RenderTransform (the latter has no Avalonia animator). -->
+        <Style Selector="Border#BodyBorder">
+            <Style.Animations>
+                <Animation Duration="0:0:0.28" FillMode="Forward" Easing="CubicEaseOut">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0"/>
+                        <Setter Property="TranslateTransform.X" Value="60"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1"/>
+                        <Setter Property="TranslateTransform.X" Value="0"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
     </UserControl.Styles>
 
     <Border x:Name="BodyBorder"
@@ -30,7 +46,7 @@
             BorderThickness="1"
             CornerRadius="6"
             ClipToBounds="True"
-            Margin="12,4"
+            BoxShadow="0 4 16 0 #33000000"
             automation:AutomationProperties.AccessibilityView="Control"
             automation:AutomationProperties.Name="{Binding Title}"
             automation:AutomationProperties.HelpText="{Binding Message}"
@@ -40,12 +56,12 @@
             <!-- Severity colour strip -->
             <Border x:Name="SeverityStrip" Grid.Column="0"/>
 
-            <!-- Severity icon -->
+            <!-- Severity icon (top-aligned with the title's first line) -->
             <Border Grid.Column="1"
                     Width="20" Height="20"
-                    Margin="12,0,4,0"
+                    Margin="12,12,4,0"
                     automation:AutomationProperties.AccessibilityView="Raw"
-                    VerticalAlignment="Center">
+                    VerticalAlignment="Top">
                 <PathIcon x:Name="SeverityIcon"
                           Width="16" Height="16"
                           HorizontalAlignment="Center"
@@ -83,8 +99,8 @@
                     IsVisible="{Binding IsClosable}"
                     Command="{Binding CloseCommand}"
                     automation:AutomationProperties.Name="Close"
-                    VerticalAlignment="Center"
-                    Margin="4,0,8,0"
+                    VerticalAlignment="Top"
+                    Margin="4,6,6,0"
                     Padding="6"
                     Background="Transparent"
                     BorderThickness="0"

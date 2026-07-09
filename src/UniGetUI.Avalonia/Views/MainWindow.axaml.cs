@@ -1254,6 +1254,7 @@ public partial class MainWindow : Window
     }
 
     // ─── Public API (legacy compat) ───────────────────────────────────────────
+    // Surfaces a fresh, auto-dismissing toast per call (name kept for pre-toast callers).
     public void ShowBanner(string title, string message, RuntimeNotificationLevel level)
     {
         if (level == RuntimeNotificationLevel.Progress) return;
@@ -1264,12 +1265,30 @@ public partial class MainWindow : Window
             RuntimeNotificationLevel.Success => InfoBarSeverity.Success,
             _ => InfoBarSeverity.Informational,
         };
-        ViewModel.ErrorBanner.ActionButtonText = "";
-        ViewModel.ErrorBanner.ActionButtonCommand = null;
-        ViewModel.ErrorBanner.Title = title;
-        ViewModel.ErrorBanner.Message = message;
-        ViewModel.ErrorBanner.Severity = severity;
-        ViewModel.ErrorBanner.IsOpen = true;
+
+        var toast = new InfoBarViewModel
+        {
+            Title = title,
+            Message = message,
+            Severity = severity,
+            IsClosable = true,
+            IsOpen = true,
+        };
+        toast.OnClosed = () => ViewModel.DismissToast(toast);
+        ViewModel.ShowToast(toast);
+    }
+
+    // Pause/resume a toast's auto-dismiss countdown while the pointer is over it.
+    private void Toast_PointerEntered(object? sender, PointerEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is InfoBarViewModel vm)
+            ViewModel.PauseToast(vm);
+    }
+
+    private void Toast_PointerExited(object? sender, PointerEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is InfoBarViewModel vm)
+            ViewModel.ResumeToast(vm);
     }
 
     public void UpdateSystemTrayStatus() => _trayService?.UpdateStatus();

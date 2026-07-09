@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using Avalonia;
 using Avalonia.Automation;
@@ -169,11 +170,94 @@ public partial class MainWindowViewModel : ViewModelBase
         ? $"UniGetUI {CoreTools.Translate("version {0}", CoreData.VersionName)}"
         : "UniGetUI";
 
-    // ─── Banners ─────────────────────────────────────────────────────────────
+    // ─── Notifications (bottom-right toasts) ───────────────────────────────────
+    // Persistent banners kept as singletons; RegisterBannerToast mirrors their IsOpen into Toasts.
     public InfoBarViewModel UpdatesBanner { get; } = new() { Severity = InfoBarSeverity.Success };
-    public InfoBarViewModel ErrorBanner { get; } = new() { Severity = InfoBarSeverity.Error };
     public InfoBarViewModel WinGetWarningBanner { get; } = new() { Severity = InfoBarSeverity.Warning };
     public InfoBarViewModel TelemetryWarner { get; } = new() { Severity = InfoBarSeverity.Informational };
+
+    // Oldest first (rendered bottom-up so the newest sits nearest the corner).
+    public ObservableCollection<InfoBarViewModel> Toasts { get; } = new();
+    private readonly Dictionary<InfoBarViewModel, DispatcherTimer> _toastTimers = new();
+
+    // A toast with an action button stays until acted on; everything else auto-dismisses.
+    private static bool IsSticky(InfoBarViewModel t) => !string.IsNullOrEmpty(t.ActionButtonText);
+    private static TimeSpan ToastDuration(InfoBarViewModel t)
+        => t.Severity is InfoBarSeverity.Error or InfoBarSeverity.Warning
+            ? TimeSpan.FromSeconds(8)
+            : TimeSpan.FromSeconds(5);
+
+    public void ShowToast(InfoBarViewModel toast)
+    {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => ShowToast(toast));
+            return;
+        }
+        if (!Toasts.Contains(toast))
+            Toasts.Add(toast);
+        ArmToastTimer(toast);
+    }
+
+    public void DismissToast(InfoBarViewModel toast)
+    {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => DismissToast(toast));
+            return;
+        }
+        DisposeToastTimer(toast);
+        Toasts.Remove(toast);
+    }
+
+    // Pause the auto-dismiss countdown while the pointer hovers a toast; restart it on leave.
+    public void PauseToast(InfoBarViewModel toast)
+    {
+        if (_toastTimers.TryGetValue(toast, out var timer)) timer.Stop();
+    }
+
+    public void ResumeToast(InfoBarViewModel toast)
+    {
+        if (_toastTimers.TryGetValue(toast, out var timer)) { timer.Stop(); timer.Start(); }
+    }
+
+    private void ArmToastTimer(InfoBarViewModel toast)
+    {
+        DisposeToastTimer(toast);
+        if (IsSticky(toast))
+            return;
+
+        var timer = new DispatcherTimer { Interval = ToastDuration(toast) };
+        timer.Tick += (_, _) => toast.IsOpen = false;
+        _toastTimers[toast] = timer;
+        timer.Start();
+    }
+
+    private void DisposeToastTimer(InfoBarViewModel toast)
+    {
+        if (_toastTimers.Remove(toast, out var timer))
+            timer.Stop();
+    }
+
+    // Mirrors a persistent banner's IsOpen into Toasts so code that just flips IsOpen keeps working.
+    private void RegisterBannerToast(InfoBarViewModel banner)
+    {
+        banner.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(InfoBarViewModel.IsOpen))
+            {
+                if (banner.IsOpen) ShowToast(banner);
+                else DismissToast(banner);
+            }
+            // Content can change in place while the banner stays open (the updater cycles
+            // statuses on the same banner, finally adding the "Update now" action); re-arm so
+            // stickiness/countdown track the new content instead of a stale timer dismissing it.
+            else if (banner.IsOpen && Toasts.Contains(banner))
+            {
+                ArmToastTimer(banner);
+            }
+        };
+    }
 
     // ─── Constructor ─────────────────────────────────────────────────────────
     [RelayCommand]
@@ -182,6 +266,11 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel()
     {
         AccessibilityAnnouncementService.AnnouncementRequested += OnAnnouncementRequested;
+
+        // Wire before the blocks below flip the banners' IsOpen flags.
+        RegisterBannerToast(UpdatesBanner);
+        RegisterBannerToast(WinGetWarningBanner);
+        RegisterBannerToast(TelemetryWarner);
 
         DiscoverPage = new DiscoverSoftwarePage();
         UpdatesPage = new SoftwareUpdatesPage();

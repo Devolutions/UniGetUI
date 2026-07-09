@@ -104,33 +104,19 @@
             <!-- ── Content: banners + page + operations ── -->
             <Grid x:Name="ContentRoot" Grid.Column="1" RowDefinitions="*,4,Auto">
 
-            <!-- ── Banners + page content ── -->
-            <Grid Grid.Row="0" RowDefinitions="Auto,*" Margin="0,0,0,10">
-                <StackPanel Grid.Row="0"
-                            Spacing="0"
-                            automation:AutomationProperties.AccessibilityView="Control">
-                    <StackPanel.DataTemplates>
-                        <DataTemplate DataType="vm:InfoBarViewModel">
-                            <controls:InfoBar/>
-                        </DataTemplate>
-                    </StackPanel.DataTemplates>
-                    <ContentControl Content="{Binding UpdatesBanner}"/>
-                    <ContentControl Content="{Binding ErrorBanner}"/>
-                    <ContentControl Content="{Binding WinGetWarningBanner}"/>
-                    <ContentControl Content="{Binding TelemetryWarner}"/>
-                </StackPanel>
-                <TransitioningContentControl Grid.Row="1"
-                                Content="{Binding CurrentPageContent}"
-                                automation:AutomationProperties.AccessibilityView="Control"
-                                automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Main}"
-                                HorizontalContentAlignment="Stretch"
-                                VerticalContentAlignment="Stretch">
-                    <!-- Page-switch animation: fade + subtle slide-up (WinUI Frame entrance feel) -->
-                    <TransitioningContentControl.PageTransition>
-                        <infra:EntrancePageTransition Duration="0:0:0.22" VerticalOffset="28"/>
-                    </TransitioningContentControl.PageTransition>
-                </TransitioningContentControl>
-            </Grid>
+            <!-- ── Page content (banners now surface as bottom-right toasts; see ToastHost) ── -->
+            <TransitioningContentControl Grid.Row="0"
+                            Margin="0,0,0,10"
+                            Content="{Binding CurrentPageContent}"
+                            automation:AutomationProperties.AccessibilityView="Control"
+                            automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Main}"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch">
+                <!-- Page-switch animation: fade + subtle slide-up (WinUI Frame entrance feel) -->
+                <TransitioningContentControl.PageTransition>
+                    <infra:EntrancePageTransition Duration="0:0:0.22" VerticalOffset="28"/>
+                </TransitioningContentControl.PageTransition>
+            </TransitioningContentControl>
 
             <!-- ── GridSplitter (only visible when operations are present) ── -->
             <GridSplitter Grid.Row="1"
@@ -602,5 +588,28 @@
                 </StackPanel>
             </Panel>
         </Grid>
+
+        <!-- ── Toast notifications: floating overlay, stacked bottom-right ──
+             Sized to content and bottom-right aligned, so empty areas stay click-through. -->
+        <ItemsControl x:Name="ToastHost"
+                      ItemsSource="{Binding Toasts}"
+                      Width="380"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Bottom"
+                      Margin="0,0,20,20"
+                      ZIndex="1000"
+                      automation:AutomationProperties.AccessibilityView="Control">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Spacing="8"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.DataTemplates>
+                <DataTemplate DataType="vm:InfoBarViewModel">
+                    <controls:InfoBar PointerEntered="Toast_PointerEntered"
+                                      PointerExited="Toast_PointerExited"/>
+                </DataTemplate>
+            </ItemsControl.DataTemplates>
+        </ItemsControl>
     </Panel>
 </Window>

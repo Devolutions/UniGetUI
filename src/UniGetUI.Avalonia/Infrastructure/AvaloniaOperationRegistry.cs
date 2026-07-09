@@ -196,19 +196,8 @@ public static class AvaloniaOperationRegistry
             $"{title}. {message}",
             AutomationLiveSetting.Polite);
 
-        if (OperatingSystem.IsWindows() && WindowsAppNotificationBridge.ShowProgress(op))
-            return;
-
-        if (OperatingSystem.IsMacOS() && MacOsNotificationBridge.ShowProgress(op))
-            return;
-
-        if (TryGetMainWindow() is not { } mainWindow)
-            return;
-
-        mainWindow.ShowRuntimeNotification(
-            title,
-            message,
-            UniGetUI.Avalonia.Views.MainWindow.RuntimeNotificationLevel.Progress);
+        if (OperatingSystem.IsWindows()) WindowsAppNotificationBridge.ShowProgress(op);
+        else if (OperatingSystem.IsMacOS()) MacOsNotificationBridge.ShowProgress(op);
     }
 
     private static void ShowOperationSuccessNotification(AbstractOperation op)
@@ -230,11 +219,8 @@ public static class AvaloniaOperationRegistry
 
         WindowsAppNotificationBridge.RemoveProgress(op);
 
-        if (OperatingSystem.IsWindows() && WindowsAppNotificationBridge.ShowSuccess(op))
-            return;
-
-        if (OperatingSystem.IsMacOS() && MacOsNotificationBridge.ShowSuccess(op))
-            return;
+        if (OperatingSystem.IsWindows()) WindowsAppNotificationBridge.ShowSuccess(op);
+        else if (OperatingSystem.IsMacOS()) MacOsNotificationBridge.ShowSuccess(op);
     }
 
     private static void ShowOperationFailureNotification(AbstractOperation op)
@@ -256,27 +242,8 @@ public static class AvaloniaOperationRegistry
 
         WindowsAppNotificationBridge.RemoveProgress(op);
 
-        if (OperatingSystem.IsWindows() && WindowsAppNotificationBridge.ShowError(op))
-            return;
-
-        if (OperatingSystem.IsMacOS() && MacOsNotificationBridge.ShowError(op))
-            return;
-
-        if (TryGetMainWindow() is not { } mainWindow)
-            return;
-
-        mainWindow.ShowRuntimeNotification(
-            title,
-            message,
-            UniGetUI.Avalonia.Views.MainWindow.RuntimeNotificationLevel.Error);
-    }
-
-    private static UniGetUI.Avalonia.Views.MainWindow? TryGetMainWindow()
-    {
-        return Application.Current?.ApplicationLifetime
-            is IClassicDesktopStyleApplicationLifetime { MainWindow: UniGetUI.Avalonia.Views.MainWindow mw }
-            ? mw
-            : null;
+        if (OperatingSystem.IsWindows()) WindowsAppNotificationBridge.ShowError(op);
+        else if (OperatingSystem.IsMacOS()) MacOsNotificationBridge.ShowError(op);
     }
 
     private static void AppendOperationHistory(AbstractOperation op)

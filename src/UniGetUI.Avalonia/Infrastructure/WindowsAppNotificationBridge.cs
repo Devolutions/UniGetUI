@@ -18,9 +18,10 @@ namespace UniGetUI.Avalonia.Infrastructure;
 /// single-instance handler foregrounds the window. The inline action buttons carried
 /// by the old WinRT toasts are intentionally dropped; activation is surfaced via
 /// <see cref="NotificationActivated"/> only when the app is already running and the toast
-/// is clicked, so the main-window view model keeps its handler. On non-Windows, or if
-/// the toast COM surface is unavailable, every call falls back to the in-app Avalonia
-/// banner via <see cref="MainWindow.ShowRuntimeNotification"/>.
+/// is clicked, so the main-window view model keeps its handler. When the toast COM surface
+/// is unavailable, feature notifications fall back to the in-app Avalonia banner via
+/// <see cref="MainWindow.ShowRuntimeNotification"/>; per-operation results do not (they
+/// already appear in the operations panel — see the <c>allowInAppFallback</c> flag on Show).
 /// </summary>
 internal static class WindowsAppNotificationBridge
 {
@@ -64,7 +65,7 @@ internal static class WindowsAppNotificationBridge
             ? operation.Metadata.Status
             : CoreTools.Translate("Please wait...");
 
-        return Show(title, message, MainWindow.RuntimeNotificationLevel.Progress, launchAction: NotificationArguments.Show);
+        return Show(title, message, MainWindow.RuntimeNotificationLevel.Progress, launchAction: NotificationArguments.Show, allowInAppFallback: false);
     }
 
     public static bool ShowSuccess(AbstractOperation operation)
@@ -77,7 +78,7 @@ internal static class WindowsAppNotificationBridge
             ? operation.Metadata.SuccessMessage
             : CoreTools.Translate("Success!");
 
-        return Show(title, message, MainWindow.RuntimeNotificationLevel.Success, launchAction: NotificationArguments.Show);
+        return Show(title, message, MainWindow.RuntimeNotificationLevel.Success, launchAction: NotificationArguments.Show, allowInAppFallback: false);
     }
 
     public static bool ShowError(AbstractOperation operation)
@@ -90,7 +91,7 @@ internal static class WindowsAppNotificationBridge
             ? operation.Metadata.FailureMessage
             : CoreTools.Translate("An error occurred while processing this package");
 
-        return Show(title, message, MainWindow.RuntimeNotificationLevel.Error, launchAction: NotificationArguments.Show);
+        return Show(title, message, MainWindow.RuntimeNotificationLevel.Error, launchAction: NotificationArguments.Show, allowInAppFallback: false);
     }
 
     public static void RemoveProgress(AbstractOperation operation)
@@ -258,12 +259,15 @@ internal static class WindowsAppNotificationBridge
     /// argument so the single-instance handler can route the activation when the toast
     /// is clicked. Returns <c>true</c> once the notification has been surfaced (toast or
     /// banner), so callers skip their own fallback banner and avoid double-showing.
+    /// <paramref name="allowInAppFallback"/> is <c>false</c> for per-operation results:
+    /// those already live in the operations panel, so we don't duplicate them as a toast.
     /// </summary>
     private static bool Show(
         string title,
         string message,
         MainWindow.RuntimeNotificationLevel level,
-        string launchAction)
+        string launchAction,
+        bool allowInAppFallback = true)
     {
 #if WINDOWS
         if (OperatingSystem.IsWindows() && Win32ToastNotifier.IsAvailable())
@@ -281,7 +285,7 @@ internal static class WindowsAppNotificationBridge
         }
 #endif
 
-        return ShowInAppBanner(title, message, level);
+        return allowInAppFallback && ShowInAppBanner(title, message, level);
     }
 
     private static bool ShowInAppBanner(

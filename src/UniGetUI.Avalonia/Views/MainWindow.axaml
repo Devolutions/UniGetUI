@@ -158,6 +158,14 @@
                                           automation:AutomationProperties.AccessibilityView="Raw"
                                           IsVisible="{Binding !OperationsPanelExpanded}"
                                           Data="M0,6 L5,0 L10,6"/>
+                                <!-- Failure badge: a failed op while the panel is collapsed -->
+                                <Ellipse Width="7" Height="7"
+                                         Fill="#E81123"
+                                         HorizontalAlignment="Left"
+                                         VerticalAlignment="Top"
+                                         Margin="-3,-4,0,0"
+                                         IsVisible="{Binding ShowFailedOperationBadge}"
+                                         automation:AutomationProperties.AccessibilityView="Raw"/>
                             </Panel>
                         </Button>
 

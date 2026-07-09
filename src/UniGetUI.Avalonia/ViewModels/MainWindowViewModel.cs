@@ -64,12 +64,20 @@ public partial class MainWindowViewModel : ViewModelBase
     public AvaloniaList<OperationViewModel> Operations => AvaloniaOperationRegistry.OperationViewModels;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowFailedOperationBadge))]
     private bool _operationsPanelVisible;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowFailedOperationBadge))]
     private bool _operationsPanelExpanded = true;
 
     private readonly List<AbstractOperation> _operationBatch = new();
+
+    public bool HasFailedOperations => Operations.Any(o => o.Operation.Status is OperationStatus.Failed);
+
+    // Red badge on the chevron when the panel is collapsed and an operation failed
+    // (failures no longer pop a toast; expanded, the failure is already visible).
+    public bool ShowFailedOperationBadge => OperationsPanelVisible && !OperationsPanelExpanded && HasFailedOperations;
 
     public string OperationsHeaderText
     {
@@ -102,7 +110,12 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     private void OnOperationStatusChanged(object? sender, OperationStatus e)
-        => Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(OperationsHeaderText)));
+        => Dispatcher.UIThread.Post(() =>
+        {
+            OnPropertyChanged(nameof(OperationsHeaderText));
+            OnPropertyChanged(nameof(HasFailedOperations));
+            OnPropertyChanged(nameof(ShowFailedOperationBadge));
+        });
 
     [RelayCommand]
     private void ToggleOperationsPanel() => OperationsPanelExpanded = !OperationsPanelExpanded;
@@ -353,6 +366,8 @@ public partial class MainWindowViewModel : ViewModelBase
                     AddToBatch(vm.Operation);
             OperationsPanelVisible = Operations.Count > 0;
             OnPropertyChanged(nameof(OperationsHeaderText));
+            OnPropertyChanged(nameof(HasFailedOperations));
+            OnPropertyChanged(nameof(ShowFailedOperationBadge));
         };
 
         if (OperatingSystem.IsWindows() && CoreTools.IsAdministrator() && !Settings.Get(Settings.K.AlreadyWarnedAboutAdmin))

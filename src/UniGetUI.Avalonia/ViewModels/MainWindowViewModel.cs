@@ -192,6 +192,7 @@ public partial class MainWindowViewModel : ViewModelBase
     // Oldest first (rendered bottom-up so the newest sits nearest the corner).
     public ObservableCollection<InfoBarViewModel> Toasts { get; } = new();
     private readonly Dictionary<InfoBarViewModel, DispatcherTimer> _toastTimers = new();
+    private const int MaxVisibleToasts = 5;
 
     // A toast with an action button stays until acted on; everything else auto-dismisses.
     private static bool IsSticky(InfoBarViewModel t) => !string.IsNullOrEmpty(t.ActionButtonText);
@@ -212,7 +213,20 @@ public partial class MainWindowViewModel : ViewModelBase
             Toasts.Add(toast);
             AnnounceToast(toast);
         }
+        TrimToastStack(keep: toast);
         ArmToastTimer(toast);
+    }
+
+    // Keep the stack from overflowing the screen: drop the oldest auto-dismissing toasts,
+    // but never a sticky (action-button) one or the toast just shown.
+    private void TrimToastStack(InfoBarViewModel keep)
+    {
+        while (Toasts.Count > MaxVisibleToasts)
+        {
+            var oldest = Toasts.FirstOrDefault(t => t != keep && !IsSticky(t));
+            if (oldest is null) break;
+            DismissToast(oldest);
+        }
     }
 
     // Surface the toast to screen readers via the live region (assertive for errors so it

@@ -72,6 +72,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _operationsPanelExpanded = true;
 
     private readonly List<AbstractOperation> _operationBatch = new();
+    private bool _batchSummaryShown;
 
     public bool HasFailedOperations => Operations.Any(o => o.Operation.Status is OperationStatus.Failed);
 
@@ -103,6 +104,7 @@ public partial class MainWindowViewModel : ViewModelBase
             foreach (var old in _operationBatch)
                 old.StatusChanged -= OnOperationStatusChanged;
             _operationBatch.Clear();
+            _batchSummaryShown = false;
         }
 
         if (!_operationBatch.Contains(op))
@@ -118,7 +120,37 @@ public partial class MainWindowViewModel : ViewModelBase
             OnPropertyChanged(nameof(OperationsHeaderText));
             OnPropertyChanged(nameof(HasFailedOperations));
             OnPropertyChanged(nameof(ShowFailedOperationBadge));
+            MaybeShowBatchSummaryToast();
         });
+
+    // Opt-in: one toast summarizing the batch once every operation in it has finished.
+    private void MaybeShowBatchSummaryToast()
+    {
+        if (_batchSummaryShown || _operationBatch.Count == 0) return;
+        if (!Settings.Get(Settings.K.ShowOperationSummaryNotifications)) return;
+        if (_operationBatch.Any(o => o.Status is OperationStatus.InQueue or OperationStatus.Running)) return;
+
+        _batchSummaryShown = true;
+
+        int total = _operationBatch.Count;
+        int failed = _operationBatch.Count(o => o.Status is OperationStatus.Failed);
+        int succeeded = _operationBatch.Count(o => o.Status is OperationStatus.Succeeded);
+
+        var toast = new InfoBarViewModel
+        {
+            Title = failed > 0
+                ? CoreTools.Translate("Operations finished with errors")
+                : CoreTools.Translate("Operations completed"),
+            Message = failed > 0
+                ? CoreTools.Translate("{0} of {1} succeeded, {2} failed", succeeded, total, failed)
+                : CoreTools.Translate("{0} of {1} operations completed", succeeded, total),
+            Severity = failed > 0 ? InfoBarSeverity.Error : InfoBarSeverity.Success,
+            IsClosable = true,
+            IsOpen = true,
+        };
+        toast.OnClosed = () => DismissToast(toast);
+        ShowToast(toast);
+    }
 
     [RelayCommand]
     private void ToggleOperationsPanel() => OperationsPanelExpanded = !OperationsPanelExpanded;

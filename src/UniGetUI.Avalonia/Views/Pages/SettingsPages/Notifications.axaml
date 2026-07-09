@@ -30,8 +30,14 @@
             <settings:CheckboxCard SettingName="DisableNotifications"
                                    Text="{t:Translate Enable UniGetUI notifications}"
                                    StateChangedCommand="{Binding UpdateNotificationsEnabledCommand}"
-                                   CornerRadius="8"
+                                   CornerRadius="8,8,0,0"
                                    IsEnabled="{Binding IsSystemTrayWarningVisible, Converter={x:Static BoolConverters.Not}}"/>
+
+            <!-- In-app summary toast (works on all platforms, so not in the OS-only group below) -->
+            <settings:CheckboxCard SettingName="ShowOperationSummaryNotifications"
+                                   Text="{t:Translate Show an in-app summary toast when a batch of operations finishes}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0,0,8,8"/>
 
             <!-- Notification types are Windows/macOS-only (no Linux delivery path). -->
             <StackPanel Orientation="Vertical" IsVisible="{Binding AreNotificationTypesSupported}">

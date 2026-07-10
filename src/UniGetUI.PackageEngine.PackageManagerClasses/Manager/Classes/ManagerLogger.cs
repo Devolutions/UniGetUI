@@ -9,15 +9,29 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
     {
         private readonly IPackageManager Manager;
 
+        // Every task (search, list, install, ...) is retained here for the manager-log viewer. Left
+        // unbounded, a session's worth of operations — each holding its full output — grows without
+        // limit (a broad search alone spawns one per manager). Keep only the most recent.
+        private const int MAX_RETAINED_OPERATIONS = 100;
         private readonly List<TaskLogger> operations = [];
         public IReadOnlyList<ITaskLogger> Operations
         {
-            get => (IReadOnlyList<ITaskLogger>)operations;
+            get { lock (operations) return operations.ToArray(); }
         }
 
         public ManagerLogger(IPackageManager manager)
         {
             Manager = manager;
+        }
+
+        private void Register(TaskLogger operation)
+        {
+            lock (operations)
+            {
+                operations.Add(operation);
+                if (operations.Count > MAX_RETAINED_OPERATIONS)
+                    operations.RemoveRange(0, operations.Count - MAX_RETAINED_OPERATIONS);
+            }
         }
 
         public IProcessTaskLogger CreateNew(LoggableTaskType type, Process process)
@@ -35,20 +49,33 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
                 process.StartInfo.FileName,
                 process.StartInfo.Arguments
             );
-            operations.Add(operation);
+            Register(operation);
             return operation;
         }
 
         public INativeTaskLogger CreateNew(LoggableTaskType type)
         {
             NativeTaskLogger operation = new(Manager, type);
-            operations.Add(operation);
+            Register(operation);
             return operation;
         }
     }
 
     public abstract class TaskLogger : ITaskLogger
     {
+        // Cap retained output per stream. A broad "search" can emit thousands of lines per manager;
+        // keeping them all across every operation is what makes memory climb with each search. The
+        // manager-log viewer only needs the tail. Trimmed in chunks to keep appending O(1).
+        protected const int MaxRetainedLines = 1000;
+        private const int TrimSlack = 256;
+
+        protected static void AppendCapped(List<string> target, string line)
+        {
+            target.Add(line);
+            if (target.Count > MaxRetainedLines + TrimSlack)
+                target.RemoveRange(0, target.Count - MaxRetainedLines);
+        }
+
         protected DateTime StartTime;
         protected DateTime? EndTime;
         protected bool isComplete;
@@ -167,7 +194,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             {
                 if (line != "")
                 {
-                    StdOut.Add(line);
+                    AppendCapped(StdOut, line);
                 }
             }
         }
@@ -193,7 +220,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             {
                 if (line != "")
                 {
-                    StdErr.Add(line);
+                    AppendCapped(StdErr, line);
                 }
             }
         }
@@ -325,7 +352,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             {
                 if (line != "")
                 {
-                    Info.Add(line);
+                    AppendCapped(Info, line);
                 }
             }
         }
@@ -351,7 +378,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
             {
                 if (line != "")
                 {
-                    Errors.Add(line);
+                    AppendCapped(Errors, line);
                 }
             }
         }

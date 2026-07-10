@@ -199,9 +199,17 @@ public partial class MainWindowViewModel : ViewModelBase
             if (loader is null) continue;
             var pt = pageType;
             loader.FinishedLoading += (_, _) =>
+            {
                 Dispatcher.UIThread.Post(() => Sidebar.SetNavItemLoading(pt, false));
+                // A load (search/refresh) balloons the working set; once it settles, return the
+                // reclaimable memory to the OS so the footprint drops back down.
+                Infrastructure.MemoryTrimmer.RequestTrimAfterIdle();
+            };
             loader.StartedLoading += (_, _) =>
+            {
                 Dispatcher.UIThread.Post(() => Sidebar.SetNavItemLoading(pt, true));
+                Infrastructure.MemoryTrimmer.CancelPending();
+            };
             Sidebar.SetNavItemLoading(pt, loader.IsLoading);
         }
 

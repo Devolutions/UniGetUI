@@ -13,6 +13,11 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager;
 
 internal sealed class WinGetCliHelper : IWinGetManagerHelper
 {
+    // "winget search a" returns ~12k results; parsing each into a Package and pushing them to the
+    // UI freezes the app for seconds and spikes RAM. Cap to the most relevant matches (winget
+    // orders by relevance), matching the bundled pinget's default behaviour.
+    private const int MAX_SEARCH_RESULTS = 100;
+
     private readonly WinGet Manager;
     private readonly string _cliExecutablePath;
     private readonly IPingetPackageDetailsProvider _packageDetailsProvider;
@@ -320,7 +325,9 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
                     Manager.Status.ExecutableCallArgs
                     + " search \""
                     + query
-                    + "\"  --accept-source-agreements "
+                    + "\" --count "
+                    + MAX_SEARCH_RESULTS
+                    + " --accept-source-agreements "
                     + WinGet.GetProxyArgument(),
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,

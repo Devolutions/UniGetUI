@@ -8,6 +8,12 @@ namespace UniGetUI.PackageEngine.PackageLoader
     {
         public static DiscoverablePackagesLoader Instance = null!;
 
+        // A broad query (e.g. "a") makes each manager return thousands of results; aggregated across
+        // every enabled manager that is thousands of packages to wrap, tag (per-package upgradable/
+        // installed lookups) and render, which freezes the UI and spikes RAM. Keep only the most
+        // relevant matches per manager — nobody scrolls thousands of results.
+        private const int MAX_RESULTS_PER_MANAGER = 100;
+
         private string QUERY_TEXT = string.Empty;
         private volatile bool _pendingReload;
 
@@ -70,7 +76,10 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return [];
             }
 
-            return manager.FindPackages(text);
+            IReadOnlyList<IPackage> found = manager.FindPackages(text);
+            return found.Count > MAX_RESULTS_PER_MANAGER
+                ? found.Take(MAX_RESULTS_PER_MANAGER).ToArray()
+                : found;
         }
 
         protected override Task WhenAddingPackage(IPackage package)

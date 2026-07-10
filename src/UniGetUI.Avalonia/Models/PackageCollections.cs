@@ -27,7 +27,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     {
         Timeout = TimeSpan.FromSeconds(8),
     };
-    private static readonly SemaphoreSlim _iconLoadSemaphore = new(4, 4);
+    private static readonly SemaphoreSlim _iconLoadSemaphore = new(8, 8);
 
     // List icons render at 24-64px; decoding/caching them at native resolution (often 256-512px)
     // wastes ~10-60x the memory. Cap the cached side to cover 64px at 2x DPI.
@@ -168,10 +168,23 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         Package.PropertyChanged += Package_PropertyChanged;
         UpdateDisplayState();
 
-        if (!Settings.Get(Settings.K.DisableIconsOnPackageLists))
-            _ = LoadIconAsync();
-
+        // Icon loading is deferred until the row is actually shown (see EnsureIconLoaded). Starting
+        // it here would eagerly load an icon for every result — thousands for a broad search — when
+        // the virtualized list only ever displays a few dozen at once.
         MaybeStartInstallerHostCheck();
+    }
+
+    private int _iconLoadStarted;
+
+    /// <summary>
+    /// Starts loading this row's icon, at most once. Called when the row becomes visible so that
+    /// only on-screen rows load icons (see PackageIconLoader).
+    /// </summary>
+    public void EnsureIconLoaded()
+    {
+        if (Settings.Get(Settings.K.DisableIconsOnPackageLists)) return;
+        if (Interlocked.Exchange(ref _iconLoadStarted, 1) != 0) return;
+        _ = LoadIconAsync();
     }
 
     /// <summary>

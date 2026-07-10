@@ -525,7 +525,8 @@
                                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0"
                                                         automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                         automation:AutomationProperties.ItemType="{t:Translate Package}">
-                                                <Panel Width="24" Height="24" VerticalAlignment="Center">
+                                                <Panel Width="24" Height="24" VerticalAlignment="Center"
+                                                       controls:PackageIconLoader.Track="True">
                                                     <Image Source="{Binding IconBitmap}" Width="24" Height="24"
                                                            Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
@@ -648,7 +649,8 @@
                                                 BorderBrush="{DynamicResource SettingsCardBorderBrush}" BorderThickness="1" Padding="4">
                                             <Grid ColumnDefinitions="48,*,28" ColumnSpacing="4">
                                                 <Panel Grid.Column="0" Width="44" Height="44"
-                                                       VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                       controls:PackageIconLoader.Track="True">
                                                     <Image Source="{Binding IconBitmap}" Width="44" Height="44"
                                                            Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
@@ -757,7 +759,8 @@
                                                 </Button>
                                                 <Panel Grid.Row="1" Width="64" Height="64"
                                                        Margin="0,-8,0,4"
-                                                       VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                       controls:PackageIconLoader.Track="True">
                                                     <Image Source="{Binding IconBitmap}" Width="64" Height="64"
                                                            Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"

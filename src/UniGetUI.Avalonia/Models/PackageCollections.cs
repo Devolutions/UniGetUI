@@ -135,6 +135,10 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     public string InstallerHostChangeTooltip { get; private set; } = "";
 
     private CancellationTokenSource? _installerHostCheckCts;
+    // Cancelled when the row is discarded (e.g. a new search). Icon loads are throttled, so a large
+    // result set queues many; without this, a discarded row's queued load keeps its async state
+    // machine — and the wrapper/package/bitmap it roots — alive, so RAM climbs with each search.
+    private readonly CancellationTokenSource _lifetimeCts = new();
 
     public string SourceIconPath => IconTypeToSvgPath(Package.Source.IconId);
 
@@ -245,6 +249,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
 
     private async Task LoadIconAsync()
     {
+        CancellationToken token = _lifetimeCts.Token;
         long hash = Package.GetHash();
         if (TryGetCachedIcon(hash, out Bitmap? cached))
         {
@@ -255,11 +260,13 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
 
         try
         {
-            await _iconLoadSemaphore.WaitAsync().ConfigureAwait(false);
+            // Cancellable wait: if the row is discarded while queued behind the throttle, the load
+            // bails here instead of eventually running and rooting this wrapper.
+            await _iconLoadSemaphore.WaitAsync(token).ConfigureAwait(false);
             Bitmap bitmap;
             try
             {
-                var uri = await Task.Run(Package.GetIconUrlIfAny).ConfigureAwait(false);
+                var uri = await Task.Run(Package.GetIconUrlIfAny, token).ConfigureAwait(false);
                 if (uri is null) { CacheIcon(hash, null); return; }
 
                 Bitmap? decoded;
@@ -272,11 +279,11 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
                         CacheIcon(hash, null);
                         return;
                     }
-                    decoded = await Task.Run(() => TryDecodeIcon(uri.LocalPath)).ConfigureAwait(false);
+                    decoded = await Task.Run(() => TryDecodeIcon(uri.LocalPath), token).ConfigureAwait(false);
                 }
                 else if (uri.Scheme is "http" or "https")
                 {
-                    var bytes = await _iconHttpClient.GetByteArrayAsync(uri).ConfigureAwait(false);
+                    var bytes = await _iconHttpClient.GetByteArrayAsync(uri, token).ConfigureAwait(false);
                     decoded = TryDecodeIcon(bytes, uri.Host);
                 }
                 else { CacheIcon(hash, null); return; }
@@ -290,8 +297,13 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
                 _iconLoadSemaphore.Release();
             }
 
-            await Dispatcher.UIThread.InvokeAsync(() => IconBitmap = bitmap);
+            if (token.IsCancellationRequested) return;
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (!token.IsCancellationRequested) IconBitmap = bitmap;
+            });
         }
+        catch (OperationCanceledException) { /* row discarded before its icon finished loading */ }
         catch { CacheIcon(hash, null); }
     }
 
@@ -400,6 +412,9 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         _installerHostCheckCts?.Cancel();
         _installerHostCheckCts?.Dispose();
         _installerHostCheckCts = null;
+        // Cancel any queued/in-flight icon load so it stops rooting this wrapper. Not disposed:
+        // a background load may still hold the token; the source is tiny and has no handle to leak.
+        _lifetimeCts.Cancel();
     }
 }
 

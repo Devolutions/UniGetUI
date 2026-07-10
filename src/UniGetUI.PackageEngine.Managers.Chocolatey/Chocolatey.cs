@@ -369,7 +369,7 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
 
         protected override void _loadManagerVersion(out string version)
         {
-            Process process = new()
+            using Process process = new()
             {
                 StartInfo = new ProcessStartInfo
                 {

@@ -91,10 +91,13 @@ internal sealed class CratesIOClient
 
     internal static T Fetch<T>(Uri url)
     {
-        HttpClient client = new(CoreTools.GenericHttpClientParameters);
+        using HttpClient client = new(CoreTools.GenericHttpClientParameters);
         client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using HttpResponseMessage response = client.Send(request);
+        response.EnsureSuccessStatusCode();
 
-        var manifestStr = client.GetStringAsync(url).GetAwaiter().GetResult();
+        string manifestStr = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
         var manifest =
             CargoJson.Deserialize<T>(manifestStr)

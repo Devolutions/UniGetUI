@@ -374,7 +374,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             var (found, path) = CoreTools.Which("scoop-search.exe");
             if (!found)
             {
-                Process proc = new()
+                using Process proc = new()
                 {
                     StartInfo = new ProcessStartInfo
                     {
@@ -553,7 +553,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 
         protected override void _loadManagerVersion(out string version)
         {
-            Process process = new()
+            using Process process = new()
             {
                 StartInfo = new ProcessStartInfo
                 {

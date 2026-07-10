@@ -589,7 +589,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             bool usesCliHelper = WinGetHelper.Instance is WinGetCliHelper;
             bool usesPingetHelper = WinGetHelper.Instance is PingetCliHelper;
 
-            Process process = new()
+            using Process process = new()
             {
                 StartInfo = new ProcessStartInfo
                 {

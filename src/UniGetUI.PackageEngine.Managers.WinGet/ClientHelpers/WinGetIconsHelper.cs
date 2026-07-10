@@ -38,7 +38,7 @@ internal static class WinGetIconsHelper
         using (StreamWriter streamWriter = new(httpRequest.GetRequestStream()))
             streamWriter.Write(data);
 
-        var httpResponse = httpRequest.GetResponse() as HttpWebResponse;
+        using var httpResponse = httpRequest.GetResponse() as HttpWebResponse;
         if (httpResponse is null)
         {
             Logger.Warn($"Null MS Store response for uri={url} and data={data}");

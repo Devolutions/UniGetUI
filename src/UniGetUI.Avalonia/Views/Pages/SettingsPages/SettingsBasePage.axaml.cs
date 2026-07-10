@@ -83,8 +83,11 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
     private void NavigateBack()
     {
         if (_history.Count == 0) return;
-        var prev = _history.Pop();
-        NavigateToPage(prev, forward: false);
+
+        var discardedPage = _currentContent;
+        var previousPage = _history.Pop();
+        NavigateToPage(previousPage, forward: false);
+        DisposePage(discardedPage);
     }
 
     private void Page_NavigationRequested(object? sender, Type e)
@@ -159,12 +162,11 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
 
     public void OnEnter()
     {
-        _history.Clear();
-        NavigateToPage(_isManagers ? GetManagersHomepage() : GetSettingsHomepage());
+        ResetToHomepage();
         VM.IsRestartBannerVisible = false;
     }
 
-    public void OnLeave() { }
+    public void OnLeave() => ResetToHomepage();
 
     // ── IInnerNavigationPage extra overloads ──────────────────────────────
 
@@ -185,6 +187,27 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
+
+    private void ResetToHomepage()
+    {
+        UserControl homepage = _isManagers ? GetManagersHomepage() : GetSettingsHomepage();
+
+        while (_history.TryPop(out var page))
+            if (!ReferenceEquals(page, homepage))
+                DisposePage(page);
+
+        if (ReferenceEquals(_currentContent, homepage)) return;
+
+        var discardedPage = _currentContent;
+        NavigateToPage(homepage);
+        DisposePage(discardedPage);
+    }
+
+    private static void DisposePage(UserControl? page)
+    {
+        if (page is IDisposable disposable)
+            disposable.Dispose();
+    }
 
     private MainWindowViewModel? GetMainWindowViewModel() =>
         (TopLevel.GetTopLevel(this) is Window { DataContext: MainWindowViewModel vm }) ? vm : null;

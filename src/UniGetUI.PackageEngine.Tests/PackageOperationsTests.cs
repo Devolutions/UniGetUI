@@ -362,6 +362,23 @@ public sealed class PackageOperationsTests
         }
     }
 
+    [Fact]
+    public async Task CancelWaitsForTheActiveOperationToCompleteCleanup()
+    {
+        using var operation = new CancellationAwareStubOperation();
+        Task mainThread = operation.MainThread();
+        await operation.PerformStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        operation.Cancel();
+        await operation.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.False(mainThread.IsCompleted);
+        operation.AllowCleanupToComplete.TrySetResult(true);
+        await mainThread;
+
+        Assert.Equal(OperationStatus.Canceled, operation.Status);
+    }
+
     private static IReadOnlyList<AbstractOperation.InnerOperation> GetInnerOperations(
         AbstractOperation operation,
         string fieldName
@@ -491,6 +508,52 @@ public sealed class PackageOperationsTests
         {
             return Task.FromResult(_veredict);
         }
+    }
+
+    private sealed class CancellationAwareStubOperation : AbstractOperation
+    {
+        public TaskCompletionSource<bool> PerformStarted { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        public TaskCompletionSource<bool> CancellationObserved { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        public TaskCompletionSource<bool> AllowCleanupToComplete { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+
+        public CancellationAwareStubOperation()
+            : base(queue_enabled: false)
+        {
+            Metadata.Status = "Cancelable stub status";
+            Metadata.Title = "Cancelable stub title";
+            Metadata.OperationInformation = "Cancelable stub info";
+            Metadata.SuccessTitle = "Cancelable stub success";
+            Metadata.SuccessMessage = "Cancelable stub success";
+            Metadata.FailureTitle = "Cancelable stub failure";
+            Metadata.FailureMessage = "Cancelable stub failure";
+        }
+
+        protected override void ApplyRetryAction(string retryMode) { }
+
+        protected override async Task<OperationVeredict> PerformOperation()
+        {
+            PerformStarted.TrySetResult(true);
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, CancellationToken);
+            }
+            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+            {
+                CancellationObserved.TrySetResult(true);
+                await AllowCleanupToComplete.Task;
+                return OperationVeredict.Canceled;
+            }
+
+            return OperationVeredict.Success;
+        }
+
+        public override Task<Uri> GetOperationIcon() => Task.FromResult(new Uri("about:blank"));
     }
 
     private sealed class LoggingStubOperation : AbstractOperation

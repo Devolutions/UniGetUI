@@ -266,10 +266,10 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
             List<string> results = [];
 
-            HttpClient client = new(CoreTools.GenericHttpClientParameters);
+            using HttpClient client = new(CoreTools.GenericHttpClientParameters);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-
-            HttpResponseMessage response = client.GetAsync(SearchUrl).GetAwaiter().GetResult();
+            using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
+            using HttpResponseMessage response = client.Send(request);
             if (!response.IsSuccessStatusCode)
             {
                 Logger.Warn(

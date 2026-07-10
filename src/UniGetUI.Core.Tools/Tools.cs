@@ -149,7 +149,7 @@ namespace UniGetUI.Core.Tools
             string command =
                 $"Wait-Process -Id {currentProcessId}; Start-Process -FilePath '{escapedExecutablePath}'";
 
-            Process.Start(
+            using var process = Process.Start(
                 new ProcessStartInfo
                 {
                     FileName = "powershell.exe",
@@ -356,9 +356,8 @@ namespace UniGetUI.Core.Tools
             try
             {
                 using HttpClient client = new(CoreTools.GenericHttpClientParameters);
-                HttpResponseMessage response = client.Send(
-                    new HttpRequestMessage(HttpMethod.Head, url)
-                );
+                using var request = new HttpRequestMessage(HttpMethod.Head, url);
+                using HttpResponseMessage response = client.Send(request);
                 return response.Content.Headers.ContentLength ?? 0;
             }
             catch (Exception e)
@@ -377,9 +376,8 @@ namespace UniGetUI.Core.Tools
                 var handler = CoreTools.GenericHttpClientParameters;
                 handler.AllowAutoRedirect = false;
                 using HttpClient client = new(handler);
-                HttpResponseMessage response = client.Send(
-                    new HttpRequestMessage(HttpMethod.Head, url)
-                );
+                using var request = new HttpRequestMessage(HttpMethod.Head, url);
+                using HttpResponseMessage response = client.Send(request);
 
                 if (
                     response.StatusCode
@@ -935,7 +933,7 @@ namespace UniGetUI.Core.Tools
                     return;
                 }
 
-                Process p = new()
+                using Process p = new()
                 {
                     StartInfo = new()
                     {
@@ -947,7 +945,6 @@ namespace UniGetUI.Core.Tools
                 };
                 p.Start();
                 await p.WaitForExitAsync();
-                p.Dispose();
             }
             catch (Exception ex)
             {
@@ -962,7 +959,7 @@ namespace UniGetUI.Core.Tools
                 if (path is null)
                     return;
 
-                var p = new Process()
+                using var p = new Process()
                 {
                     StartInfo = new() { FileName = path, UseShellExecute = true, CreateNoWindow = true, },
                 };

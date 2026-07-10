@@ -222,7 +222,7 @@ namespace UniGetUI.PackageEngine.Managers.BunManager
 
         protected override void _loadManagerVersion(out string version)
         {
-            Process process = new()
+            using Process process = new()
             {
                 StartInfo = new ProcessStartInfo
                 {

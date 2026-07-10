@@ -130,6 +130,27 @@ public class TaskRecyclerTests
     }
 
     [Fact]
+    public async Task FaultedTaskIsEvictedBeforeTheNextCall()
+    {
+        int calls = 0;
+        Func<int> method = () =>
+        {
+            if (Interlocked.Increment(ref calls) == 1)
+                throw new InvalidOperationException("Expected first attempt failure");
+            return 42;
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await TaskRecycler<int>.RunOrAttachAsync(method)
+        );
+
+        int result = await TaskRecycler<int>.RunOrAttachAsync(method);
+
+        Assert.Equal(42, result);
+        Assert.Equal(2, calls);
+    }
+
+    [Fact]
     public async Task TestTaskRecycler_Class_String()
     {
         var class1 = new TestClass();

@@ -10,11 +10,7 @@ public class DownloadOperation : AbstractOperation
     private readonly IPackage _package;
     public IPackage Package => _package;
     private string downloadLocation;
-    public string DownloadLocation
-    {
-        get => downloadLocation;
-    }
-    private bool canceled;
+    public string DownloadLocation => downloadLocation;
 
     public DownloadOperation(IPackage package, string downloadPath)
         : base(true, null)
@@ -23,10 +19,7 @@ public class DownloadOperation : AbstractOperation
         _package = package;
 
         Metadata.OperationInformation =
-            "Downloading installer for Package="
-            + _package.Id
-            + " with Manager="
-            + _package.Manager.Name;
+            "Downloading installer for Package=" + _package.Id + " with Manager=" + _package.Manager.Name;
         Metadata.Title = CoreTools.Translate(
             "{package} installer download",
             new Dictionary<string, object?> { { "package", _package.Name } }
@@ -45,11 +38,6 @@ public class DownloadOperation : AbstractOperation
             "{package} installer could not be downloaded",
             new Dictionary<string, object?> { { "package", _package.Name } }
         );
-
-        CancelRequested += (_, _) =>
-        {
-            canceled = true;
-        };
     }
 
     public override Task<Uri> GetOperationIcon()
@@ -57,27 +45,26 @@ public class DownloadOperation : AbstractOperation
         return Task.Run(_package.GetIconUrl);
     }
 
-    protected override void ApplyRetryAction(string retryMode)
-    {
-        // Do nothing
-    }
+    protected override void ApplyRetryAction(string retryMode) { }
 
     protected override async Task<OperationVeredict> PerformOperation()
     {
-        canceled = false;
+        bool downloadFileCreated = false;
         try
         {
+            CancellationToken.ThrowIfCancellationRequested();
             Line(
                 $"Fetching download url for package {_package.Name} from {_package.Manager.DisplayName}...",
                 LineType.Information
             );
             await _package.Details.Load();
+            CancellationToken.ThrowIfCancellationRequested();
             Uri? downloadUrl = _package.Details.InstallerUrl;
             if (downloadUrl is null)
             {
                 Line(
                     $"UniGetUI was not able to find any installer for this package. "
-                        + $"Please check that this package has an applicable installer and try again later",
+                        + "Please check that this package has an applicable installer and try again later",
                     LineType.Error
                 );
                 return OperationVeredict.Failure;
@@ -86,6 +73,7 @@ public class DownloadOperation : AbstractOperation
             if (Directory.Exists(downloadLocation))
             {
                 string? fileName = await _package.GetInstallerFileName();
+                CancellationToken.ThrowIfCancellationRequested();
                 if (fileName is null)
                 {
                     Line(
@@ -101,62 +89,64 @@ public class DownloadOperation : AbstractOperation
             using var httpClient = new HttpClient(CoreTools.GenericHttpClientParameters);
             using var response = await httpClient.GetAsync(
                 downloadUrl,
-                HttpCompletionOption.ResponseHeadersRead
+                HttpCompletionOption.ResponseHeadersRead,
+                CancellationToken
             );
-
             response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? -1L;
             var canReportProgress = totalBytes > 0;
-
-            using var contentStream = await response.Content.ReadAsStreamAsync();
-            using var fileStream = new FileStream(
+            await using (var contentStream = await response.Content.ReadAsStreamAsync(CancellationToken))
+            await using (var fileStream = new FileStream(
                 downloadLocation,
                 FileMode.Create,
                 FileAccess.Write,
                 FileShare.None,
                 8192,
-                true
-            );
-
-            var buffer = new byte[4 * 1024 * 1024];
-            long totalRead = 0;
-            int bytesRead;
-
-            int oldProgress = -1;
-            while ((bytesRead = await contentStream.ReadAsync(buffer)) > 0)
+                useAsync: true
+            ))
             {
-                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                totalRead += bytesRead;
-
-                if (canReportProgress)
+                downloadFileCreated = true;
+                var buffer = new byte[4 * 1024 * 1024];
+                long totalRead = 0;
+                int oldProgress = -1;
+                int bytesRead;
+                while (
+                    (bytesRead = await contentStream.ReadAsync(buffer.AsMemory(), CancellationToken)) > 0
+                )
                 {
-                    var progress = (int)((totalRead * 100L) / totalBytes);
-                    if (progress != oldProgress)
+                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), CancellationToken);
+                    totalRead += bytesRead;
+
+                    if (canReportProgress)
                     {
-                        oldProgress = progress;
-                        Line(
-                            CoreTools.TextProgressGenerator(
-                                30,
-                                progress,
-                                $"{CoreTools.FormatAsSize(totalRead)}/{CoreTools.FormatAsSize(totalBytes)}"
-                            ),
-                            LineType.ProgressIndicator
-                        );
+                        var progress = (int)((totalRead * 100L) / totalBytes);
+                        if (progress != oldProgress)
+                        {
+                            oldProgress = progress;
+                            Line(
+                                CoreTools.TextProgressGenerator(
+                                    30,
+                                    progress,
+                                    $"{CoreTools.FormatAsSize(totalRead)}/{CoreTools.FormatAsSize(totalBytes)}"
+                                ),
+                                LineType.ProgressIndicator
+                            );
+                        }
                     }
-                }
-
-                if (canceled)
-                {
-                    fileStream.Close();
-                    File.Delete(downloadLocation);
-                    Line("User has canceled the operation", LineType.Error);
-                    return OperationVeredict.Canceled;
                 }
             }
 
+            CancellationToken.ThrowIfCancellationRequested();
             Line($"The file was saved to {downloadLocation}", LineType.Information);
             return OperationVeredict.Success;
+        }
+        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+        {
+            if (downloadFileCreated)
+                File.Delete(downloadLocation);
+            Line("User has canceled the operation", LineType.Error);
+            return OperationVeredict.Canceled;
         }
         catch (Exception ex)
         {

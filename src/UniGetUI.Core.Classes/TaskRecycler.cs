@@ -21,22 +21,18 @@ public static class TaskRecycler<ReturnT>
     private static readonly ConcurrentDictionary<int, Task<ReturnT>> _tasks = new();
     private static readonly ConcurrentDictionary<int, Task> _tasks_VOID = new();
 
-    // ---------------------------------------------------------------------------------------------------------------
-
     public static Task RunOrAttachAsync_VOID(Action method, int cacheTimeSecs = 0)
     {
         int hash = method.GetHashCode();
         return _runTaskAndWait_VOID(new Task(method), hash, cacheTimeSecs);
     }
 
-    /// Asynchronous entry point for 0 parameters
     public static Task<ReturnT> RunOrAttachAsync(Func<ReturnT> method, int cacheTimeSecs = 0)
     {
         int hash = method.GetHashCode();
         return _runTaskAndWait(new Task<ReturnT>(method), hash, cacheTimeSecs);
     }
 
-    /// Asynchronous entry point for 1 parameter
     public static Task<ReturnT> RunOrAttachAsync<ParamT>(
         Func<ParamT, ReturnT> method,
         ParamT arg1,
@@ -47,7 +43,6 @@ public static class TaskRecycler<ReturnT>
         return _runTaskAndWait(new Task<ReturnT>(() => method(arg1)), hash, cacheTimeSecs);
     }
 
-    /// Asynchronous entry point for 2 parameters
     public static Task<ReturnT> RunOrAttachAsync<Param1T, Param2T>(
         Func<Param1T, Param2T, ReturnT> method,
         Param1T arg1,
@@ -59,7 +54,6 @@ public static class TaskRecycler<ReturnT>
         return _runTaskAndWait(new Task<ReturnT>(() => method(arg1, arg2)), hash, cacheTimeSecs);
     }
 
-    /// Asynchronous entry point for 3 parameters
     public static Task<ReturnT> RunOrAttachAsync<Param1T, Param2T, Param3T>(
         Func<Param1T, Param2T, Param3T, ReturnT> method,
         Param1T arg1,
@@ -80,20 +74,15 @@ public static class TaskRecycler<ReturnT>
         );
     }
 
-    // ---------------------------------------------------------------------------------------------------------------
-
-    /// Synchronous entry point for 0 parameters
     public static ReturnT RunOrAttach(Func<ReturnT> method, int cacheTimeSecs = 0) =>
         RunOrAttachAsync(method, cacheTimeSecs).GetAwaiter().GetResult();
 
-    /// Synchronous entry point for 1 parameter1
     public static ReturnT RunOrAttach<ParamT>(
         Func<ParamT, ReturnT> method,
         ParamT arg1,
         int cacheTimeSecs = 0
     ) => RunOrAttachAsync(method, arg1, cacheTimeSecs).GetAwaiter().GetResult();
 
-    /// Synchronous entry point for 2 parameters
     public static ReturnT RunOrAttach<Param1T, Param2T>(
         Func<Param1T, Param2T, ReturnT> method,
         Param1T arg1,
@@ -101,7 +90,6 @@ public static class TaskRecycler<ReturnT>
         int cacheTimeSecs = 0
     ) => RunOrAttachAsync(method, arg1, arg2, cacheTimeSecs).GetAwaiter().GetResult();
 
-    /// Synchronous entry point for 3 parameters
     public static ReturnT RunOrAttach<Param1T, Param2T, Param3T>(
         Func<Param1T, Param2T, Param3T, ReturnT> method,
         Param1T arg1,
@@ -110,104 +98,80 @@ public static class TaskRecycler<ReturnT>
         int cacheTimeSecs = 0
     ) => RunOrAttachAsync(method, arg1, arg2, arg3, cacheTimeSecs).GetAwaiter().GetResult();
 
-    // ---------------------------------------------------------------------------------------------------------------
-
     /// <summary>
     /// Instantly removes a function call from the cache, even if the associated task has not
-    /// finished yet. Any previous call will finish as expected. New calls won't attach to any
+    /// finished yet. Any previous call will finish as expected. New calls will not attach to any
     /// preexisting Tasks, and a new Task will be created instead.
-    /// If the given function call is not present in the cache, nothing will be done.
     /// </summary>
-    /// <param name="method"></param>
     public static void RemoveFromCache(Func<ReturnT> method) =>
-        _removeFromCache(method.GetHashCode(), 0);
+        _tasks.TryRemove(method.GetHashCode(), out _);
 
-    // ---------------------------------------------------------------------------------------------------------------
-
-    /// <summary>
-    /// Handles running the task if no such task was found on cache, and returning the cached task if it was found.
-    /// </summary>
-    private static async Task _runTaskAndWait_VOID(Task task, int hash, int cacheTimeSecsSecs)
+    private static Task _runTaskAndWait_VOID(Task task, int hash, int cacheTimeSecs)
     {
-        if (_tasks_VOID.TryGetValue(hash, out Task? _task))
+        Task cachedTask = _tasks_VOID.GetOrAdd(hash, task);
+        if (ReferenceEquals(cachedTask, task))
         {
-            // Get the cached task, which is either running or finished
-            task = _task;
-        }
-        else if (!_tasks_VOID.TryAdd(hash, task))
-        {
-            // Race condition, an equivalent task got added from another thread between the TryGetValue and TryAdd,
-            // so we are going to restart the call to _runTaskAndWait in order for TryGetValue to return the new task again
-            await _runTaskAndWait_VOID(task, hash, cacheTimeSecsSecs).ConfigureAwait(false);
-            return;
+            task.Start();
+            _ = _scheduleCacheRemoval_VOID(hash, task, cacheTimeSecs);
         }
         else
         {
-            // Now that the new task is in the cache, run the task.
-            task.Start();
+            Interlocked.Increment(ref TaskRecyclerTelemetry.DeduplicatedCalls);
         }
 
-        // Wait for the task to finish
-        await task.ConfigureAwait(false);
-
-        // Schedule the task for removal after the cache time expires
-        _removeFromCache_VOID(hash, cacheTimeSecsSecs);
+        return cachedTask;
     }
 
-    /// <summary>
-    /// Handles running the task if no such task was found on cache, and returning the cached task if it was found.
-    /// </summary>
-    private static async Task<ReturnT> _runTaskAndWait(
-        Task<ReturnT> task,
-        int hash,
-        int cacheTimeSecsSecs
-    )
+    private static Task<ReturnT> _runTaskAndWait(Task<ReturnT> task, int hash, int cacheTimeSecs)
     {
-        if (_tasks.TryGetValue(hash, out Task<ReturnT>? _task))
+        Task<ReturnT> cachedTask = _tasks.GetOrAdd(hash, task);
+        if (ReferenceEquals(cachedTask, task))
         {
-            // Get the cached task, which is either running or finished
-            task = _task;
-        }
-        else if (!_tasks.TryAdd(hash, task))
-        {
-            // Race condition, an equivalent task got added from another thread between the TryGetValue and TryAdd,
-            // so we are going to restart the call to _runTaskAndWait in order for TryGetValue to return the new task again
-            return await _runTaskAndWait(task, hash, cacheTimeSecsSecs).ConfigureAwait(false);
+            task.Start();
+            _ = _scheduleCacheRemoval(hash, task, cacheTimeSecs);
         }
         else
         {
-            // Now that the new task is in the cache, run the task.
-            task.Start();
+            Interlocked.Increment(ref TaskRecyclerTelemetry.DeduplicatedCalls);
         }
 
-        // Wait for the task to finish
-        ReturnT result = await task.ConfigureAwait(false);
-
-        // Schedule the task for removal after the cache time expires
-        _removeFromCache(hash, cacheTimeSecsSecs);
-
-        return result;
+        return cachedTask;
     }
 
-    /// <summary>
-    /// Removes the task associated with the given hash from the cache after the given period of time
-    /// If the given hash is not present, nothing will be done.
-    /// </summary>
-    private static async void _removeFromCache(int hash, int cacheTimeSecsSecs)
+    private static Task _scheduleCacheRemoval(int hash, Task<ReturnT> task, int cacheTimeSecs) =>
+        task.ContinueWith(
+                completedTask => _removeFromCache(hash, completedTask, cacheTimeSecs),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default
+            )
+            .Unwrap();
+
+    private static Task _scheduleCacheRemoval_VOID(int hash, Task task, int cacheTimeSecs) =>
+        task.ContinueWith(
+                completedTask => _removeFromCache_VOID(hash, completedTask, cacheTimeSecs),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default
+            )
+            .Unwrap();
+
+    private static async Task _removeFromCache(int hash, Task<ReturnT> task, int cacheTimeSecs)
     {
-        if (cacheTimeSecsSecs > 0)
-            await Task.Delay(cacheTimeSecsSecs * 1000);
+        if (task.IsCompletedSuccessfully && cacheTimeSecs > 0)
+            await Task.Delay(TimeSpan.FromSeconds(cacheTimeSecs)).ConfigureAwait(false);
 
-        _tasks.Remove(hash, out _);
+        ((ICollection<KeyValuePair<int, Task<ReturnT>>>)_tasks).Remove(new(hash, task));
     }
 
-    private static async void _removeFromCache_VOID(int hash, int cacheTimeSecsSecs)
+    private static async Task _removeFromCache_VOID(int hash, Task task, int cacheTimeSecs)
     {
-        if (cacheTimeSecsSecs > 0)
-            await Task.Delay(cacheTimeSecsSecs * 1000);
+        if (task.IsCompletedSuccessfully && cacheTimeSecs > 0)
+            await Task.Delay(TimeSpan.FromSeconds(cacheTimeSecs)).ConfigureAwait(false);
 
-        _tasks_VOID.Remove(hash, out _);
+        ((ICollection<KeyValuePair<int, Task>>)_tasks_VOID).Remove(new(hash, task));
     }
+
 }
 
 public static class TaskRecyclerTelemetry

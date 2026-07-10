@@ -23,6 +23,11 @@ public abstract partial class AbstractOperation : IDisposable
     protected bool QUEUE_ENABLED;
     protected bool FORCE_HOLD_QUEUE;
     private bool IsInnerOperation;
+    private readonly object CancellationLock = new();
+    private CancellationTokenSource? RunCancellationSource;
+    private AbstractOperation? ActiveInnerOperation;
+    private volatile bool IsExecutingOperation;
+    private bool Disposed;
 
     private readonly List<(string, LineType)> LogList = [];
     private OperationStatus _status = OperationStatus.InQueue;
@@ -73,28 +78,84 @@ public abstract partial class AbstractOperation : IDisposable
 
     public void Cancel()
     {
-        switch (_status)
+        if (_status is OperationStatus.Canceled or OperationStatus.Failed or OperationStatus.Succeeded)
+            return;
+
+        bool wasRunning = _status is OperationStatus.Running;
+        bool hasActiveWork = IsExecutingOperation;
+        Status = OperationStatus.Canceled;
+        CancellationTokenSource? cancellationSource;
+        lock (CancellationLock)
+            cancellationSource = RunCancellationSource;
+        cancellationSource?.Cancel();
+        AbstractOperation? activeInnerOperation;
+        lock (CancellationLock)
+            activeInnerOperation = ActiveInnerOperation;
+        activeInnerOperation?.Cancel();
+
+        if (wasRunning)
+            CancelRequested?.Invoke(this, EventArgs.Empty);
+
+        // A queued operation has no active work to clean up. A running operation stays on the
+        // queue until MainThread has awaited its task and completed its cleanup.
+        if (!hasActiveWork)
         {
-            case OperationStatus.Canceled:
-                break;
-            case OperationStatus.Failed:
-                break;
-            case OperationStatus.Running:
-                Status = OperationStatus.Canceled;
-                while (OperationQueue.Remove(this))
-                    ;
-                CancelRequested?.Invoke(this, EventArgs.Empty);
-                Status = OperationStatus.Canceled;
-                break;
-            case OperationStatus.InQueue:
-                Status = OperationStatus.Canceled;
-                while (OperationQueue.Remove(this))
-                    ;
-                Status = OperationStatus.Canceled;
-                break;
-            case OperationStatus.Succeeded:
-                break;
+            while (OperationQueue.Remove(this))
+                ;
         }
+    }
+
+    protected CancellationToken CancellationToken
+    {
+        get
+        {
+            lock (CancellationLock)
+                return RunCancellationSource?.Token ?? global::System.Threading.CancellationToken.None;
+        }
+    }
+
+    private CancellationTokenSource StartRunCancellation()
+    {
+        var cancellationSource = new CancellationTokenSource();
+        lock (CancellationLock)
+            RunCancellationSource = cancellationSource;
+        return cancellationSource;
+    }
+
+    private bool TrySetActiveInnerOperation(AbstractOperation operation)
+    {
+        bool cancellationRequested;
+        lock (CancellationLock)
+        {
+            cancellationRequested =
+                RunCancellationSource?.IsCancellationRequested is true
+                || Status is OperationStatus.Canceled;
+            if (!cancellationRequested)
+                ActiveInnerOperation = operation;
+        }
+
+        if (cancellationRequested)
+            operation.Cancel();
+
+        return !cancellationRequested;
+    }
+
+    private void ClearActiveInnerOperation(AbstractOperation operation)
+    {
+        lock (CancellationLock)
+            if (ReferenceEquals(ActiveInnerOperation, operation))
+                ActiveInnerOperation = null;
+    }
+
+    private void EndRunCancellation(CancellationTokenSource cancellationSource)
+    {
+        lock (CancellationLock)
+        {
+            if (!ReferenceEquals(RunCancellationSource, cancellationSource))
+                return;
+            RunCancellationSource = null;
+        }
+        cancellationSource.Dispose();
     }
 
     protected void Line(string line, LineType type)
@@ -116,6 +177,7 @@ public abstract partial class AbstractOperation : IDisposable
 
     public async Task MainThread()
     {
+        CancellationTokenSource runCancellation = StartRunCancellation();
         try
         {
             if (Metadata.Status == "")
@@ -176,7 +238,16 @@ public abstract partial class AbstractOperation : IDisposable
             }
             // END QUEUE HANDLER
 
-            var result = await _runOperation();
+            IsExecutingOperation = true;
+            OperationVeredict result;
+            try
+            {
+                result = await _runOperation();
+            }
+            finally
+            {
+                IsExecutingOperation = false;
+            }
             while (OperationQueue.Remove(this))
                 ;
 
@@ -250,8 +321,16 @@ public abstract partial class AbstractOperation : IDisposable
         }
         finally
         {
-            if (OperationQueue.Count == 0)
-                QueueDrained?.Invoke(null, EventArgs.Empty);
+            try
+            {
+                OnRunCompleted();
+            }
+            finally
+            {
+                EndRunCancellation(runCancellation);
+                if (OperationQueue.Count == 0)
+                    QueueDrained?.Invoke(null, EventArgs.Empty);
+            }
         }
     }
 
@@ -266,13 +345,27 @@ public abstract partial class AbstractOperation : IDisposable
             Line("", LineType.VerboseDetails);
         foreach (var preReq in PreOperations)
         {
+            if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
+                return OperationVeredict.Canceled;
+
             i++;
             Line(
                     CoreTools.Translate("Running PreOperation ({0}/{1})...", i, count),
                 LineType.Information
             );
             preReq.Operation.LogLineAdded += (_, line) => Line(line.Item1, line.Item2);
-            await preReq.Operation.MainThread();
+            if (!TrySetActiveInnerOperation(preReq.Operation))
+                return OperationVeredict.Canceled;
+            try
+            {
+                await preReq.Operation.MainThread();
+            }
+            finally
+            {
+                ClearActiveInnerOperation(preReq.Operation);
+            }
+            if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
+                return OperationVeredict.Canceled;
             if (preReq.Operation.Status is not OperationStatus.Succeeded && preReq.MustSucceed)
             {
                 Line(
@@ -305,29 +398,26 @@ public abstract partial class AbstractOperation : IDisposable
 
         do
         {
+            if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
+            {
+                result = OperationVeredict.Canceled;
+                break;
+            }
+
             OperationStarting?.Invoke(this, EventArgs.Empty);
 
             try
             {
-                // Check if the operation was canceled
-                if (Status is OperationStatus.Canceled)
-                {
-                    result = OperationVeredict.Canceled;
-                    break;
-                }
-
                 Task<OperationVeredict> op = PerformOperation();
-                while (Status != OperationStatus.Canceled && !op.IsCompleted)
-                    await Task.Delay(100);
-
-                if (Status is OperationStatus.Canceled)
+                result = await op.ConfigureAwait(false);
+                if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
                     result = OperationVeredict.Canceled;
-                else
-                    result = op.GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
-                result = OperationVeredict.Failure;
+                result = CancellationToken.IsCancellationRequested
+                    ? OperationVeredict.Canceled
+                    : OperationVeredict.Failure;
                 Logger.Error(e);
                 foreach (string l in e.ToString().Split("\n"))
                 {
@@ -351,8 +441,22 @@ public abstract partial class AbstractOperation : IDisposable
                 CoreTools.Translate("Running PostOperation ({0}/{1})...", i, count),
                 LineType.Information
             );
+            if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
+                return OperationVeredict.Canceled;
+
             postReq.Operation.LogLineAdded += (_, line) => Line(line.Item1, line.Item2);
-            await postReq.Operation.MainThread();
+            if (!TrySetActiveInnerOperation(postReq.Operation))
+                return OperationVeredict.Canceled;
+            try
+            {
+                await postReq.Operation.MainThread();
+            }
+            finally
+            {
+                ClearActiveInnerOperation(postReq.Operation);
+            }
+            if (Status is OperationStatus.Canceled || CancellationToken.IsCancellationRequested)
+                return OperationVeredict.Canceled;
             if (postReq.Operation.Status is not OperationStatus.Succeeded && postReq.MustSucceed)
             {
                 Line(
@@ -437,9 +541,25 @@ public abstract partial class AbstractOperation : IDisposable
     protected abstract Task<OperationVeredict> PerformOperation();
     public abstract Task<Uri> GetOperationIcon();
 
+    protected virtual void OnRunCompleted() { }
+
     public void Dispose()
     {
-        while (OperationQueue.Remove(this))
-            ;
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing || Disposed)
+            return;
+
+        Disposed = true;
+        Cancel();
+        if (!IsExecutingOperation)
+        {
+            while (OperationQueue.Remove(this))
+                ;
+        }
     }
 }

@@ -21,13 +21,15 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 LoggableTaskType.LoadPackageDetails
             );
 
-            string JsonString;
-            HttpClient client = new(CoreTools.GenericHttpClientParameters);
+            using HttpClient client = new(CoreTools.GenericHttpClientParameters);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            JsonString = client
-                .GetStringAsync($"https://pypi.org/pypi/{details.Package.Id}/json")
-                .GetAwaiter()
-                .GetResult();
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"https://pypi.org/pypi/{details.Package.Id}/json"
+            );
+            using HttpResponseMessage response = client.Send(request);
+            response.EnsureSuccessStatusCode();
+            string JsonString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
             JsonObject? contents = JsonNode.Parse(JsonString) as JsonObject;
 

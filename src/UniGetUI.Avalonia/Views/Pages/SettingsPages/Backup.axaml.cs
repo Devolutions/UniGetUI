@@ -4,8 +4,10 @@ using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
-public sealed partial class Backup : UserControl, ISettingsPage
+public sealed partial class Backup : UserControl, ISettingsPage, IDisposable
 {
+    private readonly BackupViewModel _viewModel;
+
     public bool CanGoBack => true;
     public string ShortTitle => CoreTools.Translate("Backup and Restore");
 
@@ -14,9 +16,18 @@ public sealed partial class Backup : UserControl, ISettingsPage
 
     public Backup()
     {
-        DataContext = new BackupViewModel();
+        _viewModel = new BackupViewModel();
+        DataContext = _viewModel;
         InitializeComponent();
 
-        ((BackupViewModel)DataContext).RestartRequired += (s, e) => RestartRequired?.Invoke(s, e);
+        _viewModel.RestartRequired += OnRestartRequired;
+    }
+
+    private void OnRestartRequired(object? sender, EventArgs e) => RestartRequired?.Invoke(sender, e);
+
+    public void Dispose()
+    {
+        _viewModel.RestartRequired -= OnRestartRequired;
+        _viewModel.Dispose();
     }
 }

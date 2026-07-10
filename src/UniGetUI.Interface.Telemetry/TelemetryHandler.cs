@@ -280,7 +280,7 @@ public static class TelemetryHandler
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
 
-            HttpResponseMessage response = TestSendAsyncOverride is { } sendAsync
+            using HttpResponseMessage response = TestSendAsyncOverride is { } sendAsync
                 ? await sendAsync(request)
                 : await _httpClient.SendAsync(request);
 
@@ -357,7 +357,7 @@ public static class TelemetryHandler
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
 
-            HttpResponseMessage response = TestSendAsyncOverride is { } sendAsync
+            using HttpResponseMessage response = TestSendAsyncOverride is { } sendAsync
                 ? await sendAsync(request)
                 : await _httpClient.SendAsync(request);
 

@@ -9,8 +9,13 @@ using MvvmRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace UniGetUI.Avalonia.ViewModels.Controls;
 
-public class UserAvatarViewModel : ViewModelBase
+public class UserAvatarViewModel : ViewModelBase, IDisposable
 {
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly CancellationToken _lifetimeToken;
+    private int _isDisposed;
+    private long _refreshGeneration;
+
     private bool _isAuthenticated;
     public bool IsAuthenticated
     {
@@ -38,15 +43,32 @@ public class UserAvatarViewModel : ViewModelBase
 
     public UserAvatarViewModel()
     {
+        _lifetimeToken = _lifetimeCancellation.Token;
         LoginCommand = new AsyncRelayCommand(LoginAsync);
         LogoutCommand = new MvvmRelayCommand(Logout);
         MoreDetailsCommand = new MvvmRelayCommand(() => CoreTools.Launch("https://devolutions.net/unigetui"));
-        GitHubAuthService.AuthStatusChanged += (_, _) => _ = RefreshAsync();
+        GitHubAuthService.AuthStatusChanged += OnAuthStatusChanged;
         _ = RefreshAsync();
+    }
+
+    private bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
+
+    private bool CanApplyRefresh(long generation) =>
+        !IsDisposed
+        && !_lifetimeToken.IsCancellationRequested
+        && generation == Volatile.Read(ref _refreshGeneration);
+
+    private void OnAuthStatusChanged(object? sender, EventArgs e)
+    {
+        if (!IsDisposed)
+            _ = RefreshAsync();
     }
 
     private async Task RefreshAsync()
     {
+        if (IsDisposed) return;
+
+        long generation = Interlocked.Increment(ref _refreshGeneration);
         var service = new GitHubAuthService();
         bool authenticated = GitHubAuthService.IsAuthenticated();
 
@@ -61,6 +83,8 @@ public class UserAvatarViewModel : ViewModelBase
                 if (client is not null)
                 {
                     GitHubUser user = await client.GetCurrentUserAsync();
+                    if (!CanApplyRefresh(generation)) return;
+
                     displayName = string.IsNullOrEmpty(user.Name)
                         ? $"@{user.Login}"
                         : $"{user.Name} (@{user.Login})";
@@ -68,26 +92,47 @@ public class UserAvatarViewModel : ViewModelBase
                     if (!string.IsNullOrEmpty(user.AvatarUrl))
                     {
                         using var http = new HttpClient(CoreTools.GenericHttpClientParameters);
-                        byte[] bytes = await http.GetByteArrayAsync(user.AvatarUrl);
+                        byte[] bytes = await http.GetByteArrayAsync(user.AvatarUrl, _lifetimeToken);
+                        if (!CanApplyRefresh(generation)) return;
+
                         using var ms = new MemoryStream(bytes);
                         bitmap = new Bitmap(ms);
                     }
                 }
             }
+            catch (OperationCanceledException) when (_lifetimeToken.IsCancellationRequested)
+            {
+                return;
+            }
             catch (Exception ex)
             {
-                Logger.Warn("UserAvatarViewModel: failed to fetch GitHub user info");
-                Logger.Warn(ex);
+                if (!IsDisposed)
+                {
+                    Logger.Warn("UserAvatarViewModel: failed to fetch GitHub user info");
+                    Logger.Warn(ex);
+                }
                 authenticated = false;
             }
         }
 
+        if (!CanApplyRefresh(generation))
+        {
+            bitmap?.Dispose();
+            return;
+        }
+
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
+            if (!CanApplyRefresh(generation)) return;
+
             IsAuthenticated = authenticated;
             UserDisplayName = displayName;
             AvatarBitmap = bitmap;
+            bitmap = null;
         });
+
+        // A queued UI update can become obsolete while it is waiting to run.
+        bitmap?.Dispose();
     }
 
     private async Task LoginAsync()
@@ -98,8 +143,11 @@ public class UserAvatarViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Logger.Error("UserAvatarViewModel: login failed");
-            Logger.Error(ex);
+            if (!IsDisposed)
+            {
+                Logger.Error("UserAvatarViewModel: login failed");
+                Logger.Error(ex);
+            }
         }
     }
 
@@ -108,8 +156,21 @@ public class UserAvatarViewModel : ViewModelBase
         try { new GitHubAuthService().SignOut(); }
         catch (Exception ex)
         {
-            Logger.Error("UserAvatarViewModel: logout failed");
-            Logger.Error(ex);
+            if (!IsDisposed)
+            {
+                Logger.Error("UserAvatarViewModel: logout failed");
+                Logger.Error(ex);
+            }
         }
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) != 0) return;
+
+        GitHubAuthService.AuthStatusChanged -= OnAuthStatusChanged;
+        // In-flight HTTP work can still observe this token. Cancelling is sufficient;
+        // disposing the source here could race with that work.
+        _lifetimeCancellation.Cancel();
     }
 }

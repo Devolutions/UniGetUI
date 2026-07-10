@@ -20,23 +20,10 @@ public abstract class AbstractProcessOperation : AbstractOperation
         : base(queue_enabled, preOps, postOps)
     {
         process = new();
-        CancelRequested += (_, _) =>
-        {
-            try
-            {
-                process.Kill();
-                ProcessKilled = true;
-            }
-            catch (InvalidOperationException e)
-            {
-                Line(
-                    "Attempted to cancel a process that hasn't ben created yet: " + e.Message,
-                    LineType.Error
-                );
-            }
-        };
+        CancelRequested += (_, _) => StopProcess();
         OperationStarting += (_, _) =>
         {
+            DisposeProcess();
             ProcessKilled = false;
             process = new();
             process.StartInfo.UseShellExecute = false;
@@ -56,12 +43,10 @@ public abstract class AbstractProcessOperation : AbstractOperation
             {
                 if (e.Data is null)
                     return;
-                string line = e.Data.ToString().Trim();
+                string line = e.Data.Trim();
                 var lineType = LineType.Error;
                 if (line.Length < 6 || line.Contains("Waiting for another install..."))
-                {
                     lineType = LineType.ProgressIndicator;
-                }
 
                 Line(line, lineType);
             };
@@ -98,12 +83,11 @@ public abstract class AbstractProcessOperation : AbstractOperation
         if (process.StartInfo.Arguments == "lol")
             throw new InvalidOperationException("StartInfo.Arguments has not been set");
 
-        Line($"Executing process with StartInfo:", LineType.VerboseDetails);
+        Line("Executing process with StartInfo:", LineType.VerboseDetails);
         Line($" - FileName: \"{process.StartInfo.FileName.Trim()}\"", LineType.VerboseDetails);
         Line($" - Arguments: \"{process.StartInfo.Arguments.Trim()}\"", LineType.VerboseDetails);
         Line($"Start Time: \"{DateTime.Now}\"", LineType.VerboseDetails);
 
-        // An empty FileName means elevation was required but no elevator (UniGetUI Elevator/GSudo) is available
         if (string.IsNullOrWhiteSpace(process.StartInfo.FileName))
         {
             Line(
@@ -121,18 +105,25 @@ public abstract class AbstractProcessOperation : AbstractOperation
             await CoreTools.CacheUACForCurrentProcess();
         }
 
+        CancellationToken.ThrowIfCancellationRequested();
         process.Start();
+        if (CancellationToken.IsCancellationRequested)
+        {
+            StopProcess();
+            await process.WaitForExitAsync().ConfigureAwait(false);
+            return OperationVeredict.Canceled;
+        }
+
         if (!Settings.Get(Settings.K.DisableNewProcessLineHandler))
         {
-            await process.StandardInput.WriteLineAsync("\r\n\r\n\r\n\r\n");
+            await process.StandardInput.WriteLineAsync("\r\n\r\n\r\n\r\n".AsMemory(), CancellationToken);
             process.StandardInput.Close();
         }
-        // process.BeginOutputReadLine();
         try
         {
             process.BeginErrorReadLine();
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             Logger.Error(ex);
         }
@@ -140,41 +131,56 @@ public abstract class AbstractProcessOperation : AbstractOperation
         StringBuilder currentLine = new();
         char[] buffer = new char[1];
         string? lastStringBeforeLF = null;
-
-        while ((await process.StandardOutput.ReadBlockAsync(buffer)) > 0)
+        try
         {
-            char c = buffer[0];
-            if (c == '\n')
+            while ((await process.StandardOutput.ReadAsync(buffer.AsMemory(), CancellationToken)) > 0)
             {
-                if (currentLine.Length == 0)
+                char c = buffer[0];
+                if (c == 10)
                 {
-                    if (lastStringBeforeLF is not null)
+                    if (currentLine.Length == 0)
                     {
-                        Line(lastStringBeforeLF, LineType.Information);
-                        lastStringBeforeLF = null;
+                        if (lastStringBeforeLF is not null)
+                        {
+                            Line(lastStringBeforeLF, LineType.Information);
+                            lastStringBeforeLF = null;
+                        }
+                        continue;
                     }
-                    continue;
-                }
 
-                string line = currentLine.ToString();
-                Line(line, LineType.Information);
-                currentLine.Clear();
-            }
-            else if (c == '\r')
-            {
-                if (currentLine.Length == 0)
-                    continue;
-                lastStringBeforeLF = currentLine.ToString();
-                Line(lastStringBeforeLF, LineType.ProgressIndicator);
-                currentLine.Clear();
-            }
-            else
-            {
-                currentLine.Append(c);
+                    string line = currentLine.ToString();
+                    Line(line, LineType.Information);
+                    currentLine.Clear();
+                }
+                else if (c == 13)
+                {
+                    if (currentLine.Length == 0)
+                        continue;
+                    lastStringBeforeLF = currentLine.ToString();
+                    Line(lastStringBeforeLF, LineType.ProgressIndicator);
+                    currentLine.Clear();
+                }
+                else
+                {
+                    currentLine.Append(c);
+                }
             }
         }
+        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+        {
+            await process.WaitForExitAsync().ConfigureAwait(false);
+            return OperationVeredict.Canceled;
+        }
 
-        await process.WaitForExitAsync();
+        try
+        {
+            await process.WaitForExitAsync(CancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+        {
+            await process.WaitForExitAsync().ConfigureAwait(false);
+            return OperationVeredict.Canceled;
+        }
 
         Line($"End Time: \"{DateTime.Now}\"", LineType.VerboseDetails);
         Line(
@@ -182,10 +188,9 @@ public abstract class AbstractProcessOperation : AbstractOperation
             LineType.VerboseDetails
         );
 
-        if (ProcessKilled)
+        if (ProcessKilled || CancellationToken.IsCancellationRequested)
             return OperationVeredict.Canceled;
 
-        // Raw output: redacting here would corrupt the phrases result detection matches on.
         List<string> output = new();
         foreach (var line in GetRawOutput())
         {
@@ -196,6 +201,49 @@ public abstract class AbstractProcessOperation : AbstractOperation
         }
 
         return await GetProcessVeredict(process.ExitCode, output);
+    }
+
+    protected override void OnRunCompleted()
+    {
+        DisposeProcess();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing)
+            DisposeProcess();
+    }
+
+    private void StopProcess()
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+                ProcessKilled = true;
+            }
+        }
+        catch (InvalidOperationException) { }
+    }
+
+    private void DisposeProcess()
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+                ProcessKilled = true;
+                process.WaitForExit();
+            }
+        }
+        catch (InvalidOperationException) { }
+        finally
+        {
+            process.Dispose();
+        }
     }
 
     protected abstract Task<OperationVeredict> GetProcessVeredict(

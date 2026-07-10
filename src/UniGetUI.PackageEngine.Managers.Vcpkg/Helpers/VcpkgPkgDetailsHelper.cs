@@ -27,15 +27,15 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
             string PackagePrefix = details.Package.Id.Split(":")[0];
             string PackageName = PackagePrefix.Split("[")[0];
 
-            string JsonString;
-            HttpClient client = new(CoreTools.GenericHttpClientParameters);
+            using HttpClient client = new(CoreTools.GenericHttpClientParameters);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-            JsonString = client
-                .GetStringAsync(
-                    $"https://raw.githubusercontent.com/{VCPKG_REPO}/refs/heads/{VCPKG_PORT_PATH}/{PackageName}/{VCPKG_PORT_FILE}"
-                )
-                .GetAwaiter()
-                .GetResult();
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"https://raw.githubusercontent.com/{VCPKG_REPO}/refs/heads/{VCPKG_PORT_PATH}/{PackageName}/{VCPKG_PORT_FILE}"
+            );
+            using HttpResponseMessage response = client.Send(request);
+            response.EnsureSuccessStatusCode();
+            string JsonString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
             JsonObject? contents = JsonNode.Parse(JsonString) as JsonObject;
 

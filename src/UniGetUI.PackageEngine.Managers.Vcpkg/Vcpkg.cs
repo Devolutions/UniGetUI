@@ -366,7 +366,7 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
         {
             var (_, rootPath) = GetVcpkgRoot();
 
-            Process process = new()
+            using Process process = new()
             {
                 StartInfo = new ProcessStartInfo
                 {

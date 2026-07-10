@@ -90,6 +90,33 @@ public sealed class TelemetryHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Posts_DisposeResponsesReturnedByInjectionSeam()
+    {
+        TelemetryHandler.Configure("telemetry-user", "telemetry-pass");
+        var activityResponse = new TrackingHttpResponseMessage(HttpStatusCode.OK);
+        TelemetryHandler.TestSendAsyncOverride = _ => Task.FromResult<HttpResponseMessage>(activityResponse);
+
+        await TelemetryHandler.InitializeAsync();
+
+        Assert.True(activityResponse.IsDisposed);
+
+        var packageResponse = new TrackingHttpResponseMessage(HttpStatusCode.BadRequest);
+        TelemetryHandler.TestSendAsyncOverride = _ => Task.FromResult<HttpResponseMessage>(packageResponse);
+        var package = new Package(
+            "Telemetry Package",
+            "Telemetry.Package",
+            "1.0.0",
+            new NullSource("Telemetry Source"),
+            NullPackageManager.Instance
+        );
+        TelemetryHandler.UpdatePackage(package, TEL_OP_RESULT.SUCCESS);
+
+        await TelemetryHandler.FlushPackageEventsAsync();
+
+        Assert.True(packageResponse.IsDisposed);
+    }
+
+    [Fact]
     public void ComputeActiveSettingsBitmask_IncludesDeterministicSettingsAndSpecialPaths()
     {
         Settings.Set(Settings.K.DisableAutoUpdateWingetUI, false);
@@ -351,6 +378,18 @@ public sealed class TelemetryHandlerTests : IDisposable
         FieldInfo field = typeof(Settings).GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Static)!;
         object dictionary = field.GetValue(null)!;
         dictionary.GetType().GetMethod("Clear")!.Invoke(dictionary, null);
+    }
+
+    private sealed class TrackingHttpResponseMessage(HttpStatusCode statusCode)
+        : HttpResponseMessage(statusCode)
+    {
+        public bool IsDisposed { get; private set; }
+
+        protected override void Dispose(bool disposing)
+        {
+            IsDisposed = true;
+            base.Dispose(disposing);
+        }
     }
 
     private sealed record CapturedRequest(

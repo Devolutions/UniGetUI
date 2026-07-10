@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageOperations;
 
@@ -6,18 +7,21 @@ namespace UniGetUI.PackageEngine.Operations;
 public class PrePostOperation : AbstractOperation
 {
     private readonly string Payload;
+    private readonly object ProcessLock = new();
+    private Process? ActiveProcess;
 
     public PrePostOperation(string payload)
         : base(true)
     {
         Payload = payload.Replace("\r", "\n").Replace("\n\n", "\n").Replace("\n", "&");
         Metadata.Status = $"Running custom operation {Payload}";
-        Metadata.Title = $"Custom operation";
+        Metadata.Title = "Custom operation";
         Metadata.OperationInformation = " ";
-        Metadata.SuccessTitle = $"Done!";
-        Metadata.SuccessMessage = $"Done!";
-        Metadata.FailureTitle = $"Custom operation failed";
+        Metadata.SuccessTitle = "Done!";
+        Metadata.SuccessMessage = "Done!";
+        Metadata.FailureTitle = "Custom operation failed";
         Metadata.FailureMessage = $"The custom operation {Payload} failed to run";
+        CancelRequested += (_, _) => StopActiveProcess();
     }
 
     protected override void ApplyRetryAction(string retryMode) { }
@@ -25,9 +29,9 @@ public class PrePostOperation : AbstractOperation
     protected override async Task<OperationVeredict> PerformOperation()
     {
         Line($"Running command {Payload}", LineType.Information);
-        var process = new System.Diagnostics.Process
+        using var process = new Process
         {
-            StartInfo = new System.Diagnostics.ProcessStartInfo
+            StartInfo = new ProcessStartInfo
             {
                 FileName = "cmd.exe",
                 Arguments = $"/C {Payload}",
@@ -37,25 +41,87 @@ public class PrePostOperation : AbstractOperation
                 CreateNoWindow = true,
             },
         };
-
-        process.Start();
-        process.BeginErrorReadLine();
-        process.BeginOutputReadLine();
-        process.OutputDataReceived += (s, e) =>
+        DataReceivedEventHandler outputHandler = (_, e) =>
         {
             if (e.Data is not null)
                 Line(e.Data, LineType.Information);
         };
-        process.ErrorDataReceived += (s, e) =>
+        DataReceivedEventHandler errorHandler = (_, e) =>
         {
             if (e.Data is not null)
                 Line(e.Data, LineType.Error);
         };
-        await process.WaitForExitAsync();
+        process.OutputDataReceived += outputHandler;
+        process.ErrorDataReceived += errorHandler;
+        lock (ProcessLock)
+            ActiveProcess = process;
+        bool processStarted = false;
 
-        int exitCode = process.ExitCode;
-        Line($"Exit code is {exitCode}", LineType.Information);
-        return (exitCode == 0 ? OperationVeredict.Success : OperationVeredict.Failure);
+        try
+        {
+            CancellationToken.ThrowIfCancellationRequested();
+            process.Start();
+            processStarted = true;
+            if (CancellationToken.IsCancellationRequested)
+                StopActiveProcess();
+            process.BeginErrorReadLine();
+            process.BeginOutputReadLine();
+
+            try
+            {
+                await process.WaitForExitAsync(CancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+            {
+                await process.WaitForExitAsync().ConfigureAwait(false);
+                return OperationVeredict.Canceled;
+            }
+
+            if (CancellationToken.IsCancellationRequested)
+                return OperationVeredict.Canceled;
+
+            int exitCode = process.ExitCode;
+            Line($"Exit code is {exitCode}", LineType.Information);
+            return exitCode == 0 ? OperationVeredict.Success : OperationVeredict.Failure;
+        }
+        finally
+        {
+            if (processStarted && !process.HasExited)
+            {
+                StopActiveProcess();
+                await process.WaitForExitAsync().ConfigureAwait(false);
+            }
+            process.OutputDataReceived -= outputHandler;
+            process.ErrorDataReceived -= errorHandler;
+            lock (ProcessLock)
+            {
+                if (ReferenceEquals(ActiveProcess, process))
+                    ActiveProcess = null;
+            }
+        }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing)
+            StopActiveProcess();
+    }
+
+    private void StopActiveProcess()
+    {
+        Process? process;
+        lock (ProcessLock)
+            process = ActiveProcess;
+        if (process is null)
+            return;
+
+        try
+        {
+            if (!process.HasExited)
+                process.Kill(entireProcessTree: true);
+        }
+        catch (InvalidOperationException) { }
     }
 
     public override Task<Uri> GetOperationIcon() => Task.FromResult(new Uri("about:blank"));

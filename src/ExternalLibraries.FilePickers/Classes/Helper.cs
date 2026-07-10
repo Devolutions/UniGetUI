@@ -17,6 +17,7 @@ internal static class Helper
     internal static string ShowOpen(nint windowHandle, FOS fos, List<string>? typeFilters = null)
     {
         FileOpenDialog dialog = new();
+        IShellItem item = null!;
         try
         {
             dialog.SetOptions(fos);
@@ -36,13 +37,15 @@ internal static class Helper
                 return string.Empty;
             }
 
-            dialog.GetResult(out IShellItem item);
+            dialog.GetResult(out item);
             item.GetDisplayName(SIGDN.SIGDN_FILESYSPATH, out string path);
             return path;
         }
         finally
         {
 #pragma warning disable CA1416
+            if (item is not null)
+                Marshal.ReleaseComObject(item);
             Marshal.ReleaseComObject(dialog);
 #pragma warning restore CA1416
         }
@@ -56,6 +59,7 @@ internal static class Helper
     )
     {
         FileSaveDialog dialog = new();
+        IShellItem item = null!;
         try
         {
             dialog.SetOptions(fos);
@@ -79,7 +83,7 @@ internal static class Helper
                 return string.Empty;
             }
 
-            dialog.GetResult(out IShellItem item);
+            dialog.GetResult(out item);
             item.GetDisplayName(SIGDN.SIGDN_FILESYSPATH, out string path);
 
             dialog.GetFileTypeIndex(out uint selection);
@@ -92,6 +96,8 @@ internal static class Helper
         finally
         {
 #pragma warning disable CA1416
+            if (item is not null)
+                Marshal.ReleaseComObject(item);
             Marshal.ReleaseComObject(dialog);
 #pragma warning restore CA1416
         }

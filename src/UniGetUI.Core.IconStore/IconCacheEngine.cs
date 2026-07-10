@@ -217,7 +217,8 @@ namespace UniGetUI.Core.IconEngine
                 using HttpClient client = new(CoreTools.GenericHttpClientParameters);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
 
-                HttpResponseMessage response = client.GetAsync(icon.Url).GetAwaiter().GetResult();
+                using var request = new HttpRequestMessage(HttpMethod.Get, icon.Url);
+                using HttpResponseMessage response = client.Send(request);
                 if (!response.IsSuccessStatusCode)
                 {
                     Logger.Warn(
@@ -309,25 +310,27 @@ namespace UniGetUI.Core.IconEngine
                 if (width > MAX_SIDE || height > MAX_SIDE)
                 {
                     File.Move(cachedIconFile, $"{cachedIconFile}.copy");
-                    var image = MagicImageProcessor.BuildPipeline(
-                        $"{cachedIconFile}.copy",
-                        new ProcessImageSettings
-                        {
-                            Width = MAX_SIDE,
-                            Height = MAX_SIDE,
-                            ResizeMode = CropScaleMode.Contain,
-                        }
-                    );
-
-                    // Apply changes and save the image to disk
-                    using (FileStream fileStream = File.Create(cachedIconFile))
+                    using (
+                        var image = MagicImageProcessor.BuildPipeline(
+                            $"{cachedIconFile}.copy",
+                            new ProcessImageSettings
+                            {
+                                Width = MAX_SIDE,
+                                Height = MAX_SIDE,
+                                ResizeMode = CropScaleMode.Contain,
+                            }
+                        )
+                    )
                     {
-                        image.WriteOutput(fileStream);
+                        // Apply changes and save the image to disk
+                        using (FileStream fileStream = File.Create(cachedIconFile))
+                        {
+                            image.WriteOutput(fileStream);
+                        }
+                        Logger.Debug(
+                            $"File {cachedIconFile} was downsized from {width}x{height} to {image.Settings.Width}x{image.Settings.Height}"
+                        );
                     }
-                    Logger.Debug(
-                        $"File {cachedIconFile} was downsized from {width}x{height} to {image.Settings.Width}x{image.Settings.Height}"
-                    );
-                    image.Dispose();
                     File.Delete($"{cachedIconFile}.copy");
                 }
                 else

@@ -106,10 +106,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
                     while (SearchUrl is not null)
                     {
-                        HttpResponseMessage response = client
-                            .GetAsync(SearchUrl)
-                            .GetAwaiter()
-                            .GetResult();
+                        using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
+                        using HttpResponseMessage response = client.Send(request);
 
                         if (!response.IsSuccessStatusCode)
                         {
@@ -246,10 +244,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
                     using HttpClient client = new(CoreTools.GenericHttpClientParameters);
                     client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
-                    HttpResponseMessage response = client
-                        .GetAsync(SearchUrl)
-                        .GetAwaiter()
-                        .GetResult();
+                    using var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
+                    using HttpResponseMessage response = client.Send(request);
 
                     if (!response.IsSuccessStatusCode)
                     {

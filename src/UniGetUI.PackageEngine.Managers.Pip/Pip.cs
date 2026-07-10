@@ -195,7 +195,8 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
             client.DefaultRequestHeaders.Add("Accept", "application/vnd.pypi.simple.v1+json");
 
-            HttpResponseMessage response = client.GetAsync("https://pypi.org/simple/").GetAwaiter().GetResult();
+            using var request = new HttpRequestMessage(HttpMethod.Get, "https://pypi.org/simple/");
+            using HttpResponseMessage response = client.Send(request);
             if (!response.IsSuccessStatusCode)
                 throw new HttpRequestException($"PyPI simple index returned {(int)response.StatusCode} {response.ReasonPhrase}");
 
@@ -251,9 +252,15 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             await _versionFetchSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
-                string json = await _httpClient
-                    .GetStringAsync($"https://pypi.org/pypi/{Uri.EscapeDataString(packageName)}/json")
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    $"https://pypi.org/pypi/{Uri.EscapeDataString(packageName)}/json"
+                );
+                using HttpResponseMessage response = await _httpClient
+                    .SendAsync(request)
                     .ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                string json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return (JsonNode.Parse(json) as JsonObject)?["info"]?["version"]?.GetValue<string>();
             }
             catch
@@ -489,7 +496,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
 
         protected override void _loadManagerVersion(out string version)
         {
-            Process process = new()
+            using Process process = new()
             {
                 StartInfo = new ProcessStartInfo
                 {

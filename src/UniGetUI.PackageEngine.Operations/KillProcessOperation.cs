@@ -16,9 +16,9 @@ public class KillProcessOperation : AbstractOperation
         Metadata.Status = $"Closing process(es) {procName}";
         Metadata.Title = $"Closing process(es) {procName}";
         Metadata.OperationInformation = " ";
-        Metadata.SuccessTitle = $"Done!";
-        Metadata.SuccessMessage = $"Done!";
-        Metadata.FailureTitle = $"Failed to close process";
+        Metadata.SuccessTitle = "Done!";
+        Metadata.SuccessMessage = "Done!";
+        Metadata.FailureTitle = "Failed to close process";
         Metadata.FailureMessage = $"The process(es) {procName} could not be closed";
     }
 
@@ -32,38 +32,50 @@ public class KillProcessOperation : AbstractOperation
                 $"Attempting to close all processes with name {ProcessName}...",
                 LineType.Information
             );
-            var procs = Process.GetProcessesByName(ProcessName.Replace(".exe", ""));
-            foreach (var proc in procs)
+            foreach (var proc in Process.GetProcessesByName(ProcessName.Replace(".exe", "")))
             {
-                if (proc.HasExited)
-                    continue;
-                Line(
-                    $"Attempting to close process {ProcessName} with pid={proc.Id}...",
-                    LineType.VerboseDetails
-                );
-                proc.CloseMainWindow();
-                await Task.WhenAny(proc.WaitForExitAsync(), Task.Delay(1000));
-                if (!proc.HasExited)
+                using (proc)
                 {
-                    if (Settings.Get(Settings.K.KillProcessesThatRefuseToDie))
+                    CancellationToken.ThrowIfCancellationRequested();
+                    if (proc.HasExited)
+                        continue;
+                    Line(
+                        $"Attempting to close process {ProcessName} with pid={proc.Id}...",
+                        LineType.VerboseDetails
+                    );
+                    proc.CloseMainWindow();
+                    await Task.WhenAny(
+                        proc.WaitForExitAsync(CancellationToken),
+                        Task.Delay(1000, CancellationToken)
+                    );
+                    CancellationToken.ThrowIfCancellationRequested();
+                    if (!proc.HasExited)
                     {
-                        Line(
-                            $"Timeout for process {ProcessName}, attempting to kill...",
-                            LineType.Information
-                        );
-                        proc.Kill();
-                    }
-                    else
-                    {
-                        Line(
-                            $"{ProcessName} with pid={proc.Id} did not exit and will not be killed. You can change this from UniGetUI settings.",
-                            LineType.Error
-                        );
+                        if (Settings.Get(Settings.K.KillProcessesThatRefuseToDie))
+                        {
+                            Line(
+                                $"Timeout for process {ProcessName}, attempting to kill...",
+                                LineType.Information
+                            );
+                            proc.Kill(entireProcessTree: true);
+                            await proc.WaitForExitAsync(CancellationToken);
+                        }
+                        else
+                        {
+                            Line(
+                                $"{ProcessName} with pid={proc.Id} did not exit and will not be killed. You can change this from UniGetUI settings.",
+                                LineType.Error
+                            );
+                        }
                     }
                 }
             }
 
             return OperationVeredict.Success;
+        }
+        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+        {
+            return OperationVeredict.Canceled;
         }
         catch (Exception ex)
         {

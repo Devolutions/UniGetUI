@@ -104,7 +104,10 @@ public static class TelemetryHandler
     {
         try
         {
-            if (Settings.Get(Settings.K.DisableTelemetry))
+            // Bail out before waiting for internet or gathering any data when telemetry
+            // can't be sent — opted out, or this build has no OpenSearch credentials
+            // (every from-source/community build). Only the official build proceeds.
+            if (Settings.Get(Settings.K.DisableTelemetry) || !CredentialsConfigured())
                 return;
 
             await CoreTools.WaitForInternetConnection();
@@ -216,7 +219,9 @@ public static class TelemetryHandler
     {
         if (result is null && eventSource is null)
             throw new ArgumentException("result and eventSource cannot both be null");
-        if (Settings.Get(Settings.K.DisableTelemetry))
+        // Skip enqueuing entirely when telemetry can't be sent, so events don't
+        // accumulate only to be drained-and-discarded at flush time.
+        if (Settings.Get(Settings.K.DisableTelemetry) || !CredentialsConfigured())
             return;
 
         _pendingPackageEvents.Enqueue(new UniGetUIPackageEvent
@@ -240,6 +245,9 @@ public static class TelemetryHandler
     /// </summary>
     public static async Task FlushPackageEventsAsync()
     {
+        if (Settings.Get(Settings.K.DisableTelemetry) || !CredentialsConfigured())
+            return;
+
         if (_pendingPackageEvents.IsEmpty)
             return;
 
@@ -311,7 +319,7 @@ public static class TelemetryHandler
     {
         try
         {
-            if (Settings.Get(Settings.K.DisableTelemetry))
+            if (Settings.Get(Settings.K.DisableTelemetry) || !CredentialsConfigured())
                 return;
 
             await CoreTools.WaitForInternetConnection();
@@ -397,8 +405,14 @@ public static class TelemetryHandler
             ArchitectureType = RuntimeInformation.ProcessArchitecture.ToString(),
         };
 
+    // Every field here is constant for the process lifetime, so build it once and
+    // reuse the instance across all events (including each doc in a bulk flush).
+    // The value is only ever read (serialized), never mutated, so sharing is safe;
+    // a benign race just builds it twice with identical results.
+    private static TelemetryPlatformInfo? _platformInfo;
+
     private static TelemetryPlatformInfo BuildPlatformInfo() =>
-        new()
+        _platformInfo ??= new()
         {
             Name = GetPlatformName(),
             Version = Environment.OSVersion.VersionString,

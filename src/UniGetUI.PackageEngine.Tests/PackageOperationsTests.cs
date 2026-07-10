@@ -379,6 +379,144 @@ public sealed class PackageOperationsTests
         Assert.Equal(OperationStatus.Canceled, operation.Status);
     }
 
+    [Fact]
+    public async Task RetryWaitsForCanceledRunCleanupBeforeStartingAgain()
+    {
+        using var operation = new RetryAwareStubOperation();
+        Task firstRun = operation.MainThread();
+        await operation.FirstRunStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        operation.Cancel();
+        await operation.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        operation.Retry(AbstractOperation.RetryMode.Retry);
+
+        await Task.Delay(50);
+        Assert.Equal(1, operation.RunCount);
+        Assert.False(firstRun.IsCompleted);
+
+        operation.AllowCleanupToComplete.TrySetResult(true);
+        await firstRun;
+        await operation.SecondRunStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        await WaitForAsync(() => operation.Status is OperationStatus.Succeeded);
+
+        Assert.Equal(2, operation.RunCount);
+        Assert.Equal(1, operation.MaxConcurrentRuns);
+    }
+
+    [Fact]
+    public async Task ConcurrentMainThreadCallsShareTheActiveRun()
+    {
+        using var operation = new CancellationAwareStubOperation();
+
+        Task firstCall = operation.MainThread();
+        Task secondCall = operation.MainThread();
+
+        Assert.Same(firstCall, secondCall);
+        await operation.PerformStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        operation.Cancel();
+        await operation.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        operation.AllowCleanupToComplete.TrySetResult(true);
+        await firstCall;
+    }
+
+    [Fact]
+    public async Task RetryRequestedFromRetriedRunCompletionSchedulesAnotherRun()
+    {
+        using var operation = new RepeatedRetryStubOperation();
+        await operation.MainThread();
+        operation.OperationFailed += (_, _) =>
+        {
+            if (operation.RunCount == 2)
+                operation.Retry(AbstractOperation.RetryMode.Retry);
+        };
+
+        operation.Retry(AbstractOperation.RetryMode.Retry);
+
+        await operation.ThirdRunStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        await WaitForAsync(() => operation.Status is OperationStatus.Failed);
+        Assert.Equal(3, operation.RunCount);
+    }
+
+    [Fact]
+    public async Task DisposePreventsADeferredRetryFromStarting()
+    {
+        var operation = new RetryAwareStubOperation();
+        Task firstRun = operation.MainThread();
+        await operation.FirstRunStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        operation.Cancel();
+        await operation.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        operation.Retry(AbstractOperation.RetryMode.Retry);
+
+        operation.Dispose();
+        operation.AllowCleanupToComplete.TrySetResult(true);
+        await firstRun;
+        await Task.Delay(50);
+
+        Assert.Equal(1, operation.RunCount);
+        Assert.Throws<ObjectDisposedException>(() =>
+        {
+            _ = operation.MainThread();
+        });
+    }
+
+    [Fact]
+    public async Task DisposeFromTerminalEventPreservesCompletedStatus()
+    {
+        var operation = new RepeatedRetryStubOperation();
+        operation.OperationFailed += (_, _) => operation.Dispose();
+
+        await operation.MainThread();
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+    }
+
+    [Fact]
+    public async Task DisposeFromStartupFailurePreservesFailedStatus()
+    {
+        var operation = new InvalidMetadataStubOperation();
+        operation.OperationFailed += (_, _) => operation.Dispose();
+
+        await operation.MainThread();
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+    }
+
+    [Fact]
+    public async Task RetryOptionFailureDoesNotPreventALaterRetry()
+    {
+        using var operation = new ThrowingRetryStubOperation();
+        await operation.MainThread();
+
+        operation.Retry("InvalidRetryMode");
+        operation.Retry(AbstractOperation.RetryMode.Retry);
+
+        await operation.SecondRunStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.Equal(2, operation.RunCount);
+    }
+
+    [Fact]
+    public async Task CancellationFromEnqueuedDoesNotRemainOnAFullQueue()
+    {
+        using var firstOperation = new CancellationAwareStubOperation(queueEnabled: true);
+        using var canceledOperation = new CancellationAwareStubOperation(queueEnabled: true);
+        AbstractOperation.OperationQueue.Clear();
+        AbstractOperation.MAX_OPERATIONS = 1;
+
+        Task firstRun = firstOperation.MainThread();
+        await firstOperation.PerformStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        canceledOperation.Enqueued += (_, _) => canceledOperation.Cancel();
+
+        await canceledOperation.MainThread().WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(OperationStatus.Canceled, canceledOperation.Status);
+        Assert.DoesNotContain(canceledOperation, AbstractOperation.OperationQueue);
+
+        firstOperation.Cancel();
+        await firstOperation.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        firstOperation.AllowCleanupToComplete.TrySetResult(true);
+        await firstRun;
+    }
+
     private static IReadOnlyList<AbstractOperation.InnerOperation> GetInnerOperations(
         AbstractOperation operation,
         string fieldName
@@ -522,8 +660,8 @@ public sealed class PackageOperationsTests
             TaskCreationOptions.RunContinuationsAsynchronously
         );
 
-        public CancellationAwareStubOperation()
-            : base(queue_enabled: false)
+        public CancellationAwareStubOperation(bool queueEnabled = false)
+            : base(queue_enabled: queueEnabled)
         {
             Metadata.Status = "Cancelable stub status";
             Metadata.Title = "Cancelable stub title";
@@ -551,6 +689,170 @@ public sealed class PackageOperationsTests
             }
 
             return OperationVeredict.Success;
+        }
+
+        public override Task<Uri> GetOperationIcon() => Task.FromResult(new Uri("about:blank"));
+    }
+
+    private sealed class RetryAwareStubOperation : AbstractOperation
+    {
+        private int _concurrentRuns;
+        private int _maxConcurrentRuns;
+        private int _runCount;
+
+        public TaskCompletionSource<bool> FirstRunStarted { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        public TaskCompletionSource<bool> CancellationObserved { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        public TaskCompletionSource<bool> AllowCleanupToComplete { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+        public TaskCompletionSource<bool> SecondRunStarted { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+
+        public int RunCount => Volatile.Read(ref _runCount);
+        public int MaxConcurrentRuns => Volatile.Read(ref _maxConcurrentRuns);
+
+        public RetryAwareStubOperation()
+            : base(queue_enabled: false)
+        {
+            Metadata.Status = "Retryable stub status";
+            Metadata.Title = "Retryable stub title";
+            Metadata.OperationInformation = "Retryable stub info";
+            Metadata.SuccessTitle = "Retryable stub success";
+            Metadata.SuccessMessage = "Retryable stub success";
+            Metadata.FailureTitle = "Retryable stub failure";
+            Metadata.FailureMessage = "Retryable stub failure";
+        }
+
+        protected override void ApplyRetryAction(string retryMode) { }
+
+        protected override async Task<OperationVeredict> PerformOperation()
+        {
+            int concurrentRuns = Interlocked.Increment(ref _concurrentRuns);
+            UpdateMaximum(ref _maxConcurrentRuns, concurrentRuns);
+            int run = Interlocked.Increment(ref _runCount);
+            try
+            {
+                if (run == 1)
+                {
+                    FirstRunStarted.TrySetResult(true);
+                    try
+                    {
+                        await Task.Delay(Timeout.InfiniteTimeSpan, CancellationToken);
+                    }
+                    catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+                    {
+                        CancellationObserved.TrySetResult(true);
+                        await AllowCleanupToComplete.Task;
+                        return OperationVeredict.Canceled;
+                    }
+                }
+
+                SecondRunStarted.TrySetResult(true);
+                return OperationVeredict.Success;
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _concurrentRuns);
+            }
+        }
+
+        private static void UpdateMaximum(ref int target, int value)
+        {
+            int current;
+            do
+            {
+                current = Volatile.Read(ref target);
+                if (current >= value)
+                    return;
+            } while (Interlocked.CompareExchange(ref target, value, current) != current);
+        }
+
+        public override Task<Uri> GetOperationIcon() => Task.FromResult(new Uri("about:blank"));
+    }
+
+    private sealed class RepeatedRetryStubOperation : AbstractOperation
+    {
+        private int _runCount;
+
+        public int RunCount => Volatile.Read(ref _runCount);
+        public TaskCompletionSource<bool> ThirdRunStarted { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+
+        public RepeatedRetryStubOperation()
+            : base(queue_enabled: false)
+        {
+            Metadata.Status = "Repeated retry stub status";
+            Metadata.Title = "Repeated retry stub title";
+            Metadata.OperationInformation = "Repeated retry stub info";
+            Metadata.SuccessTitle = "Repeated retry stub success";
+            Metadata.SuccessMessage = "Repeated retry stub success";
+            Metadata.FailureTitle = "Repeated retry stub failure";
+            Metadata.FailureMessage = "Repeated retry stub failure";
+        }
+
+        protected override void ApplyRetryAction(string retryMode) { }
+
+        protected override Task<OperationVeredict> PerformOperation()
+        {
+            if (Interlocked.Increment(ref _runCount) == 3)
+                ThirdRunStarted.TrySetResult(true);
+            return Task.FromResult(OperationVeredict.Failure);
+        }
+
+        public override Task<Uri> GetOperationIcon() => Task.FromResult(new Uri("about:blank"));
+    }
+
+    private sealed class InvalidMetadataStubOperation : AbstractOperation
+    {
+        public InvalidMetadataStubOperation()
+            : base(queue_enabled: false) { }
+
+        protected override void ApplyRetryAction(string retryMode) { }
+
+        protected override Task<OperationVeredict> PerformOperation()
+            => Task.FromResult(OperationVeredict.Success);
+
+        public override Task<Uri> GetOperationIcon() => Task.FromResult(new Uri("about:blank"));
+    }
+
+    private sealed class ThrowingRetryStubOperation : AbstractOperation
+    {
+        private int _runCount;
+
+        public int RunCount => Volatile.Read(ref _runCount);
+        public TaskCompletionSource<bool> SecondRunStarted { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+
+        public ThrowingRetryStubOperation()
+            : base(queue_enabled: false)
+        {
+            Metadata.Status = "Throwing retry stub status";
+            Metadata.Title = "Throwing retry stub title";
+            Metadata.OperationInformation = "Throwing retry stub info";
+            Metadata.SuccessTitle = "Throwing retry stub success";
+            Metadata.SuccessMessage = "Throwing retry stub success";
+            Metadata.FailureTitle = "Throwing retry stub failure";
+            Metadata.FailureMessage = "Throwing retry stub failure";
+        }
+
+        protected override void ApplyRetryAction(string retryMode)
+        {
+            if (retryMode == "InvalidRetryMode")
+                throw new InvalidOperationException("Invalid retry mode");
+        }
+
+        protected override Task<OperationVeredict> PerformOperation()
+        {
+            if (Interlocked.Increment(ref _runCount) == 2)
+                SecondRunStarted.TrySetResult(true);
+            return Task.FromResult(OperationVeredict.Failure);
         }
 
         public override Task<Uri> GetOperationIcon() => Task.FromResult(new Uri("about:blank"));

@@ -58,7 +58,7 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
                 Manager
             );
 
-            if (!WinGetPkgOperationHelper.UpdateAlreadyInstalled(package))
+            if (!WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package))
             {
                 packages.Add(package);
             }

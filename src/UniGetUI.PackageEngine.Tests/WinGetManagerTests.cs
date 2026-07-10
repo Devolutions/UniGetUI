@@ -1016,6 +1016,74 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.False(package.OverridenOptions.WinGet_DropArchAndScope);
     }
 
+    [Fact]
+    public void ConsumeAlreadyUpgradedSuppression_HidesOnceThenRevealsOnNextScan()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.OneShot")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        // Simulate a completed upgrade to 2.0.0 (as MarkUpgradeAsDone records it).
+        Settings.SetDictionaryItem<string, string>(
+            Settings.K.WinGetAlreadyUpgradedPackages,
+            package.Id,
+            "2.0.0"
+        );
+
+        // First scan hides the still-listed update once, then consumes the mark...
+        Assert.True(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
+        Assert.False(WinGetPkgOperationHelper.UpdateAlreadyInstalled(package));
+
+        // ...so a genuinely-outdated package (no-op upgrade) reappears next scan (issue #5042).
+        Assert.False(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
+    }
+
+    [Fact]
+    public void ConsumeAlreadyUpgradedSuppression_DoesNotHideDifferentAvailableVersion()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.NewerUpdate")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+
+        // A mark from a previous upgrade to a different version must never hide a new update.
+        Settings.SetDictionaryItem<string, string>(
+            Settings.K.WinGetAlreadyUpgradedPackages,
+            package.Id,
+            "2.0.0"
+        );
+
+        Assert.False(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
+        Assert.Equal(
+            "2.0.0",
+            Settings.GetDictionaryItem<string, string>(
+                Settings.K.WinGetAlreadyUpgradedPackages,
+                package.Id
+            )
+        );
+    }
+
+    [Fact]
+    public void ConsumeAlreadyUpgradedSuppression_NoMarkNeverHides()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.NoMark")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        Assert.False(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
+    }
+
     private static void SetCliToolKind(WinGet manager, WinGetCliToolKind kind)
     {
         typeof(WinGet)

@@ -389,6 +389,25 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             ) == package.NewVersionString;
     }
 
+    public static void ClearUpgradeMark(IPackage package)
+    {
+        Settings.RemoveDictionaryKey<string, string>(
+            Settings.K.WinGetAlreadyUpgradedPackages,
+            package.Id
+        );
+    }
+
+    // One-shot suppression: hide a just-upgraded package once (bridges CLI index lag), then clear
+    // the mark so a still-outdated package reappears next scan instead of forever (issue #5042).
+    public static bool ConsumeAlreadyUpgradedSuppression(IPackage package)
+    {
+        if (!UpdateAlreadyInstalled(package))
+            return false;
+
+        ClearUpgradeMark(package);
+        return true;
+    }
+
     public static string GetLastInstalledVersion(string id)
     {
         var val = Settings.GetDictionaryItem<string, string>(

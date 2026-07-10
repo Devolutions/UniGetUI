@@ -360,20 +360,12 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     Manager
                 );
 
-                if (!WinGetPkgOperationHelper.UpdateAlreadyInstalled(UniGetUIPackage))
-                {
-                    NativePackageHandler.AddPackage(UniGetUIPackage, nativePackage);
-                    packages.Add(UniGetUIPackage);
-                    logger.Log(
-                        $"Found package {nativePackage.Name} {nativePackage.Id} on source {source.Name}, from version {version} to version {nativePackage.DefaultInstallVersion.Version}"
-                    );
-                }
-                else
-                {
-                    Logger.Warn(
-                        $"WinGet package {nativePackage.Id} not being shown as an updated as this version has already been marked as installed"
-                    );
-                }
+                // Trust COM IsUpdateAvailable, not the "already upgraded" cache (issue #5042).
+                NativePackageHandler.AddPackage(UniGetUIPackage, nativePackage);
+                packages.Add(UniGetUIPackage);
+                logger.Log(
+                    $"Found package {nativePackage.Name} {nativePackage.Id} on source {source.Name}, from version {version} to version {nativePackage.DefaultInstallVersion.Version}"
+                );
             }
             catch (Exception ex)
             {

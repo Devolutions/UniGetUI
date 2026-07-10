@@ -156,7 +156,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
                 }
 
                 var package = new Package(name, id, version, newVersion, source, Manager);
-                if (!WinGetPkgOperationHelper.UpdateAlreadyInstalled(package))
+                if (!WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package))
                 {
                     Packages.Add(package);
                 }

@@ -6,21 +6,14 @@ using UniGetUI.Core.Logging;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
-/// <summary>
-/// Returns reclaimable memory to the OS once a package load has settled. .NET and the native
-/// allocator keep freed memory committed for reuse, so a search/refresh leaves the working set high
-/// even after the app goes idle. This collects the managed heap and hands the freed pages back so
-/// the reported footprint drops once the list has finished loading. Windows-only, best-effort.
-///
-/// Debounced: a trim is scheduled when a load finishes and cancelled if another load starts, so it
-/// only runs when everything is quiet (and never mid-load).
-/// </summary>
+// Collects and returns the working set to the OS once loading has settled — neither .NET nor the
+// native allocator hand freed memory back on their own. Debounced so it never runs mid-load.
+// Windows-only, best-effort.
 internal static class MemoryTrimmer
 {
     private static readonly TimeSpan SettleDelay = TimeSpan.FromSeconds(3);
     private static DispatcherTimer? _timer;
 
-    /// <summary>Schedule a trim once loading has been quiet for a moment.</summary>
     public static void RequestTrimAfterIdle()
     {
         if (!OperatingSystem.IsWindows()) return;
@@ -35,7 +28,6 @@ internal static class MemoryTrimmer
         _timer.Start();
     }
 
-    /// <summary>Cancel a pending trim because a new load has started.</summary>
     public static void CancelPending()
     {
         if (!OperatingSystem.IsWindows()) return;

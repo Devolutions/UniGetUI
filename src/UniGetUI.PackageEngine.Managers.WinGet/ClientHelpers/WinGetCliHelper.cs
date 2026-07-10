@@ -13,9 +13,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager;
 
 internal sealed class WinGetCliHelper : IWinGetManagerHelper
 {
-    // "winget search a" returns ~12k results; parsing each into a Package and pushing them to the
-    // UI freezes the app for seconds and spikes RAM. Cap to the most relevant matches (winget
-    // orders by relevance), matching the bundled pinget's default behaviour.
+    // "winget search a" returns ~12k results; cap to the most relevant to avoid the freeze/RAM spike.
     private const int MAX_SEARCH_RESULTS = 100;
 
     private readonly WinGet Manager;

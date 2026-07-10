@@ -29,14 +29,11 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     };
     private static readonly SemaphoreSlim _iconLoadSemaphore = new(8, 8);
 
-    // List icons render at 24-64px; decoding/caching them at native resolution (often 256-512px)
-    // wastes ~10-60x the memory. Cap the cached side to cover 64px at 2x DPI.
+    // Cap decoded icon size; the list shows icons at ≤64px (128 covers 2x DPI).
     private const int MaxIconSide = 128;
 
-    // Bounded LRU of decoded icons keyed by package hash. Was previously an unbounded static
-    // dictionary that kept every icon ever shown resident for the whole session. Entries are not
-    // disposed on eviction: the same Bitmap may still be bound to a visible row, and any wrapper
-    // still referencing it keeps it alive; dropping it here only makes it eligible for GC.
+    // Bounded LRU by package hash. Evicted entries aren't disposed: a visible row may still
+    // reference the bitmap, so dropping it here only makes it GC-eligible.
     private const int MaxIconCacheEntries = 512;
     private static readonly object _iconCacheLock = new();
     private static readonly Dictionary<long, LinkedListNode<(long Hash, Bitmap? Bitmap)>> _iconCache = new();
@@ -82,7 +79,6 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         }
     }
 
-    /// <summary>Drops all cached decoded icons. Bound bitmaps stay alive via their own references.</summary>
     public static void ClearIconCache()
     {
         lock (_iconCacheLock)
@@ -135,9 +131,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     public string InstallerHostChangeTooltip { get; private set; } = "";
 
     private CancellationTokenSource? _installerHostCheckCts;
-    // Cancelled when the row is discarded (e.g. a new search). Icon loads are throttled, so a large
-    // result set queues many; without this, a discarded row's queued load keeps its async state
-    // machine — and the wrapper/package/bitmap it roots — alive, so RAM climbs with each search.
+    // Cancels this row's queued/in-flight icon load on disposal so it stops rooting the wrapper.
     private readonly CancellationTokenSource _lifetimeCts = new();
 
     public string SourceIconPath => IconTypeToSvgPath(Package.Source.IconId);
@@ -168,18 +162,13 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         Package.PropertyChanged += Package_PropertyChanged;
         UpdateDisplayState();
 
-        // Icon loading is deferred until the row is actually shown (see EnsureIconLoaded). Starting
-        // it here would eagerly load an icon for every result — thousands for a broad search — when
-        // the virtualized list only ever displays a few dozen at once.
+        // Icons load lazily per visible row (see EnsureIconLoaded), not eagerly for every result.
         MaybeStartInstallerHostCheck();
     }
 
     private int _iconLoadStarted;
 
-    /// <summary>
-    /// Starts loading this row's icon, at most once. Called when the row becomes visible so that
-    /// only on-screen rows load icons (see PackageIconLoader).
-    /// </summary>
+    /// <summary>Loads this row's icon at most once; called when the row becomes visible.</summary>
     public void EnsureIconLoaded()
     {
         if (Settings.Get(Settings.K.DisableIconsOnPackageLists)) return;
@@ -273,8 +262,6 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
 
         try
         {
-            // Cancellable wait: if the row is discarded while queued behind the throttle, the load
-            // bails here instead of eventually running and rooting this wrapper.
             await _iconLoadSemaphore.WaitAsync(token).ConfigureAwait(false);
             Bitmap bitmap;
             try
@@ -338,8 +325,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         catch (Exception ex) { Logger.Debug($"Discarding undecodable icon '{source}': {ex.Message}"); return null; }
     }
 
-    // Decodes at native resolution, then downscales to MaxIconSide if oversized so only the small
-    // bitmap is retained. Small icons are returned as-is (never upscaled) to preserve crispness.
+    // Downscales oversized icons to MaxIconSide; small icons pass through (never upscaled).
     private static Bitmap DecodeDownscaled(Stream stream)
     {
         var bitmap = new Bitmap(stream);
@@ -425,9 +411,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         _installerHostCheckCts?.Cancel();
         _installerHostCheckCts?.Dispose();
         _installerHostCheckCts = null;
-        // Cancel any queued/in-flight icon load so it stops rooting this wrapper. Not disposed:
-        // a background load may still hold the token; the source is tiny and has no handle to leak.
-        _lifetimeCts.Cancel();
+        _lifetimeCts.Cancel(); // not disposed: a background load may still hold the token
     }
 }
 

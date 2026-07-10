@@ -8,10 +8,8 @@ namespace UniGetUI.PackageEngine.PackageLoader
     {
         public static DiscoverablePackagesLoader Instance = null!;
 
-        // A broad query (e.g. "a") makes each manager return thousands of results; aggregated across
-        // every enabled manager that is thousands of packages to wrap, tag (per-package upgradable/
-        // installed lookups) and render, which freezes the UI and spikes RAM. Keep only the most
-        // relevant matches per manager — nobody scrolls thousands of results.
+        // Cap results per manager; a broad query across every enabled manager otherwise wraps,
+        // tags and renders thousands of packages, freezing the UI and spiking RAM.
         private const int MAX_RESULTS_PER_MANAGER = 100;
 
         private string QUERY_TEXT = string.Empty;

@@ -35,9 +35,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- The app spends most of its life idle in the background. Have the GC decommit unused
-             heap segments back to the OS instead of retaining them (we measured ~40 MB of idle
-             reserve). Trades slightly more frequent collections for a smaller resident footprint. -->
+        <!-- Let the GC decommit unused heap back to the OS; the app is idle most of the time. -->
         <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" Trim="false" />
     </ItemGroup>
 

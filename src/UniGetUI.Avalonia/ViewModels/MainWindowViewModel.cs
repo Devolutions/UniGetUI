@@ -201,8 +201,7 @@ public partial class MainWindowViewModel : ViewModelBase
             loader.FinishedLoading += (_, _) =>
             {
                 Dispatcher.UIThread.Post(() => Sidebar.SetNavItemLoading(pt, false));
-                // A load (search/refresh) balloons the working set; once it settles, return the
-                // reclaimable memory to the OS so the footprint drops back down.
+                // Return the load's memory to the OS once it settles.
                 Infrastructure.MemoryTrimmer.RequestTrimAfterIdle();
             };
             loader.StartedLoading += (_, _) =>

@@ -5,12 +5,8 @@ using UniGetUI.PackageEngine.PackageClasses;
 
 namespace UniGetUI.Avalonia.Views.Controls;
 
-/// <summary>
-/// Attached behaviour that calls <see cref="PackageWrapper.EnsureIconLoaded"/> when the icon element
-/// attaches to the visual tree or is rebound to a new wrapper. In the virtualized list only the
-/// realized (visible) rows attach, so only those load their icons — instead of every result eagerly
-/// loading one in the wrapper constructor (thousands for a broad search).
-/// </summary>
+// Calls PackageWrapper.EnsureIconLoaded when the icon element attaches or is rebound, so only
+// realized (visible) rows in the virtualized list load their icons.
 public static class PackageIconLoader
 {
     public static readonly AttachedProperty<bool> TrackProperty =
@@ -43,7 +39,7 @@ public static class PackageIconLoader
     private static void OnDataContextChanged(object? sender, EventArgs e)
     {
         var control = (Control)sender!;
-        // Only when realized: a recycled container fires this while detached too.
+        // A recycled container also fires this while detached; only load when realized.
         if (control.IsLoaded) TryLoad(control);
     }
 

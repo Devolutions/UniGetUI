@@ -9,9 +9,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
     {
         private readonly IPackageManager Manager;
 
-        // Every task (search, list, install, ...) is retained here for the manager-log viewer. Left
-        // unbounded, a session's worth of operations — each holding its full output — grows without
-        // limit (a broad search alone spawns one per manager). Keep only the most recent.
+        // Keep only recent operations; retained unbounded, each holds its full output and grows forever.
         private const int MAX_RETAINED_OPERATIONS = 100;
         private readonly List<TaskLogger> operations = [];
         public IReadOnlyList<ITaskLogger> Operations
@@ -63,9 +61,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Classes
 
     public abstract class TaskLogger : ITaskLogger
     {
-        // Cap retained output per stream. A broad "search" can emit thousands of lines per manager;
-        // keeping them all across every operation is what makes memory climb with each search. The
-        // manager-log viewer only needs the tail. Trimmed in chunks to keep appending O(1).
+        // Cap retained output per stream (chunk-trimmed to keep appending O(1)); a search can emit thousands of lines.
         protected const int MaxRetainedLines = 1000;
         private const int TrimSlack = 256;
 

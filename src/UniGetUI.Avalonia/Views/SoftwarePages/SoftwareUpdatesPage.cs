@@ -363,7 +363,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         var uninstallOp = new UninstallPackageOperation(package, uninstallOpts);
         uninstallOp.OperationSucceeded += (_, _) => TelemetryHandler.UninstallPackage(package, TEL_OP_RESULT.SUCCESS);
         uninstallOp.OperationFailed += (_, _) => TelemetryHandler.UninstallPackage(package, TEL_OP_RESULT.FAILED);
-        var updateOp = new UpdatePackageOperation(package, updateOpts, req: uninstallOp);
+        // Once uninstalled the package is gone, so the second step must install the new version fresh; a plain update would fail with "no installed package found".
+        var updateOp = new InstallPackageOperation(package, updateOpts, req: uninstallOp);
         updateOp.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(package, TEL_OP_RESULT.SUCCESS);
         updateOp.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(package, TEL_OP_RESULT.FAILED);
         AvaloniaOperationRegistry.Add(uninstallOp);

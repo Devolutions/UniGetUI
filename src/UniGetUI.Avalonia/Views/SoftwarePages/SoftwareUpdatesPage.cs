@@ -368,7 +368,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         updateOp.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(package, TEL_OP_RESULT.FAILED);
         AvaloniaOperationRegistry.Add(uninstallOp);
         AvaloniaOperationRegistry.Add(updateOp);
-        _ = uninstallOp.MainThread();
+        // uninstallOp runs as updateOp's prerequisite; launching it directly too would execute it twice concurrently
         _ = updateOp.MainThread();
     }
 

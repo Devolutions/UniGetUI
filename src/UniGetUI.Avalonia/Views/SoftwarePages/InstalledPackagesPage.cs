@@ -381,7 +381,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         reinstallOp.OperationFailed += (_, _) => TelemetryHandler.InstallPackage(package, TEL_OP_RESULT.FAILED, TEL_InstallReferral.ALREADY_INSTALLED);
         AvaloniaOperationRegistry.Add(uninstallOp);
         AvaloniaOperationRegistry.Add(reinstallOp);
-        _ = uninstallOp.MainThread();
+        // uninstallOp runs as reinstallOp's prerequisite; launching it directly too would execute it twice concurrently
         _ = reinstallOp.MainThread();
     }
 

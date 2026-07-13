@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "เมนูนำทาง:",
+  "Automatic": "อัตโนมัติ",
+  "Docked open": "ปักหมุดเปิดไว้",
+  "Sliding overlay": "โอเวอร์เลย์แบบเลื่อน",
   "{0} of {1} operations completed": "ดำเนินการเสร็จสิ้น {0} จาก {1} รายการ",
   "{0} is now {1}": "{0} ตอนนี้เป็น {1}",
   "Enabled": "เปิดใช้งาน",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "อาร์กิวเมนต์การติดตั้งแบบกำหนดเอง:",
   "Custom update arguments:": "อาร์กิวเมนต์การอัปเดตแบบกำหนดเอง:",
   "Custom uninstall arguments:": "อาร์กิวเมนต์การถอนการติดตั้งแบบกำหนดเอง:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "ฟิลด์เหล่านี้เป็นอิสระต่อกัน: อาร์กิวเมนต์ที่ตั้งไว้สำหรับการติดตั้งจะไม่มีผลกับการอัปเดตหรือการถอนการติดตั้ง และในทางกลับกันเช่นกัน",
+  "Copy install arguments to update and uninstall": "คัดลอกอาร์กิวเมนต์การติดตั้งไปยังการอัปเดตและการถอนการติดตั้ง",
   "Pre-install command:": "คำสั่งก่อนการติดตั้ง:",
   "Post-install command:": "คำสั่งหลังการติดตั้ง:",
   "Abort install if pre-install command fails": "ยกเลิกการติดตั้งหากคำสั่ง pre-install ล้มเหลว",
@@ -471,6 +477,8 @@
   "System language": "ภาษาของระบบ",
   "Is your language missing or incomplete?": "ไม่พบภาษาของคุณหรือการแปลในภาษาของคุณยังไม่สมบูรณ์ใช่ไหม",
   "Appearance": "การแสดงผล",
+  "Rendering": "การเรนเดอร์",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "สลับไปใช้การเรนเดอร์ด้วยซอฟต์แวร์โดยอัตโนมัติเมื่อ Windows ไม่มี GPU ฮาร์ดแวร์",
   "UniGetUI on the background and system tray": "UniGetUI ในพื้นหลังและถาดระบบ",
   "Package lists": "รายการแพ็กเกจ",
   "Use classic mode": "ใช้โหมดคลาสสิก",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "เลือกจำนวนการดำเนินการที่ควรทำพร้อมกัน",
   "Something went wrong while launching the updater.": "มีข้อผิดพลาดขณะเปิดตัวอัปเดต",
   "Please try again later": "กรุณาลองใหม่ในภายหลัง",
-  "Show the release notes after UniGetUI is updated": "แสดงรายละเอียดการปรับปรุงหลังจากอัปเดต UniGetUI"
+  "Show the release notes after UniGetUI is updated": "แสดงรายละเอียดการปรับปรุงหลังจากอัปเดต UniGetUI",
+  "Operations completed": "การดำเนินการเสร็จสมบูรณ์",
+  "Operations finished with errors": "การดำเนินการเสร็จสิ้นโดยมีข้อผิดพลาด",
+  "{0} of {1} succeeded, {2} failed": "สำเร็จ {0} จาก {1} ล้มเหลว {2}",
+  "Show an in-app summary toast when a batch of operations finishes": "แสดงการแจ้งเตือนสรุปในแอปเมื่อชุดการดำเนินการเสร็จสิ้น",
+  "Manual install": "ติดตั้งด้วยตนเอง",
+  "Manual update": "อัปเดตด้วยตนเอง",
+  "Manual uninstall": "ถอนการติดตั้งด้วยตนเอง"
 }

@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Gezinme menüsü:",
+  "Automatic": "Otomatik",
+  "Docked open": "Sabit ve açık",
+  "Sliding overlay": "Kayan katman",
   "{0} of {1} operations completed": "{1} işlemden {0} tanesi tamamlandı",
   "{0} is now {1}": "{0} artık {1}",
   "Enabled": "Etkin",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Özel kurulum argümanları:",
   "Custom update arguments:": "Özel güncelleme argümanları:",
   "Custom uninstall arguments:": "Özel kaldırma argümanları:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Bu alanlar birbirinden bağımsızdır: Yükle için ayarlanan bir argüman Güncelleme veya Kaldır için geçerli olmaz, tersi de geçerlidir.",
+  "Copy install arguments to update and uninstall": "Yükleme argümanlarını güncelleme ve kaldırmaya kopyala",
   "Pre-install command:": "Yükleme öncesi komutu:",
   "Post-install command:": "Yükleme sonrası komutu:",
   "Abort install if pre-install command fails": "Ön kurulum komutu başarısız olursa kurulumu iptal et",
@@ -471,6 +477,8 @@
   "System language": "Sistem dili",
   "Is your language missing or incomplete?": "Diliniz eksik mi yoksa tam değil mi?",
   "Appearance": "Dış görünüş",
+  "Rendering": "İşleme",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Windows'ta donanım GPU'su olmadığında otomatik olarak yazılım işlemeye geç",
   "UniGetUI on the background and system tray": "Arka planda ve sistem tepsisinde UniGetUI",
   "Package lists": "Paket listeleri",
   "Use classic mode": "Klasik modu kullan",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "Aynı anda kaç işlemin yürütüleceğini seçin",
   "Something went wrong while launching the updater.": "Güncelleyici başlatılırken bir şeyler ters gitti.",
   "Please try again later": "Lütfen daha sonra tekrar deneyin",
-  "Show the release notes after UniGetUI is updated": "UniGetUI güncellendikten sonra sürüm notlarını göster"
+  "Show the release notes after UniGetUI is updated": "UniGetUI güncellendikten sonra sürüm notlarını göster",
+  "Operations completed": "İşlemler tamamlandı",
+  "Operations finished with errors": "İşlemler hatalarla tamamlandı",
+  "{0} of {1} succeeded, {2} failed": "{1} işlemden {0} başarılı, {2} başarısız",
+  "Show an in-app summary toast when a batch of operations finishes": "Bir grup işlem bittiğinde uygulama içi bir özet bildirimi göster",
+  "Manual install": "Manuel yükleme",
+  "Manual update": "Manuel güncelleme",
+  "Manual uninstall": "Manuel kaldırma"
 }

@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "תפריט ניווט:",
+  "Automatic": "אוטומטי",
+  "Docked open": "מעוגן ופתוח",
+  "Sliding overlay": "שכבת-על מחליקה",
   "{0} of {1} operations completed": "{0} מתוך {1} פעולות הושלמו",
   "{0} is now {1}": "{0} הוא כעת {1}",
   "Enabled": "מופעל",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "ארגומנטים מותאמים להתקנה:",
   "Custom update arguments:": "ארגומנטים מותאמים לעדכון:",
   "Custom uninstall arguments:": "ארגומנטים מותאמים להסרת התקנה:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "שדות אלה עצמאיים: ארגומנט שהוגדר עבור התקן לא יחול על עדכון או הסר, ולהפך.",
+  "Copy install arguments to update and uninstall": "העתק את ארגומנטי ההתקנה לעדכון ולהסרה",
   "Pre-install command:": "פקודת טרום-התקנה:",
   "Post-install command:": "פקודת פוסט-התקנה:",
   "Abort install if pre-install command fails": "בטל התקנה אם פקודת טרום-התקנה נכשלת",
@@ -471,6 +477,8 @@
   "System language": "שפת המערכת",
   "Is your language missing or incomplete?": "האם השפה שלך חסרה או לא שלמה?",
   "Appearance": "מראה ותחושה",
+  "Rendering": "רינדור",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "עבור אוטומטית לרינדור תוכנה כאשר ל-Windows אין GPU חומרתי",
   "UniGetUI on the background and system tray": "UniGetUI ברקע ובמגש המערכת",
   "Package lists": "רשימות חבילות",
   "Use classic mode": "השתמש במצב קלאסי",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "בחר כמה פעולות יבוצעו במקביל",
   "Something went wrong while launching the updater.": "משהו השתבש בעת הפעלת המעדכן.",
   "Please try again later": "נסה שוב מאוחר יותר",
-  "Show the release notes after UniGetUI is updated": "הצג את הערות השחרור לאחר עדכון UniGetUI"
+  "Show the release notes after UniGetUI is updated": "הצג את הערות השחרור לאחר עדכון UniGetUI",
+  "Operations completed": "הפעולות הושלמו",
+  "Operations finished with errors": "הפעולות הסתיימו עם שגיאות",
+  "{0} of {1} succeeded, {2} failed": "{0} מתוך {1} הצליחו, {2} נכשלו",
+  "Show an in-app summary toast when a batch of operations finishes": "הצג התראת סיכום בתוך האפליקציה בסיום אצווה של פעולות",
+  "Manual install": "התקנה ידנית",
+  "Manual update": "עדכון ידני",
+  "Manual uninstall": "הסרה ידנית"
 }

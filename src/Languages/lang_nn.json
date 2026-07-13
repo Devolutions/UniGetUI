@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Navigasjonsmeny:",
+  "Automatic": "Automatisk",
+  "Docked open": "Festa open",
+  "Sliding overlay": "Glidande overlegg",
   "{0} of {1} operations completed": "{0} av {1} operasjonar fullførte",
   "{0} is now {1}": "{0} er no {1}",
   "Enabled": "Aktivert",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Tilpassa installasjonsparametrar:",
   "Custom update arguments:": "Tilpassa oppdateringsparametrar:",
   "Custom uninstall arguments:": "Tilpassa avinstallasjonsparametrar:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Desse felta er uavhengige: eit argument sett for Installer gjeld ikkje for Uppdater eller Avinstaller, og omvendt.",
+  "Copy install arguments to update and uninstall": "Kopier installasjonsargument til oppdatering og avinstallering",
   "Pre-install command:": "Pre-installasjonskommando:",
   "Post-install command:": "Post-installasjonskommando:",
   "Abort install if pre-install command fails": "Avbryt installasjon viss pre-installasjonskommandoen mislykjast",
@@ -471,6 +477,8 @@
   "System language": "Systemspråk",
   "Is your language missing or incomplete?": "Manglar språket ditt eller er det uferdig? (viss språket ditt er bokmål eller nynorsk jobbar eg med saka)",
   "Appearance": "Utsjånad",
+  "Rendering": "Gjengjeving",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Byt automatisk til programvarebasert gjengjeving når Windows ikkje har ein maskinvare-GPU",
   "UniGetUI on the background and system tray": "UniGetUI i bakgrunnen og systemstatusfeltet",
   "Package lists": "Pakkelister",
   "Use classic mode": "Bruk klassisk modus",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Vel kor mange handlingar som skal utførast parallelt",
   "Something went wrong while launching the updater.": "Noko gjekk gale ved oppstart av oppdateraren.",
   "Please try again later": "Venlegst prøv igjen seinare",
-  "Show the release notes after UniGetUI is updated": "Vis utgivingsnotata etter at UniGetUI er oppdatert"
+  "Show the release notes after UniGetUI is updated": "Vis utgivingsnotata etter at UniGetUI er oppdatert",
+  "Operations completed": "Handlingar fullførte",
+  "Operations finished with errors": "Handlingar fullførte med feil",
+  "{0} of {1} succeeded, {2} failed": "{0} av {1} lukkast, {2} feila",
+  "Show an in-app summary toast when a batch of operations finishes": "Vis eit samandragsvarsel i appen når ei rekkje handlingar er ferdige",
+  "Manual install": "Manuell installering",
+  "Manual update": "Manuell oppdatering",
+  "Manual uninstall": "Manuell avinstallering"
 }

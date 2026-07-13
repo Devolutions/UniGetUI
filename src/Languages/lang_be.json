@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Меню навігацыі:",
+  "Automatic": "Аўтаматычна",
+  "Docked open": "Замацавана і адкрыта",
+  "Sliding overlay": "Слізгальнае накладанне",
   "{0} of {1} operations completed": "Завершана {0} з {1} аперацый",
   "{0} is now {1}": "{0} цяпер {1}",
   "Enabled": "Уключана",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Уласныя аргументы ўсталявання:",
   "Custom update arguments:": "Уласныя аргументы абнаўлення:",
   "Custom uninstall arguments:": "Уласныя аргументы выдалення:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Гэтыя палі незалежныя: аргумент, зададзены для ўсталёўкі, не будзе прымяняцца да абнаўлення ці выдалення, і наадварот.",
+  "Copy install arguments to update and uninstall": "Скапіраваць аргументы ўсталёўкі ў абнаўленне і выдаленне",
   "Pre-install command:": "Каманда перад усталяваннем:",
   "Post-install command:": "Каманда пасля ўсталявання:",
   "Abort install if pre-install command fails": "Скасаваць устаноўку ў выпадку памылкі ў падрыхтоўчай камандзе",
@@ -471,6 +477,8 @@
   "System language": "Мова сістэмы",
   "Is your language missing or incomplete?": "Вашай мовы няма або яна няпоўная?",
   "Appearance": "Выгляд",
+  "Rendering": "Візуалізацыя",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Аўтаматычна пераключацца на праграмную візуалізацыю, калі ў Windows няма апаратнага GPU",
   "UniGetUI on the background and system tray": "UniGetUI у фоне і трэі",
   "Package lists": "Спісы пакетаў",
   "Use classic mode": "Выкарыстоўваць класічны рэжым",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Выберыце, колькі аперацый трэба выконваць паралельна",
   "Something went wrong while launching the updater.": "Памылка пры запуску абнаўлення.",
   "Please try again later": "Паспрабуйце пазней",
-  "Show the release notes after UniGetUI is updated": "Паказваць нататкі выпуску пасля абнаўлення UniGetUI"
+  "Show the release notes after UniGetUI is updated": "Паказваць нататкі выпуску пасля абнаўлення UniGetUI",
+  "Operations completed": "Аперацыі завершаны",
+  "Operations finished with errors": "Аперацыі завершаны з памылкамі",
+  "{0} of {1} succeeded, {2} failed": "{0} з {1} паспяхова, {2} не ўдалося",
+  "Show an in-app summary toast when a batch of operations finishes": "Паказваць унутрыпраграмнае зводнае апавяшчэнне пасля завяршэння пакета аперацый",
+  "Manual install": "Ручная ўсталёўка",
+  "Manual update": "Ручное абнаўленне",
+  "Manual uninstall": "Ручное выдаленне"
 }

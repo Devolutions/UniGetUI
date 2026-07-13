@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "탐색 메뉴:",
+  "Automatic": "자동",
+  "Docked open": "고정된 상태로 열림",
+  "Sliding overlay": "슬라이딩 오버레이",
   "{0} of {1} operations completed": "{1}개 작업 중 {0}개 완료됨",
   "{0} is now {1}": "{0}이(가) 이제 {1}입니다",
   "Enabled": "사용",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "사용자 지정 설치 인수:",
   "Custom update arguments:": "사용자 지정 업데이트 인수:",
   "Custom uninstall arguments:": "사용자 지정 제거 인수:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "이 필드는 서로 독립적입니다. 설치에 설정한 인수는 업데이트나 제거에 적용되지 않으며, 그 반대도 마찬가지입니다.",
+  "Copy install arguments to update and uninstall": "설치 인수를 업데이트 및 제거에 복사",
   "Pre-install command:": "설치 전 명령:",
   "Post-install command:": "설치 후 명령:",
   "Abort install if pre-install command fails": "설치 전 명령이 실패하면 설치 중단",
@@ -471,6 +477,8 @@
   "System language": "시스템 언어",
   "Is your language missing or incomplete?": "언어가 누락되었거나 불완전합니까?",
   "Appearance": "모양",
+  "Rendering": "렌더링",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Windows에 하드웨어 GPU가 없을 때 자동으로 소프트웨어 렌더링으로 전환",
   "UniGetUI on the background and system tray": "백그라운드 및 시스템 트레이의 UniGetUI",
   "Package lists": "패키지 목록",
   "Use classic mode": "클래식 모드 사용",
@@ -842,5 +850,12 @@
   "Log in failed: ": "로그인 실패: ",
   "Log out failed: ": "로그아웃 실패: ",
   "Package backup settings": "패키지 백업 설정",
-  "Show the release notes after UniGetUI is updated": "UniGetUI 업데이트 후 릴리스 노트 표시"
+  "Show the release notes after UniGetUI is updated": "UniGetUI 업데이트 후 릴리스 노트 표시",
+  "Operations completed": "작업 완료됨",
+  "Operations finished with errors": "작업이 오류와 함께 완료됨",
+  "{0} of {1} succeeded, {2} failed": "{1}개 중 {0}개 성공, {2}개 실패",
+  "Show an in-app summary toast when a batch of operations finishes": "일괄 작업이 완료되면 앱 내 요약 알림 표시",
+  "Manual install": "수동 설치",
+  "Manual update": "수동 업데이트",
+  "Manual uninstall": "수동 제거"
 }

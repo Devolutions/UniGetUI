@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Menu navigasi:",
+  "Automatic": "Otomatis",
+  "Docked open": "Tertambat terbuka",
+  "Sliding overlay": "Hamparan geser",
   "{0} of {1} operations completed": "{0} dari {1} operasi selesai",
   "{0} is now {1}": "{0} sekarang menjadi {1}",
   "Enabled": "Diaktifkan",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Argumen penginstalan khusus:",
   "Custom update arguments:": "Argumen pembaruan khusus:",
   "Custom uninstall arguments:": "Argumen hapus instalan khusus:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Bidang ini bersifat independen: argumen yang diatur untuk Pasang tidak akan berlaku untuk Perbarui atau Hapus instalasi, dan sebaliknya.",
+  "Copy install arguments to update and uninstall": "Salin argumen pemasangan ke pembaruan dan penghapusan instalasi",
   "Pre-install command:": "Perintah pra-instalasi:",
   "Post-install command:": "Perintah pasca-instalasi:",
   "Abort install if pre-install command fails": "Batalkan instalasi jika perintah pra-instalasi gagal",
@@ -471,6 +477,8 @@
   "System language": "Bahasa sistem",
   "Is your language missing or incomplete?": "Apakah bahasa Anda tidak tersedia atau belum lengkap?",
   "Appearance": "Tampilan",
+  "Rendering": "Perenderan",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Beralih otomatis ke perenderan perangkat lunak saat Windows tidak memiliki GPU perangkat keras",
   "UniGetUI on the background and system tray": "UniGetUI di latar belakang dan area sistem",
   "Package lists": "Daftar paket",
   "Use classic mode": "Gunakan mode klasik",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Pilih berapa banyak operasi yang harus dilakukan secara paralel",
   "Something went wrong while launching the updater.": "Terjadi kesalahan saat meluncurkan pembaru.",
   "Please try again later": "Silakan coba lagi nanti",
-  "Show the release notes after UniGetUI is updated": "Tampilkan catatan rilis setelah UniGetUI diperbarui"
+  "Show the release notes after UniGetUI is updated": "Tampilkan catatan rilis setelah UniGetUI diperbarui",
+  "Operations completed": "Operasi selesai",
+  "Operations finished with errors": "Operasi selesai dengan kesalahan",
+  "{0} of {1} succeeded, {2} failed": "{0} dari {1} berhasil, {2} gagal",
+  "Show an in-app summary toast when a batch of operations finishes": "Tampilkan notifikasi ringkasan di dalam aplikasi saat sekumpulan operasi selesai",
+  "Manual install": "Pemasangan manual",
+  "Manual update": "Pembaruan manual",
+  "Manual uninstall": "Penghapusan instalasi manual"
 }

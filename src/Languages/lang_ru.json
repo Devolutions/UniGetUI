@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Меню навигации:",
+  "Automatic": "Автоматически",
+  "Docked open": "Закреплено и открыто",
+  "Sliding overlay": "Скользящее наложение",
   "{0} of {1} operations completed": "Завершено {0} из {1} операций",
   "{0} is now {1}": "{0} теперь {1}",
   "Enabled": "Включено",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Пользовательские аргументы установки:",
   "Custom update arguments:": "Пользовательские аргументы обновления:",
   "Custom uninstall arguments:": "Пользовательские аргументы удаления:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Эти поля независимы: аргумент, заданный для установки, не применяется к обновлению или удалению, и наоборот.",
+  "Copy install arguments to update and uninstall": "Копировать аргументы установки в обновление и удаление",
   "Pre-install command:": "Команда перед установкой:",
   "Post-install command:": "Команда после установки:",
   "Abort install if pre-install command fails": "Отменить установку при ошибке выполнения предустановочной команды",
@@ -471,6 +477,8 @@
   "System language": "Язык системы",
   "Is your language missing or incomplete?": "Ваш язык отсутствует или неполный?",
   "Appearance": "Внешний вид",
+  "Rendering": "Отрисовка",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Автоматически переключаться на программную отрисовку, когда в Windows нет аппаратного GPU",
   "UniGetUI on the background and system tray": "UniGetUI в фоновом режиме и системном трее",
   "Package lists": "Списки пакетов",
   "Use classic mode": "Использовать классический режим",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "Выберите, сколько операций должно выполняться параллельно",
   "Something went wrong while launching the updater.": "Что-то пошло не так при запуске программы обновления.",
   "Please try again later": "Пожалуйста, попробуйте ещё раз позже",
-  "Show the release notes after UniGetUI is updated": "Показывать примечания к выпуску после обновления UniGetUI"
+  "Show the release notes after UniGetUI is updated": "Показывать примечания к выпуску после обновления UniGetUI",
+  "Operations completed": "Операции завершены",
+  "Operations finished with errors": "Операции завершены с ошибками",
+  "{0} of {1} succeeded, {2} failed": "{0} из {1} успешно, {2} с ошибкой",
+  "Show an in-app summary toast when a batch of operations finishes": "Показывать в приложении сводное уведомление по завершении пакета операций",
+  "Manual install": "Установка вручную",
+  "Manual update": "Обновление вручную",
+  "Manual uninstall": "Удаление вручную"
 }

@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Menu điều hướng:",
+  "Automatic": "Tự động",
+  "Docked open": "Neo mở cố định",
+  "Sliding overlay": "Lớp phủ trượt",
   "{0} of {1} operations completed": "Đã hoàn thành {0} trên {1} thao tác",
   "{0} is now {1}": "{0} hiện tại là {1}",
   "Enabled": "Đã bật",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Tham số cài đặt tùy chỉnh:",
   "Custom update arguments:": "Tham số cập nhật tùy chỉnh:",
   "Custom uninstall arguments:": "Tham số gỡ cài đặt tùy chỉnh:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Các trường này độc lập với nhau: đối số đặt cho Cài đặt sẽ không áp dụng cho Cập nhật hoặc Gỡ cài đặt, và ngược lại.",
+  "Copy install arguments to update and uninstall": "Sao chép đối số cài đặt sang cập nhật và gỡ cài đặt",
   "Pre-install command:": "Lệnh trước khi cài đặt:",
   "Post-install command:": "Lệnh sau khi cài đặt:",
   "Abort install if pre-install command fails": "Hủy cài đặt nếu lệnh tiền cài đặt thất bại",
@@ -471,6 +477,8 @@
   "System language": "Ngôn ngữ hệ thống",
   "Is your language missing or incomplete?": "Ngôn ngữ của bạn bị thiếu hoặc không đầy đủ?",
   "Appearance": "Giao diện",
+  "Rendering": "Kết xuất",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Tự động chuyển sang kết xuất bằng phần mềm khi Windows không có GPU phần cứng",
   "UniGetUI on the background and system tray": "UniGetUI chạy trong nền và khay hệ thống",
   "Package lists": "Danh sách gói",
   "Use classic mode": "Dùng chế độ cổ điển",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "Chọn số thao tác nên được thực hiện song song",
   "Something went wrong while launching the updater.": "Đã xảy ra sự cố khi khởi động trình cập nhật.",
   "Please try again later": "Vui lòng thử lại sau",
-  "Show the release notes after UniGetUI is updated": "Hiển thị ghi chú phát hành sau khi UniGetUI được cập nhật"
+  "Show the release notes after UniGetUI is updated": "Hiển thị ghi chú phát hành sau khi UniGetUI được cập nhật",
+  "Operations completed": "Các thao tác đã hoàn tất",
+  "Operations finished with errors": "Các thao tác kết thúc với lỗi",
+  "{0} of {1} succeeded, {2} failed": "{0} trên {1} thành công, {2} thất bại",
+  "Show an in-app summary toast when a batch of operations finishes": "Hiển thị thông báo tóm tắt trong ứng dụng khi một loạt thao tác hoàn tất",
+  "Manual install": "Cài đặt thủ công",
+  "Manual update": "Cập nhật thủ công",
+  "Manual uninstall": "Gỡ cài đặt thủ công"
 }

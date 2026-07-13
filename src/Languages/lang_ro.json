@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Meniu de navigare:",
+  "Automatic": "Automat",
+  "Docked open": "Ancorat deschis",
+  "Sliding overlay": "Suprapunere glisantă",
   "{0} of {1} operations completed": "{0} din {1} operațiuni finalizate",
   "{0} is now {1}": "{0} este acum {1}",
   "Enabled": "Activat",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Argumente de instalare personalizate:",
   "Custom update arguments:": "Argumente de actualizare personalizate:",
   "Custom uninstall arguments:": "Argumente de dezinstalare personalizate:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Aceste câmpuri sunt independente: un argument setat pentru Instalează nu se aplică la Actualizează sau Dezinstalează, și invers.",
+  "Copy install arguments to update and uninstall": "Copiază argumentele de instalare la actualizare și dezinstalare",
   "Pre-install command:": "Comandă pre-instalare:",
   "Post-install command:": "Comandă post-instalare:",
   "Abort install if pre-install command fails": "Anulează instalarea dacă comanda pre-instalare eșuează.",
@@ -471,6 +477,8 @@
   "System language": "Limba sistemului",
   "Is your language missing or incomplete?": "Lipsește limba ta sau este incompletă?",
   "Appearance": "Aspect",
+  "Rendering": "Randare",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Comută automat la randarea software când Windows nu are un GPU hardware",
   "UniGetUI on the background and system tray": "UniGetUI în fundal și zona de notificări a sistemului",
   "Package lists": "Liste de pachete",
   "Use classic mode": "Folosește modul clasic",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "Alege câte operații să fie efectuate în paralel",
   "Something went wrong while launching the updater.": "Ceva nu a funcționat la lansarea actualizatorului.",
   "Please try again later": "Te rog încearcă din nou mai târziu",
-  "Show the release notes after UniGetUI is updated": "Afișează informațiile versiunii după actualizarea UniGetUI"
+  "Show the release notes after UniGetUI is updated": "Afișează informațiile versiunii după actualizarea UniGetUI",
+  "Operations completed": "Operații finalizate",
+  "Operations finished with errors": "Operații finalizate cu erori",
+  "{0} of {1} succeeded, {2} failed": "{0} din {1} reușite, {2} eșuate",
+  "Show an in-app summary toast when a batch of operations finishes": "Afișează o notificare de sumar în aplicație când se termină un lot de operații",
+  "Manual install": "Instalare manuală",
+  "Manual update": "Actualizare manuală",
+  "Manual uninstall": "Dezinstalare manuală"
 }

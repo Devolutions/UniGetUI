@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "قائمة التنقل:",
+  "Automatic": "تلقائي",
+  "Docked open": "مرسَّاة ومفتوحة",
+  "Sliding overlay": "تراكب منزلق",
   "{0} of {1} operations completed": "اكتملت {0} من {1} عملية",
   "{0} is now {1}": "{0} أصبح الآن {1}",
   "Enabled": "مفعّل",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "وسائط التثبيت المخصصة:",
   "Custom update arguments:": "وسائط التحديث المخصصة:",
   "Custom uninstall arguments:": "وسائط إلغاء التثبيت المخصصة:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "هذه الحقول مستقلة: مجموعة الوسائط المحددة للتثبيت لا تنطبق على التحديث أو إلغاء التثبيت، والعكس صحيح.",
+  "Copy install arguments to update and uninstall": "نسخ وسائط التثبيت إلى التحديث وإلغاء التثبيت",
   "Pre-install command:": "أمر ما قبل التثبيت:",
   "Post-install command:": "أمر ما بعد التثبيت:",
   "Abort install if pre-install command fails": "إلغاء التثبيت إذا فشل أمر التثبيت المسبق",
@@ -471,6 +477,8 @@
   "System language": "لغة النظام",
   "Is your language missing or incomplete?": "هل لغتك مفقودة أم غير مكتملة؟",
   "Appearance": "المظهر",
+  "Rendering": "التصيير",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "التبديل تلقائيًا إلى التصيير البرمجي عندما لا يتوفر لدى Windows وحدة معالجة رسومات عتادية",
   "UniGetUI on the background and system tray": "UniGetUI في الخلفية وشريط المهام",
   "Package lists": "قوائم الحزمة",
   "Use classic mode": "استخدام الوضع الكلاسيكي",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "اختر عدد العمليات التي يجب تنفيذها بالتوازي",
   "Something went wrong while launching the updater.": "لقد حدث خطأ ما أثناء تشغيل برنامج التحديث.",
   "Please try again later": "يرجى المحاولة مرة أخرى لاحقًا",
-  "Show the release notes after UniGetUI is updated": "إظهار ملاحظات الإصدار بعد تحديث UniGetUI"
+  "Show the release notes after UniGetUI is updated": "إظهار ملاحظات الإصدار بعد تحديث UniGetUI",
+  "Operations completed": "اكتملت العمليات",
+  "Operations finished with errors": "انتهت العمليات مع وجود أخطاء",
+  "{0} of {1} succeeded, {2} failed": "نجحت {0} من {1}، وفشلت {2}",
+  "Show an in-app summary toast when a batch of operations finishes": "إظهار إشعار ملخّص داخل التطبيق عند انتهاء دفعة من العمليات",
+  "Manual install": "تثبيت يدوي",
+  "Manual update": "تحديث يدوي",
+  "Manual uninstall": "إلغاء تثبيت يدوي"
 }

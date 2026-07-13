@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Navigatiemenu:",
+  "Automatic": "Automatisch",
+  "Docked open": "Vastgezet geopend",
+  "Sliding overlay": "Schuivende overlay",
   "{0} of {1} operations completed": "{0} van {1} bewerkingen voltooid",
   "{0} is now {1}": "{0} is nu {1}",
   "Enabled": "Ingeschakeld",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Aangepaste installatie-argumenten:",
   "Custom update arguments:": "Aangepaste bijwerkings-argumenten:",
   "Custom uninstall arguments:": "Aangepaste verwijderings-argumenten:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Deze velden zijn onafhankelijk: een argument dat is ingesteld voor Installeren geldt niet voor Bijwerken of Verwijderen, en omgekeerd.",
+  "Copy install arguments to update and uninstall": "Installatieargumenten kopiëren naar bijwerken en verwijderen",
   "Pre-install command:": "Pre-installatie opdracht:",
   "Post-install command:": "Post-installatie opdracht:",
   "Abort install if pre-install command fails": "Installatie afbreken als pre-installatie opdracht mislukt",
@@ -471,6 +477,8 @@
   "System language": "Systeemtaal",
   "Is your language missing or incomplete?": "Ontbreekt jouw taal of is deze onjuist of incompleet?",
   "Appearance": "Uiterlijk",
+  "Rendering": "Weergave",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Automatisch overschakelen naar softwarematige weergave wanneer Windows geen hardware-GPU heeft",
   "UniGetUI on the background and system tray": "UniGetUI op de achtergrond en het systeemvak",
   "Package lists": "Pakketlijsten",
   "Use classic mode": "Klassieke modus gebruiken",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Kies hoeveel bewerkingen parallel moeten worden uitgevoerd",
   "Something went wrong while launching the updater.": "Er ging iets mis bij het starten van de updater.",
   "Please try again later": "Probeer het later nog eens",
-  "Show the release notes after UniGetUI is updated": "Toon de release-opmerkingen nadat UniGetUI is bijgewerkt"
+  "Show the release notes after UniGetUI is updated": "Toon de release-opmerkingen nadat UniGetUI is bijgewerkt",
+  "Operations completed": "Bewerkingen voltooid",
+  "Operations finished with errors": "Bewerkingen voltooid met fouten",
+  "{0} of {1} succeeded, {2} failed": "{0} van {1} geslaagd, {2} mislukt",
+  "Show an in-app summary toast when a batch of operations finishes": "Een samenvattingsmelding in de app tonen wanneer een reeks bewerkingen is voltooid",
+  "Manual install": "Handmatig installeren",
+  "Manual update": "Handmatig bijwerken",
+  "Manual uninstall": "Handmatig verwijderen"
 }

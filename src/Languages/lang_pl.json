@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Menu nawigacji:",
+  "Automatic": "Automatyczny",
+  "Docked open": "Zadokowane otwarte",
+  "Sliding overlay": "Przesuwna nakładka",
   "{0} of {1} operations completed": "Ukończono {0} z {1} operacji",
   "{0} is now {1}": "{0} jest teraz {1}",
   "Enabled": "Włączony",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Niestandardowe argumenty instalacji:",
   "Custom update arguments:": "Niestandardowe argumenty aktualizacji:",
   "Custom uninstall arguments:": "Niestandardowe argumenty dezinstalacji:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Te pola są niezależne: argument ustawiony dla instalacji nie ma zastosowania do aktualizacji ani dezinstalacji, i odwrotnie.",
+  "Copy install arguments to update and uninstall": "Kopiuj argumenty instalacji do aktualizacji i dezinstalacji",
   "Pre-install command:": "Komenda przedinstalacyjna:",
   "Post-install command:": "Komenda poinstalacyjna:",
   "Abort install if pre-install command fails": "Przerwij instalację, jeśli wykonanie komendy przedinstalacyjnej zakończy się niepowodzeniem",
@@ -471,6 +477,8 @@
   "System language": "Język systemu",
   "Is your language missing or incomplete?": "Czy brakuje Twojego języka lub jest on niekompletny?",
   "Appearance": "Wygląd",
+  "Rendering": "Renderowanie",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Automatycznie przełączaj na renderowanie programowe, gdy system Windows nie ma sprzętowego GPU",
   "UniGetUI on the background and system tray": "UniGetUI na tle i pasku zadań",
   "Package lists": "Lista pakietów",
   "Use classic mode": "Użyj trybu klasycznego",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Wybierz, ile operacji ma być wykonywanych równolegle",
   "Something went wrong while launching the updater.": "Wystąpił błąd podczas uruchamiania aktualizatora.",
   "Please try again later": "Proszę spróbować ponownie później",
-  "Show the release notes after UniGetUI is updated": "Pokaż informacje o wydaniu po aktualizacji UniGetUI"
+  "Show the release notes after UniGetUI is updated": "Pokaż informacje o wydaniu po aktualizacji UniGetUI",
+  "Operations completed": "Operacje zakończone",
+  "Operations finished with errors": "Operacje zakończone z błędami",
+  "{0} of {1} succeeded, {2} failed": "{0} z {1} zakończono pomyślnie, {2} nie powiodło się",
+  "Show an in-app summary toast when a batch of operations finishes": "Pokaż w aplikacji powiadomienie z podsumowaniem po zakończeniu partii operacji",
+  "Manual install": "Ręczna instalacja",
+  "Manual update": "Ręczna aktualizacja",
+  "Manual uninstall": "Ręczna dezinstalacja"
 }

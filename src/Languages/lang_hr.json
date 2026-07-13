@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Navigacijski izbornik:",
+  "Automatic": "Automatski",
+  "Docked open": "Usidreno otvoreno",
+  "Sliding overlay": "Klizni preklop",
   "{0} of {1} operations completed": "Dovršeno {0} od {1} operacija",
   "{0} is now {1}": "{0} je sada {1}",
   "Enabled": "Omogućeno",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Argumenti prilagođene instalacije:",
   "Custom update arguments:": "Argumenti prilagođene nadogradnje:",
   "Custom uninstall arguments:": "Prilagođeni argumenti deinstalacije:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Ova su polja neovisna: argument postavljen za Instalirati neće se primijeniti na Ažuriraj ili Deinstaliraj, i obratno.",
+  "Copy install arguments to update and uninstall": "Kopiraj argumente instalacije u ažuriranje i deinstalaciju",
   "Pre-install command:": "Naredba pred instalacije:",
   "Post-install command:": "Naredba nakon instalacije:",
   "Abort install if pre-install command fails": "Prekini instalaciju ukoliko je prilikom pred-instalacijske naredbe došlo do greške",
@@ -471,6 +477,8 @@
   "System language": "Jezik sustava",
   "Is your language missing or incomplete?": "Nedostaje li vaš jezik ili je nepotpun?",
   "Appearance": "Izgled",
+  "Rendering": "Iscrtavanje",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Automatski prijeđi na softversko iscrtavanje kada Windows nema hardverski GPU",
   "UniGetUI on the background and system tray": "UniGetUI na pozadini i u sistemskoj traci",
   "Package lists": "Popis paketa",
   "Use classic mode": "Koristi klasični način rada",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Odaberite koliko se operacija treba izvršavati paralelno",
   "Something went wrong while launching the updater.": "Došlo je do pogreške prilikom pokretanja ažuriranja.",
   "Please try again later": "Molim pokušajte ponovno kasnije",
-  "Show the release notes after UniGetUI is updated": "Prikaži napomene o izdanju nakon ažuriranja UniGetUI-a"
+  "Show the release notes after UniGetUI is updated": "Prikaži napomene o izdanju nakon ažuriranja UniGetUI-a",
+  "Operations completed": "Operacije dovršene",
+  "Operations finished with errors": "Operacije završene s pogreškama",
+  "{0} of {1} succeeded, {2} failed": "{0} od {1} uspješno, {2} neuspješno",
+  "Show an in-app summary toast when a batch of operations finishes": "Prikaži sažetu obavijest u aplikaciji kada završi skup operacija",
+  "Manual install": "Ručna instalacija",
+  "Manual update": "Ručno ažuriranje",
+  "Manual uninstall": "Ručna deinstalacija"
 }

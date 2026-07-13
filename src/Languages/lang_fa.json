@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "منوی ناوبری:",
+  "Automatic": "خودکار",
+  "Docked open": "متصل و باز",
+  "Sliding overlay": "پوشش کشویی",
   "{0} of {1} operations completed": "{0} از {1} عملیات تکمیل شد",
   "{0} is now {1}": "{0} اکنون {1} است",
   "Enabled": "فعال",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "آرگومان های سفارشی نصب:",
   "Custom update arguments:": "آرگومان های سفارشی بروزرسانی:",
   "Custom uninstall arguments:": "آرگومان های سفارشی حذف نصب:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "این فیلدها مستقل هستند: آرگومان تنظیم‌شده برای نصب روی به روز رسانی یا حدف برنامه اعمال نمی‌شود و بالعکس.",
+  "Copy install arguments to update and uninstall": "کپی آرگومان‌های نصب به به روز رسانی و حدف برنامه",
   "Pre-install command:": "دستور قبل-نصب:",
   "Post-install command:": "دستور هنگام نصب:",
   "Abort install if pre-install command fails": "اگر اجرای دستور پیش-نیاز نصب شکست خورد، نصب انجام نشه",
@@ -471,6 +477,8 @@
   "System language": "زبان سیستم",
   "Is your language missing or incomplete?": "آیا زبان شما گم شده است یا ناقص است؟",
   "Appearance": "ظاهر",
+  "Rendering": "رندرینگ",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "زمانی که ویندوز GPU سخت‌افزاری ندارد، به‌طور خودکار به رندر نرم‌افزاری تغییر کن",
   "UniGetUI on the background and system tray": "UniGetUI در پس‌زمینه و نوار سیستم",
   "Package lists": "لیست‌های بسته",
   "Use classic mode": "استفاده از حالت کلاسیک",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "انتخاب کنید چند عملیات به‌صورت هم‌زمان انجام شوند",
   "Something went wrong while launching the updater.": "هنگام اجرای به‌روزرسان، مشکلی پیش آمد.",
   "Please try again later": "لطفاً بعداً دوباره تلاش کنید",
-  "Show the release notes after UniGetUI is updated": "نمایش یادداشت‌های انتشار پس از به‌روزرسانی UniGetUI"
+  "Show the release notes after UniGetUI is updated": "نمایش یادداشت‌های انتشار پس از به‌روزرسانی UniGetUI",
+  "Operations completed": "عملیات تکمیل شد",
+  "Operations finished with errors": "عملیات با خطا پایان یافت",
+  "{0} of {1} succeeded, {2} failed": "{0} از {1} موفق، {2} ناموفق",
+  "Show an in-app summary toast when a batch of operations finishes": "نمایش یک اعلان خلاصه درون‌برنامه‌ای هنگام پایان یک دسته از عملیات",
+  "Manual install": "نصب دستی",
+  "Manual update": "به روز رسانی دستی",
+  "Manual uninstall": "حدف برنامه دستی"
 }

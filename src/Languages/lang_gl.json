@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Menú de navegación:",
+  "Automatic": "Automático",
+  "Docked open": "Ancorado aberto",
+  "Sliding overlay": "Superposición deslizante",
   "{0} of {1} operations completed": "{0} de {1} operacións completadas",
   "{0} is now {1}": "{0} agora é {1}",
   "Enabled": "Activado",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Argumentos personalizados de instalación:",
   "Custom update arguments:": "Argumentos personalizados de actualización:",
   "Custom uninstall arguments:": "Argumentos personalizados de desinstalación:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Estes campos son independentes: un argumento definido para Instalar non se aplicará a Actualizar ou Desinstalar, e viceversa.",
+  "Copy install arguments to update and uninstall": "Copiar os argumentos de instalación a actualizar e desinstalar",
   "Pre-install command:": "Comando previo á instalación:",
   "Post-install command:": "Comando posterior á instalación:",
   "Abort install if pre-install command fails": "Abortar a instalación se falla o comando previo á instalación",
@@ -471,6 +477,8 @@
   "System language": "Idioma do sistema",
   "Is your language missing or incomplete?": "Falta o teu idioma ou está incompleto?",
   "Appearance": "Aparencia",
+  "Rendering": "Renderizado",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Cambiar automaticamente ao renderizado por software cando Windows non ten GPU de hardware",
   "UniGetUI on the background and system tray": "UniGetUI en segundo plano e na bandexa do sistema",
   "Package lists": "Listas de paquetes",
   "Use classic mode": "Usar o modo clásico",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Escolle cantas operacións se deben realizar en paralelo",
   "Something went wrong while launching the updater.": "Algo saíu mal ao iniciar o actualizador.",
   "Please try again later": "Téntao de novo máis tarde",
-  "Show the release notes after UniGetUI is updated": "Mostrar as notas da versión despois de actualizar UniGetUI"
+  "Show the release notes after UniGetUI is updated": "Mostrar as notas da versión despois de actualizar UniGetUI",
+  "Operations completed": "Operacións completadas",
+  "Operations finished with errors": "As operacións remataron con erros",
+  "{0} of {1} succeeded, {2} failed": "{0} de {1} correctas, {2} fallidas",
+  "Show an in-app summary toast when a batch of operations finishes": "Mostrar unha notificación de resumo na aplicación cando remata un lote de operacións",
+  "Manual install": "Instalación manual",
+  "Manual update": "Actualización manual",
+  "Manual uninstall": "Desinstalación manual"
 }

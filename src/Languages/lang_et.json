@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Navigeerimismenüü:",
+  "Automatic": "Automaatne",
+  "Docked open": "Dokitud ja avatud",
+  "Sliding overlay": "Libisev ülekate",
   "{0} of {1} operations completed": "{0} toimingut {1}-st lõpetatud",
   "{0} is now {1}": "{0} on nüüd {1}",
   "Enabled": "Lubatud",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Kohandatud paigaldamise argumendid:",
   "Custom update arguments:": "Kohandatud uuendamise argumendid:",
   "Custom uninstall arguments:": "Kohandatud eemaldamise argumendid:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Need väljad on sõltumatud: Paigalda jaoks määratud argument ei kehti Uuenda ega Eemalda kohta, ja vastupidi.",
+  "Copy install arguments to update and uninstall": "Kopeeri paigaldusargumendid uuendamisse ja eemaldamisse",
   "Pre-install command:": "Paigaldus-eelne käsk:",
   "Post-install command:": "Paigaldus-järgne käsk:",
   "Abort install if pre-install command fails": "Katkesta paigaldamine kui eelnev käsk nurjub",
@@ -471,6 +477,8 @@
   "System language": "Süsteemi keel",
   "Is your language missing or incomplete?": "Kas teie keel on puudu või puudulik?",
   "Appearance": "Välimus",
+  "Rendering": "Renderdamine",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Lülitu automaatselt tarkvaralisele renderdamisele, kui Windowsil pole riistvaralist GPU-d",
   "UniGetUI on the background and system tray": "UniGetUI taustale ja tegumiriidale",
   "Package lists": "Pakettide nimekirjad",
   "Use classic mode": "Kasuta klassikalist režiimi",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Valige, mitu toimingut tehakse paralleelselt",
   "Something went wrong while launching the updater.": "Uuendaja käivitamisel mingi asi ebaõnnestus.",
   "Please try again later": "Proovige hiljem uuesti",
-  "Show the release notes after UniGetUI is updated": "Kuva väljalaske märkmed pärast UniGetUI uuendamist"
+  "Show the release notes after UniGetUI is updated": "Kuva väljalaske märkmed pärast UniGetUI uuendamist",
+  "Operations completed": "Toimingud lõpetatud",
+  "Operations finished with errors": "Toimingud lõpetati vigadega",
+  "{0} of {1} succeeded, {2} failed": "{0} / {1} õnnestus, {2} ebaõnnestus",
+  "Show an in-app summary toast when a batch of operations finishes": "Näita rakendusesisest kokkuvõtvat teavitust, kui hulk toiminguid lõpeb",
+  "Manual install": "Käsitsi paigaldamine",
+  "Manual update": "Käsitsi uuendamine",
+  "Manual uninstall": "Käsitsi eemaldamine"
 }

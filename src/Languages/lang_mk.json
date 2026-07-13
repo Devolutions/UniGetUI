@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Мени за навигација:",
+  "Automatic": "Автоматски",
+  "Docked open": "Закачено и отворено",
+  "Sliding overlay": "Лизгачки прекривач",
   "{0} of {1} operations completed": "Завршени се {0} од {1} операции",
   "{0} is now {1}": "{0} сега е {1}",
   "Enabled": "Овозможено",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Сопствени аргументи за инсталација:",
   "Custom update arguments:": "Сопствени аргументи за ажурирање:",
   "Custom uninstall arguments:": "Сопствени аргументи за деинсталација:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Овие полиња се независни: аргумент поставен за инсталирање нема да се примени на ажурирање или деинсталирање, и обратно.",
+  "Copy install arguments to update and uninstall": "Копирај ги аргументите за инсталирање во ажурирање и деинсталирање",
   "Pre-install command:": "Команда пред инсталација:",
   "Post-install command:": "Команда по инсталација:",
   "Abort install if pre-install command fails": "Прекини ја инсталацијата ако командата пред инсталација не успее",
@@ -471,6 +477,8 @@
   "System language": "Системски јазик",
   "Is your language missing or incomplete?": "Дали вашиот јазик недостасува или е нецелосен?",
   "Appearance": "Изглед",
+  "Rendering": "Рендерирање",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Автоматски префрли се на софтверско рендерирање кога Windows нема хардверски графички процесор (GPU)",
   "UniGetUI on the background and system tray": "UniGetUI во заднина и системската фиока",
   "Package lists": "Списоци на пакети",
   "Use classic mode": "Користи класичен режим",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Избери колку операции треба да се извршуваат паралелно",
   "Something went wrong while launching the updater.": "Нешто тргна наопаку при стартување на ажурирачот.",
   "Please try again later": "Обидете се повторно подоцна",
-  "Show the release notes after UniGetUI is updated": "Прикажи ги белешките за изданието по ажурирањето на UniGetUI"
+  "Show the release notes after UniGetUI is updated": "Прикажи ги белешките за изданието по ажурирањето на UniGetUI",
+  "Operations completed": "Операциите се завршени",
+  "Operations finished with errors": "Операциите завршија со грешки",
+  "{0} of {1} succeeded, {2} failed": "{0} од {1} успеаја, {2} не успеаја",
+  "Show an in-app summary toast when a batch of operations finishes": "Прикажи известување со преглед во апликацијата кога ќе заврши серија операции",
+  "Manual install": "Рачно инсталирање",
+  "Manual update": "Рачно ажурирање",
+  "Manual uninstall": "Рачно деинсталирање"
 }

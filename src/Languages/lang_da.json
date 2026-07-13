@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Navigationsmenu:",
+  "Automatic": "Automatisk",
+  "Docked open": "Fastgjort åben",
+  "Sliding overlay": "Glidende overlejring",
   "{0} of {1} operations completed": "{0} af {1} handlinger fuldført",
   "{0} is now {1}": "{0} er nu {1}",
   "Enabled": "Aktiveret",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Brugerdefinerede installations argumenter:",
   "Custom update arguments:": "Brugerdefinerede opdaterings argumenter:",
   "Custom uninstall arguments:": "Brugerdefinerede afinstallations argumenter:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Disse felter er uafhængige: et argument angivet for Installer gælder ikke for Opdatér eller Afinstallér, og omvendt.",
+  "Copy install arguments to update and uninstall": "Kopiér installationsargumenter til opdatering og afinstallation",
   "Pre-install command:": "Pre-install kommando:",
   "Post-install command:": "Post-install kommando:",
   "Abort install if pre-install command fails": "Afbryd installation hvis kommandoen før installation mislykkes",
@@ -471,6 +477,8 @@
   "System language": "Systemsprog",
   "Is your language missing or incomplete?": "Mangler dit sprog (helt eller delvist)?",
   "Appearance": "Udseende",
+  "Rendering": "Gengivelse",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Skift automatisk til softwaregengivelse, når Windows ikke har en hardware-GPU",
   "UniGetUI on the background and system tray": "UniGetUI i baggrunden og systembakken",
   "Package lists": "Pakkelister",
   "Use classic mode": "Brug klassisk tilstand",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Vælg hvor mange handlinger der skal udføres parallelt",
   "Something went wrong while launching the updater.": "Noget gik galt ved afviklingen af opdateringen.",
   "Please try again later": "Prøv igen senere",
-  "Show the release notes after UniGetUI is updated": "Vis releasenotes efter UniGetUI er opdateret"
+  "Show the release notes after UniGetUI is updated": "Vis releasenotes efter UniGetUI er opdateret",
+  "Operations completed": "Operationer fuldført",
+  "Operations finished with errors": "Operationer afsluttet med fejl",
+  "{0} of {1} succeeded, {2} failed": "{0} af {1} lykkedes, {2} mislykkedes",
+  "Show an in-app summary toast when a batch of operations finishes": "Vis en oversigtsmeddelelse i appen, når en gruppe operationer afsluttes",
+  "Manual install": "Manuel installation",
+  "Manual update": "Manuel opdatering",
+  "Manual uninstall": "Manuel afinstallation"
 }

@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Menuya navîgasyonê:",
+  "Automatic": "Otomatîk",
+  "Docked open": "Girêdayî û vekirî",
+  "Sliding overlay": "Overlaya xijok",
   "{0} of {1} operations completed": "{0} ji {1} kiryaran temam bûn",
   "{0} is now {1}": "{0} ئێستا {1}ە",
   "Enabled": "چالاک",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "ئارگومێنتی تایبەتی دامەزراندن:",
   "Custom update arguments:": "ئارگومێنتی تایبەتی نوێکردنەوە:",
   "Custom uninstall arguments:": "ئارگومێنتی تایبەتی سڕینەوە:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Ev waran serbixwe ne: argumanek ku ji bo sazkirinê hatiye danîn dê li ser nûvekirin an rakirinê neyê sepandin, û berevajî.",
+  "Copy install arguments to update and uninstall": "Argumanên sazkirinê li nûvekirin û rakirinê kopî bike",
   "Pre-install command:": "فەرمانی پێش دامەزراندن:",
   "Post-install command:": "فەرمانی دوای دامەزراندن:",
   "Abort install if pre-install command fails": "ئەگەر فەرمانی پێش دامەزراندن شکستی هێنا، دامەزراندن بوەستێنە",
@@ -471,6 +477,8 @@
   "System language": "Zimanê pergalê",
   "Is your language missing or incomplete?": "ئایا زمانەکەت ونە یان تەواو نییە؟",
   "Appearance": "ڕووکار",
+  "Rendering": "Renderkirin",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Dema ku Windows GPUyeke hardware tune be, bixweber derbasî renderkirina software bibe",
   "UniGetUI on the background and system tray": "UniGetUI لە پاشبنەما و تڕەی سیستەمدا",
   "Package lists": "لیستەکانی پاکێج",
   "Use classic mode": "دۆخی کلاسیکی بەکاربهێنە",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "هەڵبژێرە چەند کردارێک دەبێت بە هاوکات ئەنجام بدرێن",
   "Something went wrong while launching the updater.": "کاتێک نوێکەرەوەکە دەستپێدەکرا شتێک هەڵە ڕوویدا.",
   "Please try again later": "تکایە دواتر دووبارە هەوڵ بدەوە",
-  "Show the release notes after UniGetUI is updated": "پیشاندانی تێبینییەکانی وەشاندن دوای نوێکردنەوەی UniGetUI"
+  "Show the release notes after UniGetUI is updated": "پیشاندانی تێبینییەکانی وەشاندن دوای نوێکردنەوەی UniGetUI",
+  "Operations completed": "Karûbar temam bûn",
+  "Operations finished with errors": "Karûbar bi çewtiyan qediyan",
+  "{0} of {1} succeeded, {2} failed": "{0} ji {1} serketî, {2} têkçûn",
+  "Show an in-app summary toast when a batch of operations finishes": "Dema komek karûbar diqede, di sepanê de agahdariyeke kurteyî nîşan bide",
+  "Manual install": "Sazkirina destî",
+  "Manual update": "Nûvekirina destî",
+  "Manual uninstall": "Rakirina destî"
 }

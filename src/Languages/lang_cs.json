@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Navigační nabídka:",
+  "Automatic": "Automaticky",
+  "Docked open": "Ukotveno a otevřeno",
+  "Sliding overlay": "Posuvná překryvná vrstva",
   "{0} of {1} operations completed": "Dokončeno {0} z {1} operací",
   "{0} is now {1}": "{0} je nyní {1}",
   "Enabled": "Povoleno",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Vlastní argumenty pro instalaci:",
   "Custom update arguments:": "Vlastní argumenty pro aktualizaci:",
   "Custom uninstall arguments:": "Vlastní argumenty pro odinstalaci:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Tato pole jsou nezávislá: argument nastavený pro Instalaci se nepoužije pro Aktualizaci ani Odinstalaci a naopak.",
+  "Copy install arguments to update and uninstall": "Kopírovat argumenty instalace do aktualizace a odinstalace",
   "Pre-install command:": "Příkaz před instalací:",
   "Post-install command:": "Příkaz po instalaci:",
   "Abort install if pre-install command fails": "Přerušit instalaci, pokud předinstalační příkaz selže",
@@ -471,6 +477,8 @@
   "System language": "Jazyk systému",
   "Is your language missing or incomplete?": "Chybí váš jazyk nebo není úplný?",
   "Appearance": "Vzhled",
+  "Rendering": "Vykreslování",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Automaticky přepnout na softwarové vykreslování, když Windows nemá hardwarový GPU",
   "UniGetUI on the background and system tray": "UniGetUI v pozadí a systémové liště",
   "Package lists": "Seznamy balíčků",
   "Use classic mode": "Použít klasický režim",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Vyberte, kolik operací se má provádět souběžně",
   "Something went wrong while launching the updater.": "Při spouštění aktualizace se něco pokazilo.",
   "Please try again later": "Zkuste to prosím později",
-  "Show the release notes after UniGetUI is updated": "Zobrazit poznámky k vydání po aktualizaci UniGetUI"
+  "Show the release notes after UniGetUI is updated": "Zobrazit poznámky k vydání po aktualizaci UniGetUI",
+  "Operations completed": "Operace dokončeny",
+  "Operations finished with errors": "Operace dokončeny s chybami",
+  "{0} of {1} succeeded, {2} failed": "{0} z {1} úspěšných, {2} selhalo",
+  "Show an in-app summary toast when a batch of operations finishes": "Zobrazit souhrnné oznámení v aplikaci po dokončení dávky operací",
+  "Manual install": "Ruční instalace",
+  "Manual update": "Ruční aktualizace",
+  "Manual uninstall": "Ruční odinstalace"
 }

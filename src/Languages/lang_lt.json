@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Naršymo meniu:",
+  "Automatic": "Automatinis",
+  "Docked open": "Prisegtas ir atidarytas",
+  "Sliding overlay": "Slenkanti perdanga",
   "{0} of {1} operations completed": "Užbaigta {0} iš {1} operacijų",
   "{0} is now {1}": "„{0}“ dabar yra {1}",
   "Enabled": "Įjungta",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Pasirinktiniai (į-)diegimo argumentai:",
   "Custom update arguments:": "Pasirinktiniai (at-)naujinimo/-io (-ų/-ių) argumentai:",
   "Custom uninstall arguments:": "Pasirinktiniai išdiegimo argumentai:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Šie laukai yra nepriklausomi: argumentas, nustatytas įdiegimui, netaikomas atnaujinimui ar išdiegimui, ir atvirkščiai.",
+  "Copy install arguments to update and uninstall": "Kopijuoti diegimo argumentus į atnaujinimą ir išdiegimą",
   "Pre-install command:": "Parengtinė (į-)diegimo komanda:",
   "Post-install command:": "Paskesnioji (į-)diegimo komanda:",
   "Abort install if pre-install command fails": "Nutraukti (į-)diegimą, jei parengtinė (į-)diegimo komanda patiria klaidą",
@@ -471,6 +477,8 @@
   "System language": "Sistemos kalba",
   "Is your language missing or incomplete?": "Ar Jūsų kalba nepasiekiama ar neužbaigta?",
   "Appearance": "Išvaizda",
+  "Rendering": "Atvaizdavimas",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Automatiškai perjungti į programinį atvaizdavimą, kai „Windows“ neturi aparatinės GPU",
   "UniGetUI on the background and system tray": "„UniGetUI“ fone ir sistemos dėkle",
   "Package lists": "Paketų sąrašai",
   "Use classic mode": "Naudoti klasikinį režimą",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Pasirinkite, kiek operacijų turi būti vykdoma lygiagrečiai",
   "Something went wrong while launching the updater.": "Kažkas įvyko negerai, bandant paleisti naujinį.",
   "Please try again later": "Prašome pabandyti dar kartą, vėlesniu laiku",
-  "Show the release notes after UniGetUI is updated": "Rodyti išleidimo užrašus po UniGetUI atnaujinimo"
+  "Show the release notes after UniGetUI is updated": "Rodyti išleidimo užrašus po UniGetUI atnaujinimo",
+  "Operations completed": "Operacijos baigtos",
+  "Operations finished with errors": "Operacijos baigtos su klaidomis",
+  "{0} of {1} succeeded, {2} failed": "{0} iš {1} pavyko, {2} nepavyko",
+  "Show an in-app summary toast when a batch of operations finishes": "Rodyti suvestinės pranešimą programoje, kai baigiama operacijų partija",
+  "Manual install": "Rankinis įdiegimas",
+  "Manual update": "Rankinis atnaujinimas",
+  "Manual uninstall": "Rankinis išdiegimas"
 }

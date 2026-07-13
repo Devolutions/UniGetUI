@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Navigeringsmeny:",
+  "Automatic": "Automatisk",
+  "Docked open": "Dockad öppen",
+  "Sliding overlay": "Glidande överlägg",
   "{0} of {1} operations completed": "{0} av {1} åtgärder slutförda",
   "{0} is now {1}": "{0} är nu {1}",
   "Enabled": "Aktiverad",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Anpassade installationsargument:",
   "Custom update arguments:": "Anpassade uppdateringsargument",
   "Custom uninstall arguments:": "Anpassade avinstallationsargument",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Dessa fält är oberoende: ett argument som anges för Installera gäller inte för Uppdatera eller Avinstallera, och vice versa.",
+  "Copy install arguments to update and uninstall": "Kopiera installationsargument till uppdatering och avinstallation",
   "Pre-install command:": "Pre-install kommando:",
   "Post-install command:": "Post-install kommando:",
   "Abort install if pre-install command fails": "Avbryt installationen om kommandot pre-install misslyckas",
@@ -471,6 +477,8 @@
   "System language": "Systemspråk",
   "Is your language missing or incomplete?": "Saknas ditt språk eller är det ofullständigt?",
   "Appearance": "Utseende",
+  "Rendering": "Rendering",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Växla automatiskt till programvarurendering när Windows saknar hårdvaru-GPU",
   "UniGetUI on the background and system tray": "UniGetUI i bakgrunden och i systemfältet",
   "Package lists": "Paketlistor",
   "Use classic mode": "Använd klassiskt läge",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "Välj hur många åtgärder som ska utföras parallellt",
   "Something went wrong while launching the updater.": "Något gick fel vid starten av uppdateraren",
   "Please try again later": "Försök igen senare",
-  "Show the release notes after UniGetUI is updated": "Visa versionsinformation efter att UniGetUI har uppdaterats"
+  "Show the release notes after UniGetUI is updated": "Visa versionsinformation efter att UniGetUI har uppdaterats",
+  "Operations completed": "Åtgärder slutförda",
+  "Operations finished with errors": "Åtgärder slutfördes med fel",
+  "{0} of {1} succeeded, {2} failed": "{0} av {1} lyckades, {2} misslyckades",
+  "Show an in-app summary toast when a batch of operations finishes": "Visa en sammanfattande avisering i appen när en grupp åtgärder slutförs",
+  "Manual install": "Manuell installation",
+  "Manual update": "Manuell uppdatering",
+  "Manual uninstall": "Manuell avinstallation"
 }

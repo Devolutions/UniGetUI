@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Navigációs menü:",
+  "Automatic": "Automatikus",
+  "Docked open": "Rögzítve nyitva",
+  "Sliding overlay": "Csúszó átfedés",
   "{0} of {1} operations completed": "{1} műveletből {0} fejeződött be",
   "{0} is now {1}": "{0} most {1}",
   "Enabled": "Engedélyezve",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Egyéni telepítési argumentumok:",
   "Custom update arguments:": "Egyéni frissítési argumentumok:",
   "Custom uninstall arguments:": "Egyéni eltávolítási argumentumok:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Ezek a mezők függetlenek: a Telepítéshez megadott argumentum nem vonatkozik a Frissítésre vagy az Eltávolításra, és fordítva.",
+  "Copy install arguments to update and uninstall": "Telepítési argumentumok másolása a frissítéshez és eltávolításhoz",
   "Pre-install command:": "Telepítés előtti parancs:",
   "Post-install command:": "Telepítés utáni parancs:",
   "Abort install if pre-install command fails": "A telepítés megszakítása, ha a telepítést megelőző parancs sikertelenül működik",
@@ -471,6 +477,8 @@
   "System language": "Rendszernyelv",
   "Is your language missing or incomplete?": "Hiányzik vagy hiányos az Ön nyelve?",
   "Appearance": "Megjelenés",
+  "Rendering": "Megjelenítés",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Automatikus váltás szoftveres megjelenítésre, ha a Windows nem rendelkezik hardveres GPU-val",
   "UniGetUI on the background and system tray": "UniGetUI a háttérben és a tálcán",
   "Package lists": "Csomag listák",
   "Use classic mode": "Klasszikus mód használata",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Válassza ki, hány művelet fusson párhuzamosan",
   "Something went wrong while launching the updater.": "Valamilyen hiba történt a frissítő indítása közben.",
   "Please try again later": "Kérjük próbálja később újra",
-  "Show the release notes after UniGetUI is updated": "Kiadási megjegyzések megjelenítése a UniGetUI frissítése után"
+  "Show the release notes after UniGetUI is updated": "Kiadási megjegyzések megjelenítése a UniGetUI frissítése után",
+  "Operations completed": "Műveletek befejezve",
+  "Operations finished with errors": "A műveletek hibákkal fejeződtek be",
+  "{0} of {1} succeeded, {2} failed": "{1} közül {0} sikeres, {2} sikertelen",
+  "Show an in-app summary toast when a batch of operations finishes": "Összefoglaló értesítés megjelenítése az alkalmazásban egy műveletcsomag befejezésekor",
+  "Manual install": "Kézi telepítés",
+  "Manual update": "Kézi frissítés",
+  "Manual uninstall": "Kézi eltávolítás"
 }

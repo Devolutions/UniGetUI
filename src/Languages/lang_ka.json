@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "ნავიგაციის მენიუ:",
+  "Automatic": "ავტომატური",
+  "Docked open": "მიმაგრებული, გახსნილი",
+  "Sliding overlay": "მოცურავე გადაფარვა",
   "{0} of {1} operations completed": "{1}-დან {0} ოპერაცია დასრულდა",
   "{0} is now {1}": "{0} ახლა არის {1}",
   "Enabled": "ჩართული",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "მორგებული ინსტალაციის არგუმენტები:",
   "Custom update arguments:": "მორგებული განახლების არგუმენტები:",
   "Custom uninstall arguments:": "მორგებული დეინსტალაციის არგუმენტები:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "ეს ველები დამოუკიდებელია: ინსტალაციისთვის მითითებული არგუმენტი არ გავრცელდება განახლებაზე ან წაშლაზე და პირიქით.",
+  "Copy install arguments to update and uninstall": "ინსტალაციის არგუმენტების კოპირება განახლებასა და წაშლაზე",
   "Pre-install command:": "პრე ინსტალაციის ბრძანება:",
   "Post-install command:": "პოსტ ინსტალაციის ბრძანება:",
   "Abort install if pre-install command fails": "ინსტალაციის შეწყვეტა პრე-ინსტალაციის ბრძანების ჩაშლისას",
@@ -471,6 +477,8 @@
   "System language": "სისტემის ენა",
   "Is your language missing or incomplete?": "თქვენი ენა არ არის ან დაუსრულებელია?",
   "Appearance": "იერსახე",
+  "Rendering": "რენდერინგი",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "ავტომატურად გადართვა პროგრამულ რენდერინგზე, როცა Windows-ს არ აქვს აპარატურული GPU",
   "UniGetUI on the background and system tray": "UniGetUI ფონურ რეჟიმში და სისტემური პანელი",
   "Package lists": "პაკეტების სიები",
   "Use classic mode": "კლასიკური რეჟიმის გამოყენება",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "აირჩიეთ, რამდენი ოპერაცია უნდა შესრულდეს პარალელურად",
   "Something went wrong while launching the updater.": "რაღაც ჩაიშალა განმაახლებლის გაშვებისას",
   "Please try again later": "გთხოვთ სცადოთ მოგვიანებით",
-  "Show the release notes after UniGetUI is updated": "რელიზის ჩანაწერების ჩვენება UniGetUI-ის განახლების შემდეგ"
+  "Show the release notes after UniGetUI is updated": "რელიზის ჩანაწერების ჩვენება UniGetUI-ის განახლების შემდეგ",
+  "Operations completed": "ოპერაციები დასრულდა",
+  "Operations finished with errors": "ოპერაციები დასრულდა შეცდომებით",
+  "{0} of {1} succeeded, {2} failed": "{1}-დან {0} წარმატებული, {2} ჩავარდა",
+  "Show an in-app summary toast when a batch of operations finishes": "ოპერაციების ჯგუფის დასრულებისას აპლიკაციაში შემაჯამებელი შეტყობინების ჩვენება",
+  "Manual install": "ხელით ინსტალაცია",
+  "Manual update": "ხელით განახლება",
+  "Manual uninstall": "ხელით წაშლა"
 }

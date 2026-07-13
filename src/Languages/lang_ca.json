@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Menú de navegació:",
+  "Automatic": "Automàtic",
+  "Docked open": "Fixat i obert",
+  "Sliding overlay": "Superposició lliscant",
   "{0} of {1} operations completed": "{0} de {1} operacions completades",
   "{0} is now {1}": "{0} ara és {1}",
   "Enabled": "Activat",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Arguments d'instal·lació personalitzats",
   "Custom update arguments:": "Arguments d'actualització personalitzats",
   "Custom uninstall arguments:": "Arguments de desinstal·lació personalitzats",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Aquests camps són independents: un argument definit per a Instal·la no s'aplicarà a Actualitza ni a Desinstal·la, i viceversa.",
+  "Copy install arguments to update and uninstall": "Copia els arguments d'instal·lació a actualització i desinstal·lació",
   "Pre-install command:": "Comanda de pre-instal·lació:",
   "Post-install command:": "Comanda de post-instal·lació:",
   "Abort install if pre-install command fails": "Avorta la instal·lació si la comanda de pre-instal·lació falla",
@@ -471,6 +477,8 @@
   "System language": "Idioma del sistema",
   "Is your language missing or incomplete?": "Falta el vostre idioma o la traducció està incompleta?",
   "Appearance": "Aparença",
+  "Rendering": "Renderització",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Canvia automàticament a la renderització per programari quan el Windows no té una GPU de maquinari",
   "UniGetUI on the background and system tray": "L'UniGetUI al rerefons i safata del sistema",
   "Package lists": "Llistes de paquets",
   "Use classic mode": "Utilitza el mode clàssic",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Trieu quantes operacions s'han de fer en paral·lel",
   "Something went wrong while launching the updater.": "Quelcom ha anat malament en executar l'actualitzador.",
   "Please try again later": "Proveu-ho més tard",
-  "Show the release notes after UniGetUI is updated": "Mostra les notes de publicació després d'actualitzar UniGetUI"
+  "Show the release notes after UniGetUI is updated": "Mostra les notes de publicació després d'actualitzar UniGetUI",
+  "Operations completed": "Operacions completades",
+  "Operations finished with errors": "Operacions finalitzades amb errors",
+  "{0} of {1} succeeded, {2} failed": "{0} de {1} amb èxit, {2} amb errors",
+  "Show an in-app summary toast when a batch of operations finishes": "Mostra una notificació de resum dins l'aplicació quan finalitzi un lot d'operacions",
+  "Manual install": "Instal·lació manual",
+  "Manual update": "Actualització manual",
+  "Manual uninstall": "Desinstal·lació manual"
 }

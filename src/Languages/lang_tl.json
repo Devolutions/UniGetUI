@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Navigation menu:",
+  "Automatic": "Awtomatiko",
+  "Docked open": "Naka-dock na bukas",
+  "Sliding overlay": "Sliding overlay",
   "{0} of {1} operations completed": "{0} sa {1} operasyon ang natapos",
   "{0} is now {1}": "Ang {0} ay {1} na ngayon",
   "Enabled": "Naka-enable",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Mga custom na argument sa install:",
   "Custom update arguments:": "Mga custom na argument sa update:",
   "Custom uninstall arguments:": "Mga custom na argument sa uninstall:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Magkahiwalay ang mga field na ito: ang argument na itinakda para sa Install ay hindi mailalapat sa Update o Uninstall, at gayundin sa kabaligtaran.",
+  "Copy install arguments to update and uninstall": "Kopyahin ang mga install argument sa update at uninstall",
   "Pre-install command:": "Command bago mag-install:",
   "Post-install command:": "Command pagkatapos mag-install:",
   "Abort install if pre-install command fails": "I-abort ang install kung pumalya ang pre-install command",
@@ -471,6 +477,8 @@
   "System language": "Wika ng sistema",
   "Is your language missing or incomplete?": "Nawawala o kulang ba ang iyong wika?",
   "Appearance": "Itsura",
+  "Rendering": "Rendering",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Awtomatikong lumipat sa software rendering kapag walang hardware GPU ang Windows",
   "UniGetUI on the background and system tray": "UniGetUI sa background at system tray",
   "Package lists": "Mga listahan ng package",
   "Use classic mode": "Gamitin ang classic mode",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "Piliin kung ilang operasyon ang dapat isagawa nang sabay-sabay",
   "Something went wrong while launching the updater.": "May nangyaring mali habang inilulunsad ang updater.",
   "Please try again later": "Pakisubukan muli mamaya",
-  "Show the release notes after UniGetUI is updated": "Ipakita ang mga tala sa release pagkatapos ma-update ang UniGetUI"
+  "Show the release notes after UniGetUI is updated": "Ipakita ang mga tala sa release pagkatapos ma-update ang UniGetUI",
+  "Operations completed": "Nakumpleto ang mga operasyon",
+  "Operations finished with errors": "Natapos ang mga operasyon nang may mga error",
+  "{0} of {1} succeeded, {2} failed": "{0} sa {1} ang nagtagumpay, {2} ang nabigo",
+  "Show an in-app summary toast when a batch of operations finishes": "Magpakita ng in-app na summary na notification kapag natapos ang isang batch ng mga operasyon",
+  "Manual install": "Manwal na install",
+  "Manual update": "Manwal na update",
+  "Manual uninstall": "Manwal na uninstall"
 }

@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "नेविगेशन मेनू:",
+  "Automatic": "स्वचालित",
+  "Docked open": "खुला डॉक किया हुआ",
+  "Sliding overlay": "स्लाइडिंग ओवरले",
   "{0} of {1} operations completed": "{1} में से {0} कार्य पूर्ण हुए",
   "{0} is now {1}": "{0} अब {1} है",
   "Enabled": "सक्षम",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "कस्टम इंस्टॉल तर्क:",
   "Custom update arguments:": "कस्टम अपडेट तर्क:",
   "Custom uninstall arguments:": "कस्टम अनइंस्टॉल तर्क:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "ये फ़ील्ड स्वतंत्र हैं: स्थापित करें के लिए सेट किया गया आर्गुमेंट अपडेट या स्थापना रद्द करें पर लागू नहीं होगा, और इसके विपरीत भी।",
+  "Copy install arguments to update and uninstall": "स्थापित करें के आर्गुमेंट अपडेट और स्थापना रद्द करें में कॉपी करें",
   "Pre-install command:": "पूर्व-स्थापना आदेश:",
   "Post-install command:": "स्थापना के बाद आदेश:",
   "Abort install if pre-install command fails": "यदि पूर्व-इंस्टॉल आदेश विफल हो जाए तो इंस्टॉलेशन निरस्त करें",
@@ -471,6 +477,8 @@
   "System language": "सिस्टम भाषा",
   "Is your language missing or incomplete?": "क्या आपकी भाषा गायब है या अधूरी है?",
   "Appearance": "उपस्थिति",
+  "Rendering": "रेंडरिंग",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "जब Windows में हार्डवेयर GPU न हो तो स्वचालित रूप से सॉफ़्टवेयर रेंडरिंग पर स्विच करें",
   "UniGetUI on the background and system tray": "यूनीगेटयूआई बैकग्राउंड और सिस्टम ट्रे पर है।",
   "Package lists": "पैकेज सूचियाँ",
   "Use classic mode": "क्लासिक मोड का उपयोग करें",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "चुनें कि कितनी कार्रवाइयाँ समानांतर में की जानी चाहिए",
   "Something went wrong while launching the updater.": "अपडेटर लॉन्च करते समय कुछ गलत हो गई।",
   "Please try again later": "कृपया बाद में पुन: प्रयास करें",
-  "Show the release notes after UniGetUI is updated": "UniGetUI अपडेट होने के बाद रिलीज नोट्स दिखाएं"
+  "Show the release notes after UniGetUI is updated": "UniGetUI अपडेट होने के बाद रिलीज नोट्स दिखाएं",
+  "Operations completed": "ऑपरेशन पूर्ण हुए",
+  "Operations finished with errors": "ऑपरेशन त्रुटियों के साथ समाप्त हुए",
+  "{0} of {1} succeeded, {2} failed": "{1} में से {0} सफल हुए, {2} विफल हुए",
+  "Show an in-app summary toast when a batch of operations finishes": "जब ऑपरेशनों का एक बैच समाप्त हो तो ऐप में सारांश सूचना दिखाएँ",
+  "Manual install": "मैनुअल स्थापित करें",
+  "Manual update": "मैनुअल अपडेट",
+  "Manual uninstall": "मैनुअल स्थापना रद्द करें"
 }

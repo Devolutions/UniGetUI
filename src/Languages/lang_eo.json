@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Naviga menuo:",
+  "Automatic": "Aŭtomata",
+  "Docked open": "Dokita malfermita",
+  "Sliding overlay": "Ŝovanta surtavolo",
   "{0} of {1} operations completed": "{0} el {1} operacioj plenumitaj",
   "{0} is now {1}": "{0} nun estas {1}",
   "Enabled": "Ŝaltita",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Propraj argumentoj por instalado:",
   "Custom update arguments:": "Propraj argumentoj por ĝisdatigo:",
   "Custom uninstall arguments:": "Propraj argumentoj por malinstalo:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Ĉi tiuj kampoj estas sendependaj: argumento agordita por Instali ne validas por Ĝisdatigi aŭ Malinstali, kaj inverse.",
+  "Copy install arguments to update and uninstall": "Kopii instalajn argumentojn al ĝisdatigo kaj malinstalo",
   "Pre-install command:": "Antaŭinstala komando:",
   "Post-install command:": "Postinstala komando:",
   "Abort install if pre-install command fails": "Nuligi instaladon se la antaŭinstala komando malsukcesas",
@@ -471,6 +477,8 @@
   "System language": "Sistema lingvo",
   "Is your language missing or incomplete?": "Ĉu via lingvo mankas aŭ estas nekompleta?",
   "Appearance": "Aspekto",
+  "Rendering": "Bildigo",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Aŭtomate ŝanĝi al programara bildigo kiam Windows ne havas aparatan GPU-on",
   "UniGetUI on the background and system tray": "UniGetUI en la fono kaj sistempleto",
   "Package lists": "Pakaĵlistoj",
   "Use classic mode": "Uzi klasikan reĝimon",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Elektu kiom da operacioj estu plenumataj paralele",
   "Something went wrong while launching the updater.": "Io misfunkciis dum lanĉo de la ĝisdatigilo.",
   "Please try again later": "Bonvolu reprovi poste",
-  "Show the release notes after UniGetUI is updated": "Montri la eldonajn notojn post kiam UniGetUI estas ĝisdatigita"
+  "Show the release notes after UniGetUI is updated": "Montri la eldonajn notojn post kiam UniGetUI estas ĝisdatigita",
+  "Operations completed": "Operacioj plenumitaj",
+  "Operations finished with errors": "Operacioj finiĝis kun eraroj",
+  "{0} of {1} succeeded, {2} failed": "{0} el {1} sukcesis, {2} malsukcesis",
+  "Show an in-app summary toast when a batch of operations finishes": "Montri resuman sciigon en la aplikaĵo kiam grupo da operacioj finiĝas",
+  "Manual install": "Mana instalo",
+  "Manual update": "Mana ĝisdatigo",
+  "Manual uninstall": "Mana malinstalo"
 }

@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Navigointivalikko:",
+  "Automatic": "Automaattinen",
+  "Docked open": "Kiinnitetty auki",
+  "Sliding overlay": "Liukuva peite",
   "{0} of {1} operations completed": "{0}/{1} toimintoa valmistunut",
   "{0} is now {1}": "{0} on nyt {1}",
   "Enabled": "Käytössä",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Mukautetun asennuksen argumentit:",
   "Custom update arguments:": "Mukautetut päivitysargumentit:",
   "Custom uninstall arguments:": "Mukautetut asennuksen poistoargumentit:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Nämä kentät ovat itsenäisiä: Asenna-toiminnolle määritetty argumentti ei koske Päivitä- tai Poista asennus -toimintoa, ja päinvastoin.",
+  "Copy install arguments to update and uninstall": "Kopioi asennusargumentit päivitykseen ja asennuksen poistoon",
   "Pre-install command:": "Esiasennuskomento:",
   "Post-install command:": "Asennuksen jälkeinen komento:",
   "Abort install if pre-install command fails": "Keskeytä asennus, jos esiasennuskomento epäonnistuu",
@@ -471,6 +477,8 @@
   "System language": "Järjestelmän kieli",
   "Is your language missing or incomplete?": "Puuttuuko käännöksesi vai onko se puutteellinen?",
   "Appearance": "Ulkonäkö",
+  "Rendering": "Renderöinti",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Vaihda automaattisesti ohjelmistopohjaiseen renderöintiin, kun Windowsissa ei ole laitteistopohjaista GPU:ta",
   "UniGetUI on the background and system tray": "UniGetUI taustalla ja ilmaisinalueella",
   "Package lists": "Pakettilista",
   "Use classic mode": "Käytä perinteistä tilaa",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Valitse, kuinka monta toimintoa suoritetaan rinnakkain",
   "Something went wrong while launching the updater.": "Jotain meni pieleen päivitystä käynnistettäessä.",
   "Please try again later": "Kokeile myöhemmin uudelleen",
-  "Show the release notes after UniGetUI is updated": "Näytä julkaisutiedot, kun UniGetUI on päivitetty"
+  "Show the release notes after UniGetUI is updated": "Näytä julkaisutiedot, kun UniGetUI on päivitetty",
+  "Operations completed": "Toiminnot valmiit",
+  "Operations finished with errors": "Toiminnot päättyivät virheisiin",
+  "{0} of {1} succeeded, {2} failed": "{0}/{1} onnistui, {2} epäonnistui",
+  "Show an in-app summary toast when a batch of operations finishes": "Näytä sovelluksen sisäinen yhteenvetoilmoitus, kun toimintoerä valmistuu",
+  "Manual install": "Manuaalinen asennus",
+  "Manual update": "Manuaalinen päivitys",
+  "Manual uninstall": "Manuaalinen asennuksen poisto"
 }

@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Μενού πλοήγησης:",
+  "Automatic": "Αυτόματο",
+  "Docked open": "Προσαρτημένο ανοιχτό",
+  "Sliding overlay": "Συρόμενη επικάλυψη",
   "{0} of {1} operations completed": "{0} από {1} λειτουργίες ολοκληρώθηκαν",
   "{0} is now {1}": "Το {0} είναι τώρα {1}",
   "Enabled": "Ενεργό",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Προσαρμοσμένα ορίσματα εγκατάστασης:",
   "Custom update arguments:": "Προσαρμοσμένα ορίσματα ενημέρωσης:",
   "Custom uninstall arguments:": "Προσαρμοσμένα ορίσματα απεγκατάστασης:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Αυτά τα πεδία είναι ανεξάρτητα: ένα όρισμα που ορίζεται για την Εγκατάσταση δεν ισχύει για την Ενημέρωση ή την Απεγκατάσταση, και αντίστροφα.",
+  "Copy install arguments to update and uninstall": "Αντιγραφή ορισμάτων εγκατάστασης στην ενημέρωση και την απεγκατάσταση",
   "Pre-install command:": "Εντολή πριν την εγκατάσταση:",
   "Post-install command:": "Εντολή μετά την εγκατάσταση:",
   "Abort install if pre-install command fails": "Διακοπή εγκατάστασης εάν η εντολή πριν την εγκατάσταση αποτύχει",
@@ -471,6 +477,8 @@
   "System language": "Γλώσσα συστήματος",
   "Is your language missing or incomplete?": "Η γλώσσα σας λείπει ή είναι ημιτελής;",
   "Appearance": "Εμφάνιση",
+  "Rendering": "Απόδοση",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Αυτόματη εναλλαγή σε απόδοση λογισμικού όταν τα Windows δεν διαθέτουν GPU υλικού",
   "UniGetUI on the background and system tray": "Το UniGetUI στο υπόβαθρο και στη γραμμή εργασιών",
   "Package lists": "Λίστες πακέτων",
   "Use classic mode": "Χρήση κλασικής λειτουργίας",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "Επιλέξτε πόσες λειτουργίες πρέπει να εκτελούνται παράλληλα",
   "Something went wrong while launching the updater.": "Κάτι πήγε στραβά κατά το άνοιγμα του προγράμματος ενημέρωσης.",
   "Please try again later": "Δοκιμάστε ξανά αργότερα",
-  "Show the release notes after UniGetUI is updated": "Εμφάνιση σημειώσεων έκδοσης μετά την ενημέρωση του UniGetUI"
+  "Show the release notes after UniGetUI is updated": "Εμφάνιση σημειώσεων έκδοσης μετά την ενημέρωση του UniGetUI",
+  "Operations completed": "Οι εργασίες ολοκληρώθηκαν",
+  "Operations finished with errors": "Οι εργασίες ολοκληρώθηκαν με σφάλματα",
+  "{0} of {1} succeeded, {2} failed": "{0} από {1} επιτυχή, {2} απέτυχαν",
+  "Show an in-app summary toast when a batch of operations finishes": "Εμφάνιση συνοπτικής ειδοποίησης εντός εφαρμογής όταν ολοκληρώνεται μια δέσμη εργασιών",
+  "Manual install": "Χειροκίνητη εγκατάσταση",
+  "Manual update": "Χειροκίνητη ενημέρωση",
+  "Manual uninstall": "Χειροκίνητη απεγκατάσταση"
 }

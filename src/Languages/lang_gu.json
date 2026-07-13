@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "નેવિગેશન મેનૂ:",
+  "Automatic": "સ્વચાલિત",
+  "Docked open": "ડૉક કરેલ ખુલ્લું",
+  "Sliding overlay": "સ્લાઇડિંગ ઓવરલે",
   "{0} of {1} operations completed": "{1} માંથી {0} ક્રિયાઓ પૂર્ણ થઈ",
   "{0} is now {1}": "{0} હવે {1} છે",
   "Enabled": "સક્રિય",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "custom install arguments:",
   "Custom update arguments:": "custom update arguments:",
   "Custom uninstall arguments:": "custom uninstall arguments:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "આ ફીલ્ડ્સ સ્વતંત્ર છે: સ્થાપિત કરો માટે સેટ કરેલી દલીલ અપડેટ અથવા અનઇન્સ્ટોલ કરો પર લાગુ થશે નહીં, અને ઊલટું.",
+  "Copy install arguments to update and uninstall": "સ્થાપન દલીલો અપડેટ અને અનઇન્સ્ટોલ પર કૉપિ કરો",
   "Pre-install command:": "સ્થાપન પહેલાંનો આદેશ:",
   "Post-install command:": "સ્થાપન પછીનો આદેશ:",
   "Abort install if pre-install command fails": "pre-install command નિષ્ફળ જાય તો સ્થાપન રદ કરો",
@@ -471,6 +477,8 @@
   "System language": "સિસ્ટમ ભાષા",
   "Is your language missing or incomplete?": "શું તમારી ભાષા ખૂટે છે અથવા અધૂરી છે?",
   "Appearance": "દેખાવ",
+  "Rendering": "રેન્ડરિંગ",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "જ્યારે Windows પાસે હાર્ડવેર GPU ન હોય ત્યારે આપમેળે સોફ્ટવેર રેન્ડરિંગ પર સ્વિચ કરો",
   "UniGetUI on the background and system tray": "background અને system tray માં UniGetUI",
   "Package lists": "પેકેજ યાદીઓ",
   "Use classic mode": "ક્લાસિક મોડ વાપરો",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "કેટલી operations parallel માં ચલાવવી તે પસંદ કરો",
   "Something went wrong while launching the updater.": "updater launch કરતી વખતે કંઈક ખોટું થયું.",
   "Please try again later": "કૃપા કરીને પછી ફરી પ્રયાસ કરો",
-  "Show the release notes after UniGetUI is updated": "UniGetUI અપડેટ થયા પછી પ્રકાશન નોંધો બતાવો"
+  "Show the release notes after UniGetUI is updated": "UniGetUI અપડેટ થયા પછી પ્રકાશન નોંધો બતાવો",
+  "Operations completed": "ઓપરેશન્સ પૂર્ણ થયા",
+  "Operations finished with errors": "ઓપરેશન્સ ભૂલો સાથે સમાપ્ત થયા",
+  "{0} of {1} succeeded, {2} failed": "{1} માંથી {0} સફળ, {2} નિષ્ફળ",
+  "Show an in-app summary toast when a batch of operations finishes": "જ્યારે ઓપરેશન્સનો સમૂહ સમાપ્ત થાય ત્યારે એપ્લિકેશનમાં સારાંશ સૂચના બતાવો",
+  "Manual install": "મેન્યુઅલ સ્થાપન",
+  "Manual update": "મેન્યુઅલ અપડેટ",
+  "Manual uninstall": "મેન્યુઅલ અનઇન્સ્ટોલ"
 }

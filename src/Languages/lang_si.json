@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "සංචලන මෙනුව:",
+  "Automatic": "ස්වයංක්‍රීය",
+  "Docked open": "නැංගුරම්ලා විවෘතව",
+  "Sliding overlay": "සර්පණ උඩැතිරිය",
   "{0} of {1} operations completed": "මෙහෙයුම් {1} කින් {0} ක් සම්පූර්ණ විය",
   "{0} is now {1}": "{0} දැන් {1} වේ",
   "Enabled": "සක්‍රීයයි",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "අභිරුචි ස්ථාපන arguments:",
   "Custom update arguments:": "අභිරුචි යාවත්කාලීන arguments:",
   "Custom uninstall arguments:": "අභිරුචි අස්ථාපන arguments:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "මෙම ක්ෂේත්‍ර ස්වාධීන වේ: ස්ථාපනය සඳහා සකසන ලද තර්කයක් යාවත්කාලීන කිරීමට හෝ ඉවත් කිරීමට අදාළ නොවේ, ප්‍රතිලෝමවද එසේම වේ.",
+  "Copy install arguments to update and uninstall": "ස්ථාපන තර්ක යාවත්කාලීන කිරීම හා ඉවත් කිරීම වෙත පිටපත් කරන්න",
   "Pre-install command:": "ස්ථාපනයට පෙර command:",
   "Post-install command:": "ස්ථාපනයෙන් පසු command:",
   "Abort install if pre-install command fails": "pre-install විධානය අසාර්ථක වුවහොත් ස්ථාපනය නවත්වන්න",
@@ -471,6 +477,8 @@
   "System language": "පද්ධති භාෂාව",
   "Is your language missing or incomplete?": "ඔබගේ භාෂාව අතුරුදන්වී තිබේද නැතහොත් අසම්පූර්ණද?",
   "Appearance": "පෙනුම",
+  "Rendering": "විදැහුම්කරණය",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Windows හි දෘඪාංග GPU නොමැති විට ස්වයංක්‍රීයව මෘදුකාංග විදැහුම්කරණයට මාරු වන්න",
   "UniGetUI on the background and system tray": "background සහ system tray තුළ UniGetUI",
   "Package lists": "පැකේජ ලැයිස්තු",
   "Use classic mode": "classic මාදිලිය භාවිතා කරන්න",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "එකවර ක්‍රියාත්මක කළ යුතු මෙහෙයුම් ගණන තෝරන්න",
   "Something went wrong while launching the updater.": "updater ආරම්භ කිරීමේදී යම් දෙයක් වැරදී ගියේය.",
   "Please try again later": "කරුණාකර පසුව නැවත උත්සාහ කරන්න",
-  "Show the release notes after UniGetUI is updated": "UniGetUI යාවත්කාලීන වූ පසු නිකුතු සටහන් පෙන්වන්න"
+  "Show the release notes after UniGetUI is updated": "UniGetUI යාවත්කාලීන වූ පසු නිකුතු සටහන් පෙන්වන්න",
+  "Operations completed": "මෙහෙයුම් සම්පූර්ණයි",
+  "Operations finished with errors": "මෙහෙයුම් දෝෂ සහිතව අවසන් විය",
+  "{0} of {1} succeeded, {2} failed": "{1} න් {0} සාර්ථකයි, {2} අසාර්ථකයි",
+  "Show an in-app summary toast when a batch of operations finishes": "මෙහෙයුම් කට්ටලයක් අවසන් වූ විට යෙදුම තුළ සාරාංශ දැනුම්දීමක් පෙන්වන්න",
+  "Manual install": "අතින් ස්ථාපනය කරන්න",
+  "Manual update": "අතින් යාවත්කාලීන කරන්න",
+  "Manual uninstall": "අතින් ඉවත් කරන්න"
 }

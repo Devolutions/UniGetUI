@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "வழிசெலுத்தல் பட்டியல்:",
+  "Automatic": "தானியங்கி",
+  "Docked open": "நங்கூரமிட்டு திறந்திருக்கும்",
+  "Sliding overlay": "நழுவும் மேலடுக்கு",
   "{0} of {1} operations completed": "{1} செயல்பாடுகளில் {0} முடிந்தது",
   "{0} is now {1}": "{0} இப்போது {1}",
   "Enabled": "இயக்கப்பட்டது",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "தனிப்பயன் நிறுவல் அளவுருக்கள்:",
   "Custom update arguments:": "தனிப்பயன் புதுப்பிப்பு அளவுருக்கள்:",
   "Custom uninstall arguments:": "தனிப்பயன் அகற்றல் அளவுருக்கள்:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "இந்த புலங்கள் தனித்தனியானவை: நிறுவுவதற்காக அமைக்கப்பட்ட ஒரு அளபுரு புதுப்பி அல்லது அகற்று ஆகியவற்றுக்குப் பொருந்தாது, மாறாகவும் அப்படியே.",
+  "Copy install arguments to update and uninstall": "நிறுவல் அளபுருக்களை புதுப்பி மற்றும் அகற்று ஆகியவற்றுக்கு நகலெடு",
   "Pre-install command:": "நிறுவலுக்கு முன் கட்டளை:",
   "Post-install command:": "நிறுவலுக்கு பின் கட்டளை:",
   "Abort install if pre-install command fails": "நிறுவலுக்கு முந்தைய கட்டளை தோல்வியுற்றால் நிறுவலை நிறுத்து",
@@ -471,6 +477,8 @@
   "System language": "கணினி மொழி",
   "Is your language missing or incomplete?": "உங்கள் மொழி இல்லை அல்லது முழுமையில்லையா?",
   "Appearance": "தோற்றம்",
+  "Rendering": "காட்சியாக்கம்",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Windows-இல் வன்பொருள் GPU இல்லாதபோது தானாகவே மென்பொருள் காட்சியாக்கத்திற்கு மாறவும்",
   "UniGetUI on the background and system tray": "background மற்றும் system tray இல் UniGetUI",
   "Package lists": "package பட்டியல்கள்",
   "Use classic mode": "பாரம்பரிய முறையைப் பயன்படுத்து",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "ஒரே நேரத்தில் எத்தனை செயல்பாடுகள் மேற்கொள்ளப்பட வேண்டும் என்பதைத் தேர்ந்தெடுக்கவும்",
   "Something went wrong while launching the updater.": "updater ஐ தொடங்கும் போது ஏதோ தவறாகிவிட்டது.",
   "Please try again later": "பின்னர் மீண்டும் முயற்சிக்கவும்",
-  "Show the release notes after UniGetUI is updated": "UniGetUI புதுப்பிக்கப்பட்ட பிறகு வெளியீட்டு குறிப்புகளைக் காட்டு"
+  "Show the release notes after UniGetUI is updated": "UniGetUI புதுப்பிக்கப்பட்ட பிறகு வெளியீட்டு குறிப்புகளைக் காட்டு",
+  "Operations completed": "செயல்பாடுகள் முடிந்தன",
+  "Operations finished with errors": "செயல்பாடுகள் பிழைகளுடன் முடிந்தன",
+  "{0} of {1} succeeded, {2} failed": "{1} இல் {0} வெற்றி, {2} தோல்வி",
+  "Show an in-app summary toast when a batch of operations finishes": "செயல்பாடுகளின் தொகுப்பு முடியும்போது பயன்பாட்டினுள் ஒரு சுருக்க அறிவிப்பைக் காட்டு",
+  "Manual install": "கைமுறை நிறுவல்",
+  "Manual update": "கைமுறை புதுப்பிப்பு",
+  "Manual uninstall": "கைமுறை அகற்றல்"
 }

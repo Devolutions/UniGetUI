@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Menú de navegación:",
+  "Automatic": "Automático",
+  "Docked open": "Anclado abierto",
+  "Sliding overlay": "Superposición deslizante",
   "{0} of {1} operations completed": "{0} de {1} operaciones completadas",
   "{0} is now {1}": "{0} ahora es {1}",
   "Enabled": "Habilitado",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Argumentos de instalación personalizados:",
   "Custom update arguments:": "Argumentos de actualización personalizados:",
   "Custom uninstall arguments:": "Argumentos de desinstalación personalizados:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Estos campos son independientes: un argumento establecido para Instalar no se aplicará a Actualizar ni a Desinstalar, y viceversa.",
+  "Copy install arguments to update and uninstall": "Copiar los argumentos de instalación a actualizar y desinstalar",
   "Pre-install command:": "Comando de preinstalación:",
   "Post-install command:": "Comando de postinstalación:",
   "Abort install if pre-install command fails": "Abortar instalación si el comando de preinstalación falla",
@@ -471,6 +477,8 @@
   "System language": "Idioma del sistema",
   "Is your language missing or incomplete?": "¿Falta tu idioma o está incompleto?",
   "Appearance": "Apariencia",
+  "Rendering": "Renderizado",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Cambiar automáticamente al renderizado por software cuando Windows no tiene una GPU de hardware",
   "UniGetUI on the background and system tray": "UniGetUI en segundo plano y en la bandeja del sistema",
   "Package lists": "Listas de paquetes",
   "Use classic mode": "Usar modo clásico",
@@ -842,5 +850,12 @@
   "Log in failed: ": "Error al iniciar sesión: ",
   "Log out failed: ": "Error al cerrar sesión: ",
   "Package backup settings": "Ajustes de copia de seguridad de paquetes",
-  "Show the release notes after UniGetUI is updated": "Mostrar las notas de la versión después de actualizar UniGetUI"
+  "Show the release notes after UniGetUI is updated": "Mostrar las notas de la versión después de actualizar UniGetUI",
+  "Operations completed": "Operaciones completadas",
+  "Operations finished with errors": "Operaciones finalizadas con errores",
+  "{0} of {1} succeeded, {2} failed": "{0} de {1} correctas, {2} fallidas",
+  "Show an in-app summary toast when a batch of operations finishes": "Mostrar una notificación de resumen en la aplicación cuando finaliza un lote de operaciones",
+  "Manual install": "Instalación manual",
+  "Manual update": "Actualización manual",
+  "Manual uninstall": "Desinstalación manual"
 }

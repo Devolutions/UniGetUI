@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "संचरणसूची:",
+  "Automatic": "स्वयंचलितम्",
+  "Docked open": "संलग्नं उद्घाटितम्",
+  "Sliding overlay": "सर्पत् आच्छादनम्",
   "{0} of {1} operations completed": "{1} इत्येतेषु {0} कार्याणि सम्पन्नानि",
   "{0} is now {1}": "{0} अधुना {1} अस्ति",
   "Enabled": "सक्रियम्",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "custom install arguments:",
   "Custom update arguments:": "custom update arguments:",
   "Custom uninstall arguments:": "custom uninstall arguments:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "एतानि क्षेत्राणि स्वतन्त्राणि सन्ति: स्थापयतु इत्यर्थं निर्धारितः प्राचलः अद्यतय अथवा अनस्थापयतु इत्येतयोः न प्रयोक्ष्यते, विपरीतमपि च।",
+  "Copy install arguments to update and uninstall": "स्थापनप्राचलान् अद्यतय अनस्थापयतु च इत्येतयोः प्रतिलिख्यताम्",
   "Pre-install command:": "स्थापनपूर्व-command:",
   "Post-install command:": "स्थापनोत्तर-command:",
   "Abort install if pre-install command fails": "pre-install आदेशः विफलः चेत् स्थापनं निरस्यतु",
@@ -471,6 +477,8 @@
   "System language": "तन्त्रांशभाषा",
   "Is your language missing or incomplete?": "भवतः भाषा अनुपस्थितास्ति वा अपूर्णा अस्ति किम्?",
   "Appearance": "रूपम्",
+  "Rendering": "आपादनम्",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "यदा विण्डोज्-मध्ये यन्त्रांश-GPU नास्ति तदा स्वयमेव सॉफ्टवेयर-आपादनं प्रति परिवर्त्यताम्",
   "UniGetUI on the background and system tray": "background तथा system tray मध्ये UniGetUI",
   "Package lists": "पैकेज्-सूचयः",
   "Use classic mode": "पारम्परिक-रीतिं उपयुञ्जताम्",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "कियत् क्रियाः समकालिकरूपेण क्रियेरन् इति चयनय",
   "Something went wrong while launching the updater.": "updater आरम्भयन् किमपि विपरीतं जातम्।",
   "Please try again later": "कृपया पश्चात् पुनः प्रयतस्व",
-  "Show the release notes after UniGetUI is updated": "UniGetUI नवीनीकृते सति प्रकाशन-टिप्पण्यः दर्शयतु"
+  "Show the release notes after UniGetUI is updated": "UniGetUI नवीनीकृते सति प्रकाशन-टिप्पण्यः दर्शयतु",
+  "Operations completed": "क्रियाः सम्पूर्णाः",
+  "Operations finished with errors": "क्रियाः दोषैः सह समाप्ताः",
+  "{0} of {1} succeeded, {2} failed": "{1} मध्ये {0} सफलाः, {2} असफलाः",
+  "Show an in-app summary toast when a batch of operations finishes": "यदा क्रियासमूहः समाप्यते तदा अनुप्रयोगान्तर्गतं सारांश-सूचना दर्श्यताम्",
+  "Manual install": "हस्तचलित-स्थापनम्",
+  "Manual update": "हस्तचलित-अद्यतनम्",
+  "Manual uninstall": "हस्तचलित-अनस्थापनम्"
 }

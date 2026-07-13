@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "ナビゲーションメニュー:",
+  "Automatic": "自動",
+  "Docked open": "固定して展開",
+  "Sliding overlay": "スライドオーバーレイ",
   "{0} of {1} operations completed": "{1}件中{0}件のパッケージ操作が完了しました",
   "{0} is now {1}": "{0}は{1}になりました",
   "Enabled": "有効",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "カスタムインストール引数：",
   "Custom update arguments:": "カスタムアップデート引数：",
   "Custom uninstall arguments:": "カスタムアンインストール引数：",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "これらのフィールドは独立しています。インストール用に設定した引数はアップデートやアンインストールには適用されず、その逆も同様です。",
+  "Copy install arguments to update and uninstall": "インストールの引数をアップデートとアンインストールにコピー",
   "Pre-install command:": "インストール前コマンド：",
   "Post-install command:": "インストール後コマンド：",
   "Abort install if pre-install command fails": "インストール前コマンドが失敗した場合はインストールを中止する",
@@ -471,6 +477,8 @@
   "System language": "システムの言語",
   "Is your language missing or incomplete?": "ご希望の言語が見当たらない、または不完全ですか？",
   "Appearance": "外観",
+  "Rendering": "レンダリング",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Windows にハードウェア GPU がない場合、自動的にソフトウェアレンダリングに切り替える",
   "UniGetUI on the background and system tray": "UniGetUIのシステムトレイ常駐とスタートアップ起動",
   "Package lists": "パッケージ一覧",
   "Use classic mode": "クラシック モードを使用する",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "同時に実行するパッケージ操作数",
   "Something went wrong while launching the updater.": "アップデーターの起動中に問題が発生しました。",
   "Please try again later": "あとでもう一度お試しください。",
-  "Show the release notes after UniGetUI is updated": "UniGetUIの更新後にリリースノートを表示する"
+  "Show the release notes after UniGetUI is updated": "UniGetUIの更新後にリリースノートを表示する",
+  "Operations completed": "パッケージ操作が完了しました",
+  "Operations finished with errors": "パッケージ操作がエラーで終了しました",
+  "{0} of {1} succeeded, {2} failed": "{1} 件中 {0} 件成功、{2} 件失敗",
+  "Show an in-app summary toast when a batch of operations finishes": "一連のパッケージ操作が完了したときにアプリ内に概要通知を表示する",
+  "Manual install": "手動インストール",
+  "Manual update": "手動アップデート",
+  "Manual uninstall": "手動アンインストール"
 }

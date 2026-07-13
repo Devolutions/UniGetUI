@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Menyja e navigimit:",
+  "Automatic": "Automatik",
+  "Docked open": "I ankoruar hapur",
+  "Sliding overlay": "Mbivendosje rrëshqitëse",
   "{0} of {1} operations completed": "U përfunduan {0} nga {1} veprime",
   "{0} is now {1}": "{0} tani është {1}",
   "Enabled": "Aktivizuar",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Argumente të instalimit të personalizuara:",
   "Custom update arguments:": "Argumente të përditësimit të personalizuara:",
   "Custom uninstall arguments:": "Argumente të çinstalimit të personalizuara:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Këto fusha janë të pavarura: një argument i vendosur për Instalo nuk do të zbatohet për Përditeso ose Çinstalo, dhe anasjelltas.",
+  "Copy install arguments to update and uninstall": "Kopjo argumentet e instalimit te përditësimi dhe çinstalimi",
   "Pre-install command:": "Komanda para instalimit:",
   "Post-install command:": "Komanda pas instalimit:",
   "Abort install if pre-install command fails": "Anulo instalimin nëse komanda e para-instalimit dështon",
@@ -471,6 +477,8 @@
   "System language": "Gjuha e sistemit",
   "Is your language missing or incomplete?": "Gjuha jote mungon apo është e paplotë?",
   "Appearance": "Pamja",
+  "Rendering": "Renderimi",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Kalo automatikisht në renderim me softuer kur Windows nuk ka GPU harduerike",
   "UniGetUI on the background and system tray": "UniGetUI në sfond dhe në hapësirën e sistemit",
   "Package lists": "Listat e paketave",
   "Use classic mode": "Përdor modalitetin klasik",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "Zgjidh sa operacione duhet të kryhen paralelisht",
   "Something went wrong while launching the updater.": "Diçka shkoi gabim gjatë nisjes së përditësuesit.",
   "Please try again later": "Të lutem provo përsëri më vonë",
-  "Show the release notes after UniGetUI is updated": "Shfaq shënimet e botimit pasi UniGetUI të jetë përditësuar"
+  "Show the release notes after UniGetUI is updated": "Shfaq shënimet e botimit pasi UniGetUI të jetë përditësuar",
+  "Operations completed": "Operacionet përfunduan",
+  "Operations finished with errors": "Operacionet përfunduan me gabime",
+  "{0} of {1} succeeded, {2} failed": "{0} nga {1} me sukses, {2} dështuan",
+  "Show an in-app summary toast when a batch of operations finishes": "Shfaq një njoftim përmbledhës brenda aplikacionit kur përfundon një grup operacionesh",
+  "Manual install": "Instalim manual",
+  "Manual update": "Përditësim manual",
+  "Manual uninstall": "Çinstalim manual"
 }

@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "導覽選單：",
+  "Automatic": "自動",
+  "Docked open": "停駐展開",
+  "Sliding overlay": "滑動浮層",
   "{0} of {1} operations completed": "已完成 {1} 項操作中的 {0} 項",
   "{0} is now {1}": "{0} 現在是 {1}",
   "Enabled": "啟用",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "自訂安裝參數：",
   "Custom update arguments:": "自訂更新參數：",
   "Custom uninstall arguments:": "自訂解除安裝參數：",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "這些欄位彼此獨立：為安裝設定的引數不會套用於更新或解除安裝，反之亦然。",
+  "Copy install arguments to update and uninstall": "將安裝引數複製到更新與解除安裝",
   "Pre-install command:": "預安裝指令：",
   "Post-install command:": "安裝後指令：",
   "Abort install if pre-install command fails": "如果預安裝指令失敗，則中止安裝",
@@ -471,6 +477,8 @@
   "System language": "系統語言",
   "Is your language missing or incomplete?": "你的語言遺失或是尚未完成",
   "Appearance": "外觀",
+  "Rendering": "算繪",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "當 Windows 沒有硬體 GPU 時自動切換為軟體算繪",
   "UniGetUI on the background and system tray": "UniGetUI 在背景和系統匣上",
   "Package lists": "套件清單",
   "Use classic mode": "使用傳統模式",
@@ -848,5 +856,12 @@
   "Something went wrong while launching the updater.": "啟動更新程式時發生錯誤。",
   "Please try again later": "請稍後再試",
   "Installer host changed since the installed version.\nOld: {0}\nNew: {1}\n\nThis is usually harmless (the publisher moved hosting), but can also indicate a hijacked package manifest. Verify the new source before upgrading.": "安裝程式主機在已安裝版本之後變更。\n舊版: {0}\n新版: {1}\n\n這通常無害（發布者移動了主機），但也可能表示套件描述檔已被劫持。更新前請驗證新來源。",
-  "Show the release notes after UniGetUI is updated": "在 UniGetUI 更新後顯示版本更新說明"
+  "Show the release notes after UniGetUI is updated": "在 UniGetUI 更新後顯示版本更新說明",
+  "Operations completed": "操作已完成",
+  "Operations finished with errors": "操作完成，但有錯誤",
+  "{0} of {1} succeeded, {2} failed": "{1} 項中 {0} 項成功，{2} 項失敗",
+  "Show an in-app summary toast when a batch of operations finishes": "當一批操作完成時在應用程式內顯示摘要通知",
+  "Manual install": "手動安裝",
+  "Manual update": "手動更新",
+  "Manual uninstall": "手動解除安裝"
 }

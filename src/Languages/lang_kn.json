@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "ನ್ಯಾವಿಗೇಶನ್ ಮೆನು:",
+  "Automatic": "ಸ್ವಯಂಚಾಲಿತ",
+  "Docked open": "ಡಾಕ್ ಆಗಿ ತೆರೆದಿದೆ",
+  "Sliding overlay": "ಸ್ಲೈಡಿಂಗ್ ಓವರ್‌ಲೇ",
   "{0} of {1} operations completed": "{1} ರಲ್ಲಿ {0} ಕಾರ್ಯಾಚರಣೆಗಳು ಪೂರ್ಣಗೊಂಡಿವೆ",
   "{0} is now {1}": "{0} ಈಗ {1} ಆಗಿದೆ",
   "Enabled": "ಸಕ್ರಿಯಗೊಂಡಿದೆ",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "ಕಸ್ಟಮ್ ಸ್ಥಾಪನಾ ಆರ್ಗ್ಯುಮೆಂಟ್‌ಗಳು:",
   "Custom update arguments:": "ಕಸ್ಟಮ್ ನವೀಕರಣ ಆರ್ಗ್ಯುಮೆಂಟ್‌ಗಳು:",
   "Custom uninstall arguments:": "ಕಸ್ಟಮ್ ಅನ್‌ಇನ್‌ಸ್ಟಾಲ್ ಆರ್ಗ್ಯುಮೆಂಟ್‌ಗಳು:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "ಈ ಕ್ಷೇತ್ರಗಳು ಸ್ವತಂತ್ರವಾಗಿವೆ: ಸ್ಥಾಪನೆಗಾಗಿ ಹೊಂದಿಸಿದ ಆರ್ಗ್ಯುಮೆಂಟ್ ನವೀಕರಣ ಅಥವಾ ಅನ್‌ಇನ್‌ಸ್ಟಾಲ್‌ಗೆ ಅನ್ವಯಿಸುವುದಿಲ್ಲ, ಮತ್ತು ಪ್ರತಿಯಾಗಿ ಕೂಡ.",
+  "Copy install arguments to update and uninstall": "ಸ್ಥಾಪನಾ ಆರ್ಗ್ಯುಮೆಂಟ್‌ಗಳನ್ನು ನವೀಕರಣ ಮತ್ತು ಅನ್‌ಇನ್‌ಸ್ಟಾಲ್‌ಗೆ ನಕಲಿಸಿ",
   "Pre-install command:": "ಸ್ಥಾಪನೆಗೂ ಮುಂಚಿನ command:",
   "Post-install command:": "ಸ್ಥಾಪನೆಯ ನಂತರದ command:",
   "Abort install if pre-install command fails": "pre-install command ವಿಫಲವಾದರೆ ಸ್ಥಾಪನೆಯನ್ನು ನಿಲ್ಲಿಸಿ",
@@ -471,6 +477,8 @@
   "System language": "ಸಿಸ್ಟಂ ಭಾಷೆ",
   "Is your language missing or incomplete?": "ನಿಮ್ಮ ಭಾಷೆ ಕಾಣೆಯಾಗಿದೆ ಅಥವಾ ಅಪೂರ್ಣವಾಗಿದೆಯೇ?",
   "Appearance": "ದೃಶ್ಯರೂಪ",
+  "Rendering": "ರೆಂಡರಿಂಗ್",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Windows ನಲ್ಲಿ ಹಾರ್ಡ್‌ವೇರ್ GPU ಇಲ್ಲದಿದ್ದಾಗ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಸಾಫ್ಟ್‌ವೇರ್ ರೆಂಡರಿಂಗ್‌ಗೆ ಬದಲಾಯಿಸಿ",
   "UniGetUI on the background and system tray": "background ಮತ್ತು system tray ಯಲ್ಲಿ UniGetUI",
   "Package lists": "ಪ್ಯಾಕೇಜ್ ಪಟ್ಟಿಗಳು",
   "Use classic mode": "ಕ್ಲಾಸಿಕ್ ಮೋಡ್ ಬಳಸಿ",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "ಎಷ್ಟು ಕಾರ್ಯಾಚರಣೆಗಳನ್ನು ಸಮಾಂತರವಾಗಿ ನಡೆಸಬೇಕು ಎಂದು ಆಯ್ಕೆಮಾಡಿ",
   "Something went wrong while launching the updater.": "updater ಆರಂಭಿಸುವಾಗ ಏನೋ ತಪ್ಪಾಗಿದೆ.",
   "Please try again later": "ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
-  "Show the release notes after UniGetUI is updated": "UniGetUI ಅಪ್‌ಡೇಟ್ ಆದ ನಂತರ ಬಿಡುಗಡೆ ಟಿಪ್ಪಣಿಗಳನ್ನು ತೋರಿಸಿ"
+  "Show the release notes after UniGetUI is updated": "UniGetUI ಅಪ್‌ಡೇಟ್ ಆದ ನಂತರ ಬಿಡುಗಡೆ ಟಿಪ್ಪಣಿಗಳನ್ನು ತೋರಿಸಿ",
+  "Operations completed": "ಕಾರ್ಯಾಚರಣೆಗಳು ಪೂರ್ಣಗೊಂಡಿವೆ",
+  "Operations finished with errors": "ಕಾರ್ಯಾಚರಣೆಗಳು ದೋಷಗಳೊಂದಿಗೆ ಮುಗಿದಿವೆ",
+  "{0} of {1} succeeded, {2} failed": "{1} ರಲ್ಲಿ {0} ಯಶಸ್ವಿಯಾಗಿದೆ, {2} ವಿಫಲವಾಗಿದೆ",
+  "Show an in-app summary toast when a batch of operations finishes": "ಕಾರ್ಯಾಚರಣೆಗಳ ಬ್ಯಾಚ್ ಮುಗಿದಾಗ ಅಪ್ಲಿಕೇಶನ್‌ನೊಳಗೆ ಸಾರಾಂಶ ಅಧಿಸೂಚನೆ ತೋರಿಸಿ",
+  "Manual install": "ಹಸ್ತಚಾಲಿತ ಸ್ಥಾಪನೆ",
+  "Manual update": "ಹಸ್ತಚಾಲಿತ ನವೀಕರಣ",
+  "Manual uninstall": "ಹಸ್ತಚಾಲಿತ ಅನ್‌ಇನ್‌ಸ್ಟಾಲ್"
 }

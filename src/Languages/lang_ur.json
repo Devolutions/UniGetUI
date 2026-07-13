@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "نیویگیشن مینو:",
+  "Automatic": "خودکار",
+  "Docked open": "منسلک اور کھلا",
+  "Sliding overlay": "کھسکنے والا اوورلے",
   "{0} of {1} operations completed": "{1} میں سے {0} آپریشن مکمل ہوئے",
   "{0} is now {1}": "{0} اب {1} ہے",
   "Enabled": "فعال",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "حسب ضرورت انسٹال دلائل:",
   "Custom update arguments:": "حسب ضرورت اپ ڈیٹ دلائل:",
   "Custom uninstall arguments:": "حسب ضرورت ان انسٹال دلائل:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "یہ فیلڈز خودمختار ہیں: انسٹال کے لیے مقرر کردہ آرگیومنٹ اپ ڈیٹ یا ان انسٹال پر لاگو نہیں ہوگا، اور اسی طرح اس کے برعکس بھی۔",
+  "Copy install arguments to update and uninstall": "انسٹال آرگیومنٹس کو اپ ڈیٹ اور ان انسٹال میں کاپی کریں",
   "Pre-install command:": "پری انسٹال کمانڈ:",
   "Post-install command:": "پوسٹ انسٹال کمانڈ:",
   "Abort install if pre-install command fails": "اگر پری انسٹال کمانڈ ناکام ہو تو انسٹالیشن منسوخ کریں",
@@ -471,6 +477,8 @@
   "System language": "نظام کی زبان",
   "Is your language missing or incomplete?": "کیا آپ کی زبان غائب ہے یا نامکمل؟",
   "Appearance": "ظاہری شکل",
+  "Rendering": "رینڈرنگ",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "جب Windows میں ہارڈ ویئر GPU نہ ہو تو خودکار طور پر سافٹ ویئر رینڈرنگ پر منتقل ہوں",
   "UniGetUI on the background and system tray": "UniGetUI پس منظر اور سسٹم ٹرے میں",
   "Package lists": "پیکیج کی فہرستیں",
   "Use classic mode": "کلاسک موڈ استعمال کریں",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "منتخب کریں کہ کتنی کارروائیاں بیک وقت انجام دی جائیں",
   "Something went wrong while launching the updater.": "اپڈیٹر لانچ کرتے وقت کچھ غلط ہو گیا۔",
   "Please try again later": "براہ کرم بعد میں دوبارہ کوشش کریں۔",
-  "Show the release notes after UniGetUI is updated": "UniGetUI اپ ڈیٹ ہونے کے بعد ریلیز نوٹس دکھائیں"
+  "Show the release notes after UniGetUI is updated": "UniGetUI اپ ڈیٹ ہونے کے بعد ریلیز نوٹس دکھائیں",
+  "Operations completed": "آپریشنز مکمل ہو گئے",
+  "Operations finished with errors": "آپریشنز نقائص کے ساتھ مکمل ہوئے",
+  "{0} of {1} succeeded, {2} failed": "{1} میں سے {0} کامیاب، {2} ناکام",
+  "Show an in-app summary toast when a batch of operations finishes": "جب آپریشنز کا ایک بیچ مکمل ہو تو ایپ کے اندر خلاصہ اطلاع دکھائیں",
+  "Manual install": "دستی انسٹال",
+  "Manual update": "دستی اپ ڈیٹ",
+  "Manual uninstall": "دستی ان انسٹال"
 }

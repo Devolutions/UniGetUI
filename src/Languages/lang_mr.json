@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "नेव्हिगेशन मेनू:",
+  "Automatic": "स्वयंचलित",
+  "Docked open": "डॉक करून उघडलेले",
+  "Sliding overlay": "सरकते आच्छादन",
   "{0} of {1} operations completed": "{1} पैकी {0} क्रिया पूर्ण झाल्या",
   "{0} is now {1}": "{0} आता {1} आहे",
   "Enabled": "सक्षम",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "सानुकूल स्थापना वितर्क:",
   "Custom update arguments:": "सानुकूल अद्यतन वितर्क:",
   "Custom uninstall arguments:": "सानुकूल विस्थापन वितर्क:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "ही फील्ड्स स्वतंत्र आहेत: स्थापनेसाठी सेट केलेला आर्ग्युमेंट अद्यतन किंवा विस्थापनास लागू होणार नाही, आणि उलटही.",
+  "Copy install arguments to update and uninstall": "स्थापना आर्ग्युमेंट्स अद्यतन आणि विस्थापनासाठी कॉपी करा",
   "Pre-install command:": "स्थापनेपूर्वीची आज्ञा:",
   "Post-install command:": "स्थापनेनंतरची आज्ञा:",
   "Abort install if pre-install command fails": "स्थापनेपूर्वीची आज्ञा अयशस्वी झाल्यास स्थापना थांबवा",
@@ -471,6 +477,8 @@
   "System language": "सिस्टम भाषा",
   "Is your language missing or incomplete?": "तुमची भाषा उपलब्ध नाही किंवा अपूर्ण आहे का?",
   "Appearance": "स्वरूप",
+  "Rendering": "रेंडरिंग",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Windows कडे हार्डवेअर GPU नसल्यास स्वयंचलितपणे सॉफ्टवेअर रेंडरिंगवर स्विच करा",
   "UniGetUI on the background and system tray": "पार्श्वभूमीत आणि सिस्टम ट्रेमध्ये UniGetUI",
   "Package lists": "पॅकेज सूची",
   "Use classic mode": "क्लासिक मोड वापरा",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "किती क्रिया समांतरपणे करायच्या ते निवडा",
   "Something went wrong while launching the updater.": "Updater सुरू करताना काहीतरी चुकले.",
   "Please try again later": "कृपया नंतर पुन्हा प्रयत्न करा",
-  "Show the release notes after UniGetUI is updated": "UniGetUI अद्यतनित झाल्यानंतर प्रकाशन नोंदी दर्शवा"
+  "Show the release notes after UniGetUI is updated": "UniGetUI अद्यतनित झाल्यानंतर प्रकाशन नोंदी दर्शवा",
+  "Operations completed": "क्रिया पूर्ण झाल्या",
+  "Operations finished with errors": "क्रिया त्रुटींसह पूर्ण झाल्या",
+  "{0} of {1} succeeded, {2} failed": "{1} पैकी {0} यशस्वी, {2} अयशस्वी",
+  "Show an in-app summary toast when a batch of operations finishes": "क्रियांचा संच पूर्ण झाल्यावर अ‍ॅपमध्ये सारांश सूचना दाखवा",
+  "Manual install": "मॅन्युअल स्थापना",
+  "Manual update": "मॅन्युअल अद्यतन",
+  "Manual uninstall": "मॅन्युअल विस्थापन"
 }

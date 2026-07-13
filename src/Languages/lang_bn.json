@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "নেভিগেশন মেনু:",
+  "Automatic": "স্বয়ংক্রিয়",
+  "Docked open": "ডক করা অবস্থায় খোলা",
+  "Sliding overlay": "স্লাইডিং ওভারলে",
   "{0} of {1} operations completed": "{1}টির মধ্যে {0}টি অপারেশন সম্পন্ন হয়েছে",
   "{0} is now {1}": "{0} এখন {1}",
   "Enabled": "সক্ষম",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "কাস্টম ইনস্টল আর্গুমেন্ট:",
   "Custom update arguments:": "কাস্টম আপডেট আর্গুমেন্ট:",
   "Custom uninstall arguments:": "কাস্টম আনইনস্টল আর্গুমেন্ট:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "এই ক্ষেত্রগুলো স্বতন্ত্র: ইনস্টলের জন্য নির্ধারিত আর্গুমেন্ট হালনাগাদ বা আনইনস্টলে প্রযোজ্য হবে না, এবং এর বিপরীতও সত্য।",
+  "Copy install arguments to update and uninstall": "ইনস্টল আর্গুমেন্ট হালনাগাদ ও আনইনস্টলে কপি করুন",
   "Pre-install command:": "প্রাক-ইনস্টল কমান্ড:",
   "Post-install command:": "পোস্ট-ইনস্টল কমান্ড:",
   "Abort install if pre-install command fails": "প্রাক-ইনস্টল কমান্ড ব্যর্থ হলে ইনস্টল বাতিল করুন",
@@ -471,6 +477,8 @@
   "System language": "সিস্টেমের ভাষা",
   "Is your language missing or incomplete?": "আপনার ভাষা অনুপস্থিত বা অসম্পূর্ণ?",
   "Appearance": "উপস্থিতি",
+  "Rendering": "রেন্ডারিং",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Windows-এ হার্ডওয়্যার GPU না থাকলে স্বয়ংক্রিয়ভাবে সফটওয়্যার রেন্ডারিংয়ে পরিবর্তন করুন",
   "UniGetUI on the background and system tray": "পটভূমিতে এবং সিস্টেম ট্রেতে UniGetUI",
   "Package lists": "প্যাকেজ তালিকা",
   "Use classic mode": "ক্লাসিক মোড ব্যবহার করুন",
@@ -846,5 +854,12 @@
   "Choose how many operations shoulds be performed in parallel": "কতগুলো অপারেশন সমান্তরালে চালানো হবে তা নির্বাচন করুন",
   "Something went wrong while launching the updater.": "আপডেটার চালু করার সময় কিছু ভুল হয়েছে।",
   "Please try again later": "অনুগ্রহ করে পরে আবার চেষ্টা করুন",
-  "Show the release notes after UniGetUI is updated": "UniGetUI আপডেট হওয়ার পর রিলিজ নোট দেখান"
+  "Show the release notes after UniGetUI is updated": "UniGetUI আপডেট হওয়ার পর রিলিজ নোট দেখান",
+  "Operations completed": "অপারেশন সম্পন্ন হয়েছে",
+  "Operations finished with errors": "অপারেশন ত্রুটিসহ সম্পন্ন হয়েছে",
+  "{0} of {1} succeeded, {2} failed": "{1}টির মধ্যে {0}টি সফল, {2}টি ব্যর্থ",
+  "Show an in-app summary toast when a batch of operations finishes": "একগুচ্ছ অপারেশন শেষ হলে অ্যাপের ভেতরে একটি সারসংক্ষেপ নোটিফিকেশন দেখান",
+  "Manual install": "ম্যানুয়াল ইনস্টল",
+  "Manual update": "ম্যানুয়াল হালনাগাদ",
+  "Manual uninstall": "ম্যানুয়াল আনইনস্টল"
 }

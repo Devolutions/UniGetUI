@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "Navigacijski meni:",
+  "Automatic": "Samodejno",
+  "Docked open": "Zasidrano odprto",
+  "Sliding overlay": "Drseča prekrivna plast",
   "{0} of {1} operations completed": "Dokončenih {0} od {1} opravil",
   "{0} is now {1}": "{0} je zdaj {1}",
   "Enabled": "Omogočeno",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "Argumenti namestitve po meri:",
   "Custom update arguments:": "Argumenti posodobitve po meri:",
   "Custom uninstall arguments:": "Argumenti odstranitve po meri:",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "Ta polja so neodvisna: argument, nastavljen za Namesti, se ne uporabi za Posodobi ali Odstrani, in obratno.",
+  "Copy install arguments to update and uninstall": "Kopiraj namestitvene argumente v posodobitev in odstranitev",
   "Pre-install command:": "Ukaz pred namestitvijo:",
   "Post-install command:": "Ukaz po namestitvi:",
   "Abort install if pre-install command fails": "Prekini namestitev, če ukaz za prednamestitev ne uspe",
@@ -471,6 +477,8 @@
   "System language": "Jezik sistema",
   "Is your language missing or incomplete?": "Ali vaš jezik manjka ali je nepopoln?",
   "Appearance": "Videz",
+  "Rendering": "Upodabljanje",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "Samodejno preklopi na programsko upodabljanje, kadar Windows nima strojnega GPE",
   "UniGetUI on the background and system tray": "UniGetUI v ozadju in sistemski vrstici",
   "Package lists": "Seznami paketov",
   "Use classic mode": "Uporabi klasični način",
@@ -847,5 +855,12 @@
   "Choose how many operations shoulds be performed in parallel": "Izberite, koliko operacij naj se izvaja vzporedno",
   "Something went wrong while launching the updater.": "Pri zagonu posodobitvenega programa je prišlo do napake.",
   "Please try again later": "Poskusite znova pozneje",
-  "Show the release notes after UniGetUI is updated": "Pokaži opombe ob izdaji po posodobitvi UniGetUI"
+  "Show the release notes after UniGetUI is updated": "Pokaži opombe ob izdaji po posodobitvi UniGetUI",
+  "Operations completed": "Operacije dokončane",
+  "Operations finished with errors": "Operacije končane z napakami",
+  "{0} of {1} succeeded, {2} failed": "{0} od {1} uspešnih, {2} neuspešnih",
+  "Show an in-app summary toast when a batch of operations finishes": "Prikaži povzetek v aplikaciji, ko se skupina operacij zaključi",
+  "Manual install": "Ročna namestitev",
+  "Manual update": "Ročna posodobitev",
+  "Manual uninstall": "Ročna odstranitev"
 }

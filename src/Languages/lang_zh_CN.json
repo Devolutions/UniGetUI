@@ -1,4 +1,8 @@
 {
+  "Navigation menu:": "导航菜单：",
+  "Automatic": "自动",
+  "Docked open": "停靠展开",
+  "Sliding overlay": "滑动浮层",
   "{0} of {1} operations completed": "已完成 {1} 项操作中的 {0} 项",
   "{0} is now {1}": "{0} 现在是 {1}",
   "Enabled": "已启用",
@@ -112,6 +116,8 @@
   "Custom install arguments:": "自定义安装参数：",
   "Custom update arguments:": "自定义更新参数：",
   "Custom uninstall arguments:": "自定义卸载参数：",
+  "These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.": "这些字段相互独立：为安装设置的参数不会应用于更新或卸载，反之亦然。",
+  "Copy install arguments to update and uninstall": "将安装参数复制到更新和卸载",
   "Pre-install command:": "安装前命令：",
   "Post-install command:": "安装后命令：",
   "Abort install if pre-install command fails": "如果安装前命令失败，则中止安装操作",
@@ -471,6 +477,8 @@
   "System language": "系统语言",
   "Is your language missing or incomplete?": "您的语言翻译是否缺失或不完整？ ",
   "Appearance": "外观",
+  "Rendering": "渲染",
+  "Automatically switch to software rendering when Windows has no hardware GPU": "当 Windows 没有硬件 GPU 时自动切换到软件渲染",
   "UniGetUI on the background and system tray": "UniGetUI 位于后台和系统托盘",
   "Package lists": "软件包列表",
   "Use classic mode": "使用经典模式",
@@ -846,5 +854,12 @@
   "Manage UniGetUI autostart behaviour from the Settings app": "管理 UniGetUI 自动启动行为",
   "Something went wrong while launching the updater.": "在启动更新程序时出错。",
   "Please try again later": "请稍后再试",
-  "Show the release notes after UniGetUI is updated": "在 UniGetUI 更新后显示发布说明"
+  "Show the release notes after UniGetUI is updated": "在 UniGetUI 更新后显示发布说明",
+  "Operations completed": "操作已完成",
+  "Operations finished with errors": "操作完成，但有错误",
+  "{0} of {1} succeeded, {2} failed": "{1} 项中 {0} 项成功，{2} 项失败",
+  "Show an in-app summary toast when a batch of operations finishes": "当一批操作完成时在应用内显示摘要通知",
+  "Manual install": "手动安装",
+  "Manual update": "手动更新",
+  "Manual uninstall": "手动卸载"
 }

@@ -316,7 +316,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
             banner.Message = CoreTools.Translate(
                 "It looks like WinGet is not working properly. Do you want to attempt to repair WinGet?");
             banner.ActionButtonText = CoreTools.Translate("Repair WinGet");
-            banner.ActionButtonCommand = new AsyncRelayCommand(AvaloniaPackageOperationHelper.HandleBrokenWinGetAsync);
+            if (OperatingSystem.IsWindows())
+                banner.ActionButtonCommand = new AsyncRelayCommand(AvaloniaPackageOperationHelper.HandleBrokenWinGetAsync);
             banner.IsClosable = true;
             banner.IsOpen = true;
         }

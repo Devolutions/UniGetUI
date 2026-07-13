@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.Versioning;
 using System.Text;
 using Avalonia.Input.Platform;
 using UniGetUI.Avalonia.Views;
@@ -95,6 +96,7 @@ internal static class ManualInstallHelper
     // Terminal.app on a launcher script via `open`. This deliberately avoids AppleScript's `do script`,
     // which sends an Apple event that requires Automation (TCC) permission the app usually lacks; when
     // denied it fails silently, so the terminal opens (from `activate`) but the command is never typed.
+    [SupportedOSPlatform("macos")]
     private static void OpenMacTerminal(string command)
     {
         string dir = Path.Combine(Path.GetTempPath(), "unigetui-manual-" + Guid.NewGuid().ToString("N"));

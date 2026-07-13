@@ -28,6 +28,11 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 VersionInfoVersion=3.3.7.0
 VersionInfoProductVersion=3.3.7.0
+VersionInfoProductName={#MyAppName}
+VersionInfoDescription={#MyAppName} Installer
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoCopyright=Copyright 2021-2026 {#MyAppPublisher}
+AppCopyright=Copyright 2021-2026 {#MyAppPublisher}
 DefaultDirName="{autopf64}\UniGetUI"
 DisableProgramGroupPage=yes
 DisableDirPage=no
@@ -264,9 +269,8 @@ begin
     not IsDirNameValid(WizardForm.DirEdit.Text) then
   begin
     Result := False;
-    MsgBox('There is an invalid character in the selected install location. ' +
-      'Install location cannot contain special characters. ' +
-      'Please input a valid path to continue, such as '+ExpandConstant('{commonpf64}')+'\UniGetUI', mbError, MB_OK);
+    MsgBox(FmtMessage(CustomMessage('InvalidInstallPath'),
+      [ExpandConstant('{commonpf64}') + '\UniGetUI']), mbError, MB_OK);
   end;
 end;
 
@@ -341,7 +345,7 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: re
 [Run]
 ; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File -NonInteractive ""{tmp}\EnsureWinGet.ps1"""; StatusMsg: "Ensuring WinGet is properly installed... (this may take a while)"; WorkingDir: {app}; Check: not CmdLineParamExists('/NoWinGet'); Flags: runhidden
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: runasoriginaluser nowait postinstall; Check: ShouldLaunchAfterInstall;
-Filename: "{app}\{#MyAppExeName}"; Parameters: "--migrate-wingetui-to-unigetui"; StatusMsg: "Removing old icons...";
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--migrate-wingetui-to-unigetui"; StatusMsg: "{cm:RemovingOldIcons}";
 
 
 [UninstallRun]    

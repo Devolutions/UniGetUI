@@ -9,6 +9,8 @@ RegInst=Perform a regular installation
 RegStartMmenuIcon=Create a shortcut on the Start menu
 RegDesktopIcon=Create a shortcut on the Desktop
 PackageBundleName=UniGetUI package bundle
+InvalidInstallPath=There is an invalid character in the selected install location. Install location cannot contain special characters. Please input a valid path to continue, such as %1
+RemovingOldIcons=Removing old icons...
 
 ; Armenian
 Armenian.InstallType=Տեղադրման տեսակը
@@ -25,7 +27,7 @@ BrazilianPortuguese.ShCuts=Atalhos
 BrazilianPortuguese.PortInst=Realizar uma instalação portátil
 BrazilianPortuguese.RegInst=Realizar uma instalação regular
 BrazilianPortuguese.RegStartMmenuIcon=Criar um atalho no menu Iniciar
-BrazilianPortuguese.RegDesktopIcon=Criar um atalho na área de trabalh
+BrazilianPortuguese.RegDesktopIcon=Criar um atalho na área de trabalho
 BrazilianPortuguese.PackageBundleName=Coleção de pacotes UniGetUI
 
 ; Catalan
@@ -179,7 +181,7 @@ Russian.PortInst=Выполнить переносную установку
 Russian.RegInst=Выполнить обычную установку
 Russian.RegStartMmenuIcon=Создать ярлык в меню «Пуск»
 Russian.RegDesktopIcon=Создать ярлык на рабочем столе
-Russian.PackageBundleName=
+Russian.PackageBundleName=Коллекция пакетов UniGetUI
 
 ; Slovenian
 Slovenian.InstallType=Vrsta namestitve
@@ -188,7 +190,7 @@ Slovenian.PortInst=Izvedite prenosno namestitev
 Slovenian.RegInst=Izvedite običajno namestitev
 Slovenian.RegStartMmenuIcon=Ustvarite bližnjico v meniju Start
 Slovenian.RegDesktopIcon=Ustvarite bližnjico na namizju
-Slovenian.PackageBundleName=Коллекция пакетов UniGetUI
+Slovenian.PackageBundleName=Zbirka paketov UniGetUI
 
 ; Spanish
 Spanish.InstallType=Tipo de instalación

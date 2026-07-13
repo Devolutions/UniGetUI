@@ -854,5 +854,8 @@
   "Operations completed": "Operations completed",
   "Operations finished with errors": "Operations finished with errors",
   "{0} of {1} succeeded, {2} failed": "{0} of {1} succeeded, {2} failed",
-  "Show an in-app summary toast when a batch of operations finishes": "Show an in-app summary toast when a batch of operations finishes"
+  "Show an in-app summary toast when a batch of operations finishes": "Show an in-app summary toast when a batch of operations finishes",
+  "Manual install": "Manual install",
+  "Manual update": "Manual update",
+  "Manual uninstall": "Manual uninstall"
 }

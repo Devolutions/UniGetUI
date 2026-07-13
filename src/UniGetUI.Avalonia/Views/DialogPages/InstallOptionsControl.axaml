@@ -501,15 +501,10 @@
         <!-- ── Command-line preview ── -->
         <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="8" Padding="12">
             <StackPanel Spacing="6">
-                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <TextBlock Grid.Column="0" Text="{Binding CommandPreviewLabel}" Opacity="0.7"
                                VerticalAlignment="Center"/>
-                    <Button Grid.Column="1" x:Name="CopyCommandButton"
-                            Content="{Binding CopyCommandLabel}"
-                            automation:AutomationProperties.Name="{Binding CopyCommandLabel}"
-                            Padding="10,4" CornerRadius="4"
-                            Click="CopyCommand_Click"/>
-                    <Button Grid.Column="2" x:Name="ManualButton"
+                    <Button Grid.Column="1" x:Name="ManualButton"
                             Content="{Binding ManualActionLabel}"
                             automation:AutomationProperties.Name="{Binding ManualActionLabel}"
                             Padding="10,4" CornerRadius="4"

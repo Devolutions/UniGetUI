@@ -57,7 +57,6 @@ public partial class InstallOptionsViewModel : ObservableObject
     public string PostUninstallLabel { get; } = CoreTools.Translate("Post-uninstall command:");
     public string AbortUninstallLabel { get; } = CoreTools.Translate("Abort uninstall if pre-uninstall command fails");
     public string CommandPreviewLabel { get; } = CoreTools.Translate("Command-line to run:");
-    public string CopyCommandLabel { get; } = CoreTools.Translate("Copy");
     public string SaveLabel { get; } = CoreTools.Translate("Save and close");
     // Tab headers — icon + two text lines, mirroring the WinUI BetterTabViewItem tabs.
     public string TabGeneralLine1 { get; } = CoreTools.Translate("General");

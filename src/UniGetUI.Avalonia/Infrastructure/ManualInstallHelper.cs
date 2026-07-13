@@ -91,20 +91,40 @@ internal static class ManualInstallHelper
     }
 
     // macOS: zsh's 'print -z' pushes text onto the line-editor buffer so it appears pre-typed at the
-    // next prompt without executing. Run it in Terminal.app via AppleScript (zsh is the default shell).
+    // next prompt without executing. We seed it from a throwaway startup file (ZDOTDIR) and open
+    // Terminal.app on a launcher script via `open`. This deliberately avoids AppleScript's `do script`,
+    // which sends an Apple event that requires Automation (TCC) permission the app usually lacks; when
+    // denied it fails silently, so the terminal opens (from `activate`) but the command is never typed.
     private static void OpenMacTerminal(string command)
     {
-        string zshCmd = "print -z -- '" + command.Replace("'", "'\\''") + "'";
-        string appleScript =
-            "tell application \"Terminal\"\n"
-            + "  activate\n"
-            + "  do script \"" + zshCmd.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"\n"
-            + "end tell";
+        string dir = Path.Combine(Path.GetTempPath(), "unigetui-manual-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+
+        // ' is escaped for the enclosing single-quoted zsh argument. Setting ZDOTDIR bypasses the
+        // user's normal startup files, so re-source them before seeding the buffer; then unset it so
+        // any shells the user spawns behave normally.
+        string cmdLiteral = command.Replace("'", "'\\''");
+        File.WriteAllText(Path.Combine(dir, ".zshrc"),
+            "[ -f \"$HOME/.zshenv\" ] && source \"$HOME/.zshenv\"\n"
+            + "[ -f \"$HOME/.zshrc\" ] && source \"$HOME/.zshrc\"\n"
+            + "unset ZDOTDIR\n"
+            + "print -z -- '" + cmdLiteral + "'\n");
+
+        // Launcher: re-exec an interactive zsh whose startup files come from our temp dir. Terminal
+        // runs a *.command file passed to `open` as long as it is executable.
+        string launcher = Path.Combine(dir, "launch.command");
+        string dirLiteral = dir.Replace("'", "'\\''");
+        File.WriteAllText(launcher,
+            "#!/bin/zsh\n"
+            + "ZDOTDIR='" + dirLiteral + "' exec zsh -i\n");
+        File.SetUnixFileMode(launcher,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
         Process.Start(new ProcessStartInfo
         {
-            FileName = "osascript",
+            FileName = "open",
             UseShellExecute = false,
-            ArgumentList = { "-e", appleScript },
+            ArgumentList = { "-a", "Terminal", launcher },
         });
     }
 

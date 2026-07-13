@@ -121,6 +121,8 @@ procedure InitializeWizard;
 begin
   WizardForm.Bevel.Visible := False;
   WizardForm.Bevel1.Visible := True;
+  // DisableWelcomePage=no makes Inno caption use AppName alone; put the version back in.
+  WizardForm.Caption := FmtMessage(SetupMessage(msgSetupWindowTitle), ['{#MyAppName} {#MyAppVersion}']);
 end;
 
 // Kills all instances of an image and loops until none remain (taskkill returns 0 while killing, 128 when none left).

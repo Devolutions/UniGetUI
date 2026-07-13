@@ -32,6 +32,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
     private MenuItem? _menuDetails;
     private MenuItem? _menuOpenInstallLocation;
     private MenuItem? _menuDownloadInstaller;
+    private MenuItem? _menuManual;
 
     private static bool _hasBackedUp;
 
@@ -106,6 +107,9 @@ public class InstalledPackagesPage : AbstractPackagesPage
         ViewModel.AddToolbarButton("options", CoreTools.Translate("Uninstall options"),
             () => _ = ShowInstallationOptionsForPackage(SelectedItem), showLabel: false);
         ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("console", CoreTools.Translate("Manual uninstall"),
+            () => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Uninstall));
+        ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
         ViewModel.AddToolbarSeparator();
@@ -143,6 +147,9 @@ public class InstalledPackagesPage : AbstractPackagesPage
             Icon = LoadMenuIcon("options"),
         };
         _menuInstallationOptions.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
+
+        _menuManual = new MenuItem { Header = CoreTools.Translate("Manual uninstall"), Icon = LoadMenuIcon("console") };
+        _menuManual.Click += (_, _) => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Uninstall);
 
         _menuOpenInstallLocation = new MenuItem
         {
@@ -213,6 +220,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         menu.Items.Add(menuUninstall);
         menu.Items.Add(new Separator());
         menu.Items.Add(_menuInstallationOptions);
+        menu.Items.Add(_menuManual);
         menu.Items.Add(_menuOpenInstallLocation);
         menu.Items.Add(new Separator());
         menu.Items.Add(_menuAsAdmin);
@@ -237,7 +245,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
             || _menuInstallationOptions is null || _menuReinstall is null
             || _menuUninstallThenReinstall is null || _menuIgnoreUpdates is null
             || _menuDetails is null
-            || _menuOpenInstallLocation is null || _menuDownloadInstaller is null)
+            || _menuOpenInstallLocation is null || _menuDownloadInstaller is null
+            || _menuManual is null)
         {
             Logger.Warn("Context menu items are null on InstalledPackagesPage");
             return;
@@ -246,6 +255,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         bool isLocal = package.Source.IsVirtualManager;
         var caps = package.Manager.Capabilities;
 
+        _menuManual.IsEnabled = !isLocal;
         _menuAsAdmin.IsEnabled = caps.CanRunAsAdmin;
         _menuInteractive.IsEnabled = caps.CanRunInteractively;
         _menuRemoveData.IsEnabled = caps.CanRemoveDataOnUninstall;

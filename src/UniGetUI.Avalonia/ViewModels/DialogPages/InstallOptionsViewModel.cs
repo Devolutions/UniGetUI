@@ -57,6 +57,7 @@ public partial class InstallOptionsViewModel : ObservableObject
     public string PostUninstallLabel { get; } = CoreTools.Translate("Post-uninstall command:");
     public string AbortUninstallLabel { get; } = CoreTools.Translate("Abort uninstall if pre-uninstall command fails");
     public string CommandPreviewLabel { get; } = CoreTools.Translate("Command-line to run:");
+    public string CopyCommandLabel { get; } = CoreTools.Translate("Copy");
     public string SaveLabel { get; } = CoreTools.Translate("Save and close");
     // Tab headers — icon + two text lines, mirroring the WinUI BetterTabViewItem tabs.
     public string TabGeneralLine1 { get; } = CoreTools.Translate("General");
@@ -125,10 +126,17 @@ public partial class InstallOptionsViewModel : ObservableObject
 
     [ObservableProperty] private string? _selectedProfile;
     [ObservableProperty] private string _proceedButtonLabel = "";
+    [ObservableProperty] private string _manualActionLabel = "";
 
     partial void OnSelectedProfileChanged(string? value)
     {
         ProceedButtonLabel = value ?? "";
+        ManualActionLabel = CurrentOp() switch
+        {
+            OperationType.Update => CoreTools.Translate("Manual update"),
+            OperationType.Uninstall => CoreTools.Translate("Manual uninstall"),
+            _ => CoreTools.Translate("Manual install"),
+        };
         ApplyProfileEnableState();
         if (_uiLoaded) _ = RefreshCommandPreviewAsync();
     }
@@ -429,11 +437,18 @@ public partial class InstallOptionsViewModel : ObservableObject
     private async Task RefreshCommandPreviewAsync()
     {
         if (!_uiLoaded) return;
+        CommandPreview = await BuildCurrentCommandAsync();
+    }
+
+    /// <summary>Builds the CLI command for the currently selected operation and options,
+    /// identical to the live preview. Used by the Copy / Open-in-terminal actions.</summary>
+    public async Task<string> BuildCurrentCommandAsync()
+    {
         var snap = SnapshotOptions();
         var op = CurrentOp();
         var applied = await InstallOptionsFactory.LoadApplicableAsync(_package, overridePackageOptions: snap);
         var args = await Task.Run(() => _package.Manager.OperationHelper.GetParameters(_package, applied, op));
-        CommandPreview = _package.Manager.Properties.ExecutableFriendlyName + " " + string.Join(' ', args);
+        return _package.Manager.Properties.ExecutableFriendlyName + " " + string.Join(' ', args);
     }
 
     private void Refresh() { if (_uiLoaded) _ = RefreshCommandPreviewAsync(); }

@@ -1,7 +1,9 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
@@ -31,5 +33,33 @@ public partial class InstallOptionsControl : UserControl
     {
         if (e.Key is Key.Return or Key.Enter or Key.OemComma)
             ViewModel.AddKillProcessCommand.Execute(null);
+    }
+
+    // ── Manual install: copy the generated command / open a terminal to run it by hand ──
+
+    private async void CopyCommand_Click(object? sender, RoutedEventArgs e)
+    {
+        var command = await ViewModel.BuildCurrentCommandAsync();
+        if (string.IsNullOrWhiteSpace(command)) return;
+
+        if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+            await clipboard.SetTextAsync(command);
+
+        if (sender is Button btn)
+        {
+            var original = btn.Content;
+            btn.Content = "✓";
+            await Task.Delay(1000);
+            btn.Content = original;
+        }
+    }
+
+    private async void Manual_Click(object? sender, RoutedEventArgs e)
+    {
+        var command = await ViewModel.BuildCurrentCommandAsync();
+        if (string.IsNullOrWhiteSpace(command)) return;
+
+        // Copies the command and opens a terminal with it pre-typed at the prompt.
+        await ManualInstallHelper.LaunchManualAsync(command);
     }
 }

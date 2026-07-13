@@ -89,6 +89,9 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         ViewModel.AddToolbarButton("options", CoreTools.Translate("Update options"),
             () => _ = ShowInstallationOptionsForPackage(SelectedItem), showLabel: false);
         ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("console", CoreTools.Translate("Manual update"),
+            () => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Update));
+        ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("info_round", CoreTools.Translate("Package details"),
             () => _ = ShowDetailsForPackage(SelectedItem), showLabel: false);
         ViewModel.AddToolbarSeparator();
@@ -121,6 +124,9 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             Icon = LoadMenuIcon("options"),
         };
         menuUpdateOptions.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
+
+        var menuManual = new MenuItem { Header = CoreTools.Translate("Manual update"), Icon = LoadMenuIcon("console") };
+        menuManual.Click += (_, _) => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Update);
 
         _menuOpenInstallLocation = new MenuItem
         {
@@ -243,6 +249,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         menu.Items.Add(menuUpdate);
         menu.Items.Add(new Separator());
         menu.Items.Add(menuUpdateOptions);
+        menu.Items.Add(menuManual);
         menu.Items.Add(_menuOpenInstallLocation);
         menu.Items.Add(new Separator());
         menu.Items.Add(_menuAsAdmin);

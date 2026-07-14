@@ -1,5 +1,5 @@
 using System;
-using System.Reflection;
+using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -10,19 +10,15 @@ namespace UniGetUI.Avalonia.Views.Controls;
 
 /// <summary>
 /// Eases DataGrid wheel scrolling to a stop (WinUI-like) instead of jumping the whole delta at once.
-/// The grid has no public scroll offset, so we drive its internal UpdateScroll via reflection; if that
-/// ever breaks we never attach and the stock instant behavior stands.
+/// The grid has no public scroll offset, so we statically bind its internal UpdateScroll method.
+/// The binding is NativeAOT-safe but must be revalidated when Avalonia DataGrid is upgraded.
 /// </summary>
 public sealed class DataGridWheelAnimator
 {
-    private static readonly MethodInfo? UpdateScroll =
-        typeof(DataGrid).GetMethod("UpdateScroll", BindingFlags.Instance | BindingFlags.NonPublic);
-
     private const double WheelStep = 70.0;   // pixels travelled per notch; larger = faster scroll, more to glide over
     private const double Tau = 0.12;         // ease time constant in seconds; larger = longer, more visible glide
 
     private readonly DataGrid _grid;
-    private readonly object?[] _args = new object?[1];
     private double _pending;
     private TimeSpan? _lastFrame;
     private bool _frameRequested;
@@ -35,7 +31,7 @@ public sealed class DataGridWheelAnimator
 
     public static void Attach(DataGrid grid)
     {
-        if (UpdateScroll is not null) _ = new DataGridWheelAnimator(grid);
+        _ = new DataGridWheelAnimator(grid);
     }
 
     private void OnWheel(object? sender, PointerWheelEventArgs e)
@@ -70,11 +66,13 @@ public sealed class DataGridWheelAnimator
         double remaining = _pending * Math.Exp(-dt / Tau);
         double step = Math.Abs(remaining) < 0.5 ? _pending : _pending - remaining;
 
-        _args[0] = new Vector(0, step);
-        bool scrolled = UpdateScroll!.Invoke(_grid, _args) is true;
+        bool scrolled = UpdateScroll(_grid, new Vector(0, step));
         _pending -= step;
 
         if (!scrolled) { _pending = 0; return; }
         if (_pending != 0) RequestFrame();
     }
+
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "UpdateScroll")]
+    private static extern bool UpdateScroll(DataGrid grid, Vector offset);
 }

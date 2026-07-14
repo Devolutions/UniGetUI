@@ -25,6 +25,7 @@
         <TrimMode>full</TrimMode>
         <PublishSingleFile>false</PublishSingleFile>
         <IncludeAvaloniaPublishSymbols>false</IncludeAvaloniaPublishSymbols>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <!-- NativeAOT is the default for release packages on all platforms. -->
@@ -231,7 +232,6 @@
       <Compile Include="Infrastructure\AppRestartHelper.cs" />
       <Compile Include="Infrastructure\WindowsAppNotificationBridge.cs" />
       <Compile Include="Infrastructure\Win32ToastNotifier.cs" />
-      <Compile Include="Infrastructure\AppShortcutAumidStamper.cs" />
       <Compile Include="Infrastructure\TrayService.cs" />
       <Compile Include="Infrastructure\MicaWindowHelper.cs" />
       <Compile Include="Infrastructure\MemoryTrimmer.cs" />

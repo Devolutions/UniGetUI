@@ -1,7 +1,6 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
 using System.Runtime.Versioning;
 using Avalonia.Controls;
 using UniGetUI.Core.Logging;
@@ -9,10 +8,11 @@ using CoreSettings = global::UniGetUI.Core.SettingsEngine.Settings;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
-internal static class WindowsAvaloniaRenderingPolicy
+internal static partial class WindowsAvaloniaRenderingPolicy
 {
     private static bool? _hasHardwareGpu;
     private static bool? _shouldUseSoftwareRendering;
+    private static readonly StrategyBasedComWrappers ComWrappers = new();
 
     public static bool ShouldUseSoftwareRendering
     {
@@ -60,23 +60,13 @@ internal static class WindowsAvaloniaRenderingPolicy
     }
 
     [SupportedOSPlatform("windows")]
-    [UnconditionalSuppressMessage("Trimming", "IL2050",
-        Justification = "The DXGI COM interfaces are declared in full and referenced directly here, so their members are preserved by trimming.")]
     private static bool DetectHardwareGpu()
     {
-        if (!RuntimeFeature.IsDynamicCodeSupported)
-        {
-            Logger.Info(
-                "Skipping DXGI hardware GPU detection because NativeAOT does not support legacy COM activation."
-            );
-            return true;
-        }
-
         try
         {
             Guid factoryIid = typeof(IDXGIFactory1).GUID;
-            if (CreateDXGIFactory1(ref factoryIid, out object factoryObj) != HResult.Ok
-                || factoryObj is not IDXGIFactory1 factory)
+            if (CreateDXGIFactory1(ref factoryIid, out nint nativeFactory) != HResult.Ok
+                || nativeFactory == IntPtr.Zero)
             {
                 Logger.Warn("Could not create DXGI factory; assuming a hardware GPU is present.");
                 return true;
@@ -84,37 +74,51 @@ internal static class WindowsAvaloniaRenderingPolicy
 
             try
             {
+                var factory = (IDXGIFactory1)ComWrappers.GetOrCreateObjectForComInstance(
+                    nativeFactory,
+                    CreateObjectFlags.None
+                );
                 for (uint i = 0; ; i++)
                 {
-                    int hr = factory.EnumAdapters1(i, out IDXGIAdapter1 adapter);
-                    if (hr == HResult.DxgiErrorNotFound || hr != HResult.Ok || adapter is null)
+                    int hr = factory.EnumAdapters1(i, out nint nativeAdapter);
+                    if (hr == HResult.DxgiErrorNotFound || hr != HResult.Ok || nativeAdapter == IntPtr.Zero)
                         break;
 
                     try
                     {
-                        if (adapter.GetDesc1(out DXGI_ADAPTER_DESC1 desc) != HResult.Ok)
-                            continue;
+                        var adapter = (IDXGIAdapter1)ComWrappers.GetOrCreateObjectForComInstance(
+                            nativeAdapter,
+                            CreateObjectFlags.None
+                        );
+                        unsafe
+                        {
+                            DXGI_ADAPTER_DESC1 desc = default;
+                            if (adapter.GetDesc1((nint)(&desc)) != HResult.Ok)
+                                continue;
 
-                        bool isSoftwareAdapter =
-                            (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0
-                            || (desc.VendorId == MicrosoftVendorId
-                                && desc.DeviceId == BasicRenderDriverDeviceId);
+                            bool isSoftwareAdapter =
+                                (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0
+                                || (desc.VendorId == MicrosoftVendorId
+                                    && desc.DeviceId == BasicRenderDriverDeviceId);
 
-                        if (!isSoftwareAdapter)
-                            return true;
+                            if (!isSoftwareAdapter)
+                            {
+                                return true;
+                            }
+                        }
                     }
                     finally
                     {
-                        Marshal.ReleaseComObject(adapter);
+                        Marshal.Release(nativeAdapter);
                     }
                 }
+
+                return false;
             }
             finally
             {
-                Marshal.ReleaseComObject(factory);
+                Marshal.Release(nativeFactory);
             }
-
-            return false;
         }
         catch (Exception ex)
         {
@@ -124,10 +128,10 @@ internal static class WindowsAvaloniaRenderingPolicy
         }
     }
 
-    [DllImport("dxgi.dll", ExactSpelling = true)]
-    private static extern int CreateDXGIFactory1(
+    [LibraryImport("dxgi.dll", EntryPoint = "CreateDXGIFactory1")]
+    private static partial int CreateDXGIFactory1(
         ref Guid riid,
-        [MarshalAs(UnmanagedType.IUnknown)] out object ppFactory
+        out nint factory
     );
 
     private static class HResult
@@ -142,60 +146,106 @@ internal static class WindowsAvaloniaRenderingPolicy
     private const uint MicrosoftVendorId = 0x1414;
     private const uint BasicRenderDriverDeviceId = 0x8C;
 
-    [ComImport]
+    [GeneratedComInterface]
     [Guid("770aae78-f26f-4dba-a829-253c83d1b387")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IDXGIFactory1
+    internal partial interface IDXGIFactory1
     {
-        void SetPrivateData();
-        void SetPrivateDataInterface();
-        void GetPrivateData();
-        void GetParent();
-        void EnumAdapters();
-        void MakeWindowAssociation();
-        void GetWindowAssociation();
-        void CreateSwapChain();
-        void CreateSoftwareAdapter();
+        [PreserveSig]
+        int SetPrivateData(in Guid name, uint dataSize, nint data);
 
         [PreserveSig]
-        int EnumAdapters1(uint adapter, out IDXGIAdapter1 ppAdapter);
+        int SetPrivateDataInterface(in Guid name, nint unknown);
 
         [PreserveSig]
-        bool IsCurrent();
+        int GetPrivateData(in Guid name, ref uint dataSize, nint data);
+
+        [PreserveSig]
+        int GetParent(in Guid riid, out nint parent);
+
+        [PreserveSig]
+        int EnumAdapters(uint adapter, out nint adapterPointer);
+
+        [PreserveSig]
+        int MakeWindowAssociation(nint window, uint flags);
+
+        [PreserveSig]
+        int GetWindowAssociation(out nint window);
+
+        [PreserveSig]
+        int CreateSwapChain(nint device, nint description, out nint swapChain);
+
+        [PreserveSig]
+        int CreateSoftwareAdapter(nint module, out nint adapter);
+
+        [PreserveSig]
+        int EnumAdapters1(uint adapter, out nint adapterPointer);
+
+        [PreserveSig]
+        int IsCurrent();
     }
 
-    [ComImport]
+    [GeneratedComInterface]
     [Guid("29038f61-3839-4626-91fd-086879011a05")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IDXGIAdapter1
+    internal partial interface IDXGIAdapter1
     {
-        void SetPrivateData();
-        void SetPrivateDataInterface();
-        void GetPrivateData();
-        void GetParent();
-        void EnumOutputs();
-        void GetDesc();
-        void CheckInterfaceSupport();
+        [PreserveSig]
+        int SetPrivateData(in Guid name, uint dataSize, nint data);
 
         [PreserveSig]
-        int GetDesc1(out DXGI_ADAPTER_DESC1 pDesc);
+        int SetPrivateDataInterface(in Guid name, nint unknown);
+
+        [PreserveSig]
+        int GetPrivateData(in Guid name, ref uint dataSize, nint data);
+
+        [PreserveSig]
+        int GetParent(in Guid riid, out nint parent);
+
+        [PreserveSig]
+        int EnumOutputs(uint output, out nint outputPointer);
+
+        [PreserveSig]
+        int GetDesc(out nint description);
+
+        [PreserveSig]
+        int CheckInterfaceSupport(in Guid interfaceName, out long userModeVersion);
+
+        [PreserveSig]
+        int GetDesc1(nint description);
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct DXGI_ADAPTER_DESC1
+    [StructLayout(LayoutKind.Explicit, Size = 312)]
+    internal struct DXGI_ADAPTER_DESC1
     {
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-        public string Description;
-
+        [FieldOffset(256)]
         public uint VendorId;
+
+        [FieldOffset(260)]
         public uint DeviceId;
+
+        [FieldOffset(264)]
         public uint SubSysId;
+
+        [FieldOffset(268)]
         public uint Revision;
-        public UIntPtr DedicatedVideoMemory;
-        public UIntPtr DedicatedSystemMemory;
-        public UIntPtr SharedSystemMemory;
+
+        [FieldOffset(272)]
+        public nuint DedicatedVideoMemory;
+
+        [FieldOffset(280)]
+        public nuint DedicatedSystemMemory;
+
+        [FieldOffset(288)]
+        public nuint SharedSystemMemory;
+
+        [FieldOffset(296)]
         public uint AdapterLuidLowPart;
+
+        [FieldOffset(300)]
         public int AdapterLuidHighPart;
+
+        [FieldOffset(304)]
         public uint Flags;
     }
 }

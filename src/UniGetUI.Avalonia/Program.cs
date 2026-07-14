@@ -27,7 +27,7 @@ sealed class Program
 #if WINDOWS
         // Stamp the AUMID onto this process before anything else so the shell attributes
         // Action-Center toasts to UniGetUI. Must match the AUMID stamped on the Start Menu
-        // shortcut by AppShortcutAumidStamper.
+        // shortcut by the installer.
         Win32ToastNotifier.SetProcessAumid();
 #endif
 

@@ -318,7 +318,7 @@ Source: "InstallerExtras\ForceUniGetUIPortable"; DestDir: "{app}"; Tasks: portab
 
 
 [Icons]
-Name: "{autostartmenu}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: regularinstall\startmenuicon
+Name: "{autostartmenu}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; AppUserModelID: "Devolutions.UniGetUI"; Tasks: regularinstall\startmenuicon
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: regularinstall\desktopicon
 
 [Run]

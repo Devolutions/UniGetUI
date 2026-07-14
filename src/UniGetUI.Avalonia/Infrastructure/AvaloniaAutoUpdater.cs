@@ -675,7 +675,7 @@ internal static partial class AvaloniaAutoUpdater
             StartInfo = new ProcessStartInfo
             {
                 FileName = installerLocation,
-                Arguments = "/SILENT /SUPPRESSMSGBOXES /NORESTART /SP- /NoVCRedist /NoEdgeWebView /NoWinGet",
+                Arguments = "/SILENT /SUPPRESSMSGBOXES /NORESTART /SP- /NoVCRedist /NoEdgeWebView /NoWinGet /NoRedirectionGuard",
                 UseShellExecute = true,
                 CreateNoWindow = true,
             },

@@ -1246,8 +1246,28 @@ public partial class MainWindow : Window
 
     private void SearchBox_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter)
+        // While the settings-search dropdown is open, drive it from the box: arrows move the
+        // highlight, Enter jumps to it, Escape dismisses.
+        if (ViewModel.IsSuggestionsOpen)
+        {
+            switch (e.Key)
+            {
+                case Key.Down: ViewModel.MoveSuggestionSelection(1); e.Handled = true; return;
+                case Key.Up: ViewModel.MoveSuggestionSelection(-1); e.Handled = true; return;
+                case Key.Escape: ViewModel.CloseSuggestions(); e.Handled = true; return;
+                case Key.Enter: ViewModel.SubmitGlobalSearch(); e.Handled = true; return;
+            }
+        }
+        else if (e.Key == Key.Enter)
+        {
             ViewModel.SubmitGlobalSearch();
+        }
+    }
+
+    private void SuggestionsList_Tapped(object? sender, TappedEventArgs e)
+    {
+        if (SuggestionsList.SelectedItem is SettingsSearchResult result)
+            ViewModel.SelectSuggestion(result);
     }
 
     // ─── Public navigation API ────────────────────────────────────────────────

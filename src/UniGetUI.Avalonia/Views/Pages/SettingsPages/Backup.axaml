@@ -107,7 +107,8 @@
             </Border>
 
             <!-- Enable cloud backup checkbox -->
-            <settings:CheckboxCard SettingName="EnablePackageBackup_CLOUD"
+            <settings:CheckboxCard x:Name="CloudBackupCard"
+                                   SettingName="EnablePackageBackup_CLOUD"
                                    Text="{t:Translate Periodically perform a cloud backup of the installed packages}"
                                    WarningText="{t:Translate Cloud backup uses a private GitHub Gist to store a list of installed packages}"
                                    StateChangedCommand="{Binding EnableCloudBackupChangedCommand}"
@@ -118,7 +119,8 @@
             <Border Height="16"/>
 
             <!-- Cloud backup now -->
-            <settings:ButtonCard CornerRadius="8,8,0,0"
+            <settings:ButtonCard x:Name="CloudBackupNowCard"
+                                 CornerRadius="8,8,0,0"
                                  Text="{t:Translate Perform a cloud backup now}"
                                  ButtonText="{t:Translate Backup}"
                                  IsEnabled="{Binding IsCloudBackupNowEnabled}"
@@ -126,7 +128,8 @@
                                  CommandParameter="{Binding $self}"/>
 
             <!-- Restore from cloud -->
-            <settings:ButtonCard CornerRadius="0,0,8,8"
+            <settings:ButtonCard x:Name="RestoreCloudCard"
+                                 CornerRadius="0,0,8,8"
                                  BorderThickness="1,0,1,1"
                                  Text="{t:Translate Restore a backup from the cloud}"
                                  Description="{t:Translate Begin the process to select a cloud backup and review which packages to restore}"
@@ -143,7 +146,8 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-            <settings:CheckboxCard SettingName="EnablePackageBackup_LOCAL"
+            <settings:CheckboxCard x:Name="LocalBackupCard"
+                                   SettingName="EnablePackageBackup_LOCAL"
                                    Text="{t:Translate Periodically perform a local backup of the installed packages}"
                                    StateChangedCommand="{Binding EnableLocalBackupChangedCommand}"
                                    CornerRadius="8,8,0,0"/>
@@ -159,7 +163,8 @@
 
             <Border Height="16"/>
 
-            <settings:ButtonCard CornerRadius="8"
+            <settings:ButtonCard x:Name="BackupDirectoryCard"
+                                 CornerRadius="8"
                                  Text="{t:Translate Change backup output directory}"
                                  Description="{Binding BackupDirectoryLabel}"
                                  ButtonText="{t:Translate Select}"
@@ -173,13 +178,15 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-            <settings:TextboxCard SettingName="ChangeBackupFileName"
+            <settings:TextboxCard x:Name="BackupFileNameCard"
+                                  SettingName="ChangeBackupFileName"
                                   Text="{t:Translate Set a custom backup file name}"
                                   Placeholder="{t:Translate Leave empty for default}"
                                   CornerRadius="8,8,0,0"
                                   IsEnabled="{Binding IsLocalBackupEnabled}"/>
 
-            <settings:CheckboxCard SettingName="EnableBackupTimestamping"
+            <settings:CheckboxCard x:Name="BackupTimestampCard"
+                                   SettingName="EnableBackupTimestamping"
                                    Text="{t:Translate Add a timestamp to the backup file names}"
                                    CornerRadius="0,0,8,8"
                                    BorderThickness="1,0,1,1"

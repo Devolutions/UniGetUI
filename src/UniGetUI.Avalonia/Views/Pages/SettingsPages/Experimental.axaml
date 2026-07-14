@@ -19,7 +19,8 @@
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard SettingName="DisableApi"
+            <settings:CheckboxCard x:Name="BackgroundApiCard"
+                                   SettingName="DisableApi"
                                    Text="{t:Translate Text='Enable background api (UniGetUI Widgets and Sharing, port 7058)'}"
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    BorderThickness="1,1,1,0"
@@ -32,14 +33,16 @@
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard SettingName="DisableTimeoutOnPackageListingTasks"
+            <settings:CheckboxCard x:Name="DisableTimeoutCard"
+                                   SettingName="DisableTimeoutOnPackageListingTasks"
                                    ForceInversion="True"
                                    Text="{t:Translate Disable the 1-minute timeout for package-related operations}"
                                    CornerRadius="8"/>
 
             <UserControl Height="16" IsVisible="{Binding IsWindows}"/>
 
-            <settings:SecureCheckboxCard SettingName="ForceUserGSudo"
+            <settings:SecureCheckboxCard x:Name="ForceGSudoCard"
+                                         SettingName="ForceUserGSudo"
                                          Text="{t:Translate Use installed GSudo instead of UniGetUI Elevator}"
                                          StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                          CornerRadius="8"
@@ -57,19 +60,22 @@
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard SettingName="DisableDMWThreadOptimizations"
+            <settings:CheckboxCard x:Name="CpuOptimizationsCard"
+                                   SettingName="DisableDMWThreadOptimizations"
                                    Text="{t:Translate Enable background CPU Usage optimizations (see Pull Request #3278)}"
                                    CornerRadius="8"/>
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard SettingName="DisableIntegrityChecks"
+            <settings:CheckboxCard x:Name="IntegrityChecksCard"
+                                   SettingName="DisableIntegrityChecks"
                                    Text="{t:Translate Perform integrity checks at startup}"
                                    CornerRadius="8"/>
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard SettingName="InstallInstalledPackagesBundlesPage"
+            <settings:CheckboxCard x:Name="InstallInstalledBundleCard"
+                                   SettingName="InstallInstalledPackagesBundlesPage"
                                    Text="{t:Translate Text='When batch installing packages from a bundle, install also packages that are already installed'}"
                                    CornerRadius="8"/>
 

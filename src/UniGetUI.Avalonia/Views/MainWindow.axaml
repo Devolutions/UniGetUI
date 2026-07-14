@@ -538,6 +538,45 @@
                 </Panel>
             </Border>
 
+            <!-- Settings search suggestions: dropdown anchored under the search box (only opened
+                 by the view-model while on a settings/managers page). -->
+            <Popup Grid.Column="1"
+                   PlacementTarget="{Binding #GlobalSearchContainer}"
+                   Placement="BottomEdgeAlignedLeft"
+                   VerticalOffset="4"
+                   IsLightDismissEnabled="True"
+                   IsOpen="{Binding IsSuggestionsOpen}">
+                <Border Width="358"
+                        MaxHeight="380"
+                        CornerRadius="8"
+                        Padding="4"
+                        Background="{DynamicResource AppWindowBackground}"
+                        BorderBrush="{DynamicResource AppBorderBrush}"
+                        BorderThickness="1"
+                        BoxShadow="0 8 24 0 #40000000">
+                    <ListBox x:Name="SuggestionsList"
+                             ItemsSource="{Binding SettingsSuggestions}"
+                             SelectedIndex="{Binding SelectedSuggestionIndex}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Tapped="SuggestionsList_Tapped">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="infra:SettingsSearchResult">
+                                <StackPanel Orientation="Vertical" Spacing="1" Margin="4,2">
+                                    <TextBlock Text="{Binding Title}"
+                                               FontSize="14"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding PageTitle}"
+                                               FontSize="12"
+                                               Opacity="0.7"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </Popup>
+
             <!-- Right column: Linux window buttons on the far right -->
             <Panel Grid.Column="2">
 

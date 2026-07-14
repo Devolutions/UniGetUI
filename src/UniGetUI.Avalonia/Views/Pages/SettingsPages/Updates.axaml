@@ -19,7 +19,8 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-            <settings:CheckboxCard SettingName="DisableAutoCheckforUpdates"
+            <settings:CheckboxCard x:Name="UpdatesCheckingCard"
+                                   SettingName="DisableAutoCheckforUpdates"
                                    Text="{t:Translate Check for package updates periodically}"
                                    StateChangedCommand="{Binding UpdateAutoCheckEnabledCommand}"
                                    CornerRadius="8,8,0,0"/>
@@ -38,26 +39,30 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-            <settings:CheckboxCard SettingName="AutomaticallyUpdatePackages"
+            <settings:CheckboxCard x:Name="UpdatesAutomaticCard"
+                                   SettingName="AutomaticallyUpdatePackages"
                                    Text="{t:Translate Install available updates automatically}"
                                    CornerRadius="8,8,0,0"
                                    IsEnabled="{Binding IsAutoCheckEnabled}"/>
 
-            <settings:CheckboxCard SettingName="DisableAUPOnMeteredConnections"
+            <settings:CheckboxCard x:Name="AUPMeteredCard"
+                                   SettingName="DisableAUPOnMeteredConnections"
                                    ForceInversion="True"
                                    Text="{t:Translate Do not automatically install updates when the network connection is metered}"
                                    BorderThickness="1,0"
                                    CornerRadius="0"
                                    IsEnabled="{Binding IsAutoCheckEnabled}"/>
 
-            <settings:CheckboxCard SettingName="DisableAUPOnBattery"
+            <settings:CheckboxCard x:Name="AUPBatteryCard"
+                                   SettingName="DisableAUPOnBattery"
                                    ForceInversion="True"
                                    Text="{t:Translate Do not automatically install updates when the device runs on battery}"
                                    BorderThickness="1,1,1,0"
                                    CornerRadius="0"
                                    IsEnabled="{Binding IsAutoCheckEnabled}"/>
 
-            <settings:CheckboxCard SettingName="DisableAUPOnBatterySaver"
+            <settings:CheckboxCard x:Name="AUPBatterySaverCard"
+                                   SettingName="DisableAUPOnBatterySaver"
                                    ForceInversion="True"
                                    Text="{t:Translate Do not automatically install updates when the battery saver is on}"
                                    CornerRadius="0,0,8,8"
@@ -84,7 +89,8 @@
                                   BorderThickness="1,0,1,1"
                                   CornerRadius="0,0,8,8"/>
 
-            <settings:CheckboxCard SettingName="DisableInstallerHostChangeWarning"
+            <settings:CheckboxCard x:Name="InstallerHostWarningCard"
+                                   SettingName="DisableInstallerHostChangeWarning"
                                    Text="{t:Translate Text='Warn me when the installer URL host changes between the installed version and the new version (WinGet only)'}"
                                    CornerRadius="8"
                                    Margin="0,8,0,0"/>

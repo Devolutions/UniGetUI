@@ -28,18 +28,21 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-            <settings:CheckboxButtonCard SettingName="DisableAutoUpdateWingetUI"
+            <settings:CheckboxButtonCard x:Name="GeneralUpdaterCard"
+                                         SettingName="DisableAutoUpdateWingetUI"
                                          CheckboxText="{t:Translate Update UniGetUI automatically}"
                                          ButtonText="{t:Translate Check for updates}"
                                          ButtonAlwaysOn="True"
                                          CornerRadius="8,8,0,0"/>
 
-            <settings:CheckboxCard SettingName="EnableUniGetUIBeta"
+            <settings:CheckboxCard x:Name="EnableUniGetUIBetaCard"
+                                   SettingName="EnableUniGetUIBeta"
                                    Text="{t:Translate Install prerelease versions of UniGetUI}"
                                    CornerRadius="0"
                                    BorderThickness="1,0,1,1"/>
 
-            <settings:CheckboxCard SettingName="DisableReleaseNotesOnUpdate"
+            <settings:CheckboxCard x:Name="ReleaseNotesOnUpdateCard"
+                                   SettingName="DisableReleaseNotesOnUpdate"
                                    Text="{t:Translate Show the release notes after UniGetUI is updated}"
                                    CornerRadius="0,0,8,8"
                                    BorderThickness="1,0,1,1"/>
@@ -50,7 +53,8 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-            <settings:ButtonCard CornerRadius="8"
+            <settings:ButtonCard x:Name="GeneralTelemetryCard"
+                                 CornerRadius="8"
                                  Text="{t:Translate Manage telemetry settings}"
                                  ButtonText="{t:Translate Manage}"
                                  Command="{Binding ShowTelemetryDialogCommand}"
@@ -62,7 +66,8 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-            <settings:CheckboxCard SettingName="RedactUsernameInLog"
+            <settings:CheckboxCard x:Name="GeneralPrivacyCard"
+                                   SettingName="RedactUsernameInLog"
                                    CornerRadius="8"
                                    Text="{t:Translate Hide my username from the logs}"
                                    WarningText="{t:Translate Text='Replaces your username with **** in the logs. Restart UniGetUI to also hide it from already-recorded entries.'}"
@@ -74,20 +79,23 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-            <settings:ButtonCard CornerRadius="8,8,0,0"
+            <settings:ButtonCard x:Name="GeneralImportCard"
+                                 CornerRadius="8,8,0,0"
                                  Text="{t:Translate Import settings from a local file}"
                                  ButtonText="{t:Translate Import}"
                                  Command="{Binding ImportSettingsCommand}"
                                  CommandParameter="{Binding $self}"/>
 
-            <settings:ButtonCard BorderThickness="1,0"
+            <settings:ButtonCard x:Name="ExportSettingsCard"
+                                 BorderThickness="1,0"
                                  CornerRadius="0"
                                  Text="{t:Translate Export settings to a local file}"
                                  ButtonText="{t:Translate Export}"
                                  Command="{Binding ExportSettingsCommand}"
                                  CommandParameter="{Binding $self}"/>
 
-            <settings:ButtonCard CornerRadius="0,0,8,8"
+            <settings:ButtonCard x:Name="ResetSettingsCard"
+                                 CornerRadius="0,0,8,8"
                                  Text="{t:Translate Reset UniGetUI}"
                                  ButtonText="{t:Translate Reset UniGetUI}"
                                  Command="{Binding ResetSettingsCommand}"

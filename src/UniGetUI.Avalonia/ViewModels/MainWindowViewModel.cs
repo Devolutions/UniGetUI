@@ -189,6 +189,57 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_syncingSearch) return;
         if (CurrentPageContent is AbstractPackagesPage page)
             page.ViewModel.GlobalQueryText = value;
+        else if (CurrentPageContent is SettingsBasePage)
+            UpdateSettingsSuggestions(value);
+    }
+
+    // ─── Settings search suggestions ───────────────────────────────────────────
+    public ObservableCollection<SettingsSearchResult> SettingsSuggestions { get; } = new();
+
+    [ObservableProperty]
+    private bool _isSuggestionsOpen;
+
+    [ObservableProperty]
+    private int _selectedSuggestionIndex = -1;
+
+    private void UpdateSettingsSuggestions(string query)
+    {
+        SettingsSuggestions.Clear();
+        foreach (var r in SettingsSearchIndex.Search(query))
+            SettingsSuggestions.Add(r);
+
+        SelectedSuggestionIndex = SettingsSuggestions.Count > 0 ? 0 : -1;
+        IsSuggestionsOpen = SettingsSuggestions.Count > 0;
+    }
+
+    public void MoveSuggestionSelection(int delta)
+    {
+        if (SettingsSuggestions.Count == 0) return;
+        int next = SelectedSuggestionIndex + delta;
+        SelectedSuggestionIndex = Math.Clamp(next, 0, SettingsSuggestions.Count - 1);
+    }
+
+    public void CloseSuggestions()
+    {
+        IsSuggestionsOpen = false;
+        SelectedSuggestionIndex = -1;
+        SettingsSuggestions.Clear();
+    }
+
+    [RelayCommand]
+    public void SelectSuggestion(SettingsSearchResult? result)
+    {
+        if (result is null) return;
+
+        _syncingSearch = true;
+        GlobalSearchText = "";
+        _syncingSearch = false;
+        CloseSuggestions();
+
+        if (result.Manager is not null)
+            OpenManagerSettings(result.Manager);
+        else if (result.PageType is not null)
+            OpenSettingsPage(result.PageType, result.Anchor);
     }
 
     private void SubscribeToPageViewModel(AbstractPackagesPage? page)
@@ -594,6 +645,8 @@ public partial class MainWindowViewModel : ViewModelBase
         (newPage as AbstractPackagesPage)?.FilterPackages();
         (newPage as IEnterLeaveListener)?.OnEnter();
 
+        CloseSuggestions();
+
         if (newPage is ISearchBoxPage newSPage)
         {
             SubscribeToPageViewModel(newPage as AbstractPackagesPage);
@@ -660,10 +713,10 @@ public partial class MainWindowViewModel : ViewModelBase
         if (manager is not null) ManagersPage?.NavigateTo(manager);
     }
 
-    public void OpenSettingsPage(Type page)
+    public void OpenSettingsPage(Type page, string? anchor = null)
     {
         NavigateTo(PageType.Settings);
-        SettingsPage?.NavigateTo(page);
+        SettingsPage?.NavigateTo(page, anchor);
     }
 
     public void ShowHelp(string uriAttachment = "")
@@ -713,6 +766,16 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     public void SubmitGlobalSearch()
     {
+        // On settings/managers the box drives the suggestion dropdown: jump to the highlighted
+        // result (falling back to the top one).
+        if (CurrentPageContent is SettingsBasePage)
+        {
+            if (SettingsSuggestions.Count == 0) return;
+            int i = SelectedSuggestionIndex >= 0 ? SelectedSuggestionIndex : 0;
+            SelectSuggestion(SettingsSuggestions[i]);
+            return;
+        }
+
         if (CurrentPageContent is ISearchBoxPage page)
             page.SearchBox_QuerySubmitted(this, EventArgs.Empty);
     }

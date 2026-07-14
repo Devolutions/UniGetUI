@@ -18,13 +18,15 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-            <settings:CheckboxCard SettingName="EnableProxy"
+            <settings:CheckboxCard x:Name="ProxyCard"
+                                   SettingName="EnableProxy"
                                    Text="{t:Translate Connect the internet using a custom proxy}"
                                    Description="{t:Translate Text='Please note that not all package managers may fully support this feature'}"
                                    StateChangedCommand="{Binding RefreshProxyEnabledCommand}"
                                    CornerRadius="8,8,0,0"/>
 
-            <settings:TextboxCard SettingName="ProxyURL"
+            <settings:TextboxCard x:Name="ProxyURLCard"
+                                  SettingName="ProxyURL"
                                   Text="{t:Translate Proxy URL}"
                                   Placeholder="{t:Translate Enter proxy URL here}"
                                   ValueChangedCommand="{Binding ApplyProxyCommand}"
@@ -34,7 +36,8 @@
 
             <Border Height="16"/>
 
-            <settings:CheckboxCard SettingName="EnableProxyAuth"
+            <settings:CheckboxCard x:Name="ProxyAuthCard"
+                                   SettingName="EnableProxyAuth"
                                    Text="{t:Translate Authenticate to the proxy with a user and a password}"
                                    Description="{t:Translate Text='Please note that not all package managers may fully support this feature'}"
                                    StateChangedCommand="{Binding RefreshProxyAuthEnabledCommand}"
@@ -54,7 +57,8 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
-            <settings:CheckboxCard SettingName="DisableWaitForInternetConnection"
+            <settings:CheckboxCard x:Name="InternetOtherCard"
+                                   SettingName="DisableWaitForInternetConnection"
                                    Text="{t:Translate Wait for the device to be connected to the internet before attempting to do tasks that require internet connectivity.}"
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    CornerRadius="8"/>

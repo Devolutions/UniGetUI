@@ -25,7 +25,8 @@
                                    ValueChangedCommand="{Binding UpdateMaxOperationsCommand}"
                                    CornerRadius="8,8,0,0"/>
 
-            <settings:CheckboxCard SettingName="MaintainSuccessfulInstalls"
+            <settings:CheckboxCard x:Name="ClearSuccessfulOpsCard"
+                                   SettingName="MaintainSuccessfulInstalls"
                                    ForceInversion="True"
                                    Text="{t:Translate Clear successful operations from the operation list after a 5 second delay}"
                                    WarningText="{t:Translate Download operations are not affected by this setting}"
@@ -34,7 +35,8 @@
 
             <UserControl Height="16"/>
 
-            <settings:CheckboxCard SettingName="KillProcessesThatRefuseToDie"
+            <settings:CheckboxCard x:Name="KillProcessesCard"
+                                   SettingName="KillProcessesThatRefuseToDie"
                                    Text="{t:Translate Try to kill the processes that refuse to close when requested to}"
                                    WarningText="{t:Translate You may lose unsaved data}"
                                    CornerRadius="8"/>

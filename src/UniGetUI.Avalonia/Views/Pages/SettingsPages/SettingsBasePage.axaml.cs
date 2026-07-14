@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
@@ -10,7 +11,7 @@ namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 /// Avalonia MVVM equivalent of the old code-behind-only SettingsBasePage.
 /// Hosts a manual navigation stack of ISettingsPage UserControls.
 /// </summary>
-public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnterLeaveListener
+public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnterLeaveListener, ISearchBoxPage
 {
     private SettingsBasePageViewModel VM => (SettingsBasePageViewModel)DataContext!;
 
@@ -168,6 +169,17 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
 
     public void OnLeave() => ResetToHomepage();
 
+    // ── ISearchBoxPage ────────────────────────────────────────────────────
+    // The title-bar box searches the settings/managers index. Suggestions and submit are driven
+    // by MainWindowViewModel; this page only enables the box (via the interface) and names it.
+    // The query isn't persisted across navigation, so QueryBackup is a no-op.
+    public string QueryBackup { get => ""; set { } }
+
+    public string SearchBoxPlaceholder =>
+        CoreTools.Translate(_isManagers ? "Search package managers" : "Search settings");
+
+    public void SearchBox_QuerySubmitted(object? sender, EventArgs? e) { }
+
     // ── IInnerNavigationPage extra overloads ──────────────────────────────
 
     public void NavigateTo(IPackageManager manager)
@@ -178,12 +190,25 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
         NavigateToPage(new PackageManagerPage(manager));
     }
 
-    public void NavigateTo(Type page)
+    public void NavigateTo(Type page, string? anchor = null)
     {
+        // Already on the requested page (e.g. searching within it) — just scroll, don't recreate.
+        if (_currentContent?.GetType() == page)
+        {
+            if (anchor is not null && _currentContent is ISettingsPage current)
+                current.ScrollToAnchor(anchor);
+            return;
+        }
+
         if (_currentContent is not null)
             _history.Push(_currentContent);
         var target = CreatePageForType(page);
-        if (target is not null) NavigateToPage(target);
+        if (target is not null)
+        {
+            NavigateToPage(target);
+            if (anchor is not null && target is ISettingsPage sp)
+                sp.ScrollToAnchor(anchor);
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────

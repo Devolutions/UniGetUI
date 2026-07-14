@@ -146,6 +146,18 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void NativeWinGetCollectionCopiesWithoutEnumeratingWinRtCollections()
+    {
+        IReadOnlyList<string> nativeCollection = new EnumeratorThrowingReadOnlyList<string>(
+            ["winget", "msstore"]
+        );
+
+        var collectionCopy = NativeWinGetCollection.Copy(nativeCollection);
+
+        Assert.Equal(["winget", "msstore"], collectionCopy);
+    }
+
+    [Fact]
     public void GetBundledPingetExecutablePathPrefersRootExecutable()
     {
         const string installDir = @"C:\Program Files\UniGetUI";
@@ -1225,6 +1237,19 @@ public sealed class WinGetManagerTests : IDisposable
             handler(details);
             return true;
         }
+    }
+
+    private sealed class EnumeratorThrowingReadOnlyList<T>(IReadOnlyList<T> items) : IReadOnlyList<T>
+    {
+        public int Count => items.Count;
+
+        public T this[int index] => items[index];
+
+        IEnumerator<T> IEnumerable<T>.GetEnumerator() =>
+            throw new InvalidCastException("Enumeration is not available for this WinRT projection.");
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
+            throw new InvalidCastException("Enumeration is not available for this WinRT projection.");
     }
 
     private sealed class TestNativeTaskLogger : INativeTaskLogger

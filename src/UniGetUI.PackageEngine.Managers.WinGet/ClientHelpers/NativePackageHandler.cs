@@ -69,7 +69,10 @@ public static class NativePackageHandler
             if (catalogPackage is null)
                 return null;
 
-            var availableVersions = catalogPackage.AvailableVersions?.ToArray() ?? [];
+            var availableVersions =
+                catalogPackage.AvailableVersions is { } versions
+                    ? NativeWinGetCollection.Copy(versions)
+                    : [];
             if (availableVersions.Length > 0)
             {
                 metadata = catalogPackage

@@ -126,7 +126,7 @@ internal static class WinGetIconsHelper
             return null;
 
         // Get the actual icon and return it
-        foreach (Icon? icon in NativeDetails.Icons.ToArray())
+        foreach (Icon? icon in NativeWinGetCollection.Copy(NativeDetails.Icons))
             if (icon is not null && icon.Url is not null)
                 // Logger.Debug($"Found WinGet native icon for {package.Id} with URL={icon.Url}");
                 return new CacheableIcon(new Uri(icon.Url), icon.Sha256);

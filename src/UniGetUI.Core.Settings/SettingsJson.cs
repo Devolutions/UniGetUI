@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -19,38 +18,27 @@ internal static class SettingsJson
 
     public static string SerializeList<T>(List<T> value)
     {
-        JsonTypeInfo<List<T>>? typeInfo = GetGeneratedTypeInfo<List<T>>();
-        return typeInfo is not null
-            ? JsonSerializer.Serialize(value, typeInfo)
-            : SerializeListWithReflection(value);
+        return JsonSerializer.Serialize(value, GetRequiredTypeInfo<List<T>>());
     }
 
     public static List<T>? DeserializeList<T>(string json)
     {
-        JsonTypeInfo<List<T>>? typeInfo = GetGeneratedTypeInfo<List<T>>();
-        return typeInfo is not null
-            ? JsonSerializer.Deserialize(json, typeInfo)
-            : DeserializeListWithReflection<T>(json);
+        return JsonSerializer.Deserialize(json, GetRequiredTypeInfo<List<T>>());
     }
 
     public static string SerializeDictionary<KeyT, ValueT>(Dictionary<KeyT, ValueT> value)
         where KeyT : notnull
     {
-        JsonTypeInfo<Dictionary<KeyT, ValueT>>? typeInfo =
-            GetGeneratedTypeInfo<Dictionary<KeyT, ValueT>>();
-        return typeInfo is not null
-            ? JsonSerializer.Serialize(value, typeInfo)
-            : SerializeDictionaryWithReflection(value);
+        return JsonSerializer.Serialize(value, GetRequiredTypeInfo<Dictionary<KeyT, ValueT>>());
     }
 
     public static Dictionary<KeyT, ValueT>? DeserializeDictionary<KeyT, ValueT>(string json)
         where KeyT : notnull
     {
-        JsonTypeInfo<Dictionary<KeyT, ValueT>>? typeInfo =
-            GetGeneratedTypeInfo<Dictionary<KeyT, ValueT>>();
-        return typeInfo is not null
-            ? JsonSerializer.Deserialize(json, typeInfo)
-            : DeserializeDictionaryWithReflection<KeyT, ValueT>(json);
+        return JsonSerializer.Deserialize(
+            json,
+            GetRequiredTypeInfo<Dictionary<KeyT, ValueT>>()
+        );
     }
 
     private static JsonTypeInfo<T>? GetGeneratedTypeInfo<T>()
@@ -66,66 +54,6 @@ internal static class SettingsJson
             );
     }
 
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026",
-        Justification = "Runtime settings use generated metadata for known app types; this fallback preserves generic settings tests and extension scenarios outside trimmed app paths.")]
-    [UnconditionalSuppressMessage(
-        "AotCompatibility",
-        "IL3050",
-        Justification = "This reflection fallback is only used when generated metadata is unavailable; NativeAOT app paths rely on source-generated metadata for the known settings types.")]
-    private static string SerializeListWithReflection<T>(List<T> value)
-    {
-        return JsonSerializer.Serialize(value, Settings.SerializationOptions);
-    }
-
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026",
-        Justification = "Runtime settings use generated metadata for known app types; this fallback preserves generic settings tests and extension scenarios outside trimmed app paths.")]
-    [UnconditionalSuppressMessage(
-        "AotCompatibility",
-        "IL3050",
-        Justification = "This reflection fallback is only used when generated metadata is unavailable; NativeAOT app paths rely on source-generated metadata for the known settings types.")]
-    private static List<T>? DeserializeListWithReflection<T>(string json)
-    {
-        return JsonSerializer.Deserialize<List<T>>(json, Settings.SerializationOptions);
-    }
-
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026",
-        Justification = "Runtime settings use generated metadata for known app types; this fallback preserves generic settings tests and extension scenarios outside trimmed app paths.")]
-    [UnconditionalSuppressMessage(
-        "AotCompatibility",
-        "IL3050",
-        Justification = "This reflection fallback is only used when generated metadata is unavailable; NativeAOT app paths rely on source-generated metadata for the known settings types.")]
-    private static string SerializeDictionaryWithReflection<KeyT, ValueT>(
-        Dictionary<KeyT, ValueT> value
-    )
-        where KeyT : notnull
-    {
-        return JsonSerializer.Serialize(value, Settings.SerializationOptions);
-    }
-
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026",
-        Justification = "Runtime settings use generated metadata for known app types; this fallback preserves generic settings tests and extension scenarios outside trimmed app paths.")]
-    [UnconditionalSuppressMessage(
-        "AotCompatibility",
-        "IL3050",
-        Justification = "This reflection fallback is only used when generated metadata is unavailable; NativeAOT app paths rely on source-generated metadata for the known settings types.")]
-    private static Dictionary<KeyT, ValueT>? DeserializeDictionaryWithReflection<KeyT, ValueT>(
-        string json
-    )
-        where KeyT : notnull
-    {
-        return JsonSerializer.Deserialize<Dictionary<KeyT, ValueT>>(
-            json,
-            Settings.SerializationOptions
-        );
-    }
 }
 
 [JsonSourceGenerationOptions(AllowTrailingCommas = true, WriteIndented = true)]
@@ -137,5 +65,4 @@ internal static class SettingsJson
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(List<bool>))]
 [JsonSerializable(typeof(List<int>))]
-[JsonSerializable(typeof(List<object>))]
 internal sealed partial class SettingsJsonContext : JsonSerializerContext;

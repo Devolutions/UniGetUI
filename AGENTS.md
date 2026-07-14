@@ -54,6 +54,23 @@ dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj /p:Configuration=R
 - Self-contained, publish-trimmed (partial), Windows App SDK self-contained
 - Tests use **xUnit** (`[Fact]`, `Assert.*`)
 
+## NativeAOT and Trim Safety
+
+Release packages are self-contained, fully trimmed NativeAOT binaries on every supported RID. Treat NativeAOT safety as a non-negotiable production requirement: changes must work without runtime-generated code or metadata that the trimmer cannot prove is required.
+
+- Consider every `IL2xxx` trim warning and `IL3xxx` AOT warning a defect. Do not blanket-suppress warnings or use a broad `RequiresUnreferencedCode`, `RequiresDynamicCode`, `DynamicDependency`, `DynamicallyAccessedMembers`, linker descriptor, or root assembly as a workaround. An exception must be narrowly scoped, explain the concrete runtime requirement, and have a publish-path test that proves it is safe.
+- Use `JsonSerializerContext`/`JsonTypeInfo<T>` source-generated metadata for every production JSON serialization or deserialization path, including generic helpers, HTTP payloads, settings, IPC, telemetry, and persisted state. Do not call reflection-based serializer overloads or retain a reflection fallback for unknown application types. Add the closed type to a context and test the persisted or transported path.
+- Do not introduce production reflection-driven activation or discovery (`Assembly.Load`, `Type.GetType`, `Activator`, member lookup/invocation), runtime generic construction, expression compilation, runtime code generation, or dynamically loaded plugins. Prefer explicit registrations, direct constructors, generated metadata, and compiled XAML bindings. If a framework-owned dynamic boundary cannot be removed, isolate it and add published-NativeAOT runtime coverage.
+- New shipping COM interop must use source-generated interfaces and wrappers (`GeneratedComInterface`, `StrategyBasedComWrappers`) or raw ABI calls; do not add `ComImport`, `CoClass`, RCW activation, or legacy marshal-to-object APIs to a NativeAOT path. Define the ABI precisely, balance COM reference ownership, and test both x64 and arm64 where applicable.
+- Prefer `LibraryImport` for new P/Invokes. Existing `DllImport` declarations are acceptable only when their marshalling is supported by NativeAOT; keep platform guards, calling conventions, ownership, callback lifetimes, and x64/arm64 struct layouts explicit and covered.
+- Audit all new or changed startup, XAML/view-loading, dependency-injection, serialization, COM/WinRT, P/Invoke, and package-manager code against the publish output, not only a Debug build. Run the relevant NativeAOT publish profile, for example:
+
+  ```shell
+  dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj --configuration Release --runtime win-x64 --self-contained true /p:Platform=x64 /p:PublishProfile=Win-x64-NativeAot
+  ```
+
+- When modifying a shared or portable path, retain the same safety guarantees for all checked-in NativeAOT publish profiles: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, and `osx-arm64`. Record unsupported runtime-matrix coverage as a gap, never as a pass.
+
 ## Avalonia DevTools (Developer-Only)
 
 Use these rules when changing Avalonia diagnostics/devtools behavior:

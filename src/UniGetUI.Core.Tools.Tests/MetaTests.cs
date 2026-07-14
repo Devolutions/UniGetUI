@@ -31,6 +31,7 @@ public class MetaTests
                 || x.Contains("JsonSerializerContext")
                 || x.Contains("JsonSourceGenerationOptions")
                 || x.Contains("GetTypeInfo")
+                || x.Contains("GetRequiredTypeInfo")
                 || x.Contains("typeInfo")
             );
             Assert.True(

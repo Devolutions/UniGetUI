@@ -62,6 +62,10 @@ namespace UniGetUI.Core.SettingsEngine
                 listSettings[setting] = value.Cast<object>().ToList();
                 return value;
             }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 Logger.Error($"Could not load list {setting} from settings");
@@ -78,7 +82,6 @@ namespace UniGetUI.Core.SettingsEngine
 
         public static void SetList<T>(string setting, List<T> value)
         {
-            listSettings[setting] = value.Cast<object>().ToList();
             var file = Path.Join(CoreData.UniGetUIUserConfigurationDirectory, $"{setting}.json");
             try
             {
@@ -86,6 +89,12 @@ namespace UniGetUI.Core.SettingsEngine
                     File.WriteAllText(file, SettingsJson.SerializeList(value));
                 else if (File.Exists(file))
                     File.Delete(file);
+
+                listSettings[setting] = value.Cast<object>().ToList();
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch (Exception e)
             {

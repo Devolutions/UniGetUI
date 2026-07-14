@@ -101,6 +101,11 @@ jobs:
       shell: pwsh
       run: |
         dotnet build-server shutdown
+        dotnet restore UniGetUI.Avalonia/UniGetUI.Avalonia.csproj `
+          --runtime win-x64 `
+          /p:Configuration=Release `
+          /p:PublishAot=true `
+          /p:SelfContained=true
         dotnet publish UniGetUI.Avalonia/UniGetUI.Avalonia.csproj `
           --no-restore `
           --configuration Release `
@@ -113,3 +118,6 @@ jobs:
           /p:TrimmerSingleWarn=false `
           /p:UseSharedCompilation=false `
           --verbosity minimal
+        if (-not (Test-Path "${{ runner.temp }}\unigetui-nativeaot-publish\UniGetUI.exe")) {
+          throw "NativeAOT publish did not produce UniGetUI.exe."
+        }

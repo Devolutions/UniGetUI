@@ -77,6 +77,10 @@ namespace UniGetUI.Core.SettingsEngine
                 );
                 return value;
             }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 Logger.Error($"Could not load dictionary name {setting}");
@@ -99,11 +103,6 @@ namespace UniGetUI.Core.SettingsEngine
             where KeyT : notnull
         {
             string setting = ResolveKey(settingsKey);
-            _dictionarySettings[settingsKey] = value.ToDictionary(
-                kvp => (object)kvp.Key,
-                kvp => (object?)kvp.Value
-            );
-
             var file = Path.Join(CoreData.UniGetUIUserConfigurationDirectory, $"{setting}.json");
             try
             {
@@ -111,6 +110,15 @@ namespace UniGetUI.Core.SettingsEngine
                     File.WriteAllText(file, SettingsJson.SerializeDictionary(value));
                 else if (File.Exists(file))
                     File.Delete(file);
+
+                _dictionarySettings[settingsKey] = value.ToDictionary(
+                    kvp => (object)kvp.Key,
+                    kvp => (object?)kvp.Value
+                );
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch (Exception e)
             {

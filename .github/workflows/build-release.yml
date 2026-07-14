@@ -767,9 +767,10 @@ jobs:
           $Repository = $Env:GITHUB_REPOSITORY
           $DraftArg = if ($DraftRelease) { '--draft' } else { $null }
 
+          # De-duplicate by basename: release asset names must be unique (e.g. two sizes.md would 422).
           $Files = Get-ChildItem -Path . -Recurse -File | Where-Object {
             $_.Name -eq 'checksums.txt' -or $_.Name -notmatch '^checksums\..+\.txt$'
-          }
+          } | Group-Object Name | ForEach-Object { $_.Group[0] }
 
           if ($DryRun) {
             Write-Host "Dry Run: skipping GitHub release creation!"

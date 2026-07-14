@@ -249,8 +249,7 @@ begin
     not IsDirNameValid(WizardForm.DirEdit.Text) then
   begin
     Result := False;
-    MsgBox(FmtMessage(CustomMessage('InvalidInstallPath'),
-      [ExpandConstant('{commonpf64}') + '\UniGetUI']), mbError, MB_OK);
+    MsgBox(FmtMessage(CustomMessage('InvalidInstallPath'), [ExpandConstant('{commonpf64}') + '\UniGetUI']), mbError, MB_OK);
   end;
 end;
 

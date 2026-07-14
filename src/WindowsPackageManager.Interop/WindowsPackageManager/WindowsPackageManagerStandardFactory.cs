@@ -49,7 +49,10 @@ public class WindowsPackageManagerStandardFactory : WindowsPackageManagerFactory
         }
         finally
         {
-            Marshal.Release(instance);
+            if (instance != IntPtr.Zero)
+            {
+                Marshal.Release(instance);
+            }
         }
     }
 

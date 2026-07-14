@@ -1,15 +1,19 @@
-﻿[CustomMessages]
+[Messages]
+
+Italian.SetupWindowTitle=Installazione di {#MyAppName} {#MyAppVersion}
+
+[CustomMessages]
 ; Armenian, Brazilian Portuguese, Catalan, Corsican, Czech, Danish, Dutch, Finnish, French, German, Hebrew, Icelandic, Italian, Japanese, Korean, Norwegian, Polish, Portuguese, Russian, Slovenian, Spanish, Turkish, Ukrainian
 
 ; English
-InstallType=Installation type
-ShCuts=Shortcuts
-PortInst=Perform a portable installation
-RegInst=Perform a regular installation
-RegStartMmenuIcon=Create a shortcut on the Start menu
-RegDesktopIcon=Create a shortcut on the Desktop
-PackageBundleName=UniGetUI package bundle
-InvalidInstallPath=There is an invalid character in the selected install location. Install location cannot contain special characters. Please input a valid path to continue, such as %1
+English.InstallType=Installation type
+English.ShCuts=Shortcuts
+English.PortInst=Perform a portable installation
+English.RegInst=Perform a regular installation
+English.RegStartMmenuIcon=Create a shortcut on the Start menu
+English.RegDesktopIcon=Create a shortcut on the Desktop
+English.PackageBundleName=UniGetUI package bundle
+English.InvalidInstallPath=There is an invalid character in the selected install location. Install location cannot contain special characters. Please input a valid path to continue, such as %1
 RemovingOldIcons=Removing old icons...
 
 ; Armenian
@@ -143,15 +147,16 @@ Hebrew.RemovingOldIcons=מסיר סמלים ישנים...
 ;Icelandic.PackageBundleName=Safn af UniGetUI pakka
 
 ; Italian
-Italian.InstallType=Tipo di installazione
+Italian.InstallType=Tipo installazione
 Italian.ShCuts=Collegamenti
 Italian.PortInst=Esegui installazione portatile
 Italian.RegInst=Esegui installazione normale
-Italian.RegStartMmenuIcon=Crea una scorciatoia nel menu Start
-Italian.RegDesktopIcon=Crea una scorciatoia sul Desktop
-Italian.PackageBundleName=Raccolta di pacchetti UniGetUI
-Italian.InvalidInstallPath=Il percorso di installazione selezionato contiene un carattere non valido. Il percorso di installazione non può contenere caratteri speciali. Immetti un percorso valido per continuare, ad esempio %1
-Italian.RemovingOldIcons=Rimozione delle icone precedenti...
+Italian.RegStartMmenuIcon=Crea collegamento nel menu Start
+Italian.RegDesktopIcon=Crea collegamento sul desktop
+Italian.PackageBundleName=Raccolta pacchetti UniGetUI
+Italian.InvalidInstallPath=Il percorso di installazione selezionato contiene un carattere non valido.%nIl percorso di installazione non può contenere caratteri speciali.%ner continuare inserisci un percorso valido, ad esempio %1.
+Italian.RemovingOldIcons=Rimozione icone precedenti...
+Italian.LaunchProgram=Esegui %1
 
 ; Japanese
 Japanese.InstallType=インストールの種類

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Avalonia.Controls;
@@ -63,6 +64,14 @@ internal static class WindowsAvaloniaRenderingPolicy
         Justification = "The DXGI COM interfaces are declared in full and referenced directly here, so their members are preserved by trimming.")]
     private static bool DetectHardwareGpu()
     {
+        if (!RuntimeFeature.IsDynamicCodeSupported)
+        {
+            Logger.Info(
+                "Skipping DXGI hardware GPU detection because NativeAOT does not support legacy COM activation."
+            );
+            return true;
+        }
+
         try
         {
             Guid factoryIid = typeof(IDXGIFactory1).GUID;

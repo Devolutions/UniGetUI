@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using UniGetUI.Core.Logging;
 
@@ -30,6 +31,12 @@ internal static class AppShortcutAumidStamper
     {
         if (!OperatingSystem.IsWindows())
             return;
+
+        if (!RuntimeFeature.IsDynamicCodeSupported)
+        {
+            Logger.Info("Skipping Start Menu shortcut AUMID stamping because NativeAOT does not support legacy COM activation.");
+            return;
+        }
 
         try
         {

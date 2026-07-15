@@ -142,6 +142,8 @@
   "Skip hash check": "Skip hash check",
   "Uninstall previous versions when updated": "Uninstall previous versions when updated",
   "Skip minor updates for this package": "Skip minor updates for this package",
+  "Ignore changes after the first": "Ignore changes after the first",
+  "version numbers": "version numbers",
   "Automatically update this package": "Automatically update this package",
   "{0} installation options": "{0} installation options",
   "Latest": "Latest",

@@ -145,20 +145,28 @@
                         <Border Height="1" Background="{DynamicResource AppBorderBrush}"
                                 automation:AutomationProperties.AccessibilityView="Raw"/>
 
-                        <WrapPanel Orientation="Horizontal">
+                        <StackPanel Orientation="Vertical" Spacing="4">
                             <CheckBox Content="{Binding IgnoreUpdatesCheckBox_Content, FallbackValue='Ignore future updates for this package'}"
                                       IsChecked="{Binding IgnoreUpdatesChecked}"
-                                      automation:AutomationProperties.Name="{Binding IgnoreUpdatesCheckBox_Content}"
-                                      Margin="0,0,16,4"/>
-                            <CheckBox Content="{Binding SkipMinorCheckBox_Content, FallbackValue='Skip minor updates'}"
-                                      IsChecked="{Binding SkipMinorChecked}"
-                                      automation:AutomationProperties.Name="{Binding SkipMinorCheckBox_Content}"
-                                      Margin="0,0,16,4"/>
+                                      automation:AutomationProperties.Name="{Binding IgnoreUpdatesCheckBox_Content}"/>
                             <CheckBox Content="{Binding AutoUpdateCheckBox_Content, FallbackValue='Auto-update this package'}"
                                       IsChecked="{Binding AutoUpdateChecked}"
-                                      automation:AutomationProperties.Name="{Binding AutoUpdateCheckBox_Content}"
-                                      Margin="0,0,16,4"/>
-                        </WrapPanel>
+                                      automation:AutomationProperties.Name="{Binding AutoUpdateCheckBox_Content}"/>
+                            <CheckBox Content="{Binding SkipMinorCheckBox_Content, FallbackValue='Skip minor updates'}"
+                                      IsChecked="{Binding SkipMinorChecked}"
+                                      automation:AutomationProperties.Name="{Binding SkipMinorCheckBox_Content}"/>
+                            <WrapPanel Orientation="Horizontal" Margin="28,0,0,0"
+                                       IsEnabled="{Binding SkipMinorChecked}">
+                                <TextBlock Text="{Binding SkipMinorLevelPrefix_Content, FallbackValue='Ignore changes after the first'}"
+                                           VerticalAlignment="Center" Margin="0,0,8,0" TextWrapping="Wrap"/>
+                                <ComboBox ItemsSource="{Binding SkipMinorLevelOptions}"
+                                          SelectedIndex="{Binding SkipMinorLevelIndex}"
+                                          automation:AutomationProperties.Name="{Binding SkipMinorLevelPrefix_Content}"
+                                          VerticalAlignment="Center" MinWidth="64"/>
+                                <TextBlock Text="{Binding SkipMinorLevelSuffix_Content, FallbackValue='version numbers'}"
+                                           VerticalAlignment="Center" Margin="8,0,0,0" TextWrapping="Wrap"/>
+                            </WrapPanel>
+                        </StackPanel>
 
                     </StackPanel>
                 </Border>

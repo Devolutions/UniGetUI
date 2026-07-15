@@ -67,6 +67,47 @@ public sealed class UpgradablePackagesLoaderTests : IDisposable
     }
 
     [Fact]
+    public async Task EvaluatePackageAsync_RespectsSkipMinorLevel()
+    {
+        var manager = new PackageManagerBuilder().Build();
+        _ = new InstalledPackagesLoader([manager]);
+        _ = new DiscoverablePackagesLoader([manager]);
+        var loader = new TestUpgradablePackagesLoader([manager]);
+
+        // A 3rd-position (patch) change on a four-part version.
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.FourPart")
+            .WithVersion("3.4.5.6")
+            .WithNewVersion("3.4.6.6")
+            .Build();
+
+        // Level 4 => only 4th-position changes count as minor, so this patch change must NOT be skipped.
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions
+            {
+                OverridesNextLevelOpts = true,
+                SkipMinorUpdates = true,
+                SkipMinorUpdatesLevel = 4,
+            },
+            package
+        );
+        Assert.True(await loader.EvaluatePackageAsync(package));
+
+        // Default level (3) => a 3rd-position change is minor and must be skipped.
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions
+            {
+                OverridesNextLevelOpts = true,
+                SkipMinorUpdates = true,
+                SkipMinorUpdatesLevel = InstallOptions.DefaultSkipMinorLevel,
+            },
+            package
+        );
+        Assert.False(await loader.EvaluatePackageAsync(package));
+    }
+
+    [Fact]
     public async Task EvaluatePackageAsync_SkipsIgnoredAndSupersededPackages()
     {
         var manager = new PackageManagerBuilder().Build();

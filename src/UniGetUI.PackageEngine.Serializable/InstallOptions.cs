@@ -12,6 +12,7 @@ namespace UniGetUI.PackageEngine.Serializable
         private const string AS_ADMIN = "RunAsAdministrator";
         private const string PRERELEASE = "PreRelease";
         private const string SKIP_MINOR = "SkipMinorUpdates";
+        private const string SKIP_MINOR_LEVEL = "SkipMinorUpdatesLevel";
         private const string REMOVE_DATA_UNINST = "RemoveDataOnUninstall";
         private const string CLEAR_PREV_VER = "UninstallPreviousVersionsOnUpdate";
         private const string ABORT_PRE_INST_FAIL = "AbortOnPreInstallFail";
@@ -65,6 +66,7 @@ namespace UniGetUI.PackageEngine.Serializable
             POST_UPD_CMD,
             PRE_UNINST_CMD,
             POST_UNINST_CMD,
+            SKIP_MINOR_LEVEL,
         ];
 
         public readonly IReadOnlyList<string> _listKeys =
@@ -103,6 +105,15 @@ namespace UniGetUI.PackageEngine.Serializable
         {
             get => _boolVal[SKIP_MINOR];
             set => _boolVal[SKIP_MINOR] = value;
+        }
+
+        // The version-number position (1=Major, 2=Minor, 3=Patch, 4=Remainder) from which a change is
+        // still considered "minor" and therefore skippable. Default 3 reproduces the legacy behaviour.
+        public const int DefaultSkipMinorLevel = 3;
+        public int SkipMinorUpdatesLevel
+        {
+            get => int.TryParse(_strVal[SKIP_MINOR_LEVEL], out int v) && v is >= 2 and <= 4 ? v : DefaultSkipMinorLevel;
+            set => _strVal[SKIP_MINOR_LEVEL] = value == DefaultSkipMinorLevel ? "" : value.ToString();
         }
         public bool RemoveDataOnUninstall
         {

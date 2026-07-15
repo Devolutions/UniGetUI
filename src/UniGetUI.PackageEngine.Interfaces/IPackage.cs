@@ -151,10 +151,12 @@ namespace UniGetUI.PackageEngine.Interfaces
         public Task<string?> GetInstallerFileName();
 
         /// <summary>
-        /// Checks whether a new update of this package is a minor update or not (0.0.x)
+        /// Checks whether a new update of this package is a minor update or not, according to
+        /// <paramref name="level"/> — the 1-based version-number position (2=Minor, 3=Patch, 4=Remainder)
+        /// from which a change is still considered minor.
         /// </summary>
-        /// <returns>False if the update is a major update or the update doesn't exist, true if it's a minor update</returns>
-        public bool IsUpdateMinor();
+        /// <returns>False if the most significant changed component is more significant than <paramref name="level"/> or the update doesn't exist, true otherwise</returns>
+        public bool IsUpdateMinor(int level = InstallOptions.DefaultSkipMinorLevel);
 
         /// <summary>
         /// Gets the applicable install options for this package

@@ -199,7 +199,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
             return Task.FromResult<string?>("");
         }
 
-        public bool IsUpdateMinor()
+        public bool IsUpdateMinor(int level = InstallOptions.DefaultSkipMinorLevel)
         {
             return false;
         }

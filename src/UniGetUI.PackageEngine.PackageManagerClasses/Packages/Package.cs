@@ -324,17 +324,26 @@ namespace UniGetUI.PackageEngine.PackageClasses
             }
         }
 
-        public virtual bool IsUpdateMinor()
+        // 1-based position of the most significant version component that changed
+        // (1=Major, 2=Minor, 3=Patch, 4=Remainder), or 0 if identical/unparseable.
+        private int HighestChangedVersionComponent()
+        {
+            if (NormalizedVersion == CoreTools.Version.Null || NormalizedNewVersion == CoreTools.Version.Null)
+                return 0;
+            if (NormalizedVersion.Major != NormalizedNewVersion.Major) return 1;
+            if (NormalizedVersion.Minor != NormalizedNewVersion.Minor) return 2;
+            if (NormalizedVersion.Patch != NormalizedNewVersion.Patch) return 3;
+            if (NormalizedVersion.Remainder != NormalizedNewVersion.Remainder) return 4;
+            return 0;
+        }
+
+        public virtual bool IsUpdateMinor(int level = InstallOptions.DefaultSkipMinorLevel)
         {
             if (!IsUpgradable)
                 return false;
 
-            return NormalizedVersion.Major == NormalizedNewVersion.Major
-                && NormalizedVersion.Minor == NormalizedNewVersion.Minor
-                && (
-                    NormalizedVersion.Patch != NormalizedNewVersion.Patch
-                    || NormalizedVersion.Remainder != NormalizedNewVersion.Remainder
-                );
+            int changed = HighestChangedVersionComponent();
+            return changed >= level;
         }
 
         public virtual Task<InstallOptions> GetInstallOptions() =>

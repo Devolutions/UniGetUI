@@ -84,6 +84,8 @@ public partial class InstallOptionsViewModel : ObservableObject
     public string SkipHashCheckBox_Content { get; } = CoreTools.Translate("Skip hash check");
     public string UninstallPrevCheckBox_Content { get; } = CoreTools.Translate("Uninstall previous versions when updated");
     public string SkipMinorCheckBox_Content { get; } = CoreTools.Translate("Skip minor updates for this package");
+    public string SkipMinorLevelPrefix_Content { get; } = CoreTools.Translate("Ignore changes after the first");
+    public string SkipMinorLevelSuffix_Content { get; } = CoreTools.Translate("version numbers");
     public string AutoUpdateCheckBox_Content { get; } = CoreTools.Translate("Automatically update this package");
     public string IgnoreUpdatesCheckBox_Content { get; } = CoreTools.Translate("Ignore future updates for this package");
 
@@ -152,6 +154,9 @@ public partial class InstallOptionsViewModel : ObservableObject
     [ObservableProperty] private string? _selectedVersion;
 
     [ObservableProperty] private bool _skipMinorChecked;
+    // Index 0 => keep first 1 number significant (level 2), 1 => first 2 (level 3), 2 => first 3 (level 4).
+    public ObservableCollection<string> SkipMinorLevelOptions { get; } = ["1", "2", "3"];
+    [ObservableProperty] private int _skipMinorLevelIndex;
     [ObservableProperty] private bool _autoUpdateChecked;
     [ObservableProperty] private bool _ignoreUpdatesChecked;
 
@@ -267,6 +272,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         SkipHashEnabled = caps.CanSkipIntegrityChecks;
         UninstallPrevChecked = options.UninstallPreviousVersionsOnUpdate;
         SkipMinorChecked = options.SkipMinorUpdates;
+        SkipMinorLevelIndex = options.SkipMinorUpdatesLevel - 2; // level is validated to 2..4 by the getter
         AutoUpdateChecked = options.AutoUpdatePackage;
 
         // Version
@@ -515,6 +521,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         o.UninstallPreviousVersionsOnUpdate = UninstallPrevChecked;
         o.AutoUpdatePackage = AutoUpdateChecked;
         o.SkipMinorUpdates = SkipMinorChecked;
+        o.SkipMinorUpdatesLevel = SkipMinorLevelIndex + 2;
         o.OverridesNextLevelOpts = !FollowGlobal;
 
         var ver = SelectedVersion ?? "";
@@ -550,6 +557,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         _options.UninstallPreviousVersionsOnUpdate = s.UninstallPreviousVersionsOnUpdate;
         _options.AutoUpdatePackage = s.AutoUpdatePackage;
         _options.SkipMinorUpdates = s.SkipMinorUpdates;
+        _options.SkipMinorUpdatesLevel = s.SkipMinorUpdatesLevel;
         _options.OverridesNextLevelOpts = s.OverridesNextLevelOpts;
         _options.PreRelease = s.PreRelease;
         _options.Version = s.Version;

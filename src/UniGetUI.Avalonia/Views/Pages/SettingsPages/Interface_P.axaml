@@ -80,6 +80,13 @@
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    CornerRadius="8,8,0,0"/>
 
+            <settings:CheckboxCard SettingName="DisablePackageIllustrations"
+                                   Text="{t:Translate Show illustrations on package lists}"
+                                   WarningText="{t:Translate Restart UniGetUI to apply this change}"
+                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
+                                   CornerRadius="0"
+                                   BorderThickness="1,0,1,1"/>
+
             <settings:ButtonCard x:Name="ResetIconCache"
                                  CornerRadius="0,0,8,8"
                                  BorderThickness="1,0,1,1"

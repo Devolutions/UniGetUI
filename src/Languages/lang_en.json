@@ -487,6 +487,7 @@
   "Close UniGetUI to the system tray": "Close UniGetUI to the system tray",
   "Manage UniGetUI autostart behaviour": "Manage UniGetUI autostart behaviour",
   "Show package icons on package lists": "Show package icons on package lists",
+  "Show illustrations on package lists": "Show illustrations on package lists",
   "Clear cache": "Clear cache",
   "Select upgradable packages by default": "Select upgradable packages by default",
   "Light": "Light",

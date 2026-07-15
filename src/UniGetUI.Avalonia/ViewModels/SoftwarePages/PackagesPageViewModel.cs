@@ -138,6 +138,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     private readonly string _noPackagesSubtitleBase;
     private readonly string _stillLoadingSubtitle;
     private readonly bool _showLastCheckedTime;
+    private readonly bool _showPackageIllustrations;
     private DateTime _lastLoadTime = DateTime.Now;
 
     protected AbstractPackageLoader Loader;
@@ -219,9 +220,10 @@ public partial class PackagesPageViewModel : ViewModelBase
         DisableReload = data.DisableReload;
         LoadsOnStart = !data.DisableAutomaticPackageLoadOnStart;
         _showLastCheckedTime = data.ShowLastLoadTime;
+        _showPackageIllustrations = !Settings.Get(Settings.K.DisablePackageIllustrations);
         NoPackagesText = data.NoPackages_BackgroundText;
         NoMatchesText = data.NoMatches_BackgroundText;
-        if (!string.IsNullOrEmpty(data.NoPackages_ImagePath))
+        if (_showPackageIllustrations && !string.IsNullOrEmpty(data.NoPackages_ImagePath))
         {
             using var stream = AssetLoader.Open(new Uri(data.NoPackages_ImagePath));
             NoPackagesImage = new Bitmap(stream);
@@ -561,7 +563,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         {
             BackgroundText = _stillLoadingSubtitle;
             BackgroundTextVisible = true;
-            LoadingImageVisible = true;
+            LoadingImageVisible = _showPackageIllustrations;
             NoPackagesImageVisible = false;
         }
         else if (FilteredPackages.Count == 0)

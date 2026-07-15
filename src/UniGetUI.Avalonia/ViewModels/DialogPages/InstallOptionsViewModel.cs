@@ -301,8 +301,8 @@ public partial class InstallOptionsViewModel : ObservableObject
             string globalName = CoreTools.Translate(CommonTranslations.ScopeNames[PackageScope.Global]);
             ScopeOptions.Add(localName);
             ScopeOptions.Add(globalName);
-            if (options.InstallationScope == "Local") SelectedScope = localName;
-            if (options.InstallationScope == "Global") SelectedScope = globalName;
+            if (options.InstallationScope == PackageScope.Local) SelectedScope = localName;
+            if (options.InstallationScope == PackageScope.Global) SelectedScope = globalName;
         }
         ScopeEnabled = caps.SupportsCustomScopes;
 
@@ -575,8 +575,8 @@ public partial class InstallOptionsViewModel : ObservableObject
 
     private static string ScopeToString(string? selected)
     {
-        if (selected == CoreTools.Translate(CommonTranslations.ScopeNames[PackageScope.Local])) return "Local";
-        if (selected == CoreTools.Translate(CommonTranslations.ScopeNames[PackageScope.Global])) return "Global";
+        if (selected == CoreTools.Translate(CommonTranslations.ScopeNames[PackageScope.Local])) return PackageScope.Local;
+        if (selected == CoreTools.Translate(CommonTranslations.ScopeNames[PackageScope.Global])) return PackageScope.Global;
         return "";
     }
 

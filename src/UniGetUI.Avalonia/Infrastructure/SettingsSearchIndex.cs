@@ -53,6 +53,7 @@ public static class SettingsSearchIndex
         new("Close UniGetUI to the system tray", ["system tray", "background", "minimize to tray"], typeof(Interface_P), "DisableSystemTrayCard"),
         new("Manage UniGetUI autostart behaviour", ["autostart", "run at login", "startup"], typeof(Interface_P), "EditAutostartSettings"),
         new("Show package icons on package lists", ["package icons"], typeof(Interface_P), "InterfacePackageListsCard"),
+        new("Show illustrations on package lists", ["illustrations", "package illustrations"], typeof(Interface_P), "PackageIllustrationsCard"),
         new("Clear the icon cache", ["icon cache", "clear cache", "cache size"], typeof(Interface_P), "ResetIconCache"),
         new("Select upgradable packages by default", ["select updates", "select upgradable"], typeof(Interface_P), "SelectUpgradableCard"),
         new("User interface preferences", ["interface", "ui"], typeof(Interface_P), null),

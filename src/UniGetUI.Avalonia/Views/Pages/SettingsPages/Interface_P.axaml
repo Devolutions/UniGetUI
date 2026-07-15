@@ -83,7 +83,8 @@
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    CornerRadius="8,8,0,0"/>
 
-            <settings:CheckboxCard SettingName="DisablePackageIllustrations"
+            <settings:CheckboxCard x:Name="PackageIllustrationsCard"
+                                   SettingName="DisablePackageIllustrations"
                                    Text="{t:Translate Show illustrations on package lists}"
                                    WarningText="{t:Translate Restart UniGetUI to apply this change}"
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"

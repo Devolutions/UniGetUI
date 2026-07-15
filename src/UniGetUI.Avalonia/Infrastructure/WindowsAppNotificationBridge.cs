@@ -275,11 +275,9 @@ internal static class WindowsAppNotificationBridge
             string launchArg = BuildLaunchArgument(launchAction);
             if (Win32ToastNotifier.Show(title, message, launchArg))
             {
-                // When the app is already running, raise activation immediately so the
-                // in-process handler fires; a subsequent toast click routes through the
-                // single-instance redirector on launch via TryParseToastLaunchArgument.
-                if (MainWindow.Instance is not null)
-                    RaiseActivation(launchAction);
+                // Show-only: the launch action fires only when the user clicks the toast, routed via
+                // the unigetui:// deep-link through the single-instance handler. Raising it on show
+                // would navigate the app on its own (e.g. yank to Updates the moment updates load).
                 return true;
             }
         }

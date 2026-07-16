@@ -36,18 +36,30 @@ public partial class CheckboxCard : SettingsCard
     {
         set
         {
-            _checkbox.IsCheckedChanged -= _checkbox_Toggled;
             setting_name = value;
             IS_INVERTED = CoreSettings.ResolveKey(value).StartsWith("Disable");
-            _checkbox.IsChecked = CoreSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
-            _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
-            UpdateStateLabel();
-            _checkbox.IsCheckedChanged += _checkbox_Toggled;
-            SyncToggleItemStatus();
+            RefreshCheckedFromSetting();
         }
     }
 
-    public bool ForceInversion { get; set; }
+    private bool _forceInversion;
+    // Recompute on assignment: in XAML this may be set after SettingName, and the load must reflect it.
+    public bool ForceInversion
+    {
+        get => _forceInversion;
+        set { _forceInversion = value; RefreshCheckedFromSetting(); }
+    }
+
+    private void RefreshCheckedFromSetting()
+    {
+        if (setting_name == CoreSettings.K.Unset) return;
+        _checkbox.IsCheckedChanged -= _checkbox_Toggled;
+        _checkbox.IsChecked = CoreSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
+        _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
+        UpdateStateLabel();
+        _checkbox.IsCheckedChanged += _checkbox_Toggled;
+        SyncToggleItemStatus();
+    }
 
     public bool Checked => _checkbox.IsChecked ?? false;
 

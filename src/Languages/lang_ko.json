@@ -142,6 +142,8 @@
   "Skip hash check": "해시 검사 건너뛰기",
   "Uninstall previous versions when updated": "업데이트 시 이전 버전 제거",
   "Skip minor updates for this package": "이 패키지의 마이너 업데이트 건너뛰기",
+    "Ignore changes after the first": "첫 번째 변경 후 변경 사항 무시",
+  "version numbers": "버전 번호",
   "Automatically update this package": "이 패키지를 자동으로 업데이트",
   "{0} installation options": "{0} 설치 옵션",
   "Latest": "최신",

@@ -193,6 +193,14 @@ public partial class MainWindowViewModel : ViewModelBase
             UpdateSettingsSuggestions(value);
     }
 
+    public void ClearAllSearchQueries()
+    {
+        DiscoverPage.ViewModel.ClearSearchQuery();
+        UpdatesPage.ViewModel.ClearSearchQuery();
+        InstalledPage.ViewModel.ClearSearchQuery();
+        GlobalSearchText = "";
+    }
+
     // ─── Settings search suggestions ───────────────────────────────────────────
     public ObservableCollection<SettingsSearchResult> SettingsSuggestions { get; } = new();
 

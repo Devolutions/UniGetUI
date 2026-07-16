@@ -500,6 +500,14 @@ public partial class PackagesPageViewModel : ViewModelBase
             FilterPackages();
     }
 
+    public void ClearSearchQuery()
+    {
+        QueryBackup = "";
+        if (string.IsNullOrEmpty(GlobalQueryText)) return;
+        GlobalQueryText = "";
+        if (!MegaQueryBoxEnabled) FilterPackages();
+    }
+
     [RelayCommand]
     public void SubmitSearch()
     {

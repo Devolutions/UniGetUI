@@ -187,6 +187,7 @@ public partial class MainWindow : Window
         if (!_allowClose && (OperatingSystem.IsMacOS() || !Settings.Get(Settings.K.DisableSystemTray)))
         {
             e.Cancel = true;
+            ViewModel.ClearAllSearchQueries();
             Hide();
             return;
         }

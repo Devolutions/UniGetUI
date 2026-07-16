@@ -49,16 +49,11 @@ internal sealed class PowerShell7PkgOperationHelper : BasePkgOperationHelper
             if (options.PreRelease)
                 parameters.Add("-Prerelease");
 
-            if (
-                package.OverridenOptions.Scope is PackageScope.Global
-                || (
-                    package.OverridenOptions.Scope is null
-                    && options.InstallationScope is PackageScope.Global
-                )
-            )
-                parameters.AddRange(["-Scope", "AllUsers"]);
-            else
-                parameters.AddRange(["-Scope", "CurrentUser"]);
+            // The scope chosen in the options dialog wins; fall back to the auto-detected install scope
+            string scope = options.InstallationScope.Length > 0
+                ? options.InstallationScope
+                : package.OverridenOptions.Scope ?? "";
+            parameters.AddRange(["-Scope", scope == PackageScope.Global ? "AllUsers" : "CurrentUser"]);
         }
 
         parameters.AddRange(

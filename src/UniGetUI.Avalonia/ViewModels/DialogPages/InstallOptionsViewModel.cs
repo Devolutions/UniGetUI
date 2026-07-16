@@ -436,6 +436,12 @@ public partial class InstallOptionsViewModel : ObservableObject
         SkipHashEnabled = op is not OperationType.Uninstall && caps.CanSkipIntegrityChecks;
         ArchEnabled = op is not OperationType.Uninstall && caps.SupportsCustomArchitectures;
         VersionEnabled = op is OperationType.Install && (caps.SupportsCustomVersions || caps.SupportsPreRelease);
+        ScopeEnabled = caps.SupportsCustomScopes && op switch
+        {
+            OperationType.Update => caps.SupportsCustomScopesOnUpdate,
+            OperationType.Uninstall => caps.SupportsCustomScopesOnUninstall,
+            _ => true,
+        };
     }
 
     // ── Live command preview ──────────────────────────────────────────────────

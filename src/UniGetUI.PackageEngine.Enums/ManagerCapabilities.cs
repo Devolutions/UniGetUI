@@ -37,6 +37,10 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public bool SupportsCustomArchitectures = false;
         public string[] SupportedCustomArchitectures = [];
         public bool SupportsCustomScopes = false;
+        // Whether a custom scope can be applied to update/uninstall too, not just install
+        // (e.g. Windows PowerShell 5.x's Update-Module has no -Scope parameter)
+        public bool SupportsCustomScopesOnUpdate = true;
+        public bool SupportsCustomScopesOnUninstall = true;
         public bool SupportsPreRelease = false;
         public bool SupportsCustomLocations = false;
         public bool SupportsCustomSources = false;

@@ -25,6 +25,9 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 SupportsCustomVersions = true,
                 CanDownloadInstaller = true,
                 SupportsCustomScopes = true,
+                // Update-Module/Uninstall-Module (PowerShellGet) take no -Scope; only Install-Module does
+                SupportsCustomScopesOnUpdate = false,
+                SupportsCustomScopesOnUninstall = false,
                 CanListDependencies = true,
                 SupportsCustomSources = true,
                 SupportsPreRelease = true,

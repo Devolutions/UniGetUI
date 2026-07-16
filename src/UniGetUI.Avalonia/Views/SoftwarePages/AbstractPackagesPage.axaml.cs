@@ -84,6 +84,26 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // Double-click a list row → show details
         PackageList.DoubleTapped += (_, _) => _ = ShowDetailsForPackage(SelectedItem);
 
+        // Native DataGrid column sorting. The default SortMemberPath path resolves the property by
+        // reflection, which full-trim NativeAOT release builds strip away — so CanUserSort reports
+        // false and header clicks are silently dropped (issue #5103). A strongly-typed
+        // CustomSortComparer plus an explicit CanUserSort keeps Avalonia's built-in sort AOT-safe.
+        foreach (var col in PackageList.Columns)
+        {
+            ObservablePackageCollection.Sorter? sorter = (col.Tag as string) switch
+            {
+                "Name" => ObservablePackageCollection.Sorter.Name,
+                "Id" => ObservablePackageCollection.Sorter.Id,
+                "Version" => ObservablePackageCollection.Sorter.Version,
+                "NewVersion" => ObservablePackageCollection.Sorter.NewVersion,
+                "Source" => ObservablePackageCollection.Sorter.Source,
+                _ => null,
+            };
+            if (sorter is null) continue;
+            col.CanUserSort = true;
+            col.CustomSortComparer = ObservablePackageCollection.GetColumnComparer(sorter.Value);
+        }
+
         // Keyboard shortcuts on the package list. Handled on the tunnel route (and even when
         // already handled) because the DataGrid swallows Enter on the bubble route otherwise.
         PackageList.AddHandler(KeyDownEvent, PackageList_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);

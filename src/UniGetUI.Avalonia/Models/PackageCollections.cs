@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Net.Http;
@@ -494,7 +495,9 @@ public sealed class ObservablePackageCollection : AvaloniaList<PackageWrapper>
             ? items.OrderBy(GetSortKey, StringComparer.OrdinalIgnoreCase)
             : items.OrderByDescending(GetSortKey, StringComparer.OrdinalIgnoreCase);
 
-    private string GetSortKey(PackageWrapper w) => CurrentSorter switch
+    private string GetSortKey(PackageWrapper w) => GetSortKey(w, CurrentSorter);
+
+    private static string GetSortKey(PackageWrapper w, Sorter sorter) => sorter switch
     {
         Sorter.Checked => w.IsChecked ? "0" : "1",
         Sorter.Name => w.Package.Name,
@@ -504,4 +507,10 @@ public sealed class ObservablePackageCollection : AvaloniaList<PackageWrapper>
         Sorter.Source => w.Package.Source.AsString_DisplayName,
         _ => w.Package.Name,
     };
+
+    // Comparer for the DataGrid's native column sorting. Reflection-free (unlike SortMemberPath),
+    // so it keeps working under full-trim NativeAOT release builds — see issue #5103.
+    public static IComparer GetColumnComparer(Sorter sorter) =>
+        Comparer<PackageWrapper>.Create((a, b) =>
+            string.Compare(GetSortKey(a, sorter), GetSortKey(b, sorter), StringComparison.OrdinalIgnoreCase));
 }

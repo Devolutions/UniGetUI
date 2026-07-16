@@ -1,4 +1,7 @@
-using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Avalonia.Threading;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
@@ -9,13 +12,16 @@ using UniGetUI.PackageOperations;
 namespace UniGetUI.Avalonia.Infrastructure;
 
 /// <summary>
-/// macOS system notification delivery via osascript (works on all macOS versions).
-/// NSUserNotificationCenter was removed in macOS 14; UNUserNotificationCenter requires
-/// ObjC blocks that are impractical via pure P/Invoke. osascript is always available.
-/// Callers are responsible for the OperatingSystem.IsMacOS() guard before invoking.
+/// macOS system notification delivery through the app-bundled UserNotifications bridge.
+/// The bridge owns the Objective-C delegate and completion blocks so this NativeAOT assembly
+/// can use a fixed P/Invoke boundary and receive default notification activations.
 /// </summary>
-internal static class MacOsNotificationBridge
+internal static partial class MacOsNotificationBridge
 {
+    private const string NativeBridgePath = "@executable_path/UniGetUIMacNotificationBridge.dylib";
+    private static readonly Lock InitializationLock = new();
+    private static bool _isInitialized;
+
     // ── Operation notifications ────────────────────────────────────────────
 
     public static bool ShowProgress(AbstractOperation operation)
@@ -186,18 +192,49 @@ internal static class MacOsNotificationBridge
 
     private static void DeliverNotification(string title, string message)
     {
-        // NSUserNotificationCenter was removed in macOS 14; osascript works on all versions.
-        string script = "display notification " + AppleScriptString(message)
-                        + " with title " + AppleScriptString(title);
-        Process.Start(new ProcessStartInfo
+        if (!EnsureInitialized())
+            throw new InvalidOperationException("The macOS notification bridge is unavailable.");
+
+        if (ShowNativeNotification(title, message) == 0)
         {
-            FileName = "/usr/bin/osascript",
-            ArgumentList = { "-e", script },
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        });
+            throw new InvalidOperationException("The macOS notification bridge rejected the notification.");
+        }
     }
 
-    private static string AppleScriptString(string s) =>
-        "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+    private static unsafe bool EnsureInitialized()
+    {
+        if (_isInitialized)
+            return true;
+
+        lock (InitializationLock)
+        {
+            if (_isInitialized)
+                return true;
+
+            try
+            {
+                _isInitialized = InitializeNativeNotifications(
+                    (nint)(delegate* unmanaged[Cdecl]<void>)&OnNotificationActivated) != 0;
+                return _isInitialized;
+            }
+            catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
+            {
+                Logger.Warn("The macOS notification bridge is unavailable.");
+                Logger.Warn(ex);
+                return false;
+            }
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void OnNotificationActivated()
+    {
+        Dispatcher.UIThread.Post(() => MainWindow.Instance?.ShowFromTray());
+    }
+
+    [LibraryImport(NativeBridgePath, EntryPoint = "UniGetUIInitializeMacNotifications")]
+    private static partial int InitializeNativeNotifications(nint activationCallback);
+
+    [LibraryImport(NativeBridgePath, EntryPoint = "UniGetUIShowMacNotification", StringMarshalling = StringMarshalling.Utf8)]
+    private static partial int ShowNativeNotification(string title, string message);
 }

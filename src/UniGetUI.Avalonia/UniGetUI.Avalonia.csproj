@@ -92,6 +92,28 @@
               ContinueOnError="true" />
     </Target>
 
+    <Target Name="BuildMacNotificationBridgeForDebug" AfterTargets="Build"
+            Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$(Configuration)' == 'Debug'">
+        <PropertyGroup>
+            <_MacNotificationBridgeSource>$(MSBuildProjectDirectory)/../../scripts/macos/UniGetUIMacNotificationBridge.m</_MacNotificationBridgeSource>
+            <_MacNotificationBridgeOutput>$(TargetDir)UniGetUIMacNotificationBridge.dylib</_MacNotificationBridgeOutput>
+        </PropertyGroup>
+        <Exec Command="xcrun clang -dynamiclib -fobjc-arc -mmacosx-version-min=12.0 -framework Foundation -framework UserNotifications -install_name @executable_path/UniGetUIMacNotificationBridge.dylib -o '$(_MacNotificationBridgeOutput)' '$(_MacNotificationBridgeSource)'" />
+    </Target>
+
+    <Target Name="BuildMacNotificationBridgeForPublish" AfterTargets="Publish"
+            Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$(Configuration)' != 'Debug'">
+        <PropertyGroup>
+            <_MacNotificationBridgeSource>$(MSBuildProjectDirectory)/../../scripts/macos/UniGetUIMacNotificationBridge.m</_MacNotificationBridgeSource>
+            <_MacNotificationBridgeOutput>$(PublishDir)UniGetUIMacNotificationBridge.dylib</_MacNotificationBridgeOutput>
+            <_MacNotificationBridgeArchitecture Condition="'$(RuntimeIdentifier)' == 'osx-arm64'">arm64</_MacNotificationBridgeArchitecture>
+            <_MacNotificationBridgeArchitecture Condition="'$(RuntimeIdentifier)' == 'osx-x64'">x86_64</_MacNotificationBridgeArchitecture>
+        </PropertyGroup>
+        <Error Condition="'$(_MacNotificationBridgeArchitecture)' == ''"
+               Text="A macOS RuntimeIdentifier is required to build the notification bridge." />
+        <Exec Command="xcrun clang -dynamiclib -fobjc-arc -arch $(_MacNotificationBridgeArchitecture) -mmacosx-version-min=12.0 -framework Foundation -framework UserNotifications -install_name @executable_path/UniGetUIMacNotificationBridge.dylib -o '$(_MacNotificationBridgeOutput)' '$(_MacNotificationBridgeSource)'" />
+    </Target>
+
     <PropertyGroup Condition="'$(EnableAvaloniaDiagnostics)' == 'true'">
         <DefineConstants>$(DefineConstants);AVALONIA_DIAGNOSTICS_ENABLED</DefineConstants>
     </PropertyGroup>

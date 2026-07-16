@@ -490,20 +490,28 @@ public sealed class ObservablePackageCollection : AvaloniaList<PackageWrapper>
     public void SetSortDirection(bool ascending) => _ascending = ascending;
 
     /// <summary>Returns <paramref name="items"/> in the current sort order.</summary>
-    public IEnumerable<PackageWrapper> ApplyToList(IEnumerable<PackageWrapper> items) =>
-        _ascending
-            ? items.OrderBy(GetSortKey, StringComparer.OrdinalIgnoreCase)
-            : items.OrderByDescending(GetSortKey, StringComparer.OrdinalIgnoreCase);
+    public IEnumerable<PackageWrapper> ApplyToList(IEnumerable<PackageWrapper> items)
+    {
+        var comparer = Comparer<PackageWrapper>.Create((a, b) => Compare(a, b, CurrentSorter));
+        return _ascending ? items.OrderBy(w => w, comparer) : items.OrderByDescending(w => w, comparer);
+    }
 
-    private string GetSortKey(PackageWrapper w) => GetSortKey(w, CurrentSorter);
+    // Shared by the "Order by" menu (ApplyToList) and the DataGrid's native column sorting
+    // (GetColumnComparer) so both order identically. Versions compare semantically via
+    // CoreTools.Version; a string key can't be used there because that struct has no ToString
+    // override, so its key would be a constant type name that never sorts.
+    private static int Compare(PackageWrapper a, PackageWrapper b, Sorter sorter) => sorter switch
+    {
+        Sorter.Version => a.Package.NormalizedVersion.CompareTo(b.Package.NormalizedVersion),
+        Sorter.NewVersion => a.Package.NormalizedNewVersion.CompareTo(b.Package.NormalizedNewVersion),
+        _ => string.Compare(GetSortKey(a, sorter), GetSortKey(b, sorter), StringComparison.OrdinalIgnoreCase),
+    };
 
     private static string GetSortKey(PackageWrapper w, Sorter sorter) => sorter switch
     {
         Sorter.Checked => w.IsChecked ? "0" : "1",
         Sorter.Name => w.Package.Name,
         Sorter.Id => w.Package.Id,
-        Sorter.Version => w.Package.NormalizedVersion.ToString() ?? string.Empty,
-        Sorter.NewVersion => w.Package.NormalizedNewVersion.ToString() ?? string.Empty,
         Sorter.Source => w.Package.Source.AsString_DisplayName,
         _ => w.Package.Name,
     };
@@ -511,6 +519,5 @@ public sealed class ObservablePackageCollection : AvaloniaList<PackageWrapper>
     // Comparer for the DataGrid's native column sorting. Reflection-free (unlike SortMemberPath),
     // so it keeps working under full-trim NativeAOT release builds — see issue #5103.
     public static IComparer GetColumnComparer(Sorter sorter) =>
-        Comparer<PackageWrapper>.Create((a, b) =>
-            string.Compare(GetSortKey(a, sorter), GetSortKey(b, sorter), StringComparison.OrdinalIgnoreCase));
+        Comparer<PackageWrapper>.Create((a, b) => Compare(a, b, sorter));
 }

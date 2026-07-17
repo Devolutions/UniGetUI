@@ -240,7 +240,7 @@
                                   HorizontalContentAlignment="Stretch"
                                   IsExpanded="True"
                                   CornerRadius="8"
-                                  Padding="4,4,4,8"
+                                  Padding="16,8,16,8"
                                   Background="{DynamicResource SettingsCardBackground}">
                             <Expander.Header>
                                 <StackPanel Orientation="Horizontal" Spacing="8">

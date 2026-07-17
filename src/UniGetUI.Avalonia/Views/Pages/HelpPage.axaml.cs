@@ -4,11 +4,12 @@ using UniGetUI.Avalonia.ViewModels.Pages;
 
 namespace UniGetUI.Avalonia.Views.Pages;
 
-public partial class HelpPage : UserControl, IEnterLeaveListener
+public partial class HelpPage : UserControl, IEnterLeaveListener, IDisposable
 {
     private readonly HelpPageViewModel _viewModel;
     private string _pendingNavigation = HelpPageViewModel.HelpBaseUrl;
     private bool _adapterReady;
+    private bool _disposed;
 
     public HelpPage()
     {
@@ -77,4 +78,15 @@ public partial class HelpPage : UserControl, IEnterLeaveListener
 
     private void ReloadButton_Click(object? sender, RoutedEventArgs e) =>
         WebViewControl.Refresh();
+
+    // Detach the WebView so its WebView2 host/controller is released; the page is
+    // rebuilt fresh on next visit (MainWindowViewModel drops the cached instance).
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        if (!OperatingSystem.IsLinux())
+            WebViewControl.Stop();
+        WebViewBorder.Child = null;
+    }
 }

@@ -3,11 +3,12 @@ using UniGetUI.Avalonia.ViewModels.Pages;
 
 namespace UniGetUI.Avalonia.Views.Pages;
 
-public partial class ReleaseNotesPage : UserControl, IEnterLeaveListener
+public partial class ReleaseNotesPage : UserControl, IEnterLeaveListener, IDisposable
 {
     private readonly ReleaseNotesPageViewModel _viewModel;
     private bool _loaded;
     private bool _adapterReady;
+    private bool _disposed;
 
     public ReleaseNotesPage()
     {
@@ -52,4 +53,15 @@ public partial class ReleaseNotesPage : UserControl, IEnterLeaveListener
     }
 
     public void OnLeave() { }
+
+    // Detach the WebView so its WebView2 host/controller is released; the page is
+    // rebuilt fresh on next visit (MainWindowViewModel drops the cached instance).
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        if (!OperatingSystem.IsLinux())
+            WebViewControl.Stop();
+        WebViewBorder.Child = null;
+    }
 }

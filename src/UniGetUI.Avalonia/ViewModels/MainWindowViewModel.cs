@@ -577,6 +577,13 @@ public partial class MainWindowViewModel : ViewModelBase
         NavigateTo(type);
     }
 
+    private void ReleaseWebViewPage(Control? leftPage)
+    {
+        if (leftPage is null) return;
+        if (ReferenceEquals(leftPage, HelpPage)) { HelpPage?.Dispose(); HelpPage = null; }
+        else if (ReferenceEquals(leftPage, ReleaseNotesPage)) { ReleaseNotesPage?.Dispose(); ReleaseNotesPage = null; }
+    }
+
     private Control GetPageForType(PageType type) =>
         type switch
         {
@@ -643,6 +650,10 @@ public partial class MainWindowViewModel : ViewModelBase
         CurrentPageContent = newPage;
         _oldPage = _currentPage;
         _currentPage = newPage_t;
+
+        // #5129: Help/ReleaseNotes each host a WebView2 that the control never releases on
+        // detach. Drop the page when leaving so its WebView2 process cluster gets freed.
+        ReleaseWebViewPage(oldPage);
 
         if (toHistory && _oldPage is not PageType.Null)
         {

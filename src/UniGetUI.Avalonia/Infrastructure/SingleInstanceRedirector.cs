@@ -1,4 +1,5 @@
 using System.IO.Pipes;
+using System.Security.Cryptography;
 using System.Text;
 using Avalonia.Threading;
 using UniGetUI.Core.Data;
@@ -17,8 +18,19 @@ namespace UniGetUI.Avalonia.Infrastructure;
 internal static class SingleInstanceRedirector
 {
     // One pipe name per user session (the MainWindowIdentifier is a stable constant).
-    private static readonly string PipeName =
-        $"UniGetUI_Pipe_{CoreData.MainWindowIdentifier}_{Environment.UserName}";
+    private static readonly string PipeName = BuildPipeName();
+
+    // On Unix the pipe is a domain socket at $TMPDIR/CoreFxPipe_<name>, capped at 104 chars (macOS
+    // sun_path). The descriptive Windows name overflows that, so non-Windows uses a short stable hash.
+    private static string BuildPipeName()
+    {
+        string name = $"UniGetUI_Pipe_{CoreData.MainWindowIdentifier}_{Environment.UserName}";
+        if (OperatingSystem.IsWindows())
+            return name;
+
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(name));
+        return "UniGetUI_" + Convert.ToHexString(hash, 0, 6);
+    }
 
     private static Thread? _listener;
 

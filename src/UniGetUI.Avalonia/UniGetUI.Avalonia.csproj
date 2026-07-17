@@ -101,6 +101,18 @@
         <Exec Command="xcrun clang -dynamiclib -fobjc-arc -mmacosx-version-min=12.0 -framework Foundation -framework UserNotifications -install_name @executable_path/UniGetUIMacNotificationBridge.dylib -o '$(_MacNotificationBridgeOutput)' '$(_MacNotificationBridgeSource)'" />
     </Target>
 
+    <!-- Ad-hoc codesign the debug .app so macOS binds it to CFBundleIdentifier and seals Info.plist;
+         without a signature UNUserNotificationCenter has no bundle identity and notifications fail.
+         "deep" also signs the dylib; entitlements disable library validation so it can be loaded. -->
+    <Target Name="CodesignMacDebugAppBundle"
+            AfterTargets="AssembleMacDebugAppBundle;BuildMacNotificationBridgeForDebug"
+            Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$(Configuration)' == 'Debug'">
+        <PropertyGroup>
+            <_MacScriptsDir>$(MSBuildProjectDirectory)/../../scripts/macos</_MacScriptsDir>
+        </PropertyGroup>
+        <Exec Command="codesign --force --deep --entitlements '$(_MacScriptsDir)/Entitlements.plist' --sign - '$(MacAppBundleDir)'" />
+    </Target>
+
     <Target Name="BuildMacNotificationBridgeForPublish" AfterTargets="Publish"
             Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$(Configuration)' != 'Debug'">
         <PropertyGroup>

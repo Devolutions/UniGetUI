@@ -851,6 +851,16 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Mica was requested; None means DWM granted no backdrop, so the transparent window would
+        // render pure black (#5111). Latch Mica off and keep a solid background instead.
+        if (ActualTransparencyLevel == WindowTransparencyLevel.None)
+        {
+            MicaWindowHelper.NotifyMicaUnavailable();
+            if (this.TryFindResource("AppWindowBackground", ActualThemeVariant, out var solidBg) && solidBg is IBrush solidBrush)
+                Background = solidBrush;
+            return;
+        }
+
         // The custom NCCALCSIZE frame keeps WS_THICKFRAME, so DWM still has a frame to round.
         int corner = DWMWCP_ROUND;
         NativeMethods.DwmSetWindowAttribute(handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, sizeof(int));

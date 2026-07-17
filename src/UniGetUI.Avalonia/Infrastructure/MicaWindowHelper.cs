@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Media;
 using Avalonia.Platform;
+using UniGetUI.Avalonia.Assets.Styles;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
@@ -24,6 +25,7 @@ internal static class MicaWindowHelper
     private const int DWMSBT_TRANSIENTWINDOW = 3; // Acrylic — for transient surfaces (menus/flyouts); Mica won't paint on these
 
     private static bool _acrylicPopupsHooked;
+    private static bool _micaConfirmedUnavailable;
 
     public static void Apply(Window window)
     {
@@ -71,6 +73,9 @@ internal static class MicaWindowHelper
 
     private static void ApplyAcrylicToPopup(TopLevel root)
     {
+        if (!IsMicaEnabled())
+            return;
+
         // Request acrylic (not Transparent): the Transparent level makes a layered window, and DWM
         // system backdrops never paint on those — so the popup ended up fully see-through with only
         // the presenter tint, unreadable when shown over the desktop (e.g. the tray menu). AcrylicBlur
@@ -89,14 +94,36 @@ internal static class MicaWindowHelper
     }
 
     /// <summary>
-    /// True when the native Mica look should be used: Windows 11+ AND the user has
-    /// "Transparency effects" enabled. When transparency is off we keep the solid look,
-    /// since the Mica backdrop otherwise lingers (DWM keeps painting it).
+    /// True when the native Mica look should be used: Windows 11+, "Transparency effects" on,
+    /// GPU-accelerated (software rendering can't be transparent, so Mica shows as black — #5111),
+    /// and no window has since found the backdrop didn't engage. Otherwise keep the solid look.
     /// </summary>
     public static bool IsMicaEnabled()
         => OperatingSystem.IsWindows()
            && Environment.OSVersion.Version.Build >= 22000
+           && !_micaConfirmedUnavailable
+           && !WindowsAvaloniaRenderingPolicy.ShouldUseSoftwareRendering
            && IsOsTransparencyEnabled();
+
+    /// <summary>
+    /// Latch Mica off for the session and drop the translucent surface overrides so every surface
+    /// falls back to the solid look, once a window confirms the backdrop never engaged (#5111).
+    /// </summary>
+    public static void NotifyMicaUnavailable()
+    {
+        if (_micaConfirmedUnavailable)
+            return;
+        _micaConfirmedUnavailable = true;
+
+        if (Application.Current is { } app)
+        {
+            for (int i = app.Resources.MergedDictionaries.Count - 1; i >= 0; i--)
+            {
+                if (app.Resources.MergedDictionaries[i] is WindowsMicaStyles)
+                    app.Resources.MergedDictionaries.RemoveAt(i);
+            }
+        }
+    }
 
     private static bool IsOsTransparencyEnabled()
     {

@@ -935,25 +935,19 @@ public partial class MainWindow : Window
         // the top inset, leaving the WS_THICKFRAME left/right/bottom resize border as glass.
         if (msg == WM_NCCALCSIZE && wParam.ToInt64() != 0)
         {
-            // When maximized, Windows places the window so its resize border sits offscreen
-            // (top-left near (-frame, -frame)). Claiming the whole window rect as client then
-            // pushes the title bar's top few pixels off the monitor, clipping the search box
-            // so it hugs the top edge (#5013). While maximized, inset the client rect by the
-            // frame thickness so it fills exactly the visible monitor; keep the full-rect
-            // (borderless, extended) client otherwise.
+            // Maximized: client = work area (the window already equals it), not a phantom frame inset (#5117/#5013).
             if (NativeMethods.IsZoomed(hWnd))
             {
-                uint dpi = NativeMethods.GetDpiForWindow(hWnd);
-                if (dpi == 0) dpi = 96;
-                var border = default(NativeMethods.RECT);
-                if (NativeMethods.AdjustWindowRectExForDpi(ref border, WS_THICKFRAME, false, 0, dpi))
+                nint monitor = NativeMethods.MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
+                if (monitor != 0)
                 {
-                    var p = Marshal.PtrToStructure<NativeMethods.NCCALCSIZE_PARAMS>(lParam);
-                    p.rgrc0.Left -= border.Left;
-                    p.rgrc0.Top -= border.Top;
-                    p.rgrc0.Right -= border.Right;
-                    p.rgrc0.Bottom -= border.Bottom;
-                    Marshal.StructureToPtr(p, lParam, false);
+                    var mi = new NativeMethods.MONITORINFO { cbSize = Marshal.SizeOf<NativeMethods.MONITORINFO>() };
+                    if (NativeMethods.GetMonitorInfo(monitor, ref mi))
+                    {
+                        var p = Marshal.PtrToStructure<NativeMethods.NCCALCSIZE_PARAMS>(lParam);
+                        p.rgrc0 = mi.rcWork;
+                        Marshal.StructureToPtr(p, lParam, false);
+                    }
                 }
             }
             handled = true;

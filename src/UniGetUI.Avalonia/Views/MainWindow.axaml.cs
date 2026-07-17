@@ -7,6 +7,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Extensions;
@@ -85,7 +86,9 @@ public partial class MainWindow : Window
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     private const int DWMWA_BORDER_COLOR = 34;
     private const int DWMWCP_ROUND = 2;
-    private const int DWMWA_COLOR_NONE = unchecked((int)0xFFFFFFFE);
+    // Subtle neutral window border (COLORREF 0x00BBGGRR), per theme — a gray edge like other Win11 apps.
+    private const int WINDOW_BORDER_COLOR_LIGHT = 0x00B9B9B9;
+    private const int WINDOW_BORDER_COLOR_DARK = 0x004A4A4A;
 
     private bool _focusSidebarSelectionOnNextPageChange;
     private bool _maxButtonHover;
@@ -165,6 +168,14 @@ public partial class MainWindow : Window
         }
 
         SetupMicaAndAccentBorder();
+
+        // Keep the window border color in sync with light/dark theme switches.
+        ActualThemeVariantChanged += (_, _) =>
+        {
+            if (MicaWindowHelper.IsMicaEnabled()
+                && TryGetPlatformHandle()?.Handle is { } themeHandle && themeHandle != 0)
+                ApplyWindowBorderColor(themeHandle);
+        };
 
         // Restore the saved size as an exact outer rect in physical pixels. Because our
         // WM_NCCALCSIZE keeps client == window rect, this round-trips with SaveGeometry with no
@@ -859,10 +870,18 @@ public partial class MainWindow : Window
         // the backdrop show through the chrome and page area.
         Background = Brushes.Transparent;
 
-        // Suppress the window border colour so the main window doesn't get the accent edge
-        // (the dialogs keep it via MicaWindowHelper).
-        int noBorder = DWMWA_COLOR_NONE;
-        NativeMethods.DwmSetWindowAttribute(handle, DWMWA_BORDER_COLOR, ref noBorder, sizeof(int));
+        // Neutral gray border (like other Win11 apps) instead of the accent edge, which reads
+        // as out of place on a window this large. Re-applied on theme changes (see OnOpened).
+        ApplyWindowBorderColor(handle);
+    }
+
+    // Sets the per-theme neutral window border via DWM. No-op on builds without the attribute.
+    private void ApplyWindowBorderColor(nint handle)
+    {
+        int color = ActualThemeVariant == ThemeVariant.Dark
+            ? WINDOW_BORDER_COLOR_DARK
+            : WINDOW_BORDER_COLOR_LIGHT;
+        NativeMethods.DwmSetWindowAttribute(handle, DWMWA_BORDER_COLOR, ref color, sizeof(int));
     }
 
     private static nint OnWindowsWndProc(nint hWnd, uint msg, nint wParam, nint lParam, ref bool handled)

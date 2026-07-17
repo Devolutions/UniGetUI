@@ -2,6 +2,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
+using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -827,36 +828,54 @@ namespace UniGetUI.Core.Tools
         public static async Task WaitForInternetConnection() =>
             await TaskRecycler<int>.RunOrAttachAsync_VOID(_waitForInternetConnection);
 
+        private static bool _tryHttpConnectivityCheck()
+        {
+            try
+            {
+                var request = (HttpWebRequest)WebRequest.Create("http://msftconnecttest.com/connecttest.txt");
+                request.Timeout = 5000;
+                request.Method = "HEAD";
+                using var response = (HttpWebResponse)request.GetResponse();
+                return response.StatusCode == HttpStatusCode.OK;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public static void _waitForInternetConnection()
         {
             if (Settings.Get(Settings.K.DisableWaitForInternetConnection))
                 return;
 
             Logger.Debug("Checking for internet connectivity...");
+            const int maxWaitSeconds = 30;
             bool internetLost = false;
 
+            for (int waited = 0; waited < maxWaitSeconds; waited++)
+            {
+                bool hasInternet = false;
+
 #if WINDOWS
-            var profile = NetworkInformation.GetInternetConnectionProfile();
-            while (
-                profile is null
-                || profile.GetNetworkConnectivityLevel()
-                    is not NetworkConnectivityLevel.InternetAccess
-            )
-            {
-                Thread.Sleep(1000);
-                profile = NetworkInformation.GetInternetConnectionProfile();
-                if (!internetLost)
-                {
-                    Logger.Warn(
-                        "User is not connected to the internet, waiting for an internet connectio to be available..."
-                    );
-                    internetLost = true;
-                }
-            }
+                var profile = NetworkInformation.GetInternetConnectionProfile();
+                hasInternet = profile?.GetNetworkConnectivityLevel() == NetworkConnectivityLevel.InternetAccess;
 #else
-            while (!NetworkInterface.GetIsNetworkAvailable())
-            {
-                Thread.Sleep(1000);
+                hasInternet = NetworkInterface.GetIsNetworkAvailable();
+#endif
+                if (hasInternet)
+                {
+                    Logger.Debug("Internet connectivity was established.");
+                    return;
+                }
+
+                // NCSI may be stale (common Windows 10 bug); verify with a real HTTP request
+                if (_tryHttpConnectivityCheck())
+                {
+                    Logger.Debug("Internet connectivity was established (HTTP check passed, NCSI was stale).");
+                    return;
+                }
+
                 if (!internetLost)
                 {
                     Logger.Warn(
@@ -864,9 +883,13 @@ namespace UniGetUI.Core.Tools
                     );
                     internetLost = true;
                 }
+
+                Thread.Sleep(1000);
             }
-#endif
-            Logger.Debug("Internet connectivity was established.");
+
+            Logger.Warn(
+                $"Internet connectivity check timed out after {maxWaitSeconds}s, proceeding anyway."
+            );
         }
 
         public static string TextProgressGenerator(int length, int progressPercent, string? extra)

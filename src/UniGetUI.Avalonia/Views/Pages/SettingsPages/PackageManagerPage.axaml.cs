@@ -531,12 +531,22 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 scoopCleanup.Click += (_, _) => ViewModel.ScoopCleanupCommand.Execute(null);
                 ExtraControls.Children.Add(scoopCleanup);
 
+                // Clear download cache on launch
+                ExtraControls.Children.Add(new CheckboxCard
+                {
+                    CornerRadius = new CornerRadius(0),
+                    BorderThickness = new Thickness(1, 0, 1, 0),
+                    SettingName = CoreSettings.K.EnableScoopCleanupCache,
+                    Text = CoreTools.AutoTranslated("Clear Scoop download cache on launch"),
+                });
+
+                // Clean up older app versions on launch
                 ExtraControls.Children.Add(new CheckboxCard
                 {
                     CornerRadius = new CornerRadius(0, 0, 8, 8),
                     BorderThickness = new Thickness(1, 0, 1, 1),
-                    SettingName = CoreSettings.K.EnableScoopCleanup,
-                    Text = CoreTools.AutoTranslated("Enable Scoop cleanup on launch"),
+                    SettingName = CoreSettings.K.EnableScoopCleanupApps,
+                    Text = CoreTools.AutoTranslated("Clean up older Scoop app versions on launch"),
                 });
                 break;
 

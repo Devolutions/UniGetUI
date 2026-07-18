@@ -199,17 +199,26 @@ public static class IpcManagerMaintenanceApi
                     throw new InvalidOperationException("Scoop is not ready.");
                 }
 
+                // Clean old app versions (user scope)
                 await RunWindowsProcessAsync(
                     manager.Status.ExecutablePath,
-                    manager.Status.ExecutableCallArgs + " cache rm *"
+                    manager.Status.ExecutableCallArgs + " cleanup --all"
                 );
+                // Clean old app versions (global scope, needs admin)
                 await RunWindowsProcessAsync(
                     manager.Status.ExecutablePath,
-                    manager.Status.ExecutableCallArgs + " cleanup --all --cache"
+                    manager.Status.ExecutableCallArgs + " cleanup --all --global",
+                    runAsAdmin: true
                 );
+                // Clear download cache (user scope)
                 await RunWindowsProcessAsync(
                     manager.Status.ExecutablePath,
-                    manager.Status.ExecutableCallArgs + " cleanup --all --global --cache",
+                    manager.Status.ExecutableCallArgs + " cache rm --all"
+                );
+                // Clear download cache (global scope, needs admin)
+                await RunWindowsProcessAsync(
+                    manager.Status.ExecutablePath,
+                    manager.Status.ExecutableCallArgs + " cache rm --all --global",
                     runAsAdmin: true
                 );
                 await ReloadManagerAsync(manager);
@@ -284,7 +293,7 @@ public static class IpcManagerMaintenanceApi
                 ? true
                 : null,
             ScoopCleanupOnLaunch = manager.Name.Equals("Scoop", StringComparison.OrdinalIgnoreCase)
-                ? Settings.Get(Settings.K.EnableScoopCleanup)
+                ? Settings.Get(Settings.K.EnableScoopCleanupCache) || Settings.Get(Settings.K.EnableScoopCleanupApps) || Settings.Get(Settings.K.EnableScoopCleanup)
                 : null,
             UpdateNotificationsSuppressed = Settings.GetDictionaryItem<string, bool>(
                 Settings.K.DisabledPackageManagerNotifications,

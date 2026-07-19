@@ -14,7 +14,7 @@ public partial class Translators : UserControl
     }
 
     private void BecomeTranslatorButton_Click(object? sender, RoutedEventArgs e) =>
-        CoreTools.Launch("https://github.com/Devolutions/UniGetUI/wiki#translating-wingetui");
+        CoreTools.Launch("https://github.com/Devolutions/UniGetUI/blob/main/TRANSLATION.md");
 
     private void GitHubButton_Click(object? sender, RoutedEventArgs e)
     {

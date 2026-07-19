@@ -68,7 +68,7 @@ public sealed partial class General : UserControl, ISettingsPage
         };
         link.Bind(TextBlock.ForegroundProperty, link.GetResourceObservable("SystemControlHighlightAccentBrush"));
         link.PointerPressed += (_, _) =>
-            CoreTools.Launch("https://github.com/Devolutions/UniGetUI/wiki#translating-wingetui");
+            CoreTools.Launch("https://github.com/Devolutions/UniGetUI/blob/main/TRANSLATION.md");
 
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
         panel.Children.Add(label);

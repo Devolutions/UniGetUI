@@ -45,7 +45,7 @@ Read more in the [Devolutions announcement](https://devolutions.net/blog/2026/03
  - [Project stewardship](#project-stewardship)
  - [Features](#features)
  - [Package Managers](#package-managers)
- - [Translations](TRANSLATION.md)
+ - [Translations](#translations)
  - [Contributions](#contributions)
  - [Screenshots](#screenshots)
  - [Frequently Asked Questions](#frequently-asked-questions)

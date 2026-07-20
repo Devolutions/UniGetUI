@@ -226,26 +226,49 @@ public class Homebrew : PackageManager
         return packages;
     }
 
+    // "brew outdated --verbose" prints a different comparison operator per package type:
+    //   Formula: "name (old_version) < new_version"  (versions are comparable)
+    //   Cask:    "name (old_version) != new_version" (versions are opaque strings)
+    // Both operators must be accepted, otherwise cask updates are silently dropped.
+    private static readonly Regex OutdatedLinePattern =
+        new(@"^(\S+)\s+\(([^)]+)\)\s+(?:<|!=)\s+(.+)$");
+
     protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
     {
-        var packages = new List<Package>();
-
-        // Build a lookup of installed packages to retrieve their sources
-        Dictionary<string, IPackage> installed = [];
-        foreach (var pkg in GetInstalledPackages())
-            installed.TryAdd(pkg.Id, pkg);
+        IReadOnlyList<IPackage> installed = GetInstalledPackages();
 
         using var p = new Process { StartInfo = MakeBrewStartInfo("outdated --verbose") };
         IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates, p);
         p.Start();
 
-        // Format: "name (old_version) < new_version"
-        var pattern = new Regex(@"^(\S+)\s+\(([^)]+)\)\s+<\s+(.+)$");
+        var lines = new List<string>();
         string? line;
         while ((line = p.StandardOutput.ReadLine()) is not null)
         {
             logger.AddToStdOut(line);
-            var m = pattern.Match(line);
+            lines.Add(line);
+        }
+
+        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        p.WaitForExit();
+        logger.Close(p.ExitCode);
+
+        return ParseAvailableUpdates(lines, installed);
+    }
+
+    internal IReadOnlyList<Package> ParseAvailableUpdates(
+        IEnumerable<string> lines,
+        IEnumerable<IPackage> installedPackages)
+    {
+        // Build a lookup of installed packages to retrieve their sources (Formula vs Cask)
+        Dictionary<string, IPackage> installed = [];
+        foreach (var pkg in installedPackages)
+            installed.TryAdd(pkg.Id, pkg);
+
+        var packages = new List<Package>();
+        foreach (var line in lines)
+        {
+            var m = OutdatedLinePattern.Match(line);
             if (!m.Success) continue;
 
             var id = m.Groups[1].Value.Trim();
@@ -265,9 +288,6 @@ public class Homebrew : PackageManager
                 this));
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
-        p.WaitForExit();
-        logger.Close(p.ExitCode);
         return packages;
     }
 }

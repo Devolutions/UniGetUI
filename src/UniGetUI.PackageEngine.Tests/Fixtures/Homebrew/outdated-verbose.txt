@@ -1,0 +1,5 @@
+fontconfig (2.17.1) < 2.18.2
+shaderc (2026.2) < 2026.3
+python@3.14 (3.14.3_1) < 3.14.6
+firefox (152.0.5) != 152.0.6
+visual-studio-code (1.90.0) != 1.91.0

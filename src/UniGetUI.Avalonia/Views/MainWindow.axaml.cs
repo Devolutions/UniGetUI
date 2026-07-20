@@ -113,6 +113,11 @@ public partial class MainWindow : Window
 
     public static MainWindow? Instance { get; private set; }
 
+    // True while the window is on screen (visible and not minimized). Read from any thread by
+    // the notification bridge to suppress OS toasts while the user is looking at the app.
+    private static volatile bool _isOnScreen;
+    public static bool IsWindowOnScreen => _isOnScreen;
+
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext!;
     public PageType CurrentPage => ViewModel.CurrentPage_t;
 
@@ -136,7 +141,8 @@ public partial class MainWindow : Window
 
         Resized += (_, _) => _ = SaveGeometryAsync();
         PositionChanged += (_, _) => _ = SaveGeometryAsync();
-        this.GetObservable(WindowStateProperty).SubscribeValue(state => { _ = SaveGeometryAsync(); });
+        this.GetObservable(WindowStateProperty).SubscribeValue(state => { UpdateOnScreenState(); _ = SaveGeometryAsync(); });
+        this.GetObservable(IsVisibleProperty).SubscribeValue(_ => UpdateOnScreenState());
 
         _trayService = new TrayService(this);
         _trayService.UpdateStatus();
@@ -1361,6 +1367,9 @@ public partial class MainWindow : Window
     }
 
     public void UpdateSystemTrayStatus() => _trayService?.UpdateStatus();
+
+    private void UpdateOnScreenState()
+        => _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
 
     public void ShowRuntimeNotification(string title, string message, RuntimeNotificationLevel level) =>
         ShowBanner(title, message, level);

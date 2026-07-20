@@ -270,7 +270,10 @@ internal static class WindowsAppNotificationBridge
         bool allowInAppFallback = true)
     {
 #if WINDOWS
-        if (OperatingSystem.IsWindows() && Win32ToastNotifier.IsAvailable())
+        // Only fire an OS toast when the app is out of sight (minimized or hidden to the tray).
+        // While the window is on screen the user can already see the operations panel / in-app
+        // toast, so a native toast would just be noise; fall through to the in-app path instead.
+        if (OperatingSystem.IsWindows() && !MainWindow.IsWindowOnScreen && Win32ToastNotifier.IsAvailable())
         {
             string launchArg = BuildLaunchArgument(launchAction);
             if (Win32ToastNotifier.Show(title, message, launchArg))

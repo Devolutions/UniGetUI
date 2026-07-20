@@ -35,7 +35,7 @@ internal static partial class MacOsNotificationBridge
             string message = operation.Metadata.Status.Length > 0
                 ? operation.Metadata.Status
                 : CoreTools.Translate("Please wait...");
-            DeliverNotification(title, message);
+            DeliverNotification(title, message, MainWindow.RuntimeNotificationLevel.Progress, allowInAppFallback: false);
             return true;
         }
         catch (Exception ex)
@@ -57,7 +57,7 @@ internal static partial class MacOsNotificationBridge
             string message = operation.Metadata.SuccessMessage.Length > 0
                 ? operation.Metadata.SuccessMessage
                 : CoreTools.Translate("Success!");
-            DeliverNotification(title, message);
+            DeliverNotification(title, message, MainWindow.RuntimeNotificationLevel.Success, allowInAppFallback: false);
             return true;
         }
         catch (Exception ex)
@@ -79,7 +79,7 @@ internal static partial class MacOsNotificationBridge
             string message = operation.Metadata.FailureMessage.Length > 0
                 ? operation.Metadata.FailureMessage
                 : CoreTools.Translate("An error occurred while processing this package");
-            DeliverNotification(title, message);
+            DeliverNotification(title, message, MainWindow.RuntimeNotificationLevel.Error, allowInAppFallback: false);
             return true;
         }
         catch (Exception ex)
@@ -109,7 +109,7 @@ internal static partial class MacOsNotificationBridge
                 title = CoreTools.Translate("Updates found!");
                 message = CoreTools.Translate("{0} packages can be updated", upgradable.Count);
             }
-            DeliverNotification(title, message);
+            DeliverNotification(title, message, MainWindow.RuntimeNotificationLevel.Success);
         }
         catch (Exception ex)
         {
@@ -135,7 +135,7 @@ internal static partial class MacOsNotificationBridge
                 title = CoreTools.Translate("{0} packages are being updated", upgradable.Count);
                 message = string.Join(", ", upgradable.Select(p => p.Name));
             }
-            DeliverNotification(title, message);
+            DeliverNotification(title, message, MainWindow.RuntimeNotificationLevel.Progress);
         }
         catch (Exception ex)
         {
@@ -150,7 +150,8 @@ internal static partial class MacOsNotificationBridge
         {
             DeliverNotification(
                 CoreTools.Translate("{0} can be updated to version {1}", "UniGetUI", newVersion),
-                CoreTools.Translate("You have currently version {0} installed", CoreData.VersionName));
+                CoreTools.Translate("You have currently version {0} installed", CoreData.VersionName),
+                MainWindow.RuntimeNotificationLevel.Success);
         }
         catch (Exception ex)
         {
@@ -179,7 +180,7 @@ internal static partial class MacOsNotificationBridge
                     "UniGetUI has detected {0} new desktop shortcuts that can be deleted automatically.",
                     shortcuts.Count);
             }
-            DeliverNotification(title, message);
+            DeliverNotification(title, message, MainWindow.RuntimeNotificationLevel.Success);
         }
         catch (Exception ex)
         {
@@ -190,8 +191,20 @@ internal static partial class MacOsNotificationBridge
 
     // ── Core delivery ──────────────────────────────────────────────────────
 
-    private static void DeliverNotification(string title, string message)
+    private static void DeliverNotification(
+        string title,
+        string message,
+        MainWindow.RuntimeNotificationLevel level,
+        bool allowInAppFallback = true)
     {
+        if (MainWindow.IsWindowOnScreen)
+        {
+            if (allowInAppFallback)
+                Dispatcher.UIThread.Post(() =>
+                    MainWindow.Instance?.ShowRuntimeNotification(title, message, level));
+            return;
+        }
+
         if (!EnsureInitialized())
             throw new InvalidOperationException("The macOS notification bridge is unavailable.");
 

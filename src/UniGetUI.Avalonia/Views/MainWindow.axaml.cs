@@ -14,6 +14,7 @@ using UniGetUI.Avalonia.Extensions;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Pages;
+using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -140,6 +141,12 @@ public partial class MainWindow : Window
 
         _trayService = new TrayService(this);
         _trayService.UpdateStatus();
+
+        // Let the elevation code activate us right before a UAC prompt, so we own the foreground
+        // and can delegate it to the consent UI (#5146). Only activate when we're already on screen;
+        // don't yank a tray-hidden window forward during silent/background elevation.
+        CoreData.BringMainWindowToForegroundAsync = () =>
+            Dispatcher.UIThread.InvokeAsync(() => { if (IsVisible) ShowFromTray(); }).GetTask();
     }
 
     protected override void OnOpened(EventArgs e)

@@ -428,6 +428,14 @@ namespace UniGetUI.Core.Data
         public static string ElevatorArgs = "";
 
         /// <summary>
+        /// Set by the UI layer to bring the main window to the foreground and wait until it is.
+        /// Called right before a UAC prompt is triggered so the app owns the foreground and can
+        /// delegate it to the consent UI (fixes prompts hiding behind the window with secure desktop off).
+        /// Null in headless mode, where no window exists to activate.
+        /// </summary>
+        public static Func<Task>? BringMainWindowToForegroundAsync;
+
+        /// <summary>
         /// This method will return the most appropriate data directory.
         /// If the new directory exists, it will be used.
         /// If the new directory does not exist, but the old directory does, it will be moved to the new location, and the new location will be used.

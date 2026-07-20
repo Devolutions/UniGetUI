@@ -603,6 +603,14 @@ namespace UniGetUI.Core.Tools
             return new Uri(url);
         }
 
+        // Grants every process the right to set the foreground window, bypassing the
+        // foreground lock so a UAC consent prompt can surface in front. ASFW_ANY = -1.
+        private const int ASFW_ANY = -1;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool AllowSetForegroundWindow(int dwProcessId);
+
         /// <summary>
         /// Enables GSudo cache for the current process
         /// </summary>
@@ -656,6 +664,19 @@ namespace UniGetUI.Core.Tools
                         StandardOutputEncoding = Encoding.UTF8,
                     },
                 };
+
+                // This is the one spot where a UAC consent prompt is raised. With secure desktop
+                // off, Windows won't let the prompt steal focus from a background console child,
+                // so it just flashes the taskbar (#5146). Bring our own window to the foreground
+                // first, then delegate that foreground right so the consent UI can come forward.
+                if (OperatingSystem.IsWindows())
+                {
+                    var bringToFront = CoreData.BringMainWindowToForegroundAsync;
+                    if (bringToFront is not null)
+                        await bringToFront();
+                    AllowSetForegroundWindow(ASFW_ANY);
+                }
+
                 p.Start();
                 await p.WaitForExitAsync();
                 _isCaching = false;

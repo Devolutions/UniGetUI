@@ -27,7 +27,7 @@ internal sealed class HomebrewSource : ManagerSource
     }
 }
 
-public class Homebrew : PackageManager
+public partial class Homebrew : PackageManager
 {
     // Standard Homebrew installation paths, in priority order
     private static readonly string[] BREW_PATHS =
@@ -230,8 +230,8 @@ public class Homebrew : PackageManager
     //   Formula: "name (old_version) < new_version"  (versions are comparable)
     //   Cask:    "name (old_version) != new_version" (versions are opaque strings)
     // Both operators must be accepted, otherwise cask updates are silently dropped.
-    private static readonly Regex OutdatedLinePattern =
-        new(@"^(\S+)\s+\(([^)]+)\)\s+(?:<|!=)\s+(.+)$");
+    [GeneratedRegex(@"^(\S+)\s+\(([^)]+)\)\s+(?:<|!=)\s+(.+)$")]
+    private static partial Regex OutdatedLineRegex();
 
     protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
     {
@@ -268,7 +268,7 @@ public class Homebrew : PackageManager
         var packages = new List<Package>();
         foreach (var line in lines)
         {
-            var m = OutdatedLinePattern.Match(line);
+            var m = OutdatedLineRegex().Match(line);
             if (!m.Success) continue;
 
             var id = m.Groups[1].Value.Trim();

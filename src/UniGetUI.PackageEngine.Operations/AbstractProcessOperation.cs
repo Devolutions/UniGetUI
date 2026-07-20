@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -106,6 +107,13 @@ public abstract class AbstractProcessOperation : AbstractOperation
         }
 
         CancellationToken.ThrowIfCancellationRequested();
+
+        // When admin-rights caching is disabled (or a cache miss), the elevator is launched
+        // directly here and the UAC prompt is raised at this Start() — bring it to the
+        // foreground too, not just on the cached path (#5146).
+        if (process.StartInfo.FileName == CoreData.ElevatorPath)
+            await CoreTools.PrepareForegroundForElevationAsync();
+
         process.Start();
         if (CancellationToken.IsCancellationRequested)
         {

@@ -1343,9 +1343,14 @@ public partial class MainWindow : Window
     // ─── BackgroundAPI integration ────────────────────────────────────────────
     public void ShowFromTray()
     {
+        // Show() restores a hidden window to its pre-maximize size, so re-apply Maximized if it was:
+        // a native maximize (Snap Layouts / Win+Up) never updates Avalonia's _showWindowState.
+        bool restoreMaximized = !IsVisible && WindowState == WindowState.Maximized;
         if (!IsVisible)
             Show();
-        if (WindowState == WindowState.Minimized)
+        if (restoreMaximized)
+            WindowState = WindowState.Maximized;
+        else if (WindowState == WindowState.Minimized)
             WindowState = WindowState.Normal;
         Activate();
     }

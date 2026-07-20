@@ -119,7 +119,8 @@
             </TransitioningContentControl>
 
             <!-- ── GridSplitter (only visible when operations are present) ── -->
-            <GridSplitter Grid.Row="1"
+            <GridSplitter x:Name="OperationsSplitter"
+                          Grid.Row="1"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch"
                           IsVisible="{Binding OperationsPanelVisible}"

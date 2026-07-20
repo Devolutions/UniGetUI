@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Specialized;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Avalonia;
@@ -103,6 +104,7 @@ public partial class MainWindow : Window
 
     // Last user-chosen height (px) of the operations panel; restored when re-expanded.
     private double _operationsPanelHeight = 240;
+    private bool _userResizedPanel;
 
     public enum RuntimeNotificationLevel
     {
@@ -132,6 +134,8 @@ public partial class MainWindow : Window
         // Title-bar back button: visible whenever there's somewhere to go back to (mirrors WinUI's TitleBar.IsBackButtonVisible).
         ViewModel.CanGoBackChanged += (_, canGoBack) => BackButton.IsVisible = canGoBack;
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+        ViewModel.Operations.CollectionChanged += OnOperationsCollectionChanged;
+        OperationsSplitter.DragCompleted += OnOperationsSplitterDragCompleted;
         UpdateOperationsPanelRow();
 
         Resized += (_, _) => _ = SaveGeometryAsync();
@@ -292,7 +296,10 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName is nameof(MainWindowViewModel.OperationsPanelExpanded)
                            or nameof(MainWindowViewModel.OperationsPanelVisible))
+        {
             UpdateOperationsPanelRow();
+            ScheduleOperationsAutoSize();
+        }
 
         // Expanding the panel while an operation has failed jumps to that op (the failure
         // badge on the chevron is what drew the user here).
@@ -314,10 +321,6 @@ public partial class MainWindow : Window
         }, DispatcherPriority.Background);
     }
 
-    // Drive the operations-panel grid row: a resizable pixel height while the panel is
-    // open, Auto otherwise so it collapses to just the toolbar (or vanishes when empty).
-    // The GridSplitter writes the row height directly, so we read it back to preserve the
-    // user's chosen size across collapse/expand.
     private void UpdateOperationsPanelRow()
     {
         if (ContentRoot.RowDefinitions.Count < 3)
@@ -326,16 +329,61 @@ public partial class MainWindow : Window
         RowDefinition row = ContentRoot.RowDefinitions[2];
         if (ViewModel.OperationsPanelVisible && ViewModel.OperationsPanelExpanded)
         {
-            row.MinHeight = 80;
-            row.Height = new GridLength(_operationsPanelHeight, GridUnitType.Pixel);
+            row.MinHeight = 48;
+            double height = _userResizedPanel ? _operationsPanelHeight : ComputeOperationsAutoHeight();
+            if (height <= 0)
+                height = _operationsPanelHeight;
+            row.Height = new GridLength(height, GridUnitType.Pixel);
         }
         else
         {
-            if (row.Height.IsAbsolute && row.Height.Value > 0)
+            if (_userResizedPanel && row.Height.IsAbsolute && row.Height.Value > 0)
                 _operationsPanelHeight = row.Height.Value;
             row.MinHeight = 0;
             row.Height = GridLength.Auto;
         }
+    }
+
+    private double ComputeOperationsAutoHeight()
+    {
+        int count = ViewModel.Operations.Count;
+        if (count == 0)
+            return 0;
+
+        const double chrome = 42;
+        const double fallbackRow = 68;
+
+        double rows = 0;
+        int visible = Math.Min(count, 3);
+        for (int i = 0; i < visible; i++)
+            rows += (OperationsList.ContainerFromIndex(i) as Control)?.Bounds.Height ?? fallbackRow;
+
+        return chrome + rows;
+    }
+
+    private void ScheduleOperationsAutoSize()
+    {
+        if (_userResizedPanel)
+            return;
+        Dispatcher.UIThread.Post(UpdateOperationsPanelRow, DispatcherPriority.Loaded);
+    }
+
+    private void OnOperationsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (ViewModel.Operations.Count == 0)
+            _userResizedPanel = false;
+        ScheduleOperationsAutoSize();
+    }
+
+    private void OnOperationsSplitterDragCompleted(object? sender, VectorEventArgs e)
+    {
+        if (ContentRoot.RowDefinitions.Count >= 3)
+        {
+            RowDefinition row = ContentRoot.RowDefinitions[2];
+            if (row.Height.IsAbsolute && row.Height.Value > 0)
+                _operationsPanelHeight = row.Height.Value;
+        }
+        _userResizedPanel = true;
     }
 
     // ─── Navigation rail / docked pane (responsive) ────────────────────────────

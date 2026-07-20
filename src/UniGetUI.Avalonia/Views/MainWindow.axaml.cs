@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -105,6 +106,7 @@ public partial class MainWindow : Window
     // Last user-chosen height (px) of the operations panel; restored when re-expanded.
     private double _operationsPanelHeight = 240;
     private bool _userResizedPanel;
+    private readonly HashSet<OperationViewModel> _badgeSubscriptions = new();
 
     public enum RuntimeNotificationLevel
     {
@@ -136,6 +138,7 @@ public partial class MainWindow : Window
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         ViewModel.Operations.CollectionChanged += OnOperationsCollectionChanged;
         OperationsSplitter.DragCompleted += OnOperationsSplitterDragCompleted;
+        SyncBadgeSubscriptions();
         UpdateOperationsPanelRow();
 
         Resized += (_, _) => _ = SaveGeometryAsync();
@@ -372,11 +375,33 @@ public partial class MainWindow : Window
     {
         if (ViewModel.Operations.Count == 0)
             _userResizedPanel = false;
+        SyncBadgeSubscriptions();
         ScheduleOperationsAutoSize();
     }
 
+    private void SyncBadgeSubscriptions()
+    {
+        _badgeSubscriptions.RemoveWhere(vm =>
+        {
+            if (ViewModel.Operations.Contains(vm))
+                return false;
+            vm.Badges.CollectionChanged -= OnOperationBadgesChanged;
+            return true;
+        });
+
+        foreach (OperationViewModel vm in ViewModel.Operations)
+            if (_badgeSubscriptions.Add(vm))
+                vm.Badges.CollectionChanged += OnOperationBadgesChanged;
+    }
+
+    private void OnOperationBadgesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        => ScheduleOperationsAutoSize();
+
     private void OnOperationsSplitterDragCompleted(object? sender, VectorEventArgs e)
     {
+        if (!ViewModel.OperationsPanelVisible || !ViewModel.OperationsPanelExpanded)
+            return;
+
         if (ContentRoot.RowDefinitions.Count >= 3)
         {
             RowDefinition row = ContentRoot.RowDefinitions[2];

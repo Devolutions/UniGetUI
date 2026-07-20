@@ -123,7 +123,7 @@
                           Grid.Row="1"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch"
-                          IsVisible="{Binding OperationsPanelVisible}"
+                          IsVisible="{Binding OperationsSplitterVisible}"
                           automation:AutomationProperties.AccessibilityView="Raw"
                           Background="{DynamicResource AppSplitterBackground}"
                           Opacity="0.8"/>

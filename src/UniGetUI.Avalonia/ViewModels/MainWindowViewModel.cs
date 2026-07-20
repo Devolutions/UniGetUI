@@ -65,11 +65,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowFailedOperationBadge))]
+    [NotifyPropertyChangedFor(nameof(OperationsSplitterVisible))]
     private bool _operationsPanelVisible;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowFailedOperationBadge))]
+    [NotifyPropertyChangedFor(nameof(OperationsSplitterVisible))]
     private bool _operationsPanelExpanded = true;
+
+    public bool OperationsSplitterVisible => OperationsPanelVisible && OperationsPanelExpanded;
 
     private readonly List<AbstractOperation> _operationBatch = new();
     private bool _batchSummaryShown;

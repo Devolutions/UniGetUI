@@ -159,21 +159,25 @@ public sealed class PowerShell7ManagerTests
         Assert.DoesNotContain("AllUsers", parameters);
     }
 
-    // A module installed in both scopes must update its system-wide (AllUsers) copy so it
-    // never stays stale, regardless of the order the scopes are reported in.
+    // For a module installed in both scopes, the resolved update scope must track the same
+    // enumerated package as the installed version (last-wins), so the two never disagree.
+    // Independent per-scope updates aren't representable in the scope-blind upgrade loader.
     [Fact]
-    public void BuildInstalledScopeMap_PrefersMachineWhenInstalledInBothScopes()
+    public void BuildInstalledScopeMap_TracksSameEnumeratedPackageAsVersion()
     {
         var manager = new PowerShell7();
         var installed = PowerShell7.ParseInstalledPackages(
             [
                 "##SCOPE:AllUsers##", "Devolutions.PowerShell\t2025.1.0\tPSGallery",
-                "##SCOPE:CurrentUser##", "Devolutions.PowerShell\t2025.1.0\tPSGallery",
+                "##SCOPE:CurrentUser##", "Devolutions.PowerShell\t2025.2.0\tPSGallery",
             ], manager);
 
         var idScope = BaseNuGet.BuildInstalledScopeMap(installed);
 
-        Assert.Equal(PackageScope.Machine, idScope["devolutions.powershell"]);
+        // CurrentUser is enumerated last, so both the version (2025.2.0) and the scope resolve to it
+        Assert.Equal(PackageScope.User, idScope["devolutions.powershell"]);
+        Assert.Equal("2025.2.0", installed[^1].VersionString);
+        Assert.Equal(PackageScope.User, installed[^1].OverridenOptions.Scope);
     }
 
     // Regression for https://github.com/Devolutions/UniGetUI/issues/4781:

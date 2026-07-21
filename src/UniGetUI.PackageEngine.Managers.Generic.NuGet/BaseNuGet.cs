@@ -301,8 +301,12 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
         /// <summary>
         /// Maps each installed package id (lowercased) to the scope its update should target.
-        /// When a package is installed in both scopes, the system-wide (Machine) scope wins so
-        /// the AllUsers copy never stays stale (regression guard for issue #5163).
+        /// Mirrors the last-wins keying of the version map so the scope and the installed
+        /// version always come from the same enumerated package (issue #5163). A module
+        /// installed in a single scope updates in that scope; a module installed in both
+        /// resolves to whichever scope is enumerated last (as its version does) — surfacing
+        /// an independent update per scope would require scope-aware package identity, which
+        /// the upgrade loader does not currently support.
         /// </summary>
         internal static Dictionary<string, string?> BuildInstalledScopeMap(
             IEnumerable<IPackage> installedPackages
@@ -310,12 +314,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         {
             var scopeMap = new Dictionary<string, string?>();
             foreach (var package in installedPackages)
-            {
-                string key = package.Id.ToLower();
-                string? scope = package.OverridenOptions.Scope;
-                if (scope == PackageScope.Machine || !scopeMap.ContainsKey(key))
-                    scopeMap[key] = scope;
-            }
+                scopeMap[package.Id.ToLower()] = package.OverridenOptions.Scope;
             return scopeMap;
         }
 

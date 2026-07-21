@@ -1,6 +1,7 @@
 #if WINDOWS
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Managers.PowerShell7Manager;
+using UniGetUI.PackageEngine.Managers.PowerShellManager;
 using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.Tests;
@@ -108,6 +109,71 @@ public sealed class PowerShell7ManagerTests
 
         Assert.Contains("AllUsers", parameters);
         Assert.DoesNotContain("CurrentUser", parameters);
+    }
+
+    // Regression for https://github.com/Devolutions/UniGetUI/issues/5163:
+    // the update-list package produced from the GetUpdates() response must carry the
+    // installed scope, otherwise Update-PSResource silently defaults to CurrentUser and
+    // the AllUsers copy never updates.
+    [Fact]
+    public void ParseUpdatesResponse_CarriesAllUsersScopeOntoUpdate()
+    {
+        var manager = new PowerShell7();
+        var installed = PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "Devolutions.PowerShell\t2025.1.0\tPSGallery"], manager);
+        var source = installed[0].Source;
+        var idVersion = new Dictionary<string, string> { ["devolutions.powershell"] = "2025.1.0" };
+        var idScope = BaseNuGet.BuildInstalledScopeMap(installed);
+
+        var xml = "<entry><d:Id>Devolutions.PowerShell</d:Id><d:Version>2025.2.0</d:Version></entry>";
+        var update = Assert.Single(
+            BaseNuGet.ParseUpdatesResponse(xml, idVersion, idScope, source, manager));
+
+        Assert.Equal("2025.1.0", update.VersionString);
+        Assert.Equal("2025.2.0", update.NewVersionString);
+        Assert.Equal(PackageScope.Machine, update.OverridenOptions.Scope);
+
+        var parameters = manager.OperationHelper.GetParameters(update, new InstallOptions(), OperationType.Update);
+        Assert.Contains("AllUsers", parameters);
+        Assert.DoesNotContain("CurrentUser", parameters);
+    }
+
+    [Fact]
+    public void ParseUpdatesResponse_CurrentUserModuleStaysCurrentUser()
+    {
+        var manager = new PowerShell7();
+        var installed = PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:CurrentUser##", "Devolutions.PowerShell\t2025.1.0\tPSGallery"], manager);
+        var source = installed[0].Source;
+        var idVersion = new Dictionary<string, string> { ["devolutions.powershell"] = "2025.1.0" };
+        var idScope = BaseNuGet.BuildInstalledScopeMap(installed);
+
+        var xml = "<entry><d:Id>Devolutions.PowerShell</d:Id><d:Version>2025.2.0</d:Version></entry>";
+        var update = Assert.Single(
+            BaseNuGet.ParseUpdatesResponse(xml, idVersion, idScope, source, manager));
+
+        Assert.Equal(PackageScope.User, update.OverridenOptions.Scope);
+
+        var parameters = manager.OperationHelper.GetParameters(update, new InstallOptions(), OperationType.Update);
+        Assert.Contains("CurrentUser", parameters);
+        Assert.DoesNotContain("AllUsers", parameters);
+    }
+
+    // A module installed in both scopes must update its system-wide (AllUsers) copy so it
+    // never stays stale, regardless of the order the scopes are reported in.
+    [Fact]
+    public void BuildInstalledScopeMap_PrefersMachineWhenInstalledInBothScopes()
+    {
+        var manager = new PowerShell7();
+        var installed = PowerShell7.ParseInstalledPackages(
+            [
+                "##SCOPE:AllUsers##", "Devolutions.PowerShell\t2025.1.0\tPSGallery",
+                "##SCOPE:CurrentUser##", "Devolutions.PowerShell\t2025.1.0\tPSGallery",
+            ], manager);
+
+        var idScope = BaseNuGet.BuildInstalledScopeMap(installed);
+
+        Assert.Equal(PackageScope.Machine, idScope["devolutions.powershell"]);
     }
 
     // Regression for https://github.com/Devolutions/UniGetUI/issues/4781:

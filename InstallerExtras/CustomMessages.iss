@@ -14,7 +14,7 @@ English.RegStartMmenuIcon=Create a shortcut on the Start menu
 English.RegDesktopIcon=Create a shortcut on the Desktop
 English.PackageBundleName=UniGetUI package bundle
 English.InvalidInstallPath=There is an invalid character in the selected install location. Install location cannot contain special characters. Please input a valid path to continue, such as %1
-English.RemovingOldIcons=Removing old icons...
+RemovingOldIcons=Removing old icons...
 
 ; Armenian
 Armenian.InstallType=Տեղադրման տեսակը
@@ -155,7 +155,7 @@ Italian.RegStartMmenuIcon=Crea collegamento nel menu Start
 Italian.RegDesktopIcon=Crea collegamento sul desktop
 Italian.PackageBundleName=Raccolta pacchetti UniGetUI
 Italian.InvalidInstallPath=Il percorso di installazione selezionato contiene un carattere non valido.%nIl percorso di installazione non può contenere caratteri speciali.%ner continuare inserisci un percorso valido, ad esempio %1.
-Italian.RemovingOldIcons=Rimozione vecchie icone...
+Italian.RemovingOldIcons=Rimozione icone precedenti...
 Italian.LaunchProgram=Esegui %1
 
 ; Japanese

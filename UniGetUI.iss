@@ -73,9 +73,6 @@ ChangesEnvironment=yes
 RestartIfNeededByRun=no
 Uninstallable=WizardIsTaskSelected('regularinstall')
 AppModifyPath="{app}\UniGetUI.Installer.exe" /silent /NoDeployInstaller
-ShowLanguageDialog=yes
-UsePreviousLanguage=no
-LanguageDetectionMethod=uilanguage
 
 
 ; Include installer's languages and messages

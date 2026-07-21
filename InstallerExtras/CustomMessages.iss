@@ -154,7 +154,7 @@ Italian.RegInst=Esegui installazione normale
 Italian.RegStartMmenuIcon=Crea collegamento nel menu Start
 Italian.RegDesktopIcon=Crea collegamento sul desktop
 Italian.PackageBundleName=Raccolta pacchetti UniGetUI
-Italian.InvalidInstallPath=Il percorso di installazione selezionato contiene un carattere non valido.%nIl percorso di installazione non può contenere caratteri speciali.%ner continuare inserisci un percorso valido, ad esempio %1.
+Italian.InvalidInstallPath=Il percorso di installazione selezionato contiene un carattere non valido.%nIl percorso di installazione non può contenere caratteri speciali.%nPer continuare inserisci un percorso valido, ad esempio %1.
 Italian.RemovingOldIcons=Rimozione vecchie icone...
 Italian.LaunchProgram=Esegui %1
 

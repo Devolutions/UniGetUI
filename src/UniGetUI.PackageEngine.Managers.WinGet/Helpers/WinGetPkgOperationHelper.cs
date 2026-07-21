@@ -321,14 +321,16 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         if (uintCode is 0x8A15010D or 0x8A15004F or 0x8A15010E)
         { // Application is already installed
             if (operation is OperationType.Update or OperationType.Install)
-                MarkUpgradeAsDone(package);
+                // Only updates feed the stuck-update counter; installs must not (#5158).
+                MarkUpgradeAsDone(package, countTowardStuckLoop: operation is OperationType.Update);
             return OperationVeredict.Success;
         }
 
         if (returnCode is 0)
         { // Operation succeeded
             if (operation is OperationType.Update or OperationType.Install)
-                MarkUpgradeAsDone(package);
+                // Only updates feed the stuck-update counter; installs must not (#5158).
+                MarkUpgradeAsDone(package, countTowardStuckLoop: operation is OperationType.Update);
             return OperationVeredict.Success;
         }
 
@@ -365,9 +367,15 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         return OperationVeredict.Failure;
     }
 
-    // Stop offering an update that "succeeds" this many times without the version ever advancing (#5158).
-    private const int StuckUpgradeThreshold = 3;
+    // Default number of "successful" upgrades to the same version (without the installed version
+    // advancing) after which the update is suppressed; overridable via WinGetStuckUpgradeThreshold (#5158).
+    private const int DefaultStuckUpgradeThreshold = 3;
     private const char AttemptSeparator = '\n';
+
+    private static int StuckUpgradeThreshold =>
+        int.TryParse(Settings.GetValue(Settings.K.WinGetStuckUpgradeThreshold), out int v) && v > 0
+            ? v
+            : DefaultStuckUpgradeThreshold;
 
     private static void MarkUpgradeAsDone(IPackage package, bool countTowardStuckLoop = true)
     {

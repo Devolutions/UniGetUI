@@ -1199,6 +1199,25 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
     }
 
+    [Fact]
+    public void StuckUpgradeThreshold_IsConfigurable()
+    {
+        Settings.SetValue(Settings.K.WinGetStuckUpgradeThreshold, "2");
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.ConfigurableThreshold")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+
+        manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
+        Assert.True(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+    }
+
     private const int StuckUpgradeThresholdForTest = 3;
 
     [Theory]
@@ -1247,7 +1266,7 @@ public sealed class WinGetManagerTests : IDisposable
         );
         var package = Assert.Single(helper.BuildUpdatePackages(result));
 
-        // Restored to the upgraded version so installed == available (#5158).
+        // Restored to the upgraded version so installed == available; the loader drops it (#5158).
         Assert.Equal("2.0.0", package.VersionString);
         Assert.Equal("2.0.0", package.NewVersionString);
 

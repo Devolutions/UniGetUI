@@ -363,7 +363,11 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     Manager
                 );
 
-                // Trust COM IsUpdateAvailable, not the "already upgraded" cache (issue #5042).
+                // Suppress an update that repeatedly fails to stick (#5158); the COM path still avoids
+                // the one-shot "already upgraded" cache (#5042).
+                if (WinGetPkgOperationHelper.IsStuckUpgradeLoop(UniGetUIPackage))
+                    continue;
+
                 NativePackageHandler.AddPackage(UniGetUIPackage, nativePackage);
                 packages.Add(UniGetUIPackage);
                 logger.Log(

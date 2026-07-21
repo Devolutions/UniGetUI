@@ -254,7 +254,8 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         if (uintCode is 0x8A150109)
         { // TODO: Restart required to finish installation
             if (operation is OperationType.Update or OperationType.Install)
-                MarkUpgradeAsDone(package);
+                // Pending-restart sticks after reboot; don't count it as a phantom no-op (#5042).
+                MarkUpgradeAsDone(package, countTowardStuckLoop: false);
             return OperationVeredict.Success;
         }
 
@@ -364,7 +365,11 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         return OperationVeredict.Failure;
     }
 
-    private static void MarkUpgradeAsDone(IPackage package)
+    // Stop offering an update that "succeeds" this many times without the version ever advancing (#5158).
+    private const int StuckUpgradeThreshold = 3;
+    private const char AttemptSeparator = '\n';
+
+    private static void MarkUpgradeAsDone(IPackage package, bool countTowardStuckLoop = true)
     {
         var options = InstallOptionsFactory.LoadApplicable(package);
         string version;
@@ -379,6 +384,47 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             package.Id,
             version
         );
+        if (countTowardStuckLoop)
+            RecordUpgradeAttempt(package.Id, version);
+    }
+
+    // Stored as "count\nversion"; count resets when the target version changes.
+    private static void RecordUpgradeAttempt(string id, string version)
+    {
+        int count = 1;
+        var existing = Settings.GetDictionaryItem<string, string>(Settings.K.WinGetUpgradeAttempts, id);
+        if (existing is not null)
+        {
+            int sep = existing.IndexOf(AttemptSeparator);
+            if (sep > 0
+                && existing[(sep + 1)..] == version
+                && int.TryParse(existing[..sep], out int previous))
+            {
+                count = previous + 1;
+            }
+        }
+        Settings.SetDictionaryItem<string, string>(
+            Settings.K.WinGetUpgradeAttempts,
+            id,
+            $"{count}{AttemptSeparator}{version}"
+        );
+    }
+
+    // An update WinGet keeps offering even after enough "successful" upgrades to it (#5158).
+    public static bool IsStuckUpgradeLoop(IPackage package)
+    {
+        var existing = Settings.GetDictionaryItem<string, string>(
+            Settings.K.WinGetUpgradeAttempts,
+            package.Id
+        );
+        if (existing is null)
+            return false;
+
+        int sep = existing.IndexOf(AttemptSeparator);
+        return sep > 0
+            && existing[(sep + 1)..] == package.NewVersionString
+            && int.TryParse(existing[..sep], out int count)
+            && count >= StuckUpgradeThreshold;
     }
 
     public static bool UpdateAlreadyInstalled(IPackage package)
@@ -397,10 +443,20 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         );
     }
 
-    // One-shot suppression: hide a just-upgraded package once (bridges CLI index lag), then clear
-    // the mark so a still-outdated package reappears next scan instead of forever (issue #5042).
+    // Persistently hide an update that never sticks (#5158); otherwise hide a just-upgraded package
+    // once to bridge CLI index lag, then let it reappear next scan (#5042).
     public static bool ConsumeAlreadyUpgradedSuppression(IPackage package)
     {
+        if (IsStuckUpgradeLoop(package))
+        {
+            Logger.Warn(
+                $"WinGet package {package.Id} keeps being offered as an update to {package.NewVersionString} "
+                + $"but the upgrade never sticks after {StuckUpgradeThreshold} attempts; suppressing it until a "
+                + "newer version is available (issue #5158)"
+            );
+            return true;
+        }
+
         if (!UpdateAlreadyInstalled(package))
             return false;
 
@@ -418,6 +474,15 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             val = "Unknown";
         return val;
     }
+
+    // Fall back to the version we last upgraded to when WinGet can't read the installed one (#5158).
+    public static string ResolveReportedInstalledVersion(string id, string? reportedVersion)
+        => reportedVersion is null or "" or "Unknown"
+            ? GetLastInstalledVersion(id)
+            : reportedVersion;
+
+    public static bool IsUnknownVersion(string? version)
+        => version is null or "" or "Unknown";
 
     /// <summary>
     /// For portable WinGet packages, reads the current install location from the Windows registry

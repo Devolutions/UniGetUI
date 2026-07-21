@@ -155,8 +155,14 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
                     source = Manager.SourcesHelper.Factory.GetSourceOrDefault(sourceName);
                 }
 
+                // Restore the version we last upgraded to when WinGet reports it as unknown (#5158).
+                bool versionUnknown = WinGetPkgOperationHelper.IsUnknownVersion(version);
+                if (versionUnknown)
+                    version = WinGetPkgOperationHelper.GetLastInstalledVersion(id);
+
                 var package = new Package(name, id, version, newVersion, source, Manager);
-                if (!WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package))
+                // Skip one-shot suppression for unknown versions so the restored mark isn't cleared.
+                if (versionUnknown || !WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package))
                 {
                     Packages.Add(package);
                 }
@@ -293,6 +299,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
                             .Trim();
                         source = Manager.SourcesHelper.Factory.GetSourceOrDefault(sourceName);
                     }
+                    version = WinGetPkgOperationHelper.ResolveReportedInstalledVersion(id, version);
                     Packages.Add(new Package(name, id, version, source, Manager));
                 }
                 OldLine = line;

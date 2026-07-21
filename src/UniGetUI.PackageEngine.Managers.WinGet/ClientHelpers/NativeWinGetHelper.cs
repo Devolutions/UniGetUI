@@ -349,9 +349,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     nativePackage.DefaultInstallVersion.PackageCatalog.Info.Name
                 );
 
-                string version = nativePackage.InstalledVersion.Version;
-                if (version == "Unknown")
-                    version = WinGetPkgOperationHelper.GetLastInstalledVersion(nativePackage.Id);
+                string version = WinGetPkgOperationHelper.ResolveReportedInstalledVersion(
+                    nativePackage.Id,
+                    nativePackage.InstalledVersion.Version
+                );
 
                 var UniGetUIPackage = new Package(
                     nativePackage.Name,
@@ -414,9 +415,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     source = Manager.GetLocalSource(nativePackage.Id);
                 }
 
-                string version = nativePackage.InstalledVersion.Version;
-                if (version == "Unknown")
-                    version = WinGetPkgOperationHelper.GetLastInstalledVersion(nativePackage.Id);
+                string version = WinGetPkgOperationHelper.ResolveReportedInstalledVersion(
+                    nativePackage.Id,
+                    nativePackage.InstalledVersion.Version
+                );
 
                 logger.Log(
                     $"Found package {nativePackage.Name} {nativePackage.Id} on source {source.Name}"

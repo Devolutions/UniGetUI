@@ -67,6 +67,8 @@ public partial class MainWindow : Window
     private const uint WM_NCLBUTTONDBLCLK = 0x00A3;
     private const uint WM_MOUSEMOVE = 0x0200;
     private const uint WM_SYSCOMMAND = 0x0112;
+    private const uint WM_SETTINGCHANGE = 0x001A;
+    private const uint WM_DWMCOLORIZATIONCOLORCHANGED = 0x0320;
     private const nint SC_MAXIMIZE = 0xF030;
     private const nint SC_RESTORE = 0xF120;
     private const int HTMAXBUTTON = 9;
@@ -89,7 +91,6 @@ public partial class MainWindow : Window
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     private const int DWMWA_BORDER_COLOR = 34;
     private const int DWMWCP_ROUND = 2;
-    // Subtle neutral window border (COLORREF 0x00BBGGRR), per theme — a gray edge like other Win11 apps.
     private const int WINDOW_BORDER_COLOR_LIGHT = 0x00B9B9B9;
     private const int WINDOW_BORDER_COLOR_DARK = 0x004A4A4A;
 
@@ -189,7 +190,6 @@ public partial class MainWindow : Window
 
         SetupMicaAndAccentBorder();
 
-        // Keep the window border color in sync with light/dark theme switches.
         ActualThemeVariantChanged += (_, _) =>
         {
             if (MicaWindowHelper.IsMicaEnabled()
@@ -966,22 +966,49 @@ public partial class MainWindow : Window
         // the backdrop show through the chrome and page area.
         Background = Brushes.Transparent;
 
-        // Neutral gray border (like other Win11 apps) instead of the accent edge, which reads
-        // as out of place on a window this large. Re-applied on theme changes (see OnOpened).
         ApplyWindowBorderColor(handle);
     }
 
-    // Sets the per-theme neutral window border via DWM. No-op on builds without the attribute.
     private void ApplyWindowBorderColor(nint handle)
     {
-        int color = ActualThemeVariant == ThemeVariant.Dark
-            ? WINDOW_BORDER_COLOR_DARK
-            : WINDOW_BORDER_COLOR_LIGHT;
+        int color;
+        if (TryReadDwmDword("ColorPrevalence", out int prevalence) && prevalence != 0
+            && TryReadDwmDword("AccentColor", out int accent))
+            color = accent & 0x00FFFFFF; // stored 0xAABBGGRR -> COLORREF 0x00BBGGRR
+        else
+            color = ActualThemeVariant == ThemeVariant.Dark ? WINDOW_BORDER_COLOR_DARK : WINDOW_BORDER_COLOR_LIGHT;
+
         NativeMethods.DwmSetWindowAttribute(handle, DWMWA_BORDER_COLOR, ref color, sizeof(int));
+    }
+
+    private static bool TryReadDwmDword(string valueName, out int value)
+    {
+        value = 0;
+        try
+        {
+            var data = new byte[4];
+            int size = data.Length;
+            int rc = NativeMethods.RegGetValueW(NativeMethods.HKEY_CURRENT_USER,
+                @"Software\Microsoft\Windows\DWM", valueName,
+                NativeMethods.RRF_RT_REG_DWORD, out _, data, ref size);
+            if (rc == 0)
+            {
+                value = BitConverter.ToInt32(data, 0);
+                return true;
+            }
+        }
+        catch { /* ignore */ }
+        return false;
     }
 
     private static nint OnWindowsWndProc(nint hWnd, uint msg, nint wParam, nint lParam, ref bool handled)
     {
+        if ((msg == WM_DWMCOLORIZATIONCOLORCHANGED || msg == WM_SETTINGCHANGE)
+            && Instance is { } borderOwner && MicaWindowHelper.IsMicaEnabled())
+        {
+            borderOwner.ApplyWindowBorderColor(hWnd);
+        }
+
         // ── Snap Layouts: report HTMAXBUTTON over the custom maximize button so Win11 shows the
         // layout flyout, and emulate hover/press/click since input now arrives as NC messages. ──
         if (Instance is { } self && self.WindowButtons.IsVisible)
@@ -1136,6 +1163,13 @@ public partial class MainWindow : Window
     // OperatingSystem.IsWindows(), so non-Windows targets never invoke user32.dll at runtime.
     private static class NativeMethods
     {
+        public static readonly nint HKEY_CURRENT_USER = new(unchecked((int)0x80000001));
+        public const int RRF_RT_REG_DWORD = 0x00000010;
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode)]
+        public static extern int RegGetValueW(nint hkey, string lpSubKey, string lpValue, int dwFlags,
+            out int pdwType, byte[] pvData, ref int pcbData);
+
         [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
         public static extern nint GetWindowLongPtr(nint hWnd, int nIndex);
 

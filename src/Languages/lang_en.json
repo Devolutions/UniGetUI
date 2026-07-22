@@ -887,5 +887,11 @@
   "{package} installer and manifest download": "{package} installer and manifest download",
   "{0} installer and manifest are being downloaded": "{0} installer and manifest are being downloaded",
   "{package} installer and manifest were downloaded successfully": "{package} installer and manifest were downloaded successfully",
-  "{package} installer and manifest could not be downloaded": "{package} installer and manifest could not be downloaded"
+  "{package} installer and manifest could not be downloaded": "{package} installer and manifest could not be downloaded",
+  "Export to CSV": "Export to CSV",
+  "Nothing to export": "Nothing to export",
+  "There are no packages to export.": "There are no packages to export.",
+  "CSV file": "CSV file",
+  "The file was saved to {0}": "The file was saved to {0}",
+  "The file could not be saved:": "The file could not be saved:"
 }

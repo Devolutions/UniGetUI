@@ -641,6 +641,12 @@ public abstract partial class AbstractPackagesPage : UserControl,
     private static string CsvEscape(string? field)
     {
         field ??= "";
+
+        // Guard against spreadsheet formula injection (CWE-1236): package metadata is
+        // external, and a value starting with one of these executes as a formula in Excel/Sheets.
+        if (field.Length > 0 && "=+-@\t\r".IndexOf(field[0]) >= 0)
+            field = "'" + field;
+
         if (field.IndexOfAny(['"', ',', '\n', '\r']) >= 0)
             return "\"" + field.Replace("\"", "\"\"") + "\"";
         return field;

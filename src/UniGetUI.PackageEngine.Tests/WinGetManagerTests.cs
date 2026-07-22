@@ -859,6 +859,106 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void WinGetUpdateEmitsExplicitLocationEvenWhenForceSettingIsOff()
+    {
+        // #5164: a location set explicitly for this package is honored on update on its own.
+        Settings.Set(Settings.K.WinGetForceLocationOnUpdate, false);
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.ExplicitLocation")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        var options = new InstallOptions
+        {
+            CustomInstallLocation = @"D:\dev\contoso",
+            CustomInstallLocationIsExplicit = true,
+        };
+
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+        Assert.Contains("--location", parameters);
+        Assert.Contains("\"D:\\dev\\contoso\"", parameters);
+    }
+
+    [Fact]
+    public void WinGetUpdateOmitsInheritedLocationWhenForceSettingIsOff()
+    {
+        // #4210: a location inherited from the manager-wide default must not relocate installs
+        // on update unless the user opts in.
+        Settings.Set(Settings.K.WinGetForceLocationOnUpdate, false);
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.InheritedLocation")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        var options = new InstallOptions
+        {
+            CustomInstallLocation = @"D:\Apps\Contoso.InheritedLocation",
+            CustomInstallLocationIsExplicit = false,
+        };
+
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+        Assert.DoesNotContain("--location", parameters);
+    }
+
+    [Fact]
+    public void WinGetUpdateEmitsInheritedLocationWhenForceSettingIsOn()
+    {
+        // #4210: the manager-wide default is still applied on update when the user opts in.
+        Settings.Set(Settings.K.WinGetForceLocationOnUpdate, true);
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.InheritedForced")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        var options = new InstallOptions
+        {
+            CustomInstallLocation = @"D:\Apps\Contoso.InheritedForced",
+            CustomInstallLocationIsExplicit = false,
+        };
+
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+        Assert.Contains("--location", parameters);
+        Assert.Contains("\"D:\\Apps\\Contoso.InheritedForced\"", parameters);
+    }
+
+    [Fact]
+    public void WinGetUpdateOmitsExplicitLocationForPingetUpgrade()
+    {
+        // Pinget upgrade rejects --location, so #5164's explicit-location behavior is scoped to
+        // system WinGet: even an explicit location (with the setting on) must not be emitted.
+        Settings.Set(Settings.K.WinGetForceLocationOnUpdate, true);
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.PingetExplicit")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+        var options = new InstallOptions
+        {
+            CustomInstallLocation = @"D:\dev\contoso",
+            CustomInstallLocationIsExplicit = true,
+        };
+
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+        Assert.DoesNotContain("--location", parameters);
+    }
+
+    [Fact]
     public void WinGetOperationHelperSkipsUnsupportedFlagsForPingetUninstall()
     {
         var manager = new WinGet();

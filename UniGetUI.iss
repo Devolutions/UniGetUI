@@ -82,6 +82,8 @@ AppModifyPath="{app}\UniGetUI.Installer.exe" /silent /NoDeployInstaller
 [Code]
 var
   PreserveAutostartDisabled: Boolean;
+  // Set once the marker is written (which happens only after {app} is initialized).
+  MarkerWritten: Boolean;
 
 // StartupApproved stores the on/off state in the first byte's low bit (03 = off).
 function IsAutostartDisabledByUser: Boolean;
@@ -147,11 +149,17 @@ begin
     ForceDirectories(ExpandConstant('{app}'));
     Pid := GetCurrentProcessId;
     SaveStringToFile(UpdateMarkerPath(), IntToStr(Pid), False);
+    MarkerWritten := True;
 end;
 
 procedure RemoveUpdateMarker;
 begin
+    // Guard against DeinitializeSetup expanding {app} on an abort before the
+    // directory page is confirmed — {app} isn't initialized yet and would throw.
+    if not MarkerWritten then
+        Exit;
     DeleteFile(UpdateMarkerPath());
+    MarkerWritten := False;
 end;
 
 // Runs before any file is copied: shut everything down, then mark the copy window.

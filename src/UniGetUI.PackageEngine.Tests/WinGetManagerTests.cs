@@ -1115,6 +1115,251 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.False(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
     }
 
+    [Fact]
+    public void ConsumeAlreadyUpgradedSuppression_BreaksLoopAfterRepeatedPhantomUpgrades()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Stuck")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        // Below the threshold a phantom no-op still reappears (#5042).
+        OperationAssert.HasVeredict(
+            manager.OperationHelper.GetResult(package, OperationType.Update, [], 0),
+            OperationVeredict.Success
+        );
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+        Assert.True(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
+        Assert.False(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
+
+        // At the threshold it stays suppressed across scans (#5158).
+        manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
+        manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
+
+        Assert.True(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+        Assert.True(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
+        Assert.True(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package));
+    }
+
+    [Fact]
+    public void IsStuckUpgradeLoop_DoesNotSuppressANewerVersion()
+    {
+        var manager = new WinGet();
+        var stuckPackage = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Stuck2")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        for (int i = 0; i < StuckUpgradeThresholdForTest; i++)
+            manager.OperationHelper.GetResult(stuckPackage, OperationType.Update, [], 0);
+        Assert.True(WinGetPkgOperationHelper.IsStuckUpgradeLoop(stuckPackage));
+
+        // A genuinely newer version must not be hidden.
+        var newerUpdate = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Stuck2")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(newerUpdate));
+        Assert.False(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(newerUpdate));
+    }
+
+    [Fact]
+    public void RestartRequiredUpgradesNeverTripTheLoopBreaker()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.RebootPending")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        // A reboot-pending success (#5042) must never count as a phantom no-op, however often it happens.
+        for (int i = 0; i < StuckUpgradeThresholdForTest + 2; i++)
+        {
+            OperationAssert.HasVeredict(
+                manager.OperationHelper.GetResult(
+                    package,
+                    OperationType.Update,
+                    [],
+                    unchecked((int)0x8A150109u)
+                ),
+                OperationVeredict.Success
+            );
+        }
+
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+    }
+
+    [Fact]
+    public void StuckUpgradeThreshold_IsConfigurable()
+    {
+        Settings.SetValue(Settings.K.WinGetStuckUpgradeThreshold, "2");
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.ConfigurableThreshold")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+
+        manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
+        Assert.True(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+    }
+
+    private const int StuckUpgradeThresholdForTest = 3;
+
+    [Theory]
+    [InlineData("1.2.3", "1.2.3")] // A real version is passed through untouched.
+    [InlineData("Unknown", "Unknown")] // Never upgraded => stays Unknown, still shown as an update.
+    [InlineData("", "Unknown")]
+    public void ResolveReportedInstalledVersion_FallsBackForUnknownVersions(string reported, string expected)
+    {
+        Assert.Equal(
+            expected,
+            WinGetPkgOperationHelper.ResolveReportedInstalledVersion("Contoso.NoMark", reported)
+        );
+    }
+
+    [Fact]
+    public void ResolveReportedInstalledVersion_RestoresLastUpgradedVersion()
+    {
+        Settings.SetDictionaryItem<string, string>(
+            Settings.K.WinGetAlreadyUpgradedPackages,
+            "ShiftUp.NIKKE",
+            "1.2.3"
+        );
+
+        // WinGet reports the installed version as "Unknown"; we restore what we last upgraded it to.
+        Assert.Equal(
+            "1.2.3",
+            WinGetPkgOperationHelper.ResolveReportedInstalledVersion("ShiftUp.NIKKE", "Unknown")
+        );
+    }
+
+    [Fact]
+    public void BuildUpdatePackages_AlreadyUpgradedUnknownPackageIsMarkedUpToDate()
+    {
+        var manager = new WinGet();
+        var helper = new PingetCliHelper(manager, @"C:\Program Files\UniGetUI\pinget.exe");
+
+        // We already upgraded this package to 2.0.0, but WinGet still can't read its version.
+        Settings.SetDictionaryItem<string, string>(
+            Settings.K.WinGetAlreadyUpgradedPackages,
+            "ShiftUp.NIKKE",
+            "2.0.0"
+        );
+
+        var result = PingetCliHelper.DeserializeJson<ListResponse>(
+            UnknownVersionUpdateJson("ShiftUp.NIKKE", "2.0.0")
+        );
+        var package = Assert.Single(helper.BuildUpdatePackages(result));
+
+        // Restored to the upgraded version so installed == available; the loader drops it (#5158).
+        Assert.Equal("2.0.0", package.VersionString);
+        Assert.Equal("2.0.0", package.NewVersionString);
+
+        // The mark is not consumed, so it keeps hiding the package on later scans.
+        Assert.Equal(
+            "2.0.0",
+            Settings.GetDictionaryItem<string, string>(
+                Settings.K.WinGetAlreadyUpgradedPackages,
+                "ShiftUp.NIKKE"
+            )
+        );
+    }
+
+    [Fact]
+    public void BuildUpdatePackages_NeverUpgradedUnknownPackageIsStillOffered()
+    {
+        var manager = new WinGet();
+        var helper = new PingetCliHelper(manager, @"C:\Program Files\UniGetUI\pinget.exe");
+
+        var result = PingetCliHelper.DeserializeJson<ListResponse>(
+            UnknownVersionUpdateJson("Smilegate.Stove", "2.0.0")
+        );
+        var package = Assert.Single(helper.BuildUpdatePackages(result));
+
+        // No recorded upgrade => the update is genuinely available and must still be shown.
+        Assert.Equal("Unknown", package.VersionString);
+        Assert.Equal("2.0.0", package.NewVersionString);
+    }
+
+    [Fact]
+    public void BuildUpdatePackages_DropsAKnownVersionUpdateThatKeepsFailingToStick()
+    {
+        // End-to-end: a known-version package looping through the real Pinget path is eventually dropped (#5158).
+        var manager = new WinGet();
+        var helper = new PingetCliHelper(manager, @"C:\Program Files\UniGetUI\pinget.exe");
+
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.PhantomLoop")
+            .WithVersion("1.0.0")
+            .WithNewVersion("2.0.0")
+            .Build();
+
+        for (int i = 0; i < StuckUpgradeThresholdForTest; i++)
+            manager.OperationHelper.GetResult(package, OperationType.Update, [], 0);
+
+        // WinGet still lists it as 1.0.0 -> 2.0.0, but we now suppress it.
+        Assert.Empty(
+            helper.BuildUpdatePackages(
+                PingetCliHelper.DeserializeJson<ListResponse>(
+                    UpdateJson("Contoso.PhantomLoop", "1.0.0", "2.0.0")
+                )
+            )
+        );
+
+        // A package that has not looped is still offered normally.
+        Assert.Single(
+            helper.BuildUpdatePackages(
+                PingetCliHelper.DeserializeJson<ListResponse>(
+                    UpdateJson("Contoso.NotLooping", "1.0.0", "2.0.0")
+                )
+            )
+        );
+    }
+
+    private static string UnknownVersionUpdateJson(string id, string availableVersion) =>
+        UpdateJson(id, "Unknown", availableVersion);
+
+    private static string UpdateJson(string id, string installedVersion, string availableVersion) =>
+        $$"""
+        {
+            "Matches": [
+                {
+                    "Name": "{{id}}",
+                    "Id": "{{id}}",
+                    "LocalId": null,
+                    "InstalledVersion": "{{installedVersion}}",
+                    "AvailableVersion": "{{availableVersion}}",
+                    "SourceName": null,
+                    "Publisher": null,
+                    "Scope": null,
+                    "InstallerCategory": null,
+                    "InstallLocation": null,
+                    "PackageFamilyNames": [],
+                    "ProductCodes": [],
+                    "UpgradeCodes": []
+                }
+            ],
+            "Warnings": [],
+            "Truncated": false
+        }
+        """;
+
     private static void SetCliToolKind(WinGet manager, WinGetCliToolKind kind)
     {
         typeof(WinGet)

@@ -46,19 +46,29 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
             "upgrade --include-unknown --output json"
         );
 
+        return BuildUpdatePackages(result);
+    }
+
+    internal IReadOnlyList<Package> BuildUpdatePackages(ListResponse result)
+    {
         List<Package> packages = [];
         foreach (ListMatch match in result.Matches.Where(match => match.AvailableVersion is not null))
         {
+            // Restore the version we last upgraded to when WinGet reports it as unknown (#5158).
+            bool versionUnknown = WinGetPkgOperationHelper.IsUnknownVersion(match.InstalledVersion);
             var package = new Package(
                 match.Name,
                 match.Id,
-                match.InstalledVersion,
+                versionUnknown
+                    ? WinGetPkgOperationHelper.GetLastInstalledVersion(match.Id)
+                    : match.InstalledVersion,
                 match.AvailableVersion!,
                 GetSource(match),
                 Manager
             );
 
-            if (!WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package))
+            // Skip one-shot suppression for unknown versions so the restored mark isn't cleared.
+            if (versionUnknown || !WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(package))
             {
                 packages.Add(package);
             }
@@ -85,7 +95,7 @@ internal sealed partial class PingetCliHelper : IWinGetManagerHelper
                 new Package(
                     match.Name,
                     match.Id,
-                    match.InstalledVersion,
+                    WinGetPkgOperationHelper.ResolveReportedInstalledVersion(match.Id, match.InstalledVersion),
                     GetSource(match),
                     Manager
                 )

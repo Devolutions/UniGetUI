@@ -556,6 +556,7 @@ public partial class InstallOptionsViewModel : ObservableObject
 
     private void ApplyToOptions()
     {
+        AddKillProcess(); // flush any process name typed but not yet committed to a chip
         var s = SnapshotOptions();
         _options.RunAsAdministrator = s.RunAsAdministrator;
         _options.InteractiveInstallation = s.InteractiveInstallation;

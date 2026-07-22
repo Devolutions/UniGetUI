@@ -65,6 +65,8 @@ public static partial class Settings
         DisabledManagers,
         DeletableDesktopShortcuts,
         WinGetAlreadyUpgradedPackages,
+        WinGetUpgradeAttempts,
+        WinGetStuckUpgradeThreshold,
         DependencyManagement,
         DisabledPackageManagerNotifications,
         PackageListViewMode,
@@ -103,6 +105,9 @@ public static partial class Settings
         DisableReleaseNotesOnUpdate,
         LastKnownBuildNumber,
         DisableAutoSoftwareRenderingOnGpuLessHosts,
+        // NOTE: Set this to true to delegate package operations to Devolutions Agent broker
+        // instead of using local UAC elevation. Change default here when ready for production.
+        UseAgentBroker,
 
         Test1,
         Test2,
@@ -179,6 +184,8 @@ public static partial class Settings
             K.DisabledManagers => "DisabledManagers",
             K.DeletableDesktopShortcuts => "DeletableDesktopShortcuts",
             K.WinGetAlreadyUpgradedPackages => "WinGetAlreadyUpgradedPackages",
+            K.WinGetUpgradeAttempts => "WinGetUpgradeAttempts",
+            K.WinGetStuckUpgradeThreshold => "WinGetStuckUpgradeThreshold",
             K.DependencyManagement => "DependencyManagement",
             K.DisabledPackageManagerNotifications => "DisabledPackageManagerNotifications",
             K.PackageListViewMode => "PackageListViewMode",
@@ -217,6 +224,7 @@ public static partial class Settings
             K.DisableReleaseNotesOnUpdate => "DisableReleaseNotesOnUpdate",
             K.LastKnownBuildNumber => "LastKnownBuildNumber",
             K.DisableAutoSoftwareRenderingOnGpuLessHosts => "DisableAutoSoftwareRenderingOnGpuLessHosts",
+            K.UseAgentBroker => "UseAgentBroker",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

@@ -1,6 +1,7 @@
 #if WINDOWS
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Managers.PowerShell7Manager;
+using UniGetUI.PackageEngine.Managers.PowerShellManager;
 using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.Tests;
@@ -108,6 +109,75 @@ public sealed class PowerShell7ManagerTests
 
         Assert.Contains("AllUsers", parameters);
         Assert.DoesNotContain("CurrentUser", parameters);
+    }
+
+    // Regression for https://github.com/Devolutions/UniGetUI/issues/5163:
+    // the update-list package produced from the GetUpdates() response must carry the
+    // installed scope, otherwise Update-PSResource silently defaults to CurrentUser and
+    // the AllUsers copy never updates.
+    [Fact]
+    public void ParseUpdatesResponse_CarriesAllUsersScopeOntoUpdate()
+    {
+        var manager = new PowerShell7();
+        var installed = PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "Devolutions.PowerShell\t2025.1.0\tPSGallery"], manager);
+        var source = installed[0].Source;
+        var idVersion = new Dictionary<string, string> { ["devolutions.powershell"] = "2025.1.0" };
+        var idScope = BaseNuGet.BuildInstalledScopeMap(installed);
+
+        var xml = "<entry><d:Id>Devolutions.PowerShell</d:Id><d:Version>2025.2.0</d:Version></entry>";
+        var update = Assert.Single(
+            BaseNuGet.ParseUpdatesResponse(xml, idVersion, idScope, source, manager));
+
+        Assert.Equal("2025.1.0", update.VersionString);
+        Assert.Equal("2025.2.0", update.NewVersionString);
+        Assert.Equal(PackageScope.Machine, update.OverridenOptions.Scope);
+
+        var parameters = manager.OperationHelper.GetParameters(update, new InstallOptions(), OperationType.Update);
+        Assert.Contains("AllUsers", parameters);
+        Assert.DoesNotContain("CurrentUser", parameters);
+    }
+
+    [Fact]
+    public void ParseUpdatesResponse_CurrentUserModuleStaysCurrentUser()
+    {
+        var manager = new PowerShell7();
+        var installed = PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:CurrentUser##", "Devolutions.PowerShell\t2025.1.0\tPSGallery"], manager);
+        var source = installed[0].Source;
+        var idVersion = new Dictionary<string, string> { ["devolutions.powershell"] = "2025.1.0" };
+        var idScope = BaseNuGet.BuildInstalledScopeMap(installed);
+
+        var xml = "<entry><d:Id>Devolutions.PowerShell</d:Id><d:Version>2025.2.0</d:Version></entry>";
+        var update = Assert.Single(
+            BaseNuGet.ParseUpdatesResponse(xml, idVersion, idScope, source, manager));
+
+        Assert.Equal(PackageScope.User, update.OverridenOptions.Scope);
+
+        var parameters = manager.OperationHelper.GetParameters(update, new InstallOptions(), OperationType.Update);
+        Assert.Contains("CurrentUser", parameters);
+        Assert.DoesNotContain("AllUsers", parameters);
+    }
+
+    // For a module installed in both scopes, the resolved update scope must track the same
+    // enumerated package as the installed version (last-wins), so the two never disagree.
+    // Independent per-scope updates aren't representable in the scope-blind upgrade loader.
+    [Fact]
+    public void BuildInstalledScopeMap_TracksSameEnumeratedPackageAsVersion()
+    {
+        var manager = new PowerShell7();
+        var installed = PowerShell7.ParseInstalledPackages(
+            [
+                "##SCOPE:AllUsers##", "Devolutions.PowerShell\t2025.1.0\tPSGallery",
+                "##SCOPE:CurrentUser##", "Devolutions.PowerShell\t2025.2.0\tPSGallery",
+            ], manager);
+
+        var idScope = BaseNuGet.BuildInstalledScopeMap(installed);
+
+        // CurrentUser is enumerated last, so both the version (2025.2.0) and the scope resolve to it
+        Assert.Equal(PackageScope.User, idScope["devolutions.powershell"]);
+        Assert.Equal("2025.2.0", installed[^1].VersionString);
+        Assert.Equal(PackageScope.User, installed[^1].OverridenOptions.Scope);
     }
 
     // Regression for https://github.com/Devolutions/UniGetUI/issues/4781:

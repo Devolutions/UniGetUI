@@ -349,9 +349,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     nativePackage.DefaultInstallVersion.PackageCatalog.Info.Name
                 );
 
-                string version = nativePackage.InstalledVersion.Version;
-                if (version == "Unknown")
-                    version = WinGetPkgOperationHelper.GetLastInstalledVersion(nativePackage.Id);
+                string version = WinGetPkgOperationHelper.ResolveReportedInstalledVersion(
+                    nativePackage.Id,
+                    nativePackage.InstalledVersion.Version
+                );
 
                 var UniGetUIPackage = new Package(
                     nativePackage.Name,
@@ -362,7 +363,11 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     Manager
                 );
 
-                // Trust COM IsUpdateAvailable, not the "already upgraded" cache (issue #5042).
+                // Suppress an update that repeatedly fails to stick (#5158); the COM path still avoids
+                // the one-shot "already upgraded" cache (#5042).
+                if (WinGetPkgOperationHelper.IsStuckUpgradeLoop(UniGetUIPackage))
+                    continue;
+
                 NativePackageHandler.AddPackage(UniGetUIPackage, nativePackage);
                 packages.Add(UniGetUIPackage);
                 logger.Log(
@@ -414,9 +419,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     source = Manager.GetLocalSource(nativePackage.Id);
                 }
 
-                string version = nativePackage.InstalledVersion.Version;
-                if (version == "Unknown")
-                    version = WinGetPkgOperationHelper.GetLastInstalledVersion(nativePackage.Id);
+                string version = WinGetPkgOperationHelper.ResolveReportedInstalledVersion(
+                    nativePackage.Id,
+                    nativePackage.InstalledVersion.Version
+                );
 
                 logger.Log(
                     $"Found package {nativePackage.Name} {nativePackage.Id} on source {source.Name}"

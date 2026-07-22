@@ -9,6 +9,7 @@ using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.Structs;
 
 namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 {
@@ -234,6 +235,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                         packageVers.Append(package.VersionString + "|");
                         packageIdVersion[package.Id.ToLower()] = package.VersionString;
                     }
+                    var packageIdScope = BuildInstalledScopeMap(pair.Value);
 
                     var SearchUrl =
                         $"{pair.Key.Url.ToString().Trim('/')}/GetUpdates()"
@@ -260,41 +262,16 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                             .Content.ReadAsStringAsync()
                             .GetAwaiter()
                             .GetResult();
-                        MatchCollection matches = Regex.Matches(
-                            SearchResults,
-                            "<entry>([\\s\\S]*?)<\\/entry>"
-                        );
-
-                        foreach (Match match in matches)
-                        {
-                            if (!match.Success)
-                                continue;
-
-                            string id = Regex
-                                .Match(match.Value, "<d:Id>([^<]+)</d:Id>")
-                                .Groups[1]
-                                .Value;
-                            string new_version = Regex
-                                .Match(match.Value, "<d:Version>([^<]+)</d:Version>")
-                                .Groups[1]
-                                .Value;
-                            // Match title = Regex.Match(match.Value, "<title[ \\\"\\=A-Za-z0-9]+>([^<>]+)<\\/title>");
-
-                            logger.Log(
-                                $"Found package {id} version {new_version} on source {pair.Key.Name}"
-                            );
-
-                            var nativePackage = new Package(
-                                CoreTools.FormatAsName(id),
-                                id,
-                                packageIdVersion[id.ToLower()],
-                                new_version,
+                        Packages.AddRange(
+                            ParseUpdatesResponse(
+                                SearchResults,
+                                packageIdVersion,
+                                packageIdScope,
                                 pair.Key,
-                                this
-                            );
-                            Packages.Add(nativePackage);
-                            Manifests[nativePackage.GetHash()] = match.Value;
-                        }
+                                this,
+                                logger
+                            )
+                        );
                     }
                 }
                 catch (Exception ex)
@@ -320,6 +297,74 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             return Packages
                 .Where(p => maxVersions[p.Id.ToLower()] < p.NormalizedNewVersion)
                 .ToArray();
+        }
+
+        /// <summary>
+        /// Maps each installed package id (lowercased) to the scope its update should target.
+        /// Mirrors the last-wins keying of the version map so the scope and the installed
+        /// version always come from the same enumerated package (issue #5163). A module
+        /// installed in a single scope updates in that scope; a module installed in both
+        /// resolves to whichever scope is enumerated last (as its version does) — surfacing
+        /// an independent update per scope would require scope-aware package identity, which
+        /// the upgrade loader does not currently support.
+        /// </summary>
+        internal static Dictionary<string, string?> BuildInstalledScopeMap(
+            IEnumerable<IPackage> installedPackages
+        )
+        {
+            var scopeMap = new Dictionary<string, string?>();
+            foreach (var package in installedPackages)
+                scopeMap[package.Id.ToLower()] = package.OverridenOptions.Scope;
+            return scopeMap;
+        }
+
+        /// <summary>
+        /// Parses a NuGet OData GetUpdates() response into update packages, carrying each
+        /// installed package's scope onto its update so operations (e.g. Update-PSResource
+        /// -Scope) don't silently fall back to CurrentUser (regression guard for issue #5163).
+        /// </summary>
+        internal static List<Package> ParseUpdatesResponse(
+            string searchResults,
+            IReadOnlyDictionary<string, string> packageIdVersion,
+            IReadOnlyDictionary<string, string?> packageIdScope,
+            IManagerSource source,
+            BaseNuGet manager,
+            INativeTaskLogger? logger = null
+        )
+        {
+            var packages = new List<Package>();
+            MatchCollection matches = Regex.Matches(searchResults, "<entry>([\\s\\S]*?)<\\/entry>");
+
+            foreach (Match match in matches)
+            {
+                if (!match.Success)
+                    continue;
+
+                string id = Regex.Match(match.Value, "<d:Id>([^<]+)</d:Id>").Groups[1].Value;
+                string new_version = Regex
+                    .Match(match.Value, "<d:Version>([^<]+)</d:Version>")
+                    .Groups[1]
+                    .Value;
+
+                if (!packageIdVersion.TryGetValue(id.ToLower(), out string? installedVersion))
+                    continue;
+
+                logger?.Log($"Found package {id} version {new_version} on source {source.Name}");
+
+                var nativePackage = new Package(
+                    CoreTools.FormatAsName(id),
+                    id,
+                    installedVersion,
+                    new_version,
+                    source,
+                    manager,
+                    new OverridenInstallationOptions(packageIdScope.GetValueOrDefault(id.ToLower()))
+                );
+                packages.Add(nativePackage);
+                Manifests[nativePackage.GetHash()] = match.Value;
+            }
+
+            return packages;
         }
 
         protected sealed override IReadOnlyList<Package> GetInstalledPackages_UnSafe() =>

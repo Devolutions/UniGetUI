@@ -35,6 +35,7 @@ public partial class Settings
                 {
                     "OperationHistory",
                     "WinGetAlreadyUpgradedPackages.json",
+                    "WinGetUpgradeAttempts.json",
                     "TelemetryClientToken",
                     "CurrentSessionToken",
                 }.Contains(Path.GetFileName(entry))
@@ -58,6 +59,7 @@ public partial class Settings
                 {
                     "OperationHistory",
                     "WinGetAlreadyUpgradedPackages.json",
+                    "WinGetUpgradeAttempts.json",
                     "TelemetryClientToken",
                     "CurrentSessionToken",
                 }.Contains(entry.Key)

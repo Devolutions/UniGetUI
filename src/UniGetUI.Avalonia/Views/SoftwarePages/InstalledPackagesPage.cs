@@ -129,6 +129,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("add_to", CoreTools.Translate("Add selection to bundle"),
             () => _ = ExportSelectionToBundleAsync(vm));
+        ViewModel.AddToolbarButton("save_as", CoreTools.Translate("Export to CSV"),
+            () => _ = ExportPackagesToCsvAsync());
     }
 
     // ─── Context menu ─────────────────────────────────────────────────────────

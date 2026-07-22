@@ -10,10 +10,14 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Transformation;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using System.IO;
+using System.Text;
 using UniGetUI.Avalonia.Extensions;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
@@ -559,4 +563,86 @@ public abstract partial class AbstractPackagesPage : UserControl,
     protected static MainWindow? GetMainWindow()
         => Application.Current?.ApplicationLifetime
             is IClassicDesktopStyleApplicationLifetime { MainWindow: MainWindow w } ? w : null;
+
+    // ─── CSV export ───────────────────────────────────────────────────────────
+    // Exports the checked packages, or the whole filtered list when nothing is checked.
+    protected async Task ExportPackagesToCsvAsync()
+    {
+        if (GetMainWindow() is not { } win) return;
+
+        var vm = ViewModel;
+        var packages = vm.FilteredPackages.GetCheckedPackages();
+        if (packages.Count == 0) packages = vm.FilteredPackages.GetPackages();
+
+        if (packages.Count == 0)
+        {
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("Nothing to export"),
+                CoreTools.Translate("There are no packages to export."),
+                MainWindow.RuntimeNotificationLevel.Error);
+            return;
+        }
+
+        var file = await win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            SuggestedFileName = CoreTools.MakeValidFileName(vm.PageTitle) + ".csv",
+            FileTypeChoices =
+            [
+                new FilePickerFileType(CoreTools.Translate("CSV file")) { Patterns = ["*.csv"] },
+            ],
+        });
+
+        var path = file?.TryGetLocalPath();
+        if (path is null) return;
+
+        try
+        {
+            // UTF-8 BOM so Excel renders accented package names correctly
+            await File.WriteAllTextAsync(path, BuildCsv(packages, vm.RoleIsUpdateLike), new UTF8Encoding(true));
+
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("Success!"),
+                CoreTools.Translate("The file was saved to {0}", path),
+                MainWindow.RuntimeNotificationLevel.Success);
+
+            await CoreTools.ShowFileOnExplorer(path);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("An error occurred while exporting packages to CSV");
+            Logger.Error(ex);
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("An error occurred"),
+                CoreTools.Translate("The file could not be saved:") + " " + ex.Message,
+                MainWindow.RuntimeNotificationLevel.Error);
+        }
+    }
+
+    private static string BuildCsv(IReadOnlyList<IPackage> packages, bool includeNewVersion)
+    {
+        var sb = new StringBuilder();
+
+        var header = new List<string> { CoreTools.Translate("Package Name"), CoreTools.Translate("Package ID"), CoreTools.Translate("Version") };
+        if (includeNewVersion) header.Add(CoreTools.Translate("New version"));
+        header.Add(CoreTools.Translate("Source"));
+        sb.AppendLine(string.Join(",", header.Select(CsvEscape)));
+
+        foreach (var p in packages)
+        {
+            var row = new List<string> { p.Name, p.Id, p.VersionString };
+            if (includeNewVersion) row.Add(p.NewVersionString);
+            row.Add(p.Source.AsString_DisplayName);
+            sb.AppendLine(string.Join(",", row.Select(CsvEscape)));
+        }
+
+        return sb.ToString();
+    }
+
+    private static string CsvEscape(string? field)
+    {
+        field ??= "";
+        if (field.IndexOfAny(['"', ',', '\n', '\r']) >= 0)
+            return "\"" + field.Replace("\"", "\"\"") + "\"";
+        return field;
+    }
 }

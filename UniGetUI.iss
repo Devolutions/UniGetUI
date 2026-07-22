@@ -302,16 +302,20 @@ Root: HKA; Subkey: "Software\Classes\UniGetUI.PackageBundle\DefaultIcon"; ValueT
 Root: HKA; Subkey: "Software\Classes\UniGetUI.PackageBundle\shell\open\command"; ValueType: string; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Flags: uninsdeletekey; Tasks: regularinstall;
 
 
+; This section deletes ONLY files the current build never ships (leftovers from the old
+; WinUI install). The live set — Assets\, *.dll, *.pdb, *.json (incl. runtimeconfig.json) —
+; is deliberately NOT listed: [Files] overwrites those in place (ignoreversion, atomic
+; temp-then-rename), so a cancelled/interrupted update can't leave the running app missing
+; files (which the crash handler would report as "Missing Files"). Deleting the live set up
+; front, as this used to, guaranteed a broken install if the copy was cut short.
+; WARNING: only add patterns here that the current build does NOT produce — matches are
+; deleted before the copy, so a live match would blank the install on an interrupted update.
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\Avalonia"
-Type: filesandordirs; Name: "{app}\Assets"
 Type: files; Name: "{app}\WingetUI.exe"
 Type: files; Name: "{app}\UniGetUI.Avalonia.exe"
-Type: files; Name: "{app}\*.dll"
-Type: files; Name: "{app}\*.pdb"
 Type: files; Name: "{app}\*.pri"
 Type: files; Name: "{app}\*.xbf"
-Type: files; Name: "{app}\*.json"
 
 [Files]
 ; Deploy installer for autorepair jobs (unless disabled)

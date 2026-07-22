@@ -148,8 +148,8 @@ var
 begin
     ForceDirectories(ExpandConstant('{app}'));
     Pid := GetCurrentProcessId;
-    SaveStringToFile(UpdateMarkerPath(), IntToStr(Pid), False);
-    MarkerWritten := True;
+    // Track reality: only guard removal if the marker was actually written.
+    MarkerWritten := SaveStringToFile(UpdateMarkerPath(), IntToStr(Pid), False);
 end;
 
 procedure RemoveUpdateMarker;
@@ -158,8 +158,9 @@ begin
     // directory page is confirmed — {app} isn't initialized yet and would throw.
     if not MarkerWritten then
         Exit;
-    DeleteFile(UpdateMarkerPath());
-    MarkerWritten := False;
+    // Keep the flag set if deletion fails, so DeinitializeSetup retries it.
+    if DeleteFile(UpdateMarkerPath()) then
+        MarkerWritten := False;
 end;
 
 // Runs before any file is copied: shut everything down, then mark the copy window.

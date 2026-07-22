@@ -1166,7 +1166,7 @@ public partial class MainWindow : Window
         public static readonly nint HKEY_CURRENT_USER = new(unchecked((int)0x80000001));
         public const int RRF_RT_REG_DWORD = 0x00000010;
 
-        [DllImport("advapi32.dll", CharSet = CharSet.Unicode)]
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
         public static extern int RegGetValueW(nint hkey, string lpSubKey, string lpValue, int dwFlags,
             out int pdwType, byte[] pvData, ref int pcbData);
 

@@ -39,6 +39,7 @@
         <ProjectReference Include="..\UniGetUI.PackageEngine.PackageLoader\UniGetUI.PackageEngine.PackageLoaders.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.PackageManagerClasses\UniGetUI.PackageEngine.Classes.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Operations\UniGetUI.PackageEngine.Operations.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.AgentBroker\UniGetUI.PackageEngine.AgentBroker.csproj" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'">

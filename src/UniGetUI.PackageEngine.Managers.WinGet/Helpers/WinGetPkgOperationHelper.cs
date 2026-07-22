@@ -112,28 +112,10 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
             if (!usePinget)
             {
-                // For portable packages, always preserve the actual current install
-                // location read from the registry. A stale CustomInstallLocation in the
-                // saved InstallOptions would otherwise leave --location off and cause
-                // WinGet to uninstall the portable from its custom path and reinstall to
-                // the default portable root, silently deleting the original directory.
-                var detectedLocation = TryGetPortableInstallLocation(package);
-                if (detectedLocation is not null)
+                var effectiveLocation = GetEffectiveUpdateLocation(package, options);
+                if (effectiveLocation is not null)
                 {
-                    parameters.AddRange(["--location", $"\"{detectedLocation}\""]);
-                }
-                else if (
-                    options.CustomInstallLocation != ""
-                    // A location set explicitly for this package is honored on update (issue #5164).
-                    // A location inherited from the manager-wide default stays opt-in behind the
-                    // setting, so updates don't relocate existing installs wholesale (issue #4210).
-                    && (
-                        options.CustomInstallLocationIsExplicit
-                        || Settings.Get(Settings.K.WinGetForceLocationOnUpdate)
-                    )
-                )
-                {
-                    parameters.AddRange(["--location", $"\"{options.CustomInstallLocation}\""]);
+                    parameters.AddRange(["--location", $"\"{effectiveLocation}\""]);
                 }
             }
         }
@@ -497,6 +479,39 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
 
     public static bool IsUnknownVersion(string? version)
         => version is null or "" or "Unknown";
+
+    /// <summary>
+    /// Resolves the install location that should be used for a WinGet update.
+    /// For portable packages, always preserves the actual current install location read
+    /// from the registry. A stale CustomInstallLocation in the saved InstallOptions would
+    /// otherwise leave the location off and cause WinGet to uninstall the portable from
+    /// its custom path and reinstall to the default portable root, silently deleting the
+    /// original directory.
+    /// A location set explicitly for this package is honored on update (issue #5164); a
+    /// location inherited from the manager-wide default stays opt-in behind
+    /// WinGetForceLocationOnUpdate so updates don't relocate existing installs (issue #4210).
+    /// </summary>
+    internal static string? GetEffectiveUpdateLocation(IPackage package, InstallOptions options)
+    {
+        var detectedLocation = TryGetPortableInstallLocation(package);
+        if (detectedLocation is not null)
+        {
+            return detectedLocation;
+        }
+
+        if (
+            options.CustomInstallLocation != ""
+            && (
+                options.CustomInstallLocationIsExplicit
+                || Settings.Get(Settings.K.WinGetForceLocationOnUpdate)
+            )
+        )
+        {
+            return options.CustomInstallLocation;
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// For portable WinGet packages, reads the current install location from the Windows registry

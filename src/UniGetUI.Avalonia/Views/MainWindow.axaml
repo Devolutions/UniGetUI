@@ -52,6 +52,18 @@
         </Style>
     </Window.Styles>
     <Panel>
+        <!-- Solid inactive-state fallback, using the same theme resource as the #5111 Mica failure path. -->
+        <Border x:Name="InactiveMicaFallback"
+                Background="{DynamicResource AppWindowBackground}"
+                Opacity="0"
+                IsHitTestVisible="False">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.16"/>
+                </Transitions>
+            </Border.Transitions>
+        </Border>
+
         <!-- Main content pushed below the native title bar.
              Navigation is a static icon rail (always laid out, never animated) plus a sliding
              flyout (NavFlyout, below) that translates in over the content on the GPU compositor.

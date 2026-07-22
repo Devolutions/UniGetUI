@@ -449,6 +449,10 @@ public partial class MainWindow : Window
         {
             HamburgerPanel.Opacity = active ? 1.0 : 0.6;
             WindowButtons.Opacity = active ? 1.0 : 0.55;
+
+            // Match WinUI's inactive Mica appearance without invoking the permanent, global
+            // NotifyMicaUnavailable() fallback used when composition actually fails (#5111).
+            InactiveMicaFallback.Opacity = MicaWindowHelper.IsMicaEnabled() && !active ? 1.0 : 0.0;
         });
 
     private void SetupTitleBar()

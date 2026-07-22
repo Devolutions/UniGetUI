@@ -72,6 +72,12 @@ namespace UniGetUI.PackageEngine.PackageClasses
         )
         {
             var instance = overridePackageOptions ?? LoadForPackage(package);
+
+            // A location typed into this package's own options is an explicit, per-package choice;
+            // one inherited from the manager default below is not. Consumers (e.g. WinGet updates)
+            // use this to honor explicit locations while keeping manager-wide defaults opt-in.
+            bool locationIsExplicit = instance.OverridesNextLevelOpts;
+
             if (!instance.OverridesNextLevelOpts)
             {
                 Logger.Debug(
@@ -85,6 +91,8 @@ namespace UniGetUI.PackageEngine.PackageClasses
                     legalizedId
                 );
             }
+
+            instance.CustomInstallLocationIsExplicit = locationIsExplicit;
 
             if (elevated is not null)
                 instance.RunAsAdministrator = (bool)elevated;

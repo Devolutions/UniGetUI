@@ -220,6 +220,10 @@ namespace UniGetUI.PackageEngine.Serializable
 
         public bool OverridesNextLevelOpts { get; set; }
 
+        // True when CustomInstallLocation was set explicitly for this package rather than inherited
+        // from the manager-wide default. Transient (not serialized): set by InstallOptionsFactory.
+        public bool CustomInstallLocationIsExplicit { get; set; }
+
         public override InstallOptions Copy()
         {
             var copy = new InstallOptions();
@@ -233,8 +237,9 @@ namespace UniGetUI.PackageEngine.Serializable
             foreach (var listKey in _listKeys)
                 copy._listVal[listKey] = this._listVal[listKey].ToList();
 
-            // Handle non-automated OverridesNextLevelOpts
+            // Handle non-automated properties
             copy.OverridesNextLevelOpts = OverridesNextLevelOpts;
+            copy.CustomInstallLocationIsExplicit = CustomInstallLocationIsExplicit;
             return copy;
         }
 

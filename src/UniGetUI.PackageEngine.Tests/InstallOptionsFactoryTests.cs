@@ -70,6 +70,26 @@ public sealed class InstallOptionsFactoryTests : IDisposable
             resolved.CustomInstallLocation
         );
         Assert.True(resolved.InteractiveInstallation);
+        Assert.False(resolved.CustomInstallLocationIsExplicit);
+    }
+
+    [Fact]
+    public void LoadApplicable_MarksLocationExplicitOnlyForPerPackageOverrides()
+    {
+        var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();
+
+        var explicitPackage = new PackageBuilder().WithManager(manager).WithId($"Pkg{Guid.NewGuid():N}").Build();
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { OverridesNextLevelOpts = true, CustomInstallLocation = @"D:\dev\app" },
+            explicitPackage
+        );
+
+        var inheritedPackage = new PackageBuilder().WithManager(manager).WithId($"Pkg{Guid.NewGuid():N}").Build();
+        InstallOptionsFactory.SaveForManager(new InstallOptions { CustomInstallLocation = @"D:\Apps\%PACKAGE%" }, manager);
+        InstallOptionsFactory.SaveForPackage(new InstallOptions(), inheritedPackage);
+
+        Assert.True(InstallOptionsFactory.LoadApplicable(explicitPackage).CustomInstallLocationIsExplicit);
+        Assert.False(InstallOptionsFactory.LoadApplicable(inheritedPackage).CustomInstallLocationIsExplicit);
     }
 
     [Fact]

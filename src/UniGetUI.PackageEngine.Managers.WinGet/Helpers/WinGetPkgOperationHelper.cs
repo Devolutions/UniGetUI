@@ -124,7 +124,13 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                 }
                 else if (
                     options.CustomInstallLocation != ""
-                    && Settings.Get(Settings.K.WinGetForceLocationOnUpdate)
+                    // A location set explicitly for this package is honored on update (issue #5164).
+                    // A location inherited from the manager-wide default stays opt-in behind the
+                    // setting, so updates don't relocate existing installs wholesale (issue #4210).
+                    && (
+                        options.CustomInstallLocationIsExplicit
+                        || Settings.Get(Settings.K.WinGetForceLocationOnUpdate)
+                    )
                 )
                 {
                     parameters.AddRange(["--location", $"\"{options.CustomInstallLocation}\""]);

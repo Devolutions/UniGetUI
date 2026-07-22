@@ -1,3 +1,5 @@
+using System.IO;
+using System.Text;
 using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Animation.Easings;
@@ -12,8 +14,6 @@ using Avalonia.Media;
 using Avalonia.Media.Transformation;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
-using System.IO;
-using System.Text;
 using UniGetUI.Avalonia.Extensions;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;

@@ -109,8 +109,7 @@ internal static class SingleInstanceRedirector
     public static bool TryForwardToFirstInstance(string[] args)
     {
         var deadline = DateTime.UtcNow + ForwardBudget;
-        Exception? last = null;
-
+        Exception? last;
         do
         {
             try

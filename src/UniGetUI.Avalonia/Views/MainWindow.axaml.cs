@@ -1412,6 +1412,12 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ClearSearchBox_Click(object? sender, RoutedEventArgs e)
+    {
+        ViewModel.GlobalSearchText = "";
+        GlobalSearchBox.Focus();
+    }
+
     private void SuggestionsList_Tapped(object? sender, TappedEventArgs e)
     {
         if (SuggestionsList.SelectedItem is SettingsSearchResult result)

@@ -505,7 +505,7 @@
                                  CornerRadius="0"
                                  BorderThickness="0"
                                  VerticalContentAlignment="Center"
-                                 Padding="12,0,4,0"
+                                 Padding="12,0,30,0"
                                  Background="Transparent"
                                  PlaceholderForeground="{DynamicResource SearchBoxPlaceholderForeground}"
                                  PlaceholderText="{Binding GlobalSearchPlaceholder}"
@@ -527,6 +527,27 @@
                                 <x:Double x:Key="TextControlPlaceholderOpacity">1</x:Double>
                             </TextBox.Resources>
                         </TextBox>
+                        <!-- Clear (✕): overlays the right edge of the text column, shown only when
+                             the box has text; the TextBox's right padding reserves room for it. -->
+                        <Button Grid.Column="0"
+                                x:Name="ClearSearchButton"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Width="24"
+                                Height="24"
+                                Margin="0,0,3,3"
+                                Padding="0"
+                                CornerRadius="4"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                IsVisible="{Binding GlobalSearchText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                automation:AutomationProperties.Name="{t:Translate Clear search}"
+                                ToolTip.Tip="{t:Translate Clear search}"
+                                Click="ClearSearchBox_Click">
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/cross.svg"
+                                              Width="12"
+                                              Height="12"/>
+                        </Button>
                         <Button Grid.Column="1"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"

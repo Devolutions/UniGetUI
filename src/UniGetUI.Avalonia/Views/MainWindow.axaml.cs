@@ -452,7 +452,11 @@ public partial class MainWindow : Window
 
             // Match WinUI's inactive Mica appearance without invoking the permanent, global
             // NotifyMicaUnavailable() fallback used when composition actually fails (#5111).
-            InactiveMicaFallback.Opacity = MicaWindowHelper.IsMicaEnabled() && !active ? 1.0 : 0.0;
+            // A partial (not full) overlay so the inactive window still keeps some of the Mica
+            // tint instead of flattening to solid grey. Skip it entirely while a modal dialog is
+            // open: the window deactivates but shouldn't grey out behind its own dialog.
+            InactiveMicaFallback.Opacity =
+                MicaWindowHelper.IsMicaEnabled() && !active && OwnedWindows.Count == 0 ? 0.4 : 0.0;
         });
 
     private void SetupTitleBar()

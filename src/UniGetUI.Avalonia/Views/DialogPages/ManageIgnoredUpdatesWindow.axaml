@@ -3,36 +3,16 @@
     xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
-        xmlns:chrome="using:Avalonia.Controls.Chrome"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.ManageIgnoredUpdatesWindow"
         x:DataType="vm:ManageIgnoredUpdatesViewModel"
-        Width="1100" MinWidth="520"
+        Width="850" MinWidth="520"
         Height="500" MinHeight="280"
         CanResize="True"
         ShowInTaskbar="False"
-        Background="{DynamicResource IgnoredDialogBackground}"
+        Background="{DynamicResource AppDialogBackground}"
         WindowStartupLocation="CenterOwner"
-        Title="">
-
-    <!-- Solid surfaces defined locally so the app-wide Mica overrides (which make most
-         dialog brushes translucent) can't bleed the desktop through this window. -->
-    <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.ThemeDictionaries>
-                <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="IgnoredDialogBackground" Color="#ECECEC"/>
-                    <SolidColorBrush x:Key="IgnoredListBackground"   Color="#F9F9F9"/>
-                    <SolidColorBrush x:Key="IgnoredRowHover"         Color="#14000000"/>
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="IgnoredDialogBackground" Color="#2C2C2C"/>
-                    <SolidColorBrush x:Key="IgnoredListBackground"   Color="#1F1F1F"/>
-                    <SolidColorBrush x:Key="IgnoredRowHover"         Color="#18FFFFFF"/>
-                </ResourceDictionary>
-            </ResourceDictionary.ThemeDictionaries>
-        </ResourceDictionary>
-    </Window.Resources>
+        Title="{Binding Title}">
 
     <Window.Styles>
         <!-- WinUI-style row hover highlight. The base Background must be set via a style
@@ -41,29 +21,16 @@
             <Setter Property="Background" Value="Transparent"/>
         </Style>
         <Style Selector="Border.row:pointerover">
-            <Setter Property="Background" Value="{DynamicResource IgnoredRowHover}"/>
-        </Style>
-        <!-- Avalonia 12's drawn window decorations add a full-screen caption button; hide it
-             so only minimize/maximize/close remain. -->
-        <Style Selector=":is(Control)[(chrome|WindowDecorationProperties.ElementRole)=FullScreenButton]">
-            <Setter Property="IsVisible" Value="False"/>
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
         </Style>
     </Window.Styles>
 
-    <Grid RowDefinitions="Auto,Auto,*"
-          Margin="16,36,16,16"
+    <Grid RowDefinitions="Auto,*"
+          Margin="16"
           RowSpacing="8">
 
-        <!-- ── Title ── -->
-        <TextBlock Grid.Row="0"
-                   Text="{Binding Title}"
-                   FontSize="20"
-                   FontWeight="SemiBold"
-                   Margin="0,0,0,4"
-                   automation:AutomationProperties.HeadingLevel="1"/>
-
-        <!-- ── Header: description + Reset list button ── -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <!-- ── Header: description + Reset list button (title is carried by the window caption) ── -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
 
             <TextBlock Text="{Binding Description}"
                        TextWrapping="Wrap"
@@ -111,8 +78,10 @@
         </Grid>
 
         <!-- ── Package list (mirrors the WinUI ItemsView: flat rows, no header) ── -->
-        <Border Grid.Row="2" Margin="0,4,0,0" CornerRadius="6"
-                Background="{DynamicResource IgnoredListBackground}">
+        <Border Grid.Row="1" Margin="0,4,0,0" CornerRadius="8"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                Background="{DynamicResource AppDialogPanelBackground}">
           <Panel>
 
             <!-- Empty state -->

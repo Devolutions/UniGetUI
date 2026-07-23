@@ -69,8 +69,13 @@ public partial class GeneralViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ResetSettings(Visual? _)
+    private async Task ResetSettings(Visual? visual)
     {
+        if (visual is null || TopLevel.GetTopLevel(visual) is not Window owner) return;
+        var dialog = new ResetSettingsDialog();
+        await dialog.ShowDialog(owner);
+        if (!dialog.Confirmed) return;
+
         try { CoreSettings.ResetSettings(); }
         catch (Exception ex) { Logger.Error(ex); }
         AccessibilityAnnouncementService.Announce(

@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+        x:Class="UniGetUI.Avalonia.Views.DialogPages.ResetSettingsDialog"
+        Title="{t:Translate Reset UniGetUI}"
+        Width="460"
+        SizeToContent="Height"
+        MinHeight="160"
+        CanResize="False"
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppDialogBackground}"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="20"
+          RowDefinitions="Auto,Auto,Auto"
+          RowSpacing="12">
+
+        <TextBlock Grid.Row="0"
+                   Text="{t:Translate Reset UniGetUI}"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   automation:AutomationProperties.HeadingLevel="1"/>
+
+        <TextBlock Grid.Row="1"
+                   Text="{t:Translate Do you really want to reset UniGetUI to its default settings? This action cannot be undone.}"
+                   TextWrapping="Wrap"
+                   Opacity="0.85"/>
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8">
+            <Button x:Name="CancelButton"
+                    Content="{t:Translate Cancel}"
+                    MinWidth="80"
+                    automation:AutomationProperties.Name="{t:Translate Cancel}"/>
+            <Button x:Name="ResetButton"
+                    Content="{t:Translate Reset UniGetUI}"
+                    MinWidth="140"
+                    Classes="accent"
+                    automation:AutomationProperties.Name="{t:Translate Reset UniGetUI}"/>
+        </StackPanel>
+
+    </Grid>
+
+</Window>

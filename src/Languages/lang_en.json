@@ -84,6 +84,7 @@
   "Show UniGetUI": "Show UniGetUI",
   "Quit": "Quit",
   "Are you sure?": "Are you sure?",
+  "Do you really want to reset UniGetUI to its default settings? This action cannot be undone.": "Do you really want to reset UniGetUI to its default settings? This action cannot be undone.",
   "Do you really want to uninstall {0}?": "Do you really want to uninstall {0}?",
   "Do you really want to uninstall the following {0} packages?": "Do you really want to uninstall the following {0} packages?",
   "No": "No",

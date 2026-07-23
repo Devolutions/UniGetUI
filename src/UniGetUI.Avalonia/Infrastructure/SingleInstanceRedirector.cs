@@ -49,9 +49,10 @@ internal static class SingleInstanceRedirector
         {
             while (true)
             {
+                NamedPipeServerStream? pipe = null;
                 try
                 {
-                    var pipe = new NamedPipeServerStream(
+                    pipe = new NamedPipeServerStream(
                         PipeName,
                         PipeDirection.In,
                         maxNumberOfServerInstances: NamedPipeServerStream.MaxAllowedServerInstances,
@@ -63,11 +64,17 @@ internal static class SingleInstanceRedirector
                     // Read off-thread and immediately re-arm: a single slow/stuck client can
                     // never block the next accept nor "busy out" the pipe into timeouts.
                     HandleConnection(pipe, onArgsReceived);
+                    pipe = null; // ownership handed to the read task
                 }
                 catch (Exception ex) when (ex is not ThreadAbortException)
                 {
                     // Keep the listener alive through errors (the pipe breaks on disconnect, etc.)
                     Logger.Warn($"SingleInstanceRedirector listener error: {ex.Message}");
+                }
+                finally
+                {
+                    // Dispose the stream if the handoff never happened, so a broken accept can't leak handles.
+                    pipe?.Dispose();
                 }
             }
         })
@@ -107,32 +114,41 @@ internal static class SingleInstanceRedirector
     /// </summary>
     /// <returns><c>true</c> if the message was delivered successfully.</returns>
     public static bool TryForwardToFirstInstance(string[] args)
+        => ForwardToFirstInstanceAsync(args).GetAwaiter().GetResult();
+
+    private static async Task<bool> ForwardToFirstInstanceAsync(string[] args)
     {
-        var deadline = DateTime.UtcNow + ForwardBudget;
-        Exception? last;
-        do
+        // One token bounds connect, write and flush across retries, so a peer that connects
+        // then stops reading can never block past the budget and skip the fallback.
+        using var cts = new CancellationTokenSource(ForwardBudget);
+        byte[] payload = Encoding.UTF8.GetBytes(string.Join('\n', args)); // newline-delimited args
+        Exception? last = null;
+
+        while (true)
         {
             try
             {
                 using var pipe = new NamedPipeClientStream(
                     serverName: ".",
                     pipeName: PipeName,
-                    direction: PipeDirection.Out);
+                    direction: PipeDirection.Out,
+                    options: PipeOptions.Asynchronous);
 
-                pipe.Connect(500);
-
-                using var writer = new StreamWriter(pipe, Encoding.UTF8);
-                // Newline-delimited args payload.
-                writer.Write(string.Join('\n', args));
-                writer.Flush();
+                await pipe.ConnectAsync(cts.Token).ConfigureAwait(false);
+                await pipe.WriteAsync(payload, cts.Token).ConfigureAwait(false);
+                await pipe.FlushAsync(cts.Token).ConfigureAwait(false);
                 return true;
             }
             catch (Exception ex)
             {
                 last = ex;
-                Thread.Sleep(100);
+                if (cts.IsCancellationRequested)
+                    break;
+
+                try { await Task.Delay(100, cts.Token).ConfigureAwait(false); }
+                catch (OperationCanceledException) { break; }
             }
-        } while (DateTime.UtcNow < deadline);
+        }
 
         Logger.Warn($"Could not forward args to first instance: {last?.Message}");
         return false;

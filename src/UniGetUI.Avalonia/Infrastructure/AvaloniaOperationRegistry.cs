@@ -13,6 +13,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Interface;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Operations.History;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Infrastructure;
@@ -66,7 +67,7 @@ public static class AvaloniaOperationRegistry
             if (!Settings.Get(Settings.K.MaintainSuccessfulInstalls))
                 _ = RemoveAfterDelayAsync(op, milliseconds: 4000);
 
-            _ = Task.Run(() => AppendOperationHistory(op));
+            _ = Task.Run(() => RecordOperationHistory(op, OperationHistoryRecord.StatusSucceeded));
 
             Dispatcher.UIThread.Post(() => ShowOperationSuccessNotification(op));
 
@@ -79,16 +80,20 @@ public static class AvaloniaOperationRegistry
             _errorCounts.AddOrUpdate(op, 1, (_, n) => n + 1);
             Interlocked.Increment(ref _errorsOccurred);
 
-            _ = Task.Run(() => AppendOperationHistory(op));
+            _ = Task.Run(() => RecordOperationHistory(op, OperationHistoryRecord.StatusFailed));
             Dispatcher.UIThread.Post(() => ShowOperationFailureNotification(op));
             Dispatcher.UIThread.Post(UpdateTrayStatus);
         };
 
+        // Cancellation drives Status = Canceled from several code paths, so StatusChanged(Canceled)
+        // can fire more than once for a single operation. Handle the terminal cancel exactly once.
+        int cancelHandled = 0;
         op.StatusChanged += (_, status) =>
         {
-            if (status is OperationStatus.Canceled)
+            if (status is OperationStatus.Canceled && Interlocked.Exchange(ref cancelHandled, 1) == 0)
             {
                 WindowsAppNotificationBridge.RemoveProgress(op);
+                _ = Task.Run(() => RecordOperationHistory(op, OperationHistoryRecord.StatusCanceled));
                 _ = RemoveAfterDelayAsync(op, milliseconds: 2500);
             }
             Dispatcher.UIThread.Post(UpdateTrayStatus);
@@ -246,25 +251,11 @@ public static class AvaloniaOperationRegistry
         else if (OperatingSystem.IsMacOS()) MacOsNotificationBridge.ShowError(op);
     }
 
-    private static void AppendOperationHistory(AbstractOperation op)
+    private static void RecordOperationHistory(AbstractOperation op, string status)
     {
         try
         {
-            var rawOutput = new List<string>
-            {
-                "                           ",
-                "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
-            };
-            foreach (var (text, _) in op.GetOutput())
-                rawOutput.Add(text);
-
-            var oldLines = Settings.GetValue(Settings.K.OperationHistory).Split('\n');
-            if (oldLines.Length > 300)
-                oldLines = oldLines.Take(300).ToArray();
-
-            Settings.SetValue(
-                Settings.K.OperationHistory,
-                string.Join('\n', rawOutput.Concat(oldLines)));
+            OperationHistoryStore.Add(OperationHistoryRecord.FromOperation(op, status));
         }
         catch (Exception ex)
         {

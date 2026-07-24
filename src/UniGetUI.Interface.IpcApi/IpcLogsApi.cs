@@ -1,7 +1,6 @@
 using UniGetUI.Core.Logging;
-using UniGetUI.Core.SettingsEngine;
-using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Operations.History;
 
 namespace UniGetUI.Interface;
 
@@ -12,9 +11,33 @@ public sealed class IpcAppLogEntry
     public string Content { get; set; } = "";
 }
 
-public sealed class IpcOperationHistoryEntry
+/// <summary>
+/// A structured, persisted operation-history entry (the agent-readable view of the history store).
+/// <see cref="Content"/> is a human-readable one-line summary kept for backward compatibility.
+/// </summary>
+public class IpcOperationHistoryEntry
 {
+    public string Id { get; set; } = "";
+    public string Kind { get; set; } = "";
+    public int Role { get; set; }
+    public string PackageId { get; set; } = "";
+    public string PackageName { get; set; } = "";
+    public string ManagerName { get; set; } = "";
+    public string SourceName { get; set; } = "";
+    public string VersionBefore { get; set; } = "";
+    public string VersionAfter { get; set; } = "";
+    public string Status { get; set; } = "";
+    public string Timestamp { get; set; } = "";
+    public int OutputLineCount { get; set; }
+    public int? ExitCode { get; set; }
+    public string FailureSummary { get; set; } = "";
     public string Content { get; set; } = "";
+}
+
+/// <summary>An operation-history entry including its full console output.</summary>
+public sealed class IpcOperationHistoryDetails : IpcOperationHistoryEntry
+{
+    public IReadOnlyList<IpcOperationOutputLine> Output { get; set; } = [];
 }
 
 public sealed class IpcManagerLogTask
@@ -48,12 +71,64 @@ public static class IpcLogsApi
 
     public static IReadOnlyList<IpcOperationHistoryEntry> ListOperationHistory()
     {
-        return Settings.GetValue(Settings.K.OperationHistory)
-            .Split('\n')
-            .Select(line => line.Replace("\r", "").Replace("\n", "").Trim())
-            .Where(line => !string.IsNullOrWhiteSpace(line))
-            .Select(line => new IpcOperationHistoryEntry { Content = line })
+        return OperationHistoryStore.GetAll()
+            .Select(ToEntry)
             .ToArray();
+    }
+
+    public static IpcOperationHistoryDetails? GetOperationHistoryEntry(string id)
+    {
+        var record = OperationHistoryStore.Get(id);
+        if (record is null) return null;
+
+        var details = new IpcOperationHistoryDetails
+        {
+            Output = record.Output
+                .Select(line => new IpcOperationOutputLine { Text = line.Text, Type = line.Type })
+                .ToArray(),
+        };
+        CopyEntryFields(record, details);
+        return details;
+    }
+
+    private static IpcOperationHistoryEntry ToEntry(OperationHistoryRecord record)
+    {
+        var entry = new IpcOperationHistoryEntry();
+        CopyEntryFields(record, entry);
+        return entry;
+    }
+
+    private static void CopyEntryFields(OperationHistoryRecord record, IpcOperationHistoryEntry entry)
+    {
+        entry.Id = record.Id;
+        entry.Kind = record.Kind;
+        entry.Role = record.Role;
+        entry.PackageId = record.PackageId;
+        entry.PackageName = record.PackageName;
+        entry.ManagerName = record.ManagerName;
+        entry.SourceName = record.SourceName;
+        entry.VersionBefore = record.VersionBefore;
+        entry.VersionAfter = record.VersionAfter;
+        entry.Status = record.Status;
+        entry.Timestamp = record.TimestampUtc;
+        entry.OutputLineCount = record.Output.Count;
+        entry.ExitCode = record.ExitCode;
+        entry.FailureSummary = record.FailureSummary;
+        entry.Content = BuildSummary(record);
+    }
+
+    private static string BuildSummary(OperationHistoryRecord record)
+    {
+        string target = string.IsNullOrEmpty(record.PackageName) ? record.PackageId : record.PackageName;
+        string version = record.VersionBefore != record.VersionAfter && record.VersionAfter.Length > 0
+            ? $"{record.VersionBefore} -> {record.VersionAfter}"
+            : record.VersionBefore;
+        var parts = new List<string> { record.Kind };
+        if (record.ManagerName.Length > 0) parts.Add(record.ManagerName);
+        if (target.Length > 0) parts.Add(target);
+        if (version.Length > 0) parts.Add($"({version})");
+        parts.Add($"[{record.Status}]");
+        return string.Join(' ', parts);
     }
 
     public static IReadOnlyList<IpcManagerLogInfo> ListManagerLogs(

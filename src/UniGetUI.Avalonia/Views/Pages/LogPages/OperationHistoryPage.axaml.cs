@@ -32,6 +32,9 @@ public partial class OperationHistoryPage : UserControl, IEnterLeaveListener, IK
             col.CustomSortComparer = new OperationHistoryRowComparer(key);
         }
 
+        // Ease wheel scrolling to a stop (WinUI-like), matching the package list.
+        DataGridWheelAnimator.Attach(HistoryList);
+
         // Right-click a row → the same actions as the inline buttons.
         HistoryList.ContextRequested += OnRowContextRequested;
         // Double-click → open the log; Enter/Delete keyboard shortcuts on the list.

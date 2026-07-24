@@ -26,14 +26,14 @@ internal static class OperationHistoryActionService
     public static bool CanRevert(OperationHistoryRecord record)
         => _packageKinds.Contains(record.Kind) && ResolveManager(record) is not null;
 
-    public static async Task ReRunAsync(OperationHistoryRecord record)
+    public static Task ReRunAsync(OperationHistoryRecord record)
     {
         var (manager, source) = BuildContext(record);
         if (manager is null || source is null)
-            return;
+            return Task.CompletedTask;
 
         Launch(BuildSameKindOperation(record, manager, source, LoadOptions(record)));
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     /// <summary>Retry modes offered for a failed package operation, mirroring the live-operations retry menu.</summary>
@@ -53,11 +53,11 @@ internal static class OperationHistoryActionService
         return (asAdmin, interactive, skipHash);
     }
 
-    public static async Task RetryAsync(OperationHistoryRecord record, string mode)
+    public static Task RetryAsync(OperationHistoryRecord record, string mode)
     {
         var (manager, source) = BuildContext(record);
         if (manager is null || source is null)
-            return;
+            return Task.CompletedTask;
 
         var options = LoadOptions(record);
         switch (mode)
@@ -68,7 +68,7 @@ internal static class OperationHistoryActionService
         }
 
         Launch(BuildSameKindOperation(record, manager, source, options));
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     private static AbstractOperation? BuildSameKindOperation(

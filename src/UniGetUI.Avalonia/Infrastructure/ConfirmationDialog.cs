@@ -10,7 +10,7 @@ namespace UniGetUI.Avalonia.Infrastructure;
 /// <summary>A minimal yes/no confirmation dialog used for destructive history actions.</summary>
 internal static class ConfirmationDialog
 {
-    public static async Task<bool> ShowAsync(string message, string? title = null)
+    public static async Task<bool> ShowAsync(string message)
     {
         if (MainWindow.Instance is not { } owner)
             return true;
@@ -24,7 +24,7 @@ internal static class ConfirmationDialog
             CanResize = false,
             ShowInTaskbar = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Title = title ?? CoreTools.Translate("Are you sure?"),
+            Title = CoreTools.Translate("Are you sure?"),
         };
 
         var noButton = new Button { Content = CoreTools.Translate("No"), MinWidth = 100 };
@@ -42,7 +42,7 @@ internal static class ConfirmationDialog
             {
                 new TextBlock
                 {
-                    Text = title ?? CoreTools.Translate("Are you sure?"),
+                    Text = CoreTools.Translate("Are you sure?"),
                     FontSize = 18,
                     FontWeight = FontWeight.SemiBold,
                     TextWrapping = TextWrapping.Wrap,

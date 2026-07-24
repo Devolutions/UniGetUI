@@ -102,14 +102,38 @@ public partial class OperationHistoryRowViewModel : ViewModelBase
             ? utc
             : DateTime.MinValue;
 
-    public string TimestampLabel
+    public string TimestampLabel => FormatRelative(Timestamp);
+
+    public string TimestampTooltip
+        => Timestamp == DateTime.MinValue ? Record.TimestampUtc : Timestamp.ToLocalTime().ToString("f");
+
+    private static string FormatRelative(DateTime utc)
+    {
+        if (utc == DateTime.MinValue) return "";
+        var delta = DateTime.UtcNow - utc;
+        if (delta < TimeSpan.Zero) delta = TimeSpan.Zero;
+        if (delta.TotalMinutes < 1) return CoreTools.Translate("just now");
+        if (delta.TotalMinutes < 60) return CoreTools.Translate("{0} min ago", (int)delta.TotalMinutes);
+        if (delta.TotalHours < 24) return CoreTools.Translate("{0} h ago", (int)delta.TotalHours);
+        if (delta.TotalDays < 7) return CoreTools.Translate("{0} d ago", (int)delta.TotalDays);
+        return utc.ToLocalTime().ToString("d");
+    }
+
+    public bool HasOutput => Record.Output.Count > 0;
+
+    /// <summary>Compact, paste-ready one-line summary (for bug reports); language-neutral status/values.</summary>
+    public string DetailsSummary
     {
         get
         {
-            if (DateTime.TryParse(Record.TimestampUtc, null,
-                    System.Globalization.DateTimeStyles.RoundtripKind, out var utc))
-                return utc.ToLocalTime().ToString("g");
-            return Record.TimestampUtc;
+            var parts = new List<string>();
+            if (Record.ManagerName.Length > 0) parts.Add(Record.ManagerName);
+            parts.Add(PackageId.Length > 0 && PackageId != TargetName ? $"{TargetName} ({PackageId})" : TargetName);
+            if (VersionChange.Length > 0) parts.Add(VersionChange);
+            parts.Add(Record.Status);
+            if (Record.ExitCode is { } code) parts.Add(CoreTools.Translate("exit {0}", code));
+            if (Record.FailureSummary.Length > 0) parts.Add(Record.FailureSummary);
+            return string.Join(" · ", parts);
         }
     }
 

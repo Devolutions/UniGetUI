@@ -1,6 +1,8 @@
 using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages.LogPages;
@@ -32,6 +34,33 @@ public partial class OperationHistoryPage : UserControl, IEnterLeaveListener, IK
 
         // Right-click a row → the same actions as the inline buttons.
         HistoryList.ContextRequested += OnRowContextRequested;
+        // Double-click → open the log; Enter/Delete keyboard shortcuts on the list.
+        // Handle on the tunnel (preview) phase so Enter opens the log instead of the DataGrid's
+        // built-in "move to next row" navigation, which otherwise consumes the key first.
+        HistoryList.DoubleTapped += (_, _) => ViewLog(SelectedRow);
+        HistoryList.AddHandler(InputElement.KeyDownEvent, OnHistoryKeyDown, RoutingStrategies.Tunnel);
+    }
+
+    private OperationHistoryRowViewModel? SelectedRow => HistoryList.SelectedItem as OperationHistoryRowViewModel;
+
+    private static void ViewLog(OperationHistoryRowViewModel? row)
+    {
+        if (row?.HasOutput is true) row.ViewLogCommand.Execute(null);
+    }
+
+    private void OnHistoryKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (SelectedRow is not { } row) return;
+        if (e.Key == Key.Enter)
+        {
+            ViewLog(row);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Delete)
+        {
+            row.RemoveCommand.Execute(null);
+            e.Handled = true;
+        }
     }
 
     private void OnRowContextRequested(object? sender, ContextRequestedEventArgs e)
@@ -41,11 +70,12 @@ public partial class OperationHistoryPage : UserControl, IEnterLeaveListener, IK
 
         var menu = new ContextMenu();
         menu.Items.Add(BuildMenuItem(
-            CoreTools.Translate("Revert this operation"), "undelete.svg", row.RevertCommand, row.CanRevert));
+            CoreTools.Translate("Revert this operation"), "undo.svg", row.RevertCommand, row.CanRevert));
         menu.Items.Add(BuildMenuItem(
             CoreTools.Translate("Run this operation again"), "reload.svg", row.ReRunCommand, row.CanReRun));
         menu.Items.Add(BuildMenuItem(
-            CoreTools.Translate("View full log"), "clipboard_list.svg", row.ViewLogCommand, true));
+            CoreTools.Translate("View full log"), "clipboard_list.svg", row.ViewLogCommand, row.HasOutput));
+        menu.Items.Add(BuildCopyDetailsItem(row));
 
         // Retry variants — only for failed operations where the mode is applicable.
         if (row.CanRetryAsAdmin || row.CanRetryInteractive || row.CanRetrySkipHash)
@@ -83,6 +113,22 @@ public partial class OperationHistoryPage : UserControl, IEnterLeaveListener, IK
             Height = 16,
         },
     };
+
+    // Copy details needs clipboard access (a top-level concern), so it uses a click handler rather than a command.
+    private MenuItem BuildCopyDetailsItem(OperationHistoryRowViewModel row)
+    {
+        var item = new MenuItem
+        {
+            Header = CoreTools.Translate("Copy details"),
+            Icon = new SvgIcon { Path = "avares://UniGetUI/Assets/Symbols/copy.svg", Width = 16, Height = 16 },
+        };
+        item.Click += async (_, _) =>
+        {
+            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+            if (clipboard is not null) await clipboard.SetTextAsync(row.DetailsSummary);
+        };
+        return item;
+    }
 
     // ─── ISearchBoxPage: the shell's global search box filters the history live ───
     public string QueryBackup { get; set; } = "";

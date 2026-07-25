@@ -1,39 +1,22 @@
-<Window xmlns="https://github.com/avaloniaui"
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
-        xmlns:chrome="using:Avalonia.Controls.Chrome"
         x:Class="UniGetUI.Avalonia.Views.InstallOptionsWindow"
         x:DataType="vm:InstallOptionsViewModel"
-        Width="680" MinWidth="500"
-        SizeToContent="Height"
-        CanResize="False"
+        MaxWidth="680"
+        MinWidth="500"
         Background="{DynamicResource AppDialogBackground}"
-        WindowStartupLocation="CenterOwner"
-        Title="">
+        Title="{Binding DialogTitle}">
 
-    <Window.KeyBindings>
+    <dialogs:ImmersiveDialog.KeyBindings>
         <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}"/>
         <KeyBinding Gesture="Meta+S" Command="{Binding SaveCommand}"/>
-    </Window.KeyBindings>
+    </dialogs:ImmersiveDialog.KeyBindings>
 
-    <Window.Styles>
-        <!-- Extended client area adds a full-screen caption button; hide it so only the
-             standard window buttons remain (matches the Manage-ignored-updates window). -->
-        <Style Selector=":is(Control)[(chrome|WindowDecorationProperties.ElementRole)=FullScreenButton]">
-            <Setter Property="IsVisible" Value="False"/>
-        </Style>
-    </Window.Styles>
-
-    <Grid RowDefinitions="Auto,Auto">
-
-        <!-- Draggable title-bar strip: the client area is extended over the OS title bar,
-             so this restores window dragging (the ScrollViewer below would otherwise eat it). -->
-        <Border Grid.Row="0" Height="32" Background="Transparent"
-                PointerPressed="TitleBar_PointerPressed"/>
-
-        <ScrollViewer Grid.Row="1"
+    <Grid>
+        <ScrollViewer
                       MaxHeight="820"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
@@ -59,4 +42,4 @@
             </StackPanel>
         </ScrollViewer>
     </Grid>
-</Window>
+</dialogs:ImmersiveDialog>

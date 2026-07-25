@@ -50,6 +50,33 @@
         <Style Selector="Border#NavFlyout.open">
             <Setter Property="Opacity" Value="1"/>
         </Style>
+        <!-- Shared WinUI caption-button states for the main window and immersive dialogs. -->
+        <Style Selector="Button.caption">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <Style Selector="Button.caption:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+            <Setter Property="CornerRadius" Value="0"/>
+        </Style>
+        <Style Selector="Button.caption:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+            <Setter Property="CornerRadius" Value="0"/>
+        </Style>
+        <Style Selector="Button.caption-close:pointerover">
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="Button.caption-close:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#C42B1C"/>
+        </Style>
+        <Style Selector="Button.caption-close:pressed">
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="Button.caption-close:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#A4262C"/>
+        </Style>
     </Window.Styles>
     <Panel>
         <!-- Solid inactive-state fallback, using the same theme resource as the #5111 Mica failure path. -->
@@ -611,64 +638,113 @@
                 </Border>
             </Popup>
 
-            <!-- Right column: Linux window buttons on the far right -->
+            <!-- Right column: custom Windows/Linux caption buttons -->
             <Panel Grid.Column="2">
 
                 <!-- Custom min / max / close (shown on Windows, and Linux without native decorations; IsVisible set in code-behind) -->
                 <StackPanel x:Name="WindowButtons"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Margin="0,0,4,0"
+                            VerticalAlignment="Top"
                             Spacing="0"
                             IsVisible="False">
                     <!-- Minimize: horizontal line -->
-                    <Button Width="46" Height="32" Padding="0"
-                            Background="Transparent" BorderThickness="0" CornerRadius="0"
+                    <Button Width="46" Height="44"
+                            Classes="caption"
                                                         automation:AutomationProperties.Name="{t:Translate Minimize}"
                             ToolTip.Tip="{t:Translate Minimize}"
                             Click="MinimizeButton_Click">
-                        <Path Stroke="{DynamicResource SystemBaseHighColor}"
-                              StrokeThickness="1.5"
+                        <Path Stroke="{Binding $parent[Button].Foreground}"
+                              StrokeThickness="1"
                               StrokeLineCap="Round"
                                                             automation:AutomationProperties.AccessibilityView="Raw"
-                              Data="M2,0 H10"
-                              Width="12" Height="2"
+                              Data="M1,1 H9"
+                              Width="10" Height="2"
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <!-- Maximize / Restore: square outline, geometry swapped in code-behind -->
                     <Button x:Name="MaximizeButton"
-                            Width="46" Height="32" Padding="0"
-                            Background="Transparent" BorderThickness="0" CornerRadius="0"
+                            Width="46" Height="44"
+                            Classes="caption"
                                                         automation:AutomationProperties.Name="{t:Translate Maximize}"
                             ToolTip.Tip="{t:Translate Maximize}"
                             Click="MaximizeButton_Click">
                         <Path x:Name="MaximizeIcon"
-                              Stroke="{DynamicResource SystemBaseHighColor}"
-                              StrokeThickness="1.5"
+                              Stroke="{Binding $parent[Button].Foreground}"
+                              StrokeThickness="1"
                               StrokeLineCap="Round"
                                                             automation:AutomationProperties.AccessibilityView="Raw"
 
                               Data="M0,0 H10 V10 H0 Z"
-                              Width="12" Height="12"
+                              Width="10" Height="10"
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <!-- Close: X -->
-                    <Button Width="46" Height="32" Padding="0"
-                            Background="Transparent" BorderThickness="0" CornerRadius="0"
+                    <Button Width="46" Height="44"
+                            Classes="caption caption-close"
                                                         automation:AutomationProperties.Name="{t:Translate Close}"
                             ToolTip.Tip="{t:Translate Close}"
                             Click="CloseButton_Click">
-                        <Path Stroke="{DynamicResource SystemBaseHighColor}"
-                              StrokeThickness="1.5"
-                              StrokeLineCap="Round"
-                                                            automation:AutomationProperties.AccessibilityView="Raw"
-                              Data="M0,0 L10,10 M10,0 L0,10"
-                              Width="12" Height="12"
-                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/cross.svg"
+                                          Width="14"
+                                          Height="14"
+                                          automation:AutomationProperties.AccessibilityView="Raw"/>
                     </Button>
                 </StackPanel>
             </Panel>
+        </Grid>
+
+        <!-- Immersive same-window modal layer, inset from and attached to its owner. -->
+        <Grid x:Name="ModalLayer"
+              IsVisible="False"
+              Opacity="0"
+              Background="{DynamicResource SmokeFillColorDefaultBrush}"
+              Margin="{Binding $parent[Window].WindowDecorationMargin}"
+              ZIndex="2000"
+              automation:AutomationProperties.AccessibilityView="Control">
+            <Border x:Name="ModalSurface"
+                    Margin="48"
+                    MaxWidth="1100"
+                    MaxHeight="900"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="{DynamicResource AppDialogBackground}"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    ClipToBounds="True"
+                    KeyboardNavigation.TabNavigation="Cycle"
+                    BoxShadow="0 8 32 0 #59000000">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid Grid.Row="0"
+                          Height="48"
+                          Margin="20,0,0,0"
+                          ColumnDefinitions="*,Auto">
+                        <TextBlock x:Name="ModalTitle"
+                                   VerticalAlignment="Center"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <Button x:Name="ModalCloseButton"
+                                Grid.Column="1"
+                                Width="46"
+                                Height="28"
+                                Classes="caption caption-close"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Click="ModalCloseButton_Click"
+                                automation:AutomationProperties.Name="{t:Translate Close}">
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/cross.svg"
+                                              Width="12"
+                                              Height="12"/>
+                        </Button>
+                    </Grid>
+                    <ContentControl x:Name="ModalContent"
+                                    Grid.Row="1"
+                                    HorizontalContentAlignment="Stretch"
+                                    VerticalContentAlignment="Stretch"/>
+                </Grid>
+            </Border>
         </Grid>
 
         <!-- ── Toast notifications: floating overlay, stacked bottom-right ──

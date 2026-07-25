@@ -1,34 +1,25 @@
-<Window xmlns="https://github.com/avaloniaui"
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
         xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.SimpleErrorDialog"
-        Width="480"
-        SizeToContent="Height"
+        MaxWidth="480"
         MinHeight="160"
-        CanResize="False"
-        ShowInTaskbar="False"
-        Background="{DynamicResource AppDialogBackground}"
-        WindowStartupLocation="CenterOwner">
+
+        Background="{DynamicResource AppDialogBackground}">
 
     <Grid Margin="20"
-          RowDefinitions="Auto,Auto,Auto"
+          RowDefinitions="Auto,Auto"
           RowSpacing="12">
 
-        <TextBlock x:Name="TitleBlock"
-                   Grid.Row="0"
-                   FontSize="16"
-                   FontWeight="SemiBold"
-                   TextWrapping="Wrap"
-                   automation:AutomationProperties.HeadingLevel="1"/>
-
         <TextBlock x:Name="MessageBlock"
-                   Grid.Row="1"
+                   Grid.Row="0"
                    TextWrapping="Wrap"
                    Opacity="0.85"/>
 
         <Button x:Name="OkButton"
-                Grid.Row="2"
+                Grid.Row="1"
                 Content="{t:Translate OK}"
                 MinWidth="80"
                 HorizontalAlignment="Right"
@@ -37,4 +28,4 @@
 
     </Grid>
 
-</Window>
+</dialogs:ImmersiveDialog>

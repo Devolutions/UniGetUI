@@ -3,12 +3,11 @@ using Avalonia.Threading;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
-public partial class AboutWindow : Window
+public partial class AboutWindow : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     public AboutWindow()
     {
         InitializeComponent();
-        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
     }
 
     protected override void OnOpened(EventArgs e)

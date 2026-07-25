@@ -33,6 +33,10 @@
                     <SolidColorBrush x:Key="MegaQueryPlaceholderForeground"   Color="#52000000"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5C000000"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#FFFFFFFF"/>
+                    <!-- Opaque WinUI menu surface and low-contrast divider. -->
+                    <SolidColorBrush x:Key="MenuSurfaceBrush"            Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="MenuSurfaceBorderBrush"      Color="#0F000000"/>
+                    <SolidColorBrush x:Key="MenuDividerBrush"            Color="#0F000000"/>
                     <!-- Text on accent -->
                     <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush"      Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="TextOnAccentFillColorSecondaryBrush"    Color="#B3FFFFFF"/>
@@ -64,6 +68,8 @@
                     <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#F9F9F9"/>
                     <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#EEEEEE"/>
                     <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#EEEEEE"/>
+                    <SolidColorBrush x:Key="ScreenshotLetterboxBackground" Color="#202020"/>
+                    <SolidColorBrush x:Key="SmokeFillColorDefaultBrush" Color="#4D000000"/>
                     <!-- Warning banner -->
                     <SolidColorBrush x:Key="WarningBannerBackground"     Color="#FFF4CE"/>
                     <SolidColorBrush x:Key="WarningBannerBorderBrush"    Color="#9D5D00"/>
@@ -76,7 +82,7 @@
                     <SolidColorBrush x:Key="StatusErrorBackground"       Color="#FDE7E9"/>
                     <SolidColorBrush x:Key="StatusErrorBorderBrush"      Color="#C42B1C"/>
                     <SolidColorBrush x:Key="StatusInfoBackground"        Color="#E5F1FA"/>
-                    <SolidColorBrush x:Key="StatusInfoBorderBrush"       Color="#005FB8"/>
+                    <SolidColorBrush x:Key="StatusInfoBorderBrush"       Color="{DynamicResource SystemAccentColor}"/>
                     <!-- Status badge foreground -->
                     <SolidColorBrush x:Key="StatusSuccessForeground"     Color="#0F7B0F"/>
                     <SolidColorBrush x:Key="StatusWarningForeground"     Color="#9D5D00"/>
@@ -115,6 +121,10 @@
                     <SolidColorBrush x:Key="MegaQueryPlaceholderForeground"   Color="#C5FFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5DFFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#E4000000"/>
+                    <!-- WinUI's dark flyout surface is an opaque #2C2C2C. -->
+                    <SolidColorBrush x:Key="MenuSurfaceBrush"            Color="#FF2C2C2C"/>
+                    <SolidColorBrush x:Key="MenuSurfaceBorderBrush"      Color="#26FFFFFF"/>
+                    <SolidColorBrush x:Key="MenuDividerBrush"            Color="#15FFFFFF"/>
                     <!-- Text on accent -->
                     <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush"      Color="#000000"/>
                     <SolidColorBrush x:Key="TextOnAccentFillColorSecondaryBrush"    Color="#80000000"/>
@@ -146,6 +156,8 @@
                     <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#2C2C2C"/>
                     <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#393939"/>
                     <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#1A1A1A"/>
+                    <SolidColorBrush x:Key="ScreenshotLetterboxBackground" Color="#202020"/>
+                    <SolidColorBrush x:Key="SmokeFillColorDefaultBrush" Color="#4D000000"/>
                     <!-- Warning banner -->
                     <SolidColorBrush x:Key="WarningBannerBackground"     Color="#433519"/>
                     <SolidColorBrush x:Key="WarningBannerBorderBrush"    Color="#A07208"/>
@@ -186,6 +198,44 @@
     <!-- Column headers default to Avalonia's 12px bare-TextBlock size; WinUI renders them at 14px. -->
     <Style Selector="DataGridColumnHeader">
         <Setter Property="FontSize" Value="14"/>
+    </Style>
+
+    <!-- WinUI-style menu geometry. Insetting each item keeps its hover fill away from the
+         flyout edge, while separators deliberately span the presenter's usable width. -->
+    <Style Selector="MenuFlyoutPresenter">
+        <Setter Property="Background" Value="{DynamicResource MenuSurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource MenuSurfaceBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="0,4"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter MenuItem">
+        <Setter Property="Margin" Value="4,0"/>
+        <Setter Property="Padding" Value="8,4,8,5"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter Separator">
+        <Setter Property="Margin" Value="0,4"/>
+        <Setter Property="Background" Value="{DynamicResource MenuDividerBrush}"/>
+    </Style>
+    <Style Selector="ContextMenu">
+        <Setter Property="Background" Value="{DynamicResource MenuSurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource MenuSurfaceBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="0,4"/>
+    </Style>
+    <Style Selector="ContextMenu MenuItem">
+        <Setter Property="Margin" Value="4,0"/>
+        <Setter Property="Padding" Value="8,4,8,5"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="ContextMenu MenuItem /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="ContextMenu Separator">
+        <Setter Property="Margin" Value="0,4"/>
+        <Setter Property="Background" Value="{DynamicResource MenuDividerBrush}"/>
     </Style>
     <Style Selector="DataGridRow:selected">
         <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}"/>

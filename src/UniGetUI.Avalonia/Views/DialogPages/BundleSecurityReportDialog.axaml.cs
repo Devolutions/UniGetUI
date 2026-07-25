@@ -4,12 +4,11 @@ using UniGetUI.Interface.Enums;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
-public partial class BundleSecurityReportDialog : Window
+public partial class BundleSecurityReportDialog : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     public BundleSecurityReportDialog(BundleReport report)
     {
         InitializeComponent();
-        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
 
         var sb = new System.Text.StringBuilder();
         foreach (var (pkgId, entries) in report.Contents)

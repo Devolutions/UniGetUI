@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Avalonia;
@@ -15,6 +16,8 @@ using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Extensions;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Avalonia.Views.Controls;
+using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
@@ -109,6 +112,12 @@ public partial class MainWindow : Window
     private double _operationsPanelHeight = 240;
     private bool _userResizedPanel;
     private readonly HashSet<OperationViewModel> _badgeSubscriptions = new();
+    private readonly SemaphoreSlim _modalTransitionSemaphore = new(1, 1);
+    private readonly List<ImmersiveDialog> _modalStack = new();
+    private readonly Dictionary<ImmersiveDialog, Control?> _modalFocusHistory = new();
+    private readonly List<UniGetUiWebView> _webViewsHiddenForModal = new();
+    private IDisposable? _modalTitleSubscription;
+    private Control? _focusBeforeModal;
 
     public enum RuntimeNotificationLevel
     {
@@ -149,6 +158,7 @@ public partial class MainWindow : Window
         UpdateOperationsPanelRow();
 
         Resized += (_, _) => _ = SaveGeometryAsync();
+        ModalLayer.SizeChanged += (_, _) => UpdateModalSurfaceSize();
         PositionChanged += (_, _) => _ = SaveGeometryAsync();
         this.GetObservable(WindowStateProperty).SubscribeValue(state => { UpdateOnScreenState(); _ = SaveGeometryAsync(); });
         this.GetObservable(IsVisibleProperty).SubscribeValue(_ => UpdateOnScreenState());
@@ -237,6 +247,16 @@ public partial class MainWindow : Window
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
     {
+        // A WinUI ContentDialog is a true modal scope: background navigation and package-page
+        // shortcuts must not run while keyboard focus is inside the dialog.
+        if (ModalLayer.IsVisible)
+        {
+            if (e.Key == Key.Escape)
+                (ModalContent.Content as ImmersiveDialog)?.Close();
+            e.Handled = true;
+            return;
+        }
+
         bool isCtrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
         bool isShift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
 
@@ -450,25 +470,12 @@ public partial class MainWindow : Window
             HamburgerPanel.Opacity = active ? 1.0 : 0.6;
             WindowButtons.Opacity = active ? 1.0 : 0.55;
 
-            // Match WinUI's inactive Mica appearance without invoking the permanent, global
-            // NotifyMicaUnavailable() fallback used when composition actually fails (#5111).
-            // A partial (not full) overlay so the inactive window still keeps some of the Mica
-            // tint instead of flattening to solid grey. Skip it while a modal dialog is open: the
-            // window deactivates but shouldn't grey out behind its own dialog. Modeless owned
-            // windows (operation output/failure) don't count — the main window should still grey
-            // when the user switches to another application.
+            // WinUI replaces inactive Mica with SolidBackgroundFillColorBase rather than leaving
+            // a partially wallpaper-tinted backdrop. AppWindowBackground is that token
+            // (#F3F3F3 light / #202020 dark), so make the fallback fully opaque while inactive.
             InactiveMicaFallback.Opacity =
-                MicaWindowHelper.IsMicaEnabled() && !active && !HasOpenModalDialog() ? 0.4 : 0.0;
+                MicaWindowHelper.IsMicaEnabled() && !active ? 1.0 : 0.0;
         });
-
-    // True when a window opened modally (ShowDialog) over this one is currently open.
-    private bool HasOpenModalDialog()
-    {
-        foreach (var owned in OwnedWindows)
-            if (owned.IsDialog)
-                return true;
-        return false;
-    }
 
     private void SetupTitleBar()
     {
@@ -892,7 +899,7 @@ public partial class MainWindow : Window
     {
         MaximizeIcon.Data = Geometry.Parse(
             isMaximized
-                ? "M2,0 H10 V8 H2 Z M0,2 H8 V10 H0 Z"
+                ? "M3,0 H10 V7 H8 V2 H3 Z M0,3 H7 V10 H0 Z"
                 : "M0,0 H10 V10 H0 Z");
         ToolTip.SetTip(
             MaximizeButton,
@@ -903,7 +910,7 @@ public partial class MainWindow : Window
     // button's bounds — the area for which we claim HTMAXBUTTON so Snap Layouts can attach.
     private bool HitTestMaximizeButton(nint lParam)
     {
-        if (!MaximizeButton.IsVisible)
+        if (!MaximizeButton.IsVisible || !MaximizeButton.IsEnabled)
             return false;
         try
         {
@@ -931,7 +938,7 @@ public partial class MainWindow : Window
         if (key is not null && this.TryFindResource(key, ActualThemeVariant, out var res) && res is IBrush brush)
             MaximizeButton.Background = brush;
         else
-            MaximizeButton.Background = Brushes.Transparent;
+            MaximizeButton.ClearValue(BackgroundProperty);
     }
 
     private static void TrackNonClientMouseLeave(nint hWnd)
@@ -1445,6 +1452,259 @@ public partial class MainWindow : Window
     public void OpenManagerSettings(IPackageManager? manager = null) =>
         ViewModel.OpenManagerSettings(manager);
     public void ShowHelp(string uriAttachment = "") => ViewModel.ShowHelp(uriAttachment);
+
+    /// <summary>
+    /// Shows the ignored-updates editor as a modal surface inside this window. Keeping the
+    /// surface in the owner's visual tree makes it resize with the app and avoids a second
+    /// task-switcher/window-management target.
+    /// </summary>
+    public async Task ShowManageIgnoredUpdatesAsync()
+    {
+        var dialog = new ManageIgnoredUpdatesWindow();
+        await ShowImmersiveDialogAsync(dialog);
+    }
+
+    public async Task ShowImmersiveDialogAsync(ImmersiveDialog dialog)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void CloseDialog(object? sender, EventArgs args) => completion.TrySetResult();
+        bool opened = false;
+        bool added = false;
+        dialog.CloseRequested += CloseDialog;
+
+        try
+        {
+            await _modalTransitionSemaphore.WaitAsync();
+            try
+            {
+                if (_modalStack.Contains(dialog))
+                    throw new InvalidOperationException("The immersive dialog is already open.");
+
+                if (_modalStack.Count == 0)
+                {
+                    _focusBeforeModal = FocusManager?.GetFocusedElement() as Control;
+                    HideNativeWebViewsForModal();
+                    // Block pointer input without putting every underlying control into Avalonia's
+                    // disabled visual state. The modal layer owns focus while it is visible.
+                    MainContentRoot.IsHitTestVisible = false;
+                    TitleBarGrid.IsHitTestVisible = false;
+                }
+                else
+                {
+                    _modalFocusHistory[_modalStack[^1]] =
+                        FocusManager?.GetFocusedElement() as Control;
+                }
+
+                ModalContent.Content = null;
+                _modalStack.Add(dialog);
+                added = true;
+                PresentModal(dialog);
+                dialog.NotifyOpened();
+                opened = true;
+                await AnimateModalAsync(opening: true);
+                FocusModalIfNeeded(dialog);
+            }
+            finally
+            {
+                _modalTransitionSemaphore.Release();
+            }
+
+            await completion.Task;
+        }
+        finally
+        {
+            dialog.CloseRequested -= CloseDialog;
+            await _modalTransitionSemaphore.WaitAsync();
+            try
+            {
+                int index = added ? _modalStack.IndexOf(dialog) : -1;
+                bool isTopmost = index >= 0 && index == _modalStack.Count - 1;
+                if (isTopmost)
+                {
+                    try
+                    {
+                        await AnimateModalAsync(opening: false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex);
+                    }
+                    ModalContent.Content = null;
+                }
+
+                if (index >= 0)
+                    _modalStack.RemoveAt(index);
+                _modalFocusHistory.Remove(dialog);
+
+                if (opened)
+                {
+                    try
+                    {
+                        dialog.NotifyClosed();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex);
+                    }
+                }
+
+                if (_modalStack.Count > 0)
+                {
+                    PresentModal(_modalStack[^1]);
+                    ModalLayer.Opacity = 1;
+                    ModalSurface.Opacity = 1;
+                    ModalSurface.RenderTransform = null;
+                    RestoreModalFocus(_modalStack[^1]);
+                }
+                else
+                {
+                    _modalTitleSubscription?.Dispose();
+                    _modalTitleSubscription = null;
+                    ModalLayer.IsVisible = false;
+                    ModalContent.Content = null;
+                    ModalTitle.Text = "";
+                    MainContentRoot.IsHitTestVisible = true;
+                    TitleBarGrid.IsHitTestVisible = true;
+                    RestoreNativeWebViewsAfterModal();
+                    Dispatcher.UIThread.Post(
+                        () => _focusBeforeModal?.Focus(),
+                        DispatcherPriority.Background);
+                    _focusBeforeModal = null;
+                }
+            }
+            finally
+            {
+                _modalTransitionSemaphore.Release();
+            }
+        }
+    }
+
+    private void PresentModal(ImmersiveDialog dialog)
+    {
+        _modalTitleSubscription?.Dispose();
+        _modalTitleSubscription = dialog.GetObservable(ImmersiveDialog.TitleProperty)
+            .SubscribeValue(title => ModalTitle.Text = title ?? "");
+        ModalCloseButton.IsVisible = dialog.IsCloseButtonVisible;
+        ModalContent.Content = dialog;
+        ModalLayer.IsVisible = true;
+        UpdateModalSurfaceSize();
+    }
+
+    private void HideNativeWebViewsForModal()
+    {
+        _webViewsHiddenForModal.Clear();
+        foreach (UniGetUiWebView webView in MainContentRoot.GetVisualDescendants().OfType<UniGetUiWebView>())
+        {
+            if (!webView.IsVisible)
+                continue;
+
+            _webViewsHiddenForModal.Add(webView);
+            webView.IsVisible = false;
+        }
+    }
+
+    private void RestoreNativeWebViewsAfterModal()
+    {
+        foreach (UniGetUiWebView webView in _webViewsHiddenForModal)
+            webView.IsVisible = true;
+        _webViewsHiddenForModal.Clear();
+    }
+
+    private void FocusModalIfNeeded(ImmersiveDialog dialog)
+    {
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (ReferenceEquals(ModalContent.Content, dialog) && !dialog.IsKeyboardFocusWithin)
+                    ModalCloseButton.Focus();
+            },
+            DispatcherPriority.Background);
+    }
+
+    private void RestoreModalFocus(ImmersiveDialog dialog)
+    {
+        _modalFocusHistory.Remove(dialog, out Control? previousFocus);
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (!ReferenceEquals(ModalContent.Content, dialog))
+                    return;
+                if (previousFocus?.Focus() != true && !dialog.IsKeyboardFocusWithin)
+                    ModalCloseButton.Focus();
+            },
+            DispatcherPriority.Background);
+    }
+
+    private void ModalCloseButton_Click(object? sender, RoutedEventArgs e) =>
+        (ModalContent.Content as ImmersiveDialog)?.Close();
+
+    private void UpdateModalSurfaceSize()
+    {
+        if (ModalContent.Content is not ImmersiveDialog dialog)
+            return;
+
+        const double maximumSurfaceWidth = 1100;
+        const double maximumSurfaceHeight = 900;
+        double layerWidth = ModalLayer.Bounds.Width > 0 ? ModalLayer.Bounds.Width : Bounds.Width;
+        double layerHeight = ModalLayer.Bounds.Height > 0 ? ModalLayer.Bounds.Height : Bounds.Height;
+        double availableWidth = Math.Max(0, layerWidth - 96);
+        double availableHeight = Math.Max(0, layerHeight - 96);
+
+        ModalSurface.MaxWidth = Math.Min(maximumSurfaceWidth, availableWidth);
+        ModalSurface.MaxHeight = Math.Min(maximumSurfaceHeight, availableHeight);
+        ModalSurface.Width = double.IsFinite(dialog.MaxWidth)
+            ? Math.Min(dialog.MaxWidth, ModalSurface.MaxWidth)
+            : double.NaN;
+        ModalSurface.Height = double.IsFinite(dialog.MaxHeight)
+            ? Math.Min(dialog.MaxHeight, ModalSurface.MaxHeight)
+            : double.NaN;
+    }
+
+    private async Task AnimateModalAsync(bool opening)
+    {
+        if (MotionPreference.ReducedMotion)
+        {
+            ModalLayer.Opacity = opening ? 1 : 0;
+            ModalSurface.Opacity = opening ? 1 : 0;
+            ModalSurface.RenderTransform = null;
+            return;
+        }
+
+        var scale = new ScaleTransform();
+        ModalSurface.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
+        ModalSurface.RenderTransform = scale;
+
+        double fromOpacity = opening ? 0 : 1;
+        double toOpacity = opening ? 1 : 0;
+        double fromScale = opening ? 1.06 : 1;
+        double toScale = opening ? 1 : 1.06;
+        var duration = TimeSpan.FromMilliseconds(opening ? 180 : 120);
+        long started = Stopwatch.GetTimestamp();
+        while (true)
+        {
+            double progress = Math.Clamp(
+                Stopwatch.GetElapsedTime(started).TotalMilliseconds / duration.TotalMilliseconds,
+                0,
+                1);
+            double eased = 1 - Math.Pow(1 - progress, 3);
+            double opacity = fromOpacity + ((toOpacity - fromOpacity) * eased);
+            double currentScale = fromScale + ((toScale - fromScale) * eased);
+
+            ModalLayer.Opacity = opacity;
+            ModalSurface.Opacity = opacity;
+            scale.ScaleX = currentScale;
+            scale.ScaleY = currentScale;
+
+            if (progress >= 1)
+                break;
+            await Task.Delay(16);
+        }
+
+        ModalLayer.Opacity = toOpacity;
+        ModalSurface.Opacity = toOpacity;
+        scale.ScaleX = toScale;
+        scale.ScaleY = toScale;
+    }
 
     /// <summary>
     /// Focuses the global search box and optionally pre-fills a character typed

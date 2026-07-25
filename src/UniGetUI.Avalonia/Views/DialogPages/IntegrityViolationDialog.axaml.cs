@@ -3,12 +3,11 @@ using Avalonia.Threading;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
-public partial class IntegrityViolationDialog : Window
+public partial class IntegrityViolationDialog : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     public IntegrityViolationDialog()
     {
         InitializeComponent();
-        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         CloseButton.Click += (_, _) => Close();
     }
 

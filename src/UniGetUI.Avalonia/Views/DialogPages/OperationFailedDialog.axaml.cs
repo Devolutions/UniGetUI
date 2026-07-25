@@ -12,7 +12,7 @@ using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
-public partial class OperationFailedDialog : Window
+public partial class OperationFailedDialog : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     private readonly AbstractOperation _operation;
 
@@ -20,7 +20,6 @@ public partial class OperationFailedDialog : Window
     {
         _operation = operation;
         InitializeComponent();
-        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         Title = operation.Metadata.FailureMessage;
 
         HeaderContent.Text =

@@ -7,14 +7,13 @@ using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
-public partial class OperationOutputWindow : Window
+public partial class OperationOutputWindow : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     public OperationOutputWindow(AbstractOperation operation)
     {
         var vm = new OperationOutputViewModel(operation);
         DataContext = vm;
         InitializeComponent();
-        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
 
         OutputText.SetLines(vm.OutputLines);
         vm.OutputLines.CollectionChanged += OnOutputLinesChanged;

@@ -3,14 +3,13 @@ using Avalonia.Threading;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
-public partial class DiscardBundleChangesDialog : Window
+public partial class DiscardBundleChangesDialog : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     public bool Confirmed { get; private set; }
 
     public DiscardBundleChangesDialog()
     {
         InitializeComponent();
-        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         CancelButton.Click += (_, _) => Close();
         DiscardButton.Click += (_, _) => { Confirmed = true; Close(); };
     }

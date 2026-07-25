@@ -1,15 +1,15 @@
-<Window xmlns="https://github.com/avaloniaui"
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         xmlns:about="using:UniGetUI.Avalonia.Views.Pages.AboutPages"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.AboutWindow"
         Title="{t:Translate About UniGetUI}"
-        Width="700" MinWidth="500"
-        Height="600" MinHeight="400"
-        CanResize="True"
-        ShowInTaskbar="False"
-        Background="{DynamicResource AppDialogBackground}"
-        WindowStartupLocation="CenterOwner">
+        MaxWidth="700"
+        MinWidth="500"
+        MaxHeight="600"
+        MinHeight="400"
+        Background="{DynamicResource AppDialogBackground}">
 
     <TabControl x:Name="MainTabControl" Margin="8">
 
@@ -31,4 +31,4 @@
 
     </TabControl>
 
-</Window>
+</dialogs:ImmersiveDialog>

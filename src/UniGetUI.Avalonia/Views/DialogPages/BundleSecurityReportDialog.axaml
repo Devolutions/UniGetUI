@@ -1,17 +1,15 @@
-<Window xmlns="https://github.com/avaloniaui"
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
         xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.BundleSecurityReportDialog"
         Title="{t:Translate Bundle security report}"
-        Width="580"
-        Height="420"
+        MaxWidth="580"
         MinWidth="400"
+        MaxHeight="420"
         MinHeight="300"
-        CanResize="True"
-        ShowInTaskbar="False"
-        Background="{DynamicResource AppDialogBackground}"
-        WindowStartupLocation="CenterOwner">
+        Background="{DynamicResource AppDialogBackground}">
 
     <Grid Margin="20"
           RowDefinitions="Auto,*,Auto"
@@ -42,4 +40,4 @@
 
     </Grid>
 
-</Window>
+</dialogs:ImmersiveDialog>

@@ -1,14 +1,14 @@
-<Window xmlns="https://github.com/avaloniaui"
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.CrashReportWindow"
         Title="{t:Translate UniGetUI – Crash Report}"
-        Width="800" MinWidth="500"
-        Height="580" MinHeight="380"
-        CanResize="True"
-        ShowInTaskbar="False"
-        Background="{DynamicResource AppDialogBackground}"
-        WindowStartupLocation="CenterOwner">
+        MaxWidth="800"
+        MinWidth="500"
+        MaxHeight="580"
+        MinHeight="380"
+        Background="{DynamicResource AppDialogBackground}">
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="24,20,24,24" Spacing="16">
@@ -66,4 +66,4 @@
         </StackPanel>
     </ScrollViewer>
 
-</Window>
+</dialogs:ImmersiveDialog>

@@ -30,7 +30,7 @@
             <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#80FFFFFF"/>
             <!-- Flyouts / menus / dropdowns / tooltips: DWM acrylic backdrop with the card tint over it -->
             <SolidColorBrush x:Key="FlyoutPresenterBackground"     Color="#80FFFFFF"/>
-            <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="ComboBoxDropDownBackground"    Color="#80FFFFFF"/>
             <SolidColorBrush x:Key="ToolTipBackground"             Color="#80FFFFFF"/>
             <!-- Expander chrome -->
@@ -71,7 +71,7 @@
                  stays readably dark even when the popup floats over bright content (e.g. the release-notes
                  WebView) — a lighter tint let the white page wash the menu out (#5007) -->
             <SolidColorBrush x:Key="FlyoutPresenterBackground"     Color="#BF2D2D2D"/>
-            <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#BF2D2D2D"/>
+            <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#FF2C2C2C"/>
             <SolidColorBrush x:Key="ComboBoxDropDownBackground"    Color="#BF2D2D2D"/>
             <SolidColorBrush x:Key="ToolTipBackground"             Color="#BF2D2D2D"/>
             <!-- Expander chrome -->

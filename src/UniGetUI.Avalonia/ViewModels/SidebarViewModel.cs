@@ -122,7 +122,7 @@ public partial class SidebarViewModel : ViewModelBase
     public event EventHandler<PageType>? NavigationRequested;
 
     public string VersionLabel { get; } =
-        CoreTools.Translate("UniGetUI Version {0} by Devolutions", CoreData.VersionName);
+        CoreTools.Translate("UniGetUI Version {0}", CoreData.VersionName);
 
     [RelayCommand]
     public void RequestNavigation(string? pageName)

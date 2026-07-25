@@ -1,20 +1,20 @@
-<Window xmlns="https://github.com/avaloniaui"
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
         xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.PackageDetailsWindow"
         x:DataType="vm:PackageDetailsViewModel"
-        Width="1000" MinWidth="640"
-        Height="720" MinHeight="420"
-        CanResize="True"
-        ShowInTaskbar="False"
+        MaxWidth="1000"
+        MinWidth="640"
+        MaxHeight="720"
+        MinHeight="420"
         Background="{DynamicResource AppDialogBackground}"
-        WindowStartupLocation="CenterOwner"
-        Title="{Binding PackageName}">
+        Title="{t:Translate Package details}">
 
-    <Window.Styles>
+    <dialogs:ImmersiveDialog.Styles>
         <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
             <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
         </Style>
@@ -97,7 +97,7 @@
         <Style Selector="Border#ScreenshotsBorder:pointerover Button.carousel-nav">
             <Setter Property="Opacity" Value="0.9"/>
         </Style>
-    </Window.Styles>
+    </dialogs:ImmersiveDialog.Styles>
 
     <Grid>
         <!-- Loading indicator across the very top -->
@@ -255,9 +255,10 @@
                                 x:Name="ScreenshotsBorder"
                                 Height="320">
                             <Panel>
-                                <!-- Black letterbox only behind actual screenshots; the empty-state
+                                <!-- Neutral WinUI fallback only behind actual screenshots; the empty-state
                                      banner below composites over the themed window background instead. -->
-                                <Border Background="#000000" IsVisible="{Binding HasScreenshots}"/>
+                                <Border Background="{DynamicResource ScreenshotLetterboxBackground}"
+                                        IsVisible="{Binding HasScreenshots}"/>
                                 <Carousel x:Name="ScreenshotsCarousel"
                                           IsVisible="{Binding HasScreenshots}"
                                           ItemsSource="{Binding Screenshots}"
@@ -337,4 +338,4 @@
             </Grid>
         </ScrollViewer>
     </Grid>
-</Window>
+</dialogs:ImmersiveDialog>

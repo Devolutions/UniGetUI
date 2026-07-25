@@ -13,6 +13,7 @@ namespace UniGetUI.Avalonia.Views;
 public partial class SidebarView : BaseView<SidebarViewModel>
 {
     private bool _lastNavItemSelectionWasAuto;
+    private bool _isMoreFlyoutOpen;
 
     /// <summary>
     /// Whether the nav item text labels are shown. False renders an icon-only rail; true renders the
@@ -31,6 +32,15 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     public SidebarView()
     {
         InitializeComponent();
+        if (FlyoutBase.GetAttachedFlyout(MoreNavBtn) is { } moreFlyout)
+        {
+            moreFlyout.Opened += (_, _) => _isMoreFlyoutOpen = true;
+            moreFlyout.Closed += (_, _) =>
+            {
+                _isMoreFlyoutOpen = false;
+                SyncListBoxSelection(ViewModel?.SelectedPageType ?? PageType.Null);
+            };
+        }
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -50,6 +60,9 @@ public partial class SidebarView : BaseView<SidebarViewModel>
 
     private void SyncListBoxSelection(PageType page)
     {
+        if (_isMoreFlyoutOpen)
+            return;
+
         // Selection lives in two ListBoxes (main + footer); only one may hold a selection at a time.
         _lastNavItemSelectionWasAuto = true;
         NavListBox.SelectedItem = page switch
@@ -82,8 +95,8 @@ public partial class SidebarView : BaseView<SidebarViewModel>
 
         if (tag == "More")
         {
-            // Not a page: re-sync selection so "More" doesn't stay highlighted, then open its menu.
-            SyncListBoxSelection(ViewModel?.SelectedPageType ?? PageType.Null);
+            // Keep the item selected until the menu closes so its accent pill remains anchored.
+            _isMoreFlyoutOpen = true;
             FlyoutBase.ShowAttachedFlyout(item);
             return;
         }

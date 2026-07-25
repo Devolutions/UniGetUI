@@ -3,14 +3,13 @@ using Avalonia.Threading;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
-public partial class ResetSettingsDialog : Window
+public partial class ResetSettingsDialog : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     public bool Confirmed { get; private set; }
 
     public ResetSettingsDialog()
     {
         InitializeComponent();
-        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         CancelButton.Click += (_, _) => Close();
         ResetButton.Click += (_, _) => { Confirmed = true; Close(); };
     }

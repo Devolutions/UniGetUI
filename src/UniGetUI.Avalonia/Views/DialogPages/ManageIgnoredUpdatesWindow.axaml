@@ -1,20 +1,21 @@
-<Window xmlns="https://github.com/avaloniaui"
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
+        xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.ManageIgnoredUpdatesWindow"
         x:DataType="vm:ManageIgnoredUpdatesViewModel"
-        Width="850" MinWidth="520"
-        Height="500" MinHeight="280"
-        CanResize="True"
-        ShowInTaskbar="False"
-        Background="{DynamicResource AppDialogBackground}"
-        WindowStartupLocation="CenterOwner"
-        Title="{Binding Title}">
+        Title="{Binding Title}"
+        MaxWidth="850"
+        MinWidth="520"
+        MaxHeight="500"
+        MinHeight="280"
+        HorizontalContentAlignment="Stretch"
+        VerticalContentAlignment="Stretch">
 
-    <Window.Styles>
+    <dialogs:ImmersiveDialog.Styles>
         <!-- WinUI-style row hover highlight. The base Background must be set via a style
              (not a local value) so the :pointerover setter can override it. -->
         <Style Selector="Border.row">
@@ -23,15 +24,14 @@
         <Style Selector="Border.row:pointerover">
             <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
         </Style>
-    </Window.Styles>
+    </dialogs:ImmersiveDialog.Styles>
 
     <Grid RowDefinitions="Auto,*"
-          Margin="16"
-          RowSpacing="8">
+          Margin="20"
+          RowSpacing="12">
 
-        <!-- ── Header: description + Reset list button (title is carried by the window caption) ── -->
+        <!-- ── Description + Reset list button ── -->
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-
             <TextBlock Text="{Binding Description}"
                        TextWrapping="Wrap"
                        VerticalAlignment="Center"
@@ -78,7 +78,7 @@
         </Grid>
 
         <!-- ── Package list (mirrors the WinUI ItemsView: flat rows, no header) ── -->
-        <Border Grid.Row="1" Margin="0,4,0,0" CornerRadius="8"
+        <Border Grid.Row="1" CornerRadius="8"
                 BorderThickness="1"
                 BorderBrush="{DynamicResource AppBorderBrush}"
                 Background="{DynamicResource AppDialogPanelBackground}">
@@ -170,4 +170,4 @@
         </Border>
 
     </Grid>
-</Window>
+</dialogs:ImmersiveDialog>

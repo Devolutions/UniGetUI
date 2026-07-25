@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.PackageEngine.Enums;
@@ -8,7 +7,7 @@ using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.Avalonia.Views;
 
-public partial class InstallOptionsWindow : Window
+public partial class InstallOptionsWindow : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     public bool ShouldProceedWithOperation =>
         ((InstallOptionsViewModel)DataContext!).ShouldProceedWithOperation;
@@ -19,11 +18,6 @@ public partial class InstallOptionsWindow : Window
         DataContext = vm;
         InitializeComponent();
 
-        // Drop the OS title-bar strip but keep the system min/close buttons, extending the
-        // client area into the title-bar region (matches the Manage-ignored-updates window).
-        ExtendClientAreaToDecorationsHint = true;
-        ExtendClientAreaTitleBarHeightHint = -1;
-
         vm.CloseRequested += (_, _) => Close();
     }
 
@@ -33,11 +27,4 @@ public partial class InstallOptionsWindow : Window
         Dispatcher.UIThread.Post(OptionsControl.FocusProfileSelector, DispatcherPriority.Background);
     }
 
-    // The client area is extended over the title bar, so provide window dragging from the
-    // transparent strip at the top.
-    private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            BeginMoveDrag(e);
-    }
 }

@@ -366,13 +366,10 @@ public partial class PackagesPageViewModel : ViewModelBase
     {
         object? bgResource = null;
         Application.Current?.Resources.TryGetResource("AppWindowBackground", Application.Current.ActualThemeVariant, out bgResource);
-        var dialog = new Window
+        var dialog = new UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
         {
-            Width = 460,
-            Height = 180,
-            CanResize = false,
-            ShowInTaskbar = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            MaxWidth = 460,
+            MaxHeight = 180,
             Title = title,
             Background = bgResource as IBrush,
         };

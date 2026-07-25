@@ -8,7 +8,7 @@ using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
-internal sealed partial class CrashReportWindow : Window
+internal sealed partial class CrashReportWindow : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     private readonly string _crashReport;
 
@@ -16,7 +16,6 @@ internal sealed partial class CrashReportWindow : Window
     {
         _crashReport = crashReport;
         InitializeComponent();
-        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         CrashReportText.Text = crashReport;
         DontSendButton.Content = CoreTools.Translate("Don't Send");
         SendButton.Content = CoreTools.Translate("Send Report");

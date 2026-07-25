@@ -29,6 +29,7 @@
       <!-- Header as one inset, rounded bar (WinUI-style): rounded + inset ends, no borders/separators -->
       <Style Selector="DataGridColumnHeader">
          <Setter Property="Background" Value="{DynamicResource PackageListHeaderBackground}"/>
+         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
          <Setter Property="HorizontalContentAlignment" Value="Center"/>
          <Setter Property="AreSeparatorsVisible" Value="False"/>
          <Setter Property="SeparatorBrush" Value="Transparent"/>

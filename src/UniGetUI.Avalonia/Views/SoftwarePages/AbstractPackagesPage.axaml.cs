@@ -49,7 +49,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         ViewModel.ManageIgnoredRequested += async () =>
         {
             if (GetMainWindow() is { } win)
-                await new ManageIgnoredUpdatesWindow(win).ShowDialog(win);
+                await win.ShowManageIgnoredUpdatesAsync();
         };
 
         // "New version" sort option is only relevant on the updates page

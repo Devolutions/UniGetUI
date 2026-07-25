@@ -1,42 +1,34 @@
-<Window xmlns="https://github.com/avaloniaui"
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
     xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.ManageDesktopShortcutsWindow"
         x:DataType="vm:ManageDesktopShortcutsViewModel"
-        Width="950" MinWidth="560"
-        Height="520" MinHeight="300"
-        CanResize="True"
-        ShowInTaskbar="False"
+        MaxWidth="950"
+        MinWidth="560"
+        MaxHeight="520"
+        MinHeight="300"
         Background="{DynamicResource AppDialogBackground}"
-        WindowStartupLocation="CenterOwner"
         Title="{t:Translate Text='Manage shortcuts'}">
 
-    <Window.Styles>
+    <dialogs:ImmersiveDialog.Styles>
         <Style Selector="DataGridCell:current /template/ Grid#FocusVisual">
             <Setter Property="IsVisible" Value="False"/>
         </Style>
         <Style Selector="DataGridCell:current">
             <Setter Property="BorderBrush" Value="Transparent"/>
         </Style>
-    </Window.Styles>
+    </dialogs:ImmersiveDialog.Styles>
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto"
+    <Grid RowDefinitions="Auto,*,Auto"
           Margin="16"
           RowSpacing="8">
 
-        <!-- ── Title ── -->
-        <TextBlock Grid.Row="0"
-                   Text="{t:Translate Text='Manage shortcuts'}"
-                   FontSize="20"
-                   FontWeight="SemiBold"
-                   Margin="0,0,0,4"
-                   automation:AutomationProperties.HeadingLevel="1"/>
-
         <!-- ── Header: description + Reset list button ── -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
 
             <StackPanel Orientation="Vertical" Spacing="2">
                 <TextBlock Text="{t:Translate Text='UniGetUI has detected the following desktop shortcuts which can be removed automatically on future upgrades'}"
@@ -92,7 +84,7 @@
         </Grid>
 
         <!-- ── Shortcut list ── -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="1"
                 CornerRadius="8"
                 BorderThickness="1"
                 BorderBrush="{DynamicResource AppBorderBrush}"
@@ -196,7 +188,7 @@
         </Border>
 
         <!-- ── Footer: auto-delete toggle + save button ── -->
-        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4,0,0">
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4,0,0">
 
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                 <ToggleSwitch IsChecked="{Binding AutoDelete}"
@@ -220,4 +212,4 @@
         </Grid>
 
     </Grid>
-</Window>
+</dialogs:ImmersiveDialog>

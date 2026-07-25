@@ -347,13 +347,11 @@ public partial class BackupViewModel : ViewModelBase, IDisposable
             Width = 360,
         };
 
-        var dialog = new Window
+        var dialog = new UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
         {
             Title = CoreTools.Translate("Select backup"),
-            Width = 440,
-            Height = 160,
-            CanResize = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            MaxWidth = 440,
+            MaxHeight = 160,
             Content = new StackPanel
             {
                 Margin = new Thickness(20),

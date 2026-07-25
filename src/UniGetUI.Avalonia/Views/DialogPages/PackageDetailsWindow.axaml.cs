@@ -24,7 +24,7 @@ using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Views;
 
-public partial class PackageDetailsWindow : Window
+public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     private const double WideThreshold = 950;
     private const string ContributeUrl = "https://github.com/Devolutions/UniGetUI";
@@ -44,7 +44,6 @@ public partial class PackageDetailsWindow : Window
         _vm = new PackageDetailsViewModel(package, operation);
         DataContext = _vm;
         InitializeComponent();
-        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
 
         // Honor the OS "reduce motion" preference: drop the screenshot slide animation.
         if (MotionPreference.ReducedMotion)

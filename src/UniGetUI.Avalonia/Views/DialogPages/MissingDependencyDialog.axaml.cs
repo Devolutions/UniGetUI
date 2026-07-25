@@ -10,7 +10,7 @@ using UniGetUI.PackageEngine.Classes.Manager.Classes;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
-public partial class MissingDependencyDialog : Window
+public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     private readonly ManagerDependency _dep;
     private readonly int _current;
@@ -26,7 +26,6 @@ public partial class MissingDependencyDialog : Window
         _total = total;
 
         InitializeComponent();
-        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
 
         bool notFirstTime =
             Settings.GetDictionaryItem<string, string>(Settings.K.DependencyManagement, dep.Name)
@@ -36,7 +35,6 @@ public partial class MissingDependencyDialog : Window
         Title = CoreTools.Translate("Missing dependency")
             + (total > 1 ? $" ({current}/{total})" : "");
 
-        TitleBlock.Text = Title;
         DescBlock.Text = CoreTools.Translate(
             "UniGetUI requires {0} to operate, but it was not found on your system.", dep.Name);
         InfoBlock.Text = CoreTools.Translate(

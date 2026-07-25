@@ -26,6 +26,8 @@ public partial class InfoBar : UserControl
     }
 
     private InfoBarViewModel? _vm;
+    private IDisposable? _severityStripBinding;
+    private IDisposable? _severityIconBinding;
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
@@ -53,17 +55,19 @@ public partial class InfoBar : UserControl
         BodyBorder.Classes.Set("severity-warning", severity == InfoBarSeverity.Warning);
         BodyBorder.Classes.Set("severity-info", severity == InfoBarSeverity.Informational);
 
-        // Strip colour (solid, not theme-sensitive)
-        var stripColor = severity switch
+        _severityStripBinding?.Dispose();
+        _severityIconBinding?.Dispose();
+        _severityStripBinding = null;
+        _severityIconBinding = null;
+
+        Color? stripColor = severity switch
         {
             InfoBarSeverity.Warning => Color.Parse("#F7A800"),
             InfoBarSeverity.Error => Color.Parse("#C42B1C"),
             InfoBarSeverity.Success => Color.Parse("#107C10"),
-            _ => Color.Parse("#0078D4"),
+            _ => null,
         };
-        SeverityStrip.Background = new SolidColorBrush(stripColor);
 
-        // Icon (shared SVG asset, tinted with the severity colour)
         SeverityIcon.Path = severity switch
         {
             InfoBarSeverity.Warning => WarningIcon,
@@ -71,6 +75,23 @@ public partial class InfoBar : UserControl
             InfoBarSeverity.Success => SuccessIcon,
             _ => InfoIcon,
         };
-        SeverityIcon.Foreground = new SolidColorBrush(stripColor);
+
+        if (stripColor is { } color)
+        {
+            var brush = new SolidColorBrush(color);
+            SeverityStrip.Background = brush;
+            SeverityIcon.Foreground = brush;
+        }
+        else
+        {
+            SeverityStrip.ClearValue(Border.BackgroundProperty);
+            SeverityIcon.ClearValue(ForegroundProperty);
+            _severityStripBinding = SeverityStrip.Bind(
+                Border.BackgroundProperty,
+                this.GetResourceObservable("SystemAccentColor"));
+            _severityIconBinding = SeverityIcon.Bind(
+                ForegroundProperty,
+                this.GetResourceObservable("SystemAccentColor"));
+        }
     }
 }

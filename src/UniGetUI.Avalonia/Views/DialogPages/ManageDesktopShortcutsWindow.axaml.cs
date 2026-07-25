@@ -5,14 +5,13 @@ using UniGetUI.Avalonia.ViewModels;
 
 namespace UniGetUI.Avalonia.Views;
 
-public partial class ManageDesktopShortcutsWindow : Window
+public partial class ManageDesktopShortcutsWindow : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     public ManageDesktopShortcutsWindow(System.Collections.Generic.IReadOnlyList<string>? shortcuts = null)
     {
         var vm = new ManageDesktopShortcutsViewModel(shortcuts);
         DataContext = vm;
         InitializeComponent();
-        UniGetUI.Avalonia.Infrastructure.MicaWindowHelper.Apply(this);
         vm.CloseRequested += (_, _) => Close();
     }
 

@@ -1,28 +1,20 @@
-<Window xmlns="https://github.com/avaloniaui"
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
         xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.IntegrityViolationDialog"
         Title="{t:Translate Integrity violation}"
-        Width="520"
-        SizeToContent="Height"
+        MaxWidth="520"
         MinHeight="200"
-        CanResize="False"
-        ShowInTaskbar="False"
-        Background="{DynamicResource AppDialogBackground}"
-        WindowStartupLocation="CenterOwner">
+
+        Background="{DynamicResource AppDialogBackground}">
 
     <Grid Margin="20"
-          RowDefinitions="Auto,Auto,Auto"
+          RowDefinitions="Auto,Auto"
           RowSpacing="12">
 
-        <TextBlock Grid.Row="0"
-                   Text="{t:Translate Integrity violation}"
-                   FontSize="16"
-                   FontWeight="SemiBold"
-                   automation:AutomationProperties.HeadingLevel="1"/>
-
-        <StackPanel Grid.Row="1" Spacing="8">
+        <StackPanel Grid.Row="0" Spacing="8">
             <TextBlock Text="{t:Translate UniGetUI or some of its components are missing or corrupt. It is strongly recommended to reinstall UniGetUI to adress the situation.}"
                        TextWrapping="Wrap"
                        FontWeight="SemiBold"
@@ -36,7 +28,7 @@
         </StackPanel>
 
         <Button x:Name="CloseButton"
-                Grid.Row="2"
+                Grid.Row="1"
                 Content="{t:Translate Close}"
                 MinWidth="90"
                 HorizontalAlignment="Right"
@@ -45,4 +37,4 @@
 
     </Grid>
 
-</Window>
+</dialogs:ImmersiveDialog>

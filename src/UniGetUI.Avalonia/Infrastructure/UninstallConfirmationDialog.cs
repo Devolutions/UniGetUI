@@ -22,15 +22,10 @@ internal static class UninstallConfirmationDialog
         }
 
         bool isConfirmed = false;
-        var dialog = new Window
+        var dialog = new UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
         {
-            Width = packages.Count == 1 ? 520 : 560,
-            Height = packages.Count == 1 ? 220 : 380,
-            MinWidth = 420,
-            MinHeight = packages.Count == 1 ? 220 : 300,
-            CanResize = packages.Count > 1,
-            ShowInTaskbar = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            MaxWidth = packages.Count == 1 ? 520 : 560,
+            MaxHeight = packages.Count == 1 ? 220 : 380,
             Title = CoreTools.Translate("Are you sure?"),
         };
 

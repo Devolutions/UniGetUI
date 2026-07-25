@@ -184,8 +184,7 @@
                     </StackPanel>
                 </ListBoxItem>
 
-                <!-- More: a nav item visually, but it opens a menu instead of selecting a page,
-                     so code-behind shows its flyout and re-syncs selection rather than highlighting it. -->
+                <!-- More is kept selected while its flyout is open so its navigation pill remains visible. -->
                 <ListBoxItem x:Name="MoreNavBtn" Tag="More" Classes="nav-item" Padding="4,2" CornerRadius="6"
                              automation:AutomationProperties.Name="{t:Translate More}"
                              ToolTip.Tip="{t:Translate More}">

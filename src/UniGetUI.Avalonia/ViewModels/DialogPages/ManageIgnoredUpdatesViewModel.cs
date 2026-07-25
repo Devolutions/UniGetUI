@@ -11,8 +11,6 @@ namespace UniGetUI.Avalonia.ViewModels;
 
 public partial class ManageIgnoredUpdatesViewModel : ObservableObject
 {
-    public event EventHandler? CloseRequested;
-
     public string Title { get; } = CoreTools.Translate("Manage ignored updates");
     public string Description { get; } = CoreTools.Translate("The packages listed here won't be taken in account when checking for updates. Double-click them or click the button on their right to stop ignoring their updates.");
     public string ResetLabel { get; } = CoreTools.Translate("Reset list");

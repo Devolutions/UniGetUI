@@ -248,34 +248,23 @@
     </Style>
 
     <!-- Sidebar navigation items: WinUI NavigationViewItem-style selection.
-         Fluent's default fills the selected item with the accent colour; instead use a subtle
-         neutral fill plus a vertical accent pill on the left edge. The content presenter is named
-         ContentHost (not PART_ContentPresenter) so the base theme's accent-fill setters don't apply. -->
+         The accent pill is a single moving overlay owned by SidebarView. The content presenter is
+         named ContentHost (not PART_ContentPresenter) so the base theme's accent-fill setters don't
+         apply. -->
     <Style Selector="ListBoxItem.nav-item">
         <Setter Property="Margin" Value="0,2"/>
         <Setter Property="Template">
             <ControlTemplate>
-                <Panel>
-                    <ContentPresenter Name="ContentHost"
-                                      Background="{TemplateBinding Background}"
-                                      BorderBrush="{TemplateBinding BorderBrush}"
-                                      BorderThickness="{TemplateBinding BorderThickness}"
-                                      CornerRadius="{TemplateBinding CornerRadius}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Content="{TemplateBinding Content}"
-                                      Padding="{TemplateBinding Padding}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"/>
-                    <Border Name="SelectionPill"
-                            Width="3" Height="16" CornerRadius="1.5"
-                            Background="{DynamicResource AccentFillColorDefaultBrush}"
-                            HorizontalAlignment="Left" VerticalAlignment="Center"
-                            Opacity="0">
-                        <Border.Transitions>
-                            <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.1"/></Transitions>
-                        </Border.Transitions>
-                    </Border>
-                </Panel>
+                <ContentPresenter Name="ContentHost"
+                                  Background="{TemplateBinding Background}"
+                                  BorderBrush="{TemplateBinding BorderBrush}"
+                                  BorderThickness="{TemplateBinding BorderThickness}"
+                                  CornerRadius="{TemplateBinding CornerRadius}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  Content="{TemplateBinding Content}"
+                                  Padding="{TemplateBinding Padding}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"/>
             </ControlTemplate>
         </Setter>
     </Style>
@@ -291,10 +280,6 @@
     <Style Selector="ListBoxItem.nav-item:selected:pointerover /template/ ContentPresenter#ContentHost">
         <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
     </Style>
-    <Style Selector="ListBoxItem.nav-item:selected /template/ Border#SelectionPill">
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-
     <!-- View-mode segmented selector (List / Grid / Icons): WinUI Segmented-style selection — subtle
          fill plus an accent underline under the selected segment, not Fluent's full-accent fill. -->
     <Style Selector="ListBoxItem.segment-item">

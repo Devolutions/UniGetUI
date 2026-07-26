@@ -13,7 +13,7 @@
              x:DataType="vm:SidebarViewModel"
              MinWidth="64">
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid x:Name="SidebarLayout" RowDefinitions="*,Auto">
 
         <!-- Main nav items -->
         <ListBox x:Name="NavListBox"
@@ -233,5 +233,16 @@
             </ListBox>
 
         </StackPanel>
+
+        <!-- One shared indicator moves between items so selection changes use WinUI's
+             leading/trailing-edge stretch instead of fading separate item indicators. -->
+        <Canvas Grid.RowSpan="2" IsHitTestVisible="False">
+            <Border x:Name="NavigationSelectionPill"
+                    Width="3"
+                    Height="16"
+                    CornerRadius="1.5"
+                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                    IsVisible="False"/>
+        </Canvas>
     </Grid>
 </UserControl>

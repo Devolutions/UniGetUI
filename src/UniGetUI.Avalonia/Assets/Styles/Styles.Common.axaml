@@ -152,7 +152,7 @@
                     <SolidColorBrush x:Key="AppBorderBrush"              Color="#353535"/>
                     <SolidColorBrush x:Key="AppBadgeBackground"          Color="#3C3C3C"/>
                     <!-- Dialogs -->
-                    <SolidColorBrush x:Key="AppDialogBackground"         Color="#202020"/>
+                    <SolidColorBrush x:Key="AppDialogBackground"         Color="#2C2C2C"/>
                     <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#2C2C2C"/>
                     <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#393939"/>
                     <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#1A1A1A"/>

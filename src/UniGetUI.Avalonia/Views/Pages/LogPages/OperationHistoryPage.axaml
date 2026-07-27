@@ -29,6 +29,14 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="6"/>
         </Style>
+        <!-- Keep disabled action buttons flat (no theme gray box); dim them to read as disabled. -->
+        <Style Selector="#HistoryActions Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="#HistoryActions Button:disabled">
+            <Setter Property="Opacity" Value="0.4"/>
+        </Style>
 
         <!-- DataGrid styled to match the package list (rounded inset header bar, no gridlines) -->
         <Style Selector="DataGridCell:current /template/ Grid#FocusVisual">

@@ -167,8 +167,8 @@ namespace UniGetUI.PackageEngine.Operations
 
         /// <summary>
         /// Override to intercept operations and route through the Devolutions Agent broker
-        /// when the UseAgentBroker setting is enabled and the manager supports it (WinGet only for now).
-        /// Falls back to process-based execution otherwise.
+        /// when the UseAgentBroker setting is enabled and the manager is supported by the
+        /// broker protocol. Falls back to process-based execution otherwise.
         /// </summary>
         protected override async Task<OperationVeredict> PerformOperation()
         {
@@ -193,14 +193,14 @@ namespace UniGetUI.PackageEngine.Operations
         }
 
         /// <summary>
-        /// Whether a package operation is eligible for broker routing. Only WinGet is
-        /// supported in this iteration, and virtual/local sources are excluded: the agent
-        /// command builder always emits --source from the request, while the local WinGet
+        /// Whether a package operation is eligible for broker routing. The manager must be
+        /// mappable to a broker protocol manager, and virtual/local sources are excluded:
+        /// the agent command builder always emits --source from the request, while the local
         /// path deliberately omits it for virtual sources (e.g. the Local PC source).
         /// </summary>
         private static bool IsBrokerEligible(IPackage package) =>
             Settings.Get(Settings.K.UseAgentBroker)
-            && IsWinGetManager(package.Manager)
+            && BrokerRequestBuilder.SupportsManager(package.Manager.Name)
             && !package.Source.IsVirtualManager;
 
         /// <summary>
@@ -381,9 +381,10 @@ namespace UniGetUI.PackageEngine.Operations
 
         /// <summary>
         /// Resolves the install location to send in a broker request, matching the local
-        /// execution path: for updates this uses the WinGet portable-install safeguard
+        /// execution path: for WinGet updates this uses the portable-install safeguard
         /// (registry-detected location, saved value only under WinGetForceLocationOnUpdate);
-        /// for installs the configured custom location; for uninstalls nothing.
+        /// for installs (and non-WinGet updates) the configured custom location; for
+        /// uninstalls nothing.
         /// </summary>
         private string? GetBrokerEffectiveInstallLocation()
         {
@@ -391,10 +392,12 @@ namespace UniGetUI.PackageEngine.Operations
             {
                 case OperationType.Update:
 #if WINDOWS
-                    return WinGetPkgOperationHelper.GetEffectiveUpdateLocation(Package, Options);
-#else
-                    return null;
+                    if (IsWinGetManager(Package.Manager))
+                    {
+                        return WinGetPkgOperationHelper.GetEffectiveUpdateLocation(Package, Options);
+                    }
 #endif
+                    goto case OperationType.Install;
                 case OperationType.Install:
                     return string.IsNullOrWhiteSpace(Options.CustomInstallLocation)
                         ? null

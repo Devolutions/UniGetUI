@@ -50,17 +50,19 @@ public static class OperationHistoryStore
         return _cache;
     }
 
-    private static void SaveUnlocked()
+    private static bool SaveUnlocked()
     {
         try
         {
             string json = JsonSerializer.Serialize(_cache ?? [], OperationHistoryJsonContext.Default.ListOperationHistoryRecord);
             File.WriteAllText(FilePath, json);
+            return true;
         }
         catch (Exception ex)
         {
             Logger.Warn("Failed to persist the operation history store");
             Logger.Warn(ex);
+            return false;
         }
     }
 
@@ -126,30 +128,37 @@ public static class OperationHistoryStore
             if (!File.Exists(legacyPath)) return;
 
             string content = File.ReadAllText(legacyPath);
-            if (!string.IsNullOrWhiteSpace(content))
+            if (string.IsNullOrWhiteSpace(content))
             {
-                var record = new OperationHistoryRecord
-                {
-                    Id = Guid.NewGuid().ToString("N"),
-                    Kind = OperationHistoryRecord.KindLegacyLog,
-                    Status = "",
-                    TimestampUtc = DateTime.UtcNow.ToString("O"),
-                    Output = content
-                        .Split('\n')
-                        .Select(line => new OperationHistoryOutputLine
-                        {
-                            Text = line.Replace("\r", ""),
-                            Type = "Information",
-                        })
-                        .ToList(),
-                };
-                cache.Add(record);
-                SaveUnlocked();
-                Logger.Info($"Imported {record.Output.Count} lines of legacy operation history");
+                // Nothing to migrate; drop the empty legacy file so the check doesn't repeat.
+                File.Delete(legacyPath);
+                return;
             }
 
-            // Remove the old file whether or not it had content, so the import runs only once.
-            File.Delete(legacyPath);
+            var record = new OperationHistoryRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Kind = OperationHistoryRecord.KindLegacyLog,
+                Status = "",
+                TimestampUtc = DateTime.UtcNow.ToString("O"),
+                Output = content
+                    .Split('\n')
+                    .Select(line => new OperationHistoryOutputLine
+                    {
+                        Text = line.Replace("\r", ""),
+                        Type = "Information",
+                    })
+                    .ToList(),
+            };
+            cache.Add(record);
+
+            // Only delete the user's only history copy after a verifiably successful save. If the save
+            // fails (full disk, permissions), keep the legacy file and retry the import next launch.
+            if (SaveUnlocked())
+            {
+                Logger.Info($"Imported {record.Output.Count} lines of legacy operation history");
+                File.Delete(legacyPath);
+            }
         }
         catch (Exception ex)
         {

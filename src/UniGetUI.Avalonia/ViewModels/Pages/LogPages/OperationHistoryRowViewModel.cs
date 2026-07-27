@@ -32,7 +32,7 @@ public partial class OperationHistoryRowViewModel : ViewModelBase
         _ => Record.Kind,
     };
 
-    public string KindIconPath => SymbolBase + Record.Kind switch
+    public string KindIconPath => SymbolBase + (Record.Kind switch
     {
         "install-package" => "installed.svg",
         "update-package" => "update.svg",
@@ -40,7 +40,7 @@ public partial class OperationHistoryRowViewModel : ViewModelBase
         "download-package" => "download.svg",
         "add-source" or "remove-source" => "Sources.svg",
         _ => "history.svg",
-    };
+    });
 
     public string VersionChange
     {
@@ -70,12 +70,12 @@ public partial class OperationHistoryRowViewModel : ViewModelBase
         _ => Record.Status,
     };
 
-    public string StatusIconPath => SymbolBase + Record.Status switch
+    public string StatusIconPath => SymbolBase + (Record.Status switch
     {
         OperationHistoryRecord.StatusSucceeded => "success_round.svg",
         OperationHistoryRecord.StatusFailed => "cross.svg",
         _ => "info_round.svg",
-    };
+    });
 
     public string StatusTooltip => Record.ExitCode is { } code
         ? CoreTools.Translate("Exit code: {0}", code)

@@ -29,6 +29,7 @@ public abstract class AbstractProcessOperation : AbstractOperation
         {
             DisposeProcess();
             ProcessKilled = false;
+            LastReturnCode = null;
             process = new();
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.RedirectStandardOutput = true;

@@ -24,16 +24,23 @@ internal static class OperationHistoryActionService
         => _packageKinds.Contains(record.Kind) && ResolveManager(record) is not null;
 
     public static bool CanRevert(OperationHistoryRecord record)
-        => _packageKinds.Contains(record.Kind) && ResolveManager(record) is not null;
+        => _packageKinds.Contains(record.Kind)
+           && record.Status == OperationHistoryRecord.StatusSucceeded
+           && ResolveManager(record) is not null;
 
-    public static Task ReRunAsync(OperationHistoryRecord record)
+    public static async Task ReRunAsync(OperationHistoryRecord record)
     {
         var (manager, source) = BuildContext(record);
         if (manager is null || source is null)
-            return Task.CompletedTask;
+            return;
+
+        // Re-running an uninstall removes a currently-installed package, so confirm first;
+        // the other kinds are non-destructive repeats.
+        if (record.Kind == "uninstall-package" && !await ConfirmationDialog.ShowAsync(
+                CoreTools.Translate("This will uninstall {0}. Continue?", DisplayName(record))))
+            return;
 
         Launch(BuildSameKindOperation(record, manager, source, LoadOptions(record)));
-        return Task.CompletedTask;
     }
 
     /// <summary>Retry modes offered for a failed package operation, mirroring the live-operations retry menu.</summary>

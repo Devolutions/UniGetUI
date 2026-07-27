@@ -33,6 +33,7 @@ public partial class Settings
             if (
                 new[]
                 {
+                    "OperationHistory",
                     "OperationHistory.json",
                     "WinGetAlreadyUpgradedPackages.json",
                     "WinGetUpgradeAttempts.json",
@@ -57,6 +58,7 @@ public partial class Settings
             if (
                 new[]
                 {
+                    "OperationHistory",
                     "OperationHistory.json",
                     "WinGetAlreadyUpgradedPackages.json",
                     "WinGetUpgradeAttempts.json",

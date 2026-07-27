@@ -232,7 +232,7 @@
                         <ComboBox MinWidth="130"
                                   ItemsSource="{Binding ManagerOptions}"
                                   SelectedItem="{Binding SelectedManager}"
-                                  automation:AutomationProperties.Name="{t:Translate Filter by source}"/>
+                                  automation:AutomationProperties.Name="{t:Translate Filter by manager}"/>
                     </StackPanel>
                 </Grid>
             </Grid>

@@ -81,10 +81,15 @@ public sealed class OperationHistoryRecord
                     record.ManagerName = pop.Package.Manager.Id;
                     record.SourceName = pop.Package.Source.Name;
                     record.Role = (int)pop.Role;
-                    record.VersionBefore = pop.Package.VersionString;
-                    record.VersionAfter = pop.Role is OperationType.Update
-                        ? pop.Package.NewVersionString
-                        : pop.Package.VersionString;
+                    // Only populate the side of the transition that actually existed: an install has no
+                    // "before" version and an uninstall has no "after" version.
+                    record.VersionBefore = pop.Role is OperationType.Install ? "" : pop.Package.VersionString;
+                    record.VersionAfter = pop.Role switch
+                    {
+                        OperationType.Update => pop.Package.NewVersionString,
+                        OperationType.Uninstall => "",
+                        _ => pop.Package.VersionString,
+                    };
                     record.OptionsJson = pop.Options.AsJsonString();
                     break;
                 case DownloadOperation dop:

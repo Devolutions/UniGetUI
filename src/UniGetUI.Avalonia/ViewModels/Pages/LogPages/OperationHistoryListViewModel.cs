@@ -58,6 +58,8 @@ public partial class OperationHistoryListViewModel : ViewModelBase
         KindOptions.Add(new() { Key = "update-package", Label = CoreTools.Translate("Update") });
         KindOptions.Add(new() { Key = "uninstall-package", Label = CoreTools.Translate("Uninstall") });
         KindOptions.Add(new() { Key = "download-package", Label = CoreTools.Translate("Download") });
+        KindOptions.Add(new() { Key = "add-source", Label = CoreTools.Translate("Add source") });
+        KindOptions.Add(new() { Key = "remove-source", Label = CoreTools.Translate("Remove source") });
 
         _selectedStatus = StatusOptions[0];
         _selectedKind = KindOptions[0];
@@ -96,7 +98,7 @@ public partial class OperationHistoryListViewModel : ViewModelBase
         string? previous = SelectedManager?.Key;
 
         ManagerOptions.Clear();
-        ManagerOptions.Add(new() { Key = "", Label = CoreTools.Translate("All sources") });
+        ManagerOptions.Add(new() { Key = "", Label = CoreTools.Translate("All managers") });
         foreach (var manager in _all.Select(r => r.Record.ManagerName)
                      .Where(m => m.Length > 0)
                      .Distinct()

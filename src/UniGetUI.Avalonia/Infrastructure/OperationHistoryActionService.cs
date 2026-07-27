@@ -98,53 +98,53 @@ internal static class OperationHistoryActionService
         switch (record.Kind)
         {
             case "install-package":
-            {
-                // Undo an install by uninstalling the version that got installed.
-                if (!await ConfirmationDialog.ShowAsync(
-                        CoreTools.Translate("This will uninstall {0}. Continue?", name)))
-                    return;
+                {
+                    // Undo an install by uninstalling the version that got installed.
+                    if (!await ConfirmationDialog.ShowAsync(
+                            CoreTools.Translate("This will uninstall {0}. Continue?", name)))
+                        return;
 
-                Launch(new UninstallPackageOperation(
-                    new Package(name, record.PackageId, InstalledVersion(record), source, manager),
-                    LoadOptions(record)));
-                break;
-            }
+                    Launch(new UninstallPackageOperation(
+                        new Package(name, record.PackageId, InstalledVersion(record), source, manager),
+                        LoadOptions(record)));
+                    break;
+                }
 
             case "uninstall-package":
-            {
-                // Undo an uninstall by reinstalling the version that was removed (not destructive).
-                var options = LoadOptions(record);
-                if (record.VersionBefore.Length > 0) options.Version = record.VersionBefore;
-                Launch(new InstallPackageOperation(
-                    new Package(name, record.PackageId, record.VersionBefore, source, manager), options));
-                break;
-            }
+                {
+                    // Undo an uninstall by reinstalling the version that was removed (not destructive).
+                    var options = LoadOptions(record);
+                    if (record.VersionBefore.Length > 0) options.Version = record.VersionBefore;
+                    Launch(new InstallPackageOperation(
+                        new Package(name, record.PackageId, record.VersionBefore, source, manager), options));
+                    break;
+                }
 
             case "update-package":
-            {
-                // Undo an update by downgrading. A plain install of the old version would leave the
-                // newer one in place (managers that allow side-by-side versions end up with two copies),
-                // so first uninstall the currently-installed version, then install the previous one.
-                if (!await ConfirmationDialog.ShowAsync(
-                        CoreTools.Translate("This will downgrade {0} to version {1}. Continue?", name, record.VersionBefore)))
-                    return;
+                {
+                    // Undo an update by downgrading. A plain install of the old version would leave the
+                    // newer one in place (managers that allow side-by-side versions end up with two copies),
+                    // so first uninstall the currently-installed version, then install the previous one.
+                    if (!await ConfirmationDialog.ShowAsync(
+                            CoreTools.Translate("This will downgrade {0} to version {1}. Continue?", name, record.VersionBefore)))
+                        return;
 
-                var uninstallOp = new UninstallPackageOperation(
-                    new Package(name, record.PackageId, InstalledVersion(record), source, manager),
-                    LoadOptions(record));
+                    var uninstallOp = new UninstallPackageOperation(
+                        new Package(name, record.PackageId, InstalledVersion(record), source, manager),
+                        LoadOptions(record));
 
-                var installOptions = LoadOptions(record);
-                if (record.VersionBefore.Length > 0) installOptions.Version = record.VersionBefore;
-                var installOp = new InstallPackageOperation(
-                    new Package(name, record.PackageId, record.VersionBefore, source, manager),
-                    installOptions, req: uninstallOp);
+                    var installOptions = LoadOptions(record);
+                    if (record.VersionBefore.Length > 0) installOptions.Version = record.VersionBefore;
+                    var installOp = new InstallPackageOperation(
+                        new Package(name, record.PackageId, record.VersionBefore, source, manager),
+                        installOptions, req: uninstallOp);
 
-                AvaloniaOperationRegistry.Add(uninstallOp);
-                AvaloniaOperationRegistry.Add(installOp);
-                // uninstallOp runs as installOp's prerequisite; launching it directly too would run it twice.
-                _ = installOp.MainThread();
-                break;
-            }
+                    AvaloniaOperationRegistry.Add(uninstallOp);
+                    AvaloniaOperationRegistry.Add(installOp);
+                    // uninstallOp runs as installOp's prerequisite; launching it directly too would run it twice.
+                    _ = installOp.MainThread();
+                    break;
+                }
 
             default:
                 return;

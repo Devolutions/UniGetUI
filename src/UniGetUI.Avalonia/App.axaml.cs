@@ -28,6 +28,8 @@ public partial class App : Application
     {
         AvaloniaXamlLoader.Load(this);
 
+        ButtonActivationGuard.Install();
+
         // Windows 11 Mica look is opt-in per environment: only merge the translucent
         // surface overrides when Mica is actually usable (Win11 + transparency on).
         // macOS, Linux, Windows 10, and transparency-off all keep the solid Styles.Common look.

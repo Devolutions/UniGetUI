@@ -14,6 +14,7 @@ using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Infrastructure;
@@ -116,6 +117,14 @@ internal static class AvaloniaBootstrapper
             Secrets.GetOpenSearchUsername(),
             Secrets.GetOpenSearchPassword());
         AbstractOperation.QueueDrained += (_, _) => _ = TelemetryHandler.FlushPackageEventsAsync();
+        PackageOperation.BrokerUnavailable += (_, message) =>
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (MainWindow.Instance is not { } owner) return;
+                _ = new SimpleErrorDialog(
+                    CoreTools.Translate("Agent broker unavailable"),
+                    message).ShowDialog(owner);
+            });
         _ = TelemetryHandler.InitializeAsync()
             .ContinueWith(
                 t => Logger.Error(t.Exception!),

@@ -27,6 +27,13 @@ namespace UniGetUI.PackageEngine.Operations
 {
     public abstract class PackageOperation : AbstractProcessOperation
     {
+        /// <summary>
+        /// Raised when an operation that must be routed through the Devolutions Agent broker
+        /// cannot proceed because the broker is not available. The payload is a user-facing
+        /// error message. The UI layer subscribes to this to show an error message box.
+        /// </summary>
+        public static event EventHandler<string>? BrokerUnavailable;
+
         protected List<string> DesktopShortcutsBeforeStart = [];
 
         public readonly IPackage Package;
@@ -206,13 +213,18 @@ namespace UniGetUI.PackageEngine.Operations
 
             using var client = CreateBrokerClient(RequiresAdminRights());
 
-            // Check broker availability.
+            // Check broker availability. Brokered operations must not fall back to local
+            // execution: policy evaluation and kill/pre/post actions are owned by the broker.
             if (!await client.IsAvailable(CancellationToken))
             {
-                Line("Agent broker is not available, falling back to local execution.", LineType.Information);
-                Line("Note: kill/pre/post operation actions were delegated to the broker and will not run for this fallback execution.", LineType.Information);
-                Logger.Warn("[AgentBroker] Broker not available, falling back to process execution");
-                return await base.PerformOperation();
+                Line("Agent broker is not available. The operation cannot continue.", LineType.Error);
+                Logger.Error("[AgentBroker] Broker not available, aborting operation");
+                string message = CoreTools.Translate(
+                    "The Devolutions Agent broker is not available. The operation cannot be performed. Please ensure the Devolutions Agent is installed and running.");
+                Metadata.FailureTitle = CoreTools.Translate("Agent broker unavailable");
+                Metadata.FailureMessage = message;
+                BrokerUnavailable?.Invoke(this, message);
+                return OperationVeredict.Failure;
             }
 
             // Resolve the install location the same way the local WinGet path does, so the

@@ -332,7 +332,7 @@ Source: "InstallerExtras\ForceUniGetUIPortable"; DestDir: "{app}"; Tasks: portab
 
 [Icons]
 Name: "{autostartmenu}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; AppUserModelID: "Devolutions.UniGetUI"; Tasks: regularinstall\startmenuicon
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: regularinstall\desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: regularinstall\desktopicon; Check: not CmdLineParamExists('/NoDesktopShortcut')
 
 [Run]
 ; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File -NonInteractive ""{tmp}\EnsureWinGet.ps1"""; StatusMsg: "Ensuring WinGet is properly installed... (this may take a while)"; WorkingDir: {app}; Check: not CmdLineParamExists('/NoWinGet'); Flags: runhidden

@@ -31,7 +31,8 @@ public static class OperationHistoryStore
             if (File.Exists(FilePath))
             {
                 string json = File.ReadAllText(FilePath);
-                _cache = JsonSerializer.Deserialize(json, OperationHistoryJsonContext.Default.ListOperationHistoryRecord) ?? [];
+                var typeInfo = OperationHistoryJsonContext.Default.ListOperationHistoryRecord;
+                _cache = JsonSerializer.Deserialize(json, typeInfo) ?? [];
             }
             else
             {
@@ -54,7 +55,8 @@ public static class OperationHistoryStore
     {
         try
         {
-            string json = JsonSerializer.Serialize(_cache ?? [], OperationHistoryJsonContext.Default.ListOperationHistoryRecord);
+            var typeInfo = OperationHistoryJsonContext.Default.ListOperationHistoryRecord;
+            string json = JsonSerializer.Serialize(_cache ?? [], typeInfo);
             File.WriteAllText(FilePath, json);
             return true;
         }

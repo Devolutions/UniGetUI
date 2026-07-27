@@ -1093,6 +1093,38 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void WinGetUpdateNotApplicableSuppressesPhantomUpdate()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Hugin.Hugin")
+            .WithVersion("20.25.0")
+            .WithNewVersion("2025.0.1")
+            .Build();
+
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A15002B)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.True(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+
+        var newerUpdate = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Hugin.Hugin")
+            .WithVersion("20.25.0")
+            .WithNewVersion("2026.0.0")
+            .Build();
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(newerUpdate));
+    }
+
+    [Fact]
     public void WinGetUpdateNotApplicableViaPingetRetriesWithoutScopeAndArchitecture()
     {
         // Bundled pinget signals "not applicable" with a non-zero exit code and a

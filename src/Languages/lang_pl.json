@@ -643,7 +643,7 @@
   "Do not ignore updates for this package anymore": "Nie ignoruj już aktualizacji dla tego pakietu",
   "Add packages or open an existing package bundle": "Dodaj paczki albo otwórz istniejącą paczkę pakietów",
   "Add packages to start": "Żeby zacząć, dodaj paczki",
-  "The current bundle has no packages. Add some packages to get started": "Obecna paczka nie zawiera pakietów. Dodaj pakiety aby rozpocząć.",
+  "The current bundle has no packages. Add some packages to get started": "Obecna paczka nie zawiera pakietów. Dodaj pakiety, aby rozpocząć.",
   "New": "Nowy",
   "Save as": "Zapisz jako",
   "Create .ps1 script": "Utwórz skrypt .ps1",

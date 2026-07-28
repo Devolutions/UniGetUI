@@ -67,7 +67,7 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
                 StrokeThickness = 1.5,
                 StrokeLineCap = PenLineCap.Round,
                 StrokeJoin = PenLineJoin.Round,
-                Stretch = Stretch.Uniform,
+                Stretch = Stretch.None,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
             };
@@ -101,6 +101,7 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
             {
                 OnContent = "",
                 OffContent = "",
+                HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
             };
             AutomationProperties.SetName(toggle, manager.DisplayName);
@@ -170,26 +171,28 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
         TextBlock text)
     {
         string bgKey, fgKey, label;
+        glyph.RenderTransform = null;
         if (!manager.IsEnabled())
         {
             bgKey = "WarningBannerBackground";
             fgKey = "StatusWarningForeground";
             label = CoreTools.Translate("Disabled");
-            glyph.Data = Geometry.Parse("M3.5,1 V4.2 M3.5,6 V6.1");
+            glyph.Data = Geometry.Parse("M2.5,0.9 L2.5,2.6 M2.5,3.9 L2.5,4");
         }
         else if (manager.Status.Found)
         {
             bgKey = "StatusSuccessBackground";
             fgKey = "StatusSuccessForeground";
             label = CoreTools.Translate("Ready");
-            glyph.Data = Geometry.Parse("M1,3.6 L2.8,5.4 L6,1.5");
+            glyph.Data = Geometry.Parse("M0.5,2.6 L2,4.1 L4.5,0.9");
+            glyph.RenderTransform = new TranslateTransform(0, 2);
         }
         else
         {
             bgKey = "StatusErrorBackground";
             fgKey = "StatusErrorForeground";
             label = CoreTools.Translate("Not found");
-            glyph.Data = Geometry.Parse("M1.4,1.4 L5.6,5.6 M5.6,1.4 L1.4,5.6");
+            glyph.Data = Geometry.Parse("M0.75,0.75 L4.25,4.25 M4.25,0.75 L0.75,4.25");
         }
         IBrush background = LookupBrush(bgKey);
         badge.Background = background;

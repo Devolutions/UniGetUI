@@ -922,9 +922,9 @@
                 <Button x:Name="OrderByButton"
                         Padding="10,6"
                         CornerRadius="4"
-                        Background="Transparent"
+                        Background="{DynamicResource SettingsCardBackground}"
                         BorderThickness="1"
-                        BorderBrush="{DynamicResource AppBorderBrush}"
+                        BorderBrush="Transparent"
                         automation:AutomationProperties.LabeledBy="{Binding #OrderByLabel}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="{Binding SortFieldName}" VerticalAlignment="Center" FontSize="14"/>

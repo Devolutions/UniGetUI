@@ -67,6 +67,15 @@
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#B3FFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#ECECEC"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#F6F6F6"/>
+                    <!-- WinUI dropdown controls use the same control/card fill as settings actions. -->
+                    <StaticResource x:Key="ComboBoxBackground" ResourceKey="SettingsCardBackground"/>
+                    <StaticResource x:Key="ComboBoxBackgroundUnfocused" ResourceKey="SettingsCardBackground"/>
+                    <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="SettingsCardHoverBackground"/>
+                    <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="SettingsCardHoverBackground"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="Transparent"/>
+                    <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushUnfocused" Color="Transparent"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="Transparent"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="Transparent"/>
                     <!-- Package list container; near-transparent over Mica (see Styles.WindowsMica) -->
                     <SolidColorBrush x:Key="PackageListBackground"       Color="#FBFBFB"/>
                     <!-- Column header: WinUI default button (ControlFillColorDefault fill + ControlStrokeColorDefault border) -->
@@ -176,6 +185,15 @@
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#393939"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#323232"/>
+                    <!-- WinUI dropdown controls use the same control/card fill as settings actions. -->
+                    <StaticResource x:Key="ComboBoxBackground" ResourceKey="SettingsCardBackground"/>
+                    <StaticResource x:Key="ComboBoxBackgroundUnfocused" ResourceKey="SettingsCardBackground"/>
+                    <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="SettingsCardHoverBackground"/>
+                    <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="SettingsCardHoverBackground"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="Transparent"/>
+                    <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushUnfocused" Color="Transparent"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="Transparent"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="Transparent"/>
                     <!-- Package list container; near-transparent over Mica (see Styles.WindowsMica) -->
                     <SolidColorBrush x:Key="PackageListBackground"       Color="#2D2D2D"/>
                     <!-- Column header: WinUI default button (ControlFillColorDefault fill + ControlStrokeColorDefault border) -->

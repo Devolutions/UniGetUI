@@ -135,8 +135,12 @@ internal sealed class TrayService : IDisposable
         menu.Add(installed);
         menu.Add(new NativeMenuItemSeparator());
 
+        menu.Add(new NativeMenuItem(CoreTools.Translate("UniGetUI by Devolutions"))
+        {
+            IsEnabled = false,
+        });
         menu.Add(new NativeMenuItem(
-            CoreTools.Translate("UniGetUI Version {0} by Devolutions", CoreData.VersionName))
+            $"{CoreTools.Translate("Version")} {CoreData.VersionName}")
         {
             IsEnabled = false,
         });

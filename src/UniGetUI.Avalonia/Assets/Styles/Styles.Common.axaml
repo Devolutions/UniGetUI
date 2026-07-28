@@ -13,6 +13,25 @@
                     <SolidColorBrush x:Key="AccentFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorDark2}"/>
                     <SolidColorBrush x:Key="AccentFillColorDisabledBrush"  Color="#37000000"/>
                     <SolidColorBrush x:Key="AccentFillColorSelectedTextBackgroundBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <!-- Avalonia's Fluent controls still map these states to the raw system accent.
+                         Route them through WinUI's theme-adjusted accent fill instead. -->
+                    <StaticResource x:Key="ToggleButtonBackgroundChecked" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="TextControlBorderBrushFocused" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="TextControlSelectionHighlightColor" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="TextControlButtonBackgroundPressed" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="TextControlButtonForegroundPointerOver" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="CheckBoxCheckBackgroundStrokeChecked" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="CheckBoxCheckBackgroundStrokeIndeterminate" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="CheckBoxCheckBackgroundFillChecked" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="CheckBoxCheckBackgroundFillIndeterminate" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="CalendarViewSelectedBorderBrush" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="RadioButtonOuterEllipseCheckedStroke" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="RadioButtonOuterEllipseCheckedFill" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="SliderTrackValueFill" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="SliderTrackValueFillPointerOver" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="SliderTrackValueFillPressed" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="ToggleSwitchFillOn" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="SplitButtonBackgroundChecked" ResourceKey="AccentFillColorDefaultBrush"/>
                     <!-- Subtle fills (WinUI NavigationViewItem hover/selected backgrounds) -->
                     <SolidColorBrush x:Key="SubtleFillColorSecondaryBrush" Color="#09000000"/>
                     <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush"  Color="#06000000"/>
@@ -104,6 +123,25 @@
                     <SolidColorBrush x:Key="AccentFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColor}"/>
                     <SolidColorBrush x:Key="AccentFillColorDisabledBrush"  Color="#28FFFFFF"/>
                     <SolidColorBrush x:Key="AccentFillColorSelectedTextBackgroundBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <!-- Avalonia's Fluent controls still map these states to the raw system accent.
+                         Route them through WinUI's lighter dark-theme accent fill instead. -->
+                    <StaticResource x:Key="ToggleButtonBackgroundChecked" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="TextControlBorderBrushFocused" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="TextControlSelectionHighlightColor" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="TextControlButtonBackgroundPressed" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="TextControlButtonForegroundPointerOver" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="CheckBoxCheckBackgroundStrokeChecked" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="CheckBoxCheckBackgroundStrokeIndeterminate" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="CheckBoxCheckBackgroundFillChecked" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="CheckBoxCheckBackgroundFillIndeterminate" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="CalendarViewSelectedBorderBrush" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="RadioButtonOuterEllipseCheckedStroke" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="RadioButtonOuterEllipseCheckedFill" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="SliderTrackValueFill" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="SliderTrackValueFillPointerOver" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="SliderTrackValueFillPressed" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="ToggleSwitchFillOn" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="SplitButtonBackgroundChecked" ResourceKey="AccentFillColorDefaultBrush"/>
                     <!-- Subtle fills (WinUI NavigationViewItem hover/selected backgrounds) -->
                     <SolidColorBrush x:Key="SubtleFillColorSecondaryBrush" Color="#0FFFFFFF"/>
                     <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush"  Color="#0AFFFFFF"/>

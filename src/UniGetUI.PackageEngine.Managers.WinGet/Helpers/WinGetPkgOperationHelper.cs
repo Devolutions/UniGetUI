@@ -115,14 +115,14 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
                 var effectiveLocation = GetEffectiveUpdateLocation(package, options);
                 if (effectiveLocation is not null)
                 {
-                    parameters.AddRange(["--location", $"\"{effectiveLocation}\""]);
+                    parameters.AddRange(["--location", CoreTools.EscapeCommandLineArgument(effectiveLocation)]);
                 }
             }
         }
         else if (operation is OperationType.Install)
         {
             if (options.CustomInstallLocation != "")
-                parameters.AddRange(["--location", $"\"{options.CustomInstallLocation}\""]);
+                parameters.AddRange(["--location", CoreTools.EscapeCommandLineArgument(options.CustomInstallLocation)]);
         }
 
         if (operation is not OperationType.Uninstall)

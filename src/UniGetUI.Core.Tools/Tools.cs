@@ -1012,6 +1012,41 @@ namespace UniGetUI.Core.Tools
         public static string MakeValidFileName(string name) =>
             string.Concat(name.Where(x => !_illegalPathChars.Contains(x)));
 
+        public static string EscapeCommandLineArgument(string argument)
+        {
+            StringBuilder builder = new();
+            builder.Append('"');
+            int i = 0;
+            while (i < argument.Length)
+            {
+                int backslashes = 0;
+                while (i < argument.Length && argument[i] == '\\')
+                {
+                    i++;
+                    backslashes++;
+                }
+
+                if (i == argument.Length)
+                {
+                    builder.Append('\\', backslashes * 2);
+                }
+                else if (argument[i] == '"')
+                {
+                    builder.Append('\\', backslashes * 2 + 1);
+                    builder.Append('"');
+                    i++;
+                }
+                else
+                {
+                    builder.Append('\\', backslashes);
+                    builder.Append(argument[i]);
+                    i++;
+                }
+            }
+            builder.Append('"');
+            return builder.ToString();
+        }
+
         // Safely wait for a task that may throw an exception we don't care about
         public static async void FinalizeDangerousTask(Task t)
         {

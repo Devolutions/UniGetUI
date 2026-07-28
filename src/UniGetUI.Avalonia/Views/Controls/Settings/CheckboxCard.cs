@@ -78,10 +78,23 @@ public partial class CheckboxCard : SettingsCard
     {
         set
         {
-            _warningBlock.Text = value;
+            _warningBlock.Text = FormatTwoLine(value);
             _warningBlock.IsVisible = value.Any();
             ApplyAutomationMetadata(_checkbox, _textblock.Text, _warningBlock.IsVisible ? value : null);
         }
+    }
+
+    // Splits translated warning text at the first sentence boundary so it renders
+    // on two readable lines. Handles both Latin (". ") and CJK ("。") separators.
+    private static string FormatTwoLine(string text)
+    {
+        var idx = text.IndexOf(". ", StringComparison.Ordinal);
+        if (idx >= 0)
+            return text[..(idx + 1)] + "\n" + text[(idx + 2)..];
+        idx = text.IndexOf('。');
+        if (idx >= 0)
+            return text[..(idx + 1)] + "\n" + text[(idx + 1)..];
+        return text;
     }
 
     public double WarningOpacity
@@ -141,6 +154,15 @@ public partial class CheckboxCard : SettingsCard
 
         _checkbox.IsCheckedChanged += _checkbox_Toggled;
         ApplyAutomationMetadata(_checkbox, _textblock.Text);
+
+        // The SettingsCard measures the Header with infinite width, so TextWrapping
+        // alone won't constrain the warning block. Fix it by updating MaxWidth after
+        // every layout pass, leaving room for the Content (toggle) area.
+        SizeChanged += (_, e) =>
+        {
+            var contentWidth = (Content as Control)?.Bounds.Width ?? 0;
+            _warningBlock.MaxWidth = Math.Max(100, e.NewSize.Width - contentWidth - 48);
+        };
     }
 
     protected void UpdateStateLabel()

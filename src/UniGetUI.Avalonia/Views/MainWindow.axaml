@@ -17,6 +17,9 @@
         MinWidth="700"
         MinHeight="500">
     <Window.Styles>
+        <Style Selector="Border#GlobalSearchContainer">
+            <Setter Property="Background" Value="{DynamicResource SearchBoxInactiveBackground}"/>
+        </Style>
         <!-- Global search box focus: a WinUI-style accent underline that spans the whole box
              (field + button) along the bottom, instead of recoloring the entire border. Toggled
              via styles (opacity) so the .focus-within setter wins over the base. -->
@@ -40,6 +43,7 @@
             <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
         </Style>
         <Style Selector="Border#GlobalSearchContainer:focus-within">
+            <Setter Property="Background" Value="{DynamicResource SearchBoxFocusedBackground}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource SearchBoxFocusedBorderBrush}"/>
         </Style>
         <!-- Nav flyout cross-fade. The flyout's icons sit exactly over the static rail's icons, so
@@ -522,7 +526,6 @@
                     Height="32"
                     CornerRadius="5"
                     BorderThickness="1"
-                    Background="{DynamicResource SearchBoxInactiveBackground}"
                     ClipToBounds="True"
                     automation:AutomationProperties.AccessibilityView="Control">
                 <Panel>

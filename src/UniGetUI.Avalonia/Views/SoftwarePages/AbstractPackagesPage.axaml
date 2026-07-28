@@ -15,6 +15,9 @@
              Name="ABSTRACT_PAGE">
 
     <UserControl.Styles>
+      <Style Selector="Border#MegaQueryContainer">
+         <Setter Property="Background" Value="{DynamicResource SearchBoxInactiveBackground}"/>
+      </Style>
       <!-- Suppress per-cell focus highlight so the whole row appears selected -->
       <Style Selector="DataGridCell:current /template/ Grid#FocusVisual">
          <Setter Property="IsVisible" Value="False"/>
@@ -92,6 +95,7 @@
          <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
       </Style>
       <Style Selector="Border#MegaQueryContainer:focus-within">
+         <Setter Property="Background" Value="{DynamicResource SearchBoxFocusedBackground}"/>
          <Setter Property="BorderBrush" Value="{DynamicResource SearchBoxFocusedBorderBrush}"/>
       </Style>
    </UserControl.Styles>
@@ -852,7 +856,6 @@
                             Grid.ColumnSpan="2"
                             CornerRadius="8"
                             BorderThickness="1"
-                            Background="{DynamicResource SearchBoxInactiveBackground}"
                             ClipToBounds="True">
                         <Panel>
                             <Grid ColumnDefinitions="*,64">

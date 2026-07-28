@@ -43,7 +43,7 @@
                     <SolidColorBrush x:Key="TextOnAccentFillColorDisabledBrush"     Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="TextOnAccentFillColorSelectedTextBrush" Color="#FFFFFFFF"/>
                     <!-- Settings cards -->
-                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#FBFBFB"/>
+                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#B3FFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#ECECEC"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#F6F6F6"/>
                     <!-- Package list container; near-transparent over Mica (see Styles.WindowsMica) -->
@@ -131,7 +131,7 @@
                     <SolidColorBrush x:Key="TextOnAccentFillColorDisabledBrush"     Color="#87FFFFFF"/>
                     <SolidColorBrush x:Key="TextOnAccentFillColorSelectedTextBrush" Color="#FFFFFFFF"/>
                     <!-- Settings cards -->
-                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#2D2D2D"/>
+                    <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#393939"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#323232"/>
                     <!-- Package list container; near-transparent over Mica (see Styles.WindowsMica) -->

@@ -16,7 +16,7 @@
             <!-- Window/page surface goes transparent so Mica shows behind chrome + page -->
             <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
             <!-- Cards / panels: translucent white layers over the (light) Mica -->
-            <SolidColorBrush x:Key="SettingsCardBackground"      Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="SettingsCardBackground"      Color="#B3FFFFFF"/>
             <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#14000000"/>
             <!-- Package list: near-transparent so Mica shows through, matching WinUI's SystemFillColorNeutralBackground -->
             <SolidColorBrush x:Key="PackageListBackground"       Color="#06000000"/>
@@ -53,8 +53,8 @@
 
         <ResourceDictionary x:Key="Dark">
             <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
-            <!-- Cards / panels: translucent dark layers; ~40% so the wallpaper-tinted Mica bleeds through -->
-            <SolidColorBrush x:Key="SettingsCardBackground"      Color="#662D2D2D"/>
+            <!-- Cards / panels: WinUI's translucent card layer over the Mica backdrop -->
+            <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
             <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#26FFFFFF"/>
             <!-- Package list: near-transparent so Mica shows through, matching WinUI's SystemFillColorNeutralBackground -->
             <SolidColorBrush x:Key="PackageListBackground"       Color="#08FFFFFF"/>

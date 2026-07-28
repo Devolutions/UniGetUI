@@ -34,6 +34,12 @@ namespace UniGetUI.PackageEngine.Operations
         /// </summary>
         public static event EventHandler<string>? BrokerUnavailable;
 
+        /// <summary>
+        /// Test seam: substitutes the transport used to reach the agent broker so tests can
+        /// simulate broker outages without a real named pipe. Always null in production.
+        /// </summary>
+        internal static Func<Devolutions.Now.Policy.Client.IBrokerTransport>? BrokerTransportFactory;
+
         protected List<string> DesktopShortcutsBeforeStart = [];
 
         public readonly IPackage Package;
@@ -217,14 +223,7 @@ namespace UniGetUI.PackageEngine.Operations
             // execution: policy evaluation and kill/pre/post actions are owned by the broker.
             if (!await client.IsAvailable(CancellationToken))
             {
-                Line("Agent broker is not available. The operation cannot continue.", LineType.Error);
-                Logger.Error("[AgentBroker] Broker not available, aborting operation");
-                string message = CoreTools.Translate(
-                    "The Devolutions Agent broker is not available. The operation cannot be performed. Please ensure the Devolutions Agent is installed and running.");
-                Metadata.FailureTitle = CoreTools.Translate("Agent broker unavailable");
-                Metadata.FailureMessage = message;
-                BrokerUnavailable?.Invoke(this, message);
-                return OperationVeredict.Failure;
+                return HandleBrokerUnavailable();
             }
 
             // Resolve the install location the same way the local WinGet path does, so the
@@ -279,6 +278,13 @@ namespace UniGetUI.PackageEngine.Operations
                 Line("Broker operation was canceled.", LineType.Error);
                 return OperationVeredict.Canceled;
             }
+            catch (BrokerClientException ex) when (ex.Kind is BrokerClientErrorKind.BrokerUnavailable)
+            {
+                // The broker can stop between the availability probe and the request itself;
+                // route this through the same unavailable handling as a failed probe.
+                Logger.Error($"[AgentBroker] Broker became unavailable during the operation: {ex}");
+                return HandleBrokerUnavailable();
+            }
             catch (BrokerClientException ex)
             {
                 Line($"Broker operation failed: {ex.Message}", LineType.Error);
@@ -287,6 +293,24 @@ namespace UniGetUI.PackageEngine.Operations
                 Metadata.FailureMessage = ex.Message;
                 return OperationVeredict.Failure;
             }
+        }
+
+        /// <summary>
+        /// Fails the operation because the agent broker is unreachable: brokered operations
+        /// must not fall back to local execution, since policy evaluation and kill/pre/post
+        /// actions are owned by the broker. Sets the failure metadata and raises
+        /// <see cref="BrokerUnavailable"/> so the UI can notify the user.
+        /// </summary>
+        private OperationVeredict HandleBrokerUnavailable()
+        {
+            Line("Agent broker is not available. The operation cannot continue.", LineType.Error);
+            Logger.Error("[AgentBroker] Broker not available, aborting operation");
+            string message = CoreTools.Translate(
+                "The Devolutions Agent broker is not available. The operation cannot be performed. Please ensure the Devolutions Agent is installed and running.");
+            Metadata.FailureTitle = CoreTools.Translate("Agent broker unavailable");
+            Metadata.FailureMessage = message;
+            BrokerUnavailable?.Invoke(this, message);
+            return OperationVeredict.Failure;
         }
 
         private List<string> DisplayBrokerOutput(string? encodedStdout)
@@ -327,6 +351,7 @@ namespace UniGetUI.PackageEngine.Operations
             new(
                 new BrokerClientOptions
                 {
+                    Transport = BrokerTransportFactory?.Invoke(),
                     RequestedElevation = requestedElevation
                         ? BrokerElevation.Elevated
                         : BrokerElevation.Standard,
@@ -356,7 +381,7 @@ namespace UniGetUI.PackageEngine.Operations
             {
                 BrokerClientErrorKind.PolicyDenied => "Operation denied by policy",
                 BrokerClientErrorKind.UnsupportedCapability => "Operation unsupported by broker",
-                BrokerClientErrorKind.BrokerUnavailable or BrokerClientErrorKind.Timeout => "Broker communication error",
+                BrokerClientErrorKind.Timeout => "Broker communication error",
                 _ => "Operation failed via broker",
             };
 

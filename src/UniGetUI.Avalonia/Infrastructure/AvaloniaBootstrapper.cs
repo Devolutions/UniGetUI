@@ -22,6 +22,10 @@ namespace UniGetUI.Avalonia.Infrastructure;
 internal static class AvaloniaBootstrapper
 {
     private static bool _hasStarted;
+
+    // Coalesces broker-unavailable notifications: during bulk operations every failed
+    // package raises the event, but only one dialog should be visible at a time.
+    private static bool _brokerUnavailableDialogActive;
     private static IpcServer? _ipcApi;
 
     public static async Task InitializeAsync()
@@ -118,12 +122,25 @@ internal static class AvaloniaBootstrapper
             Secrets.GetOpenSearchPassword());
         AbstractOperation.QueueDrained += (_, _) => _ = TelemetryHandler.FlushPackageEventsAsync();
         PackageOperation.BrokerUnavailable += (_, message) =>
-            Dispatcher.UIThread.Post(() =>
+            Dispatcher.UIThread.Post(async void () =>
             {
-                if (MainWindow.Instance is not { } owner) return;
-                _ = new SimpleErrorDialog(
-                    CoreTools.Translate("Agent broker unavailable"),
-                    message).ShowDialog(owner);
+                // Runs on the UI thread, so the flag needs no synchronization.
+                if (_brokerUnavailableDialogActive || MainWindow.Instance is not { } owner) return;
+                _brokerUnavailableDialogActive = true;
+                try
+                {
+                    await new SimpleErrorDialog(
+                        CoreTools.Translate("Agent broker unavailable"),
+                        message).ShowDialog(owner);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex);
+                }
+                finally
+                {
+                    _brokerUnavailableDialogActive = false;
+                }
             });
         _ = TelemetryHandler.InitializeAsync()
             .ContinueWith(

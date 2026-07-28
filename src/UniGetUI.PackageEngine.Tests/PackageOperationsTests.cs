@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Enums;
@@ -13,6 +14,12 @@ using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 using UniGetUI.PackageOperations;
+using BrokerClientErrorKind = Devolutions.Now.Policy.Client.BrokerClientErrorKind;
+using BrokerClientException = Devolutions.Now.Policy.Client.BrokerClientException;
+using BrokerTransportKind = Devolutions.Now.Policy.Api.Transport;
+using BrokerTransportRequest = Devolutions.Now.Policy.Client.BrokerTransportRequest;
+using BrokerTransportResponse = Devolutions.Now.Policy.Client.BrokerTransportResponse;
+using IBrokerTransport = Devolutions.Now.Policy.Client.IBrokerTransport;
 
 namespace UniGetUI.PackageEngine.Tests;
 
@@ -517,6 +524,77 @@ public sealed class PackageOperationsTests
         await firstRun;
     }
 
+    [Fact]
+    public async Task BrokerOperationFailsWithoutLocalFallbackWhenProbeFails()
+    {
+        var transport = new FakeBrokerTransport(healthy: false);
+
+        await AssertBrokerUnavailableFailure(transport);
+    }
+
+    [Fact]
+    public async Task BrokerOperationFailsWithoutLocalFallbackWhenBrokerDropsAfterProbe()
+    {
+        var transport = new FakeBrokerTransport(healthy: true);
+
+        await AssertBrokerUnavailableFailure(transport);
+
+        // The availability probe succeeded; the outage happened on the actual request.
+        Assert.Contains("/v1/health", transport.RequestedPaths);
+        Assert.Contains(transport.RequestedPaths, path => path != "/v1/health");
+    }
+
+    /// <summary>
+    /// Runs an install operation against a broker whose transport simulates an outage and
+    /// asserts the policy-enforcement contract: the operation fails with the
+    /// broker-unavailable metadata, raises <see cref="PackageOperation.BrokerUnavailable"/>,
+    /// and never falls back to local process execution.
+    /// </summary>
+    private static async Task AssertBrokerUnavailableFailure(FakeBrokerTransport transport)
+    {
+        bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
+        bool localExecutionPrepared = false;
+        var manager = new PackageManagerBuilder()
+            .WithName("Chocolatey")
+            .ConfigureManager(m =>
+            {
+                m.ExecutablePath = "C:\\test-tools\\choco.exe";
+                m.ExecutableArguments = "--test";
+            })
+            .ConfigureOperation(helper =>
+                helper.ParametersFactory = (package, _, operation) =>
+                {
+                    localExecutionPrepared = true;
+                    return [operation.ToString().ToLowerInvariant(), package.Id];
+                })
+            .Build();
+        var package = new PackageBuilder().WithManager(manager).Build();
+        string? notifiedMessage = null;
+        EventHandler<string> onBrokerUnavailable = (_, message) => notifiedMessage = message;
+        PackageOperation.BrokerUnavailable += onBrokerUnavailable;
+        PackageOperation.BrokerTransportFactory = () => transport;
+        Settings.Set(Settings.K.UseAgentBroker, true);
+        try
+        {
+            using var operation = new BrokerProbingInstallPackageOperation(package, new InstallOptions());
+            var veredict = await operation.InvokePerformOperationForTests();
+
+            Assert.Equal(OperationVeredict.Failure, veredict);
+            Assert.Equal(
+                CoreTools.Translate("Agent broker unavailable"),
+                operation.Metadata.FailureTitle);
+            Assert.False(string.IsNullOrWhiteSpace(operation.Metadata.FailureMessage));
+            Assert.Equal(operation.Metadata.FailureMessage, notifiedMessage);
+            Assert.False(localExecutionPrepared);
+        }
+        finally
+        {
+            Settings.Set(Settings.K.UseAgentBroker, originalSetting);
+            PackageOperation.BrokerTransportFactory = null;
+            PackageOperation.BrokerUnavailable -= onBrokerUnavailable;
+        }
+    }
+
     private static IReadOnlyList<AbstractOperation.InnerOperation> GetInnerOperations(
         AbstractOperation operation,
         string fieldName
@@ -571,6 +649,40 @@ public sealed class PackageOperationsTests
 
             await Task.Delay(25);
         }
+    }
+
+    private sealed class BrokerProbingInstallPackageOperation : InstallPackageOperation
+    {
+        public BrokerProbingInstallPackageOperation(IPackage package, InstallOptions options)
+            : base(package, options, IgnoreParallelInstalls: true) { }
+
+        public Task<OperationVeredict> InvokePerformOperationForTests() => PerformOperation();
+    }
+
+    private sealed class FakeBrokerTransport(bool healthy) : IBrokerTransport
+    {
+        public List<string> RequestedPaths { get; } = [];
+
+        public BrokerTransportKind Kind => BrokerTransportKind.HttpNamedPipe;
+
+        public Task<BrokerTransportResponse> Send(
+            BrokerTransportRequest request,
+            CancellationToken cancellationToken = default
+        )
+        {
+            RequestedPaths.Add(request.Path);
+            if (healthy && request.Path == "/v1/health")
+            {
+                return Task.FromResult(new BrokerTransportResponse { StatusCode = 200, Body = "{}" });
+            }
+
+            throw new BrokerClientException(
+                BrokerClientErrorKind.BrokerUnavailable,
+                "Simulated broker outage",
+                request.Path);
+        }
+
+        public void Dispose() { }
     }
 
     private class InspectableInstallPackageOperation : InstallPackageOperation

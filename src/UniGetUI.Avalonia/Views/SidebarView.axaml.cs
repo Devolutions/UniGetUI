@@ -21,7 +21,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     private int _pillAnimationVersion;
 
     private const double PillHeight = 16d;
-    private static readonly TimeSpan PillAnimationDuration = TimeSpan.FromMilliseconds(600);
+    private static readonly TimeSpan PillAnimationDuration = TimeSpan.FromMilliseconds(400);
 
     /// <summary>
     /// Whether the nav item text labels are shown. False renders an icon-only rail; true renders the

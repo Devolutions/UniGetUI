@@ -78,23 +78,10 @@ public partial class CheckboxCard : SettingsCard
     {
         set
         {
-            _warningBlock.Text = FormatTwoLine(value);
+            _warningBlock.Text = CoreTools.FormatAsTwoLines(value);
             _warningBlock.IsVisible = value.Any();
             ApplyAutomationMetadata(_checkbox, _textblock.Text, _warningBlock.IsVisible ? value : null);
         }
-    }
-
-    // Splits translated warning text at the first sentence boundary so it renders
-    // on two readable lines. Handles both Latin (". ") and CJK ("。") separators.
-    private static string FormatTwoLine(string text)
-    {
-        var idx = text.IndexOf(". ", StringComparison.Ordinal);
-        if (idx >= 0)
-            return text[..(idx + 1)] + "\n" + text[(idx + 2)..];
-        idx = text.IndexOf('。');
-        if (idx >= 0)
-            return text[..(idx + 1)] + "\n" + text[(idx + 1)..];
-        return text;
     }
 
     public double WarningOpacity

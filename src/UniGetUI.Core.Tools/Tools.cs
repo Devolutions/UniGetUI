@@ -86,6 +86,25 @@ namespace UniGetUI.Core.Tools
         }
 
         /// <summary>
+        /// Splits a translated string at the first sentence boundary so it renders on two
+        /// readable lines. Handles both Latin (". ") and CJK ("。") separators. Strings that
+        /// already contain a translator-provided line break are returned unchanged.
+        /// </summary>
+        public static string FormatAsTwoLines(string text)
+        {
+            if (text.Contains('\n'))
+                return text;
+
+            var idx = text.IndexOf(". ", StringComparison.Ordinal);
+            if (idx >= 0)
+                return text[..(idx + 1)] + "\n" + text[(idx + 2)..];
+            idx = text.IndexOf('。');
+            if (idx >= 0 && idx < text.Length - 1)
+                return text[..(idx + 1)] + "\n" + text[(idx + 1)..];
+            return text;
+        }
+
+        /// <summary>
         /// Translates a string into the operating system's UI language, independently of the
         /// language currently selected in UniGetUI. Used for the "System language" entry of the
         /// language selector so it appears in the language it would actually resolve to.

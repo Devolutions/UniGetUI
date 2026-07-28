@@ -78,10 +78,9 @@
         </Grid>
 
         <!-- ── Package list (mirrors the WinUI ItemsView: flat rows, no header) ── -->
-        <Border Grid.Row="1" CornerRadius="8"
-                BorderThickness="1"
-                BorderBrush="{DynamicResource AppBorderBrush}"
-                Background="{DynamicResource AppDialogPanelBackground}">
+        <Border Grid.Row="1"
+                CornerRadius="8"
+                Background="{DynamicResource AppDialogDarkBackground}">
           <Panel>
 
             <!-- Empty state -->

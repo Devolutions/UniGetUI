@@ -688,10 +688,15 @@
                                                         automation:AutomationProperties.Name="{t:Translate Close}"
                             ToolTip.Tip="{t:Translate Close}"
                             Click="CloseButton_Click">
-                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/cross.svg"
-                                          Width="14"
-                                          Height="14"
-                                          automation:AutomationProperties.AccessibilityView="Raw"/>
+                        <Path Stroke="{Binding $parent[Button].Foreground}"
+                              StrokeThickness="1.25"
+                              StrokeLineCap="Round"
+                              Data="M0,0 L10,10 M10,0 L0,10"
+                              Width="10"
+                              Height="10"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              automation:AutomationProperties.AccessibilityView="Raw"/>
                     </Button>
                 </StackPanel>
             </Panel>

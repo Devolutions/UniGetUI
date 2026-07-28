@@ -156,6 +156,68 @@ public sealed class InstallOptionsFactoryTests : IDisposable
     }
 
     [Fact]
+    public void LoadApplicable_ExpandsEnvironmentVariablesInCustomParametersAndLocation()
+    {
+        var varName = $"UNIGETUI_TEST_{Guid.NewGuid():N}";
+        Environment.SetEnvironmentVariable(varName, @"C:\Expanded");
+        try
+        {
+            var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();
+            var package = new PackageBuilder().WithManager(manager).WithId($"Pkg{Guid.NewGuid():N}").Build();
+            var packageOptions = new InstallOptions
+            {
+                OverridesNextLevelOpts = true,
+                CustomInstallLocation = $"%{varName}%\\app",
+                CustomParameters_Install = [$"--location=%{varName}%\\app"],
+                CustomParameters_Update = [$"--location=%{varName}%"],
+                CustomParameters_Uninstall = ["--purge"],
+            };
+
+            SecureSettings.ApplyForUser(Environment.UserName, SecureSettings.ResolveKey(SecureSettings.K.AllowCLIArguments), true);
+            InstallOptionsFactory.SaveForPackage(packageOptions, package);
+
+            var resolved = InstallOptionsFactory.LoadApplicable(package);
+
+            Assert.Equal(@"C:\Expanded\app", resolved.CustomInstallLocation);
+            Assert.Equal([@"--location=C:\Expanded\app"], resolved.CustomParameters_Install);
+            Assert.Equal([@"--location=C:\Expanded"], resolved.CustomParameters_Update);
+            Assert.Equal(["--purge"], resolved.CustomParameters_Uninstall);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(varName, null);
+        }
+    }
+
+    [Fact]
+    public void LoadApplicable_SanitizesMetacharactersIntroducedByEnvironmentVariableExpansion()
+    {
+        var varName = $"UNIGETUI_TEST_{Guid.NewGuid():N}";
+        Environment.SetEnvironmentVariable(varName, "safe & rm -rf");
+        try
+        {
+            var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();
+            var package = new PackageBuilder().WithManager(manager).WithId($"Pkg{Guid.NewGuid():N}").Build();
+            var packageOptions = new InstallOptions
+            {
+                OverridesNextLevelOpts = true,
+                CustomParameters_Install = [$"--flag=%{varName}%"],
+            };
+
+            SecureSettings.ApplyForUser(Environment.UserName, SecureSettings.ResolveKey(SecureSettings.K.AllowCLIArguments), true);
+            InstallOptionsFactory.SaveForPackage(packageOptions, package);
+
+            var resolved = InstallOptionsFactory.LoadApplicable(package);
+
+            Assert.Equal(["--flag=safe  rm -rf"], resolved.CustomParameters_Install);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(varName, null);
+        }
+    }
+
+    [Fact]
     public void SaveAndLoadForPackage_RoundTripsPersistedOptions()
     {
         var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();

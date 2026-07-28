@@ -220,42 +220,13 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         private static InstallOptions EnsureSecureOptions(InstallOptions options)
         {
+            options.CustomInstallLocation = _expandEnvironmentVariables(options.CustomInstallLocation);
+
             if (SecureSettings.Get(SecureSettings.K.AllowCLIArguments))
             {
-                // If CLI arguments are allowed, sanitize them
-                for (int i = 0; i < options.CustomParameters_Install.Count; i++)
-                {
-                    options.CustomParameters_Install[i] = options
-                        .CustomParameters_Install[i]
-                        .Replace("&", "")
-                        .Replace("|", "")
-                        .Replace(";", "")
-                        .Replace("<", "")
-                        .Replace(">", "")
-                        .Replace("\n", "");
-                }
-                for (int i = 0; i < options.CustomParameters_Update.Count; i++)
-                {
-                    options.CustomParameters_Update[i] = options
-                        .CustomParameters_Update[i]
-                        .Replace("&", "")
-                        .Replace("|", "")
-                        .Replace(";", "")
-                        .Replace("<", "")
-                        .Replace(">", "")
-                        .Replace("\n", "");
-                }
-                for (int i = 0; i < options.CustomParameters_Uninstall.Count; i++)
-                {
-                    options.CustomParameters_Uninstall[i] = options
-                        .CustomParameters_Uninstall[i]
-                        .Replace("&", "")
-                        .Replace("|", "")
-                        .Replace(";", "")
-                        .Replace("<", "")
-                        .Replace(">", "")
-                        .Replace("\n", "");
-                }
+                _expandAndSanitizeCliArguments(options.CustomParameters_Install);
+                _expandAndSanitizeCliArguments(options.CustomParameters_Update);
+                _expandAndSanitizeCliArguments(options.CustomParameters_Uninstall);
             }
             else
             {
@@ -312,6 +283,37 @@ namespace UniGetUI.PackageEngine.PackageClasses
             }
 
             return options;
+        }
+
+        private static void _expandAndSanitizeCliArguments(List<string> parameters)
+        {
+            for (int i = 0; i < parameters.Count; i++)
+            {
+                parameters[i] = _expandEnvironmentVariables(parameters[i])
+                    .Replace("&", "")
+                    .Replace("|", "")
+                    .Replace(";", "")
+                    .Replace("<", "")
+                    .Replace(">", "")
+                    .Replace("\n", "");
+            }
+        }
+
+        private static string _expandEnvironmentVariables(string value)
+        {
+            if (string.IsNullOrEmpty(value) || !value.Contains('%'))
+                return value;
+
+            try
+            {
+                return Environment.ExpandEnvironmentVariables(value);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Could not expand environment variables in \"{value}\"");
+                Logger.Warn(ex);
+                return value;
+            }
         }
     }
 }

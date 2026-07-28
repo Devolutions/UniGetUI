@@ -21,6 +21,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     private int _pillAnimationVersion;
 
     private const double PillHeight = 16d;
+    private const double MaxPillStretch = PillHeight * 5d;
     private static readonly TimeSpan PillAnimationDuration = TimeSpan.FromMilliseconds(300);
 
     /// <summary>
@@ -227,6 +228,14 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             double bottomProgress = movingDown ? lead : trail;
             double top = Lerp(startTop, targetTop, topProgress);
             double bottom = Lerp(startBottom, targetBottom, bottomProgress);
+
+            if (bottom - top > MaxPillStretch)
+            {
+                if (movingDown)
+                    top = bottom - MaxPillStretch;
+                else
+                    bottom = top + MaxPillStretch;
+            }
 
             animation.Children.Add(new KeyFrame
             {

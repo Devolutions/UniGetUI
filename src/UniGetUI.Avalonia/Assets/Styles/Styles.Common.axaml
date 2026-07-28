@@ -31,6 +31,8 @@
                          gets a lighter light-theme value to read as the same weight as the compact title-bar field. -->
                     <SolidColorBrush x:Key="SearchBoxPlaceholderForeground"   Color="#72000000"/>
                     <SolidColorBrush x:Key="MegaQueryPlaceholderForeground"   Color="#52000000"/>
+                    <SolidColorBrush x:Key="SearchBoxInactiveBackground"      Color="#B3FFFFFF"/>
+                    <SolidColorBrush x:Key="SearchBoxFocusedBorderBrush"      Color="#0F000000"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5C000000"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#FFFFFFFF"/>
                     <!-- Opaque WinUI menu surface and low-contrast divider. -->
@@ -119,6 +121,8 @@
                          share it since thick-stroke heaviness only reads as darker on light backgrounds. -->
                     <SolidColorBrush x:Key="SearchBoxPlaceholderForeground"   Color="#C5FFFFFF"/>
                     <SolidColorBrush x:Key="MegaQueryPlaceholderForeground"   Color="#C5FFFFFF"/>
+                    <SolidColorBrush x:Key="SearchBoxInactiveBackground"      Color="#0FFFFFFF"/>
+                    <SolidColorBrush x:Key="SearchBoxFocusedBorderBrush"      Color="#12FFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5DFFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#E4000000"/>
                     <!-- WinUI's dark flyout surface is an opaque #2C2C2C. -->

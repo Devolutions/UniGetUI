@@ -91,6 +91,9 @@
          <Setter Property="Opacity" Value="1"/>
          <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
       </Style>
+      <Style Selector="Border#MegaQueryContainer:focus-within">
+         <Setter Property="BorderBrush" Value="{DynamicResource SearchBoxFocusedBorderBrush}"/>
+      </Style>
    </UserControl.Styles>
 
    <UserControl.Resources>
@@ -848,9 +851,9 @@
                             Grid.Column="1"
                             Grid.ColumnSpan="2"
                             CornerRadius="8"
-                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderBrush="Transparent"
                             BorderThickness="1"
-                            Background="{DynamicResource MicaPageBackground}"
+                            Background="{DynamicResource SearchBoxInactiveBackground}"
                             ClipToBounds="True">
                         <Panel>
                             <Grid ColumnDefinitions="*,64">

@@ -521,7 +521,6 @@
                     Margin="0,0,40,0"
                     Height="32"
                     CornerRadius="5"
-                    BorderBrush="Transparent"
                     BorderThickness="1"
                     Background="{DynamicResource SearchBoxInactiveBackground}"
                     ClipToBounds="True"

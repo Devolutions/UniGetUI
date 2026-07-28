@@ -851,7 +851,6 @@
                             Grid.Column="1"
                             Grid.ColumnSpan="2"
                             CornerRadius="8"
-                            BorderBrush="Transparent"
                             BorderThickness="1"
                             Background="{DynamicResource SearchBoxInactiveBackground}"
                             ClipToBounds="True">

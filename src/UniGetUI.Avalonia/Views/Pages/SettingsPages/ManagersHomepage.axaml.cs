@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using UniGetUI.Avalonia.Infrastructure;
@@ -10,6 +11,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Interfaces;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
+using AvaloniaPath = Avalonia.Controls.Shapes.Path;
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
@@ -22,7 +24,8 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
     public event EventHandler<Type>? NavigationRequested { add { } remove { } }
     public event EventHandler<IPackageManager>? ManagerNavigationRequested;
 
-    private readonly List<(ToggleSwitch Toggle, IPackageManager Manager, Border Badge, TextBlock BadgeText)> _rows = [];
+    private readonly List<(ToggleSwitch Toggle, IPackageManager Manager, Border Badge,
+        Ellipse BadgeIcon, AvaloniaPath BadgeGlyph, TextBlock BadgeText)> _rows = [];
     private bool _isLoadingToggles;
 
     public ManagersHomepage()
@@ -49,13 +52,46 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
                 FontSize = 12,
                 FontWeight = FontWeight.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center,
+                Foreground = LookupBrush("TextFillColorPrimaryBrush"),
             };
             AutomationProperties.SetAccessibilityView(badgeText, AccessibilityView.Raw);
+
+            var badgeIcon = new Ellipse
+            {
+                Width = 12,
+                Height = 12,
+            };
+            var badgeGlyph = new AvaloniaPath
+            {
+                Width = 7,
+                Height = 7,
+                StrokeThickness = 1.5,
+                StrokeLineCap = PenLineCap.Round,
+                StrokeJoin = PenLineJoin.Round,
+                Stretch = Stretch.Uniform,
+            };
+            var iconHost = new Grid
+            {
+                Width = 12,
+                Height = 12,
+                VerticalAlignment = VerticalAlignment.Center,
+                Children = { badgeIcon, badgeGlyph },
+            };
+            AutomationProperties.SetAccessibilityView(iconHost, AccessibilityView.Raw);
+
+            var badgeContent = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 5,
+                VerticalAlignment = VerticalAlignment.Center,
+                Children = { iconHost, badgeText },
+            };
             var badge = new Border
             {
                 CornerRadius = new CornerRadius(4),
                 Padding = new Thickness(6, 3, 6, 3),
-                Child = badgeText,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Child = badgeContent,
             };
             AutomationProperties.SetAccessibilityView(badge, AccessibilityView.Raw);
 
@@ -72,14 +108,14 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
                 _isLoadingToggles = true;
                 toggle.IsChecked = manager.IsEnabled();
                 _isLoadingToggles = false;
-                ApplyStatusBadge(manager, toggle, badge, badgeText);
+                ApplyStatusBadge(manager, toggle, badge, badgeIcon, badgeGlyph, badgeText);
             };
             toggle.IsCheckedChanged += async (_, _) =>
             {
                 if (_isLoadingToggles) return;
                 CoreSettings.SetDictionaryItem(CoreSettings.K.DisabledManagers, manager.Name, toggle.IsChecked != true);
                 await Task.Run(manager.Initialize);
-                ApplyStatusBadge(manager, toggle, badge, badgeText);
+                ApplyStatusBadge(manager, toggle, badge, badgeIcon, badgeGlyph, badgeText);
                 AccessibilityAnnouncementService.AnnounceToggle(manager.DisplayName, toggle.IsChecked == true);
             };
 
@@ -108,7 +144,7 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
             btn.Click += (_, _) => ManagerNavigationRequested?.Invoke(this, capturedManager);
 
             ManagersPanel.Children.Add(btn);
-            _rows.Add((toggle, manager, badge, badgeText));
+            _rows.Add((toggle, manager, badge, badgeIcon, badgeGlyph, badgeText));
         }
     }
 
@@ -116,15 +152,21 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
     public void RefreshToggles()
     {
         _isLoadingToggles = true;
-        foreach (var (toggle, manager, badge, badgeText) in _rows)
+        foreach (var (toggle, manager, badge, badgeIcon, badgeGlyph, badgeText) in _rows)
         {
             toggle.IsChecked = manager.IsEnabled();
-            ApplyStatusBadge(manager, toggle, badge, badgeText);
+            ApplyStatusBadge(manager, toggle, badge, badgeIcon, badgeGlyph, badgeText);
         }
         _isLoadingToggles = false;
     }
 
-    private void ApplyStatusBadge(IPackageManager manager, ToggleSwitch toggle, Border badge, TextBlock text)
+    private void ApplyStatusBadge(
+        IPackageManager manager,
+        ToggleSwitch toggle,
+        Border badge,
+        Ellipse icon,
+        AvaloniaPath glyph,
+        TextBlock text)
     {
         string bgKey, fgKey, label;
         if (!manager.IsEnabled())
@@ -132,21 +174,26 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
             bgKey = "WarningBannerBackground";
             fgKey = "StatusWarningForeground";
             label = CoreTools.Translate("Disabled");
+            glyph.Data = Geometry.Parse("M3.5,1 V4.2 M3.5,6 V6.1");
         }
         else if (manager.Status.Found)
         {
             bgKey = "StatusSuccessBackground";
             fgKey = "StatusSuccessForeground";
             label = CoreTools.Translate("Ready");
+            glyph.Data = Geometry.Parse("M1,3.6 L2.8,5.4 L6,1.5");
         }
         else
         {
             bgKey = "StatusErrorBackground";
             fgKey = "StatusErrorForeground";
             label = CoreTools.Translate("Not found");
+            glyph.Data = Geometry.Parse("M1.4,1.4 L5.6,5.6 M5.6,1.4 L1.4,5.6");
         }
-        badge.Background = LookupBrush(bgKey);
-        text.Foreground = LookupBrush(fgKey);
+        IBrush background = LookupBrush(bgKey);
+        badge.Background = background;
+        icon.Fill = LookupBrush(fgKey);
+        glyph.Stroke = background;
         text.Text = label;
         // Bake state into Name so VoiceOver always announces it on macOS
         AutomationProperties.SetName(toggle, $"{manager.DisplayName}, {label}");

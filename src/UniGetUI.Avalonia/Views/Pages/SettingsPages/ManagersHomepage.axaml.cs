@@ -52,7 +52,6 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
                 FontSize = 12,
                 FontWeight = FontWeight.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center,
-                Foreground = LookupBrush("TextFillColorPrimaryBrush"),
             };
             AutomationProperties.SetAccessibilityView(badgeText, AccessibilityView.Raw);
 
@@ -194,6 +193,7 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
         badge.Background = background;
         icon.Fill = LookupBrush(fgKey);
         glyph.Stroke = background;
+        text.Foreground = LookupBrush("TextFillColorPrimaryBrush");
         text.Text = label;
         // Bake state into Name so VoiceOver always announces it on macOS
         AutomationProperties.SetName(toggle, $"{manager.DisplayName}, {label}");

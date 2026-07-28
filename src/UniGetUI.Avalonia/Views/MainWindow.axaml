@@ -690,7 +690,7 @@
                         <Path Stroke="{Binding $parent[Button].Foreground}"
                               StrokeThickness="1.25"
                               StrokeLineCap="Round"
-                              Data="M0,0 L10,10 M10,0 L0,10"
+                              Data="M0.75,0.75 L9.25,9.25 M9.25,0.75 L0.75,9.25"
                               Width="10"
                               Height="10"
                               HorizontalAlignment="Center"

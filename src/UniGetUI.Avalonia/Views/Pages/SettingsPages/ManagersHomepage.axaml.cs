@@ -10,8 +10,8 @@ using UniGetUI.Avalonia.Views.Controls.Settings;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Interfaces;
-using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 using AvaloniaPath = Avalonia.Controls.Shapes.Path;
+using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 

@@ -213,36 +213,6 @@
       <Platform Solution="*|x64" Project="x64" />
     </Project>
   </Folder>
-  <Folder Name="/UniGetUI.PackageEngine.Managers.Chocolatey/">
-    <Project Path="UniGetUI.PackageEngine.Managers.Chocolatey/UniGetUI.PackageEngine.Managers.Chocolatey.csproj">
-      <Platform Solution="*|arm64" Project="arm64" />
-      <Platform Solution="*|x64" Project="x64" />
-    </Project>
-  </Folder>
-  <Folder Name="/UniGetUI.PackageEngine.Managers.PowerShell/">
-    <Project Path="UniGetUI.PackageEngine.Managers.PowerShell/UniGetUI.PackageEngine.Managers.PowerShell.csproj">
-      <Platform Solution="*|arm64" Project="arm64" />
-      <Platform Solution="*|x64" Project="x64" />
-    </Project>
-  </Folder>
-  <Folder Name="/UniGetUI.PackageEngine.Managers.Scoop/">
-    <Project Path="UniGetUI.PackageEngine.Managers.Scoop/UniGetUI.PackageEngine.Managers.Scoop.csproj">
-      <Platform Solution="*|arm64" Project="arm64" />
-      <Platform Solution="*|x64" Project="x64" />
-    </Project>
-  </Folder>
-  <Folder Name="/UniGetUI.PackageEngine.Managers.WinGet/">
-    <Project Path="UniGetUI.PackageEngine.Managers.WinGet/UniGetUI.PackageEngine.Managers.WinGet.csproj">
-      <Platform Solution="*|arm64" Project="arm64" />
-      <Platform Solution="*|x64" Project="x64" />
-    </Project>
-  </Folder>
-  <Folder Name="/WindowsPackageManager.Interop/">
-    <Project Path="WindowsPackageManager.Interop/ExternalLibraries.WindowsPackageManager.Interop.csproj">
-      <Platform Solution="*|arm64" Project="arm64" />
-      <Platform Solution="*|x64" Project="x64" />
-    </Project>
-  </Folder>
   <Folder Name="/UniGetUI.PackageEngine.AgentBroker/">
     <Project Path="UniGetUI.PackageEngine.AgentBroker/UniGetUI.PackageEngine.AgentBroker.csproj">
       <Platform Solution="*|arm64" Project="arm64" />

@@ -177,7 +177,7 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
             bgKey = "WarningBannerBackground";
             fgKey = "StatusWarningForeground";
             label = CoreTools.Translate("Disabled");
-            glyph.Data = Geometry.Parse("M2.5,0.9 L2.5,2.6 M2.5,3.9 L2.5,4");
+            glyph.Data = Geometry.Parse("M2.5,0.4 L2.5,2.1 M2.1,4 L2.9,4");
         }
         else if (manager.Status.Found)
         {
@@ -185,7 +185,7 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
             fgKey = "StatusSuccessForeground";
             label = CoreTools.Translate("Ready");
             glyph.Data = Geometry.Parse("M0.5,2.6 L2,4.1 L4.5,0.9");
-            glyph.RenderTransform = new TranslateTransform(0, 2);
+            glyph.RenderTransform = new TranslateTransform(0, 1);
         }
         else
         {

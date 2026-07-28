@@ -62,12 +62,14 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
             };
             var badgeGlyph = new AvaloniaPath
             {
-                Width = 7,
-                Height = 7,
+                Width = 5,
+                Height = 5,
                 StrokeThickness = 1.5,
                 StrokeLineCap = PenLineCap.Round,
                 StrokeJoin = PenLineJoin.Round,
                 Stretch = Stretch.Uniform,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
             };
             var iconHost = new Grid
             {

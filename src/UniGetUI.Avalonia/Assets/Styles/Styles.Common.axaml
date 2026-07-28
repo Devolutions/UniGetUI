@@ -301,10 +301,10 @@
                                       VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
                                       HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"/>
                     <Border Name="SelectionPill"
-                            Height="2" CornerRadius="1"
+                            Width="16" Height="3" CornerRadius="1.5"
                             Background="{DynamicResource AccentFillColorDefaultBrush}"
-                            HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
-                            Margin="5,0,5,2"
+                            HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                            Margin="0,0,0,2"
                             Opacity="0">
                         <Border.Transitions>
                             <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.1"/></Transitions>

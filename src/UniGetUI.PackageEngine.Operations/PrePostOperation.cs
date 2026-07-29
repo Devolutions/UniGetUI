@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageOperations;
 
@@ -14,13 +15,13 @@ public class PrePostOperation : AbstractOperation
         : base(true)
     {
         Payload = payload.Replace("\r", "\n").Replace("\n\n", "\n").Replace("\n", "&");
-        Metadata.Status = $"Running custom operation {Payload}";
-        Metadata.Title = "Custom operation";
+        Metadata.Status = CoreTools.Translate("Running custom operation {0}", Payload);
+        Metadata.Title = CoreTools.Translate("Custom operation");
         Metadata.OperationInformation = " ";
-        Metadata.SuccessTitle = "Done!";
-        Metadata.SuccessMessage = "Done!";
-        Metadata.FailureTitle = "Custom operation failed";
-        Metadata.FailureMessage = $"The custom operation {Payload} failed to run";
+        Metadata.SuccessTitle = CoreTools.Translate("Done!");
+        Metadata.SuccessMessage = CoreTools.Translate("Done!");
+        Metadata.FailureTitle = CoreTools.Translate("Custom operation failed");
+        Metadata.FailureMessage = CoreTools.Translate("The custom operation {0} failed to run", Payload);
         CancelRequested += (_, _) => StopActiveProcess();
     }
 

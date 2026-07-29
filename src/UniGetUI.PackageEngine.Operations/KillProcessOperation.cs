@@ -13,13 +13,13 @@ public class KillProcessOperation : AbstractOperation
         : base(false)
     {
         ProcessName = CoreTools.MakeValidFileName(procName);
-        Metadata.Status = $"Closing process(es) {procName}";
-        Metadata.Title = $"Closing process(es) {procName}";
+        Metadata.Status = CoreTools.Translate("Closing process(es) {0}", procName);
+        Metadata.Title = CoreTools.Translate("Closing process(es) {0}", procName);
         Metadata.OperationInformation = " ";
-        Metadata.SuccessTitle = "Done!";
-        Metadata.SuccessMessage = "Done!";
-        Metadata.FailureTitle = "Failed to close process";
-        Metadata.FailureMessage = $"The process(es) {procName} could not be closed";
+        Metadata.SuccessTitle = CoreTools.Translate("Done!");
+        Metadata.SuccessMessage = CoreTools.Translate("Done!");
+        Metadata.FailureTitle = CoreTools.Translate("Failed to close process");
+        Metadata.FailureMessage = CoreTools.Translate("The process(es) {0} could not be closed", procName);
     }
 
     protected override void ApplyRetryAction(string retryMode) { }

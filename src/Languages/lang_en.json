@@ -936,5 +936,12 @@
   "There are no packages to export.": "There are no packages to export.",
   "CSV file": "CSV file",
   "The file was saved to {0}": "The file was saved to {0}",
-  "The file could not be saved:": "The file could not be saved:"
+  "The file could not be saved:": "The file could not be saved:",
+  "Closing process(es) {0}": "Closing process(es) {0}",
+  "Failed to close process": "Failed to close process",
+  "The process(es) {0} could not be closed": "The process(es) {0} could not be closed",
+  "Running custom operation {0}": "Running custom operation {0}",
+  "Custom operation": "Custom operation",
+  "Custom operation failed": "Custom operation failed",
+  "The custom operation {0} failed to run": "The custom operation {0} failed to run"
 }

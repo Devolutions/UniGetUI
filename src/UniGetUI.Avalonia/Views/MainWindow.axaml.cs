@@ -1091,6 +1091,11 @@ public partial class MainWindow : Window
             borderOwner.ApplyWindowBorderColor(hWnd);
         }
 
+        if (msg == WM_SETTINGCHANGE && Instance is { } trayOwner)
+        {
+            trayOwner.UpdateSystemTrayStatus();
+        }
+
         // ── Snap Layouts: report HTMAXBUTTON over the custom maximize button so Win11 shows the
         // layout flyout, and emulate hover/press/click since input now arrives as NC messages. ──
         if (Instance is { } self && self.WindowButtons.IsVisible)

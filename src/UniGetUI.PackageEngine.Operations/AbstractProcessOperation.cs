@@ -13,6 +13,9 @@ public abstract class AbstractProcessOperation : AbstractOperation
     protected Process process { get; private set; }
     private bool ProcessKilled;
 
+    /// <summary>Exit code of the most recent process run, or null if it never completed a run.</summary>
+    public int? LastReturnCode { get; private set; }
+
     protected AbstractProcessOperation(
         bool queue_enabled,
         IReadOnlyList<InnerOperation>? preOps = null,
@@ -26,6 +29,7 @@ public abstract class AbstractProcessOperation : AbstractOperation
         {
             DisposeProcess();
             ProcessKilled = false;
+            LastReturnCode = null;
             process = new();
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.RedirectStandardOutput = true;
@@ -190,6 +194,7 @@ public abstract class AbstractProcessOperation : AbstractOperation
             return OperationVeredict.Canceled;
         }
 
+        LastReturnCode = process.ExitCode;
         Line($"End Time: \"{DateTime.Now}\"", LineType.VerboseDetails);
         Line(
             $"Process return value: \"{process.ExitCode}\" (0x{process.ExitCode:X})",

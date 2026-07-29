@@ -415,6 +415,8 @@
   "Ask only once for administrator privileges": "仅请求一次管理员权限",
   "Prohibit any kind of Elevation via UniGetUI Elevator or GSudo": "禁止任何通过 UniGetUI Elevator 或 GSudo 的提权操作",
   "This option WILL cause issues. Any operation incapable of elevating itself WILL FAIL. Install/update/uninstall as administrator will NOT WORK.": "此选项会导致一些问题。任何无法自行提升权限的操作都将失败。以管理员身份进行安装/更新/卸载将不起作用。",
+  "Delegate package operations to the Devolutions Agent broker": "将软件包操作委托给 Devolutions Agent 中介服务",
+  "When enabled, install, update and uninstall operations for supported package managers will be performed by the Devolutions Agent service instead of requesting UAC elevation. Operations will fail unless the agent is installed and running.": "启用后，受支持的包管理器的安装、更新和卸载操作将由 Devolutions Agent 服务执行，而不是请求 UAC 提权。如果未安装并运行该代理，操作将失败。",
   "Allow custom command-line arguments": "允许自定义命令行参数",
   "Custom command-line arguments can change the way in which programs are installed, upgraded or uninstalled, in a way UniGetUI cannot control. Using custom command-lines can break packages. Proceed with caution.": "自定义命令行参数将以 UniGetUI 无法控制的方式更改程序的安装、升级或卸载方式。使用自定义命令行可能会损坏软件包。请谨慎操作。",
   "Ignore custom pre-install and post-install commands when importing packages from a bundle": "允许运行自定义预安装和安装后命令",

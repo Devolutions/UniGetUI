@@ -34,6 +34,7 @@ public partial class Settings
                 new[]
                 {
                     "OperationHistory",
+                    "OperationHistory.json",
                     "WinGetAlreadyUpgradedPackages.json",
                     "WinGetUpgradeAttempts.json",
                     "TelemetryClientToken",
@@ -58,6 +59,7 @@ public partial class Settings
                 new[]
                 {
                     "OperationHistory",
+                    "OperationHistory.json",
                     "WinGetAlreadyUpgradedPackages.json",
                     "WinGetUpgradeAttempts.json",
                     "TelemetryClientToken",

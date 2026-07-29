@@ -417,6 +417,8 @@
   "Ask only once for administrator privileges": "관리자 권한을 한 번만 요청",
   "Prohibit any kind of Elevation via UniGetUI Elevator or GSudo": "UniGetUI Elevator 또는 GSudo를 통한 모든 종류의 권한 상승 금지",
   "This option WILL cause issues. Any operation incapable of elevating itself WILL FAIL. Install/update/uninstall as administrator will NOT WORK.": "이 옵션은 문제를 일으킬 수 있습니다. 스스로 권한을 상승시킬 수 없는 작업은 실패합니다. 관리자 권한으로 설치/업데이트/제거해도 작동하지 않습니다.",
+  "Delegate package operations to the Devolutions Agent broker": "패키지 작업을 Devolutions Agent 브로커에 위임",
+  "When enabled, install, update and uninstall operations for supported package managers will be performed by the Devolutions Agent service instead of requesting UAC elevation. Operations will fail unless the agent is installed and running.": "활성화하면 지원되는 패키지 관리자의 설치, 업데이트 및 제거 작업이 UAC 권한 상승을 요청하는 대신 Devolutions Agent 서비스에 의해 수행됩니다. 에이전트가 설치되어 실행 중이 아니면 작업이 실패합니다.",
   "Allow custom command-line arguments": "사용자 지정 명령줄 인수 허용",
   "Custom command-line arguments can change the way in which programs are installed, upgraded or uninstalled, in a way UniGetUI cannot control. Using custom command-lines can break packages. Proceed with caution.": "사용자 지정 명령줄 인수는 UniGetUI가 제어할 수 없는 방식으로 프로그램 설치, 업그레이드 또는 제거 방식을 변경할 수 있습니다. 사용자 지정 명령줄을 사용하면 패키지가 손상될 수 있습니다. 주의해서 진행하세요.",
   "Ignore custom pre-install and post-install commands when importing packages from a bundle": "번들에서 패키지를 가져올 때 사용자 지정 설치 전 및 설치 후 명령 실행 허용",

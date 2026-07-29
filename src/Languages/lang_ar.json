@@ -415,6 +415,8 @@
   "Ask only once for administrator privileges": "السؤال مرة واحد لامتيازات المسؤول",
   "Prohibit any kind of Elevation via UniGetUI Elevator or GSudo": "منع أي نوع من الرفع عبر UniGetUI Elevator أو GSudo",
   "This option WILL cause issues. Any operation incapable of elevating itself WILL FAIL. Install/update/uninstall as administrator will NOT WORK.": "سيؤدي هذا الخيار بالتأكيد إلى حدوث مشاكل. أي عملية غير قادرة على رفع صلاحياتها بنفسها ستفشل. لن يعمل التثبيت أو التحديث أو إلغاء التثبيت كمسؤول.",
+  "Delegate package operations to the Devolutions Agent broker": "تفويض عمليات الحزم إلى وسيط Devolutions Agent",
+  "When enabled, install, update and uninstall operations for supported package managers will be performed by the Devolutions Agent service instead of requesting UAC elevation. Operations will fail unless the agent is installed and running.": "عند التفعيل، سيتم تنفيذ عمليات التثبيت والتحديث وإلغاء التثبيت لمديري الحزم المدعومين بواسطة خدمة Devolutions Agent بدلاً من طلب رفع صلاحيات UAC. ستفشل العمليات إذا لم يكن الوكيل مثبتًا وقيد التشغيل.",
   "Allow custom command-line arguments": "السماح بمعاملات سطر الأوامر المخصصة",
   "Custom command-line arguments can change the way in which programs are installed, upgraded or uninstalled, in a way UniGetUI cannot control. Using custom command-lines can break packages. Proceed with caution.": "يمكن أن تغيّر وسائط سطر الأوامر المخصصة الطريقة التي يتم بها تثبيت البرامج أو ترقيتها أو إلغاء تثبيتها بطريقة لا يستطيع UniGetUI التحكم بها. قد يؤدي استخدام أسطر أوامر مخصصة إلى إفساد الحزم. تابع بحذر.",
   "Ignore custom pre-install and post-install commands when importing packages from a bundle": "السماح بتشغيل أوامر ما قبل التثبيت وما بعده المخصصة",

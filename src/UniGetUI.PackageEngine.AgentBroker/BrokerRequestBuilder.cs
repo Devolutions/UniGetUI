@@ -83,28 +83,47 @@ public static class BrokerRequestBuilder
     };
 
     /// <summary>
+    /// Whether a UniGetUI manager name can be mapped to a broker protocol manager,
+    /// and therefore whether operations for it can be routed through the broker.
+    /// </summary>
+    public static bool SupportsManager(string managerName) =>
+        TryMapManagerName(managerName, out _);
+
+    /// <summary>
     /// Maps UniGetUI manager names to the broker protocol canonical managers.
     /// PowerShell 5 and PowerShell 7 are modeled as separate managers.
     /// </summary>
-    private static ManagerName MapManagerName(string managerName)
+    private static ManagerName MapManagerName(string managerName) =>
+        TryMapManagerName(managerName, out var mapped)
+            ? mapped
+            : throw new ArgumentException($"Unsupported manager for the broker: {managerName}");
+
+    private static bool TryMapManagerName(string managerName, out ManagerName mapped)
     {
-        if (managerName.Equals("Winget", StringComparison.OrdinalIgnoreCase))
+        ManagerName? result = managerName.ToLowerInvariant() switch
         {
-            return ManagerName.Winget;
-        }
+            "winget" => ManagerName.Winget,
+            "powershell" => ManagerName.PowerShell,
+            "powershell7" or "pwsh" => ManagerName.PowerShell7,
+            "apt" => ManagerName.Apt,
+            "bun" => ManagerName.Bun,
+            "cargo" => ManagerName.Cargo,
+            "chocolatey" => ManagerName.Chocolatey,
+            "dnf" => ManagerName.Dnf,
+            ".net tool" or "dotnet" => ManagerName.Dotnet,
+            "flatpak" => ManagerName.Flatpak,
+            "homebrew" => ManagerName.Homebrew,
+            "npm" => ManagerName.Npm,
+            "pacman" => ManagerName.Pacman,
+            "pip" => ManagerName.Pip,
+            "scoop" => ManagerName.Scoop,
+            "snap" => ManagerName.Snap,
+            "vcpkg" => ManagerName.Vcpkg,
+            _ => null,
+        };
 
-        if (managerName.Equals("PowerShell", StringComparison.OrdinalIgnoreCase))
-        {
-            return ManagerName.PowerShell;
-        }
-
-        if (managerName.Equals("PowerShell7", StringComparison.OrdinalIgnoreCase) ||
-            managerName.Equals("pwsh", StringComparison.OrdinalIgnoreCase))
-        {
-            return ManagerName.PowerShell7;
-        }
-
-        throw new ArgumentException($"Unsupported manager for the broker: {managerName}");
+        mapped = result ?? default;
+        return result is not null;
     }
 
     private static Scope? MapScope(string? scope)

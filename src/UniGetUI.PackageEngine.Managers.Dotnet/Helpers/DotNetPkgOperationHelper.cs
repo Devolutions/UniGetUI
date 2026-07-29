@@ -1,3 +1,4 @@
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -30,7 +31,7 @@ internal sealed class DotNetPkgOperationHelper : BasePkgOperationHelper
         ];
 
         if (options.CustomInstallLocation != "")
-            parameters.AddRange(["--tool-path", "\"" + options.CustomInstallLocation + "\""]);
+            parameters.AddRange(["--tool-path", CoreTools.EscapeCommandLineArgument(options.CustomInstallLocation)]);
 
         if (
             package.OverridenOptions.Scope is PackageScope.Global

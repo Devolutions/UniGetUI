@@ -415,6 +415,8 @@
   "Ask only once for administrator privileges": "בקש פעם אחת בלבד הרשאות מנהל מערכת",
   "Prohibit any kind of Elevation via UniGetUI Elevator or GSudo": "אסור על כל סוג של הרמה דרך UniGetUI Elevator או GSudo",
   "This option WILL cause issues. Any operation incapable of elevating itself WILL FAIL. Install/update/uninstall as administrator will NOT WORK.": "אפשרות זו תגרום לבעיות. כל פעולה שאינה מסוגלת להרימנה עצמה תיכשל. התקנה/עדכון/הסרה כמנהל מערכת לא יפעלו.",
+  "Delegate package operations to the Devolutions Agent broker": "האצלת פעולות חבילות למתווך Devolutions Agent",
+  "When enabled, install, update and uninstall operations for supported package managers will be performed by the Devolutions Agent service instead of requesting UAC elevation. Operations will fail unless the agent is installed and running.": "כאשר האפשרות מופעלת, פעולות התקנה, עדכון והסרה עבור מנהלי חבילות נתמכים יבוצעו על ידי שירות Devolutions Agent במקום לבקש הרשאות UAC מוגברות. הפעולות ייכשלו אם הסוכן אינו מותקן ופועל.",
   "Allow custom command-line arguments": "אפשר ארגומנטים מותאמים אישית של שורת הפקודה\n",
   "Custom command-line arguments can change the way in which programs are installed, upgraded or uninstalled, in a way UniGetUI cannot control. Using custom command-lines can break packages. Proceed with caution.": "ארגומנטים מותאמים אישית של שורת הפקודה יכולים לשנות את הדרך שבה התוכנים מותקנים, מתעדכנים או מוסרים, באופן ש-UniGetUI אינו יכול לשלוט. שימוש בשורות פקודה מותאמות אישית עלול לגרום נזק לחבילות. יש לפעול בזהירות.",
   "Ignore custom pre-install and post-install commands when importing packages from a bundle": "אפשר להפעיל פקודות מותאמות אישית לפני ואחרי ההתקנה בעת ייבוא חבילות מצרור",

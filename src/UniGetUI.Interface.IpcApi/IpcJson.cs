@@ -100,6 +100,7 @@ internal static class IpcHttpResponseJsonExtensions
 [JsonSerializable(typeof(IpcDesktopShortcutOperationResult))]
 [JsonSerializable(typeof(IpcAppLogEntry))]
 [JsonSerializable(typeof(IpcOperationHistoryEntry))]
+[JsonSerializable(typeof(IpcOperationHistoryDetails))]
 [JsonSerializable(typeof(IpcManagerLogTask))]
 [JsonSerializable(typeof(IpcManagerLogInfo))]
 [JsonSerializable(typeof(IpcManagerMaintenanceInfo))]

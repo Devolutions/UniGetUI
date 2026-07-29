@@ -1,0 +1,253 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.LogPages.OperationHistoryPage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.LogPages"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:pages="using:UniGetUI.Avalonia.Views.Pages.LogPages"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:OperationHistoryListViewModel">
+
+    <UserControl.Styles>
+        <!-- WinUI-style tabs: no accent underline; selection shown by header background. -->
+        <Style Selector="TabItem">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style Selector="TabItem /template/ #PART_SelectedPipe" x:SetterTargetType="Control">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="TabItem:selected /template/ #PART_SelectedPipe" x:SetterTargetType="Control">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="#HistoryActions Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6"/>
+        </Style>
+        <!-- Keep disabled action buttons flat (no theme gray box); dim them to read as disabled. -->
+        <Style Selector="#HistoryActions Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="#HistoryActions Button:disabled">
+            <Setter Property="Opacity" Value="0.4"/>
+        </Style>
+
+        <!-- DataGrid styled to match the package list (rounded inset header bar, no gridlines) -->
+        <Style Selector="DataGridCell:current /template/ Grid#FocusVisual">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="DataGridCell:current">
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="DataGrid /template/ Rectangle#PART_ColumnHeadersAndRowsSeparator">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource PackageListHeaderBackground}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="8,0,0,0"/>
+            <Setter Property="AreSeparatorsVisible" Value="False"/>
+            <Setter Property="SeparatorBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="Margin" Value="0,6,0,6"/>
+        </Style>
+        <Style Selector="DataGridColumnHeader:nth-child(1)">
+            <Setter Property="CornerRadius" Value="4,0,0,4"/>
+        </Style>
+        <Style Selector="DataGridColumnHeader:nth-last-child(1)">
+            <Setter Property="CornerRadius" Value="0,4,4,0"/>
+        </Style>
+    </UserControl.Styles>
+
+    <TabControl Background="Transparent" Margin="8" Padding="0">
+
+        <!-- ─── History tab: structured, actionable list ─── -->
+        <TabItem>
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/history.svg" Width="16" Height="16"/>
+                    <TextBlock Text="{t:Translate History}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </TabItem.Header>
+
+            <Grid RowDefinitions="*,Auto" RowSpacing="6" Margin="0,8,0,0">
+
+                <!-- List (with the same rounded background as the package list) -->
+                <Panel Grid.Row="0">
+                    <Border CornerRadius="8"
+                            BorderThickness="0"
+                            Background="{DynamicResource PackageListBackground}">
+                    <DataGrid x:Name="HistoryList"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              Margin="8,4,8,4"
+                              ItemsSource="{Binding Entries}"
+                              AutoGenerateColumns="False"
+                              CanUserReorderColumns="True"
+                              CanUserResizeColumns="True"
+                              CanUserSortColumns="True"
+                              IsReadOnly="True"
+                              GridLinesVisibility="None"
+                              SelectionMode="Single">
+                        <DataGrid.Columns>
+
+                            <DataGridTemplateColumn Header="{t:Translate Operation}" Width="1*" MinWidth="120" Tag="kind">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:OperationHistoryRowViewModel">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,0" VerticalAlignment="Center">
+                                            <controls:SvgIcon Path="{Binding KindIconPath}" Width="24" Height="24" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding KindLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="{t:Translate Package}" Width="2.4*" Tag="package">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:OperationHistoryRowViewModel">
+                                        <StackPanel Spacing="0" Margin="4,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding TargetName}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding PackageId}" Opacity="0.55" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="{t:Translate Version}" Width="1.3*" Tag="version">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:OperationHistoryRowViewModel">
+                                        <TextBlock Text="{Binding VersionChange}" Margin="4,0" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="{t:Translate Source}" Width="1.1*" Tag="source">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:OperationHistoryRowViewModel">
+                                        <TextBlock Text="{Binding SourceLabel}" Margin="4,0" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="{t:Translate Status}" Width="1.1*" MinWidth="100" Tag="status">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:OperationHistoryRowViewModel">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,0" VerticalAlignment="Center"
+                                                    ToolTip.Tip="{Binding StatusTooltip}">
+                                            <controls:SvgIcon Path="{Binding StatusIconPath}" Width="18" Height="18" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding StatusLabel}" Foreground="{Binding StatusBrush}"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="{t:Translate Date}" Width="1.3*" Tag="date">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:OperationHistoryRowViewModel">
+                                        <TextBlock Text="{Binding TimestampLabel}" Margin="4,0" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding TimestampTooltip}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="" Width="150">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:OperationHistoryRowViewModel">
+                                        <StackPanel x:Name="HistoryActions" Orientation="Horizontal" Spacing="2" Margin="4,0" VerticalAlignment="Center">
+                                            <Button Command="{Binding RevertCommand}" IsEnabled="{Binding CanRevert}"
+                                                    ToolTip.Tip="{t:Translate Revert this operation}"
+                                                    automation:AutomationProperties.Name="{t:Translate Revert this operation}">
+                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/undo.svg" Width="16" Height="16"/>
+                                            </Button>
+                                            <Button Command="{Binding ReRunCommand}" IsEnabled="{Binding CanReRun}"
+                                                    ToolTip.Tip="{t:Translate Run this operation again}"
+                                                    automation:AutomationProperties.Name="{t:Translate Run this operation again}">
+                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg" Width="16" Height="16"/>
+                                            </Button>
+                                            <Button Command="{Binding ViewLogCommand}"
+                                                    IsEnabled="{Binding HasOutput}"
+                                                    ToolTip.Tip="{t:Translate View full log}"
+                                                    automation:AutomationProperties.Name="{t:Translate View full log}">
+                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/clipboard_list.svg" Width="16" Height="16"/>
+                                            </Button>
+                                            <Button Command="{Binding RemoveCommand}"
+                                                    ToolTip.Tip="{t:Translate Remove from history}"
+                                                    automation:AutomationProperties.Name="{t:Translate Remove from history}">
+                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/cross.svg" Width="16" Height="16"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    </Border>
+
+                    <!-- Empty state -->
+                    <StackPanel IsVisible="{Binding IsEmpty}"
+                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Spacing="12" IsHitTestVisible="False">
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/history.svg" Width="48" Height="48" Opacity="0.4"/>
+                        <TextBlock Text="{Binding EmptyMessage}"
+                                   Opacity="0.6" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Panel>
+
+                <!-- Footer: Clear on the left, quick filters on the bottom right (like the package list) -->
+                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
+                    <Button Grid.Column="0"
+                            Command="{Binding ClearCommand}"
+                            Padding="10,6"
+                            CornerRadius="4"
+                            Background="Transparent"
+                            BorderThickness="1"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            automation:AutomationProperties.Name="{t:Translate Clear history}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/delete.svg" Width="16" Height="16"/>
+                            <TextBlock Text="{t:Translate Clear history}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <ComboBox MinWidth="130"
+                                  ItemsSource="{Binding StatusOptions}"
+                                  SelectedItem="{Binding SelectedStatus}"
+                                  automation:AutomationProperties.Name="{t:Translate Filter by status}"/>
+                        <ComboBox MinWidth="130"
+                                  ItemsSource="{Binding KindOptions}"
+                                  SelectedItem="{Binding SelectedKind}"
+                                  automation:AutomationProperties.Name="{t:Translate Filter by type}"/>
+                        <ComboBox MinWidth="130"
+                                  ItemsSource="{Binding ManagerOptions}"
+                                  SelectedItem="{Binding SelectedManager}"
+                                  automation:AutomationProperties.Name="{t:Translate Filter by manager}"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </TabItem>
+
+        <!-- ─── Log tab: raw console output ─── -->
+        <TabItem>
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/clipboard_list.svg" Width="16" Height="16"/>
+                    <TextBlock Text="{t:Translate Log}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </TabItem.Header>
+            <pages:OperationHistoryLogView x:Name="LogView"/>
+        </TabItem>
+
+    </TabControl>
+</UserControl>

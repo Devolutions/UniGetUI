@@ -49,6 +49,25 @@ public partial class MainWindow : Window
 {
     private const string FORCE_NATIVE_LINUX_DECORATIONS_ENVIRONMENT_VARIABLE = "UNIGETUI_FORCE_NATIVE_LINUX_DECORATIONS";
 
+    // Back/toggle button size on macOS. The native title bar is ~28 px tall and the traffic lights are
+    // centred in it, so a button sharing that centre line has to fit inside those 28 px — the 32 px
+    // AXAML size would overflow past the top of the window (see SetupTitleBar).
+    private const double MAC_TITLE_BAR_CONTROL_SIZE = 24;
+
+    // Centre line of the macOS traffic lights, measured from the top of the window: they sit centred in
+    // the native 28 px NSTitlebarContainerView. This can't be read back from WindowDecorationMargin,
+    // because ExtendClientAreaTitleBarHeightHint makes that report our requested 44 px instead.
+    private const double MAC_TRAFFIC_LIGHT_CENTER_Y = 14;
+
+    // Left inset for the title-bar row on macOS. The close/minimise/zoom cluster ends ~59 px in, and
+    // the row's first glyph starts 4 px past this inset (the button's padding), so this leaves a ~21 px
+    // gap — enough for the row to read as separate from the window buttons rather than crowding them.
+    private const double MAC_TRAFFIC_LIGHT_INSET = 76;
+
+    // Last known macOS title-bar height; seeded with the requested height for the window's first layout
+    // pass and while fullscreen reports a collapsed decoration margin.
+    private double _macTitleBarHeight = 44;
+
     // Workaround for Avalonia 12 issue #21160 / #21212: BorderOnly + ExtendClientArea
     // strips WS_CAPTION / WS_THICKFRAME, which makes DWM disable Aero Snap drag-to-top,
     // Win+Up, and the maximize/minimize/restore animations. Re-add those bits on every
@@ -481,37 +500,59 @@ public partial class MainWindow : Window
     {
         if (OperatingSystem.IsMacOS())
         {
-            // macOS: extend into the native title bar area.
-            // WindowDecorationMargin.Top drives TitleBarGrid.Height via binding.
-            // Traffic lights sit on the left → keep the 65 px HamburgerPanel margin.
-            // Request a 44 px title bar (matching Windows/Linux) instead of the default
-            // ~28 px one: the default is shorter than the 32 px search pill, so the
-            // centred pill overflowed upward and hugged the top of the window. macOS
-            // vertically centres the traffic lights in the taller bar.
+            // macOS: extend into the native title bar area. Request a 44 px bar (matching
+            // Windows/Linux) so the centred search pill keeps its size and position.
+            //
+            // The bar height alone can't align the left-hand row, though: macOS keeps the traffic
+            // lights centred in the real ~28 px NSTitlebarContainerView, and Avalonia's height hint
+            // only stretches its own title-bar material/underline — it never repositions the buttons.
+            // Centring the row in the 44 px band therefore put it at y=22 while the traffic lights
+            // stayed at y=14, so back/toggle/title sat 8 px below the window buttons.
+            //
+            // So the bar stays 44 px for the search pill, and only the left-hand row is pinned to the
+            // traffic lights' centre line (see ApplyMacTitleBarLayout / MAC_TRAFFIC_LIGHT_*).
             ExtendClientAreaToDecorationsHint = true;
             ExtendClientAreaTitleBarHeightHint = 44;
+            ApplyMacTitleBarControlSizes();
 
-            // In fullscreen the native title bar is hidden and WindowDecorationMargin
-            // collapses to 0, which would clip the search box and hamburger. Use a fixed
-            // title bar height in that state, and drop the traffic-light reservation
-            // since the traffic lights aren't shown either.
-            //
-            // Track the window state and the live decoration margin directly rather than
-            // via string-based Bindings: reflection bindings are trim-unsafe (IL2026).
+            // Drive height/inset from code rather than the AXAML bindings: in fullscreen the native
+            // title bar is hidden and WindowDecorationMargin collapses to 0, which would clip the
+            // search box and hamburger. Track the window state and the live decoration margin
+            // directly rather than via string-based Bindings: reflection bindings are trim-unsafe
+            // (IL2026).
+            TitleBarGrid.ClearValue(HeightProperty);
+
             void ApplyMacTitleBarLayout()
             {
-                if (WindowState == WindowState.FullScreen)
+                bool fullScreen = WindowState == WindowState.FullScreen;
+
+                // Keep the last good decoration height so entering/leaving fullscreen (where the
+                // margin collapses to 0) doesn't shift the content.
+                if (!fullScreen && WindowDecorationMargin.Top > 0)
                 {
-                    TitleBarGrid.Height = 44;
-                    MainContentRoot.Margin = new Thickness(0, 44, 0, 0);
+                    _macTitleBarHeight = WindowDecorationMargin.Top;
+                }
+
+                TitleBarGrid.Height = _macTitleBarHeight;
+                MainContentRoot.Margin = new Thickness(0, _macTitleBarHeight, 0, 0);
+
+                if (fullScreen)
+                {
+                    // No traffic lights in fullscreen: drop their horizontal reservation and just
+                    // centre the row in the bar.
+                    HamburgerPanel.VerticalAlignment = VerticalAlignment.Center;
                     HamburgerPanel.Margin = new Thickness(10, 0, 8, 0);
                 }
                 else
                 {
-                    Thickness margin = WindowDecorationMargin;
-                    TitleBarGrid.Height = margin.Top;
-                    MainContentRoot.Margin = margin;
-                    HamburgerPanel.Margin = new Thickness(65, 0, 8, 0);
+                    // Pin the row to the traffic lights: top-aligned, offset so its centre line
+                    // matches theirs, and inset far enough to clear the close/minimise/zoom cluster.
+                    HamburgerPanel.VerticalAlignment = VerticalAlignment.Top;
+                    HamburgerPanel.Margin = new Thickness(
+                        MAC_TRAFFIC_LIGHT_INSET,
+                        MAC_TRAFFIC_LIGHT_CENTER_Y - (MAC_TITLE_BAR_CONTROL_SIZE / 2),
+                        8,
+                        0);
                 }
             }
 
@@ -563,6 +604,21 @@ public partial class MainWindow : Window
             {
                 CreateResizeGrips();
             }
+        }
+    }
+
+    /// <summary>
+    /// Shrinks the back/toggle buttons so they fit inside macOS' native (~28 px) title bar band, which
+    /// is where the traffic lights live. The AXAML size targets the taller Windows/Linux bars; at 32 px
+    /// a button centred on the traffic lights' centre line would overflow past the top of the window.
+    /// The centred search pill is unaffected — it stays centred in the full 44 px bar.
+    /// </summary>
+    private void ApplyMacTitleBarControlSizes()
+    {
+        foreach (Button button in new[] { BackButton, SidebarToggleButton })
+        {
+            button.Width = MAC_TITLE_BAR_CONTROL_SIZE;
+            button.Height = MAC_TITLE_BAR_CONTROL_SIZE;
         }
     }
 

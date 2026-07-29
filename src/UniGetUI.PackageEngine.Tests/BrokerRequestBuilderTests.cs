@@ -30,6 +30,20 @@ public class BrokerRequestBuilderTests
     [InlineData("Winget", ManagerName.Winget)]
     [InlineData("PowerShell", ManagerName.PowerShell)]
     [InlineData("PowerShell7", ManagerName.PowerShell7)]
+    [InlineData("Apt", ManagerName.Apt)]
+    [InlineData("Bun", ManagerName.Bun)]
+    [InlineData("Cargo", ManagerName.Cargo)]
+    [InlineData("Chocolatey", ManagerName.Chocolatey)]
+    [InlineData("Dnf", ManagerName.Dnf)]
+    [InlineData(".NET Tool", ManagerName.Dotnet)]
+    [InlineData("Flatpak", ManagerName.Flatpak)]
+    [InlineData("Homebrew", ManagerName.Homebrew)]
+    [InlineData("Npm", ManagerName.Npm)]
+    [InlineData("Pacman", ManagerName.Pacman)]
+    [InlineData("Pip", ManagerName.Pip)]
+    [InlineData("Scoop", ManagerName.Scoop)]
+    [InlineData("Snap", ManagerName.Snap)]
+    [InlineData("vcpkg", ManagerName.Vcpkg)]
     public void Build_MapsSupportedManagers(string managerName, ManagerName expected)
     {
         var package = new PackageBuilder()
@@ -44,11 +58,21 @@ public class BrokerRequestBuilderTests
     public void Build_ThrowsForUnsupportedManager()
     {
         var package = new PackageBuilder()
-            .WithManager(new PackageManagerBuilder().WithName("Scoop").Build())
+            .WithManager(new PackageManagerBuilder().WithName("NotARealManager").Build())
             .Build();
 
         Assert.Throws<ArgumentException>(
             () => BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Install));
+    }
+
+    [Theory]
+    [InlineData("Winget", true)]
+    [InlineData("Chocolatey", true)]
+    [InlineData("Scoop", true)]
+    [InlineData("NotARealManager", false)]
+    public void SupportsManager_MatchesMapping(string managerName, bool expected)
+    {
+        Assert.Equal(expected, BrokerRequestBuilder.SupportsManager(managerName));
     }
 
     [Fact]

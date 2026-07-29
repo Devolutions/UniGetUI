@@ -86,6 +86,25 @@ namespace UniGetUI.Core.Tools
         }
 
         /// <summary>
+        /// Splits a translated string at the first sentence boundary so it renders on two
+        /// readable lines. Handles both Latin (". ") and CJK ("。") separators. Strings that
+        /// already contain a translator-provided line break are returned unchanged.
+        /// </summary>
+        public static string FormatAsTwoLines(string text)
+        {
+            if (text.Contains('\n'))
+                return text;
+
+            var idx = text.IndexOf(". ", StringComparison.Ordinal);
+            if (idx >= 0)
+                return text[..(idx + 1)] + "\n" + text[(idx + 2)..];
+            idx = text.IndexOf('。');
+            if (idx >= 0 && idx < text.Length - 1)
+                return text[..(idx + 1)] + "\n" + text[(idx + 1)..];
+            return text;
+        }
+
+        /// <summary>
         /// Translates a string into the operating system's UI language, independently of the
         /// language currently selected in UniGetUI. Used for the "System language" entry of the
         /// language selector so it appears in the language it would actually resolve to.
@@ -1011,6 +1030,41 @@ namespace UniGetUI.Core.Tools
 
         public static string MakeValidFileName(string name) =>
             string.Concat(name.Where(x => !_illegalPathChars.Contains(x)));
+
+        public static string EscapeCommandLineArgument(string argument)
+        {
+            StringBuilder builder = new();
+            builder.Append('"');
+            int i = 0;
+            while (i < argument.Length)
+            {
+                int backslashes = 0;
+                while (i < argument.Length && argument[i] == '\\')
+                {
+                    i++;
+                    backslashes++;
+                }
+
+                if (i == argument.Length)
+                {
+                    builder.Append('\\', backslashes * 2);
+                }
+                else if (argument[i] == '"')
+                {
+                    builder.Append('\\', backslashes * 2 + 1);
+                    builder.Append('"');
+                    i++;
+                }
+                else
+                {
+                    builder.Append('\\', backslashes);
+                    builder.Append(argument[i]);
+                    i++;
+                }
+            }
+            builder.Append('"');
+            return builder.ToString();
+        }
 
         // Safely wait for a task that may throw an exception we don't care about
         public static async void FinalizeDangerousTask(Task t)

@@ -176,6 +176,10 @@ namespace UniGetUI.Interface
                 IpcHttpRoutes.Path("/logs/history"),
                 V3_GetOperationHistory
             );
+            endpoints.MapGet(
+                IpcHttpRoutes.Path("/logs/history/detail"),
+                V3_GetOperationHistoryDetail
+            );
             endpoints.MapGet(IpcHttpRoutes.Path("/logs/manager"), V3_GetManagerLog);
             endpoints.MapGet(IpcHttpRoutes.Path("/backups/status"), V3_GetBackupStatus);
             endpoints.MapPost(
@@ -1058,6 +1062,26 @@ namespace UniGetUI.Interface
                 IpcLogsApi.ListOperationHistory(),
                 IpcJson.Options
             );
+        }
+
+        private async Task V3_GetOperationHistoryDetail(HttpContext context)
+        {
+            if (!AuthenticateToken(context.Request.Query["token"]))
+            {
+                context.Response.StatusCode = 401;
+                return;
+            }
+
+            string id = context.Request.Query["id"].ToString();
+            var details = IpcLogsApi.GetOperationHistoryEntry(id);
+            if (details is null)
+            {
+                context.Response.StatusCode = 404;
+                await context.Response.WriteAsync($"No history entry with id \"{id}\" was found.");
+                return;
+            }
+
+            await context.Response.WriteAsJsonAsync(details, IpcJson.Options);
         }
 
         private async Task V3_GetManagerLog(HttpContext context)

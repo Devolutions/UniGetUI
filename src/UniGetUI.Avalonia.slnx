@@ -195,6 +195,30 @@
       <Platform Solution="*|x64" Project="x64" />
     </Project>
   </Folder>
+  <Folder Name="/UniGetUI.PackageEngine.Managers.Apt/">
+    <Project Path="UniGetUI.PackageEngine.Managers.Apt/UniGetUI.PackageEngine.Managers.Apt.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/UniGetUI.PackageEngine.Managers.Dnf/">
+    <Project Path="UniGetUI.PackageEngine.Managers.Dnf/UniGetUI.PackageEngine.Managers.Dnf.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/UniGetUI.PackageEngine.Managers.Pacman/">
+    <Project Path="UniGetUI.PackageEngine.Managers.Pacman/UniGetUI.PackageEngine.Managers.Pacman.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/UniGetUI.PackageEngine.AgentBroker/">
+    <Project Path="UniGetUI.PackageEngine.AgentBroker/UniGetUI.PackageEngine.AgentBroker.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
   <Folder Name="/UniGetUI.PackageEngine.Operations/">
     <Project Path="UniGetUI.PackageEngine.Operations/UniGetUI.PackageEngine.Operations.csproj">
       <Platform Solution="*|arm64" Project="arm64" />

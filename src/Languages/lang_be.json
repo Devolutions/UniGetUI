@@ -415,6 +415,8 @@
   "Ask only once for administrator privileges": "Запытаць толькі раз",
   "Prohibit any kind of Elevation via UniGetUI Elevator or GSudo": "Забараніць павышэнне прывілеяў праз UniGetUI Elevator або GSudo",
   "This option WILL cause issues. Any operation incapable of elevating itself WILL FAIL. Install/update/uninstall as administrator will NOT WORK.": "Гэта опцыя выкліча праблемы. Аперацыі без самапазняцця будуць ПАДАЛЕ. Устал./абнаўл./выдал. як адміністратар НЕ ПРАЦУЕ.",
+  "Delegate package operations to the Devolutions Agent broker": "Дэлегаваць аперацыі з пакетамі брокеру Devolutions Agent",
+  "When enabled, install, update and uninstall operations for supported package managers will be performed by the Devolutions Agent service instead of requesting UAC elevation. Operations will fail unless the agent is installed and running.": "Калі ўключана, аперацыі ўсталявання, абнаўлення і выдалення для падтрымліваемых менеджараў пакетаў будуць выконвацца службай Devolutions Agent замест запыту павышэння правоў UAC. Аперацыі не будуць выкананы, калі агент не ўсталяваны і не запушчаны.",
   "Allow custom command-line arguments": "Дазволіць ўвод уласных аргументаў каманднага радка",
   "Custom command-line arguments can change the way in which programs are installed, upgraded or uninstalled, in a way UniGetUI cannot control. Using custom command-lines can break packages. Proceed with caution.": "Уласныя аргументы могуць змяніць працэс усталявання/абнаўлення/выдалення. Будзьце асцярожныя - гэта можа сапсаваць пакеты.",
   "Ignore custom pre-install and post-install commands when importing packages from a bundle": "Дазволіць выкананне карыстальніцкіх каманд перад і пасля ўсталявання пры імпарце пакетаў з набору",

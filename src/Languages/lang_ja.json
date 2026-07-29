@@ -415,6 +415,8 @@
   "Ask only once for administrator privileges": "管理者権限の要求を1回のみにする",
   "Prohibit any kind of Elevation via UniGetUI Elevator or GSudo": "UniGetUI Elevator または GSudo による権限昇格を禁止する",
   "This option WILL cause issues. Any operation incapable of elevating itself WILL FAIL. Install/update/uninstall as administrator will NOT WORK.": "エラーの原因となるため推奨されません。\n単独で権限昇格を行えないすべてのパッケージ操作が失敗するため、管理者としてのインストール・アップデート・アンインストールが動作しなくなります。",
+  "Delegate package operations to the Devolutions Agent broker": "パッケージ操作を Devolutions Agent ブローカーに委任する",
+  "When enabled, install, update and uninstall operations for supported package managers will be performed by the Devolutions Agent service instead of requesting UAC elevation. Operations will fail unless the agent is installed and running.": "有効にすると、対応するパッケージマネージャーのインストール、更新、アンインストール操作は、UAC の昇格を要求する代わりに Devolutions Agent サービスによって実行されます。エージェントがインストールされて実行中でない場合、操作は失敗します。",
   "Allow custom command-line arguments": "カスタムコマンドライン引数を許可する",
   "Custom command-line arguments can change the way in which programs are installed, upgraded or uninstalled, in a way UniGetUI cannot control. Using custom command-lines can break packages. Proceed with caution.": "カスタムコマンドライン引数によって、プログラムのインストール、アップグレード、アンインストールの方法がUniGetUIでは制御できない形で変更されることがあります。カスタムコマンドライン引数を使用するとパッケージが破損する可能性があります。慎重に操作してください。",
   "Ignore custom pre-install and post-install commands when importing packages from a bundle": "バンドルからパッケージをインポートする際に、カスタムのインストール前後コマンドを無視する",

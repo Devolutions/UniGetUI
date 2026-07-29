@@ -195,6 +195,8 @@ public partial class MainWindowViewModel : ViewModelBase
             page.ViewModel.GlobalQueryText = value;
         else if (CurrentPageContent is SettingsBasePage)
             UpdateSettingsSuggestions(value);
+        else if (CurrentPageContent is Views.Pages.LogPages.OperationHistoryPage historyPage)
+            historyPage.ApplyQuery(value);
     }
 
     public void ClearAllSearchQueries()

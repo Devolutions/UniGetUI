@@ -2,6 +2,7 @@
 using Devolutions.Pinget.Core;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -884,6 +885,32 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void WinGetInstallEscapesQuotesInCustomLocationToPreventArgumentInjection()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.QuotedLocation")
+            .WithVersion("1.0.0")
+            .Build();
+        var options = new InstallOptions
+        {
+            CustomInstallLocation = "C:\\apps\" --evil-injected-switch",
+        };
+
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Install).ToList();
+
+        int locationIndex = parameters.IndexOf("--location");
+        Assert.True(locationIndex >= 0);
+        Assert.Equal(
+            CoreTools.EscapeCommandLineArgument("C:\\apps\" --evil-injected-switch"),
+            parameters[locationIndex + 1]
+        );
+        Assert.DoesNotContain("--evil-injected-switch", parameters);
+    }
+
+    [Fact]
     public void WinGetUpdateOmitsInheritedLocationWhenForceSettingIsOff()
     {
         // #4210: a location inherited from the manager-wide default must not relocate installs
@@ -1090,6 +1117,38 @@ public sealed class WinGetManagerTests : IDisposable
 
         OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
         Assert.False(package.OverridenOptions.WinGet_DropArchAndScope);
+    }
+
+    [Fact]
+    public void WinGetUpdateNotApplicableSuppressesPhantomUpdate()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Hugin.Hugin")
+            .WithVersion("20.25.0")
+            .WithNewVersion("2025.0.1")
+            .Build();
+
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A15002B)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.True(WinGetPkgOperationHelper.IsStuckUpgradeLoop(package));
+
+        var newerUpdate = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Hugin.Hugin")
+            .WithVersion("20.25.0")
+            .WithNewVersion("2026.0.0")
+            .Build();
+        Assert.False(WinGetPkgOperationHelper.IsStuckUpgradeLoop(newerUpdate));
     }
 
     [Fact]

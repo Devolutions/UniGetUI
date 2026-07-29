@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using UniGetUI.Core.Language;
 using UniGetUI.PackageEngine.Enums;
 
@@ -48,6 +49,73 @@ namespace UniGetUI.Core.Tools.Tests
                 PackageScope.Local,
                 CommonTranslations.InvertedScopeNames["Usuari | Local"]
             );
+        }
+
+        [Fact]
+        public void EscapeCommandLineArgument_WrapsSimplePathInQuotes()
+        {
+            Assert.Equal("\"C:\\dev\\contoso\"", CoreTools.EscapeCommandLineArgument(@"C:\dev\contoso"));
+            Assert.Equal("\"C:\\Program Files\\App\"", CoreTools.EscapeCommandLineArgument(@"C:\Program Files\App"));
+        }
+
+        [Fact]
+        public void EscapeCommandLineArgument_EscapesEmbeddedQuoteToPreventInjection()
+        {
+            Assert.Equal("\"C:\\x\\\" --evil\"", CoreTools.EscapeCommandLineArgument("C:\\x\" --evil"));
+        }
+
+        [Fact]
+        public void EscapeCommandLineArgument_DoublesTrailingBackslashes()
+        {
+            Assert.Equal("\"C:\\App\\\\\"", CoreTools.EscapeCommandLineArgument(@"C:\App\"));
+        }
+
+        [Theory]
+        [InlineData(@"C:\dev\contoso")]
+        [InlineData(@"C:\Program Files\App")]
+        [InlineData(@"C:\App\")]
+        [InlineData("C:\\x\" --disable-hash-check")]
+        [InlineData(@"C:\weird path\with spaces\and\")]
+        [InlineData("plain")]
+        [InlineData("")]
+        public void EscapeCommandLineArgument_RoundTripsThroughWindowsParser(string argument)
+        {
+            if (!OperatingSystem.IsWindows())
+                return;
+
+            string escaped = CoreTools.EscapeCommandLineArgument(argument);
+            string[] parsed = SplitWindowsCommandLine("app.exe " + escaped);
+
+            Assert.Equal(2, parsed.Length);
+            Assert.Equal(argument, parsed[1]);
+        }
+
+        [DllImport("shell32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern IntPtr CommandLineToArgvW(string lpCmdLine, out int pNumArgs);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr LocalFree(IntPtr hMem);
+
+        private static string[] SplitWindowsCommandLine(string commandLine)
+        {
+            IntPtr argv = CommandLineToArgvW(commandLine, out int argc);
+            if (argv == IntPtr.Zero)
+                throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+
+            try
+            {
+                string[] result = new string[argc];
+                for (int i = 0; i < argc; i++)
+                {
+                    IntPtr entry = Marshal.ReadIntPtr(argv, i * IntPtr.Size);
+                    result[i] = Marshal.PtrToStringUni(entry) ?? "";
+                }
+                return result;
+            }
+            finally
+            {
+                LocalFree(argv);
+            }
         }
 
         [Fact]

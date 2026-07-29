@@ -82,6 +82,14 @@
                                        WarningText="{t:Translate Text='This option WILL cause issues. Any operation incapable of elevating itself WILL FAIL. Install/update/uninstall as administrator will NOT WORK.'}"
                                        StateChangedCommand="{Binding RefreshElevationStateCommand}"
                                        CornerRadius="8"/>
+
+                <UserControl Height="16"/>
+
+                <settings:CheckboxCard x:Name="UseAgentBrokerCard"
+                                       SettingName="UseAgentBroker"
+                                       Text="{t:Translate Delegate package operations to the Devolutions Agent broker}"
+                                       WarningText="{t:Translate Text='When enabled, install, update and uninstall operations for supported package managers will be performed by the Devolutions Agent service instead of requesting UAC elevation. Operations will fail unless the agent is installed and running.'}"
+                                       CornerRadius="8"/>
             </StackPanel>
 
             <settings:TranslatedTextBlock Text="Restrictions on package operations"

@@ -495,7 +495,8 @@
                           automation:AutomationProperties.AccessibilityView="Raw"
                           Data="M7,1 L1,7 L7,13 M1,7 H15"/>
                 </Button>
-                <Button Width="32" Height="32"
+                <Button x:Name="SidebarToggleButton"
+                        Width="32" Height="32"
                         Padding="4"
                         Background="Transparent"
                         BorderThickness="0"

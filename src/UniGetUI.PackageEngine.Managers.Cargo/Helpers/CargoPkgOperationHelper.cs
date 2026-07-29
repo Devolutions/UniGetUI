@@ -1,3 +1,4 @@
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -52,7 +53,7 @@ internal sealed class CargoPkgOperationHelper(Cargo cargo) : BasePkgOperationHel
                     parameters.Add("--skip-signatures");
 
                 if (options.CustomInstallLocation != "")
-                    parameters.AddRange(["--install-path", options.CustomInstallLocation]);
+                    parameters.AddRange(["--install-path", CoreTools.EscapeCommandLineArgument(options.CustomInstallLocation)]);
             }
         }
 

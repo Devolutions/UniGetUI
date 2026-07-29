@@ -205,7 +205,11 @@ public partial class SidebarView : BaseView<SidebarViewModel>
 
         double currentCenter = _pillTranslate.Y + ((PillHeight / 2d) * _pillScale.ScaleY);
         if (Math.Abs(currentCenter - targetCenter) < 0.5)
+        {
+            _pillScale.ScaleY = 1d;
+            _pillTranslate.Y = targetTop;
             return;
+        }
 
         _pillAnimationCancellation = new CancellationTokenSource();
         int version = ++_pillAnimationVersion;

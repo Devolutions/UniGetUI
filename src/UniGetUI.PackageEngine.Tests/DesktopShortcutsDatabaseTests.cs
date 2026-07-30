@@ -19,13 +19,13 @@ public sealed class DesktopShortcutsDatabaseTests : IDisposable
         Directory.CreateDirectory(CoreData.UniGetUIUserConfigurationDirectory);
         Settings.ResetSettings();
         DesktopShortcutsDatabase.ResetDatabase();
-        DesktopShortcutsDatabase.GetUnknownShortcuts().Clear();
+        DesktopShortcutsDatabase.ClearUnknownShortcuts();
     }
 
     public void Dispose()
     {
         DesktopShortcutsDatabase.ResetDatabase();
-        DesktopShortcutsDatabase.GetUnknownShortcuts().Clear();
+        DesktopShortcutsDatabase.ClearUnknownShortcuts();
         Settings.ResetSettings();
         CoreData.TEST_DataDirectoryOverride = null;
         if (Directory.Exists(_testRoot))

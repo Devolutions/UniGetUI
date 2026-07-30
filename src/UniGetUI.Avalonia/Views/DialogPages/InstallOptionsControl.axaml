@@ -238,6 +238,12 @@
                                  FontSize="14"
                                  HorizontalAlignment="Stretch"/>
 
+                        <TextBlock Text="{Binding EnvVarSyntaxHintLabel}"
+                                   IsVisible="{Binding LocationEnabled}"
+                                   TextWrapping="Wrap"
+                                   Opacity="0.7"
+                                   FontSize="12"/>
+
                     </StackPanel>
                 </Border>
             </TabItem>
@@ -268,6 +274,12 @@
                                        HorizontalAlignment="Left" Padding="0" FontWeight="SemiBold"/>
 
                       <TextBlock Text="{Binding CliArgsHintLabel}"
+                                 IsVisible="{Binding CliEnabled}"
+                                 TextWrapping="Wrap"
+                                 Opacity="0.7"
+                                 FontSize="12"/>
+
+                      <TextBlock Text="{Binding EnvVarSyntaxHintLabel}"
                                  IsVisible="{Binding CliEnabled}"
                                  TextWrapping="Wrap"
                                  Opacity="0.7"

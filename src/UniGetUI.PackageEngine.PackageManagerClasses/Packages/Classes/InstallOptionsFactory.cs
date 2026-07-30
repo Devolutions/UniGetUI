@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
@@ -301,7 +303,17 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         private static string _expandEnvironmentVariables(string value)
         {
-            if (string.IsNullOrEmpty(value) || !value.Contains('%'))
+            if (string.IsNullOrEmpty(value))
+                return value;
+
+            return Settings.Get(Settings.K.ExpandEnvVarsWithPercentSyntax)
+                ? _expandPercentVariables(value)
+                : _expandAngleBracketVariables(value);
+        }
+
+        private static string _expandPercentVariables(string value)
+        {
+            if (!value.Contains('%'))
                 return value;
 
             try
@@ -314,6 +326,47 @@ namespace UniGetUI.PackageEngine.PackageClasses
                 Logger.Warn(ex);
                 return value;
             }
+        }
+
+        private static string _expandAngleBracketVariables(string value)
+        {
+            if (!value.Contains('<'))
+                return value;
+
+            StringBuilder result = new();
+            int i = 0;
+            while (i < value.Length)
+            {
+                if (value[i] == '<')
+                {
+                    int end = value.IndexOf('>', i + 1);
+                    if (end > i + 1)
+                    {
+                        string name = value.Substring(i + 1, end - i - 1);
+                        string? resolved = null;
+                        try
+                        {
+                            resolved = Environment.GetEnvironmentVariable(name);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Warn($"Could not read environment variable \"{name}\"");
+                            Logger.Warn(ex);
+                        }
+
+                        if (resolved is not null)
+                        {
+                            result.Append(resolved);
+                            i = end + 1;
+                            continue;
+                        }
+                    }
+                }
+
+                result.Append(value[i]);
+                i++;
+            }
+            return result.ToString();
         }
     }
 }

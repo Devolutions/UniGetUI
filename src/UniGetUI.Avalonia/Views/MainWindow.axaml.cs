@@ -271,8 +271,10 @@ public partial class MainWindow : Window
         if (ModalLayer.IsVisible)
         {
             if (e.Key == Key.Escape)
+            {
                 (ModalContent.Content as ImmersiveDialog)?.Close();
-            e.Handled = true;
+                e.Handled = true;
+            }
             return;
         }
 

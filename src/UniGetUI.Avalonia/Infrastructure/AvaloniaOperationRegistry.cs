@@ -36,6 +36,8 @@ public static class AvaloniaOperationRegistry
     public static int ErrorsOccurred => _errorsOccurred;
     public static bool RestartRequired { get; set; }
 
+    private static bool _shortcutDialogOpen;
+
     /// <summary>
     /// Register an operation and create its UI view-model.
     /// Must be called before <c>operation.MainThread()</c>.
@@ -294,17 +296,50 @@ public static class AvaloniaOperationRegistry
             await CoreTools.ResetUACForCurrentProcess();
         }
 
-        if (OperatingSystem.IsWindows())
+        if (!anyStillRunning && Settings.Get(Settings.K.AskToDeleteNewDesktopShortcuts))
         {
-            var unknownShortcuts = UniGetUI.PackageEngine.Classes.Packages.Classes.DesktopShortcutsDatabase.GetUnknownShortcuts();
+            var unknownShortcuts = DesktopShortcutsDatabase.GetUnknownShortcuts();
             if (unknownShortcuts.Count > 0)
-                WindowsAppNotificationBridge.ShowNewShortcutsNotification(unknownShortcuts);
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    if (Views.MainWindow.IsWindowOnScreen)
+                        Dispatcher.UIThread.Post(() => _ = AutoOpenShortcutsDialogAsync(unknownShortcuts));
+                }
+                else if (OperatingSystem.IsMacOS())
+                {
+                    MacOsNotificationBridge.ShowNewShortcutsNotification(unknownShortcuts);
+                }
+            }
         }
-        else if (OperatingSystem.IsMacOS())
+    }
+
+    public static void PromptPendingShortcutsIfAny()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        if (!Settings.Get(Settings.K.AskToDeleteNewDesktopShortcuts)) return;
+        var unknownShortcuts = DesktopShortcutsDatabase.GetUnknownShortcuts();
+        if (unknownShortcuts.Count == 0) return;
+        Dispatcher.UIThread.Post(() => _ = AutoOpenShortcutsDialogAsync(unknownShortcuts));
+    }
+
+    private static async Task AutoOpenShortcutsDialogAsync(IReadOnlyList<string> shortcuts)
+    {
+        if (_shortcutDialogOpen) return;
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
+            return;
+
+        var pending = shortcuts.ToList();
+        _shortcutDialogOpen = true;
+        try
         {
-            var unknownShortcuts = UniGetUI.PackageEngine.Classes.Packages.Classes.DesktopShortcutsDatabase.GetUnknownShortcuts();
-            if (unknownShortcuts.Count > 0)
-                MacOsNotificationBridge.ShowNewShortcutsNotification(unknownShortcuts);
+            await new Views.ManageDesktopShortcutsWindow(pending).ShowDialog(owner);
+        }
+        finally
+        {
+            _shortcutDialogOpen = false;
+            foreach (var shortcut in pending)
+                DesktopShortcutsDatabase.RemoveFromUnknownShortcuts(shortcut);
         }
     }
 }

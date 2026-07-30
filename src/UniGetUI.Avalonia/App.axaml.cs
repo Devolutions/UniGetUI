@@ -215,10 +215,7 @@ public partial class App : Application
         if (isDaemonLaunch)
             return;
 
-        if (!mainWindow.IsVisible)
-            mainWindow.Show();
-
-        mainWindow.Activate();
+        mainWindow.ShowFromTray();
     }
 
     public static void ApplyTheme(string value)

@@ -1841,6 +1841,8 @@ public partial class MainWindow : Window
         else if (WindowState == WindowState.Minimized)
             WindowState = WindowState.Normal;
         Activate();
+
+        AvaloniaOperationRegistry.PromptPendingShortcutsIfAny();
     }
 
     public bool IsQuitting => Interlocked.CompareExchange(ref _isQuitting, 0, 0) == 1;

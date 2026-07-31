@@ -117,7 +117,20 @@ public partial class PackagesPageViewModel : ViewModelBase
         }
     }
 
-    public double FilterPaneColumnWidth => IsFilterPaneOpen ? _trackedFilterPaneWidth : 0.0;
+    private bool _filterPaneOverlaysContent;
+    public bool FilterPaneOverlaysContent
+    {
+        get => _filterPaneOverlaysContent;
+        set
+        {
+            if (_filterPaneOverlaysContent == value) return;
+            _filterPaneOverlaysContent = value;
+            OnPropertyChanged(nameof(FilterPaneColumnWidth));
+        }
+    }
+
+    public double FilterPaneColumnWidth =>
+        IsFilterPaneOpen && !FilterPaneOverlaysContent ? _trackedFilterPaneWidth : 0.0;
     partial void OnIsFilterPaneOpenChanged(bool value)
     {
         OnPropertyChanged(nameof(FilterPaneColumnWidth));

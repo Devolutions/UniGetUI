@@ -228,13 +228,12 @@
               ClipToBounds="True"
               ColumnDefinitions="220,4,*">
 
-            <!-- ===== FILTER PANE =====
-                 SidePanel is the Border the code-behind positions (inline vs overlay mode). -->
-                <Border x:Name="SidePanel"
-                        Grid.Column="0"
-                        CornerRadius="8"
-                        ClipToBounds="True">
-                <ScrollViewer x:Name="SidePanelScroller"
+            <!-- Both presentations use this single content definition. Their containers remain
+                 isolated so compact compositor state cannot leak into the inline pane. -->
+            <Grid.Resources>
+                <DataTemplate x:Key="FilterPaneContentTemplate"
+                              x:DataType="vm:PackagesPageViewModel">
+                    <ScrollViewer
                               HorizontalScrollBarVisibility="Disabled"
                               Padding="4,8,4,0"
                               automation:AutomationProperties.AccessibilityView="Control"
@@ -443,8 +442,21 @@
                         </Expander>
 
                     </StackPanel>
-                </ScrollViewer>
-                </Border>
+                    </ScrollViewer>
+                </DataTemplate>
+            </Grid.Resources>
+
+            <!-- ===== INLINE FILTER PANE ===== -->
+            <Border x:Name="InlineSidePanel"
+                    Grid.Column="0"
+                    CornerRadius="8"
+                    ClipToBounds="True">
+                <Border.CacheMode>
+                    <BitmapCache RenderAtScale="1"/>
+                </Border.CacheMode>
+                <ContentControl Content="{Binding}"
+                                ContentTemplate="{StaticResource FilterPaneContentTemplate}"/>
+            </Border>
             <!-- ===== DRAG SPLITTER ===== -->
             <GridSplitter x:Name="FilterSplitter"
                           Grid.Column="1"
@@ -461,6 +473,26 @@
                     Background="#60000000"
                     IsVisible="False"
                     IsHitTestVisible="True"/>
+
+            <!-- ===== COMPACT OVERLAY FILTER PANE ===== -->
+            <Border x:Name="OverlaySidePanel"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="3"
+                    ZIndex="10"
+                    Width="220"
+                    HorizontalAlignment="Left"
+                    CornerRadius="0,8,8,0"
+                    BorderThickness="0,1,1,1"
+                    BorderBrush="{DynamicResource SettingsCardBorderBrush}"
+                    Background="{DynamicResource AppWindowBackground}"
+                    ClipToBounds="True"
+                    IsVisible="False">
+                <Border.CacheMode>
+                    <BitmapCache RenderAtScale="1"/>
+                </Border.CacheMode>
+                <ContentControl Content="{Binding}"
+                                ContentTemplate="{StaticResource FilterPaneContentTemplate}"/>
+            </Border>
 
             <!-- ===== PACKAGE LIST ===== -->
             <Grid x:Name="PackagesListGrid" Grid.Column="2" Margin="0">

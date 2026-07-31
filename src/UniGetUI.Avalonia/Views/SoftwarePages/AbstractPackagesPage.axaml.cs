@@ -13,8 +13,10 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Transformation;
 using Avalonia.Platform.Storage;
+using Avalonia.Rendering.Composition;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.Extensions;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Logging;
@@ -32,8 +34,12 @@ public abstract partial class AbstractPackagesPage : UserControl,
     private readonly ContextMenu? _contextMenu;
     private double _savedFilterPaneWidth = 220;
     private bool _isOverlayMode;
-    private IDisposable? _sidePanelBgBinding;
-    private CancellationTokenSource? _filterPaneAnimCts;
+    private IDisposable? _inlineSidePanelBgBinding;
+    private CancellationTokenSource? _inlineFilterPaneAnimCts;
+    private CancellationTokenSource? _overlayFilterPaneAnimCts;
+    private double? _overlayRestingOffsetX;
+    private static readonly SplineEasing FluentEntranceEasing = new(0.1, 0.9, 0.2, 1.0);
+    private static readonly TimeSpan FilterAnimationDuration = TimeSpan.FromMilliseconds(300);
 
     protected AbstractPackagesPage(PackagesPageData data)
     {
@@ -147,7 +153,10 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // Responsive: collapse the menu bar to icon-only on narrow windows so the
         // toolbar buttons stay reachable instead of overflowing (mirrors WinUI).
         this.GetObservable(BoundsProperty)
-            .SubscribeValue(bounds => ViewModel.SetToolbarLabelsCollapsed(bounds.Width < 900));
+            .SubscribeValue(bounds => UpdateToolbarLayout(bounds.Width));
+        Loaded += (_, _) => Dispatcher.UIThread.Post(
+            () => UpdateToolbarLayout(Bounds.Width),
+            DispatcherPriority.Loaded);
 
         // Grid/icons views: stretch cards to fill each row then reflow (mirrors WinUI's
         // UniformGridLayout) instead of leaving wasted space to the right.
@@ -179,17 +188,22 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // Apply the initial filter-pane state (AXAML defaults to 220px open).
         UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
 
-        // Attach the pane slide AFTER the initial state so launch doesn't animate. The pane slides
-        // via a compositor RenderTransform (clipped by FilteringPanel) instead of width-tweening the
-        // column, which reflowed the package list every frame and felt laggy.
-        SidePanel.Transitions = new Transitions
+        // Attach inline transitions AFTER the initial state so launch doesn't animate. The inline
+        // pane uses Avalonia's RenderTransform while the separate compact pane uses the compositor.
+        InlineSidePanel.Transitions = new Transitions
         {
             new TransformOperationsTransition
             {
                 Property = Visual.RenderTransformProperty,
-                Duration = TimeSpan.FromMilliseconds(200),
+                Duration = FilterAnimationDuration,
                 Easing = new SplineEasing(0.1, 0.9, 0.2, 1.0),
-            }
+            },
+            new DoubleTransition
+            {
+                Property = Visual.OpacityProperty,
+                Duration = FilterAnimationDuration,
+                Easing = new SplineEasing(0.1, 0.9, 0.2, 1.0),
+            },
         };
     }
 
@@ -210,6 +224,12 @@ public abstract partial class AbstractPackagesPage : UserControl,
         const double minSlotWidth = 128 + 8; // 128px tile + 4px margin per side
         int columns = Math.Max(1, (int)(availableWidth / minSlotWidth));
         ViewModel.IconCardWidth = Math.Floor(availableWidth / columns);
+    }
+
+    private void UpdateToolbarLayout(double availableWidth)
+    {
+        if (availableWidth <= 0) return;
+        ViewModel.SetToolbarLabelsCollapsed(availableWidth < 900);
     }
 
     // ─── UI-only: focus the package list ─────────────────────────────────────
@@ -432,11 +452,11 @@ public abstract partial class AbstractPackagesPage : UserControl,
         if (shouldBeOverlay == _isOverlayMode) return;
 
         _isOverlayMode = shouldBeOverlay;
+        ViewModel.FilterPaneOverlaysContent = _isOverlayMode;
 
-        if (_isOverlayMode && ViewModel.IsFilterPaneOpen)
-            ViewModel.IsFilterPaneOpen = false; // collapse pane when entering overlay
-        else
-            UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
+        // Presentation changes must not alter the user's logical open/closed choice. Each mode
+        // owns a separate visual, so switching modes only activates the appropriate instance.
+        UpdateFilterPaneColumn(ViewModel.IsFilterPaneOpen);
     }
 
     private void UpdateFilterPaneColumn(bool open, bool animate = false)
@@ -445,62 +465,162 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
         if (_isOverlayMode)
         {
-            _filterPaneAnimCts?.Cancel();
+            DeactivateInlineFilterPane();
 
             // Package list fills full width; filter pane and splitter take no space.
             FilteringPanel.ColumnDefinitions[0].Width = new GridLength(0);
             FilteringPanel.ColumnDefinitions[1].Width = new GridLength(0);
+            OverlaySidePanel.Width = _savedFilterPaneWidth;
 
-            // Float the filter pane on top of the content when open.
-            Grid.SetColumnSpan(SidePanel, 3);
-            SidePanel.ZIndex = 10;
-            SidePanel.Width = _savedFilterPaneWidth;
-            SidePanel.HorizontalAlignment = HorizontalAlignment.Left;
-            SidePanel.IsVisible = open;
-            SetSidePanelTransformInstant(0);
-
-            // Floating over content needs an opaque surface (the page surface is transparent under Mica).
-            _sidePanelBgBinding ??= SidePanel.Bind(Border.BackgroundProperty, this.GetResourceObservable("AppWindowBackground"));
-
-            // Semi-transparent backdrop covers the package list behind the pane.
-            FilterOverlayBackdrop.IsVisible = open;
+            if (animate && !MotionPreference.ReducedMotion)
+                AnimateOverlayFilterPane(open);
+            else
+                SetOverlayFilterPaneInstant(open);
         }
         else
         {
-            // Inline mode: pane sits beside the package list and blends with the Mica page surface.
-            Grid.SetColumnSpan(SidePanel, 1);
-            SidePanel.ZIndex = 0;
-            SidePanel.Width = double.NaN;
-            SidePanel.HorizontalAlignment = HorizontalAlignment.Stretch;
-            _sidePanelBgBinding?.Dispose();
-            _sidePanelBgBinding = null;
-            SidePanel.Background = null;
-            FilterOverlayBackdrop.IsVisible = false;
+            DeactivateOverlayFilterPane();
+            RestoreInlineSidePanelLayout();
 
-            if (animate)
+            if (animate && !MotionPreference.ReducedMotion)
             {
                 AnimateInlineFilterPane(open);
             }
             else
             {
-                _filterPaneAnimCts?.Cancel();
-                SidePanel.IsVisible = open;
-                SetSidePanelTransformInstant(open ? 0 : -_savedFilterPaneWidth);
+                InlineSidePanel.IsVisible = open;
+                SetInlineSidePanelTransformInstant(open ? 0 : -_savedFilterPaneWidth);
                 FilteringPanel.ColumnDefinitions[0].Width = open ? new GridLength(_savedFilterPaneWidth) : new GridLength(0);
                 FilteringPanel.ColumnDefinitions[1].Width = open ? new GridLength(4) : new GridLength(0);
             }
         }
     }
 
+    private async void AnimateOverlayFilterPane(bool open)
+    {
+        _overlayFilterPaneAnimCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _overlayFilterPaneAnimCts = cts;
+
+        var paneVisual = ElementComposition.GetElementVisual(OverlaySidePanel);
+        var backdropVisual = ElementComposition.GetElementVisual(FilterOverlayBackdrop);
+        if (paneVisual is null || backdropVisual is null)
+        {
+            SetOverlayFilterPaneInstant(open);
+            return;
+        }
+
+        paneVisual.StopAnimation("Offset");
+        paneVisual.StopAnimation("Opacity");
+        backdropVisual.StopAnimation("Opacity");
+        double restingOffsetX = _overlayRestingOffsetX ??= paneVisual.Offset.X;
+        paneVisual.Offset = new Vector3D(restingOffsetX, paneVisual.Offset.Y, paneVisual.Offset.Z);
+
+        if (open)
+        {
+            OverlaySidePanel.IsVisible = true;
+            FilterOverlayBackdrop.IsVisible = true;
+            StartCompositionOffsetAnimation(paneVisual, restingOffsetX, -_savedFilterPaneWidth, 0);
+            StartCompositionOpacityAnimation(paneVisual, 0, 1);
+            StartCompositionOpacityAnimation(backdropVisual, 0, 1);
+            return;
+        }
+
+        StartCompositionOffsetAnimation(paneVisual, restingOffsetX, 0, -_savedFilterPaneWidth);
+        StartCompositionOpacityAnimation(paneVisual, 1, 0);
+        StartCompositionOpacityAnimation(backdropVisual, 1, 0);
+        try { await Task.Delay(FilterAnimationDuration, cts.Token); }
+        catch (TaskCanceledException) { return; }
+        if (!ReferenceEquals(_overlayFilterPaneAnimCts, cts) || cts.IsCancellationRequested) return;
+        paneVisual.StopAnimation("Offset");
+        paneVisual.StopAnimation("Opacity");
+        backdropVisual.StopAnimation("Opacity");
+        paneVisual.Offset = new Vector3D(restingOffsetX, paneVisual.Offset.Y, paneVisual.Offset.Z);
+        paneVisual.Opacity = 1;
+        backdropVisual.Opacity = 1;
+        OverlaySidePanel.IsVisible = false;
+        FilterOverlayBackdrop.IsVisible = false;
+    }
+
+    private static void StartCompositionOffsetAnimation(
+        CompositionVisual visual,
+        double restingOffsetX,
+        double fromX,
+        double toX)
+    {
+        var animation = visual.Compositor.CreateVector3DKeyFrameAnimation();
+        animation.Duration = FilterAnimationDuration;
+        Vector3D restingOffset = new(restingOffsetX, visual.Offset.Y, visual.Offset.Z);
+        for (int step = 0; step <= 20; step++)
+        {
+            float progress = step / 20f;
+            double eased = FluentEntranceEasing.Ease(progress);
+            double x = fromX + ((toX - fromX) * eased);
+            animation.InsertKeyFrame(progress,
+                new Vector3D(restingOffset.X + x, restingOffset.Y, restingOffset.Z));
+        }
+        visual.StartAnimation("Offset", animation);
+    }
+
+    private static void StartCompositionOpacityAnimation(CompositionVisual visual, double from, double to)
+    {
+        var animation = visual.Compositor.CreateScalarKeyFrameAnimation();
+        animation.Duration = FilterAnimationDuration;
+        for (int step = 0; step <= 20; step++)
+        {
+            float progress = step / 20f;
+            double eased = FluentEntranceEasing.Ease(progress);
+            animation.InsertKeyFrame(progress, (float)(from + ((to - from) * eased)));
+        }
+        visual.StartAnimation("Opacity", animation);
+    }
+
+    private void SetOverlayFilterPaneInstant(bool open)
+    {
+        _overlayFilterPaneAnimCts?.Cancel();
+        OverlaySidePanel.IsVisible = open;
+        FilterOverlayBackdrop.IsVisible = open;
+
+        if (ElementComposition.GetElementVisual(OverlaySidePanel) is not { } paneVisual ||
+            ElementComposition.GetElementVisual(FilterOverlayBackdrop) is not { } backdropVisual)
+            return;
+
+        paneVisual.StopAnimation("Offset");
+        paneVisual.StopAnimation("Opacity");
+        backdropVisual.StopAnimation("Opacity");
+        double restingOffsetX = _overlayRestingOffsetX ??= paneVisual.Offset.X;
+        paneVisual.Offset = new Vector3D(
+            restingOffsetX + (open ? 0 : -_savedFilterPaneWidth),
+            paneVisual.Offset.Y,
+            paneVisual.Offset.Z);
+        paneVisual.Opacity = open ? 1 : 0;
+        backdropVisual.Opacity = open ? 1 : 0;
+    }
+
+    private void DeactivateOverlayFilterPane()
+    {
+        SetOverlayFilterPaneInstant(false);
+        OverlaySidePanel.IsVisible = false;
+        FilterOverlayBackdrop.IsVisible = false;
+    }
+
+    private void DeactivateInlineFilterPane()
+    {
+        _inlineFilterPaneAnimCts?.Cancel();
+        RestoreInlineSidePanelLayout();
+        SetInlineSidePanelTransformInstant(0);
+        InlineSidePanel.IsVisible = false;
+    }
+
     // Reserve/release the inline pane's column in one step (a single reflow, not a per-frame tween),
-    // and slide the pane itself in/out via a compositor RenderTransform (clipped by FilteringPanel) —
+    // and slide the pane itself in/out via its Avalonia RenderTransform (clipped by FilteringPanel) —
     // tweening the column width reflowed the package list every frame and felt laggy. The toolbar
     // buttons still slide via their MinWidth transition.
     private async void AnimateInlineFilterPane(bool open)
     {
-        _filterPaneAnimCts?.Cancel();
+        _inlineFilterPaneAnimCts?.Cancel();
         var cts = new CancellationTokenSource();
-        _filterPaneAnimCts = cts;
+        _inlineFilterPaneAnimCts = cts;
 
         var col0 = FilteringPanel.ColumnDefinitions[0];
         var col1 = FilteringPanel.ColumnDefinitions[1];
@@ -510,8 +630,8 @@ public abstract partial class AbstractPackagesPage : UserControl,
             // Reserve the column (one reflow), then slide the pane in from -width to 0.
             col0.Width = new GridLength(_savedFilterPaneWidth);
             col1.Width = new GridLength(4);
-            SidePanel.IsVisible = true;
-            SidePanel.RenderTransform = TranslateX(0);
+            InlineSidePanel.IsVisible = true;
+            InlineSidePanel.RenderTransform = TranslateX(0);
         }
         else
         {
@@ -520,18 +640,24 @@ public abstract partial class AbstractPackagesPage : UserControl,
             // full width when the slide ends. Inline positioning is restored on the next open by
             // UpdateFilterPaneColumn.
             double w = _savedFilterPaneWidth;
-            Grid.SetColumnSpan(SidePanel, 3);
-            SidePanel.ZIndex = 10;
-            SidePanel.Width = w;
-            SidePanel.HorizontalAlignment = HorizontalAlignment.Left;
-            _sidePanelBgBinding ??= SidePanel.Bind(Border.BackgroundProperty, this.GetResourceObservable("AppWindowBackground"));
+            Grid.SetColumnSpan(InlineSidePanel, 3);
+            InlineSidePanel.ZIndex = 10;
+            InlineSidePanel.Width = w;
+            InlineSidePanel.HorizontalAlignment = HorizontalAlignment.Left;
+            InlineSidePanel.CornerRadius = new CornerRadius(0, 8, 8, 0);
+            InlineSidePanel.BorderThickness = new Thickness(0, 1, 1, 1);
+            _inlineSidePanelBgBinding ??= InlineSidePanel.Bind(
+                Border.BackgroundProperty,
+                this.GetResourceObservable("AppWindowBackground"));
             col0.Width = new GridLength(0);
             col1.Width = new GridLength(0);
 
-            SidePanel.RenderTransform = TranslateX(-w);
-            try { await Task.Delay(210, cts.Token); }
+            InlineSidePanel.RenderTransform = TranslateX(-w);
+            try { await Task.Delay(FilterAnimationDuration, cts.Token); }
             catch (TaskCanceledException) { return; }
-            SidePanel.IsVisible = false;
+            if (!ReferenceEquals(_inlineFilterPaneAnimCts, cts) || cts.IsCancellationRequested) return;
+            InlineSidePanel.IsVisible = false;
+            RestoreInlineSidePanelLayout();
         }
     }
 
@@ -539,12 +665,25 @@ public abstract partial class AbstractPackagesPage : UserControl,
         => TransformOperations.Parse(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"translateX({x}px)"));
 
     // Set the pane transform without triggering the slide transition (for initial/mode-change states).
-    private void SetSidePanelTransformInstant(double translateX)
+    private void SetInlineSidePanelTransformInstant(double translateX)
     {
-        var transitions = SidePanel.Transitions;
-        SidePanel.Transitions = null;
-        SidePanel.RenderTransform = TranslateX(translateX);
-        SidePanel.Transitions = transitions;
+        var transitions = InlineSidePanel.Transitions;
+        InlineSidePanel.Transitions = null;
+        InlineSidePanel.RenderTransform = TranslateX(translateX);
+        InlineSidePanel.Transitions = transitions;
+    }
+
+    private void RestoreInlineSidePanelLayout()
+    {
+        Grid.SetColumnSpan(InlineSidePanel, 1);
+        InlineSidePanel.ZIndex = 0;
+        InlineSidePanel.Width = double.NaN;
+        InlineSidePanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+        InlineSidePanel.CornerRadius = new CornerRadius(8);
+        InlineSidePanel.BorderThickness = new Thickness(0);
+        _inlineSidePanelBgBinding?.Dispose();
+        _inlineSidePanelBgBinding = null;
+        InlineSidePanel.Background = null;
     }
 
     // ─── Card overflow button (Grid / Icons view) ─────────────────────────────

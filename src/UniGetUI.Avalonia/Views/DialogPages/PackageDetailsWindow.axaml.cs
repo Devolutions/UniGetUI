@@ -95,6 +95,11 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     {
         _installOpts = await InstallOptionsFactory.LoadForPackageAsync(_vm.Package);
         _installVm = new InstallOptionsViewModel(_vm.Package, _vm.OperationRole, _installOpts);
+        _installVm.CloseRequested += (_, _) =>
+        {
+            _ = SaveInstallOptionsAsync();
+            Close();
+        };
         var embed = new InstallOptionsControl { DataContext = _installVm };
         InstallOptionsHolder.Content = embed;
     }

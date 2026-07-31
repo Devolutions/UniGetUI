@@ -12,7 +12,7 @@ public static class DesktopShortcutsDatabase
         Delete, // The user has allowed the shortcut to be deleted
     }
 
-    private static readonly List<string> UnknownShortcuts = [];
+    private const string PendingShortcutsKey = "PendingDesktopShortcuts";
 
     public static IReadOnlyDictionary<string, bool> GetDatabase()
     {
@@ -173,7 +173,15 @@ public static class DesktopShortcutsDatabase
     /// <returns>True if it was found, false otherwise</returns>
     public static bool RemoveFromUnknownShortcuts(string shortcutPath)
     {
-        return UnknownShortcuts.Remove(shortcutPath);
+        return Settings.RemoveFromList(PendingShortcutsKey, shortcutPath);
+    }
+
+    /// <summary>
+    /// Clears every shortcut awaiting a deletion verdict.
+    /// </summary>
+    public static void ClearUnknownShortcuts()
+    {
+        Settings.ClearList(PendingShortcutsKey);
     }
 
     /// <summary>
@@ -182,7 +190,9 @@ public static class DesktopShortcutsDatabase
     /// <returns>The list of shortcuts awaiting verdicts</returns>
     public static List<string> GetUnknownShortcuts()
     {
-        return UnknownShortcuts;
+        return (Settings.GetList<string>(PendingShortcutsKey) ?? [])
+            .Where(File.Exists)
+            .ToList();
     }
 
     /// <summary>
@@ -228,10 +238,10 @@ public static class DesktopShortcutsDatabase
                 else
                 {
                     // Mark the shortcut as unknown and prompt the user.
-                    if (!UnknownShortcuts.Contains(shortcut))
+                    if (!Settings.ListContains(PendingShortcutsKey, shortcut))
                     {
                         Logger.Info($"Marking the shortcut {shortcut} to be asked to be deleted");
-                        UnknownShortcuts.Add(shortcut);
+                        Settings.AddToList(PendingShortcutsKey, shortcut);
                     }
                 }
             }

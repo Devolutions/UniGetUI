@@ -603,17 +603,18 @@ namespace UniGetUI.PackageEngine.Operations
         protected override async Task HandleSuccess()
         {
             Package.SetTag(PackageTag.AlreadyInstalled);
+
+            if (Settings.Get(Settings.K.AskToDeleteNewDesktopShortcuts))
+            {
+                DesktopShortcutsDatabase.HandleNewShortcuts(DesktopShortcutsBeforeStart);
+            }
+
             bool explicitVersionRequested = !string.IsNullOrWhiteSpace(Options.Version);
             var installedPackage = await ResolveInstalledPackageSnapshotAsync(
                 explicitVersionRequested ? Options.Version : Package.VersionString,
                 preferFallbackVersionWhenMissing: explicitVersionRequested
             );
             await InstalledPackagesLoader.Instance.AddForeign(installedPackage);
-
-            if (Settings.Get(Settings.K.AskToDeleteNewDesktopShortcuts))
-            {
-                DesktopShortcutsDatabase.HandleNewShortcuts(DesktopShortcutsBeforeStart);
-            }
         }
 
         protected override void Initialize()
@@ -681,6 +682,11 @@ namespace UniGetUI.PackageEngine.Operations
             UpgradablePackagesLoader.Instance.Remove(Package);
             InstalledPackagesLoader.Instance.Remove(Package);
 
+            if (Settings.Get(Settings.K.AskToDeleteNewDesktopShortcuts))
+            {
+                DesktopShortcutsDatabase.HandleNewShortcuts(DesktopShortcutsBeforeStart);
+            }
+
             bool explicitVersionRequested = !string.IsNullOrWhiteSpace(Options.Version);
             var installedPackage = await ResolveInstalledPackageSnapshotAsync(
                 explicitVersionRequested
@@ -691,11 +697,6 @@ namespace UniGetUI.PackageEngine.Operations
                 preferFallbackVersionWhenMissing: explicitVersionRequested
             );
             await InstalledPackagesLoader.Instance.AddForeign(installedPackage);
-
-            if (Settings.Get(Settings.K.AskToDeleteNewDesktopShortcuts))
-            {
-                DesktopShortcutsDatabase.HandleNewShortcuts(DesktopShortcutsBeforeStart);
-            }
 
             if (
                 await Package.HasUpdatesIgnoredAsync()

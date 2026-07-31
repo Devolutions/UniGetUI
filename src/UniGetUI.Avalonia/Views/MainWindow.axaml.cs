@@ -271,8 +271,10 @@ public partial class MainWindow : Window
         if (ModalLayer.IsVisible)
         {
             if (e.Key == Key.Escape)
+            {
                 (ModalContent.Content as ImmersiveDialog)?.Close();
-            e.Handled = true;
+                e.Handled = true;
+            }
             return;
         }
 
@@ -1091,6 +1093,11 @@ public partial class MainWindow : Window
             borderOwner.ApplyWindowBorderColor(hWnd);
         }
 
+        if (msg == WM_SETTINGCHANGE && Instance is { } trayOwner)
+        {
+            trayOwner.UpdateSystemTrayStatus();
+        }
+
         // ── Snap Layouts: report HTMAXBUTTON over the custom maximize button so Win11 shows the
         // layout flyout, and emulate hover/press/click since input now arrives as NC messages. ──
         if (Instance is { } self && self.WindowButtons.IsVisible)
@@ -1836,6 +1843,8 @@ public partial class MainWindow : Window
         else if (WindowState == WindowState.Minimized)
             WindowState = WindowState.Normal;
         Activate();
+
+        AvaloniaOperationRegistry.PromptPendingShortcutsIfAny();
     }
 
     public bool IsQuitting => Interlocked.CompareExchange(ref _isQuitting, 0, 0) == 1;

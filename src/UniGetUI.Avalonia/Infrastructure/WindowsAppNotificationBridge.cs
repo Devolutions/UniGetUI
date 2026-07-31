@@ -212,48 +212,6 @@ internal static class WindowsAppNotificationBridge
     }
 
     /// <summary>
-    /// Shows a Windows toast notification after new desktop shortcuts are detected.
-    /// </summary>
-    public static void ShowNewShortcutsNotification(IReadOnlyList<string> shortcuts)
-    {
-        if (!OperatingSystem.IsWindows()) return;
-        if (Settings.AreNotificationsDisabled()) return;
-
-        try
-        {
-            string title;
-            string message;
-
-            if (shortcuts.Count == 1)
-            {
-                title = CoreTools.Translate("Desktop shortcut created");
-                message = CoreTools.Translate(
-                    "UniGetUI has detected a new desktop shortcut that can be deleted automatically.")
-                    + "\n" + shortcuts[0].Split('\\')[^1];
-            }
-            else
-            {
-                string names = string.Join(", ", shortcuts.Select(s => s.Split('\\')[^1]));
-                title = CoreTools.Translate("{0} desktop shortcuts created", shortcuts.Count);
-                message = CoreTools.Translate(
-                    "UniGetUI has detected {0} new desktop shortcuts that can be deleted automatically.",
-                    shortcuts.Count) + "\n" + names;
-            }
-
-            Show(
-                title,
-                message,
-                MainWindow.RuntimeNotificationLevel.Success,
-                launchAction: NotificationArguments.Show);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn("Could not show new shortcuts notification");
-            Logger.Warn(ex);
-        }
-    }
-
-    /// <summary>
     /// Shows a native toast when available, otherwise falls back to the in-app banner.
     /// The <paramref name="launchAction"/> is encoded into the <c>unigetui://</c> launch
     /// argument so the single-instance handler can route the activation when the toast

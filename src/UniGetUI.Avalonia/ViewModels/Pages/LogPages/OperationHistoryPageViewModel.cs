@@ -61,8 +61,27 @@ public class OperationHistoryPageViewModel : BaseLogPageViewModel
                 System.Globalization.DateTimeStyles.RoundtripKind, out var utc))
             timestamp = utc.ToLocalTime().ToString("g");
 
-        return CoreTools.Translate("Operation") + $": {record.Kind} {record.ManagerName} {target} " +
+        string kind = record.Kind switch
+        {
+            "install-package" => CoreTools.Translate("Install"),
+            "update-package" => CoreTools.Translate("Update"),
+            "uninstall-package" => CoreTools.Translate("Uninstall"),
+            "download-package" => CoreTools.Translate("Download"),
+            "add-source" => CoreTools.Translate("Add source"),
+            "remove-source" => CoreTools.Translate("Remove source"),
+            _ => record.Kind,
+        };
+
+        string status = record.Status switch
+        {
+            OperationHistoryRecord.StatusSucceeded => CoreTools.Translate("Succeeded"),
+            OperationHistoryRecord.StatusFailed => CoreTools.Translate("Failed"),
+            OperationHistoryRecord.StatusCanceled => CoreTools.Translate("Canceled"),
+            _ => record.Status,
+        };
+
+        return CoreTools.Translate("Operation") + $": {kind} {record.ManagerName} {target} " +
                (version.Length > 0 ? $"({version}) " : "") +
-               $"[{record.Status}] — {timestamp}";
+               $"[{status}] — {timestamp}";
     }
 }

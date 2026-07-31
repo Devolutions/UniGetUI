@@ -238,6 +238,20 @@
                                  FontSize="14"
                                  HorizontalAlignment="Stretch"/>
 
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"
+                              IsVisible="{Binding LocationEnabled}">
+                            <TextBlock Text="{Binding EnvVarSyntaxHintLabel}"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Opacity="0.7"
+                                       FontSize="12"/>
+                            <HyperlinkButton Grid.Column="1"
+                                             Content="{Binding ChangeEnvVarSyntaxLabel}"
+                                             Command="{Binding GoToOperationsSettingsCommand}"
+                                             VerticalAlignment="Center"
+                                             Padding="0" FontSize="12"/>
+                        </Grid>
+
                     </StackPanel>
                 </Border>
             </TabItem>
@@ -272,6 +286,20 @@
                                  TextWrapping="Wrap"
                                  Opacity="0.7"
                                  FontSize="12"/>
+
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"
+                            IsVisible="{Binding CliEnabled}">
+                          <TextBlock Text="{Binding EnvVarSyntaxHintLabel}"
+                                     VerticalAlignment="Center"
+                                     TextWrapping="Wrap"
+                                     Opacity="0.7"
+                                     FontSize="12"/>
+                          <HyperlinkButton Grid.Column="1"
+                                           Content="{Binding ChangeEnvVarSyntaxLabel}"
+                                           Command="{Binding GoToOperationsSettingsCommand}"
+                                           VerticalAlignment="Center"
+                                           Padding="0" FontSize="12"/>
+                      </Grid>
 
                       <Grid ColumnDefinitions="*,2*"
                             RowDefinitions="Auto,Auto,Auto"

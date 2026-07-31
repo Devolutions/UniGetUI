@@ -156,7 +156,7 @@ public sealed class InstallOptionsFactoryTests : IDisposable
     }
 
     [Fact]
-    public void LoadApplicable_ExpandsEnvironmentVariablesInCustomParametersAndLocation()
+    public void LoadApplicable_ExpandsAngleBracketEnvironmentVariablesByDefault()
     {
         var varName = $"UNIGETUI_TEST_{Guid.NewGuid():N}";
         Environment.SetEnvironmentVariable(varName, @"C:\Expanded");
@@ -167,9 +167,9 @@ public sealed class InstallOptionsFactoryTests : IDisposable
             var packageOptions = new InstallOptions
             {
                 OverridesNextLevelOpts = true,
-                CustomInstallLocation = $"%{varName}%\\app",
-                CustomParameters_Install = [$"--location=%{varName}%\\app"],
-                CustomParameters_Update = [$"--location=%{varName}%"],
+                CustomInstallLocation = $"<{varName}>\\app",
+                CustomParameters_Install = [$"--location=<{varName}>\\app"],
+                CustomParameters_Update = [$"--location=<{varName}>"],
                 CustomParameters_Uninstall = ["--purge"],
             };
 
@@ -190,6 +190,62 @@ public sealed class InstallOptionsFactoryTests : IDisposable
     }
 
     [Fact]
+    public void LoadApplicable_DoesNotExpandPercentSyntaxByDefault()
+    {
+        var varName = $"UNIGETUI_TEST_{Guid.NewGuid():N}";
+        Environment.SetEnvironmentVariable(varName, @"C:\Expanded");
+        try
+        {
+            var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();
+            var package = new PackageBuilder().WithManager(manager).WithId($"Pkg{Guid.NewGuid():N}").Build();
+            var packageOptions = new InstallOptions
+            {
+                OverridesNextLevelOpts = true,
+                CustomInstallLocation = $"%{varName}%\\app",
+            };
+
+            InstallOptionsFactory.SaveForPackage(packageOptions, package);
+
+            var resolved = InstallOptionsFactory.LoadApplicable(package);
+
+            Assert.Equal($"%{varName}%\\app", resolved.CustomInstallLocation);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(varName, null);
+        }
+    }
+
+    [Fact]
+    public void LoadApplicable_ExpandsPercentSyntaxWhenSettingEnabled()
+    {
+        var varName = $"UNIGETUI_TEST_{Guid.NewGuid():N}";
+        Environment.SetEnvironmentVariable(varName, @"C:\Expanded");
+        try
+        {
+            Settings.Set(Settings.K.ExpandEnvVarsWithPercentSyntax, true);
+            var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();
+            var package = new PackageBuilder().WithManager(manager).WithId($"Pkg{Guid.NewGuid():N}").Build();
+            var packageOptions = new InstallOptions
+            {
+                OverridesNextLevelOpts = true,
+                CustomInstallLocation = $"%{varName}%\\app",
+            };
+
+            InstallOptionsFactory.SaveForPackage(packageOptions, package);
+
+            var resolved = InstallOptionsFactory.LoadApplicable(package);
+
+            Assert.Equal(@"C:\Expanded\app", resolved.CustomInstallLocation);
+        }
+        finally
+        {
+            Settings.Set(Settings.K.ExpandEnvVarsWithPercentSyntax, false);
+            Environment.SetEnvironmentVariable(varName, null);
+        }
+    }
+
+    [Fact]
     public void LoadApplicable_SanitizesMetacharactersIntroducedByEnvironmentVariableExpansion()
     {
         var varName = $"UNIGETUI_TEST_{Guid.NewGuid():N}";
@@ -201,7 +257,7 @@ public sealed class InstallOptionsFactoryTests : IDisposable
             var packageOptions = new InstallOptions
             {
                 OverridesNextLevelOpts = true,
-                CustomParameters_Install = [$"--flag=%{varName}%"],
+                CustomParameters_Install = [$"--flag=<{varName}>"],
             };
 
             SecureSettings.ApplyForUser(Environment.UserName, SecureSettings.ResolveKey(SecureSettings.K.AllowCLIArguments), true);

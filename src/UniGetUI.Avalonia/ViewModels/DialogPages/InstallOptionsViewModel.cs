@@ -46,6 +46,10 @@ public partial class InstallOptionsViewModel : ObservableObject
     public string ParamsUpdateLabel { get; } = CoreTools.Translate("Custom update arguments:");
     public string ParamsUninstallLabel { get; } = CoreTools.Translate("Custom uninstall arguments:");
     public string CliArgsHintLabel { get; } = CoreTools.Translate("These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.");
+    public string EnvVarSyntaxHintLabel { get; } = Settings.Get(Settings.K.ExpandEnvVarsWithPercentSyntax)
+        ? CoreTools.Translate("Environment variables use %VARIABLE% syntax.")
+        : CoreTools.Translate("Environment variables use <VARIABLE> syntax.");
+    public string ChangeEnvVarSyntaxLabel { get; } = CoreTools.Translate("Change environment variable syntax");
     public string CopyInstallArgsLabel { get; } = CoreTools.Translate("Copy install arguments to update and uninstall");
     public string PreInstallLabel { get; } = CoreTools.Translate("Pre-install command:");
     public string PostInstallLabel { get; } = CoreTools.Translate("Post-install command:");
@@ -405,6 +409,15 @@ public partial class InstallOptionsViewModel : ObservableObject
         CloseRequested?.Invoke(this, EventArgs.Empty);
         if (MainWindow.Instance?.DataContext is MainWindowViewModel vm)
             vm.OpenSettingsPage(typeof(Views.Pages.SettingsPages.Administrator));
+    }
+
+    [RelayCommand]
+    private void GoToOperationsSettings()
+    {
+        ApplyToOptions();
+        CloseRequested?.Invoke(this, EventArgs.Empty);
+        if (MainWindow.Instance?.DataContext is MainWindowViewModel vm)
+            vm.OpenSettingsPage(typeof(Views.Pages.SettingsPages.Operations));
     }
 
     // ── Ignore-future-updates state (package-level, like WinUI) ────────────────

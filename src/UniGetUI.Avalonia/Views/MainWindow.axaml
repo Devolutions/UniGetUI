@@ -260,7 +260,13 @@
                                         CornerRadius="6"
                                         Padding="10,6"
                                         Margin="0,3,0,3">
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <Grid ColumnDefinitions="*,Auto">
+
+                                        <Border Grid.Column="0"
+                                                Background="Transparent"
+                                                Cursor="Hand"
+                                                Tapped="OperationCard_Tapped">
+                                        <Grid ColumnDefinitions="Auto,*">
 
                                         <!-- Package icon -->
                                         <Image Grid.Column="0"
@@ -349,9 +355,11 @@
                                             </ItemsControl>
 
                                         </StackPanel>
+                                        </Grid>
+                                        </Border>
 
                                         <!-- Split-button: Cancel/Close + "…" menu -->
-                                        <Border Grid.Column="2"
+                                        <Border Grid.Column="1"
                                                 CornerRadius="6"
                                                 ClipToBounds="True"
                                                 VerticalAlignment="Center">

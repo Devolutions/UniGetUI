@@ -1509,6 +1509,15 @@ public partial class MainWindow : Window
             ViewModel.SelectSuggestion(result);
     }
 
+    private void OperationCard_Tapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Source is Visual source && source.FindAncestorOfType<Button>(includeSelf: true) is not null)
+            return;
+
+        if ((sender as Control)?.DataContext is OperationViewModel op)
+            op.ShowDetailsCommand.Execute(null);
+    }
+
     // ─── Public navigation API ────────────────────────────────────────────────
     public void Navigate(PageType type) => ViewModel.NavigateTo(type);
     public void OpenManagerLogs(IPackageManager? manager = null) => ViewModel.OpenManagerLogs(manager);

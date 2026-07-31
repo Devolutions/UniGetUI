@@ -117,6 +117,49 @@ public partial class OperationHistoryPage : UserControl, IEnterLeaveListener, IK
         },
     };
 
+    private void FilterButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string facet } button) return;
+
+        (IEnumerable<HistoryFilterOption> options, HistoryFilterOption? selected) = facet switch
+        {
+            "status" => (_viewModel.StatusOptions, _viewModel.SelectedStatus),
+            "kind" => (_viewModel.KindOptions, _viewModel.SelectedKind),
+            "manager" => (_viewModel.ManagerOptions, _viewModel.SelectedManager),
+            _ => ([], null),
+        };
+
+        var flyout = new MenuFlyout { Placement = PlacementMode.TopEdgeAlignedRight };
+        foreach (HistoryFilterOption option in options)
+        {
+            var item = new MenuItem
+            {
+                Header = option.Label,
+                IsChecked = ReferenceEquals(option, selected),
+            };
+            item.Click += (_, _) => SetHistoryFilter(facet, option);
+            flyout.Items.Add(item);
+        }
+
+        flyout.ShowAt(button);
+    }
+
+    private void SetHistoryFilter(string facet, HistoryFilterOption option)
+    {
+        switch (facet)
+        {
+            case "status":
+                _viewModel.SelectedStatus = option;
+                break;
+            case "kind":
+                _viewModel.SelectedKind = option;
+                break;
+            case "manager":
+                _viewModel.SelectedManager = option;
+                break;
+        }
+    }
+
     // Copy details needs clipboard access (a top-level concern), so it uses a click handler rather than a command.
     private MenuItem BuildCopyDetailsItem(OperationHistoryRowViewModel row)
     {

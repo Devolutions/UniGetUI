@@ -13,6 +13,14 @@
                     <SolidColorBrush x:Key="AccentFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorDark2}"/>
                     <SolidColorBrush x:Key="AccentFillColorDisabledBrush"  Color="#37000000"/>
                     <SolidColorBrush x:Key="AccentFillColorSelectedTextBackgroundBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <!-- Bridge Avalonia's legacy Fluent accent aliases to the same palette. -->
+                    <SolidColorBrush x:Key="SystemControlBackgroundAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <SolidColorBrush x:Key="SystemControlForegroundAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <SolidColorBrush x:Key="SystemControlHighlightAltAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <SolidColorBrush x:Key="SystemControlRevealFocusVisualBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="{DynamicResource SystemAccentColor}"/>
+                    <SolidColorBrush x:Key="TabItemHeaderSelectedPipeFill" Color="{DynamicResource SystemAccentColor}"/>
                     <!-- Subtle fills (WinUI NavigationViewItem hover/selected backgrounds) -->
                     <SolidColorBrush x:Key="SubtleFillColorSecondaryBrush" Color="#09000000"/>
                     <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush"  Color="#06000000"/>
@@ -45,6 +53,15 @@
                     <SolidColorBrush x:Key="TextOnAccentFillColorSecondaryBrush"    Color="#B3FFFFFF"/>
                     <SolidColorBrush x:Key="TextOnAccentFillColorDisabledBrush"     Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="TextOnAccentFillColorSelectedTextBrush" Color="#FFFFFFFF"/>
+                    <!-- Avalonia's Button theme reads these keys from inside its control template. -->
+                    <StaticResource x:Key="AccentButtonBackground" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="AccentButtonBackgroundPointerOver" ResourceKey="AccentFillColorSecondaryBrush"/>
+                    <StaticResource x:Key="AccentButtonBackgroundPressed" ResourceKey="AccentFillColorTertiaryBrush"/>
+                    <StaticResource x:Key="AccentButtonBackgroundDisabled" ResourceKey="AccentFillColorDisabledBrush"/>
+                    <StaticResource x:Key="AccentButtonForeground" ResourceKey="TextOnAccentFillColorPrimaryBrush"/>
+                    <StaticResource x:Key="AccentButtonForegroundPointerOver" ResourceKey="TextOnAccentFillColorPrimaryBrush"/>
+                    <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="TextOnAccentFillColorSecondaryBrush"/>
+                    <StaticResource x:Key="AccentButtonForegroundDisabled" ResourceKey="TextOnAccentFillColorDisabledBrush"/>
                     <!-- Settings cards -->
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#B3FFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#ECECEC"/>
@@ -114,6 +131,14 @@
                     <SolidColorBrush x:Key="AccentFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColor}"/>
                     <SolidColorBrush x:Key="AccentFillColorDisabledBrush"  Color="#28FFFFFF"/>
                     <SolidColorBrush x:Key="AccentFillColorSelectedTextBackgroundBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <!-- Avalonia's defaults keep the base accent in dark mode; WinUI uses Light2. -->
+                    <SolidColorBrush x:Key="SystemControlBackgroundAccentBrush" Color="{DynamicResource SystemAccentColorLight2}"/>
+                    <SolidColorBrush x:Key="SystemControlForegroundAccentBrush" Color="{DynamicResource SystemAccentColorLight2}"/>
+                    <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="{DynamicResource SystemAccentColorLight2}"/>
+                    <SolidColorBrush x:Key="SystemControlHighlightAltAccentBrush" Color="{DynamicResource SystemAccentColorLight2}"/>
+                    <SolidColorBrush x:Key="SystemControlRevealFocusVisualBrush" Color="{DynamicResource SystemAccentColorLight2}"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="{DynamicResource SystemAccentColorLight2}"/>
+                    <SolidColorBrush x:Key="TabItemHeaderSelectedPipeFill" Color="{DynamicResource SystemAccentColorLight2}"/>
                     <!-- Subtle fills (WinUI NavigationViewItem hover/selected backgrounds) -->
                     <SolidColorBrush x:Key="SubtleFillColorSecondaryBrush" Color="#0FFFFFFF"/>
                     <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush"  Color="#0AFFFFFF"/>
@@ -145,6 +170,15 @@
                     <SolidColorBrush x:Key="TextOnAccentFillColorSecondaryBrush"    Color="#80000000"/>
                     <SolidColorBrush x:Key="TextOnAccentFillColorDisabledBrush"     Color="#87FFFFFF"/>
                     <SolidColorBrush x:Key="TextOnAccentFillColorSelectedTextBrush" Color="#FFFFFFFF"/>
+                    <!-- Override the keys consumed by Avalonia's nested .accent button theme. -->
+                    <StaticResource x:Key="AccentButtonBackground" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <StaticResource x:Key="AccentButtonBackgroundPointerOver" ResourceKey="AccentFillColorSecondaryBrush"/>
+                    <StaticResource x:Key="AccentButtonBackgroundPressed" ResourceKey="AccentFillColorTertiaryBrush"/>
+                    <StaticResource x:Key="AccentButtonBackgroundDisabled" ResourceKey="AccentFillColorDisabledBrush"/>
+                    <StaticResource x:Key="AccentButtonForeground" ResourceKey="TextOnAccentFillColorPrimaryBrush"/>
+                    <StaticResource x:Key="AccentButtonForegroundPointerOver" ResourceKey="TextOnAccentFillColorPrimaryBrush"/>
+                    <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="TextOnAccentFillColorSecondaryBrush"/>
+                    <StaticResource x:Key="AccentButtonForegroundDisabled" ResourceKey="TextOnAccentFillColorDisabledBrush"/>
                     <!-- Settings cards -->
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#393939"/>
@@ -213,6 +247,118 @@
 
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
 
+    <!-- Avalonia's Fluent controls still consume UWP-era accent resources, whose dark-theme
+         defaults use the base accent and white foreground. Bind every filled accent control to
+         the WinUI v2 tokens above so dark mode consistently uses a lighter fill and dark glyphs. -->
+    <Style Selector="Button.accent controls|SvgIcon,
+                     Button.accent:pointerover controls|SvgIcon">
+        <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+    </Style>
+    <Style Selector="Button.accent:pressed controls|SvgIcon">
+        <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorSecondaryBrush}"/>
+    </Style>
+    <Style Selector="Button.accent:disabled controls|SvgIcon">
+        <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorDisabledBrush}"/>
+    </Style>
+    <Style Selector="CheckBox:checked /template/ Border#NormalRectangle,
+                     CheckBox:indeterminate /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+    </Style>
+    <Style Selector="CheckBox:checked:pointerover /template/ Border#NormalRectangle,
+                     CheckBox:indeterminate:pointerover /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource AccentFillColorSecondaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorSecondaryBrush}"/>
+    </Style>
+    <Style Selector="CheckBox:checked:pressed /template/ Border#NormalRectangle,
+                     CheckBox:indeterminate:pressed /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource AccentFillColorTertiaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorTertiaryBrush}"/>
+    </Style>
+    <Style Selector="CheckBox:checked:disabled /template/ Border#NormalRectangle,
+                     CheckBox:indeterminate:disabled /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource AccentFillColorDisabledBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDisabledBrush}"/>
+    </Style>
+    <Style Selector="CheckBox:checked /template/ Path#CheckGlyph,
+                     CheckBox:indeterminate /template/ Path#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+    </Style>
+    <Style Selector="CheckBox:checked:pointerover /template/ Path#CheckGlyph,
+                     CheckBox:indeterminate:pointerover /template/ Path#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+    </Style>
+    <Style Selector="CheckBox:checked:pressed /template/ Path#CheckGlyph,
+                     CheckBox:indeterminate:pressed /template/ Path#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorSecondaryBrush}"/>
+    </Style>
+    <Style Selector="CheckBox:checked:disabled /template/ Path#CheckGlyph,
+                     CheckBox:indeterminate:disabled /template/ Path#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorDisabledBrush}"/>
+    </Style>
+
+    <Style Selector="RadioButton:checked /template/ Ellipse#CheckOuterEllipse">
+        <Setter Property="Fill" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+        <Setter Property="Stroke" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+    </Style>
+    <Style Selector="RadioButton:checked:pointerover /template/ Ellipse#CheckOuterEllipse">
+        <Setter Property="Fill" Value="{DynamicResource AccentFillColorSecondaryBrush}"/>
+        <Setter Property="Stroke" Value="{DynamicResource AccentFillColorSecondaryBrush}"/>
+    </Style>
+    <Style Selector="RadioButton:checked:pressed /template/ Ellipse#CheckOuterEllipse">
+        <Setter Property="Fill" Value="{DynamicResource AccentFillColorTertiaryBrush}"/>
+        <Setter Property="Stroke" Value="{DynamicResource AccentFillColorTertiaryBrush}"/>
+    </Style>
+    <Style Selector="RadioButton:checked:disabled /template/ Ellipse#CheckOuterEllipse">
+        <Setter Property="Fill" Value="{DynamicResource AccentFillColorDisabledBrush}"/>
+        <Setter Property="Stroke" Value="{DynamicResource AccentFillColorDisabledBrush}"/>
+    </Style>
+    <Style Selector="RadioButton:checked /template/ Ellipse#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+    </Style>
+    <Style Selector="RadioButton:checked:pointerover /template/ Ellipse#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+    </Style>
+    <Style Selector="RadioButton:checked:pressed /template/ Ellipse#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorSecondaryBrush}"/>
+    </Style>
+    <Style Selector="RadioButton:checked:disabled /template/ Ellipse#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorDisabledBrush}"/>
+    </Style>
+
+    <Style Selector="ToggleSwitch:checked /template/ Border#SwitchKnobBounds">
+        <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+    </Style>
+    <Style Selector="ToggleSwitch:checked:pointerover /template/ Border#SwitchKnobBounds">
+        <Setter Property="Background" Value="{DynamicResource AccentFillColorSecondaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorSecondaryBrush}"/>
+    </Style>
+    <Style Selector="ToggleSwitch:checked:pressed /template/ Border#SwitchKnobBounds">
+        <Setter Property="Background" Value="{DynamicResource AccentFillColorTertiaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorTertiaryBrush}"/>
+    </Style>
+    <Style Selector="ToggleSwitch:checked:disabled /template/ Border#SwitchKnobBounds">
+        <Setter Property="Background" Value="{DynamicResource AccentFillColorDisabledBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDisabledBrush}"/>
+    </Style>
+    <Style Selector="ToggleSwitch:checked /template/ Ellipse#SwitchKnobOn">
+        <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+    </Style>
+    <Style Selector="ToggleSwitch:checked:pointerover /template/ Ellipse#SwitchKnobOn">
+        <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+    </Style>
+    <Style Selector="ToggleSwitch:checked:pressed /template/ Ellipse#SwitchKnobOn">
+        <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorSecondaryBrush}"/>
+    </Style>
+    <Style Selector="ToggleSwitch:checked:disabled /template/ Ellipse#SwitchKnobOn">
+        <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorDisabledBrush}"/>
+    </Style>
+
+    <Style Selector="ProgressBar">
+        <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+    </Style>
+
     <!-- DataGrid selection: WinUI-style border-only. Permanent transparent border reserves layout
          space so adjacent rows don't shift on select and the accent border isn't clipped on first/last rows. -->
     <Style Selector="DataGridRow">
@@ -262,7 +408,7 @@
         <Setter Property="Background" Value="{DynamicResource MenuDividerBrush}"/>
     </Style>
     <Style Selector="DataGridRow:selected">
-        <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
     </Style>
     <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
         <Setter Property="Fill" Value="Transparent"/>
@@ -357,7 +503,7 @@
         <Setter Property="Background"   Value="{DynamicResource SettingsCardHoverBackground}"/>
     </Style>
     <Style Selector="Border.settings-card-focused">
-        <Setter Property="BorderBrush"     Value="{DynamicResource SystemAccentColor}"/>
+        <Setter Property="BorderBrush"     Value="{DynamicResource AccentFillColorDefaultBrush}"/>
         <Setter Property="BorderThickness" Value="2"/>
     </Style>
 
@@ -376,7 +522,7 @@
 
     <!-- Hyperlink-style text (blue accent, underline) -->
     <Style Selector="TextBlock.hyperlink">
-        <Setter Property="Foreground"       Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
+        <Setter Property="Foreground"       Value="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
         <Setter Property="TextDecorations"  Value="Underline"/>
         <Setter Property="Cursor"           Value="Hand"/>
     </Style>

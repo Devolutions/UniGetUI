@@ -64,7 +64,7 @@
                           MinHeight="32">
                         <!-- Accent bar -->
                         <Border Grid.Column="0"
-                                Background="{DynamicResource SystemAccentColor}"
+                                Background="{DynamicResource AccentFillColorDefaultBrush}"
                                 CornerRadius="2"
                                 Margin="0,4"/>
                         <!-- Package icon + name -->

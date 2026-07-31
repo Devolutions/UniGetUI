@@ -92,7 +92,7 @@
       <!-- Focus: accent underline (declared after hover so it wins when both apply). -->
       <Style Selector="Border#MegaQueryContainer:focus-within Border#MegaQueryUnderline">
          <Setter Property="Opacity" Value="1"/>
-         <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
+         <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
       </Style>
       <Style Selector="Border#MegaQueryContainer:focus-within">
          <Setter Property="Background" Value="{DynamicResource SearchBoxFocusedBackground}"/>
@@ -540,7 +540,7 @@
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
                                                                       Width="24" Height="24" IsVisible="{Binding !HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="{Binding TagBackdropIconPath}"
-                                                                      Foreground="{DynamicResource SystemAccentColor}"
+                                                                      Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
                                                                       Width="20" Height="20"
                                                                       Margin="0,0,-3,-3"
                                                                       IsVisible="{Binding TagIconVisible}"
@@ -664,7 +664,7 @@
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
                                                                       Width="44" Height="44" IsVisible="{Binding !HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="{Binding TagBackdropIconPath}"
-                                                                      Foreground="{DynamicResource SystemAccentColor}"
+                                                                      Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
                                                                       Width="28" Height="28"
                                                                       Margin="0,0,-4,-4"
                                                                       IsVisible="{Binding TagIconVisible}"
@@ -774,7 +774,7 @@
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
                                                                       Width="64" Height="64" IsVisible="{Binding !HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="{Binding TagBackdropIconPath}"
-                                                                      Foreground="{DynamicResource SystemAccentColor}"
+                                                                      Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
                                                                       Width="38" Height="38"
                                                                       Margin="0,0,-5,-5"
                                                                       IsVisible="{Binding TagIconVisible}"

@@ -59,12 +59,12 @@ public static class SettingsAnchor
         var layer = AdornerLayer.GetAdornerLayer(target);
         if (layer is null) return;
 
-        Color accent = target.TryFindResource("SystemAccentColor", target.ActualThemeVariant, out var res)
-                       && res is Color c ? c : Colors.DodgerBlue;
+        IBrush accent = target.TryFindResource("AccentFillColorDefaultBrush", target.ActualThemeVariant, out var res)
+                        && res is IBrush brush ? brush : Brushes.DodgerBlue;
 
         var adorner = new Border
         {
-            BorderBrush = new SolidColorBrush(accent),
+            BorderBrush = accent,
             BorderThickness = new Thickness(2),
             CornerRadius = target is Border b ? b.CornerRadius : new CornerRadius(8),
             IsHitTestVisible = false,

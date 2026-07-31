@@ -40,7 +40,7 @@
         <!-- Focus: accent underline (declared after hover so it wins when both apply). -->
         <Style Selector="Border#GlobalSearchContainer:focus-within Border#SearchFocusUnderline">
             <Setter Property="Opacity" Value="1"/>
-            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
         </Style>
         <Style Selector="Border#GlobalSearchContainer:focus-within">
             <Setter Property="Background" Value="{DynamicResource SearchBoxFocusedBackground}"/>

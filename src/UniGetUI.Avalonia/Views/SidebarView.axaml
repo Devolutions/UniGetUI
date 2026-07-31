@@ -66,7 +66,7 @@
                                    IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
                     </StackPanel>
                     <!-- Update count bubble (InfoBadge-style), anchored to the icon's top-right in both rail and flyout -->
-                    <Border Background="{DynamicResource SystemAccentColor}"
+                    <Border Background="{DynamicResource AccentFillColorDefaultBrush}"
                             CornerRadius="8"
                             Padding="3,1"
                             MinWidth="16"
@@ -76,9 +76,9 @@
                             VerticalAlignment="Top"
                             Margin="26,5,0,0">
                         <TextBlock Text="{Binding UpdatesBadgeCount}"
-                                   FontSize="9"
+                                   FontSize="11"
                                    FontWeight="Bold"
-                                   Foreground="White"
+                                   Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>
                     </Border>

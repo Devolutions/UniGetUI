@@ -88,10 +88,10 @@ public partial class InfoBar : UserControl
             SeverityIcon.ClearValue(ForegroundProperty);
             _severityStripBinding = SeverityStrip.Bind(
                 Border.BackgroundProperty,
-                this.GetResourceObservable("SystemAccentColor"));
+                this.GetResourceObservable("AccentFillColorDefaultBrush"));
             _severityIconBinding = SeverityIcon.Bind(
                 ForegroundProperty,
-                this.GetResourceObservable("SystemAccentColor"));
+                this.GetResourceObservable("AccentFillColorDefaultBrush"));
         }
     }
 }

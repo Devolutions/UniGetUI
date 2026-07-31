@@ -15,7 +15,7 @@ public partial class TelemetryDialog : UniGetUI.Avalonia.Views.DialogPages.Immer
         Body2.Text = CoreTools.Translate("No personal information is collected nor sent, and the collected data is anonimized, so it can't be back-tracked to you.");
 
         DetailsLink.Bind(TextBlock.ForegroundProperty,
-            DetailsLink.GetResourceObservable("SystemControlHighlightAccentBrush"));
+            DetailsLink.GetResourceObservable("AccentTextFillColorPrimaryBrush"));
         DetailsLink.PointerPressed += (_, e) =>
         {
             if (e.GetCurrentPoint(null).Properties.IsLeftButtonPressed)

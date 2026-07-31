@@ -42,7 +42,7 @@
                                 Padding="0"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Foreground="{DynamicResource SystemAccentColor}"
+                                Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
                                 FontSize="11"
                                 Cursor="Hand"
                                 automation:AutomationProperties.Name="{t:Translate More details}"/>
@@ -77,7 +77,7 @@
                                 Padding="0"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Foreground="{DynamicResource SystemAccentColor}"
+                                Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
                                 FontSize="11"
                                 Cursor="Hand"
                                 automation:AutomationProperties.Name="{t:Translate More details}"/>

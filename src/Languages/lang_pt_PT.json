@@ -949,5 +949,8 @@
   "There are no packages to export.": "Não existem pacotes para exportar.",
   "CSV file": "Ficheiro CSV",
   "The file was saved to {0}": "O ficheiro foi guardado em {0}",
-  "The file could not be saved:": "Não foi possível guardar o ficheiro:"
+  "The file could not be saved:": "Não foi possível guardar o ficheiro:",
+  "Environment variables use %VARIABLE% syntax.": "As variáveis de ambiente usam a sintaxe %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "As variáveis de ambiente usam a sintaxe <VARIABLE>.",
+  "Change environment variable syntax": "Alterar a sintaxe das variáveis de ambiente"
 }

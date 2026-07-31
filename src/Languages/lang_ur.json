@@ -949,5 +949,8 @@
   "There are no packages to export.": "برآمد کرنے کے لیے کوئی پیکیجز نہیں ہیں۔",
   "CSV file": "CSV فائل",
   "The file was saved to {0}": "فائل {0} میں محفوظ کر دی گئی",
-  "The file could not be saved:": "فائل محفوظ نہیں کی جا سکی:"
+  "The file could not be saved:": "فائل محفوظ نہیں کی جا سکی:",
+  "Environment variables use %VARIABLE% syntax.": "ماحولیاتی متغیرات %VARIABLE% نحو استعمال کرتے ہیں۔",
+  "Environment variables use <VARIABLE> syntax.": "ماحولیاتی متغیرات <VARIABLE> نحو استعمال کرتے ہیں۔",
+  "Change environment variable syntax": "ماحولیاتی متغیر کی نحو تبدیل کریں"
 }

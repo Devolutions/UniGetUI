@@ -944,5 +944,8 @@
   "There are no packages to export.": "내보낼 패키지가 없습니다.",
   "CSV file": "CSV 파일",
   "The file was saved to {0}": "파일이 {0}에 저장되었습니다",
-  "The file could not be saved:": "파일을 저장할 수 없습니다:"
+  "The file could not be saved:": "파일을 저장할 수 없습니다:",
+  "Environment variables use %VARIABLE% syntax.": "환경 변수는 %VARIABLE% 구문을 사용합니다.",
+  "Environment variables use <VARIABLE> syntax.": "환경 변수는 <VARIABLE> 구문을 사용합니다.",
+  "Change environment variable syntax": "환경 변수 구문 변경"
 }

@@ -949,5 +949,8 @@
   "There are no packages to export.": "निर्यातयितुं कानिचित् packages न सन्ति।",
   "CSV file": "CSV सञ्चिका",
   "The file was saved to {0}": "सञ्चिका {0} प्रति रक्षिता",
-  "The file could not be saved:": "सञ्चिका रक्षितुं न शक्यत:"
+  "The file could not be saved:": "सञ्चिका रक्षितुं न शक्यत:",
+  "Environment variables use %VARIABLE% syntax.": "पर्यावरण-चराः %VARIABLE% इति वाक्यविन्यासं प्रयुञ्जते।",
+  "Environment variables use <VARIABLE> syntax.": "पर्यावरण-चराः <VARIABLE> इति वाक्यविन्यासं प्रयुञ्जते।",
+  "Change environment variable syntax": "पर्यावरण-चराणां वाक्यविन्यासं परिवर्तयतु"
 }

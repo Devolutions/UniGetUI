@@ -949,5 +949,8 @@
   "There are no packages to export.": "Немає пакетів для експорту.",
   "CSV file": "Файл CSV",
   "The file was saved to {0}": "Файл збережено до {0}",
-  "The file could not be saved:": "Не вдалося зберегти файл:"
+  "The file could not be saved:": "Не вдалося зберегти файл:",
+  "Environment variables use %VARIABLE% syntax.": "Змінні середовища використовують синтаксис %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Змінні середовища використовують синтаксис <VARIABLE>.",
+  "Change environment variable syntax": "Змінити синтаксис змінних середовища"
 }

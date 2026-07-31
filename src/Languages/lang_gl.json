@@ -948,5 +948,8 @@
   "There are no packages to export.": "Non hai paquetes que exportar.",
   "CSV file": "Ficheiro CSV",
   "The file was saved to {0}": "O ficheiro gardouse en {0}",
-  "The file could not be saved:": "Non se puido gardar o ficheiro:"
+  "The file could not be saved:": "Non se puido gardar o ficheiro:",
+  "Environment variables use %VARIABLE% syntax.": "As variables de contorno usan a sintaxe %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "As variables de contorno usan a sintaxe <VARIABLE>.",
+  "Change environment variable syntax": "Cambiar a sintaxe das variables de contorno"
 }

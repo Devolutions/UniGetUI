@@ -948,5 +948,8 @@
   "There are no packages to export.": "אין חבילות לייצוא.",
   "CSV file": "קובץ CSV",
   "The file was saved to {0}": "הקובץ נשמר אל {0}",
-  "The file could not be saved:": "לא ניתן היה לשמור את הקובץ:"
+  "The file could not be saved:": "לא ניתן היה לשמור את הקובץ:",
+  "Environment variables use %VARIABLE% syntax.": "משתני סביבה משתמשים בתחביר %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "משתני סביבה משתמשים בתחביר <VARIABLE>.",
+  "Change environment variable syntax": "שינוי תחביר משתני הסביבה"
 }

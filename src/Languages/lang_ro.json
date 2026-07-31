@@ -949,5 +949,8 @@
   "There are no packages to export.": "Nu există pachete de exportat.",
   "CSV file": "Fișier CSV",
   "The file was saved to {0}": "Fișierul a fost salvat în {0}",
-  "The file could not be saved:": "Fișierul nu a putut fi salvat:"
+  "The file could not be saved:": "Fișierul nu a putut fi salvat:",
+  "Environment variables use %VARIABLE% syntax.": "Variabilele de mediu folosesc sintaxa %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Variabilele de mediu folosesc sintaxa <VARIABLE>.",
+  "Change environment variable syntax": "Modifică sintaxa variabilelor de mediu"
 }

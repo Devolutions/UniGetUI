@@ -948,5 +948,8 @@
   "There are no packages to export.": "Ti paket tune ku bên derxistin.",
   "CSV file": "Pelê CSV",
   "The file was saved to {0}": "Pel li {0} hate tomarkirin",
-  "The file could not be saved:": "Pel nehat tomarkirin:"
+  "The file could not be saved:": "Pel nehat tomarkirin:",
+  "Environment variables use %VARIABLE% syntax.": "Guhêrbarên jîngehê hevoksaziya %VARIABLE% bikar tînin.",
+  "Environment variables use <VARIABLE> syntax.": "Guhêrbarên jîngehê hevoksaziya <VARIABLE> bikar tînin.",
+  "Change environment variable syntax": "Hevoksaziya guhêrbarên jîngehê biguhêre"
 }

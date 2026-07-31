@@ -948,5 +948,8 @@
   "There are no packages to export.": "ರಫ್ತು ಮಾಡಲು ಯಾವುದೇ packages ಇಲ್ಲ.",
   "CSV file": "CSV ಫೈಲ್",
   "The file was saved to {0}": "ಫೈಲ್ ಅನ್ನು {0} ಗೆ ಉಳಿಸಲಾಗಿದೆ",
-  "The file could not be saved:": "ಫೈಲ್ ಅನ್ನು ಉಳಿಸಲಾಗಲಿಲ್ಲ:"
+  "The file could not be saved:": "ಫೈಲ್ ಅನ್ನು ಉಳಿಸಲಾಗಲಿಲ್ಲ:",
+  "Environment variables use %VARIABLE% syntax.": "ಪರಿಸರ ವೇರಿಯೇಬಲ್‌ಗಳು %VARIABLE% ಸಿಂಟ್ಯಾಕ್ಸ್ ಬಳಸುತ್ತವೆ.",
+  "Environment variables use <VARIABLE> syntax.": "ಪರಿಸರ ವೇರಿಯೇಬಲ್‌ಗಳು <VARIABLE> ಸಿಂಟ್ಯಾಕ್ಸ್ ಬಳಸುತ್ತವೆ.",
+  "Change environment variable syntax": "ಪರಿಸರ ವೇರಿಯೇಬಲ್ ಸಿಂಟ್ಯಾಕ್ಸ್ ಬದಲಾಯಿಸಿ"
 }

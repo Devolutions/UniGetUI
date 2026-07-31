@@ -948,5 +948,8 @@
   "There are no packages to export.": "Tidak ada paket untuk diekspor.",
   "CSV file": "File CSV",
   "The file was saved to {0}": "File disimpan ke {0}",
-  "The file could not be saved:": "File tidak dapat disimpan:"
+  "The file could not be saved:": "File tidak dapat disimpan:",
+  "Environment variables use %VARIABLE% syntax.": "Variabel lingkungan menggunakan sintaks %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Variabel lingkungan menggunakan sintaks <VARIABLE>.",
+  "Change environment variable syntax": "Ubah sintaks variabel lingkungan"
 }

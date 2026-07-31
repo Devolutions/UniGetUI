@@ -948,5 +948,8 @@
   "There are no packages to export.": "Vietäviä paketteja ei ole.",
   "CSV file": "CSV-tiedosto",
   "The file was saved to {0}": "Tiedosto tallennettiin kohteeseen {0}",
-  "The file could not be saved:": "Tiedostoa ei voitu tallentaa:"
+  "The file could not be saved:": "Tiedostoa ei voitu tallentaa:",
+  "Environment variables use %VARIABLE% syntax.": "Ympäristömuuttujat käyttävät %VARIABLE%-syntaksia.",
+  "Environment variables use <VARIABLE> syntax.": "Ympäristömuuttujat käyttävät <VARIABLE>-syntaksia.",
+  "Change environment variable syntax": "Muuta ympäristömuuttujien syntaksia"
 }

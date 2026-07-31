@@ -949,5 +949,8 @@
   "There are no packages to export.": "Nuk ka paketa për të eksportuar.",
   "CSV file": "Skedar CSV",
   "The file was saved to {0}": "Skedari u ruajt në {0}",
-  "The file could not be saved:": "Skedari nuk mundi të ruhej:"
+  "The file could not be saved:": "Skedari nuk mundi të ruhej:",
+  "Environment variables use %VARIABLE% syntax.": "Variablat e mjedisit përdorin sintaksën %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Variablat e mjedisit përdorin sintaksën <VARIABLE>.",
+  "Change environment variable syntax": "Ndrysho sintaksën e variablave të mjedisit"
 }

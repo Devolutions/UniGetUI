@@ -948,5 +948,8 @@
   "There are no packages to export.": "Нема пакети за експортирање.",
   "CSV file": "CSV датотека",
   "The file was saved to {0}": "Датотеката беше зачувана во {0}",
-  "The file could not be saved:": "Датотеката не можеше да се зачува:"
+  "The file could not be saved:": "Датотеката не можеше да се зачува:",
+  "Environment variables use %VARIABLE% syntax.": "Променливите на околината користат синтакса %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Променливите на околината користат синтакса <VARIABLE>.",
+  "Change environment variable syntax": "Промени ја синтаксата на променливите на околината"
 }

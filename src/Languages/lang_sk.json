@@ -949,5 +949,8 @@
   "There are no packages to export.": "Nie sú žiadne balíčky na export.",
   "CSV file": "Súbor CSV",
   "The file was saved to {0}": "Súbor bol uložený do {0}",
-  "The file could not be saved:": "Súbor sa nepodarilo uložiť:"
+  "The file could not be saved:": "Súbor sa nepodarilo uložiť:",
+  "Environment variables use %VARIABLE% syntax.": "Premenné prostredia používajú syntax %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Premenné prostredia používajú syntax <VARIABLE>.",
+  "Change environment variable syntax": "Zmeniť syntax premenných prostredia"
 }

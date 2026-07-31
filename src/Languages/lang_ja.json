@@ -948,5 +948,8 @@
   "There are no packages to export.": "エクスポートするパッケージがありません。",
   "CSV file": "CSVファイル",
   "The file was saved to {0}": "ファイルを{0}に保存しました",
-  "The file could not be saved:": "ファイルを保存できませんでした："
+  "The file could not be saved:": "ファイルを保存できませんでした：",
+  "Environment variables use %VARIABLE% syntax.": "環境変数は %VARIABLE% 構文を使用します。",
+  "Environment variables use <VARIABLE> syntax.": "環境変数は <VARIABLE> 構文を使用します。",
+  "Change environment variable syntax": "環境変数の構文を変更"
 }

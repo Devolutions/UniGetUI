@@ -948,5 +948,8 @@
   "There are no packages to export.": "निर्यात करण्यासाठी कोणतेही पॅकेज नाहीत.",
   "CSV file": "CSV फाइल",
   "The file was saved to {0}": "फाइल {0} मध्ये जतन केली गेली",
-  "The file could not be saved:": "फाइल जतन करता आली नाही:"
+  "The file could not be saved:": "फाइल जतन करता आली नाही:",
+  "Environment variables use %VARIABLE% syntax.": "एन्व्हायर्नमेंट व्हेरिएबल्स %VARIABLE% सिंटॅक्स वापरतात.",
+  "Environment variables use <VARIABLE> syntax.": "एन्व्हायर्नमेंट व्हेरिएबल्स <VARIABLE> सिंटॅक्स वापरतात.",
+  "Change environment variable syntax": "एन्व्हायर्नमेंट व्हेरिएबल सिंटॅक्स बदला"
 }

@@ -948,5 +948,8 @@
   "There are no packages to export.": "هیچ بسته‌ای برای استخراج وجود ندارد.",
   "CSV file": "فایل CSV",
   "The file was saved to {0}": "فایل در {0} ذخیره شد",
-  "The file could not be saved:": "فایل ذخیره نشد:"
+  "The file could not be saved:": "فایل ذخیره نشد:",
+  "Environment variables use %VARIABLE% syntax.": "متغیرهای محیطی از نحو %VARIABLE% استفاده می‌کنند.",
+  "Environment variables use <VARIABLE> syntax.": "متغیرهای محیطی از نحو <VARIABLE> استفاده می‌کنند.",
+  "Change environment variable syntax": "تغییر نحو متغیرهای محیطی"
 }

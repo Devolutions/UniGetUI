@@ -949,5 +949,8 @@
   "There are no packages to export.": "Нема пакета за извоз.",
   "CSV file": "CSV датотека",
   "The file was saved to {0}": "Датотека је сачувана у {0}",
-  "The file could not be saved:": "Датотеку није могуће сачувати:"
+  "The file could not be saved:": "Датотеку није могуће сачувати:",
+  "Environment variables use %VARIABLE% syntax.": "Променљиве окружења користе синтаксу %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Променљиве окружења користе синтаксу <VARIABLE>.",
+  "Change environment variable syntax": "Промени синтаксу променљивих окружења"
 }

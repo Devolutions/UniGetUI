@@ -948,5 +948,8 @@
   "There are no packages to export.": "Det finnes ingen pakker å eksportere.",
   "CSV file": "CSV-fil",
   "The file was saved to {0}": "Filen ble lagret til {0}",
-  "The file could not be saved:": "Filen kunne ikke lagres:"
+  "The file could not be saved:": "Filen kunne ikke lagres:",
+  "Environment variables use %VARIABLE% syntax.": "Miljøvariabler bruker %VARIABLE%-syntaks.",
+  "Environment variables use <VARIABLE> syntax.": "Miljøvariabler bruker <VARIABLE>-syntaks.",
+  "Change environment variable syntax": "Endre syntaks for miljøvariabler"
 }

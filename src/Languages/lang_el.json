@@ -948,5 +948,8 @@
   "There are no packages to export.": "Δεν υπάρχουν πακέτα για εξαγωγή.",
   "CSV file": "Αρχείο CSV",
   "The file was saved to {0}": "Το αρχείο αποθηκεύτηκε στο {0}",
-  "The file could not be saved:": "Το αρχείο δεν ήταν δυνατό να αποθηκευτεί:"
+  "The file could not be saved:": "Το αρχείο δεν ήταν δυνατό να αποθηκευτεί:",
+  "Environment variables use %VARIABLE% syntax.": "Οι μεταβλητές περιβάλλοντος χρησιμοποιούν σύνταξη %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Οι μεταβλητές περιβάλλοντος χρησιμοποιούν σύνταξη <VARIABLE>.",
+  "Change environment variable syntax": "Αλλαγή σύνταξης μεταβλητών περιβάλλοντος"
 }

@@ -948,5 +948,8 @@
   "There are no packages to export.": "Eksportimiseks pole pakette.",
   "CSV file": "CSV-fail",
   "The file was saved to {0}": "Fail salvestati asukohta {0}",
-  "The file could not be saved:": "Faili ei õnnestunud salvestada:"
+  "The file could not be saved:": "Faili ei õnnestunud salvestada:",
+  "Environment variables use %VARIABLE% syntax.": "Keskkonnamuutujad kasutavad süntaksit %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Keskkonnamuutujad kasutavad süntaksit <VARIABLE>.",
+  "Change environment variable syntax": "Muuda keskkonnamuutujate süntaksit"
 }

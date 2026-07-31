@@ -949,5 +949,8 @@
   "There are no packages to export.": "Không có gói nào để xuất.",
   "CSV file": "Tệp CSV",
   "The file was saved to {0}": "Tệp đã được lưu tại {0}",
-  "The file could not be saved:": "Không thể lưu tệp:"
+  "The file could not be saved:": "Không thể lưu tệp:",
+  "Environment variables use %VARIABLE% syntax.": "Biến môi trường sử dụng cú pháp %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Biến môi trường sử dụng cú pháp <VARIABLE>.",
+  "Change environment variable syntax": "Thay đổi cú pháp biến môi trường"
 }

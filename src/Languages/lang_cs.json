@@ -948,5 +948,8 @@
   "There are no packages to export.": "Nejsou žádné balíčky k exportu.",
   "CSV file": "Soubor CSV",
   "The file was saved to {0}": "Soubor byl uložen do {0}",
-  "The file could not be saved:": "Soubor se nepodařilo uložit:"
+  "The file could not be saved:": "Soubor se nepodařilo uložit:",
+  "Environment variables use %VARIABLE% syntax.": "Proměnné prostředí používají syntaxi %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Proměnné prostředí používají syntaxi <VARIABLE>.",
+  "Change environment variable syntax": "Změnit syntaxi proměnných prostředí"
 }

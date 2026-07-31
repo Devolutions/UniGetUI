@@ -943,5 +943,8 @@
   "Running custom operation {0}": "Running custom operation {0}",
   "Custom operation": "Custom operation",
   "Custom operation failed": "Custom operation failed",
-  "The custom operation {0} failed to run": "The custom operation {0} failed to run"
+  "The custom operation {0} failed to run": "The custom operation {0} failed to run",
+  "Environment variables use %VARIABLE% syntax.": "Environment variables use %VARIABLE% syntax.",
+  "Environment variables use <VARIABLE> syntax.": "Environment variables use <VARIABLE> syntax.",
+  "Change environment variable syntax": "Change environment variable syntax"
 }

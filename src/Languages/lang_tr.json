@@ -949,5 +949,8 @@
   "There are no packages to export.": "Aktarılacak paket yok.",
   "CSV file": "CSV dosyası",
   "The file was saved to {0}": "Dosya {0} konumuna kaydedildi",
-  "The file could not be saved:": "Dosya kaydedilemedi:"
+  "The file could not be saved:": "Dosya kaydedilemedi:",
+  "Environment variables use %VARIABLE% syntax.": "Ortam değişkenleri %VARIABLE% sözdizimini kullanır.",
+  "Environment variables use <VARIABLE> syntax.": "Ortam değişkenleri <VARIABLE> sözdizimini kullanır.",
+  "Change environment variable syntax": "Ortam değişkeni sözdizimini değiştir"
 }

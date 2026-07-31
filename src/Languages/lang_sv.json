@@ -949,5 +949,8 @@
   "There are no packages to export.": "Det finns inga paket att exportera.",
   "CSV file": "CSV-fil",
   "The file was saved to {0}": "Filen sparades till {0}",
-  "The file could not be saved:": "Filen kunde inte sparas:"
+  "The file could not be saved:": "Filen kunde inte sparas:",
+  "Environment variables use %VARIABLE% syntax.": "Miljövariabler använder %VARIABLE%-syntax.",
+  "Environment variables use <VARIABLE> syntax.": "Miljövariabler använder <VARIABLE>-syntax.",
+  "Change environment variable syntax": "Ändra syntax för miljövariabler"
 }

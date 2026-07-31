@@ -948,5 +948,8 @@
   "There are no packages to export.": "ექსპორტისთვის პაკეტები არ არის.",
   "CSV file": "CSV ფაილი",
   "The file was saved to {0}": "ფაილი შენახულია {0}-ში",
-  "The file could not be saved:": "ფაილის შენახვა ვერ მოხერხდა:"
+  "The file could not be saved:": "ფაილის შენახვა ვერ მოხერხდა:",
+  "Environment variables use %VARIABLE% syntax.": "გარემოს ცვლადები იყენებს %VARIABLE% სინტაქსს.",
+  "Environment variables use <VARIABLE> syntax.": "გარემოს ცვლადები იყენებს <VARIABLE> სინტაქსს.",
+  "Change environment variable syntax": "გარემოს ცვლადების სინტაქსის შეცვლა"
 }

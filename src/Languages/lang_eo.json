@@ -948,5 +948,8 @@
   "There are no packages to export.": "Ne estas pakaĵoj por eksporti.",
   "CSV file": "CSV-dosiero",
   "The file was saved to {0}": "La dosiero estis konservita al {0}",
-  "The file could not be saved:": "La dosiero ne povis esti konservita:"
+  "The file could not be saved:": "La dosiero ne povis esti konservita:",
+  "Environment variables use %VARIABLE% syntax.": "Mediovariabloj uzas la sintakson %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Mediovariabloj uzas la sintakson <VARIABLE>.",
+  "Change environment variable syntax": "Ŝanĝi sintakson de mediovariabloj"
 }

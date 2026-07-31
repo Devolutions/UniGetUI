@@ -948,5 +948,8 @@
   "There are no packages to export.": "Nėra paketų, kuriuos būtų galima eksportuoti.",
   "CSV file": "CSV failas",
   "The file was saved to {0}": "Failas išsaugotas į {0}",
-  "The file could not be saved:": "Nepavyko išsaugoti failo:"
+  "The file could not be saved:": "Nepavyko išsaugoti failo:",
+  "Environment variables use %VARIABLE% syntax.": "Aplinkos kintamieji naudoja %VARIABLE% sintaksę.",
+  "Environment variables use <VARIABLE> syntax.": "Aplinkos kintamieji naudoja <VARIABLE> sintaksę.",
+  "Change environment variable syntax": "Keisti aplinkos kintamųjų sintaksę"
 }

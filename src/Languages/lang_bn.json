@@ -948,5 +948,8 @@
   "There are no packages to export.": "রপ্তানি করার জন্য কোনো প্যাকেজ নেই।",
   "CSV file": "CSV ফাইল",
   "The file was saved to {0}": "ফাইলটি {0}-এ সংরক্ষণ করা হয়েছে",
-  "The file could not be saved:": "ফাইলটি সংরক্ষণ করা যায়নি:"
+  "The file could not be saved:": "ফাইলটি সংরক্ষণ করা যায়নি:",
+  "Environment variables use %VARIABLE% syntax.": "এনভায়রনমেন্ট ভেরিয়েবল %VARIABLE% সিনট্যাক্স ব্যবহার করে।",
+  "Environment variables use <VARIABLE> syntax.": "এনভায়রনমেন্ট ভেরিয়েবল <VARIABLE> সিনট্যাক্স ব্যবহার করে।",
+  "Change environment variable syntax": "এনভায়রনমেন্ট ভেরিয়েবল সিনট্যাক্স পরিবর্তন করুন"
 }

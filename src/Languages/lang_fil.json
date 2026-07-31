@@ -948,5 +948,8 @@
   "There are no packages to export.": "Walang mga package na i-export.",
   "CSV file": "CSV file",
   "The file was saved to {0}": "Na-save ang file sa {0}",
-  "The file could not be saved:": "Hindi ma-save ang file:"
+  "The file could not be saved:": "Hindi ma-save ang file:",
+  "Environment variables use %VARIABLE% syntax.": "Gumagamit ang mga environment variable ng %VARIABLE% na syntax.",
+  "Environment variables use <VARIABLE> syntax.": "Gumagamit ang mga environment variable ng <VARIABLE> na syntax.",
+  "Change environment variable syntax": "Baguhin ang syntax ng environment variable"
 }

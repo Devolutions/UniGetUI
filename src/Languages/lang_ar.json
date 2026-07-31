@@ -948,5 +948,8 @@
   "There are no packages to export.": "لا توجد حزم للتصدير.",
   "CSV file": "ملف CSV",
   "The file was saved to {0}": "تم حفظ الملف في {0}",
-  "The file could not be saved:": "تعذّر حفظ الملف:"
+  "The file could not be saved:": "تعذّر حفظ الملف:",
+  "Environment variables use %VARIABLE% syntax.": "متغيرات البيئة تستخدم صيغة %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "متغيرات البيئة تستخدم صيغة <VARIABLE>.",
+  "Change environment variable syntax": "تغيير صيغة متغيرات البيئة"
 }

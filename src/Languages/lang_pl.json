@@ -948,5 +948,8 @@
   "All sources": "Wszystkie źródła",
   "Filter by source": "Filtruj według źródła",
   "[... {0} earlier lines omitted ...]": "[... pominięto {0} wcześniejszych wierszy ...]",
-  "Clear Scoop download cache on launch": "Wyczyść pamięć podręczną pobierania Scoop przy uruchomieniu"
+  "Clear Scoop download cache on launch": "Wyczyść pamięć podręczną pobierania Scoop przy uruchomieniu",
+  "Environment variables use %VARIABLE% syntax.": "Zmienne środowiskowe używają składni %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Zmienne środowiskowe używają składni <VARIABLE>.",
+  "Change environment variable syntax": "Zmień składnię zmiennych środowiskowych"
 }

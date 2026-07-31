@@ -947,5 +947,8 @@
   "There are no packages to export.": "没有可导出的软件包。",
   "CSV file": "CSV 文件",
   "The file was saved to {0}": "文件已保存至 {0}",
-  "The file could not be saved:": "无法保存文件："
+  "The file could not be saved:": "无法保存文件：",
+  "Environment variables use %VARIABLE% syntax.": "环境变量使用 %VARIABLE% 语法。",
+  "Environment variables use <VARIABLE> syntax.": "环境变量使用 <VARIABLE> 语法。",
+  "Change environment variable syntax": "更改环境变量语法"
 }

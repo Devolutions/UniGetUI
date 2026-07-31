@@ -948,5 +948,8 @@
   "There are no packages to export.": "Daar is geen pakkette om uit te voer nie.",
   "CSV file": "CSV-lêer",
   "The file was saved to {0}": "Die lêer is gestoor na {0}",
-  "The file could not be saved:": "Die lêer kon nie gestoor word nie:"
+  "The file could not be saved:": "Die lêer kon nie gestoor word nie:",
+  "Environment variables use %VARIABLE% syntax.": "Omgewingsveranderlikes gebruik %VARIABLE%-sintaksis.",
+  "Environment variables use <VARIABLE> syntax.": "Omgewingsveranderlikes gebruik <VARIABLE>-sintaksis.",
+  "Change environment variable syntax": "Verander omgewingsveranderlike-sintaksis"
 }

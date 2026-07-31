@@ -948,5 +948,8 @@
   "There are no packages to export.": "No hi ha paquets per exportar.",
   "CSV file": "Fitxer CSV",
   "The file was saved to {0}": "El fitxer s'ha desat a {0}",
-  "The file could not be saved:": "No s'ha pogut desar el fitxer:"
+  "The file could not be saved:": "No s'ha pogut desar el fitxer:",
+  "Environment variables use %VARIABLE% syntax.": "Les variables d'entorn utilitzen la sintaxi %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Les variables d'entorn utilitzen la sintaxi <VARIABLE>.",
+  "Change environment variable syntax": "Canvia la sintaxi de les variables d'entorn"
 }

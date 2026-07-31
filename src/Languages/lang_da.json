@@ -948,5 +948,8 @@
   "There are no packages to export.": "Der er ingen pakker at eksportere.",
   "CSV file": "CSV-fil",
   "The file was saved to {0}": "Filen blev gemt i {0}",
-  "The file could not be saved:": "Filen kunne ikke gemmes:"
+  "The file could not be saved:": "Filen kunne ikke gemmes:",
+  "Environment variables use %VARIABLE% syntax.": "Miljøvariabler bruger syntaksen %VARIABLE%.",
+  "Environment variables use <VARIABLE> syntax.": "Miljøvariabler bruger syntaksen <VARIABLE>.",
+  "Change environment variable syntax": "Skift syntaks for miljøvariabler"
 }

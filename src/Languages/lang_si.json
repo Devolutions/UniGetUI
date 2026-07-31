@@ -949,5 +949,8 @@
   "There are no packages to export.": "අපනයනය කිරීමට පැකේජ නොමැත.",
   "CSV file": "CSV ගොනුව",
   "The file was saved to {0}": "ගොනුව {0} වෙත සුරකින ලදී",
-  "The file could not be saved:": "ගොනුව සුරැකිය නොහැකි විය:"
+  "The file could not be saved:": "ගොනුව සුරැකිය නොහැකි විය:",
+  "Environment variables use %VARIABLE% syntax.": "පරිසර විචල්‍ය %VARIABLE% වාක්‍ය රීතිය භාවිත කරයි.",
+  "Environment variables use <VARIABLE> syntax.": "පරිසර විචල්‍ය <VARIABLE> වාක්‍ය රීතිය භාවිත කරයි.",
+  "Change environment variable syntax": "පරිසර විචල්‍ය වාක්‍ය රීතිය වෙනස් කරන්න"
 }

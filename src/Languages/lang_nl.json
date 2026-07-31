@@ -948,5 +948,8 @@
   "There are no packages to export.": "Er zijn geen pakketten om te exporteren.",
   "CSV file": "CSV-bestand",
   "The file was saved to {0}": "Het bestand is opgeslagen in {0}",
-  "The file could not be saved:": "Het bestand kon niet worden opgeslagen:"
+  "The file could not be saved:": "Het bestand kon niet worden opgeslagen:",
+  "Environment variables use %VARIABLE% syntax.": "Omgevingsvariabelen gebruiken de %VARIABLE%-syntaxis.",
+  "Environment variables use <VARIABLE> syntax.": "Omgevingsvariabelen gebruiken de <VARIABLE>-syntaxis.",
+  "Change environment variable syntax": "Syntaxis van omgevingsvariabelen wijzigen"
 }

@@ -949,5 +949,8 @@
   "There are no packages to export.": "ไม่มีแพ็กเกจให้ส่งออก",
   "CSV file": "ไฟล์ CSV",
   "The file was saved to {0}": "บันทึกไฟล์ไปยัง {0} แล้ว",
-  "The file could not be saved:": "ไม่สามารถบันทึกไฟล์ได้:"
+  "The file could not be saved:": "ไม่สามารถบันทึกไฟล์ได้:",
+  "Environment variables use %VARIABLE% syntax.": "ตัวแปรสภาพแวดล้อมใช้ไวยากรณ์ %VARIABLE%",
+  "Environment variables use <VARIABLE> syntax.": "ตัวแปรสภาพแวดล้อมใช้ไวยากรณ์ <VARIABLE>",
+  "Change environment variable syntax": "เปลี่ยนไวยากรณ์ตัวแปรสภาพแวดล้อม"
 }

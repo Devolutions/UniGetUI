@@ -948,5 +948,8 @@
   "There are no packages to export.": "Nincsenek exportálható csomagok.",
   "CSV file": "CSV fájl",
   "The file was saved to {0}": "A fájl ide lett mentve: {0}",
-  "The file could not be saved:": "A fájlt nem sikerült menteni:"
+  "The file could not be saved:": "A fájlt nem sikerült menteni:",
+  "Environment variables use %VARIABLE% syntax.": "A környezeti változók a(z) %VARIABLE% szintaxist használják.",
+  "Environment variables use <VARIABLE> syntax.": "A környezeti változók a(z) <VARIABLE> szintaxist használják.",
+  "Change environment variable syntax": "Környezeti változók szintaxisának módosítása"
 }

@@ -460,11 +460,15 @@
     <!-- ComboBox popups are separate visual roots, so their item geometry and states must
          be global. The horizontal margin is the popup's inner gutter: highlights never
          touch or obscure its rounded left/right frame. -->
+    <Style Selector="ComboBox">
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
     <Style Selector="ComboBoxItem">
         <Setter Property="Margin" Value="4,0"/>
         <Setter Property="Padding" Value="8,4,8,5"/>
         <Setter Property="MinHeight" Value="32"/>
         <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
     </Style>
     <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter,

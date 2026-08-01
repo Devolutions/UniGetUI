@@ -364,6 +364,17 @@
     <Style Selector="DataGridRow">
         <Setter Property="BorderThickness" Value="2"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <!-- WinUI selection surfaces use rounded control corners rather than square highlights. -->
+    <Style Selector="ListBoxItem">
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="ComboBoxItem">
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="TabItem">
+        <Setter Property="CornerRadius" Value="4"/>
     </Style>
     <!-- Column headers default to Avalonia's 12px bare-TextBlock size; WinUI renders them at 14px. -->
     <Style Selector="DataGridColumnHeader">

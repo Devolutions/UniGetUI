@@ -735,7 +735,8 @@
                     KeyboardNavigation.TabNavigation="Cycle"
                     BoxShadow="0 8 32 0 #59000000">
                 <Grid RowDefinitions="Auto,*">
-                    <Grid Grid.Row="0"
+                    <Grid x:Name="ModalHeader"
+                          Grid.Row="0"
                           Height="48"
                           Margin="20,0,0,0"
                           ColumnDefinitions="*,Auto">

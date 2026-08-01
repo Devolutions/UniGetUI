@@ -20,6 +20,8 @@ public class ImmersiveDialog : ContentControl
     internal event EventHandler? CloseRequested;
     public event EventHandler<CancelEventArgs>? Closing;
 
+    public Thickness TitleMargin { get; set; } = new(20, 0, 0, 0);
+
     public string? Title
     {
         get => GetValue(TitleProperty);

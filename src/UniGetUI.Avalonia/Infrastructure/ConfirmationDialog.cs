@@ -28,6 +28,7 @@ internal static class ConfirmationDialog
             MinWidth = 320,
             MinHeight = 136,
             Title = CoreTools.Translate("Are you sure?"),
+            TitleMargin = new Thickness(24, 0, 0, 0),
             Background = GetBrush("AppDialogBackground"),
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalContentAlignment = VerticalAlignment.Stretch,
@@ -97,6 +98,8 @@ internal static class ConfirmationDialog
         var footer = new Border
         {
             Background = GetBrush("AppDialogDarkBackground"),
+            CornerRadius = new CornerRadius(0, 0, 7, 7),
+            ClipToBounds = true,
             Child = actions,
         };
         Grid.SetRow(footer, 1);

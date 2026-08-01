@@ -16,6 +16,11 @@ internal static class ConfirmationDialog
         if (MainWindow.Instance is not { } owner)
             return true;
 
+        IBrush? GetBrush(string key) =>
+            owner.TryFindResource(key, owner.ActualThemeVariant, out object? resource)
+                ? resource as IBrush
+                : null;
+
         bool confirmed = false;
         var dialog = new ImmersiveDialog
         {
@@ -23,7 +28,7 @@ internal static class ConfirmationDialog
             MinWidth = 320,
             MinHeight = 136,
             Title = CoreTools.Translate("Are you sure?"),
-            Background = Application.Current?.FindResource("AppDialogBackground") as IBrush,
+            Background = GetBrush("AppDialogBackground"),
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalContentAlignment = VerticalAlignment.Stretch,
         };
@@ -59,7 +64,7 @@ internal static class ConfirmationDialog
 
         var content = new Grid
         {
-            Background = Application.Current?.FindResource("AppDialogBackground") as IBrush,
+            Background = GetBrush("AppDialogBackground"),
         };
         content.RowDefinitions.Add(new RowDefinition(GridLength.Star));
         content.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
@@ -70,7 +75,7 @@ internal static class ConfirmationDialog
             FontSize = 14,
             LineHeight = 20,
             Margin = new Thickness(24, 12, 24, 24),
-            Foreground = Application.Current?.FindResource("TextFillColorPrimaryBrush") as IBrush,
+            Foreground = GetBrush("TextFillColorPrimaryBrush"),
             TextWrapping = TextWrapping.Wrap,
             VerticalAlignment = VerticalAlignment.Top,
         };
@@ -89,7 +94,7 @@ internal static class ConfirmationDialog
 
         var footer = new Border
         {
-            Background = Application.Current?.FindResource("AppDialogDarkBackground") as IBrush,
+            Background = GetBrush("AppDialogDarkBackground"),
             Child = actions,
         };
         Grid.SetRow(footer, 1);

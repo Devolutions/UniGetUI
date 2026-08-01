@@ -15,6 +15,7 @@ using Avalonia.Media.Transformation;
 using Avalonia.Platform.Storage;
 using Avalonia.Rendering.Composition;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Extensions;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
@@ -92,7 +93,16 @@ public abstract partial class AbstractPackagesPage : UserControl,
         GenerateToolBar(ViewModel);
 
         // Double-click a list row → show details
-        PackageList.DoubleTapped += (_, _) => _ = ShowDetailsForPackage(SelectedItem);
+        PackageList.DoubleTapped += (_, e) =>
+        {
+            if (e.Source is Visual source
+                && (source is CheckBox || source.GetVisualAncestors().Any(control => control is CheckBox)))
+            {
+                return;
+            }
+
+            _ = ShowDetailsForPackage(SelectedItem);
+        };
 
         // Native DataGrid column sorting. The default SortMemberPath path resolves the property by
         // reflection, which full-trim NativeAOT release builds strip away — so CanUserSort reports

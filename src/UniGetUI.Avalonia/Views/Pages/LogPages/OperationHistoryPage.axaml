@@ -17,7 +17,19 @@
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="MinHeight" Value="0"/>
             <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
             <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="TabItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TabItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+        </Style>
+        <Style Selector="TabItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
         </Style>
         <Style Selector="TabItem /template/ #PART_SelectedPipe" x:SetterTargetType="Control">
             <Setter Property="IsVisible" Value="False"/>

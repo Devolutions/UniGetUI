@@ -40,6 +40,8 @@ internal static class ConfirmationDialog
             Height = 32,
             Padding = new Thickness(11, 5, 11, 6),
             CornerRadius = new CornerRadius(4),
+            Background = GetBrush("AppDialogBackground"),
+            BorderThickness = new Thickness(0),
             FontSize = 14,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Center,

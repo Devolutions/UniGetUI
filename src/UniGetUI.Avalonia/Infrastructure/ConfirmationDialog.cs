@@ -76,7 +76,7 @@ internal static class ConfirmationDialog
             Text = message,
             FontSize = 14,
             LineHeight = 20,
-            Margin = new Thickness(24, 12, 24, 24),
+            Margin = new Thickness(24),
             Foreground = GetBrush("TextFillColorPrimaryBrush"),
             TextWrapping = TextWrapping.Wrap,
             VerticalAlignment = VerticalAlignment.Top,

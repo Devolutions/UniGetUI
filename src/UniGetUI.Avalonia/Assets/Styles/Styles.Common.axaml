@@ -366,6 +366,10 @@
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="CornerRadius" Value="4"/>
     </Style>
+    <Style Selector="DataGridRow /template/ Rectangle#BackgroundRectangle">
+        <Setter Property="RadiusX" Value="4"/>
+        <Setter Property="RadiusY" Value="4"/>
+    </Style>
     <!-- WinUI selection surfaces use rounded control corners rather than square highlights. -->
     <Style Selector="ListBoxItem">
         <Setter Property="CornerRadius" Value="4"/>

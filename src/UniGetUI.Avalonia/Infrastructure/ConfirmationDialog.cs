@@ -20,7 +20,7 @@ internal static class ConfirmationDialog
         var dialog = new ImmersiveDialog
         {
             MaxWidth = 460,
-            MinHeight = 170,
+            MinWidth = 380,
             Title = CoreTools.Translate("Are you sure?"),
             Background = Application.Current?.FindResource("AppDialogBackground") as IBrush,
         };
@@ -28,10 +28,14 @@ internal static class ConfirmationDialog
         var noButton = new Button
         {
             Content = CoreTools.Translate("No"),
-            MinWidth = 100,
-            Height = 40,
-            Padding = new Thickness(12, 4),
+            MinWidth = 0,
+            Height = 36,
+            Padding = new Thickness(12, 3),
             CornerRadius = new CornerRadius(4),
+            Background = Application.Current?.FindResource("SettingsCardBackground") as IBrush,
+            BorderThickness = new Thickness(0),
+            Foreground = Application.Current?.FindResource("TextFillColorPrimaryBrush") as IBrush,
+            FontSize = 14,
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center,
         };
@@ -40,40 +44,50 @@ internal static class ConfirmationDialog
         var yesButton = new Button
         {
             Content = CoreTools.Translate("Yes"),
-            MinWidth = 100,
-            Height = 40,
-            Padding = new Thickness(12, 4),
+            MinWidth = 0,
+            Height = 36,
+            Padding = new Thickness(12, 3),
             CornerRadius = new CornerRadius(4),
+            FontSize = 14,
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center,
         };
         yesButton.Classes.Add("accent");
         yesButton.Click += (_, _) => { confirmed = true; dialog.Close(); };
 
-        var content = new Grid
-        {
-            Margin = new Thickness(20),
-        };
-        content.RowDefinitions.Add(new RowDefinition(GridLength.Star));
+        var content = new Grid();
+        content.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         content.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
 
-        content.Children.Add(new TextBlock
+        var messageBlock = new TextBlock
         {
             Text = message,
-            Opacity = 0.82,
+            FontSize = 14,
+            LineHeight = 20,
+            Margin = new Thickness(20, 12, 20, 20),
+            Foreground = Application.Current?.FindResource("TextFillColorPrimaryBrush") as IBrush,
             TextWrapping = TextWrapping.Wrap,
-        });
-
-        var actions = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            Margin = new Thickness(0, 20, 0, 0),
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Children = { noButton, yesButton },
         };
-        Grid.SetRow(actions, 1);
-        content.Children.Add(actions);
+        content.Children.Add(messageBlock);
+
+        var actions = new Grid
+        {
+            ColumnSpacing = 8,
+            Margin = new Thickness(20, 12),
+        };
+        actions.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        actions.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        actions.Children.Add(noButton);
+        Grid.SetColumn(yesButton, 1);
+        actions.Children.Add(yesButton);
+
+        var footer = new Border
+        {
+            Background = Application.Current?.FindResource("AppWindowBackground") as IBrush,
+            Child = actions,
+        };
+        Grid.SetRow(footer, 1);
+        content.Children.Add(footer);
 
         dialog.Content = content;
 

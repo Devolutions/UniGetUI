@@ -39,8 +39,12 @@
                     Spacing="8"
                     Margin="0,4,0,0">
             <Button x:Name="DeclineButton" Content="{t:Translate Decline}" MinWidth="100"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
                     automation:AutomationProperties.Name="{t:Translate Decline}"/>
             <Button x:Name="AcceptButton"  Content="{t:Translate Accept}" MinWidth="100" Classes="accent"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
                     automation:AutomationProperties.Name="{t:Translate Accept}"/>
         </StackPanel>
 

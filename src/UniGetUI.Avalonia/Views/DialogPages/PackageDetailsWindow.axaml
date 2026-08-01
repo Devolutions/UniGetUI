@@ -196,7 +196,7 @@
                                     Classes="accent action-chevron"
                                     automation:AutomationProperties.Name="{Binding MainActionLabel}">
                                 <Path Data="M 0,0 L 4,4 L 8,0"
-                                      Stroke="White"
+                                      Stroke="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                                       StrokeThickness="1.5"
                                       StrokeJoin="Miter"
                                       Fill="Transparent"

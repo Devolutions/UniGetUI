@@ -72,6 +72,7 @@ public sealed partial class CheckboxButtonCard : SettingsCard
     public CheckboxButtonCard()
     {
         Button = new Button { Margin = new Thickness(0, 8, 0, 0) };
+        Button.Classes.Add("secondary-action");
         _checkbox = new ToggleSwitch
         {
             // OnContent/OffContent intentionally left null — state label is a

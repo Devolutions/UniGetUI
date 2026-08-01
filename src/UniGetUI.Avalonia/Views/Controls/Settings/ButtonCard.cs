@@ -31,6 +31,7 @@ public sealed partial class ButtonCard : SettingsCard
 
     public ButtonCard()
     {
+        _button.Classes.Add("secondary-action");
         _button.MinWidth = 200;
         _button.Click += (_, _) => Click?.Invoke(this, EventArgs.Empty);
         Content = _button;

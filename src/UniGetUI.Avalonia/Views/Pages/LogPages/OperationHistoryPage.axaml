@@ -73,8 +73,8 @@
         </Style>
         <Style Selector="DataGridColumnHeader">
             <Setter Property="Background" Value="{DynamicResource PackageListHeaderBackground}"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Padding" Value="8,0,0,0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="AreSeparatorsVisible" Value="False"/>
             <Setter Property="SeparatorBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>

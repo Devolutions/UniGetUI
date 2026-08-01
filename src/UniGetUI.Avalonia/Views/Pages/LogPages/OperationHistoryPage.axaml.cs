@@ -40,7 +40,18 @@ public partial class OperationHistoryPage : UserControl, IEnterLeaveListener, IK
         // Double-click → open the log; Enter/Delete keyboard shortcuts on the list.
         // Handle on the tunnel (preview) phase so Enter opens the log instead of the DataGrid's
         // built-in "move to next row" navigation, which otherwise consumes the key first.
-        HistoryList.DoubleTapped += (_, _) => ViewLog(SelectedRow);
+        HistoryList.DoubleTapped += (_, e) =>
+        {
+            // Inline actions own their pointer gestures; a double-click on one must not
+            // bubble into the row's "open log" shortcut as a second, unrelated action.
+            if (e.Source is Visual source
+                && source.FindAncestorOfType<Button>(includeSelf: true) is not null)
+            {
+                return;
+            }
+
+            ViewLog(SelectedRow);
+        };
         HistoryList.AddHandler(InputElement.KeyDownEvent, OnHistoryKeyDown, RoutingStrategies.Tunnel);
     }
 
@@ -116,6 +127,50 @@ public partial class OperationHistoryPage : UserControl, IEnterLeaveListener, IK
             Height = 16,
         },
     };
+
+    private void FilterButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string facet } button) return;
+
+        (IEnumerable<HistoryFilterOption> options, HistoryFilterOption? selected) = facet switch
+        {
+            "status" => (_viewModel.StatusOptions, _viewModel.SelectedStatus),
+            "kind" => (_viewModel.KindOptions, _viewModel.SelectedKind),
+            "manager" => (_viewModel.ManagerOptions, _viewModel.SelectedManager),
+            _ => ([], null),
+        };
+
+        var flyout = new MenuFlyout { Placement = PlacementMode.TopEdgeAlignedRight };
+        foreach (HistoryFilterOption option in options)
+        {
+            var item = new MenuItem
+            {
+                Header = option.Label,
+                ToggleType = MenuItemToggleType.Radio,
+                IsChecked = ReferenceEquals(option, selected),
+            };
+            item.Click += (_, _) => SetHistoryFilter(facet, option);
+            flyout.Items.Add(item);
+        }
+
+        flyout.ShowAt(button);
+    }
+
+    private void SetHistoryFilter(string facet, HistoryFilterOption option)
+    {
+        switch (facet)
+        {
+            case "status":
+                _viewModel.SelectedStatus = option;
+                break;
+            case "kind":
+                _viewModel.SelectedKind = option;
+                break;
+            case "manager":
+                _viewModel.SelectedManager = option;
+                break;
+        }
+    }
 
     // Copy details needs clipboard access (a top-level concern), so it uses a click handler rather than a command.
     private MenuItem BuildCopyDetailsItem(OperationHistoryRowViewModel row)

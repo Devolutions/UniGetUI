@@ -17,6 +17,18 @@
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="MinHeight" Value="0"/>
             <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="TabItem:selected">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+        </Style>
+        <Style Selector="TabItem:selected:pointerover /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+        </Style>
+        <Style Selector="TabItem:selected:pressed /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
         </Style>
         <Style Selector="TabItem /template/ #PART_SelectedPipe" x:SetterTargetType="Control">
             <Setter Property="IsVisible" Value="False"/>
@@ -50,8 +62,8 @@
         </Style>
         <Style Selector="DataGridColumnHeader">
             <Setter Property="Background" Value="{DynamicResource PackageListHeaderBackground}"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Padding" Value="8,0,0,0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="AreSeparatorsVisible" Value="False"/>
             <Setter Property="SeparatorBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -101,7 +113,7 @@
                             <DataGridTemplateColumn Header="{t:Translate Operation}" Width="1*" MinWidth="120" Tag="kind">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="vm:OperationHistoryRowViewModel">
-                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,0" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="12,0,4,0" VerticalAlignment="Center">
                                             <controls:SvgIcon Path="{Binding KindIconPath}" Width="24" Height="24" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding KindLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
@@ -141,12 +153,9 @@
                             <DataGridTemplateColumn Header="{t:Translate Status}" Width="1.1*" MinWidth="100" Tag="status">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="vm:OperationHistoryRowViewModel">
-                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,0" VerticalAlignment="Center"
-                                                    ToolTip.Tip="{Binding StatusTooltip}">
-                                            <controls:SvgIcon Path="{Binding StatusIconPath}" Width="18" Height="18" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding StatusLabel}" Foreground="{Binding StatusBrush}"
-                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
+                                        <controls:StatusBadge Text="{Binding StatusLabel}"
+                                                              Severity="{Binding StatusSeverity}"
+                                                              ToolTip.Tip="{Binding StatusTooltip}"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -163,7 +172,11 @@
                             <DataGridTemplateColumn Header="" Width="150">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="vm:OperationHistoryRowViewModel">
-                                        <StackPanel x:Name="HistoryActions" Orientation="Horizontal" Spacing="2" Margin="4,0" VerticalAlignment="Center">
+                                        <StackPanel x:Name="HistoryActions"
+                                                    Orientation="Horizontal"
+                                                    Spacing="2"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center">
                                             <Button Command="{Binding RevertCommand}" IsEnabled="{Binding CanRevert}"
                                                     ToolTip.Tip="{t:Translate Revert this operation}"
                                                     automation:AutomationProperties.Name="{t:Translate Revert this operation}">
@@ -207,12 +220,10 @@
                 <!-- Footer: Clear on the left, quick filters on the bottom right (like the package list) -->
                 <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
                     <Button Grid.Column="0"
+                            Classes="secondary-action"
                             Command="{Binding ClearCommand}"
-                            Padding="10,6"
-                            CornerRadius="4"
-                            Background="Transparent"
-                            BorderThickness="1"
-                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            Height="40"
+                            Padding="10,4"
                             automation:AutomationProperties.Name="{t:Translate Clear history}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/delete.svg" Width="16" Height="16"/>
@@ -221,18 +232,39 @@
                     </Button>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                        <ComboBox MinWidth="130"
-                                  ItemsSource="{Binding StatusOptions}"
-                                  SelectedItem="{Binding SelectedStatus}"
-                                  automation:AutomationProperties.Name="{t:Translate Filter by status}"/>
-                        <ComboBox MinWidth="130"
-                                  ItemsSource="{Binding KindOptions}"
-                                  SelectedItem="{Binding SelectedKind}"
-                                  automation:AutomationProperties.Name="{t:Translate Filter by type}"/>
-                        <ComboBox MinWidth="130"
-                                  ItemsSource="{Binding ManagerOptions}"
-                                  SelectedItem="{Binding SelectedManager}"
-                                  automation:AutomationProperties.Name="{t:Translate Filter by manager}"/>
+                        <Button Classes="dropdown-trigger wide" MinWidth="130" Tag="status"
+                                Click="FilterButton_Click"
+                                automation:AutomationProperties.Name="{t:Translate Filter by status}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <TextBlock Text="{Binding SelectedStatus.Label}" VerticalAlignment="Center"/>
+                                <Path Grid.Column="1" Data="M 0,0 L 5,5 L 10,0"
+                                      Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                                      StrokeThickness="1.5" StrokeJoin="Miter" Fill="Transparent"
+                                      VerticalAlignment="Center"/>
+                            </Grid>
+                        </Button>
+                        <Button Classes="dropdown-trigger wide" MinWidth="130" Tag="kind"
+                                Click="FilterButton_Click"
+                                automation:AutomationProperties.Name="{t:Translate Filter by type}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <TextBlock Text="{Binding SelectedKind.Label}" VerticalAlignment="Center"/>
+                                <Path Grid.Column="1" Data="M 0,0 L 5,5 L 10,0"
+                                      Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                                      StrokeThickness="1.5" StrokeJoin="Miter" Fill="Transparent"
+                                      VerticalAlignment="Center"/>
+                            </Grid>
+                        </Button>
+                        <Button Classes="dropdown-trigger wide" MinWidth="130" Tag="manager"
+                                Click="FilterButton_Click"
+                                automation:AutomationProperties.Name="{t:Translate Filter by manager}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <TextBlock Text="{Binding SelectedManager.Label}" VerticalAlignment="Center"/>
+                                <Path Grid.Column="1" Data="M 0,0 L 5,5 L 10,0"
+                                      Stroke="{DynamicResource TextFillColorPrimaryBrush}"
+                                      StrokeThickness="1.5" StrokeJoin="Miter" Fill="Transparent"
+                                      VerticalAlignment="Center"/>
+                            </Grid>
+                        </Button>
                     </StackPanel>
                 </Grid>
             </Grid>

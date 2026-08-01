@@ -7,6 +7,7 @@ using Avalonia.Platform.Storage;
 using UniGetUI.Avalonia.ViewModels.Pages.LogPages;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.Controls;
+using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Operations.History;
 
@@ -37,28 +38,27 @@ internal static class OperationHistoryLogDialog
         var editor = new LogTextEditor();
         editor.SetLines(lines);
 
-        var dialog = new Window
+        var dialog = new ImmersiveDialog
         {
-            Width = 780,
-            Height = 520,
+            MaxWidth = 780,
+            MaxHeight = 520,
             MinWidth = 460,
             MinHeight = 300,
-            ShowInTaskbar = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Title = CoreTools.Translate("Operation log") + (target.Length > 0 ? $" — {target}" : ""),
+            Background = Application.Current?.FindResource("AppDialogBackground") as IBrush,
         };
 
-        var copyButton = new Button { Content = CoreTools.Translate("Copy to clipboard") };
+        var copyButton = CreateDialogButton(CoreTools.Translate("Copy to clipboard"));
         copyButton.Click += async (_, _) =>
         {
             var clipboard = TopLevel.GetTopLevel(dialog)?.Clipboard;
             if (clipboard is not null) await clipboard.SetTextAsync(plainText);
         };
 
-        var exportButton = new Button { Content = CoreTools.Translate("Export to a file") };
+        var exportButton = CreateDialogButton(CoreTools.Translate("Export to a file"));
         exportButton.Click += async (_, _) =>
         {
-            var file = await dialog.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            var file = await owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = CoreTools.Translate("Export log"),
                 SuggestedFileName = CoreTools.Translate("UniGetUI Log"),
@@ -68,7 +68,7 @@ internal static class OperationHistoryLogDialog
                 await File.WriteAllTextAsync(file.Path.LocalPath, plainText);
         };
 
-        var closeButton = new Button { Content = CoreTools.Translate("Close"), MinWidth = 100 };
+        var closeButton = CreateDialogButton(CoreTools.Translate("Close"), 100);
         closeButton.Classes.Add("accent");
         closeButton.Click += (_, _) => dialog.Close();
 
@@ -84,7 +84,7 @@ internal static class OperationHistoryLogDialog
         {
             CornerRadius = new CornerRadius(8),
             ClipToBounds = true,
-            Background = Application.Current?.FindResource("ApplicationPageBackgroundThemeBrush") as IBrush,
+            Background = Application.Current?.FindResource("AppDialogDarkBackground") as IBrush,
             Child = editor,
         };
         Grid.SetRow(editorBorder, 1);
@@ -108,4 +108,16 @@ internal static class OperationHistoryLogDialog
 
         await dialog.ShowDialog(owner);
     }
+
+    private static Button CreateDialogButton(string content, double minWidth = 0) => new()
+    {
+        Content = content,
+        MinWidth = minWidth,
+        Height = 32,
+        Padding = new Thickness(11, 5, 11, 6),
+        CornerRadius = new CornerRadius(4),
+        FontSize = 14,
+        HorizontalContentAlignment = HorizontalAlignment.Center,
+        VerticalContentAlignment = VerticalAlignment.Center,
+    };
 }

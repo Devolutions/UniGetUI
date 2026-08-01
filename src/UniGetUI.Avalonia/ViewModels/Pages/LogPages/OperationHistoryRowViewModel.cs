@@ -1,6 +1,6 @@
-using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Operations.History;
 
@@ -70,31 +70,16 @@ public partial class OperationHistoryRowViewModel : ViewModelBase
         _ => Record.Status,
     };
 
-    public string StatusIconPath => SymbolBase + (Record.Status switch
+    public StatusBadgeSeverity StatusSeverity => Record.Status switch
     {
-        OperationHistoryRecord.StatusSucceeded => "success_round.svg",
-        OperationHistoryRecord.StatusFailed => "cross.svg",
-        _ => "info_round.svg",
-    });
+        OperationHistoryRecord.StatusSucceeded => StatusBadgeSeverity.Success,
+        OperationHistoryRecord.StatusFailed => StatusBadgeSeverity.Error,
+        _ => StatusBadgeSeverity.Info,
+    };
 
     public string StatusTooltip => Record.ExitCode is { } code
         ? CoreTools.Translate("Exit code: {0}", code)
         : StatusLabel;
-
-    public IBrush StatusBrush
-    {
-        get
-        {
-            bool dark = ThemeHelper.IsDark;
-            var color = Record.Status switch
-            {
-                OperationHistoryRecord.StatusSucceeded => dark ? Color.FromRgb(90, 220, 90) : Color.FromRgb(0, 150, 0),
-                OperationHistoryRecord.StatusFailed => dark ? Color.FromRgb(255, 90, 90) : Color.FromRgb(200, 0, 0),
-                _ => dark ? Color.FromRgb(190, 190, 190) : Color.FromRgb(120, 120, 120),
-            };
-            return new SolidColorBrush(color);
-        }
-    }
 
     public DateTime Timestamp
         => DateTime.TryParse(Record.TimestampUtc, null,

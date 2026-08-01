@@ -40,7 +40,7 @@
         <!-- Focus: accent underline (declared after hover so it wins when both apply). -->
         <Style Selector="Border#GlobalSearchContainer:focus-within Border#SearchFocusUnderline">
             <Setter Property="Opacity" Value="1"/>
-            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
         </Style>
         <Style Selector="Border#GlobalSearchContainer:focus-within">
             <Setter Property="Background" Value="{DynamicResource SearchBoxFocusedBackground}"/>
@@ -728,16 +728,14 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Background="{DynamicResource AppDialogBackground}"
-                    BorderBrush="{DynamicResource AppBorderBrush}"
-                    BorderThickness="1"
                     CornerRadius="8"
                     ClipToBounds="True"
                     KeyboardNavigation.TabNavigation="Cycle"
                     BoxShadow="0 8 32 0 #59000000">
                 <Grid RowDefinitions="Auto,*">
-                    <Grid Grid.Row="0"
+                    <Grid x:Name="ModalHeader"
+                          Grid.Row="0"
                           Height="48"
-                          Margin="20,0,0,0"
                           ColumnDefinitions="*,Auto">
                         <TextBlock x:Name="ModalTitle"
                                    VerticalAlignment="Center"
@@ -762,6 +760,14 @@
                                     Grid.Row="1"
                                     HorizontalContentAlignment="Stretch"
                                     VerticalContentAlignment="Stretch"/>
+                    <!-- Draw the outline above dialog content so opaque footer surfaces cannot
+                         cover the antialiased inner edge of the rounded border. -->
+                    <Border Grid.RowSpan="2"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            IsHitTestVisible="False"
+                            ZIndex="10"/>
                 </Grid>
             </Border>
         </Grid>

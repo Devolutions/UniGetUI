@@ -1,22 +1,25 @@
 using Avalonia.Controls;
-using Avalonia.Threading;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
-public partial class DiscardBundleChangesDialog : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
+public sealed class DiscardBundleChangesDialog : ImmersiveConfirmationDialog
 {
-    public bool Confirmed { get; private set; }
+    public bool Confirmed => Result is true;
 
     public DiscardBundleChangesDialog()
     {
-        InitializeComponent();
-        CancelButton.Click += (_, _) => Close();
-        DiscardButton.Click += (_, _) => { Confirmed = true; Close(); };
-    }
-
-    protected override void OnOpened(EventArgs e)
-    {
-        base.OnOpened(e);
-        Dispatcher.UIThread.Post(() => DiscardButton.Focus(), DispatcherPriority.Background);
+        Configure(
+            CoreTools.Translate("Unsaved changes"),
+            new TextBlock
+            {
+                Text = CoreTools.Translate("You have unsaved changes in the current bundle. Do you want to discard them?"),
+                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+                Opacity = 0.85,
+            },
+            CoreTools.Translate("Discard changes"),
+            CoreTools.Translate("Cancel"));
+        MaxWidth = 460;
+        MinHeight = 160;
     }
 }

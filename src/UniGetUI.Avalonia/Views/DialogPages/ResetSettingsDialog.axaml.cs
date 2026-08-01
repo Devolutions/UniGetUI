@@ -1,22 +1,26 @@
 using Avalonia.Controls;
-using Avalonia.Threading;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
-public partial class ResetSettingsDialog : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
+public sealed class ResetSettingsDialog : ImmersiveConfirmationDialog
 {
-    public bool Confirmed { get; private set; }
+    public bool Confirmed => Result is true;
 
     public ResetSettingsDialog()
     {
-        InitializeComponent();
-        CancelButton.Click += (_, _) => Close();
-        ResetButton.Click += (_, _) => { Confirmed = true; Close(); };
-    }
-
-    protected override void OnOpened(EventArgs e)
-    {
-        base.OnOpened(e);
-        Dispatcher.UIThread.Post(() => CancelButton.Focus(), DispatcherPriority.Background);
+        Configure(
+            CoreTools.Translate("Reset UniGetUI"),
+            new TextBlock
+            {
+                Text = CoreTools.Translate("Do you really want to reset UniGetUI to its default settings? This action cannot be undone."),
+                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+                Opacity = 0.85,
+            },
+            CoreTools.Translate("Reset UniGetUI"),
+            CoreTools.Translate("Cancel"));
+        MaxWidth = 460;
+        MinHeight = 160;
+        FocusPrimaryButton = false;
     }
 }

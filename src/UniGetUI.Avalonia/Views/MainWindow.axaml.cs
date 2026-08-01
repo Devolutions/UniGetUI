@@ -1657,6 +1657,7 @@ public partial class MainWindow : Window
         _modalTitleSubscription = dialog.GetObservable(ImmersiveDialog.TitleProperty)
             .SubscribeValue(title => ModalTitle.Text = title ?? "");
         ModalCloseButton.IsVisible = dialog.IsCloseButtonVisible;
+        ModalTitle.Margin = dialog.TitleMargin;
         ModalContent.Content = dialog;
         ModalLayer.IsVisible = true;
         UpdateModalSurfaceSize();

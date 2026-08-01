@@ -1,0 +1,52 @@
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
+        x:Class="UniGetUI.Avalonia.Views.DialogPages.ImmersiveConfirmationDialog"
+        TitleMargin="24,24,0,0"
+        MaxWidth="548"
+        MinWidth="320"
+        MinHeight="136"
+        HorizontalContentAlignment="Stretch"
+        VerticalContentAlignment="Stretch"
+        Background="{DynamicResource AppDialogBackground}">
+
+    <Grid RowDefinitions="*,Auto"
+          Background="{DynamicResource AppDialogBackground}">
+        <ContentControl x:Name="BodyPresenter"
+                        Grid.Row="0"
+                        Margin="24"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Top"/>
+
+        <Border Grid.Row="1"
+                Background="{DynamicResource AppDialogDarkBackground}"
+                CornerRadius="0,0,8,8"
+                ClipToBounds="True">
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8" Margin="24">
+                <Button x:Name="PrimaryButton"
+                        Grid.Column="0"
+                        Classes="accent"
+                        Height="32"
+                        MinWidth="0"
+                        Padding="11,5,11,6"
+                        CornerRadius="4"
+                        FontSize="14"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"/>
+                <Button x:Name="SecondaryButton"
+                        Grid.Column="1"
+                        Height="32"
+                        MinWidth="0"
+                        Padding="11,5,11,6"
+                        CornerRadius="4"
+                        FontSize="14"
+                        Background="{DynamicResource AppDialogBackground}"
+                        BorderThickness="0"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</dialogs:ImmersiveDialog>

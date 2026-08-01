@@ -1,9 +1,8 @@
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Layout;
 using Avalonia.Media;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.Avalonia.Views.DialogPages;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
@@ -21,22 +20,6 @@ internal static class UninstallConfirmationDialog
             return false;
         }
 
-        bool isConfirmed = false;
-        var dialog = new UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
-        {
-            MaxWidth = packages.Count == 1 ? 520 : 560,
-            MaxHeight = packages.Count == 1 ? 220 : 380,
-            Title = CoreTools.Translate("Are you sure?"),
-        };
-
-        var titleBlock = new TextBlock
-        {
-            Text = CoreTools.Translate("Are you sure?"),
-            FontSize = 18,
-            FontWeight = FontWeight.SemiBold,
-            TextWrapping = TextWrapping.Wrap,
-        };
-
         var messageBlock = new TextBlock
         {
             Text = packages.Count == 1
@@ -47,25 +30,8 @@ internal static class UninstallConfirmationDialog
             Opacity = 0.82,
             TextWrapping = TextWrapping.Wrap,
         };
-
-        var root = new Grid
-        {
-            Margin = new Thickness(20),
-            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
-            RowSpacing = 14,
-        };
-
-        var headerPanel = new StackPanel
-        {
-            Spacing = 8,
-            Children =
-            {
-                titleBlock,
-                messageBlock,
-            },
-        };
-        Grid.SetRow(headerPanel, 0);
-        root.Children.Add(headerPanel);
+        var body = new StackPanel { Spacing = 12 };
+        body.Children.Add(messageBlock);
 
         if (packages.Count > 1)
         {
@@ -87,45 +53,19 @@ internal static class UninstallConfirmationDialog
                 MaxHeight = 220,
                 Content = packageListBlock,
             };
-            Grid.SetRow(packageListViewer, 1);
-            root.Children.Add(packageListViewer);
+            body.Children.Add(packageListViewer);
         }
 
-        var noButton = new Button
+        var dialog = new ImmersiveConfirmationDialog(
+            CoreTools.Translate("Are you sure?"),
+            body,
+            CoreTools.Translate("Yes"),
+            CoreTools.Translate("No"))
         {
-            Content = CoreTools.Translate("No"),
-            MinWidth = 100,
+            MaxWidth = packages.Count == 1 ? 520 : 560,
+            MaxHeight = packages.Count == 1 ? 220 : 380,
         };
-        noButton.Click += (_, _) => dialog.Close();
-
-        var yesButton = new Button
-        {
-            Content = CoreTools.Translate("Yes"),
-            MinWidth = 100,
-        };
-        yesButton.Classes.Add("accent");
-        yesButton.Click += (_, _) =>
-        {
-            isConfirmed = true;
-            dialog.Close();
-        };
-
-        var footerPanel = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Children =
-            {
-                noButton,
-                yesButton,
-            },
-        };
-        Grid.SetRow(footerPanel, 2);
-        root.Children.Add(footerPanel);
-
-        dialog.Content = root;
         await dialog.ShowDialog(owner);
-        return isConfirmed;
+        return dialog.Result is true;
     }
 }

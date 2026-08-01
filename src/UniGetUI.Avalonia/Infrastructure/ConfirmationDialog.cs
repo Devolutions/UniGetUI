@@ -98,7 +98,7 @@ internal static class ConfirmationDialog
         var footer = new Border
         {
             Background = GetBrush("AppDialogDarkBackground"),
-            CornerRadius = new CornerRadius(0, 0, 7, 7),
+            CornerRadius = new CornerRadius(0, 0, 8, 8),
             ClipToBounds = true,
             Child = actions,
         };

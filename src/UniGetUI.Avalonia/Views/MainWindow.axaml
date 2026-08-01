@@ -728,8 +728,6 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Background="{DynamicResource AppDialogBackground}"
-                    BorderBrush="{DynamicResource AppBorderBrush}"
-                    BorderThickness="1"
                     CornerRadius="8"
                     ClipToBounds="True"
                     KeyboardNavigation.TabNavigation="Cycle"
@@ -763,6 +761,14 @@
                                     Grid.Row="1"
                                     HorizontalContentAlignment="Stretch"
                                     VerticalContentAlignment="Stretch"/>
+                    <!-- Draw the outline above dialog content so opaque footer surfaces cannot
+                         cover the antialiased inner edge of the rounded border. -->
+                    <Border Grid.RowSpan="2"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            IsHitTestVisible="False"
+                            ZIndex="10"/>
                 </Grid>
             </Border>
         </Grid>

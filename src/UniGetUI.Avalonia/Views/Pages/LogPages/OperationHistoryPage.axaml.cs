@@ -135,6 +135,7 @@ public partial class OperationHistoryPage : UserControl, IEnterLeaveListener, IK
             var item = new MenuItem
             {
                 Header = option.Label,
+                ToggleType = MenuItemToggleType.Radio,
                 IsChecked = ReferenceEquals(option, selected),
             };
             item.Click += (_, _) => SetHistoryFilter(facet, option);

@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Media;
+using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
-using UniGetUI.Avalonia.Views.DialogPages;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 

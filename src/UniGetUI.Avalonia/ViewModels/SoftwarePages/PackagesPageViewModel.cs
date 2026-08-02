@@ -103,6 +103,7 @@ public class SourceTreeNode : INotifyPropertyChanged
 
 public partial class PackagesPageViewModel : ViewModelBase
 {
+    private const int MaximumPreloadedIcons = 512;
     // Live width of the filter pane. Code-behind keeps this in sync with the GridSplitter
     // so the toolbar's main button (bound to FilterPaneColumnWidth) tracks resizes.
     private double _trackedFilterPaneWidth = 220.0;
@@ -204,6 +205,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     public string QueryBackup { get; set; } = "";
 
     private readonly ObservableCollection<PackageWrapper> _wrappedPackages = new();
+    private CancellationTokenSource? _iconPreloadCts;
     protected List<IPackageManager> UsedManagers = [];
     protected ConcurrentDictionary<IPackageManager, List<IManagerSource>> UsedSourcesForManager = new();
     protected ConcurrentDictionary<IPackageManager, SourceTreeNode> RootNodeForManager = new();
@@ -473,7 +475,35 @@ public partial class PackagesPageViewModel : ViewModelBase
         _lastLoadTime = DateTime.Now;
         ReloadButtonTooltip = CoreTools.Translate("Last checked: {0}", _lastLoadTime.ToString(CultureInfo.CurrentCulture));
         FilterPackages();
+        _iconPreloadCts?.Cancel();
+        _iconPreloadCts?.Dispose();
+        _iconPreloadCts = new CancellationTokenSource();
+        _ = PreloadPackageIconsAsync(
+            FilteredPackages.Take(MaximumPreloadedIcons).ToArray(),
+            _iconPreloadCts.Token);
         PackagesLoaded?.Invoke(ReloadReason.External);
+    }
+
+    private static async Task PreloadPackageIconsAsync(
+        PackageWrapper[] wrappers,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Leave half the global icon-loader slots free for rows that become visible immediately.
+            const int batchSize = 4;
+            for (int start = 0; start < wrappers.Length; start += batchSize)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int count = Math.Min(batchSize, wrappers.Length - start);
+                var tasks = new Task[count];
+                for (int index = 0; index < count; index++)
+                    tasks[index] = wrappers[start + index].EnsureIconLoadedAsync();
+
+                await Task.WhenAll(tasks).WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) { }
     }
 
     private void Loader_StartedLoading(object? sender, EventArgs e)
@@ -484,6 +514,7 @@ public partial class PackagesPageViewModel : ViewModelBase
             return;
         }
         IsLoading = true;
+        _iconPreloadCts?.Cancel();
         UpdateSubtitle();
     }
 

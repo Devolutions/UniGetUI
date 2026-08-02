@@ -29,9 +29,12 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         Timeout = TimeSpan.FromSeconds(8),
     };
     private static readonly SemaphoreSlim _iconLoadSemaphore = new(8, 8);
+    private static readonly object _inflightIconLoadsLock = new();
+    private static readonly Dictionary<long, Task<Bitmap?>> _inflightIconLoads = new();
 
     // Cap decoded icon size; the list shows icons at ≤64px (128 covers 2x DPI).
     private const int MaxIconSide = 128;
+    private const int MaxIconDownloadBytes = 2 * 1024 * 1024;
 
     // Bounded LRU by package hash. Evicted entries aren't disposed: a visible row may still
     // reference the bitmap, so dropping it here only makes it GC-eligible.
@@ -163,18 +166,26 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         Package.PropertyChanged += Package_PropertyChanged;
         UpdateDisplayState();
 
-        // Icons load lazily per visible row (see EnsureIconLoaded), not eagerly for every result.
+        // Icons are normally preloaded after the result set completes. The visible-row hook remains
+        // as a fallback while results are still arriving.
         MaybeStartInstallerHostCheck();
     }
 
-    private int _iconLoadStarted;
+    private readonly object _iconLoadLock = new();
+    private Task? _iconLoadTask;
 
-    /// <summary>Loads this row's icon at most once; called when the row becomes visible.</summary>
+    /// <summary>Loads this row's icon at most once; also called when the row becomes visible.</summary>
     public void EnsureIconLoaded()
     {
-        if (Settings.Get(Settings.K.DisableIconsOnPackageLists)) return;
-        if (Interlocked.Exchange(ref _iconLoadStarted, 1) != 0) return;
-        _ = LoadIconAsync();
+        _ = EnsureIconLoadedAsync();
+    }
+
+    /// <summary>Loads this row's icon at most once and returns the shared load operation.</summary>
+    public Task EnsureIconLoadedAsync()
+    {
+        if (Settings.Get(Settings.K.DisableIconsOnPackageLists)) return Task.CompletedTask;
+        lock (_iconLoadLock)
+            return _iconLoadTask ??= LoadIconAsync();
     }
 
     /// <summary>
@@ -263,40 +274,8 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
 
         try
         {
-            await _iconLoadSemaphore.WaitAsync(token).ConfigureAwait(false);
-            Bitmap bitmap;
-            try
-            {
-                var uri = await Task.Run(Package.GetIconUrlIfAny, token).ConfigureAwait(false);
-                if (uri is null) { CacheIcon(hash, null); return; }
-
-                Bitmap? decoded;
-                if (uri.IsFile)
-                {
-                    if (!IsSkiaDecodableExtension(uri.LocalPath))
-                    {
-                        // Avalonia's Bitmap (Skia) can't decode SVG/AVIF/ICO/TIFF — the
-                        // icon cache may produce those. Reject upfront so we don't throw.
-                        CacheIcon(hash, null);
-                        return;
-                    }
-                    decoded = await Task.Run(() => TryDecodeIcon(uri.LocalPath), token).ConfigureAwait(false);
-                }
-                else if (uri.Scheme is "http" or "https")
-                {
-                    var bytes = await _iconHttpClient.GetByteArrayAsync(uri, token).ConfigureAwait(false);
-                    decoded = TryDecodeIcon(bytes, uri.Host);
-                }
-                else { CacheIcon(hash, null); return; }
-
-                if (decoded is null) { CacheIcon(hash, null); return; }
-                bitmap = decoded;
-                CacheIcon(hash, bitmap);
-            }
-            finally
-            {
-                _iconLoadSemaphore.Release();
-            }
+            Bitmap? bitmap = await GetSharedIconLoad(hash, Package).WaitAsync(token).ConfigureAwait(false);
+            if (bitmap is null) return;
 
             if (token.IsCancellationRequested) return;
             await Dispatcher.UIThread.InvokeAsync(() =>
@@ -306,6 +285,86 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         }
         catch (OperationCanceledException) { /* row discarded before its icon finished loading */ }
         catch { CacheIcon(hash, null); }
+    }
+
+    private static Task<Bitmap?> GetSharedIconLoad(long hash, IPackage package)
+    {
+        lock (_inflightIconLoadsLock)
+        {
+            if (TryGetCachedIcon(hash, out Bitmap? cached))
+                return Task.FromResult(cached);
+            if (_inflightIconLoads.TryGetValue(hash, out Task<Bitmap?>? existing))
+                return existing;
+
+            Task<Bitmap?> task = LoadAndCacheIconAsync(hash, package);
+            _inflightIconLoads[hash] = task;
+            _ = RemoveInflightIconLoadAsync(hash, task);
+            return task;
+        }
+    }
+
+    private static async Task RemoveInflightIconLoadAsync(long hash, Task<Bitmap?> task)
+    {
+        try { await task.ConfigureAwait(false); }
+        finally
+        {
+            lock (_inflightIconLoadsLock)
+            {
+                if (_inflightIconLoads.TryGetValue(hash, out Task<Bitmap?>? current)
+                    && ReferenceEquals(current, task))
+                    _inflightIconLoads.Remove(hash);
+            }
+        }
+    }
+
+    private static async Task<Bitmap?> LoadAndCacheIconAsync(long hash, IPackage package)
+    {
+        await _iconLoadSemaphore.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var uri = await Task.Run(package.GetIconUrlIfAny).ConfigureAwait(false);
+            if (uri is null) { CacheIcon(hash, null); return null; }
+
+            Bitmap? decoded;
+            if (uri.IsFile)
+            {
+                if (!IsSkiaDecodableExtension(uri.LocalPath))
+                {
+                    CacheIcon(hash, null);
+                    return null;
+                }
+                decoded = await Task.Run(() => TryDecodeIcon(uri.LocalPath)).ConfigureAwait(false);
+            }
+            else if (uri.Scheme is "http" or "https")
+            {
+                using var response = await _iconHttpClient.GetAsync(
+                    uri,
+                    HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                if (response.Content.Headers.ContentLength > MaxIconDownloadBytes)
+                {
+                    CacheIcon(hash, null);
+                    return null;
+                }
+
+                await response.Content.LoadIntoBufferAsync(MaxIconDownloadBytes).ConfigureAwait(false);
+                var bytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+                decoded = TryDecodeIcon(bytes, uri.Host);
+            }
+            else { CacheIcon(hash, null); return null; }
+
+            CacheIcon(hash, decoded);
+            return decoded;
+        }
+        catch
+        {
+            CacheIcon(hash, null);
+            return null;
+        }
+        finally
+        {
+            _iconLoadSemaphore.Release();
+        }
     }
 
     // Icons come from a shared on-disk cache that can hold empty or partial entries after an
@@ -326,28 +385,10 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         catch (Exception ex) { Logger.Debug($"Discarding undecodable icon '{source}': {ex.Message}"); return null; }
     }
 
-    // Downscales oversized icons to MaxIconSide; small icons pass through (never upscaled).
+    // Decode directly at the display-cache width. This avoids allocating a full-size bitmap first,
+    // which is important for untrusted or unusually large package artwork.
     private static Bitmap DecodeDownscaled(Stream stream)
-    {
-        var bitmap = new Bitmap(stream);
-        PixelSize size = bitmap.PixelSize;
-        if (size.Width <= MaxIconSide && size.Height <= MaxIconSide)
-            return bitmap;
-
-        double scale = (double)MaxIconSide / Math.Max(size.Width, size.Height);
-        var target = new PixelSize(
-            Math.Max(1, (int)Math.Round(size.Width * scale)),
-            Math.Max(1, (int)Math.Round(size.Height * scale)));
-
-        try
-        {
-            return bitmap.CreateScaledBitmap(target, BitmapInterpolationMode.HighQuality);
-        }
-        finally
-        {
-            bitmap.Dispose();
-        }
-    }
+        => Bitmap.DecodeToWidth(stream, MaxIconSide, BitmapInterpolationMode.HighQuality);
 
     private static bool IsSkiaDecodableExtension(string path)
     {

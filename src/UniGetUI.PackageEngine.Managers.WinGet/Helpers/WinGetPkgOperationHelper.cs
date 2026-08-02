@@ -267,13 +267,11 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             return OperationVeredict.Failure;
         }
 
-        // WinGet (CLI/COM) reports "not applicable" as 0x8A15002B; bundled pinget instead exits
-        // non-zero with "No applicable installer found" in its output.
         bool pingetReportedNotApplicable =
             ((WinGet)Manager).SelectedCliToolKind is WinGetCliToolKind.BundledPinget
-            && returnCode != 0
             && processOutput.Any(line =>
                 line.Contains("No applicable installer found", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("No applicable upgrade found", StringComparison.OrdinalIgnoreCase)
             );
 
         if (uintCode is 0x8A15002B || pingetReportedNotApplicable)

@@ -34,7 +34,7 @@
             <!-- Keep light ComboBox flyouts opaque. A translucent white popup composites
                  against the dimmed owner window and reads as a disabled grey surface. -->
             <SolidColorBrush x:Key="ComboBoxDropDownBackground"    Color="#FFFFFFFF"/>
-            <SolidColorBrush x:Key="ToolTipBackground"             Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="ToolTipBackground"             Color="#FFFFFFFF"/>
             <!-- Expander chrome -->
             <SolidColorBrush x:Key="ExpanderHeaderBackground"            Color="#80FFFFFF"/>
             <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#99FFFFFF"/>

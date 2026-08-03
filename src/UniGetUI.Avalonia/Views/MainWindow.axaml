@@ -171,8 +171,7 @@
                           VerticalAlignment="Stretch"
                           IsVisible="{Binding OperationsSplitterVisible}"
                           automation:AutomationProperties.AccessibilityView="Raw"
-                          Background="{DynamicResource AppSplitterBackground}"
-                          Opacity="0.8"/>
+                          Background="Transparent"/>
 
             <!-- ── Operations panel ── -->
             <Border Grid.Row="2"
@@ -224,11 +223,15 @@
 
                         <!-- Bulk-ops menu -->
                         <Button Grid.Column="2"
-                                Width="28" Height="24" Padding="4"
+                                Width="28" Height="24" Padding="0" Margin="0,0,4,0"
                                 Background="Transparent" BorderThickness="0" CornerRadius="4"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
                                 automation:AutomationProperties.Name="{t:Translate Bulk operations}"
                                 ToolTip.Tip="{t:Translate Bulk operations}">
                             <TextBlock Text="⋯" FontSize="13"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
                                        automation:AutomationProperties.AccessibilityView="Raw"/>
                             <Button.Flyout>
                                 <MenuFlyout>

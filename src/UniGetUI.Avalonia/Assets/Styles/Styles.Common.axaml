@@ -35,8 +35,17 @@
                     <SolidColorBrush x:Key="SearchBoxInactiveBackground"      Color="#B3FFFFFF"/>
                     <SolidColorBrush x:Key="SearchBoxFocusedBackground"       Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="SearchBoxFocusedBorderBrush"      Color="#0F000000"/>
-                    <SolidColorBrush x:Key="SearchFieldBorderBrush"           Color="#0F000000"/>
-                    <Thickness x:Key="SearchFieldBorderThickness">0.5</Thickness>
+                    <!-- WinUI's light controls use a 1-DIP elevation stroke, not a flat
+                         half-DIP low-alpha outline.  Its stronger lower edge is what keeps
+                         pale controls legible on similarly pale surfaces. -->
+                    <LinearGradientBrush x:Key="ControlElevationBorderBrush"
+                                         StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#0F000000"/>
+                        <GradientStop Offset="1" Color="#29000000"/>
+                    </LinearGradientBrush>
+                    <SolidColorBrush x:Key="ControlStrokeDefaultBrush" Color="#0F000000"/>
+                    <StaticResource x:Key="SearchFieldBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <Thickness x:Key="SearchFieldBorderThickness">1</Thickness>
                     <!-- Opaque package-details layers remain distinct even when the dialog uses Mica. -->
                     <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#F2F2F2"/>
                     <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#E0E0E0"/>

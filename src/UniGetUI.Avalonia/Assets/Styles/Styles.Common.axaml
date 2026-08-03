@@ -66,6 +66,8 @@
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#B3FFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#ECECEC"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#F6F6F6"/>
+                    <SolidColorBrush x:Key="SecondaryActionBorderBrush"  Color="#0F000000"/>
+                    <Thickness x:Key="SecondaryActionBorderThickness">0.5</Thickness>
                     <!-- WinUI dropdown controls use the same control/card fill as settings actions. -->
                     <StaticResource x:Key="ComboBoxBackground" ResourceKey="SettingsCardBackground"/>
                     <StaticResource x:Key="ComboBoxBackgroundUnfocused" ResourceKey="SettingsCardBackground"/>
@@ -187,6 +189,8 @@
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#393939"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#323232"/>
+                    <SolidColorBrush x:Key="SecondaryActionBorderBrush"  Color="Transparent"/>
+                    <Thickness x:Key="SecondaryActionBorderThickness">0</Thickness>
                     <!-- WinUI dropdown controls use the same control/card fill as settings actions. -->
                     <StaticResource x:Key="ComboBoxBackground" ResourceKey="SettingsCardBackground"/>
                     <StaticResource x:Key="ComboBoxBackgroundUnfocused" ResourceKey="SettingsCardBackground"/>
@@ -275,8 +279,8 @@
     <Style Selector="Button.secondary-action">
         <Setter Property="CornerRadius" Value="4"/>
         <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SecondaryActionBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="{DynamicResource SecondaryActionBorderThickness}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>

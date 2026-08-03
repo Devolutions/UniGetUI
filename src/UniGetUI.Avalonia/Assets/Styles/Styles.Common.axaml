@@ -73,10 +73,11 @@
                     <StaticResource x:Key="ComboBoxBackgroundUnfocused" ResourceKey="SettingsCardBackground"/>
                     <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="SettingsCardHoverBackground"/>
                     <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="SettingsCardHoverBackground"/>
-                    <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="Transparent"/>
-                    <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushUnfocused" Color="Transparent"/>
-                    <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="Transparent"/>
-                    <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="Transparent"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#0F000000"/>
+                    <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushUnfocused" Color="#0F000000"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#0F000000"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#0F000000"/>
+                    <Thickness x:Key="ComboBoxOutlineThickness">0.5</Thickness>
                     <!-- Shared WinUI dropdown surface and neutral item states. ComboBox popups
                          use the same visual language as MenuFlyout-based pickers. -->
                     <StaticResource x:Key="ComboBoxDropDownBackground" ResourceKey="MenuSurfaceBrush"/>
@@ -200,6 +201,7 @@
                     <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushUnfocused" Color="Transparent"/>
                     <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="Transparent"/>
                     <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="Transparent"/>
+                    <Thickness x:Key="ComboBoxOutlineThickness">0</Thickness>
                     <!-- Shared WinUI dropdown surface and neutral item states. -->
                     <StaticResource x:Key="ComboBoxDropDownBackground" ResourceKey="MenuSurfaceBrush"/>
                     <StaticResource x:Key="ComboBoxDropDownBorderBrush" ResourceKey="MenuSurfaceBorderBrush"/>
@@ -465,6 +467,7 @@
          be global. The horizontal margin is the popup's inner gutter: highlights never
          touch or obscure its rounded left/right frame. -->
     <Style Selector="ComboBox">
+        <Setter Property="BorderThickness" Value="{DynamicResource ComboBoxOutlineThickness}"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="ComboBoxItem">

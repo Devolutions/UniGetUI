@@ -28,6 +28,7 @@
             <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#80FFFFFF"/>
             <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#80FFFFFF"/>
             <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="IgnoredUpdatesListBackground" Color="#F3F3F3"/>
             <!-- Flyouts / menus / dropdowns / tooltips: DWM acrylic backdrop with the card tint over it -->
             <SolidColorBrush x:Key="FlyoutPresenterBackground"     Color="#80FFFFFF"/>
             <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#FFFFFFFF"/>
@@ -68,6 +69,7 @@
             <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#662C2C2C"/>
             <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#66393939"/>
             <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#66181818"/>
+            <SolidColorBrush x:Key="IgnoredUpdatesListBackground" Color="#66181818"/>
             <!-- Flyouts / menus / dropdowns / tooltips: MicaWindowHelper gives the popup window a DWM
                  acrylic backdrop (transient surfaces can't use Mica). Kept mostly opaque so the surface
                  stays readably dark even when the popup floats over bright content (e.g. the release-notes

@@ -38,6 +38,7 @@
                        Opacity="0.75"/>
 
             <Button x:Name="ResetButton" Grid.Column="1" VerticalAlignment="Center"
+                    Classes="secondary-action"
                     automation:AutomationProperties.Name="{Binding ResetLabel}">
                 <TextBlock Text="{Binding ResetLabel}"/>
                 <Button.Flyout>
@@ -60,6 +61,7 @@
                                        Text="{Binding ResetConfirm}"
                                        TextWrapping="Wrap"/>
                             <Button Grid.Row="1" Grid.Column="0"
+                                    Classes="secondary-action"
                                     Content="{Binding ResetYes}"
                                     automation:AutomationProperties.Name="{Binding ResetYes}"
                                     HorizontalAlignment="Stretch"
@@ -80,7 +82,7 @@
         <!-- ── Package list (mirrors the WinUI ItemsView: flat rows, no header) ── -->
         <Border Grid.Row="1"
                 CornerRadius="8"
-                Background="{DynamicResource AppDialogDarkBackground}">
+                Background="{DynamicResource IgnoredUpdatesListBackground}">
           <Panel>
 
             <!-- Empty state -->
@@ -151,6 +153,7 @@
                                            Text="{Binding Manager}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Manager}"/>
 
                                 <Button Grid.Column="10" Width="32" Height="32" Padding="0" Margin="4,0,0,0"
+                                        Classes="secondary-action"
                                         VerticalAlignment="Center"
                                         Command="{Binding RemoveCommand}"
                                         automation:AutomationProperties.Name="{Binding RemoveAutomationName}"

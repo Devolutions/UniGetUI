@@ -10,18 +10,18 @@
     <UserControl.Styles>
         <Style Selector="ComboBox.install-option-input">
             <Setter Property="Background" Value="{DynamicResource SearchBoxInactiveBackground}"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ComboBoxBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style Selector="ComboBox.install-option-input:pointerover">
             <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ComboBoxBorderBrushPointerOver}"/>
         </Style>
         <Style Selector="ComboBox.install-option-input:focus-within">
             <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ComboBoxBorderBrushPressed}"/>
         </Style>
 
         <!-- WinUI-style rich tabs: roomy headers that hold an icon + two text lines. -->

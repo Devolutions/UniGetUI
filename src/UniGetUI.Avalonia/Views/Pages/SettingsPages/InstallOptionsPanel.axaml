@@ -135,11 +135,13 @@
                                 Command="{Binding ResetLocationCommand}"
                                 IsEnabled="{Binding LocationResetEnabled}"/>
                     </Grid>
-                    <SelectableTextBlock Text="{Binding LocationText}"
-                               FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
-                               FontSize="14"
-                               Opacity="0.6"
-                               TextWrapping="Wrap"/>
+                    <TextBox Text="{Binding LocationText}"
+                             Classes="search-field-standalone multiline"
+                             IsReadOnly="True"
+                             AcceptsReturn="True"
+                             FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
+                             FontSize="14"
+                             Opacity="0.6"/>
 
                     <!-- CLI disabled warning -->
                     <TextBlock Text="{Binding CliDisabledLabel}"
@@ -177,7 +179,9 @@
                                    FontSize="14"
                                    Opacity="{Binding CliOpacity}"/>
                         <TextBox   Grid.Row="0" Grid.Column="1"
+                                   Classes="search-field-standalone multiline"
                                    Text="{Binding CustomInstall}"
+                                   AcceptsReturn="True"
                                    IsEnabled="{Binding CliSectionEnabled}"
                                    FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                    FontSize="14"
@@ -191,7 +195,9 @@
                                    FontSize="14"
                                    Opacity="{Binding CliOpacity}"/>
                         <TextBox   Grid.Row="1" Grid.Column="1"
+                                   Classes="search-field-standalone multiline"
                                    Text="{Binding CustomUpdate}"
+                                   AcceptsReturn="True"
                                    IsEnabled="{Binding CliSectionEnabled}"
                                    FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                    FontSize="14"
@@ -205,7 +211,9 @@
                                    FontSize="14"
                                    Opacity="{Binding CliOpacity}"/>
                         <TextBox   Grid.Row="2" Grid.Column="1"
+                                   Classes="search-field-standalone multiline"
                                    Text="{Binding CustomUninstall}"
+                                   AcceptsReturn="True"
                                    IsEnabled="{Binding CliSectionEnabled}"
                                    FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                    FontSize="14"

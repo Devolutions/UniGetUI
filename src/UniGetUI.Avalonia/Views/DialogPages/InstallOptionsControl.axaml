@@ -8,11 +8,85 @@
              x:DataType="vm:InstallOptionsViewModel">
 
     <UserControl.Styles>
+        <Style Selector="ComboBox.install-option-input">
+            <Setter Property="Background" Value="{DynamicResource SearchBoxInactiveBackground}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="ComboBox.install-option-input:pointerover">
+            <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="ComboBox.install-option-input:focus-within">
+            <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+
         <!-- WinUI-style rich tabs: roomy headers that hold an icon + two text lines. -->
-        <Style Selector="TabItem">
+        <Style Selector="TabControl.install-options-tabs">
+            <Setter Property="Background" Value="{DynamicResource AppDialogDarkBackground}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="ItemsPanel">
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+            </Setter>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            ClipToBounds="True">
+                        <DockPanel>
+                            <ScrollViewer DockPanel.Dock="Top"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled">
+                                <ItemsPresenter Name="PART_ItemsPresenter"
+                                                ItemsPanel="{TemplateBinding ItemsPanel}"/>
+                            </ScrollViewer>
+                            <Panel ClipToBounds="True">
+                                <ContentPresenter Name="PART_SelectedContentHost2"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  IsVisible="False"/>
+                                <ContentPresenter Name="PART_SelectedContentHost"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            </Panel>
+                        </DockPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="TabControl.install-options-tabs TabItem">
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Margin" Value="0,4,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="8,8,0,0"/>
+        </Style>
+        <Style Selector="TabControl.install-options-tabs TabItem:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
+        </Style>
+        <Style Selector="TabControl.install-options-tabs TabItem:pointerover /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
+        </Style>
+        <Style Selector="TabControl.install-options-tabs TabItem:selected">
+            <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>
+        </Style>
+        <Style Selector="TabControl.install-options-tabs TabItem:selected /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>
+        </Style>
+        <Style Selector="TabControl.install-options-tabs TabItem:selected:pointerover /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>
         </Style>
         <!-- WinUI tabs have no accent underline; the selected tab is shown by its background. -->
         <Style Selector="TabItem /template/ #PART_SelectedPipe" x:SetterTargetType="Control">
@@ -21,8 +95,16 @@
         <Style Selector="TabItem:selected /template/ #PART_SelectedPipe" x:SetterTargetType="Control">
             <Setter Property="IsVisible" Value="False"/>
         </Style>
+        <!-- Blur the locked options themselves; the overlay remains sharp above them. -->
+        <Style Selector="StackPanel.lockable-options.locked">
+            <Setter Property="Effect">
+                <BlurEffect Radius="6"/>
+            </Setter>
+        </Style>
     </UserControl.Styles>
 
+    <Border Background="{DynamicResource InstallOptionsSectionBackground}"
+            CornerRadius="8" Padding="16">
     <StackPanel Spacing="12">
 
         <!-- ── Header: icon · title · profile selector ── -->
@@ -45,6 +127,7 @@
                            Text="{Binding ProfileLabel}"
                            FontSize="14" Opacity="0.7"/>
                 <ComboBox x:Name="ProfileSelectorComboBox"
+                          Classes="install-option-input"
                           ItemsSource="{Binding ProfileOptions}"
                           SelectedItem="{Binding SelectedProfile}"
                           automation:AutomationProperties.LabeledBy="{Binding #ProfileLabelBlock}"
@@ -53,7 +136,7 @@
         </Grid>
 
         <!-- ── Follow-global-options card ── -->
-        <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="8" Padding="16,8">
+        <Border Background="{DynamicResource AppDialogDarkBackground}" CornerRadius="8" Padding="16,8">
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8">
                 <TextBlock x:Name="FollowGlobalLabelBlock"
                            Grid.Row="0" Grid.Column="0"
@@ -76,7 +159,9 @@
 
         <!-- ── Options area + lock overlay ── -->
         <Grid>
-          <StackPanel Spacing="12">
+          <StackPanel Spacing="12"
+                      Classes="lockable-options"
+                      Classes.locked="{Binding FollowGlobal}">
 
             <!-- Explainer (applies to every tab, like WinUI) -->
             <TextBlock Text="{Binding GeneralInfoLabel}"
@@ -84,8 +169,8 @@
                        TextWrapping="Wrap"
                        Margin="4,0"/>
 
-            <TabControl IsEnabled="{Binding IsCustomMode}"
-                        Background="Transparent">
+            <TabControl Classes="install-options-tabs"
+                        IsEnabled="{Binding IsCustomMode}">
 
             <!-- Tab 0: General -->
             <TabItem>
@@ -99,7 +184,7 @@
                         </StackPanel>
                     </StackPanel>
                 </TabItem.Header>
-                <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="0,8,8,8" Padding="16">
+                <Border Background="{DynamicResource AppDialogDarkBackground}" Padding="16">
                     <StackPanel Spacing="8">
 
                         <WrapPanel Orientation="Horizontal">
@@ -135,6 +220,7 @@
                                        Text="{Binding VersionLabel}"
                                        VerticalAlignment="Center"/>
                             <ComboBox Grid.Column="1"
+                                      Classes="install-option-input"
                                       ItemsSource="{Binding VersionOptions}"
                                       SelectedItem="{Binding SelectedVersion}"
                                       IsEnabled="{Binding VersionEnabled}"
@@ -160,6 +246,7 @@
                                 <TextBlock Text="{Binding SkipMinorLevelPrefix_Content, FallbackValue='Ignore changes after the first'}"
                                            VerticalAlignment="Center" Margin="0,0,8,0" TextWrapping="Wrap"/>
                                 <ComboBox ItemsSource="{Binding SkipMinorLevelOptions}"
+                                          Classes="install-option-input"
                                           SelectedIndex="{Binding SkipMinorLevelIndex}"
                                           automation:AutomationProperties.Name="{Binding SkipMinorLevelPrefix_Content}"
                                           VerticalAlignment="Center" MinWidth="64"/>
@@ -184,12 +271,13 @@
                         </StackPanel>
                     </StackPanel>
                 </TabItem.Header>
-                <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="0,8,8,8" Padding="16">
+                <Border Background="{DynamicResource AppDialogDarkBackground}" Padding="16">
                     <StackPanel Spacing="8">
 
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                             <TextBlock x:Name="ArchLabelBlock" Text="{Binding ArchLabel}" VerticalAlignment="Center"/>
                             <ComboBox Grid.Column="1"
+                                      Classes="install-option-input"
                                       ItemsSource="{Binding ArchOptions}"
                                       SelectedItem="{Binding SelectedArch}"
                                       IsEnabled="{Binding ArchEnabled}"
@@ -203,6 +291,7 @@
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                             <TextBlock x:Name="ScopeLabelBlock" Text="{Binding ScopeLabel}" VerticalAlignment="Center"/>
                             <ComboBox Grid.Column="1"
+                                      Classes="install-option-input"
                                       ItemsSource="{Binding ScopeOptions}"
                                       SelectedItem="{Binding SelectedScope}"
                                       IsEnabled="{Binding ScopeEnabled}"
@@ -216,6 +305,7 @@
                         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
                             <TextBlock x:Name="LocationLabelBlock" Text="{Binding LocationLabel}" VerticalAlignment="Center"/>
                             <Button Grid.Column="1"
+                                    Classes="secondary-action"
                                     Content="{Binding SelectDirLabel}"
                                     automation:AutomationProperties.Name="{Binding SelectDirLabel}"
                                     automation:AutomationProperties.HelpText="{Binding LocationLabel}"
@@ -223,6 +313,7 @@
                                     Padding="8,3" CornerRadius="4"
                                     Click="SelectDir_Click"/>
                             <Button Grid.Column="2"
+                                    Classes="secondary-action"
                                     Content="{Binding ResetDirLabel}"
                                     automation:AutomationProperties.Name="{Binding ResetDirLabel}"
                                     automation:AutomationProperties.HelpText="{Binding LocationLabel}"
@@ -231,7 +322,9 @@
                                     Command="{Binding ResetLocationCommand}"/>
                         </Grid>
 
-                        <TextBox Text="{Binding LocationText}"
+                        <TextBox Classes="install-option-input search-field-standalone multiline"
+                                 Text="{Binding LocationText}"
+                                 AcceptsReturn="True"
                                  IsEnabled="{Binding LocationEnabled}"
                                  automation:AutomationProperties.LabeledBy="{Binding #LocationLabelBlock}"
                                  FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
@@ -268,7 +361,7 @@
                         </StackPanel>
                     </StackPanel>
                 </TabItem.Header>
-                <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="0,8,8,8" Padding="16">
+                <Border Background="{DynamicResource AppDialogDarkBackground}" Padding="16">
                     <StackPanel Spacing="8">
 
                       <!-- Security warning shown when custom CLI arguments are disabled -->
@@ -309,7 +402,9 @@
                         <TextBlock x:Name="ParamsInstallLabelBlock" Text="{Binding ParamsInstallLabel}"
                                    VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1"
+                                 Classes="install-option-input search-field-standalone multiline"
                                  Text="{Binding ParamsInstall}"
+                                 AcceptsReturn="True"
                                  automation:AutomationProperties.LabeledBy="{Binding #ParamsInstallLabelBlock}"
                                  FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                  FontSize="14"/>
@@ -318,7 +413,9 @@
                                    Text="{Binding ParamsUpdateLabel}"
                                    VerticalAlignment="Center"/>
                         <TextBox Grid.Row="1" Grid.Column="1"
+                                 Classes="install-option-input search-field-standalone multiline"
                                  Text="{Binding ParamsUpdate}"
+                                 AcceptsReturn="True"
                                  automation:AutomationProperties.LabeledBy="{Binding #ParamsUpdateLabelBlock}"
                                  FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                  FontSize="14"/>
@@ -327,7 +424,9 @@
                                    Text="{Binding ParamsUninstallLabel}"
                                    VerticalAlignment="Center"/>
                         <TextBox Grid.Row="2" Grid.Column="1"
+                                 Classes="install-option-input search-field-standalone multiline"
                                  Text="{Binding ParamsUninstall}"
+                                 AcceptsReturn="True"
                                  automation:AutomationProperties.LabeledBy="{Binding #ParamsUninstallLabelBlock}"
                                  FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                  FontSize="14"/>
@@ -356,7 +455,7 @@
                         </StackPanel>
                     </StackPanel>
                 </TabItem.Header>
-                <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="0,8,8,8" Padding="16">
+                <Border Background="{DynamicResource AppDialogDarkBackground}" Padding="16">
                     <StackPanel Spacing="8">
 
                         <TextBlock Text="{Binding KillProcessesDescriptionLabel}"
@@ -364,6 +463,7 @@
                                    Opacity="0.7"/>
 
                         <TextBox x:Name="KillProcessNewEntryBox"
+                                 Classes="install-option-input search-field-standalone"
                                  Text="{Binding KillProcessNewEntry}"
                                  PlaceholderText="{Binding KillProcessesPlaceholderLabel}"
                                  HorizontalAlignment="Stretch"
@@ -378,6 +478,7 @@
                                                    FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                                    FontSize="14"/>
                                         <Button Grid.Column="1"
+                                                Classes="secondary-action"
                                                 Content="✕"
                                                 Command="{Binding RemoveCommand}"
                                                 Padding="6,2" Margin="8,0,0,0"
@@ -410,7 +511,7 @@
                         </StackPanel>
                     </StackPanel>
                 </TabItem.Header>
-                <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="0,8,8,8" Padding="16">
+                <Border Background="{DynamicResource AppDialogDarkBackground}" Padding="16">
                     <StackPanel Spacing="10">
 
                         <!-- Security warning shown when pre/post scripts are disabled -->
@@ -426,19 +527,21 @@
 
                         <!-- Install -->
                         <Grid ColumnDefinitions="*,*"
-                              RowDefinitions="Auto,56,Auto"
+                              RowDefinitions="Auto,Auto,Auto"
                               ColumnSpacing="8" RowSpacing="4"
                               IsEnabled="{Binding PrePostEnabled}">
                             <TextBlock x:Name="PreInstallLabelBlock" Text="{Binding PreInstallLabel}" FontSize="12"/>
                             <TextBlock x:Name="PostInstallLabelBlock" Grid.Column="1"
                                        Text="{Binding PostInstallLabel}" FontSize="12"/>
                             <TextBox Grid.Row="1"
+                                     Classes="install-option-input search-field-standalone multiline"
                                      Text="{Binding PreInstallText}"
                                      AcceptsReturn="True"
                                      automation:AutomationProperties.LabeledBy="{Binding #PreInstallLabelBlock}"
                                      FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                      FontSize="14"/>
                             <TextBox Grid.Row="1" Grid.Column="1"
+                                     Classes="install-option-input search-field-standalone multiline"
                                      Text="{Binding PostInstallText}"
                                      AcceptsReturn="True"
                                      automation:AutomationProperties.LabeledBy="{Binding #PostInstallLabelBlock}"
@@ -455,19 +558,21 @@
 
                         <!-- Update -->
                         <Grid ColumnDefinitions="*,*"
-                              RowDefinitions="Auto,56,Auto"
+                              RowDefinitions="Auto,Auto,Auto"
                               ColumnSpacing="8" RowSpacing="4"
                               IsEnabled="{Binding PrePostEnabled}">
                             <TextBlock x:Name="PreUpdateLabelBlock" Text="{Binding PreUpdateLabel}" FontSize="12"/>
                             <TextBlock x:Name="PostUpdateLabelBlock" Grid.Column="1"
                                        Text="{Binding PostUpdateLabel}" FontSize="12"/>
                             <TextBox Grid.Row="1"
+                                     Classes="install-option-input search-field-standalone multiline"
                                      Text="{Binding PreUpdateText}"
                                      AcceptsReturn="True"
                                      automation:AutomationProperties.LabeledBy="{Binding #PreUpdateLabelBlock}"
                                      FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                      FontSize="14"/>
                             <TextBox Grid.Row="1" Grid.Column="1"
+                                     Classes="install-option-input search-field-standalone multiline"
                                      Text="{Binding PostUpdateText}"
                                      AcceptsReturn="True"
                                      automation:AutomationProperties.LabeledBy="{Binding #PostUpdateLabelBlock}"
@@ -484,19 +589,21 @@
 
                         <!-- Uninstall -->
                         <Grid ColumnDefinitions="*,*"
-                              RowDefinitions="Auto,56,Auto"
+                              RowDefinitions="Auto,Auto,Auto"
                               ColumnSpacing="8" RowSpacing="4"
                               IsEnabled="{Binding PrePostEnabled}">
                             <TextBlock x:Name="PreUninstallLabelBlock" Text="{Binding PreUninstallLabel}" FontSize="12"/>
                             <TextBlock x:Name="PostUninstallLabelBlock" Grid.Column="1"
                                        Text="{Binding PostUninstallLabel}" FontSize="12"/>
                             <TextBox Grid.Row="1"
+                                     Classes="install-option-input search-field-standalone multiline"
                                      Text="{Binding PreUninstallText}"
                                      AcceptsReturn="True"
                                      automation:AutomationProperties.LabeledBy="{Binding #PreUninstallLabelBlock}"
                                      FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                                      FontSize="14"/>
                             <TextBox Grid.Row="1" Grid.Column="1"
+                                     Classes="install-option-input search-field-standalone multiline"
                                      Text="{Binding PostUninstallText}"
                                      AcceptsReturn="True"
                                      automation:AutomationProperties.LabeledBy="{Binding #PostUninstallLabelBlock}"
@@ -516,9 +623,8 @@
 
           </StackPanel>
 
-          <!-- Lock overlay shown while following the default options. A translucent solid
-               layer (composites over the in-app tabs so they show faintly behind); Avalonia
-               has no in-app gaussian blur, so this is the closest readable equivalent. -->
+          <!-- Lock overlay shown while following the default options. The options content
+               beneath it is Gaussian-blurred by the conditional style above. -->
           <Panel IsVisible="{Binding FollowGlobal}">
             <Border Background="{DynamicResource AppDialogBackground}" Opacity="0.7" IsHitTestVisible="True"/>
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -527,6 +633,7 @@
                          FontSize="20" FontWeight="SemiBold"
                          TextAlignment="Center" TextWrapping="Wrap"/>
               <Button Content="{Binding UnlockLabel}"
+                      Classes="secondary-action"
                       HorizontalAlignment="Center"
                       Padding="12,5" CornerRadius="4"
                       Command="{Binding UnlockCommand}"/>
@@ -535,12 +642,13 @@
         </Grid>
 
         <!-- ── Command-line preview ── -->
-        <Border Background="{DynamicResource AppDialogPanelBackground}" CornerRadius="8" Padding="12">
+        <Border Background="{DynamicResource AppDialogDarkBackground}" CornerRadius="8" Padding="12">
             <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <TextBlock Grid.Column="0" Text="{Binding CommandPreviewLabel}" Opacity="0.7"
                                VerticalAlignment="Center"/>
                     <Button Grid.Column="1" x:Name="ManualButton"
+                            Classes="secondary-action"
                             Content="{Binding ManualActionLabel}"
                             automation:AutomationProperties.Name="{Binding ManualActionLabel}"
                             Padding="10,4" CornerRadius="4"
@@ -557,4 +665,5 @@
         </Border>
 
     </StackPanel>
+    </Border>
 </UserControl>

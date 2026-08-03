@@ -1715,7 +1715,7 @@ public partial class MainWindow : Window
         if (ModalContent.Content is not ImmersiveDialog dialog)
             return;
 
-        const double maximumSurfaceWidth = 1100;
+        const double maximumSurfaceWidth = 1200;
         const double maximumSurfaceHeight = 900;
         double layerWidth = ModalLayer.Bounds.Width > 0 ? ModalLayer.Bounds.Width : Bounds.Width;
         double layerHeight = ModalLayer.Bounds.Height > 0 ? ModalLayer.Bounds.Height : Bounds.Height;

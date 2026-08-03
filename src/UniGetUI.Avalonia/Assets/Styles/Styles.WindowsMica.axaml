@@ -31,7 +31,9 @@
             <!-- Flyouts / menus / dropdowns / tooltips: DWM acrylic backdrop with the card tint over it -->
             <SolidColorBrush x:Key="FlyoutPresenterBackground"     Color="#80FFFFFF"/>
             <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#FFFFFFFF"/>
-            <SolidColorBrush x:Key="ComboBoxDropDownBackground"    Color="#80FFFFFF"/>
+            <!-- Keep light ComboBox flyouts opaque. A translucent white popup composites
+                 against the dimmed owner window and reads as a disabled grey surface. -->
+            <SolidColorBrush x:Key="ComboBoxDropDownBackground"    Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="ToolTipBackground"             Color="#80FFFFFF"/>
             <!-- Expander chrome -->
             <SolidColorBrush x:Key="ExpanderHeaderBackground"            Color="#80FFFFFF"/>

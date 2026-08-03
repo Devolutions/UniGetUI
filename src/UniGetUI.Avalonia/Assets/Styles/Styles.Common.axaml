@@ -38,6 +38,7 @@
                     <!-- Opaque package-details layers remain distinct even when the dialog uses Mica. -->
                     <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#F2F2F2"/>
                     <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#E0E0E0"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#E8E8E8"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5C000000"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#FFFFFFFF"/>
                     <!-- Opaque WinUI menu surface and low-contrast divider. -->
@@ -142,6 +143,7 @@
                     <!-- Opaque package-details layers remain distinct even when the dialog uses Mica. -->
                     <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#393939"/>
                     <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#4A4A4A"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#15FFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5DFFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#E4000000"/>
                     <!-- WinUI's dark flyout surface is an opaque #2C2C2C. -->

@@ -74,10 +74,10 @@
             <Setter Property="CornerRadius" Value="8,8,0,0"/>
         </Style>
         <Style Selector="TabControl.install-options-tabs TabItem:pointerover">
-            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
+            <Setter Property="Background" Value="{DynamicResource InstallOptionsTabHoverBackground}"/>
         </Style>
         <Style Selector="TabControl.install-options-tabs TabItem:pointerover /template/ Border#PART_LayoutRoot">
-            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
+            <Setter Property="Background" Value="{DynamicResource InstallOptionsTabHoverBackground}"/>
         </Style>
         <Style Selector="TabControl.install-options-tabs TabItem:selected">
             <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>

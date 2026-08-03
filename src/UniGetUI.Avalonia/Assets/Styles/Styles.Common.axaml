@@ -35,21 +35,6 @@
                     <SolidColorBrush x:Key="SearchBoxInactiveBackground"      Color="#B3FFFFFF"/>
                     <SolidColorBrush x:Key="SearchBoxFocusedBackground"       Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="SearchBoxFocusedBorderBrush"      Color="#0F000000"/>
-                    <!-- WinUI's light controls use a 1-DIP elevation stroke, not a flat
-                         half-DIP low-alpha outline.  Its stronger lower edge is what keeps
-                         pale controls legible on similarly pale surfaces. -->
-                    <LinearGradientBrush x:Key="ControlElevationBorderBrush"
-                                         StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Offset="0" Color="#0F000000"/>
-                        <GradientStop Offset="1" Color="#29000000"/>
-                    </LinearGradientBrush>
-                    <SolidColorBrush x:Key="ControlStrokeDefaultBrush" Color="#0F000000"/>
-                    <StaticResource x:Key="SearchFieldBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
-                    <Thickness x:Key="SearchFieldBorderThickness">1</Thickness>
-                    <!-- Opaque package-details layers remain distinct even when the dialog uses Mica. -->
-                    <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#F2F2F2"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#E0E0E0"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#E8E8E8"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5C000000"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#FFFFFFFF"/>
                     <!-- Opaque WinUI menu surface and low-contrast divider. -->
@@ -122,6 +107,17 @@
                     <!-- Toast: failure-badge red and drop shadow (light) -->
                     <SolidColorBrush x:Key="ToastBadgeBrush"              Color="#C42B1C"/>
                     <BoxShadows x:Key="ToastShadow">0 4 16 0 #33000000</BoxShadows>
+                    <!-- Package-details-only surfaces live at the end of the theme dictionary
+                         so the independent global-theme PR can extend shared control tokens. -->
+                    <LinearGradientBrush x:Key="SearchFieldBorderBrush"
+                                         StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#0F000000"/>
+                        <GradientStop Offset="1" Color="#29000000"/>
+                    </LinearGradientBrush>
+                    <Thickness x:Key="SearchFieldBorderThickness">1</Thickness>
+                    <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#F2F2F2"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#E0E0E0"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#E8E8E8"/>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <!-- Accent fills (lighter accents on dark bg) -->
@@ -171,7 +167,7 @@
                     <!-- Settings cards -->
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#393939"/>
-                    <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#15FFFFFF"/>
+                    <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#323232"/>
                     <!-- WinUI dropdown controls use the same control/card fill as settings actions. -->
                     <StaticResource x:Key="ComboBoxBackground" ResourceKey="SettingsCardBackground"/>
                     <StaticResource x:Key="ComboBoxBackgroundUnfocused" ResourceKey="SettingsCardBackground"/>

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Text.Json;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -14,8 +15,16 @@ using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 using UniGetUI.PackageOperations;
+using BrokerCapabilitiesResponse = Devolutions.Now.Policy.Api.CapabilitiesResponse;
 using BrokerClientErrorKind = Devolutions.Now.Policy.Client.BrokerClientErrorKind;
 using BrokerClientException = Devolutions.Now.Policy.Client.BrokerClientException;
+using BrokerExecutionResponse = Devolutions.Now.Policy.Api.ExecutionResponse;
+using BrokerManagerCapability = Devolutions.Now.Policy.Api.ManagerCapability;
+using BrokerManagerName = Devolutions.Now.Policy.Api.ManagerName;
+using BrokerOperationKind = Devolutions.Now.Policy.Api.Operation;
+using BrokerOperationStatus = Devolutions.Now.Policy.Api.OperationStatus;
+using BrokerOperationSubmission = Devolutions.Now.Policy.Api.OperationSubmission;
+using BrokerStatusResponse = Devolutions.Now.Policy.Api.StatusResponse;
 using BrokerTransportKind = Devolutions.Now.Policy.Api.Transport;
 using BrokerTransportRequest = Devolutions.Now.Policy.Client.BrokerTransportRequest;
 using BrokerTransportResponse = Devolutions.Now.Policy.Client.BrokerTransportResponse;
@@ -544,6 +553,49 @@ public sealed class PackageOperationsTests
         Assert.Contains(transport.RequestedPaths, path => path != "/v1/health");
     }
 
+    [Fact]
+    public async Task BrokerOperationReportedCanceledReturnsCanceledVeredict()
+    {
+        bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
+        bool localExecutionPrepared = false;
+        var manager = new PackageManagerBuilder()
+            .WithName("Chocolatey")
+            .ConfigureManager(m =>
+            {
+                m.ExecutablePath = "C:\\test-tools\\choco.exe";
+                m.ExecutableArguments = "--test";
+            })
+            .ConfigureOperation(helper =>
+                helper.ParametersFactory = (package, _, operation) =>
+                {
+                    localExecutionPrepared = true;
+                    return [operation.ToString().ToLowerInvariant(), package.Id];
+                })
+            .Build();
+        var package = new PackageBuilder().WithManager(manager).Build();
+        var transport = new FakeBrokerTransport(
+            healthy: true,
+            FakeBrokerTransportScenario.CanceledOperation);
+        PackageOperation.BrokerTransportFactory = () => transport;
+        Settings.Set(Settings.K.UseAgentBroker, true);
+        try
+        {
+            using var operation = new BrokerProbingInstallPackageOperation(package, new InstallOptions());
+
+            var veredict = await operation.InvokePerformOperationForTests();
+
+            Assert.Equal(OperationVeredict.Canceled, veredict);
+            Assert.Contains("/v1/package-operations/execute", transport.RequestedPaths);
+            Assert.Contains("/v1/package-operations/get-status", transport.RequestedPaths);
+            Assert.False(localExecutionPrepared);
+        }
+        finally
+        {
+            Settings.Set(Settings.K.UseAgentBroker, originalSetting);
+            PackageOperation.BrokerTransportFactory = null;
+        }
+    }
+
     /// <summary>
     /// Runs an install operation against a broker whose transport simulates an outage and
     /// asserts the policy-enforcement contract: the operation fails with the
@@ -659,7 +711,16 @@ public sealed class PackageOperationsTests
         public Task<OperationVeredict> InvokePerformOperationForTests() => PerformOperation();
     }
 
-    private sealed class FakeBrokerTransport(bool healthy) : IBrokerTransport
+    private enum FakeBrokerTransportScenario
+    {
+        UnavailableAfterHealth,
+        CanceledOperation,
+    }
+
+    private sealed class FakeBrokerTransport(
+        bool healthy,
+        FakeBrokerTransportScenario scenario = FakeBrokerTransportScenario.UnavailableAfterHealth
+    ) : IBrokerTransport
     {
         public List<string> RequestedPaths { get; } = [];
 
@@ -676,6 +737,15 @@ public sealed class PackageOperationsTests
                 return Task.FromResult(new BrokerTransportResponse { StatusCode = 200, Body = "{}" });
             }
 
+            if (healthy && scenario is FakeBrokerTransportScenario.CanceledOperation)
+            {
+                return Task.FromResult(new BrokerTransportResponse
+                {
+                    StatusCode = 200,
+                    Body = CreateCanceledOperationResponse(request.Path),
+                });
+            }
+
             throw new BrokerClientException(
                 BrokerClientErrorKind.BrokerUnavailable,
                 "Simulated broker outage",
@@ -683,6 +753,56 @@ public sealed class PackageOperationsTests
         }
 
         public void Dispose() { }
+
+        private static string CreateCanceledOperationResponse(string path)
+        {
+            if (path == "/v1/capabilities")
+            {
+                return JsonSerializer.Serialize(new BrokerCapabilitiesResponse
+                {
+                    Transports = [BrokerTransportKind.HttpNamedPipe],
+                    Managers =
+                    [
+                        new BrokerManagerCapability
+                        {
+                            Manager = BrokerManagerName.Chocolatey,
+                            Operations = [BrokerOperationKind.Install],
+                            SupportsCaptureOutput = true,
+                        },
+                    ],
+                    MaxRequestBodyBytes = 1_000_000,
+                });
+            }
+
+            if (path == "/v1/package-operations/execute")
+            {
+                return JsonSerializer.Serialize(new BrokerExecutionResponse
+                {
+                    Operation = new BrokerOperationSubmission
+                    {
+                        OperationId = "operation-1",
+                        Status = BrokerOperationStatus.Running,
+                        SubmittedAt = DateTimeOffset.UtcNow,
+                    },
+                });
+            }
+
+            if (path == "/v1/package-operations/get-status")
+            {
+                return JsonSerializer.Serialize(new BrokerStatusResponse
+                {
+                    OperationId = "operation-1",
+                    Status = BrokerOperationStatus.Canceled,
+                    Message = "Canceled by broker",
+                    Stdout = "broker output",
+                });
+            }
+
+            throw new BrokerClientException(
+                BrokerClientErrorKind.BrokerUnavailable,
+                "Unexpected broker test path",
+                path);
+        }
     }
 
     private class InspectableInstallPackageOperation : InstallPackageOperation

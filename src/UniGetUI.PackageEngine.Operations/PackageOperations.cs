@@ -251,6 +251,15 @@ namespace UniGetUI.PackageEngine.Operations
                 }
                 var output = DisplayBrokerOutput(status.Stdout);
 
+                if (status.Status == BrokerOperationStatus.Canceled)
+                {
+                    string canceledReason = string.IsNullOrWhiteSpace(status.Message)
+                        ? CoreTools.Translate("Operation canceled by user")
+                        : status.Message;
+                    Line($"Operation canceled via broker: {canceledReason}", LineType.Error);
+                    return OperationVeredict.Canceled;
+                }
+
                 if (status.Status == BrokerOperationStatus.Completed)
                 {
                     var veredict = await GetProcessVeredict(status.ExitCode ?? -1, output);

@@ -240,11 +240,19 @@ namespace UniGetUI.PackageEngine.Operations
             && !package.Source.IsVirtualManager;
 
         /// <summary>
+        /// Raw process output streamed over the event channel of the current brokered
+        /// run, in emission order. Null when no streamed output was captured (no event
+        /// channel, or streaming failed); result parsers then receive an empty list.
+        /// </summary>
+        private List<string>? _brokerStreamedOutput;
+
+        /// <summary>
         /// Perform the package operation through the Devolutions Agent broker.
         /// Sends the request over named pipe and interprets the response.
         /// </summary>
         private async Task<OperationVeredict> PerformBrokerOperation()
         {
+            _brokerStreamedOutput = null;
             Line("Routing operation through Devolutions Agent broker...", LineType.Information);
 
             using var client = CreateBrokerClient(RequiresAdminRights());
@@ -390,8 +398,10 @@ namespace UniGetUI.PackageEngine.Operations
             }
 
             Line("Live output streaming enabled via broker event channel.", LineType.VerboseDetails);
-            var stdout = new StreamedOutputLineBuffer(this, LineType.Information);
-            var stderr = new StreamedOutputLineBuffer(this, LineType.Error);
+            var capturedOutput = new List<string>();
+            _brokerStreamedOutput = capturedOutput;
+            var stdout = new StreamedOutputLineBuffer(this, LineType.Information, capturedOutput);
+            var stderr = new StreamedOutputLineBuffer(this, LineType.Error, capturedOutput);
 
             await using (channel.ConfigureAwait(false))
             {
@@ -651,18 +661,10 @@ namespace UniGetUI.PackageEngine.Operations
 
             if (status.Status is BrokerOperationStatus.Completed)
             {
-                // Feed the accumulated output (including any live-streamed process
-                // output) to the manager's result parser, like the local process path.
-                List<string> output = [];
-                foreach (var line in GetRawOutput())
-                {
-                    if (line.Item2 is LineType.Error or LineType.Information)
-                    {
-                        output.Add(line.Item1);
-                    }
-                }
-
-                var veredict = await GetProcessVeredict(status.ExitCode ?? -1, output);
+                // Feed the process output streamed over the event channel (if any) to
+                // the manager's result parser, like the local process path does. Only
+                // real process output is passed; internal informational lines are not.
+                var veredict = await GetProcessVeredict(status.ExitCode ?? -1, _brokerStreamedOutput ?? []);
                 if (veredict is OperationVeredict.Success)
                 {
                     Line("Operation completed successfully via agent broker.", LineType.Information);
@@ -706,33 +708,56 @@ namespace UniGetUI.PackageEngine.Operations
         /// <see cref="AbstractOperation.Line"/>, mirroring the local process reader:
         /// LF-terminated text is emitted with the configured line type, while
         /// CR-terminated text (progress bars) is emitted as a progress indicator and
-        /// promoted to a regular line when followed by a bare LF.
+        /// promoted to a regular line when followed by a bare LF. Regular (non-progress)
+        /// lines are also recorded in <paramref name="capturedOutput"/> so the manager's
+        /// result parser receives only real process output.
         /// </summary>
-        private sealed class StreamedOutputLineBuffer(PackageOperation owner, LineType lineType)
+        private sealed class StreamedOutputLineBuffer(
+            PackageOperation owner,
+            LineType lineType,
+            List<string> capturedOutput)
         {
             private readonly StringBuilder _pending = new();
             private string? _lastLineBeforeLF;
 
             public void Append(string data)
             {
-                foreach (char c in data)
+                ReadOnlySpan<char> remaining = data;
+                while (!remaining.IsEmpty)
                 {
-                    if (c == '\n')
+                    int terminatorIndex = remaining.IndexOfAny('\r', '\n');
+                    if (terminatorIndex < 0)
+                    {
+                        _pending.Append(remaining);
+                        break;
+                    }
+
+                    _pending.Append(remaining[..terminatorIndex]);
+                    char terminator = remaining[terminatorIndex];
+                    remaining = remaining[(terminatorIndex + 1)..];
+
+                    if (terminator == '\n')
                     {
                         if (_pending.Length == 0)
                         {
+                            // A bare LF after a CR-terminated line (CRLF): promote the
+                            // progress line to a regular line.
                             if (_lastLineBeforeLF is not null)
                             {
-                                owner.Line(_lastLineBeforeLF, lineType);
+                                EmitLine(_lastLineBeforeLF);
                                 _lastLineBeforeLF = null;
                             }
+
                             continue;
                         }
 
-                        owner.Line(_pending.ToString(), lineType);
+                        EmitLine(_pending.ToString());
                         _pending.Clear();
+                        // New text arrived after the CR: the progress line was
+                        // superseded and must not be promoted by a later bare LF.
+                        _lastLineBeforeLF = null;
                     }
-                    else if (c == '\r')
+                    else
                     {
                         if (_pending.Length == 0)
                         {
@@ -742,10 +767,6 @@ namespace UniGetUI.PackageEngine.Operations
                         _lastLineBeforeLF = _pending.ToString();
                         owner.Line(_lastLineBeforeLF, LineType.ProgressIndicator);
                         _pending.Clear();
-                    }
-                    else
-                    {
-                        _pending.Append(c);
                     }
                 }
             }
@@ -758,11 +779,17 @@ namespace UniGetUI.PackageEngine.Operations
             {
                 if (_pending.Length > 0)
                 {
-                    owner.Line(_pending.ToString(), lineType);
+                    EmitLine(_pending.ToString());
                     _pending.Clear();
                 }
 
                 _lastLineBeforeLF = null;
+            }
+
+            private void EmitLine(string line)
+            {
+                owner.Line(line, lineType);
+                capturedOutput.Add(line);
             }
         }
 

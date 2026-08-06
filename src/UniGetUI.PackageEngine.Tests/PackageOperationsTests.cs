@@ -788,7 +788,11 @@ public sealed class PackageOperationsTests
             await pipe.WriteStderr("an error line\n");
             // Lines split across frames must be reassembled before being emitted.
             await pipe.WriteStdout("par");
-            await pipe.WriteStdout("tial");
+            await pipe.WriteStdout("tial\n");
+            // A CR progress line superseded by new text must not be re-emitted when a
+            // later bare LF arrives.
+            await pipe.WriteStdout("42%\rdone\n\n");
+            await pipe.WriteStdout("trailing");
             await pipe.WriteStdoutOverflow(42);
             await pipe.WriteFinish();
         });
@@ -810,17 +814,25 @@ public sealed class PackageOperationsTests
         Assert.Equal(OperationVeredict.Success, result.Veredict);
         Assert.Contains(("hello from broker", LineType.Information), result.Output);
         Assert.Contains(("an error line", LineType.Error), result.Output);
-        // The trailing partial line is flushed when the stream finishes.
         Assert.Contains(("partial", LineType.Information), result.Output);
+        Assert.Contains(("done", LineType.Information), result.Output);
+        // The superseded "42%" progress text was never promoted to a regular line.
+        Assert.DoesNotContain(("42%", LineType.Information), result.Output);
+        // The trailing partial line is flushed when the stream finishes.
+        Assert.Contains(("trailing", LineType.Information), result.Output);
         Assert.Contains(result.Output, line =>
             line.Item1.Contains("42 bytes") && line.Item2 is LineType.Information);
         // FINISH triggered exactly one final status query; no polling loop ran.
         Assert.Equal(1, transport.StatusQueryCount);
-        // The streamed output was fed back to the manager's result parser.
+        // The streamed output was fed back to the manager's result parser...
         Assert.NotNull(parsedOutput);
         Assert.Contains("hello from broker", parsedOutput);
         Assert.Contains("an error line", parsedOutput);
         Assert.Contains("partial", parsedOutput);
+        // ...but internal informational lines were not: the parser sees only raw
+        // process output.
+        Assert.DoesNotContain(parsedOutput, line => line.Contains("42 bytes"));
+        Assert.DoesNotContain(parsedOutput, line => line.Contains("Devolutions Agent broker"));
     }
 
     [Fact]

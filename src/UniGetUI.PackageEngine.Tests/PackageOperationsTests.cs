@@ -1,5 +1,8 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
+using System.IO.Pipes;
 using System.Reflection;
+using System.Text;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -19,6 +22,8 @@ using BrokerApiCapabilitiesResponse = Devolutions.Now.Policy.Api.CapabilitiesRes
 using BrokerApiConstants = Devolutions.Now.Policy.Api.BrokerApi;
 using BrokerApiDecision = Devolutions.Now.Policy.Api.Decision;
 using BrokerApiDecisionInfo = Devolutions.Now.Policy.Api.DecisionInfo;
+using BrokerApiEventChannel = Devolutions.Now.Policy.Api.EventChannel;
+using BrokerApiEventChannelKind = Devolutions.Now.Policy.Api.EventChannelKind;
 using BrokerApiExecutionResponse = Devolutions.Now.Policy.Api.ExecutionResponse;
 using BrokerApiHealthResponse = Devolutions.Now.Policy.Api.HealthResponse;
 using BrokerApiHealthStatus = Devolutions.Now.Policy.Api.HealthStatus;
@@ -36,6 +41,7 @@ using BrokerTransportKind = Devolutions.Now.Policy.Api.Transport;
 using BrokerTransportRequest = Devolutions.Now.Policy.Client.BrokerTransportRequest;
 using BrokerTransportResponse = Devolutions.Now.Policy.Client.BrokerTransportResponse;
 using IBrokerTransport = Devolutions.Now.Policy.Client.IBrokerTransport;
+using LineType = UniGetUI.PackageOperations.AbstractOperation.LineType;
 
 namespace UniGetUI.PackageEngine.Tests;
 
@@ -611,6 +617,10 @@ public sealed class PackageOperationsTests
         }
     }
 
+    private sealed record BrokeredRunResult(
+        OperationVeredict Veredict,
+        IReadOnlyList<(string, LineType)> Output);
+
     /// <summary>
     /// Runs an install operation against a scripted broker transport with the UseAgentBroker
     /// setting enabled, fast status polling, and short cancel timeouts. The caller scripts the
@@ -619,6 +629,23 @@ public sealed class PackageOperationsTests
     private static async Task<OperationVeredict> RunBrokeredOperation(
         ScriptedBrokerTransport transport,
         Action<CancellationTokenSource>? configureCancellation = null,
+        TimeSpan? operationTimeout = null)
+    {
+        var result = await RunBrokeredOperationWithOutput(
+            transport, configureCancellation, operationTimeout: operationTimeout);
+        return result.Veredict;
+    }
+
+    /// <summary>
+    /// Like <see cref="RunBrokeredOperation"/>, but also returns the operation's output
+    /// log and allows customizing the manager's operation helper (e.g. to inspect the
+    /// process output passed to the result parser) and hooking the created operation.
+    /// </summary>
+    private static async Task<BrokeredRunResult> RunBrokeredOperationWithOutput(
+        ScriptedBrokerTransport transport,
+        Action<CancellationTokenSource>? configureCancellation = null,
+        Action<TestPackageOperationHelper>? configureOperationHelper = null,
+        Action<AbstractOperation>? onOperationCreated = null,
         TimeSpan? operationTimeout = null)
     {
         bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
@@ -633,6 +660,7 @@ public sealed class PackageOperationsTests
                 m.ExecutablePath = "C:\\test-tools\\choco.exe";
                 m.ExecutableArguments = "--test";
             })
+            .ConfigureOperation(helper => configureOperationHelper?.Invoke(helper))
             .Build();
         var package = new PackageBuilder().WithManager(manager).Build();
         PackageOperation.BrokerTransportFactory = () => transport;
@@ -654,7 +682,10 @@ public sealed class PackageOperationsTests
                 configureCancellation(cancellationSource);
             }
 
-            return await operation.InvokePerformOperationForTests().WaitAsync(TimeSpan.FromSeconds(10));
+            onOperationCreated?.Invoke(operation);
+
+            var veredict = await operation.InvokePerformOperationForTests().WaitAsync(TimeSpan.FromSeconds(10));
+            return new BrokeredRunResult(veredict, operation.GetOutput());
         }
         finally
         {
@@ -740,6 +771,158 @@ public sealed class PackageOperationsTests
 
         Assert.Equal(OperationVeredict.Failure, veredict);
         Assert.Equal(0, transport.CancelRequestCount);
+    }
+
+    [Fact]
+    public async Task StreamedEventChannelOutputReachesOperationOutputAndResultParser()
+    {
+        var transport = new ScriptedBrokerTransport
+        {
+            StatusAfterCancel = BrokerApiOperationStatus.Completed,
+            CompletedExitCode = 0,
+        };
+        await using var server = new EventChannelPipeServer(async pipe =>
+        {
+            await pipe.WriteHello();
+            await pipe.WriteStdout("hello from broker\n");
+            await pipe.WriteStderr("an error line\n");
+            // Lines split across frames must be reassembled before being emitted.
+            await pipe.WriteStdout("par");
+            await pipe.WriteStdout("tial");
+            await pipe.WriteStdoutOverflow(42);
+            await pipe.WriteFinish();
+        });
+        transport.EventChannelPipeName = server.PipeName;
+
+        IReadOnlyList<string>? parsedOutput = null;
+        var result = await RunBrokeredOperationWithOutput(
+            transport,
+            configureOperationHelper: helper =>
+            {
+                var defaultFactory = helper.ResultFactory;
+                helper.ResultFactory = (package, operation, processOutput, returnCode) =>
+                {
+                    parsedOutput = processOutput;
+                    return defaultFactory(package, operation, processOutput, returnCode);
+                };
+            });
+
+        Assert.Equal(OperationVeredict.Success, result.Veredict);
+        Assert.Contains(("hello from broker", LineType.Information), result.Output);
+        Assert.Contains(("an error line", LineType.Error), result.Output);
+        // The trailing partial line is flushed when the stream finishes.
+        Assert.Contains(("partial", LineType.Information), result.Output);
+        Assert.Contains(result.Output, line =>
+            line.Item1.Contains("42 bytes") && line.Item2 is LineType.Information);
+        // FINISH triggered exactly one final status query; no polling loop ran.
+        Assert.Equal(1, transport.StatusQueryCount);
+        // The streamed output was fed back to the manager's result parser.
+        Assert.NotNull(parsedOutput);
+        Assert.Contains("hello from broker", parsedOutput);
+        Assert.Contains("an error line", parsedOutput);
+        Assert.Contains("partial", parsedOutput);
+    }
+
+    [Fact]
+    public async Task StatusUpdatedFrameTriggersStatusQueryAndFinishTriggersFinalStatus()
+    {
+        var transport = new ScriptedBrokerTransport
+        {
+            StatusAfterCancel = BrokerApiOperationStatus.Completed,
+            CompletedExitCode = 0,
+        };
+        transport.StatusScript.Enqueue(BrokerApiOperationStatus.Running);
+        await using var server = new EventChannelPipeServer(async pipe =>
+        {
+            await pipe.WriteHello();
+            await pipe.WriteStatusUpdated();
+            await pipe.WriteFinish();
+        });
+        transport.EventChannelPipeName = server.PipeName;
+
+        var result = await RunBrokeredOperationWithOutput(transport);
+
+        Assert.Equal(OperationVeredict.Success, result.Veredict);
+        // One query for the STATUS_UPDATED hint, one final query after FINISH.
+        Assert.Equal(2, transport.StatusQueryCount);
+    }
+
+    [Fact]
+    public async Task MissingEventChannelFallsBackToStatusPolling()
+    {
+        var transport = new ScriptedBrokerTransport
+        {
+            StatusAfterCancel = BrokerApiOperationStatus.Completed,
+            CompletedExitCode = 0,
+        };
+        transport.StatusScript.Enqueue(BrokerApiOperationStatus.Running);
+        transport.StatusScript.Enqueue(BrokerApiOperationStatus.Running);
+
+        var veredict = await RunBrokeredOperation(transport);
+
+        Assert.Equal(OperationVeredict.Success, veredict);
+        // The polling loop drained the Running statuses before the terminal one.
+        Assert.Equal(3, transport.StatusQueryCount);
+    }
+
+    [Fact]
+    public async Task EventChannelDecodeErrorFallsBackToStatusPolling()
+    {
+        var transport = new ScriptedBrokerTransport
+        {
+            StatusAfterCancel = BrokerApiOperationStatus.Completed,
+            CompletedExitCode = 0,
+        };
+        transport.StatusScript.Enqueue(BrokerApiOperationStatus.Running);
+        await using var server = new EventChannelPipeServer(async pipe =>
+        {
+            // Advertise an unsupported protocol major version: a fatal decode error.
+            await pipe.WriteHello(major: 2);
+        });
+        transport.EventChannelPipeName = server.PipeName;
+
+        var result = await RunBrokeredOperationWithOutput(transport);
+
+        Assert.Equal(OperationVeredict.Success, result.Veredict);
+        Assert.True(transport.StatusQueryCount >= 2);
+        Assert.Contains(result.Output, line => line.Item1.Contains("streaming was interrupted"));
+    }
+
+    [Fact]
+    public async Task CancelDuringEventChannelStreamingYieldsCanceledVeredict()
+    {
+        var transport = new ScriptedBrokerTransport();
+        var cancelRequested = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        transport.OnCancelRequested = () => cancelRequested.TrySetResult();
+        await using var server = new EventChannelPipeServer(async pipe =>
+        {
+            await pipe.WriteHello();
+            await pipe.WriteStdout("streamed-line\n");
+            // Hold the channel open until the broker-side cancel request arrives, then
+            // emit the output tail and finish, as a real broker would.
+            await cancelRequested.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await pipe.WriteStderr("shutting down\n");
+            await pipe.WriteStatusUpdated();
+            await pipe.WriteFinish();
+        });
+        transport.EventChannelPipeName = server.PipeName;
+
+        CancellationTokenSource? cancellationSource = null;
+        var result = await RunBrokeredOperationWithOutput(
+            transport,
+            configureCancellation: cancellation => cancellationSource = cancellation,
+            onOperationCreated: operation => operation.LogLineAdded += (_, line) =>
+            {
+                if (line.Item1 == "streamed-line")
+                    cancellationSource!.Cancel();
+            });
+
+        Assert.Equal(OperationVeredict.Canceled, result.Veredict);
+        Assert.Equal(1, transport.CancelRequestCount);
+        Assert.Contains("/v1/package-operations/cancel", transport.RequestedPaths);
+        Assert.Contains(("streamed-line", LineType.Information), result.Output);
+        // Output that arrived while the cancellation was being confirmed is preserved.
+        Assert.Contains(("shutting down", LineType.Error), result.Output);
     }
 
     private static IReadOnlyList<AbstractOperation.InnerOperation> GetInnerOperations(
@@ -851,6 +1034,13 @@ public sealed class PackageOperationsTests
         public int StatusQueryCount { get; private set; }
         public int CancelRequestCount { get; private set; }
         public Action? OnStatusQueried { get; set; }
+        public Action? OnCancelRequested { get; set; }
+
+        /// <summary>
+        /// When set, the execution response advertises a LocalPipe event channel with
+        /// this pipe name, and the client is expected to stream operation events from it.
+        /// </summary>
+        public string? EventChannelPipeName { get; set; }
 
         private bool cancelReceived;
 
@@ -912,6 +1102,7 @@ public sealed class PackageOperationsTests
             }
 
             cancelReceived = true;
+            OnCancelRequested?.Invoke();
             return Json(BrokerJson.Serialize(new BrokerApiCancelResponse
             {
                 ResponseKind = BrokerApiConstants.CancelResponseKind,
@@ -952,7 +1143,7 @@ public sealed class PackageOperationsTests
             ],
         };
 
-        private static BrokerApiExecutionResponse BuildExecutionResponse() => new()
+        private BrokerApiExecutionResponse BuildExecutionResponse() => new()
         {
             ResponseKind = BrokerApiConstants.ExecutionResponseKind,
             ResponseVersion = BrokerApiConstants.Version,
@@ -962,8 +1153,107 @@ public sealed class PackageOperationsTests
                 OperationId = OperationId,
                 Status = BrokerApiOperationStatus.Starting,
                 SubmittedAt = DateTimeOffset.UtcNow,
+                EventChannel = EventChannelPipeName is null
+                    ? null
+                    : new BrokerApiEventChannel
+                    {
+                        Kind = BrokerApiEventChannelKind.LocalPipe,
+                        Path = EventChannelPipeName,
+                    },
             },
         };
+    }
+
+    /// <summary>
+    /// Test-side server for the NOW_BROKER per-operation event channel: hosts a named
+    /// pipe that <c>BrokerClient.OpenEventChannel</c> connects to, and writes protocol
+    /// frames scripted by the test. Frame layout (little-endian):
+    /// <c>u32 body_size (excludes 6-byte header) | u16 kind | body</c>.
+    /// </summary>
+    private sealed class EventChannelPipeServer : IAsyncDisposable
+    {
+        private const ushort HelloKind = 0x0000;
+        private const ushort StatusUpdatedKind = 0x0001;
+        private const ushort FinishKind = 0x0002;
+        private const ushort StdoutKind = 0x0003;
+        private const ushort StderrKind = 0x0004;
+        private const ushort StdoutOverflowKind = 0x0005;
+
+        public string PipeName { get; } = $"unigetui-test-events-{Guid.NewGuid():N}";
+
+        private readonly NamedPipeServerStream _pipe;
+        private readonly Task _serverTask;
+
+        public EventChannelPipeServer(Func<EventChannelPipeServer, Task> script)
+        {
+            _pipe = new NamedPipeServerStream(
+                PipeName,
+                PipeDirection.Out,
+                maxNumberOfServerInstances: 1,
+                PipeTransmissionMode.Byte,
+                PipeOptions.Asynchronous);
+            _serverTask = Run(script);
+        }
+
+        private async Task Run(Func<EventChannelPipeServer, Task> script)
+        {
+            await _pipe.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(10));
+            try
+            {
+                await script(this);
+            }
+            catch (IOException)
+            {
+                // The client may dispose the channel early (e.g. after a decode error).
+            }
+        }
+
+        public Task WriteHello(ushort major = 1, ushort minor = 0)
+        {
+            byte[] body = new byte[4];
+            BinaryPrimitives.WriteUInt16LittleEndian(body, major);
+            BinaryPrimitives.WriteUInt16LittleEndian(body.AsSpan(2), minor);
+            return WriteFrame(HelloKind, body);
+        }
+
+        public Task WriteStatusUpdated() => WriteFrame(StatusUpdatedKind, []);
+
+        public Task WriteFinish() => WriteFrame(FinishKind, []);
+
+        public Task WriteStdout(string text) => WriteFrame(StdoutKind, Encoding.UTF8.GetBytes(text));
+
+        public Task WriteStderr(string text) => WriteFrame(StderrKind, Encoding.UTF8.GetBytes(text));
+
+        public Task WriteStdoutOverflow(uint bytesSkipped)
+        {
+            byte[] body = new byte[4];
+            BinaryPrimitives.WriteUInt32LittleEndian(body, bytesSkipped);
+            return WriteFrame(StdoutOverflowKind, body);
+        }
+
+        private async Task WriteFrame(ushort kind, byte[] body)
+        {
+            byte[] header = new byte[6];
+            BinaryPrimitives.WriteUInt32LittleEndian(header, (uint)body.Length);
+            BinaryPrimitives.WriteUInt16LittleEndian(header.AsSpan(4), kind);
+            await _pipe.WriteAsync(header);
+            await _pipe.WriteAsync(body);
+            await _pipe.FlushAsync();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                await _serverTask.WaitAsync(TimeSpan.FromSeconds(10));
+            }
+            catch (TimeoutException)
+            {
+                // Dispose below unblocks a stuck script.
+            }
+
+            await _pipe.DisposeAsync();
+        }
     }
 
     private class InspectableInstallPackageOperation : InstallPackageOperation

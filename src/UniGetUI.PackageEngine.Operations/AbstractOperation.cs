@@ -125,6 +125,16 @@ public abstract partial class AbstractOperation : IDisposable
         }
     }
 
+    /// <summary>
+    /// Test hook: installs the cancellation source that MainThread() would normally create,
+    /// so tests invoking PerformOperation() directly can exercise Cancel().
+    /// </summary>
+    internal void SetRunCancellationSourceForTests(CancellationTokenSource source)
+    {
+        lock (CancellationLock)
+            RunCancellationSource = source;
+    }
+
     private bool TrySetActiveInnerOperation(AbstractOperation operation)
     {
         bool cancellationRequested;

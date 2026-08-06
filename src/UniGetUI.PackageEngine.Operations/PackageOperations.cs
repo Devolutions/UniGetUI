@@ -58,6 +58,13 @@ namespace UniGetUI.PackageEngine.Operations
         /// </summary>
         internal static TimeSpan BrokerCancelConfirmTimeout = TimeSpan.FromSeconds(30);
 
+        /// <summary>
+        /// Upper bound for a brokered operation to reach a terminal status before the
+        /// operation is reported as failed. Protects against a broker that keeps
+        /// reporting a non-terminal status indefinitely.
+        /// </summary>
+        internal static TimeSpan BrokerOperationTimeout = TimeSpan.FromHours(1);
+
         protected List<string> DesktopShortcutsBeforeStart = [];
 
         public readonly IPackage Package;
@@ -287,20 +294,33 @@ namespace UniGetUI.PackageEngine.Operations
                 // not consumed yet; brokered operations show no captured output until then.
 
                 BrokerStatusResponse status;
+                using var operationTimeout = new CancellationTokenSource(BrokerOperationTimeout);
+                using var polling = CancellationTokenSource.CreateLinkedTokenSource(
+                    CancellationToken, operationTimeout.Token);
                 try
                 {
-                    status = await WaitForBrokerTerminalStatus(client, operationId, CancellationToken);
+                    status = await WaitForBrokerTerminalStatus(client, operationId, polling.Token);
                 }
                 catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
                 {
                     return await CancelBrokerOperation(client, operationId);
+                }
+                catch (OperationCanceledException) when (operationTimeout.IsCancellationRequested)
+                {
+                    string timeoutMessage = CoreTools.Translate(
+                        "The operation did not finish within the allotted time. It may still be running on the agent.");
+                    Line($"Broker operation timed out after {BrokerOperationTimeout}.", LineType.Error);
+                    Logger.Error($"[AgentBroker] Operation {operationId} did not reach a terminal status within {BrokerOperationTimeout}");
+                    Metadata.FailureTitle = CoreTools.Translate("Operation failed via broker");
+                    Metadata.FailureMessage = timeoutMessage;
+                    return OperationVeredict.Failure;
                 }
 
                 return await InterpretBrokerTerminalStatus(status);
             }
             catch (OperationCanceledException)
             {
-                Line("Broker operation was canceled.", LineType.Error);
+                Line("Broker operation was canceled.", LineType.Information);
                 return OperationVeredict.Canceled;
             }
             catch (BrokerClientException ex) when (ex.Kind is BrokerClientErrorKind.BrokerUnavailable)
@@ -390,7 +410,7 @@ namespace UniGetUI.PackageEngine.Operations
                 Logger.Warn($"[AgentBroker] Could not confirm terminal status of canceled operation {operationId}: {ex}");
             }
 
-            Line("Broker operation was canceled.", LineType.Error);
+            Line("Broker operation was canceled.", LineType.Information);
             return OperationVeredict.Canceled;
         }
 
@@ -408,7 +428,7 @@ namespace UniGetUI.PackageEngine.Operations
 
             if (status.Status is BrokerOperationStatus.Canceled)
             {
-                Line("Broker operation was canceled.", LineType.Error);
+                Line("Broker operation was canceled.", LineType.Information);
                 return OperationVeredict.Canceled;
             }
 

@@ -23,11 +23,14 @@ using BrokerApiCapabilitiesResponse = Devolutions.Now.Policy.Api.CapabilitiesRes
 using BrokerApiDecision = Devolutions.Now.Policy.Api.Decision;
 using BrokerApiDecisionInfo = Devolutions.Now.Policy.Api.DecisionInfo;
 using BrokerApiExecutionResponse = Devolutions.Now.Policy.Api.ExecutionResponse;
+using BrokerApiHealthResponse = Devolutions.Now.Policy.Api.HealthResponse;
+using BrokerApiHealthStatus = Devolutions.Now.Policy.Api.HealthStatus;
 using BrokerApiManagerCapability = Devolutions.Now.Policy.Api.ManagerCapability;
 using BrokerApiManagerName = Devolutions.Now.Policy.Api.ManagerName;
 using BrokerApiOperation = Devolutions.Now.Policy.Api.Operation;
 using BrokerApiOperationStatus = Devolutions.Now.Policy.Api.OperationStatus;
 using BrokerApiOperationSubmission = Devolutions.Now.Policy.Api.OperationSubmission;
+using BrokerApiServerContext = Devolutions.Now.Policy.Api.ServerContext;
 using BrokerApiStatusResponse = Devolutions.Now.Policy.Api.StatusResponse;
 using BrokerTransportKind = Devolutions.Now.Policy.Api.Transport;
 using BrokerTransportRequest = Devolutions.Now.Policy.Client.BrokerTransportRequest;
@@ -615,12 +618,14 @@ public sealed class PackageOperationsTests
     /// </summary>
     private static async Task<OperationVeredict> RunBrokeredOperation(
         ScriptedBrokerTransport transport,
-        Action<CancellationTokenSource>? configureCancellation = null)
+        Action<CancellationTokenSource>? configureCancellation = null,
+        TimeSpan? operationTimeout = null)
     {
         bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
         int originalPollInterval = PackageOperation.BrokerStatusPollIntervalMs;
         TimeSpan originalCancelRequestTimeout = PackageOperation.BrokerCancelRequestTimeout;
         TimeSpan originalCancelConfirmTimeout = PackageOperation.BrokerCancelConfirmTimeout;
+        TimeSpan originalOperationTimeout = PackageOperation.BrokerOperationTimeout;
         var manager = new PackageManagerBuilder()
             .WithName("Chocolatey")
             .ConfigureManager(m =>
@@ -634,6 +639,8 @@ public sealed class PackageOperationsTests
         PackageOperation.BrokerStatusPollIntervalMs = 5;
         PackageOperation.BrokerCancelRequestTimeout = TimeSpan.FromSeconds(2);
         PackageOperation.BrokerCancelConfirmTimeout = TimeSpan.FromSeconds(2);
+        if (operationTimeout is not null)
+            PackageOperation.BrokerOperationTimeout = operationTimeout.Value;
         Settings.Set(Settings.K.UseAgentBroker, true);
         try
         {
@@ -643,9 +650,7 @@ public sealed class PackageOperationsTests
                 // Attach a cancellation source the same way MainThread() would, so the
                 // operation's CancellationToken plumbing is exercised end-to-end.
                 var cancellationSource = new CancellationTokenSource();
-                typeof(AbstractOperation)
-                    .GetField("RunCancellationSource", BindingFlags.Instance | BindingFlags.NonPublic)!
-                    .SetValue(operation, cancellationSource);
+                operation.SetRunCancellationSourceForTests(cancellationSource);
                 configureCancellation(cancellationSource);
             }
 
@@ -658,6 +663,7 @@ public sealed class PackageOperationsTests
             PackageOperation.BrokerStatusPollIntervalMs = originalPollInterval;
             PackageOperation.BrokerCancelRequestTimeout = originalCancelRequestTimeout;
             PackageOperation.BrokerCancelConfirmTimeout = originalCancelConfirmTimeout;
+            PackageOperation.BrokerOperationTimeout = originalOperationTimeout;
         }
     }
 
@@ -717,6 +723,23 @@ public sealed class PackageOperationsTests
 
         Assert.Equal(OperationVeredict.Canceled, veredict);
         Assert.Equal(1, transport.CancelRequestCount);
+    }
+
+    [Fact]
+    public async Task BrokeredOperationThatNeverReachesTerminalStatusFailsAfterTimeout()
+    {
+        var transport = new ScriptedBrokerTransport
+        {
+            // The broker keeps reporting Running forever.
+            StatusAfterCancel = BrokerApiOperationStatus.Running,
+        };
+
+        var veredict = await RunBrokeredOperation(
+            transport,
+            operationTimeout: TimeSpan.FromMilliseconds(200));
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+        Assert.Equal(0, transport.CancelRequestCount);
     }
 
     private static IReadOnlyList<AbstractOperation.InnerOperation> GetInnerOperations(
@@ -841,7 +864,7 @@ public sealed class PackageOperationsTests
             RequestedPaths.Add(request.Path);
             return request.Path switch
             {
-                "/v1/health" => Json("{}"),
+                "/v1/health" => Json(BrokerJson.Serialize(BuildHealthResponse())),
                 "/v1/capabilities" => Json(BrokerJson.Serialize(BuildCapabilities())),
                 "/v1/package-operations/execute" => Json(BrokerJson.Serialize(BuildExecutionResponse())),
                 "/v1/package-operations/get-status" => HandleStatusQuery(),
@@ -897,6 +920,18 @@ public sealed class PackageOperationsTests
                 Status = BrokerApiOperationStatus.Canceling,
             }));
         }
+
+        private static BrokerApiHealthResponse BuildHealthResponse() => new()
+        {
+            ResponseKind = BrokerApiConstants.HealthResponseKind,
+            ResponseVersion = BrokerApiConstants.Version,
+            Server = new BrokerApiServerContext
+            {
+                ServerVersion = "0.0.0-tests",
+                Transport = BrokerTransportKind.HttpNamedPipe,
+            },
+            Status = BrokerApiHealthStatus.Ready,
+        };
 
         private static BrokerApiCapabilitiesResponse BuildCapabilities() => new()
         {

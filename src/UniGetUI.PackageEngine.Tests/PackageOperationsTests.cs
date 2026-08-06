@@ -14,8 +14,21 @@ using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 using UniGetUI.PackageOperations;
+using BrokerApiConstants = Devolutions.Now.Policy.Api.BrokerApi;
 using BrokerClientErrorKind = Devolutions.Now.Policy.Client.BrokerClientErrorKind;
 using BrokerClientException = Devolutions.Now.Policy.Client.BrokerClientException;
+using BrokerJson = Devolutions.Now.Policy.Api.BrokerJson;
+using BrokerApiCancelResponse = Devolutions.Now.Policy.Api.CancelResponse;
+using BrokerApiCapabilitiesResponse = Devolutions.Now.Policy.Api.CapabilitiesResponse;
+using BrokerApiDecision = Devolutions.Now.Policy.Api.Decision;
+using BrokerApiDecisionInfo = Devolutions.Now.Policy.Api.DecisionInfo;
+using BrokerApiExecutionResponse = Devolutions.Now.Policy.Api.ExecutionResponse;
+using BrokerApiManagerCapability = Devolutions.Now.Policy.Api.ManagerCapability;
+using BrokerApiManagerName = Devolutions.Now.Policy.Api.ManagerName;
+using BrokerApiOperation = Devolutions.Now.Policy.Api.Operation;
+using BrokerApiOperationStatus = Devolutions.Now.Policy.Api.OperationStatus;
+using BrokerApiOperationSubmission = Devolutions.Now.Policy.Api.OperationSubmission;
+using BrokerApiStatusResponse = Devolutions.Now.Policy.Api.StatusResponse;
 using BrokerTransportKind = Devolutions.Now.Policy.Api.Transport;
 using BrokerTransportRequest = Devolutions.Now.Policy.Client.BrokerTransportRequest;
 using BrokerTransportResponse = Devolutions.Now.Policy.Client.BrokerTransportResponse;
@@ -595,6 +608,117 @@ public sealed class PackageOperationsTests
         }
     }
 
+    /// <summary>
+    /// Runs an install operation against a scripted broker transport with the UseAgentBroker
+    /// setting enabled, fast status polling, and short cancel timeouts. The caller scripts the
+    /// transport behavior and can trigger operation cancellation from transport callbacks.
+    /// </summary>
+    private static async Task<OperationVeredict> RunBrokeredOperation(
+        ScriptedBrokerTransport transport,
+        Action<CancellationTokenSource>? configureCancellation = null)
+    {
+        bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
+        int originalPollInterval = PackageOperation.BrokerStatusPollIntervalMs;
+        TimeSpan originalCancelRequestTimeout = PackageOperation.BrokerCancelRequestTimeout;
+        TimeSpan originalCancelConfirmTimeout = PackageOperation.BrokerCancelConfirmTimeout;
+        var manager = new PackageManagerBuilder()
+            .WithName("Chocolatey")
+            .ConfigureManager(m =>
+            {
+                m.ExecutablePath = "C:\\test-tools\\choco.exe";
+                m.ExecutableArguments = "--test";
+            })
+            .Build();
+        var package = new PackageBuilder().WithManager(manager).Build();
+        PackageOperation.BrokerTransportFactory = () => transport;
+        PackageOperation.BrokerStatusPollIntervalMs = 5;
+        PackageOperation.BrokerCancelRequestTimeout = TimeSpan.FromSeconds(2);
+        PackageOperation.BrokerCancelConfirmTimeout = TimeSpan.FromSeconds(2);
+        Settings.Set(Settings.K.UseAgentBroker, true);
+        try
+        {
+            using var operation = new BrokerProbingInstallPackageOperation(package, new InstallOptions());
+            if (configureCancellation is not null)
+            {
+                // Attach a cancellation source the same way MainThread() would, so the
+                // operation's CancellationToken plumbing is exercised end-to-end.
+                var cancellationSource = new CancellationTokenSource();
+                typeof(AbstractOperation)
+                    .GetField("RunCancellationSource", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .SetValue(operation, cancellationSource);
+                configureCancellation(cancellationSource);
+            }
+
+            return await operation.InvokePerformOperationForTests().WaitAsync(TimeSpan.FromSeconds(10));
+        }
+        finally
+        {
+            Settings.Set(Settings.K.UseAgentBroker, originalSetting);
+            PackageOperation.BrokerTransportFactory = null;
+            PackageOperation.BrokerStatusPollIntervalMs = originalPollInterval;
+            PackageOperation.BrokerCancelRequestTimeout = originalCancelRequestTimeout;
+            PackageOperation.BrokerCancelConfirmTimeout = originalCancelConfirmTimeout;
+        }
+    }
+
+    [Fact]
+    public async Task CancelingBrokeredOperationRequestsRemoteCancelAndYieldsCanceledVeredict()
+    {
+        var transport = new ScriptedBrokerTransport();
+        transport.StatusScript.Enqueue(BrokerApiOperationStatus.Running);
+        transport.StatusScript.Enqueue(BrokerApiOperationStatus.Running);
+        transport.StatusAfterCancel = BrokerApiOperationStatus.Canceled;
+
+        var veredict = await RunBrokeredOperation(
+            transport,
+            cancellation => transport.OnStatusQueried = () =>
+            {
+                if (transport.StatusQueryCount >= 2)
+                    cancellation.Cancel();
+            });
+
+        Assert.Equal(OperationVeredict.Canceled, veredict);
+        Assert.Equal(1, transport.CancelRequestCount);
+        Assert.Contains("/v1/package-operations/cancel", transport.RequestedPaths);
+    }
+
+    [Fact]
+    public async Task CanceledBrokeredOperationHonorsCompletedTerminalStatusWhenProcessWinsTheRace()
+    {
+        var transport = new ScriptedBrokerTransport();
+        transport.StatusScript.Enqueue(BrokerApiOperationStatus.Running);
+        // The remote process finishes before the broker-side cancel takes effect.
+        transport.StatusAfterCancel = BrokerApiOperationStatus.Completed;
+        transport.CompletedExitCode = 0;
+
+        var veredict = await RunBrokeredOperation(
+            transport,
+            cancellation => transport.OnStatusQueried = () => cancellation.Cancel());
+
+        Assert.Equal(OperationVeredict.Success, veredict);
+        Assert.Equal(1, transport.CancelRequestCount);
+    }
+
+    [Fact]
+    public async Task FailedBrokerCancelRequestStillYieldsCanceledVeredict()
+    {
+        var transport = new ScriptedBrokerTransport
+        {
+            FailCancelRequests = true,
+        };
+        transport.StatusScript.Enqueue(BrokerApiOperationStatus.Running);
+        // The broker keeps reporting a non-terminal status, so the bounded
+        // confirmation wait times out and the cancellation is honored anyway.
+        transport.StatusAfterCancel = BrokerApiOperationStatus.Canceling;
+
+        var veredict = await RunBrokeredOperation(
+            transport,
+            cancellation => transport.OnStatusQueried = () => cancellation.Cancel());
+
+        Assert.Equal(OperationVeredict.Canceled, veredict);
+        Assert.Equal(1, transport.CancelRequestCount);
+    }
+
     private static IReadOnlyList<AbstractOperation.InnerOperation> GetInnerOperations(
         AbstractOperation operation,
         string fieldName
@@ -683,6 +807,128 @@ public sealed class PackageOperationsTests
         }
 
         public void Dispose() { }
+    }
+
+    /// <summary>
+    /// A scriptable broker transport implementing the full happy-path endpoint surface
+    /// (health, capabilities, execute, get-status, cancel) with responses built from the
+    /// real Api types via <see cref="BrokerJson"/>. Status responses are drained from
+    /// <see cref="StatusScript"/>; once a cancel request has been received (or the script
+    /// is empty), <see cref="StatusAfterCancel"/> is reported instead.
+    /// </summary>
+    private sealed class ScriptedBrokerTransport : IBrokerTransport
+    {
+        private const string OperationId = "test-operation-1";
+
+        public List<string> RequestedPaths { get; } = [];
+        public Queue<BrokerApiOperationStatus> StatusScript { get; } = new();
+        public BrokerApiOperationStatus StatusAfterCancel { get; set; } = BrokerApiOperationStatus.Canceled;
+        public int CompletedExitCode { get; set; }
+        public bool FailCancelRequests { get; set; }
+        public int StatusQueryCount { get; private set; }
+        public int CancelRequestCount { get; private set; }
+        public Action? OnStatusQueried { get; set; }
+
+        private bool cancelReceived;
+
+        public BrokerTransportKind Kind => BrokerTransportKind.HttpNamedPipe;
+
+        public Task<BrokerTransportResponse> Send(
+            BrokerTransportRequest request,
+            CancellationToken cancellationToken = default
+        )
+        {
+            RequestedPaths.Add(request.Path);
+            return request.Path switch
+            {
+                "/v1/health" => Json("{}"),
+                "/v1/capabilities" => Json(BrokerJson.Serialize(BuildCapabilities())),
+                "/v1/package-operations/execute" => Json(BrokerJson.Serialize(BuildExecutionResponse())),
+                "/v1/package-operations/get-status" => HandleStatusQuery(),
+                "/v1/package-operations/cancel" => HandleCancelRequest(),
+                _ => throw new BrokerClientException(
+                    BrokerClientErrorKind.InvalidRequest,
+                    $"Unexpected request path: {request.Path}",
+                    request.Path),
+            };
+        }
+
+        public void Dispose() { }
+
+        private static Task<BrokerTransportResponse> Json(string body) =>
+            Task.FromResult(new BrokerTransportResponse { StatusCode = 200, Body = body });
+
+        private Task<BrokerTransportResponse> HandleStatusQuery()
+        {
+            StatusQueryCount++;
+            OnStatusQueried?.Invoke();
+            BrokerApiOperationStatus status =
+                cancelReceived || StatusScript.Count == 0
+                    ? StatusAfterCancel
+                    : StatusScript.Dequeue();
+
+            return Json(BrokerJson.Serialize(new BrokerApiStatusResponse
+            {
+                ResponseKind = BrokerApiConstants.StatusResponseKind,
+                ResponseVersion = BrokerApiConstants.Version,
+                OperationId = OperationId,
+                Status = status,
+                ExitCode = status is BrokerApiOperationStatus.Completed ? CompletedExitCode : null,
+            }));
+        }
+
+        private Task<BrokerTransportResponse> HandleCancelRequest()
+        {
+            CancelRequestCount++;
+            if (FailCancelRequests)
+            {
+                throw new BrokerClientException(
+                    BrokerClientErrorKind.BrokerError,
+                    "Simulated cancel failure",
+                    "/v1/package-operations/cancel");
+            }
+
+            cancelReceived = true;
+            return Json(BrokerJson.Serialize(new BrokerApiCancelResponse
+            {
+                ResponseKind = BrokerApiConstants.CancelResponseKind,
+                ResponseVersion = BrokerApiConstants.Version,
+                OperationId = OperationId,
+                Status = BrokerApiOperationStatus.Canceling,
+            }));
+        }
+
+        private static BrokerApiCapabilitiesResponse BuildCapabilities() => new()
+        {
+            ResponseKind = BrokerApiConstants.CapabilitiesResponseKind,
+            ResponseVersion = BrokerApiConstants.Version,
+            MaxRequestBodyBytes = 1_000_000,
+            Transports = [BrokerTransportKind.HttpNamedPipe],
+            Managers =
+            [
+                new BrokerApiManagerCapability
+                {
+                    Manager = BrokerApiManagerName.Chocolatey,
+                    Operations = [BrokerApiOperation.Install, BrokerApiOperation.Update, BrokerApiOperation.Uninstall],
+                    SupportsCustomParameters = true,
+                    SupportsCustomInstallLocation = true,
+                    SupportsCaptureOutput = true,
+                },
+            ],
+        };
+
+        private static BrokerApiExecutionResponse BuildExecutionResponse() => new()
+        {
+            ResponseKind = BrokerApiConstants.ExecutionResponseKind,
+            ResponseVersion = BrokerApiConstants.Version,
+            Decision = new BrokerApiDecisionInfo { Decision = BrokerApiDecision.Allow },
+            Operation = new BrokerApiOperationSubmission
+            {
+                OperationId = OperationId,
+                Status = BrokerApiOperationStatus.Starting,
+                SubmittedAt = DateTimeOffset.UtcNow,
+            },
+        };
     }
 
     private class InspectableInstallPackageOperation : InstallPackageOperation

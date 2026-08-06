@@ -6,8 +6,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Devolutions.Now.Policy.Api" Version="2026.7.28" />
-        <PackageReference Include="Devolutions.Now.Policy.Client" Version="2026.7.28" />
+        <PackageReference Include="Devolutions.Now.Policy.Api" Version="2026.8.5" />
+        <PackageReference Include="Devolutions.Now.Policy.Client" Version="2026.8.5" />
     </ItemGroup>
 
     <ItemGroup>

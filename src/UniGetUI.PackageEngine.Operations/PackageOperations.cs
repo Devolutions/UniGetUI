@@ -1,4 +1,3 @@
-using System.Text;
 using UniGetUI.Core.Classes;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
@@ -17,8 +16,12 @@ using BrokerClient = Devolutions.Now.Policy.Client.BrokerClient;
 using BrokerClientErrorKind = Devolutions.Now.Policy.Client.BrokerClientErrorKind;
 using BrokerClientException = Devolutions.Now.Policy.Client.BrokerClientException;
 using BrokerClientOptions = Devolutions.Now.Policy.Client.BrokerClientOptions;
+using BrokerDecision = Devolutions.Now.Policy.Api.Decision;
 using BrokerElevation = Devolutions.Now.Policy.Api.Elevation;
 using BrokerOperationStatus = Devolutions.Now.Policy.Api.OperationStatus;
+using BrokerStatusResponse = Devolutions.Now.Policy.Api.StatusResponse;
+using OperationCancelQuery = Devolutions.Now.Policy.Client.OperationCancelQuery;
+using OperationStatusQuery = Devolutions.Now.Policy.Client.OperationStatusQuery;
 #if WINDOWS
 using UniGetUI.PackageEngine.Managers.WingetManager;
 #endif
@@ -39,6 +42,21 @@ namespace UniGetUI.PackageEngine.Operations
         /// simulate broker outages without a real named pipe. Always null in production.
         /// </summary>
         internal static Func<Devolutions.Now.Policy.Client.IBrokerTransport>? BrokerTransportFactory;
+
+        /// <summary>
+        /// Interval between broker operation status polls. Internal so tests can shorten it.
+        /// </summary>
+        internal static int BrokerStatusPollIntervalMs = 500;
+
+        /// <summary>
+        /// Maximum time to wait for the broker to accept a cancel request.
+        /// </summary>
+        internal static TimeSpan BrokerCancelRequestTimeout = TimeSpan.FromSeconds(5);
+
+        /// <summary>
+        /// Maximum time to wait for a canceled broker operation to reach a terminal status.
+        /// </summary>
+        internal static TimeSpan BrokerCancelConfirmTimeout = TimeSpan.FromSeconds(30);
 
         protected List<string> DesktopShortcutsBeforeStart = [];
 
@@ -240,38 +258,45 @@ namespace UniGetUI.PackageEngine.Operations
 
             try
             {
-                // Send to broker and poll until completion, honoring operation cancellation.
-                var status = await client.ExecuteAndWait(request, CancellationToken);
+                // Submit the operation explicitly (instead of ExecuteAndWait) so the
+                // operation id is available for broker-side cancellation.
+                var execution = await client.Execute(request, CancellationToken);
 
-                // Log status details.
-                Line($"Broker status: {status.Status}, exitCode={status.ExitCode}", LineType.Information);
-                if (!string.IsNullOrWhiteSpace(status.Message))
+                if (execution.Decision.Decision != BrokerDecision.Allow)
                 {
-                    Line($"  Message: {status.Message}", LineType.Information);
-                }
-                var output = DisplayBrokerOutput(status.Stdout);
-
-                if (status.Status == BrokerOperationStatus.Completed)
-                {
-                    var veredict = await GetProcessVeredict(status.ExitCode ?? -1, output);
-                    if (veredict is OperationVeredict.Success)
-                    {
-                        Line("Operation completed successfully via agent broker.", LineType.Information);
-                    }
-                    else if (!string.IsNullOrWhiteSpace(status.Message))
-                    {
-                        Metadata.FailureMessage = status.Message;
-                    }
-
-                    return veredict;
+                    string denialReason = execution.Decision.Reason ?? CoreTools.Translate("No reason provided");
+                    Line($"Operation denied by policy: {denialReason}", LineType.Error);
+                    Metadata.FailureTitle = CoreTools.Translate("Operation denied by policy");
+                    Metadata.FailureMessage = denialReason;
+                    return OperationVeredict.Failure;
                 }
 
-                // Operation failed — surface a user-visible error.
-                string reason = status.Message ?? $"Exit code: {status.ExitCode}";
-                Line($"Operation failed via broker: {reason}", LineType.Error);
-                Metadata.FailureTitle = CoreTools.Translate("Operation denied or failed via broker");
-                Metadata.FailureMessage = reason;
-                return OperationVeredict.Failure;
+                if (execution.Operation is null)
+                {
+                    Line("Broker allowed the operation but did not return an operation submission.", LineType.Error);
+                    Metadata.FailureTitle = CoreTools.Translate("Operation failed via broker");
+                    Metadata.FailureMessage = CoreTools.Translate(
+                        "The broker accepted the request but did not report an operation to track.");
+                    return OperationVeredict.Failure;
+                }
+
+                string operationId = execution.Operation.OperationId;
+                Line($"Broker accepted operation: {operationId}", LineType.VerboseDetails);
+
+                // NOTE: execution.Operation.EventChannel (live output streaming) is intentionally
+                // not consumed yet; brokered operations show no captured output until then.
+
+                BrokerStatusResponse status;
+                try
+                {
+                    status = await WaitForBrokerTerminalStatus(client, operationId, CancellationToken);
+                }
+                catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+                {
+                    return await CancelBrokerOperation(client, operationId);
+                }
+
+                return await InterpretBrokerTerminalStatus(status);
             }
             catch (OperationCanceledException)
             {
@@ -296,6 +321,123 @@ namespace UniGetUI.PackageEngine.Operations
         }
 
         /// <summary>
+        /// Polls the broker until the operation reaches a terminal status
+        /// (Completed, Failed or Canceled).
+        /// </summary>
+        private static async Task<BrokerStatusResponse> WaitForBrokerTerminalStatus(
+            BrokerClient client,
+            string operationId,
+            CancellationToken cancellationToken)
+        {
+            while (true)
+            {
+                await Task.Delay(BrokerStatusPollIntervalMs, cancellationToken);
+
+                var status = await client.QueryStatus(
+                    new OperationStatusQuery { OperationId = operationId },
+                    cancellationToken);
+
+                if (status.Status is BrokerOperationStatus.Completed
+                    or BrokerOperationStatus.Failed
+                    or BrokerOperationStatus.Canceled)
+                {
+                    return status;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Requests broker-side cancellation of a running operation, then waits (bounded)
+        /// for the operation to reach a terminal status. The remote process may win the
+        /// race and complete or fail before the cancel takes effect; in that case the
+        /// terminal status is honored instead of reporting a cancellation.
+        /// </summary>
+        private async Task<OperationVeredict> CancelBrokerOperation(BrokerClient client, string operationId)
+        {
+            Line("Cancellation requested; asking broker to cancel the remote operation...", LineType.Information);
+
+            try
+            {
+                using var cancelTimeout = new CancellationTokenSource(BrokerCancelRequestTimeout);
+                var cancelResponse = await client.Cancel(
+                    new OperationCancelQuery { OperationId = operationId },
+                    cancelTimeout.Token);
+                Line($"Broker acknowledged cancel request: {cancelResponse.Status}", LineType.VerboseDetails);
+            }
+            catch (Exception ex)
+            {
+                // Best-effort: the cancel request is idempotent, and the operation may already
+                // have reached a terminal state. Still wait below for the terminal status.
+                Logger.Warn($"[AgentBroker] Cancel request for operation {operationId} failed: {ex}");
+                Line("Broker cancel request failed; checking final operation status...", LineType.Information);
+            }
+
+            try
+            {
+                using var confirmTimeout = new CancellationTokenSource(BrokerCancelConfirmTimeout);
+                var status = await WaitForBrokerTerminalStatus(client, operationId, confirmTimeout.Token);
+
+                if (status.Status is not BrokerOperationStatus.Canceled)
+                {
+                    // The remote process finished before the cancel took effect.
+                    Line($"Broker operation finished before cancellation took effect: {status.Status}", LineType.Information);
+                    return await InterpretBrokerTerminalStatus(status);
+                }
+            }
+            catch (Exception ex)
+            {
+                // The user asked for cancellation; do not surface polling failures as errors.
+                Logger.Warn($"[AgentBroker] Could not confirm terminal status of canceled operation {operationId}: {ex}");
+            }
+
+            Line("Broker operation was canceled.", LineType.Error);
+            return OperationVeredict.Canceled;
+        }
+
+        /// <summary>
+        /// Maps a terminal broker status response to an operation veredict, setting
+        /// failure metadata where appropriate.
+        /// </summary>
+        private async Task<OperationVeredict> InterpretBrokerTerminalStatus(BrokerStatusResponse status)
+        {
+            Line($"Broker status: {status.Status}, exitCode={status.ExitCode}", LineType.Information);
+            if (!string.IsNullOrWhiteSpace(status.Message))
+            {
+                Line($"  Message: {status.Message}", LineType.Information);
+            }
+
+            if (status.Status is BrokerOperationStatus.Canceled)
+            {
+                Line("Broker operation was canceled.", LineType.Error);
+                return OperationVeredict.Canceled;
+            }
+
+            if (status.Status is BrokerOperationStatus.Completed)
+            {
+                // Captured output is not available anymore over the status endpoint; live
+                // output will be restored through the per-operation event channel.
+                var veredict = await GetProcessVeredict(status.ExitCode ?? -1, []);
+                if (veredict is OperationVeredict.Success)
+                {
+                    Line("Operation completed successfully via agent broker.", LineType.Information);
+                }
+                else if (!string.IsNullOrWhiteSpace(status.Message))
+                {
+                    Metadata.FailureMessage = status.Message;
+                }
+
+                return veredict;
+            }
+
+            // Operation failed — surface a user-visible error.
+            string reason = status.Message ?? $"Exit code: {status.ExitCode}";
+            Line($"Operation failed via broker: {reason}", LineType.Error);
+            Metadata.FailureTitle = CoreTools.Translate("Operation denied or failed via broker");
+            Metadata.FailureMessage = reason;
+            return OperationVeredict.Failure;
+        }
+
+        /// <summary>
         /// Fails the operation because the agent broker is unreachable: brokered operations
         /// must not fall back to local execution, since policy evaluation and kill/pre/post
         /// actions are owned by the broker. Sets the failure metadata and raises
@@ -311,40 +453,6 @@ namespace UniGetUI.PackageEngine.Operations
             Metadata.FailureMessage = message;
             BrokerUnavailable?.Invoke(this, message);
             return OperationVeredict.Failure;
-        }
-
-        private List<string> DisplayBrokerOutput(string? encodedStdout)
-        {
-            List<string> output = [];
-            if (string.IsNullOrWhiteSpace(encodedStdout))
-            {
-                return output;
-            }
-
-            string decoded;
-            try
-            {
-                decoded = Encoding.UTF8.GetString(Convert.FromBase64String(encodedStdout));
-            }
-            catch (FormatException ex)
-            {
-                Logger.Error($"[AgentBroker] Broker returned invalid base64 stdout: {ex}");
-                Line("Broker returned captured output in an invalid format.", LineType.Error);
-                return output;
-            }
-
-            foreach (var line in decoded.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
-            {
-                if (line.Length == 0)
-                {
-                    continue;
-                }
-
-                output.Add(line);
-                Line(line, LineType.Information);
-            }
-
-            return output;
         }
 
         private static BrokerClient CreateBrokerClient(bool requestedElevation) =>

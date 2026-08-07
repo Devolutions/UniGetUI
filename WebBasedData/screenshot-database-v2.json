@@ -28469,6 +28469,19 @@
       "icon": "",
       "images": []
     },
+    "ninja-claudeforge": {
+      "icon": "https://raw.githubusercontent.com/JanusMael/ClaudeForge/main/docs/ClaudeForge.png",
+      "images": [
+        "https://raw.githubusercontent.com/JanusMael/ClaudeForge/main/docs/screenshots/WelcomePage-Light.png",
+        "https://raw.githubusercontent.com/JanusMael/ClaudeForge/main/docs/screenshots/EffectiveSettingsPage-Light.png",
+        "https://raw.githubusercontent.com/JanusMael/ClaudeForge/main/docs/screenshots/PermissionsPage-Light.png",
+        "https://raw.githubusercontent.com/JanusMael/ClaudeForge/main/docs/screenshots/HooksPage-Light.png",
+        "https://raw.githubusercontent.com/JanusMael/ClaudeForge/main/docs/screenshots/EnvironmentPage-Light.png",
+        "https://raw.githubusercontent.com/JanusMael/ClaudeForge/main/docs/screenshots/MemoryPage-Light.png",
+        "https://raw.githubusercontent.com/JanusMael/ClaudeForge/main/docs/screenshots/PluginsPage-Light.png",
+        "https://raw.githubusercontent.com/JanusMael/ClaudeForge/main/docs/screenshots/BackupPage-Light.png"
+      ]
+    },
     "ninja-kitware": {
       "icon": "",
       "images": []

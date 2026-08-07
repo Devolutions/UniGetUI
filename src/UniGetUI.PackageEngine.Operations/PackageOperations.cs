@@ -434,8 +434,8 @@ namespace UniGetUI.PackageEngine.Operations
                                     Line($"Broker operation status: {updated.Status}", LineType.VerboseDetails);
                                 }
                                 break;
-                            // Hello and Finish frames need no handling here: the channel
-                            // validates the handshake, and Finish ends the enumeration.
+                                // Hello and Finish frames need no handling here: the channel
+                                // validates the handshake, and Finish ends the enumeration.
                         }
                     }
                 }

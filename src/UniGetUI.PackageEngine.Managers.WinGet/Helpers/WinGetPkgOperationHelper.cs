@@ -150,6 +150,37 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             }
         }
 
+        ApplyElevationRequirements(package, options, operation);
+
+        if (!usePinget)
+        {
+            parameters.Add(WinGet.GetProxyArgument());
+        }
+
+        parameters.AddRange(
+            operation switch
+            {
+                OperationType.Update => options.CustomParameters_Update,
+                OperationType.Uninstall => options.CustomParameters_Uninstall,
+                _ => options.CustomParameters_Install,
+            }
+        );
+        return parameters;
+    }
+
+    /// <summary>
+    /// Consults the WinGet native installer metadata to detect packages that require (or
+    /// prohibit) elevation, and updates <c>package.OverridenOptions.RunAsAdministrator</c>
+    /// accordingly. Used by both the local execution path (via
+    /// <see cref="_getOperationParameters"/>) and the agent-broker path, so that the
+    /// requested elevation matches regardless of where the operation runs.
+    /// </summary>
+    public override void ApplyElevationRequirements(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation
+    )
+    {
         try
         {
             var installOptions = NativePackageHandler.GetInstallationOptions(
@@ -212,21 +243,6 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             Logger.Error("Recovered from fatal WinGet exception:");
             Logger.Error(ex);
         }
-
-        if (!usePinget)
-        {
-            parameters.Add(WinGet.GetProxyArgument());
-        }
-
-        parameters.AddRange(
-            operation switch
-            {
-                OperationType.Update => options.CustomParameters_Update,
-                OperationType.Uninstall => options.CustomParameters_Uninstall,
-                _ => options.CustomParameters_Install,
-            }
-        );
-        return parameters;
     }
 
     protected override OperationVeredict _getOperationResult(

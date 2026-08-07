@@ -22,6 +22,7 @@ using BrokerApiCapabilitiesResponse = Devolutions.Now.Policy.Api.CapabilitiesRes
 using BrokerApiConstants = Devolutions.Now.Policy.Api.BrokerApi;
 using BrokerApiDecision = Devolutions.Now.Policy.Api.Decision;
 using BrokerApiDecisionInfo = Devolutions.Now.Policy.Api.DecisionInfo;
+using BrokerApiElevation = Devolutions.Now.Policy.Api.Elevation;
 using BrokerApiEventChannel = Devolutions.Now.Policy.Api.EventChannel;
 using BrokerApiEventChannelKind = Devolutions.Now.Policy.Api.EventChannelKind;
 using BrokerApiExecutionResponse = Devolutions.Now.Policy.Api.ExecutionResponse;
@@ -32,6 +33,7 @@ using BrokerApiManagerName = Devolutions.Now.Policy.Api.ManagerName;
 using BrokerApiOperation = Devolutions.Now.Policy.Api.Operation;
 using BrokerApiOperationStatus = Devolutions.Now.Policy.Api.OperationStatus;
 using BrokerApiOperationSubmission = Devolutions.Now.Policy.Api.OperationSubmission;
+using BrokerApiPackageRequest = Devolutions.Now.Policy.Api.PackageRequest;
 using BrokerApiServerContext = Devolutions.Now.Policy.Api.ServerContext;
 using BrokerApiStatusResponse = Devolutions.Now.Policy.Api.StatusResponse;
 using BrokerClientErrorKind = Devolutions.Now.Policy.Client.BrokerClientErrorKind;
@@ -774,6 +776,82 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task BrokeredOperationConsultsElevationRequirementsAndRequestsElevated()
+    {
+        var transport = new ScriptedBrokerTransport
+        {
+            StatusAfterCancel = BrokerApiOperationStatus.Completed,
+            CompletedExitCode = 0,
+        };
+
+        var result = await RunBrokeredOperationWithOutput(
+            transport,
+            configureOperationHelper: helper => helper.ElevationRequirementsAction =
+                (package, _, _) => package.OverridenOptions.RunAsAdministrator = true);
+
+        Assert.Equal(OperationVeredict.Success, result.Veredict);
+        Assert.Equal(
+            BrokerApiElevation.Elevated,
+            DeserializeExecuteRequest(transport).Client?.RequestedElevation);
+        Assert.Contains(result.Output, line => line.Item1.Contains("Elevation: Elevated"));
+    }
+
+    [Fact]
+    public async Task BrokeredOperationRequestsStandardElevationByDefault()
+    {
+        var transport = new ScriptedBrokerTransport
+        {
+            StatusAfterCancel = BrokerApiOperationStatus.Completed,
+            CompletedExitCode = 0,
+        };
+
+        var result = await RunBrokeredOperationWithOutput(transport);
+
+        Assert.Equal(OperationVeredict.Success, result.Veredict);
+        Assert.Equal(
+            BrokerApiElevation.Standard,
+            DeserializeExecuteRequest(transport).Client?.RequestedElevation);
+        Assert.Contains(result.Output, line => line.Item1.Contains("Elevation: Standard"));
+    }
+
+    [Fact]
+    public async Task ProhibitElevationSettingForcesStandardBrokerElevation()
+    {
+        bool originalProhibitElevation = Settings.Get(Settings.K.ProhibitElevation);
+        Settings.Set(Settings.K.ProhibitElevation, true);
+        try
+        {
+            var transport = new ScriptedBrokerTransport
+            {
+                StatusAfterCancel = BrokerApiOperationStatus.Completed,
+                CompletedExitCode = 0,
+            };
+
+            var result = await RunBrokeredOperationWithOutput(
+                transport,
+                configureOperationHelper: helper => helper.ElevationRequirementsAction =
+                    (package, _, _) => package.OverridenOptions.RunAsAdministrator = true);
+
+            Assert.Equal(OperationVeredict.Success, result.Veredict);
+            Assert.Equal(
+                BrokerApiElevation.Standard,
+                DeserializeExecuteRequest(transport).Client?.RequestedElevation);
+        }
+        finally
+        {
+            Settings.Set(Settings.K.ProhibitElevation, originalProhibitElevation);
+        }
+    }
+
+    private static BrokerApiPackageRequest DeserializeExecuteRequest(ScriptedBrokerTransport transport)
+    {
+        Assert.NotNull(transport.LastExecuteRequestBody);
+        var request = BrokerJson.Deserialize<BrokerApiPackageRequest>(transport.LastExecuteRequestBody);
+        Assert.NotNull(request);
+        return request;
+    }
+
+    [Fact]
     public async Task StreamedEventChannelOutputReachesOperationOutputAndResultParser()
     {
         var transport = new ScriptedBrokerTransport
@@ -1054,6 +1132,12 @@ public sealed class PackageOperationsTests
         /// </summary>
         public string? EventChannelPipeName { get; set; }
 
+        /// <summary>
+        /// Body of the last /v1/package-operations/execute request, for asserting on
+        /// the wire-level request (e.g. the requested elevation).
+        /// </summary>
+        public string? LastExecuteRequestBody { get; private set; }
+
         private bool cancelReceived;
 
         public BrokerTransportKind Kind => BrokerTransportKind.HttpNamedPipe;
@@ -1064,6 +1148,11 @@ public sealed class PackageOperationsTests
         )
         {
             RequestedPaths.Add(request.Path);
+            if (request.Path == "/v1/package-operations/execute")
+            {
+                LastExecuteRequestBody = request.Body;
+            }
+
             return request.Path switch
             {
                 "/v1/health" => Json(BrokerJson.Serialize(BuildHealthResponse())),

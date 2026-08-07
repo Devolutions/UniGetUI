@@ -255,7 +255,14 @@ namespace UniGetUI.PackageEngine.Operations
             _brokerStreamedOutput = null;
             Line("Routing operation through Devolutions Agent broker...", LineType.Information);
 
-            using var client = CreateBrokerClient(RequiresAdminRights());
+            // Apply manager-specific elevation requirements (e.g. WinGet's detection of
+            // machine-scope or elevation-requiring installers) before deciding the requested
+            // elevation, mirroring the local execution path where this runs as part of
+            // building the process parameters.
+            Package.Manager.OperationHelper.ApplyElevationRequirements(Package, Options, Role);
+
+            bool requestElevated = RequiresAdminRights();
+            using var client = CreateBrokerClient(requestElevated);
 
             // Check broker availability. Brokered operations must not fall back to local
             // execution: policy evaluation and kill/pre/post actions are owned by the broker.
@@ -275,6 +282,7 @@ namespace UniGetUI.PackageEngine.Operations
             Line($"  Package: {request.Package.Id} ({request.Operation})", LineType.VerboseDetails);
             Line($"  Manager: {request.Manager}", LineType.VerboseDetails);
             Line($"  User: {GetEffectiveUser()}", LineType.VerboseDetails);
+            Line($"  Elevation: {(requestElevated ? "Elevated" : "Standard")}", LineType.VerboseDetails);
 
             try
             {

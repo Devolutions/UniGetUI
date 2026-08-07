@@ -66,4 +66,16 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
 
         return _getOperationResult(package, operation, processOutput, returnCode);
     }
+
+    /// <summary>
+    /// Default implementation: no manager-specific elevation requirements. Managers that
+    /// can detect that a package needs (or prohibits) elevation override this to update
+    /// <c>package.OverridenOptions.RunAsAdministrator</c> accordingly.
+    /// </summary>
+    public virtual void ApplyElevationRequirements(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation
+    )
+    { }
 }

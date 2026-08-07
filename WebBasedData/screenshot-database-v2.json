@@ -15801,6 +15801,17 @@
       "icon": "https://community.chocolatey.org/content/packageimages/fslogix-java.2.9.8361.52326.png",
       "images": []
     },
+    "FSPProductions.FileHasher": {
+      "icon": "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-icon/hash-icon-256.png",
+      "images": [
+        "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-ui-screenshots/main-ui-completion-state-simple.png",
+        "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-ui-screenshots/main-ui.png",
+        "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-ui-screenshots/main-ui-completion-inner-msi-scan.png",
+        "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-ui-screenshots/sidecar-file-explorer-view.png",
+        "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-ui-screenshots/sidecar-file-overwrite-dialog.png",
+        "https://raw.githubusercontent.com/fsantiago07044/filehasher/main/docs/filehasher-winget-PR-assets/app-ui-screenshots/completion-dialog-sidecars-overwritten.png"
+      ]
+    },
     "fspy": {
       "icon": "",
       "images": []

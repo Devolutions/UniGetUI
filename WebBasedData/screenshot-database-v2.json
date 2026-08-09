@@ -3012,6 +3012,18 @@
       "icon": "",
       "images": []
     },
+    "ArKT-7.QuickRotate": {
+      "icon": "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/icon.png",
+      "images": [
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_1.png",
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_2.png",
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_3.png",
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_4.png",
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_5.png",
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_6.png",
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_7.png"
+      ]
+    },
     "arliveforacfunlive": {
       "icon": "",
       "images": [
@@ -50313,6 +50325,18 @@
     "xpdf-utils": {
       "icon": "https://community.chocolatey.org/content/packageimages/xpdf-utils.3.4.0.20170430.png",
       "images": []
+    },
+    "XPDLLZG5H4Q1V1": {
+      "icon": "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/icon.png",
+      "images": [
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_1.png",
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_2.png",
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_3.png",
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_4.png",
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_5.png",
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_6.png",
+        "https://raw.githubusercontent.com/ArKT-7/QuickRotate/main/assets/QuickRotate_7.png"
+      ]
     },
     "XPFFTQ032PTPHF": {
       "icon": "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/media/icon.png",

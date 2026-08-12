@@ -7,6 +7,10 @@
     "total_screenshots": 4140
   },
   "icons_and_screenshots": {
+    "edde746/plezy": {
+      "icon": "https://raw.githubusercontent.com/edde746/plezy/main/assets/plezy.png",
+      "images": []
+    },
     "bbk1ng/agent-orch": {
       "icon": "https://raw.githubusercontent.com/bbk1ng/agent-orch/main/docs/assets/orch-avatar.png",
       "images": []

@@ -1,0 +1,47 @@
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
+        xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+        x:Class="UniGetUI.Avalonia.Views.DialogPages.RemoteHostEditorDialog"
+        Title="{t:Translate Remote host}"
+        MaxWidth="520"
+        MinHeight="280"
+        Background="{DynamicResource AppDialogBackground}">
+
+    <StackPanel Margin="20" Spacing="12">
+        <TextBlock TextWrapping="Wrap"
+                   Opacity="0.85"
+                   Text="{t:Translate Text='Enter an SSH destination or ~/.ssh/config alias. UniGetUI does not store passwords or keys. Connect once from a terminal so the host key is trusted.'}"/>
+
+        <TextBlock Text="{t:Translate Display name (optional)}"/>
+        <TextBox x:Name="NameBox"
+                 PlaceholderText="{t:Translate Linux lab}"
+                 automation:AutomationProperties.Name="{t:Translate Display name (optional)}"/>
+
+        <TextBlock Text="{t:Translate SSH destination}"/>
+        <TextBox x:Name="DestinationBox"
+                 PlaceholderText="{t:Translate user@host}"
+                 automation:AutomationProperties.Name="{t:Translate SSH destination}"/>
+
+        <TextBlock x:Name="StatusText"
+                   TextWrapping="Wrap"
+                   Opacity="0.9"/>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button x:Name="TestButton"
+                    Content="{t:Translate Test connection}"
+                    MinWidth="120"
+                    automation:AutomationProperties.Name="{t:Translate Test connection}"/>
+            <Button x:Name="CancelButton"
+                    Content="{t:Translate Cancel}"
+                    MinWidth="80"
+                    automation:AutomationProperties.Name="{t:Translate Cancel}"/>
+            <Button x:Name="SaveButton"
+                    Content="{t:Translate Save}"
+                    MinWidth="80"
+                    Classes="accent"
+                    automation:AutomationProperties.Name="{t:Translate Save}"/>
+        </StackPanel>
+    </StackPanel>
+</dialogs:ImmersiveDialog>

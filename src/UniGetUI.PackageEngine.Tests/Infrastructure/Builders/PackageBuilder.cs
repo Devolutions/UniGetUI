@@ -13,6 +13,7 @@ public sealed class PackageBuilder
     private IManagerSource? _source;
     private IPackageManager? _manager;
     private OverridenInstallationOptions? _options;
+    private Guid? _remoteHostId;
 
     public PackageBuilder WithName(string name)
     {
@@ -56,13 +57,19 @@ public sealed class PackageBuilder
         return this;
     }
 
+    public PackageBuilder WithRemoteHostId(Guid hostId)
+    {
+        _remoteHostId = hostId;
+        return this;
+    }
+
     public Package Build()
     {
         var manager = _manager ?? new PackageManagerBuilder().Build();
         var source = _source ?? manager.DefaultSource;
 
         return _availableVersion is null
-            ? new Package(_name, _id, _installedVersion, source, manager, _options)
-            : new Package(_name, _id, _installedVersion, _availableVersion, source, manager, _options);
+            ? new Package(_name, _id, _installedVersion, source, manager, _options, _remoteHostId)
+            : new Package(_name, _id, _installedVersion, _availableVersion, source, manager, _options, _remoteHostId);
     }
 }

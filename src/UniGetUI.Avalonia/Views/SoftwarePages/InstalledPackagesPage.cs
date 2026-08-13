@@ -358,21 +358,17 @@ public class InstalledPackagesPage : AbstractPackagesPage
         var list = packages.ToList();
         if (list.Count == 0) return;
 
-        foreach (var pkg in list)
-        {
-            var opts = await InstallOptionsFactory.LoadApplicableAsync(
-                pkg, elevated: elevated, interactive: interactive, remove_data: remove_data);
-            var op = new UninstallPackageOperation(pkg, opts);
-            op.OperationSucceeded += (_, _) => TelemetryHandler.UninstallPackage(pkg, TEL_OP_RESULT.SUCCESS);
-            op.OperationFailed += (_, _) => TelemetryHandler.UninstallPackage(pkg, TEL_OP_RESULT.FAILED);
-            AvaloniaOperationRegistry.Add(op);
-            _ = op.MainThread();
-        }
+        await RemotePackageActionHelper.LaunchAsync(
+            list,
+            OperationType.Uninstall,
+            elevated: elevated,
+            interactive: interactive,
+            remove_data: remove_data);
     }
 
     private static async Task LaunchReinstall(IPackage? package)
     {
-        if (package is null || package.Source.IsVirtualManager) return;
+        if (package is null || package.Source.IsVirtualManager || package.RemoteHostId is not null) return;
         var opts = await InstallOptionsFactory.LoadApplicableAsync(package);
         var op = new InstallPackageOperation(package, opts);
         op.OperationSucceeded += (_, _) => TelemetryHandler.InstallPackage(package, TEL_OP_RESULT.SUCCESS, TEL_InstallReferral.ALREADY_INSTALLED);
@@ -383,7 +379,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
 
     private static async Task LaunchUninstallThenReinstall(IPackage? package)
     {
-        if (package is null || package.Source.IsVirtualManager) return;
+        if (package is null || package.Source.IsVirtualManager || package.RemoteHostId is not null) return;
         var uninstallOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
         var reinstallOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
         var uninstallOp = new UninstallPackageOperation(package, uninstallOpts);
@@ -400,7 +396,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
 
     private static async Task ToggleIgnoreUpdatesAsync(IPackage? package)
     {
-        if (package is null || package.Source.IsVirtualManager) return;
+        if (package is null || package.Source.IsVirtualManager || package.RemoteHostId is not null) return;
         if (await package.HasUpdatesIgnoredAsync())
         {
             await package.RemoveFromIgnoredUpdatesAsync();

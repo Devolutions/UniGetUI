@@ -69,6 +69,15 @@
 
             <Border Height="16"/>
 
+            <!-- ── Remote hosts ────────────────────────────────────────── -->
+            <settings:SettingsPageButton CornerRadius="8"
+                Icon="LocalPc"
+                Text="{t:Translate Remote hosts}"
+                UnderText="{t:Translate Text='Manage packages on other machines over SSH'}"
+                Command="{Binding NavigateToRemoteHostsCommand}"/>
+
+            <Border Height="16"/>
+
             <!-- ── Managers ───────────────────────────────────────────── -->
             <settings:SettingsPageButton CornerRadius="8"
                 Icon="ClipboardList"

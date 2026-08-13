@@ -231,6 +231,12 @@
       <Platform Solution="*|x64" Project="x64" />
     </Project>
   </Folder>
+  <Folder Name="/UniGetUI.PackageEngine.RemoteHosts/">
+    <Project Path="UniGetUI.PackageEngine.RemoteHosts/UniGetUI.PackageEngine.RemoteHosts.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
   <Folder Name="/UniGetUI.Core.Settings.Tests/">
     <Project Path="UniGetUI.Core.Settings.Tests/UniGetUI.Core.Settings.Tests.csproj">
       <Platform Solution="*|arm64" Project="arm64" />

@@ -7,6 +7,7 @@
              xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
              xmlns:conv="using:UniGetUI.Avalonia.Converters"
              xmlns:pkg="using:UniGetUI.PackageEngine.PackageClasses"
+             xmlns:remote="using:UniGetUI.PackageEngine.RemoteHosts"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -109,38 +110,76 @@
         <!-- ==================== HEADER ==================== -->
         <Grid Name="MainHeader"
               Grid.Row="0"
-              ColumnDefinitions="80,*"
-              ColumnSpacing="8"
+              RowDefinitions="Auto,Auto"
               Margin="0,0,0,8">
 
-            <controls:SvgIcon x:Name="HeaderIcon"
-                              Grid.Column="0"
-                              Width="40"
-                              Height="40"
-                              Margin="0,0,4,0"
-                              automation:AutomationProperties.AccessibilityView="Raw"
-                              VerticalAlignment="Center"
-                              HorizontalAlignment="Center"
-                              Path="{Binding PageIconPath}"/>
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="80,*,Auto"
+                  ColumnSpacing="8">
 
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
-                <TextBlock x:Name="MainTitle"
-                           MaxHeight="60"
-                           HorizontalAlignment="Left"
-                           FontSize="28"
-                           FontWeight="SemiBold"
-                           FontFamily="Segoe UI Variable Display"
-                           TextWrapping="Wrap"
-                           Text="{Binding PageTitle}"/>
-                <TextBlock x:Name="MainSubtitle"
-                           MaxHeight="40"
-                           HorizontalAlignment="Left"
-                           FontSize="12"
-                           FontWeight="Normal"
-                           Opacity="0.6"
-                           TextWrapping="Wrap"
-                           Text="{Binding Subtitle}"/>
-            </StackPanel>
+                <controls:SvgIcon x:Name="HeaderIcon"
+                                  Grid.Column="0"
+                                  Width="40"
+                                  Height="40"
+                                  Margin="0,0,4,0"
+                                  automation:AutomationProperties.AccessibilityView="Raw"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Center"
+                                  Path="{Binding PageIconPath}"/>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
+                    <TextBlock x:Name="MainTitle"
+                               MaxHeight="60"
+                               HorizontalAlignment="Left"
+                               FontSize="28"
+                               FontWeight="SemiBold"
+                               FontFamily="Segoe UI Variable Display"
+                               TextWrapping="Wrap"
+                               Text="{Binding PageTitle}"/>
+                    <TextBlock x:Name="MainSubtitle"
+                               MaxHeight="40"
+                               HorizontalAlignment="Left"
+                               FontSize="12"
+                               FontWeight="Normal"
+                               Opacity="0.6"
+                               TextWrapping="Wrap"
+                               Text="{Binding Subtitle}"/>
+                </StackPanel>
+
+                <ComboBox Grid.Column="2"
+                          MinWidth="180"
+                          MaxWidth="280"
+                          VerticalAlignment="Center"
+                          IsVisible="{Binding HostPickerVisible}"
+                          ItemsSource="{Binding HostPickerItems}"
+                          SelectedItem="{Binding SelectedHostItem}"
+                          automation:AutomationProperties.Name="{t:Translate Host}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="remote:RemoteHostPickerItem">
+                            <TextBlock Text="{Binding DisplayName}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </Grid>
+
+            <Border Grid.Row="1"
+                    Margin="0,8,0,0"
+                    Padding="12,8"
+                    CornerRadius="8"
+                    Classes="warning-banner"
+                    IsVisible="{Binding RemoteBannerVisible}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBlock Text="{Binding RemoteBannerText}"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center"/>
+                    <Button Grid.Column="1"
+                            Content="{t:Translate Retry}"
+                            Command="{Binding RetryRemoteCommand}"
+                            IsVisible="{Binding RemoteBannerIsError}"
+                            VerticalAlignment="Center"
+                            automation:AutomationProperties.Name="{t:Translate Retry}"/>
+                </Grid>
+            </Border>
 
         </Grid>
 
@@ -181,7 +220,8 @@
                 <Button x:Name="MainToolbarButton"
                         Height="40"
                         Margin="-9,0,1,0"
-                        CornerRadius="4,0,0,4">
+                        CornerRadius="4,0,0,4"
+                        IsEnabled="{Binding IsMainActionEnabled}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <controls:SvgIcon x:Name="MainToolbarButtonIcon"
                                           Width="20" Height="20"
@@ -197,7 +237,8 @@
                         Height="40"
                         Padding="4"
                         automation:AutomationProperties.Name="{t:Translate More}"
-                        CornerRadius="0,4,4,0">
+                        CornerRadius="0,4,4,0"
+                        IsEnabled="{Binding IsMainActionEnabled}">
                     <Path Data="M 0,0 L 4,4 L 8,0"
                           Stroke="{DynamicResource TextFillColorPrimaryBrush}"
                           StrokeThickness="1.5"

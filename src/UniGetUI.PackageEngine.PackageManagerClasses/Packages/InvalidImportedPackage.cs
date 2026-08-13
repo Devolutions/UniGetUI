@@ -58,6 +58,8 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         public IPackageManager Manager { get; }
 
+        public Guid? RemoteHostId => null;
+
         public string NewVersionString
         {
             get => "";

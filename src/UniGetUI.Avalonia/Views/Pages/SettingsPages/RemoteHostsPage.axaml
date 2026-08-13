@@ -1,0 +1,54 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.RemoteHostsPage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:remote="using:UniGetUI.PackageEngine.RemoteHosts"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:RemoteHostsViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical">
+            <settings:TranslatedTextBlock Text="Remote hosts"
+                                          FontSize="14"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <TextBlock Margin="44,0,44,12"
+                       TextWrapping="Wrap"
+                       Opacity="0.85"
+                       Text="{t:Translate Text='Manage packages on other machines over SSH. UniGetUI does not store passwords or keys. Connect once from a terminal so the host key is trusted, then add the SSH destination or ~/.ssh/config alias here.'}"/>
+
+            <ListBox x:Name="HostList"
+                     Margin="44,0,44,12"
+                     MinHeight="120"
+                     ItemsSource="{Binding Hosts}"
+                     SelectedItem="{Binding SelectedHost}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="remote:RemoteHost">
+                        <StackPanel Spacing="2" Margin="4">
+                            <TextBlock FontWeight="SemiBold" Text="{Binding DisplayName}"/>
+                            <TextBlock Opacity="0.7" FontSize="12" Text="{Binding Destination}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="44,0,44,16">
+                <Button x:Name="AddButton" Content="{t:Translate Add host}"/>
+                <Button x:Name="EditButton" Content="{t:Translate Edit}"/>
+                <Button x:Name="RemoveButton" Content="{t:Translate Remove}"/>
+                <Button x:Name="TestButton" Content="{t:Translate Test connection}"/>
+            </StackPanel>
+
+            <TextBlock Margin="44,0,44,24"
+                       TextWrapping="Wrap"
+                       Text="{Binding StatusMessage}"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -109,6 +109,7 @@ public static partial class Settings
         // NOTE: Set this to true to delegate package operations to Devolutions Agent broker
         // instead of using local UAC elevation. Change default here when ready for production.
         UseAgentBroker,
+        RemoteHosts,
 
         Test1,
         Test2,
@@ -227,6 +228,7 @@ public static partial class Settings
             K.LastKnownBuildNumber => "LastKnownBuildNumber",
             K.DisableAutoSoftwareRenderingOnGpuLessHosts => "DisableAutoSoftwareRenderingOnGpuLessHosts",
             K.UseAgentBroker => "UseAgentBroker",
+            K.RemoteHosts => "RemoteHosts",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

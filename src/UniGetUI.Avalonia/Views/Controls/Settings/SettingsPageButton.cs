@@ -57,6 +57,7 @@ public partial class SettingsPageButton : SettingsCard
             IconType.OpenFolder => "open_folder",
             IconType.Experimental => "experimental",
             IconType.ClipboardList => "clipboard_list",
+            IconType.LocalPc => "local_pc",
             _ => icon.ToString().ToLower(),
         };
         return $"avares://UniGetUI/Assets/Symbols/{name}.svg";

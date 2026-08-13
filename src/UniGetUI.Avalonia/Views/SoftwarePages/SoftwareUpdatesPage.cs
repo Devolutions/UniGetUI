@@ -340,34 +340,22 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         bool? interactive = null,
         bool? no_integrity = null)
     {
-        foreach (var pkg in packages)
-        {
-            var opts = await InstallOptionsFactory.LoadApplicableAsync(
-                pkg, elevated: elevated, interactive: interactive, no_integrity: no_integrity);
-            var op = new UpdatePackageOperation(pkg, opts);
-            op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
-            op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
-            AvaloniaOperationRegistry.Add(op);
-            _ = op.MainThread();
-        }
+        await RemotePackageActionHelper.LaunchAsync(
+            packages,
+            OperationType.Update,
+            elevated: elevated,
+            interactive: interactive,
+            no_integrity: no_integrity);
     }
 
     private static async Task LaunchUninstallFromUpdates(IEnumerable<IPackage> packages)
     {
-        foreach (var pkg in packages)
-        {
-            var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
-            var op = new UninstallPackageOperation(pkg, opts);
-            op.OperationSucceeded += (_, _) => TelemetryHandler.UninstallPackage(pkg, TEL_OP_RESULT.SUCCESS);
-            op.OperationFailed += (_, _) => TelemetryHandler.UninstallPackage(pkg, TEL_OP_RESULT.FAILED);
-            AvaloniaOperationRegistry.Add(op);
-            _ = op.MainThread();
-        }
+        await RemotePackageActionHelper.LaunchAsync(packages, OperationType.Uninstall);
     }
 
     private static async Task LaunchUninstallThenUpdate(IPackage? package)
     {
-        if (package is null || package.Source.IsVirtualManager) return;
+        if (package is null || package.Source.IsVirtualManager || package.RemoteHostId is not null) return;
         var uninstallOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
         var updateOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
         var uninstallOp = new UninstallPackageOperation(package, uninstallOpts);

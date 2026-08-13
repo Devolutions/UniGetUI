@@ -18,12 +18,11 @@ using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
-using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
-using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
+using UniGetUI.PackageEngine.RemoteHosts;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages;
 
@@ -155,6 +154,8 @@ public partial class PackagesPageViewModel : ViewModelBase
     private DateTime _lastLoadTime = DateTime.Now;
 
     protected AbstractPackageLoader Loader;
+    private readonly OperationType _pageRole;
+    private bool _suppressHostPicker;
 
     // ─── Observable properties ────────────────────────────────────────────────
     [ObservableProperty] private string _pageTitle = "";
@@ -188,11 +189,19 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private string _versionHeaderText = "";
     [ObservableProperty] private string _newVersionHeaderText = "";
     [ObservableProperty] private string _sourceHeaderText = "";
+    [ObservableProperty] private bool _hostPickerVisible;
+    [ObservableProperty] private RemoteHostPickerItem? _selectedHostItem;
+    [ObservableProperty] private bool _remoteBannerVisible;
+    [ObservableProperty] private string _remoteBannerText = "";
+    [ObservableProperty] private bool _remoteBannerIsError;
+    [ObservableProperty] private bool _isMainActionEnabled = true;
+    [ObservableProperty] private bool _isRemoteHostSelected;
 
     // ─── Collections ──────────────────────────────────────────────────────────
     public ObservablePackageCollection FilteredPackages { get; } = new();
     public AvaloniaList<SourceTreeNode> SourceNodes { get; } = new();
     public AvaloniaList<object> ToolBarItems { get; } = new();
+    public ObservableCollection<RemoteHostPickerItem> HostPickerItems { get; } = [];
 
     // Labels of toolbar buttons that can be hidden to collapse the menu bar to icon-only
     // on narrow windows (buttons created with showLabel: false are never tracked here).
@@ -245,6 +254,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         _stillLoadingSubtitle = data.MainSubtitle_StillLoading;
         SimilarSearchEnabled = !data.DisableSuggestedResultsRadio;
         RoleIsUpdateLike = data.PageRole == OperationType.Update;
+        _pageRole = data.PageRole;
         NewVersionHeaderVisible = RoleIsUpdateLike;
         ReloadButtonVisible = !DisableReload;
         SearchBoxPlaceholder = CoreTools.Translate("Search for packages");
@@ -293,6 +303,12 @@ public partial class PackagesPageViewModel : ViewModelBase
         Loader_PackagesChanged(this, new(false, [], []));
 
         UpdateHeaderTexts();
+
+        RefreshHostPicker();
+        RemoteHostService.Instance.HostsChanged += (_, _) =>
+            Dispatcher.UIThread.Post(RefreshHostPicker);
+        RemoteHostService.Instance.SelectedHostChanged += (_, _) =>
+            Dispatcher.UIThread.Post(OnSelectedHostChanged);
 
         if (MegaQueryBoxEnabled)
         {
@@ -435,6 +451,9 @@ public partial class PackagesPageViewModel : ViewModelBase
             return;
         }
 
+        if (IsRemoteHostSelected)
+            return;
+
         if (e.ProceduralChange)
         {
             foreach (var pkg in e.AddedPackages)
@@ -469,6 +488,8 @@ public partial class PackagesPageViewModel : ViewModelBase
             Dispatcher.UIThread.Post(() => Loader_FinishedLoading(sender, e));
             return;
         }
+        if (IsRemoteHostSelected)
+            return;
         IsLoading = false;
         _lastLoadTime = DateTime.Now;
         ReloadButtonTooltip = CoreTools.Translate("Last checked: {0}", _lastLoadTime.ToString(CultureInfo.CurrentCulture));
@@ -483,6 +504,8 @@ public partial class PackagesPageViewModel : ViewModelBase
             Dispatcher.UIThread.Post(() => Loader_StartedLoading(sender, e));
             return;
         }
+        if (IsRemoteHostSelected)
+            return;
         IsLoading = true;
         UpdateSubtitle();
     }
@@ -526,6 +549,11 @@ public partial class PackagesPageViewModel : ViewModelBase
 
         if (Loader is DiscoverablePackagesLoader discoverLoader)
         {
+            if (IsRemoteHostSelected)
+            {
+                _ = LoadPackages(ReloadReason.Manual);
+                return;
+            }
             Loader.ClearPackages(emitFinishSignal: false);
             _ = discoverLoader.ReloadPackages(query);
         }
@@ -575,7 +603,8 @@ public partial class PackagesPageViewModel : ViewModelBase
         UpdateSubtitle();
         PackageCountUpdated?.Invoke();
 
-        bool loadingOrPending = Loader.IsLoading || (LoadsOnStart && !Loader.IsLoaded);
+        bool loadingOrPending = IsLoading
+            || (!IsRemoteHostSelected && (Loader.IsLoading || (LoadsOnStart && !Loader.IsLoaded)));
 
         if (loadingOrPending && FilteredPackages.Count == 0)
         {
@@ -603,11 +632,158 @@ public partial class PackagesPageViewModel : ViewModelBase
     // ─── Package loading ──────────────────────────────────────────────────────
     public async Task LoadPackages(ReloadReason reason = ReloadReason.External)
     {
+        if (RemoteHostService.Instance.SelectedHost is { } host)
+        {
+            await LoadRemotePackagesAsync(host, reason);
+            return;
+        }
+
+        IsRemoteHostSelected = false;
+        IsMainActionEnabled = true;
+        RemoteBannerVisible = false;
+
         if (!Loader.IsLoading && (!Loader.IsLoaded
-            || reason is ReloadReason.External or ReloadReason.Manual or ReloadReason.Automated))
+            || reason is ReloadReason.Manual or ReloadReason.Automated))
         {
             await Loader.ReloadPackages();
         }
+        else
+        {
+            Loader_PackagesChanged(this, new(false, [], []));
+        }
+    }
+
+    private async Task LoadRemotePackagesAsync(RemoteHost host, ReloadReason reason)
+    {
+        IsRemoteHostSelected = true;
+        IsMainActionEnabled = _pageRole is not OperationType.Install;
+        RemoteBannerVisible = false;
+        IsLoading = true;
+        UpdateSubtitle();
+
+        RemoteHostSession session = RemoteHostService.Instance.GetSession(host);
+        try
+        {
+            if (MegaQueryBoxEnabled)
+            {
+                string query = string.IsNullOrWhiteSpace(_searchQuery) ? MegaQueryText.Trim() : _searchQuery;
+                if (string.IsNullOrWhiteSpace(query))
+                {
+                    MegaQueryVisible = true;
+                    ApplyRemotePackages([]);
+                    ShowRemoteBanner(
+                        CoreTools.Translate("Search requires UniGetUI on this host. Installing packages from Discover is not supported yet."),
+                        isError: false
+                    );
+                    return;
+                }
+
+                MegaQueryVisible = false;
+                await session.SearchAsync(query);
+                ApplyRemotePackages(session.Discover);
+            }
+            else
+            {
+                await session.RefreshAsync();
+                ApplyRemotePackages(RoleIsUpdateLike ? session.Updates : session.Installed);
+            }
+
+            ApplyRemoteSessionState(session);
+            _lastLoadTime = DateTime.Now;
+            ReloadButtonTooltip = CoreTools.Translate("Last checked: {0}", _lastLoadTime.ToString(CultureInfo.CurrentCulture));
+            PackagesLoaded?.Invoke(reason);
+        }
+        catch (Exception ex)
+        {
+            ApplyRemotePackages([]);
+            ShowRemoteBanner(ex.Message, isError: true);
+        }
+        finally
+        {
+            IsLoading = false;
+            FilterPackages();
+        }
+    }
+
+    private void ApplyRemoteSessionState(RemoteHostSession session)
+    {
+        if (!string.IsNullOrEmpty(session.Error))
+        {
+            ShowRemoteBanner(session.Error, isError: true);
+            return;
+        }
+
+        if (session.CanElevate == false)
+        {
+            ShowRemoteBanner(
+                CoreTools.Translate("This host cannot elevate without a password. System packages are visible but read-only until passwordless sudo or an elevated SSH session is available."),
+                isError: false
+            );
+        }
+    }
+
+    private void ShowRemoteBanner(string message, bool isError)
+    {
+        RemoteBannerText = message;
+        RemoteBannerIsError = isError;
+        RemoteBannerVisible = true;
+    }
+
+    private void ApplyRemotePackages(IReadOnlyList<IPackage> packages)
+    {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => ApplyRemotePackages(packages));
+            return;
+        }
+
+        foreach (PackageWrapper wrapper in _wrappedPackages)
+            wrapper.Dispose();
+        _wrappedPackages.Clear();
+        ClearSourcesList();
+        foreach (IPackage pkg in packages)
+        {
+            _wrappedPackages.Add(new PackageWrapper(pkg, this));
+            AddPackageToSourcesList(pkg);
+        }
+        FilterPackages();
+    }
+
+    private void RefreshHostPicker()
+    {
+        _suppressHostPicker = true;
+        try
+        {
+            HostPickerItems.Clear();
+            foreach (RemoteHostPickerItem item in RemoteHostService.Instance.GetPickerItems(CoreTools.Translate("This PC")))
+                HostPickerItems.Add(item);
+
+            HostPickerVisible = HostPickerItems.Count > 1;
+            Guid? selectedId = RemoteHostService.Instance.SelectedHost?.Id;
+            SelectedHostItem = HostPickerItems.FirstOrDefault(item => item.HostId == selectedId)
+                ?? HostPickerItems.FirstOrDefault();
+            IsRemoteHostSelected = selectedId is not null;
+            IsMainActionEnabled = !IsRemoteHostSelected || _pageRole is not OperationType.Install;
+            if (!IsRemoteHostSelected)
+                RemoteBannerVisible = false;
+        }
+        finally
+        {
+            _suppressHostPicker = false;
+        }
+    }
+
+    private void OnSelectedHostChanged()
+    {
+        RefreshHostPicker();
+        _ = LoadPackages(ReloadReason.External);
+    }
+
+    partial void OnSelectedHostItemChanged(RemoteHostPickerItem? value)
+    {
+        if (_suppressHostPicker)
+            return;
+        RemoteHostService.Instance.SelectHost(value?.HostId);
     }
 
     // ─── Sorting ──────────────────────────────────────────────────────────────
@@ -909,13 +1085,13 @@ public partial class PackagesPageViewModel : ViewModelBase
     // ─── Subtitle ─────────────────────────────────────────────────────────────
     public void UpdateSubtitle()
     {
-        if (Loader.IsLoading || (LoadsOnStart && !Loader.IsLoaded))
+        if (IsLoading || (!IsRemoteHostSelected && (Loader.IsLoading || (LoadsOnStart && !Loader.IsLoaded))))
         {
             Subtitle = _stillLoadingSubtitle;
             return;
         }
 
-        if (Loader.Any())
+        if (_wrappedPackages.Count > 0)
         {
             int selected = FilteredPackages.GetCheckedPackages().Count;
             string r = CoreTools.Translate(
@@ -939,6 +1115,7 @@ public partial class PackagesPageViewModel : ViewModelBase
 
     // ─── Commands ─────────────────────────────────────────────────────────────
     [RelayCommand] private async Task Reload() => await LoadPackages(ReloadReason.Manual);
+    [RelayCommand] private async Task RetryRemote() => await LoadPackages(ReloadReason.Manual);
     [RelayCommand] private void SelectAllSources_Cmd() { SelectAllSources(); FilterPackages(); }
     [RelayCommand] private void ClearSourceSelection_Cmd() { ClearSourceSelection(); FilterPackages(); }
     [RelayCommand] private void RequestHelp() => HelpRequested?.Invoke();
@@ -999,16 +1176,12 @@ public partial class PackagesPageViewModel : ViewModelBase
         bool? interactive = null,
         bool? no_integrity = null)
     {
-        foreach (var pkg in packages)
-        {
-            var opts = await InstallOptionsFactory.LoadApplicableAsync(
-                pkg, elevated: elevated, interactive: interactive, no_integrity: no_integrity);
-            var op = new InstallPackageOperation(pkg, opts);
-            op.OperationSucceeded += (_, _) => TelemetryHandler.InstallPackage(pkg, TEL_OP_RESULT.SUCCESS, TEL_InstallReferral.DIRECT_SEARCH);
-            op.OperationFailed += (_, _) => TelemetryHandler.InstallPackage(pkg, TEL_OP_RESULT.FAILED, TEL_InstallReferral.DIRECT_SEARCH);
-            AvaloniaOperationRegistry.Add(op);
-            _ = op.MainThread();
-        }
+        await RemotePackageActionHelper.LaunchAsync(
+            packages,
+            OperationType.Install,
+            elevated,
+            interactive,
+            no_integrity);
     }
 
     // ─── Focus (triggers view to focus the list) ──────────────────────────────

@@ -3,6 +3,7 @@
 This file documents the **public command-line surface** exposed by UniGetUI in the 2026 CLI redesign.
 
 - For the background IPC API that powers these commands, see [IPC.md](IPC.md).
+- For SSH remote hosts, see [RemoteHosts.md](RemoteHosts.md). The `unigetui remote` agent is a one-shot stdio command; it does **not** use the localhost IPC API.
 - For developer-only Avalonia diagnostics toggles, see the project source and build props; they are intentionally not documented here as public CLI arguments.
 
 ## Quick start
@@ -54,6 +55,21 @@ Related environment variables:
 - `--manager` uses stable manager ids, not GUI labels. Current ids: `apt`, `bun`, `cargo`, `chocolatey`, `dnf`, `dotnet-tool`, `flatpak`, `homebrew`, `npm`, `pacman`, `pip`, `pwsh`, `scoop`, `snap`, `vcpkg`, `winget`, and `winps`.
 
 ## Command reference
+
+### Remote agent (no IPC)
+
+These commands run in-process and print one JSON document to stdout. They do not connect to a GUI session or to the localhost IPC API. UniGetUI on another machine uses them over OpenSSH (`ssh -T -o BatchMode=yes …`).
+
+| Command | Required options | Optional options | Notes |
+| --- | --- | --- | --- |
+| `remote --protocol 1 hello` | `--protocol 1` | None | Reports OS, host description, and whether the session is elevated. |
+| `remote --protocol 1 inventory` | `--protocol 1` | None | Lists installed packages and available updates from local package managers. |
+| `remote --protocol 1 search` | `--protocol 1`, `--query <text>` | None | Searches managers on this host. Used by Discover on agent remotes. |
+| `remote --protocol 1 update` | `--protocol 1`, `--manager <id>`, `--id <package-id>` | None | Updates one package, then reprints inventory. Fails if elevation would require UAC or an interactive sudo prompt. |
+| `remote --protocol 1 uninstall` | `--protocol 1`, `--manager <id>`, `--id <package-id>` | None | Uninstalls one package, then reprints inventory. |
+| `remote --protocol 1 update-all` | `--protocol 1` | None | Updates every upgradable package, then reprints inventory. |
+
+Protocol mismatches (`--protocol` other than `1`) return a JSON error and exit code `2`. Progress is written to stderr; the JSON document is the only stdout payload.
 
 ### Core
 

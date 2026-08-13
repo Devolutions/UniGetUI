@@ -212,6 +212,7 @@
         <ProjectReference Include="..\UniGetUI.Interface.IpcApi\UniGetUI.Interface.IpcApi.csproj" />
         <ProjectReference Include="..\UniGetUI.Interface.Telemetry\UniGetUI.Interface.Telemetry.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.PackageEngine\UniGetUI.PackageEngine.PEInterface.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.RemoteHosts\UniGetUI.PackageEngine.RemoteHosts.csproj" />
     </ItemGroup>
 
     <ItemGroup>

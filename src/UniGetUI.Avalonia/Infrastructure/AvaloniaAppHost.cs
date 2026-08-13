@@ -35,6 +35,12 @@ public static class AvaloniaAppHost
             return;
         }
 
+        if (RemoteAgentHost.IsRemoteCommand(args))
+        {
+            Environment.ExitCode = RemoteAgentHost.RunAsync(args).GetAwaiter().GetResult();
+            return;
+        }
+
         if (IpcCliSyntax.IsIpcCommand(args))
         {
             Environment.ExitCode = IpcCliCommandRunner.RunAsync(args, Console.Out, Console.Error)
@@ -107,7 +113,7 @@ public static class AvaloniaAppHost
 
     private static bool ShouldPrepareCliConsole(IReadOnlyList<string> args)
     {
-        return IpcCliSyntax.HasVerbCommand(args);
+        return IpcCliSyntax.HasVerbCommand(args) || RemoteAgentHost.IsRemoteCommand(args);
     }
 
     private static bool TryRegisterSingleInstance(string[] args)

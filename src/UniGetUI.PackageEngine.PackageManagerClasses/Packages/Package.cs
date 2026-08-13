@@ -74,6 +74,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
         /// IPackageManager is guaranteed to be PackageManager, but C# doesn't allow covariant attributes
         /// </summary>
         public IPackageManager Manager { get; }
+        public Guid? RemoteHostId { get; }
         public string NewVersionString { get; }
         public virtual bool IsUpgradable { get; }
 
@@ -86,9 +87,10 @@ namespace UniGetUI.PackageEngine.PackageClasses
             string version,
             IManagerSource source,
             IPackageManager manager,
-            OverridenInstallationOptions? options = null
+            OverridenInstallationOptions? options = null,
+            Guid? remoteHostId = null
         )
-            : this(name, id, version, version, source, manager, options)
+            : this(name, id, version, version, source, manager, options, remoteHostId)
         {
             IsUpgradable = false;
         }
@@ -103,7 +105,8 @@ namespace UniGetUI.PackageEngine.PackageClasses
             string new_version,
             IManagerSource source,
             IPackageManager manager,
-            OverridenInstallationOptions? options = null
+            OverridenInstallationOptions? options = null,
+            Guid? remoteHostId = null
         )
         {
             Name = name;
@@ -114,6 +117,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
             NormalizedNewVersion = CoreTools.VersionStringToStruct(new_version);
             Source = source;
             Manager = manager;
+            RemoteHostId = remoteHostId;
 
             IsUpgradable = true;
             Tag = PackageTag.Default;
@@ -124,11 +128,12 @@ namespace UniGetUI.PackageEngine.PackageClasses
                 .Replace("{manager}", Source.AsString_DisplayName);
 
             _overridenOptions = options ?? _overridenOptions;
+            string hostPrefix = remoteHostId is Guid hostId ? $"{hostId}\\" : "";
             _hash = CoreTools.HashStringAsLong(
-                $"{Manager.Name}\\{Source.AsString_DisplayName}\\{Id}"
+                $"{hostPrefix}{Manager.Name}\\{Source.AsString_DisplayName}\\{Id}"
             );
             _versionedHash = CoreTools.HashStringAsLong(
-                $"{Manager.Name}\\{Source.AsString_DisplayName}\\{Id}\\{installed_version}"
+                $"{hostPrefix}{Manager.Name}\\{Source.AsString_DisplayName}\\{Id}\\{installed_version}"
             );
             _ignoredId = IgnoredUpdatesDatabase.GetIgnoredIdForPackage(this);
             _iconId = GenerateIconId(this);

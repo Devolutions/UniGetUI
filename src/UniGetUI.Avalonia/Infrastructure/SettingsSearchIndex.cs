@@ -105,6 +105,9 @@ public static class SettingsSearchIndex
         new("Add a timestamp to the backup file names", ["backup timestamp"], typeof(Backup), "BackupTimestampCard"),
         new("Package backup", ["backup"], typeof(Backup), null),
 
+        // ── Remote hosts ─────────────────────────────────────────────────────
+        new("Remote hosts", ["ssh", "remote", "hosts"], typeof(RemoteHostsPage), null),
+
         // ── Administrator ────────────────────────────────────────────────────
         new("Ask for administrator privileges once for each batch of operations", ["administrator", "admin rights", "elevation", "uac", "batch"], typeof(Administrator), "AdminElevationCard"),
         new("Ask only once for administrator privileges", ["admin once", "cache admin rights"], typeof(Administrator), "CacheAdminOnceCard"),
@@ -262,6 +265,7 @@ public static class SettingsSearchIndex
         nameof(Operations) => "Package operation preferences",
         nameof(Internet) => "Internet connection settings",
         nameof(Backup) => "Package backup",
+        nameof(RemoteHostsPage) => "Remote hosts",
         nameof(Administrator) => "Administrator rights and other dangerous settings",
         nameof(Experimental) => "Experimental settings and developer options",
         _ => "UniGetUI Settings",

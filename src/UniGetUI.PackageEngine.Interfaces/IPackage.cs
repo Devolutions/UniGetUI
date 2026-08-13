@@ -19,6 +19,7 @@ namespace UniGetUI.PackageEngine.Interfaces
         public CoreTools.Version NormalizedNewVersion { get; }
         public IManagerSource Source { get; }
         public IPackageManager Manager { get; }
+        public Guid? RemoteHostId { get; }
         public string NewVersionString { get; }
         public bool IsUpgradable { get; }
         public ref OverridenInstallationOptions OverridenOptions { get; }
@@ -27,6 +28,7 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// <summary>
         /// Returns an identifier that can be used to compare different package instances that refer to the same package.
         /// What is taken into account:
+        ///    - Remote host (if any)
         ///    - Manager and Source
         ///    - Package Identifier
         /// For more specific comparison use GetVersionedHash()

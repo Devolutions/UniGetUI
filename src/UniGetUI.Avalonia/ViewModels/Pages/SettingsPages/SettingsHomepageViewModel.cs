@@ -15,6 +15,7 @@ public partial class SettingsHomepageViewModel : ViewModelBase
     [RelayCommand] private void NavigateToOperations() => NavigationRequested?.Invoke(this, typeof(Operations));
     [RelayCommand] private void NavigateToInternet() => NavigationRequested?.Invoke(this, typeof(Internet));
     [RelayCommand] private void NavigateToBackup() => NavigationRequested?.Invoke(this, typeof(Backup));
+    [RelayCommand] private void NavigateToRemoteHosts() => NavigationRequested?.Invoke(this, typeof(RemoteHostsPage));
     [RelayCommand] private void NavigateToAdministrator() => NavigationRequested?.Invoke(this, typeof(Administrator));
     [RelayCommand] private void NavigateToExperimental() => NavigationRequested?.Invoke(this, typeof(Experimental));
     [RelayCommand] private void NavigateToManagers() => NavigationRequested?.Invoke(this, typeof(ManagersHomepage));

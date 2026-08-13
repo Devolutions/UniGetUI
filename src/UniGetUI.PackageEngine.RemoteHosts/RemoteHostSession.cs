@@ -22,7 +22,7 @@ public sealed class RemoteHostSession
     public RemoteHostSession(RemoteHost host, RemoteSshClient? client = null)
     {
         Host = host;
-        _client = client ?? new RemoteSshClient();
+        _client = client ?? RemoteSshClient.ForHost(host);
     }
 
     public bool CanMutate(IPackage package)

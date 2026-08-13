@@ -49,6 +49,43 @@
             <TextBlock Margin="44,0,44,24"
                        TextWrapping="Wrap"
                        Text="{Binding StatusMessage}"/>
+
+            <StackPanel IsVisible="{Binding IsWslSectionVisible}">
+                <settings:TranslatedTextBlock Text="WSL distributions"
+                                              FontSize="14"
+                                              FontWeight="SemiBold"
+                                              Margin="44,8,4,8"
+                                              automation:AutomationProperties.HeadingLevel="2"/>
+
+                <TextBlock Margin="44,0,44,12"
+                           TextWrapping="Wrap"
+                           Opacity="0.85"
+                           Text="{t:Translate Text='Installed WSL distros appear in the host picker. No SSH setup is required. Selecting a stopped distro starts it. Package actions run as the default WSL user and use passwordless sudo when available.'}"/>
+
+                <TextBlock Margin="44,0,44,12"
+                           TextWrapping="Wrap"
+                           Opacity="0.85"
+                           IsVisible="{Binding !HasWslDistros}"
+                           Text="{t:Translate Text='No WSL distributions were found.'}"/>
+
+                <ItemsControl Margin="44,0,44,24"
+                              IsVisible="{Binding HasWslDistros}"
+                              ItemsSource="{Binding WslDistros}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:WslDistroItem">
+                            <Grid ColumnDefinitions="Auto,*" Margin="0,4">
+                                <CheckBox Grid.Column="0"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding IsEnabled}"/>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}"/>
+                                    <TextBlock Opacity="0.7" FontSize="12" Text="{Binding StatusText}"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

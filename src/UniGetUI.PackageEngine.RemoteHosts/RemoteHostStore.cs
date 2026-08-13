@@ -43,6 +43,7 @@ public static class RemoteHostStore
         List<RemoteHost> hosts = [.. Load()];
         if (hosts.Any(existing =>
             existing.Id != host.Id
+            && existing.Kind == host.Kind
             && existing.Destination.Equals(host.Destination, StringComparison.OrdinalIgnoreCase)))
         {
             throw new RemoteHostException(RemoteHostErrorKind.DuplicateDestination);

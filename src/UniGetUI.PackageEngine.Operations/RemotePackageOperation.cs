@@ -26,7 +26,7 @@ public sealed class RemotePackageOperation : AbstractOperation
         Package = package;
         Host = host;
         Role = role;
-        _client = client ?? new RemoteSshClient();
+        _client = client ?? RemoteSshClient.ForHost(host);
 
         string hostName = host.DisplayName;
         string verb = role switch
@@ -69,7 +69,9 @@ public sealed class RemotePackageOperation : AbstractOperation
     {
         Package.SetTag(PackageTag.BeingProcessed);
         Line(
-            CoreTools.Translate("Connecting to {0} over SSH…", Host.Destination),
+            Host.Kind == RemoteHostKind.Wsl
+                ? CoreTools.Translate("Connecting to {0}…", Host.DisplayName)
+                : CoreTools.Translate("Connecting to {0} over SSH…", Host.Destination),
             LineType.Information
         );
 

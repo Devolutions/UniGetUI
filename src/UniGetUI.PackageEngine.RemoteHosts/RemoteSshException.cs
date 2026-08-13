@@ -10,6 +10,9 @@ public enum RemoteSshErrorKind
     UntrustedHost,
     UnsupportedDistro,
     SshClientMissing,
+    WslNotAvailable,
+    WslDistroNotFound,
+    WslLaunchFailed,
 }
 
 public sealed class RemoteSshException : Exception
@@ -40,6 +43,14 @@ public sealed class RemoteSshException : Exception
                 $"No supported Linux package manager was found on {destination}.",
             RemoteSshErrorKind.SshClientMissing =>
                 "OpenSSH (ssh) was not found on this computer. Install the OpenSSH client and try again.",
+            RemoteSshErrorKind.WslNotAvailable =>
+                "Windows Subsystem for Linux is not available on this computer.",
+            RemoteSshErrorKind.WslDistroNotFound =>
+                $"The WSL distribution {destination} is not registered.",
+            RemoteSshErrorKind.WslLaunchFailed =>
+                string.IsNullOrWhiteSpace(detail)
+                    ? $"Could not start a process in the WSL distribution {destination}."
+                    : $"Could not start a process in the WSL distribution {destination}: {detail}",
             RemoteSshErrorKind.ConnectionFailed =>
                 string.IsNullOrWhiteSpace(detail)
                     ? $"Could not connect to {destination} over SSH."

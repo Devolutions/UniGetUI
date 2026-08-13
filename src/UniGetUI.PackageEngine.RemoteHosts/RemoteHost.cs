@@ -2,6 +2,12 @@ using System.Text.Json.Serialization;
 
 namespace UniGetUI.PackageEngine.RemoteHosts;
 
+public enum RemoteHostKind
+{
+    Ssh = 0,
+    Wsl = 1,
+}
+
 public sealed class RemoteHost : IEquatable<RemoteHost>
 {
     public const int MaxDestinationLength = 255;
@@ -13,10 +19,14 @@ public sealed class RemoteHost : IEquatable<RemoteHost>
 
     public string Destination { get; init; } = "";
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public RemoteHostKind Kind { get; init; } = RemoteHostKind.Ssh;
+
     public RemoteHost() { }
 
-    public RemoteHost(string destination, string? name = null, Guid? id = null)
+    public RemoteHost(string destination, string? name = null, Guid? id = null, RemoteHostKind kind = RemoteHostKind.Ssh)
     {
+        Kind = kind;
         Destination = NormalizeDestination(destination);
         if (!IsValidDestination(Destination))
             throw new RemoteHostException(RemoteHostErrorKind.InvalidDestination);
@@ -26,11 +36,24 @@ public sealed class RemoteHost : IEquatable<RemoteHost>
         Id = id ?? Guid.NewGuid();
     }
 
+    public static RemoteHost ForWsl(string distroName)
+        => new(distroName, name: null, id: WslDistroCatalog.CreateHostId(distroName), kind: RemoteHostKind.Wsl);
+
+    public static RemoteHost ForWsl(WslDistroInfo distro)
+        => ForWsl(distro.Name);
+
     [JsonIgnore]
     public string DisplayName
     {
         get
         {
+            if (Kind == RemoteHostKind.Wsl)
+            {
+                string distro = Destination.Length == 0 ? "WSL" : Destination;
+                string pretty = char.ToUpperInvariant(distro[0]) + distro[1..];
+                return pretty + " (WSL)";
+            }
+
             string value = DroppingLocalSuffix(Name ?? Destination);
             if (value.Length == 0)
                 return Destination;

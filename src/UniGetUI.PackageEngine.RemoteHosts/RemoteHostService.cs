@@ -21,7 +21,7 @@ public sealed class RemoteHostService
     public static RemoteHostService Instance { get; } = new();
 
     private readonly Dictionary<Guid, RemoteHostSession> _sessions = [];
-    private readonly RemoteSshClient _client = new();
+    private readonly List<RemoteHost> _wslHosts = [];
 
     public ObservableCollection<RemoteHost> Hosts { get; } = [];
     public RemoteHost? SelectedHost { get; private set; }
@@ -42,7 +42,10 @@ public sealed class RemoteHostService
         foreach (RemoteHost host in RemoteHostStore.Load())
             Hosts.Add(host);
 
-        if (SelectedHost is not null && Hosts.All(host => host.Id != SelectedHost.Id))
+        _wslHosts.Clear();
+        _wslHosts.AddRange(WslDistroCatalog.GetEnabledHosts());
+
+        if (SelectedHost is not null && !TryGetHost(SelectedHost.Id, out _))
             SelectHost(null);
 
         HostsChanged?.Invoke(this, EventArgs.Empty);
@@ -59,12 +62,19 @@ public sealed class RemoteHostService
             HostId = host.Id,
             DisplayName = host.DisplayName,
         }));
+        items.AddRange(_wslHosts.Select(host => new RemoteHostPickerItem
+        {
+            HostId = host.Id,
+            DisplayName = host.DisplayName,
+        }));
         return items;
     }
 
     public void SelectHost(Guid? hostId)
     {
-        RemoteHost? next = hostId is null ? null : Hosts.FirstOrDefault(host => host.Id == hostId);
+        RemoteHost? next = null;
+        if (hostId is Guid id && TryGetHost(id, out RemoteHost found))
+            next = found;
         if (ReferenceEquals(SelectedHost, next) || (SelectedHost?.Id == next?.Id))
             return;
         SelectedHost = next;
@@ -74,18 +84,22 @@ public sealed class RemoteHostService
     public RemoteHostSession GetSession(RemoteHost host)
     {
         if (_sessions.TryGetValue(host.Id, out RemoteHostSession? existing)
-            && existing.Host.Destination == host.Destination)
+            && existing.Host.Destination == host.Destination
+            && existing.Host.Kind == host.Kind)
         {
             return existing;
         }
 
-        var session = new RemoteHostSession(host, _client);
+        var session = new RemoteHostSession(host, RemoteSshClient.ForHost(host));
         _sessions[host.Id] = session;
         return session;
     }
 
     public RemoteHost SaveHost(RemoteHost host)
     {
+        if (host.Kind == RemoteHostKind.Wsl)
+            throw new RemoteHostException(RemoteHostErrorKind.InvalidDestination);
+
         RemoteHost saved = RemoteHostStore.AddOrUpdate(host);
         ReloadFromStore();
         return Hosts.First(item => item.Id == saved.Id);
@@ -100,7 +114,8 @@ public sealed class RemoteHostService
 
     public bool TryGetHost(Guid id, out RemoteHost host)
     {
-        host = Hosts.FirstOrDefault(item => item.Id == id)!;
+        host = Hosts.FirstOrDefault(item => item.Id == id)
+            ?? _wslHosts.FirstOrDefault(item => item.Id == id)!;
         return host is not null;
     }
 

@@ -4,13 +4,23 @@ public sealed class RemoteSshClient
 {
     public const int ProtocolVersion = RemoteControlProtocol.Version;
 
-    private readonly IRemoteProcessRunner _runner;
-    private readonly string _sshExecutable;
+    private readonly IRemotePosixTransport _transport;
 
     public RemoteSshClient(IRemoteProcessRunner? runner = null, string? sshExecutable = null)
+        : this(new SshPosixTransport(runner, sshExecutable))
     {
-        _runner = runner ?? new SystemRemoteProcessRunner();
-        _sshExecutable = sshExecutable ?? ResolveSshExecutable();
+    }
+
+    public RemoteSshClient(IRemotePosixTransport transport)
+    {
+        _transport = transport;
+    }
+
+    public static RemoteSshClient ForHost(RemoteHost host, IRemoteProcessRunner? runner = null)
+    {
+        if (host.Kind == RemoteHostKind.Wsl)
+            return new RemoteSshClient(new WslLaunchTransport());
+        return new RemoteSshClient(runner);
     }
 
     public static string ResolveSshExecutable()
@@ -35,10 +45,7 @@ public sealed class RemoteSshClient
         => "'" + value.Replace("'", "'\"'\"'", StringComparison.Ordinal) + "'";
 
     public IReadOnlyList<string> BuildArguments(RemoteHost host, string remoteCommand)
-    {
-        List<string> args = [.. BuildBaseArguments(host.Destination), remoteCommand];
-        return args;
-    }
+        => [.. BuildBaseArguments(host.Destination), remoteCommand];
 
     public static string BuildPosixDispatchCommand(IReadOnlyList<string> agentArguments, string linuxScript)
     {
@@ -76,7 +83,7 @@ public sealed class RemoteSshClient
         CancellationToken cancellationToken = default
     )
     {
-        RemoteProcessResult uname = await RunSshAsync(host, "uname -s", cancellationToken).ConfigureAwait(false);
+        RemoteProcessResult uname = await RunRemoteAsync(host, "uname -s", cancellationToken).ConfigureAwait(false);
         string osToken = uname.StdOut.Trim();
         if (uname.ExitCode == 0 && osToken.Equals("Linux", StringComparison.OrdinalIgnoreCase))
         {
@@ -98,7 +105,7 @@ public sealed class RemoteSshClient
         CancellationToken cancellationToken = default
     )
     {
-        RemoteProcessResult uname = await RunSshAsync(host, "uname -s", cancellationToken).ConfigureAwait(false);
+        RemoteProcessResult uname = await RunRemoteAsync(host, "uname -s", cancellationToken).ConfigureAwait(false);
         if (uname.ExitCode == 0 && uname.StdOut.Trim().Equals("Linux", StringComparison.OrdinalIgnoreCase))
         {
             return await RunPosixAsync(host, AgentArguments("inventory"), LinuxAgentless.InventoryScript, cancellationToken)
@@ -171,7 +178,7 @@ public sealed class RemoteSshClient
     )
     {
         IReadOnlyList<string> args = ["remote", "--protocol", ProtocolVersion.ToString(), "search", "--query", query];
-        RemoteProcessResult uname = await RunSshAsync(host, "uname -s", cancellationToken).ConfigureAwait(false);
+        RemoteProcessResult uname = await RunRemoteAsync(host, "uname -s", cancellationToken).ConfigureAwait(false);
         if (uname.ExitCode == 0 && (
             uname.StdOut.Trim().Equals("Linux", StringComparison.OrdinalIgnoreCase)
             || uname.StdOut.Trim().Equals("Darwin", StringComparison.OrdinalIgnoreCase)))
@@ -191,7 +198,7 @@ public sealed class RemoteSshClient
         CancellationToken cancellationToken
     )
     {
-        RemoteProcessResult uname = await RunSshAsync(host, "uname -s", cancellationToken, onProgress).ConfigureAwait(false);
+        RemoteProcessResult uname = await RunRemoteAsync(host, "uname -s", cancellationToken, onProgress).ConfigureAwait(false);
         RemoteControlResponse response;
         if (uname.ExitCode == 0 && uname.StdOut.Trim().Equals("Linux", StringComparison.OrdinalIgnoreCase))
         {
@@ -224,7 +231,7 @@ public sealed class RemoteSshClient
     )
     {
         string command = BuildPosixDispatchCommand(agentArguments, linuxScript);
-        RemoteProcessResult result = await RunSshAsync(host, command, cancellationToken, onProgress).ConfigureAwait(false);
+        RemoteProcessResult result = await RunRemoteAsync(host, command, cancellationToken, onProgress).ConfigureAwait(false);
         return DecodeOrThrow(host, result);
     }
 
@@ -237,7 +244,7 @@ public sealed class RemoteSshClient
     )
     {
         string command = BuildPosixDispatchCommand(agentArguments, linuxScript);
-        RemoteProcessResult result = await RunSshAsync(host, command, cancellationToken, onProgress).ConfigureAwait(false);
+        RemoteProcessResult result = await RunRemoteAsync(host, command, cancellationToken, onProgress).ConfigureAwait(false);
         RemoteControlResponse response = DecodeOrThrow(host, result);
         if (response.BackendKind == RemoteBackendKind.LinuxAgentless)
             throw new RemoteSshException(RemoteSshErrorKind.MissingRemoteAgent, host.Destination);
@@ -252,35 +259,17 @@ public sealed class RemoteSshClient
     )
     {
         string command = BuildWindowsAgentCommand(agentArguments);
-        RemoteProcessResult result = await RunSshAsync(host, command, cancellationToken, onProgress).ConfigureAwait(false);
+        RemoteProcessResult result = await RunRemoteAsync(host, command, cancellationToken, onProgress).ConfigureAwait(false);
         return DecodeOrThrow(host, result);
     }
 
-    private async Task<RemoteProcessResult> RunSshAsync(
+    private Task<RemoteProcessResult> RunRemoteAsync(
         RemoteHost host,
         string remoteCommand,
         CancellationToken cancellationToken,
         Action<string>? onProgress = null
     )
-    {
-        try
-        {
-            return await _runner.RunAsync(
-                _sshExecutable,
-                BuildArguments(host, remoteCommand),
-                onProgress,
-                cancellationToken
-            ).ConfigureAwait(false);
-        }
-        catch (System.ComponentModel.Win32Exception)
-        {
-            throw new RemoteSshException(RemoteSshErrorKind.SshClientMissing, host.Destination);
-        }
-        catch (FileNotFoundException)
-        {
-            throw new RemoteSshException(RemoteSshErrorKind.SshClientMissing, host.Destination);
-        }
-    }
+        => _transport.RunAsync(host, remoteCommand, onProgress, cancellationToken);
 
     internal static RemoteControlResponse DecodeOrThrow(RemoteHost host, RemoteProcessResult result)
     {

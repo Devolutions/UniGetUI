@@ -968,6 +968,11 @@
   "Search requires UniGetUI on this host. Installing packages from Discover is not supported yet.": "Search requires UniGetUI on this host. Installing packages from Discover is not supported yet.",
   "This host cannot elevate without a password. System packages are visible but read-only until passwordless sudo or an elevated SSH session is available.": "This host cannot elevate without a password. System packages are visible but read-only until passwordless sudo or an elevated SSH session is available.",
   "Connecting to {0} over SSH…": "Connecting to {0} over SSH…",
+  "Connecting to {0}…": "Connecting to {0}…",
+  "WSL distributions": "WSL distributions",
+  "Installed WSL distros appear in the host picker. No SSH setup is required. Selecting a stopped distro starts it. Package actions run as the default WSL user and use passwordless sudo when available.": "Installed WSL distros appear in the host picker. No SSH setup is required. Selecting a stopped distro starts it. Package actions run as the default WSL user and use passwordless sudo when available.",
+  "No WSL distributions were found.": "No WSL distributions were found.",
+  "This WSL distro cannot elevate without a password. System packages are visible but read-only until passwordless sudo is available for the default WSL user.": "This WSL distro cannot elevate without a password. System packages are visible but read-only until passwordless sudo is available for the default WSL user.",
   "{package} completed on {host}": "{package} completed on {host}",
   "{package} could not be processed on {host}": "{package} could not be processed on {host}"
 }

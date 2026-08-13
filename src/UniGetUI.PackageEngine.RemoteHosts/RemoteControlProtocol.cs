@@ -102,6 +102,7 @@ public sealed class RemoteInventoryPackageDto
 [JsonSerializable(typeof(List<RemoteInventoryPackageDto>))]
 [JsonSerializable(typeof(List<RemoteHost>))]
 [JsonSerializable(typeof(RemoteHost))]
+[JsonSerializable(typeof(List<string>))]
 internal sealed partial class RemoteHostsJsonContext : JsonSerializerContext;
 
 public static class RemoteHostsJson
@@ -126,4 +127,10 @@ public static class RemoteHostsJson
             return null;
         }
     }
+
+    public static string SerializeStringList(List<string> values)
+        => JsonSerializer.Serialize(values, RemoteHostsJsonContext.Default.ListString);
+
+    public static List<string> DeserializeStringList(string json)
+        => JsonSerializer.Deserialize(json, RemoteHostsJsonContext.Default.ListString) ?? [];
 }

@@ -715,10 +715,10 @@ public partial class PackagesPageViewModel : ViewModelBase
 
         if (session.CanElevate == false)
         {
-            ShowRemoteBanner(
-                CoreTools.Translate("This host cannot elevate without a password. System packages are visible but read-only until passwordless sudo or an elevated SSH session is available."),
-                isError: false
-            );
+            string banner = session.Host.Kind == RemoteHostKind.Wsl
+                ? CoreTools.Translate("This WSL distro cannot elevate without a password. System packages are visible but read-only until passwordless sudo is available for the default WSL user.")
+                : CoreTools.Translate("This host cannot elevate without a password. System packages are visible but read-only until passwordless sudo or an elevated SSH session is available.");
+            ShowRemoteBanner(banner, isError: false);
         }
     }
 

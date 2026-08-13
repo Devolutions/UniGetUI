@@ -3,6 +3,7 @@
         <TargetFrameworks>$(SharedTargetFrameworks)</TargetFrameworks>
         <RootNamespace>UniGetUI.PackageEngine.RemoteHosts</RootNamespace>
         <AssemblyName>UniGetUI.PackageEngine.RemoteHosts</AssemblyName>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>

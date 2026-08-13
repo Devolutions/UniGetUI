@@ -18,12 +18,15 @@ public sealed class RemoteHostTests : IDisposable
         Directory.CreateDirectory(_testRoot);
         CoreData.TEST_DataDirectoryOverride = Path.Combine(_testRoot, "Data");
         Directory.CreateDirectory(CoreData.UniGetUIUserConfigurationDirectory);
+        WslDistroCatalog.ListOverride = static () => [];
         Settings.ResetSettings();
+        RemoteHostService.Instance.ReloadFromStore();
     }
 
     public void Dispose()
     {
         Settings.ResetSettings();
+        WslDistroCatalog.ListOverride = null;
         CoreData.TEST_DataDirectoryOverride = null;
         if (Directory.Exists(_testRoot))
             Directory.Delete(_testRoot, recursive: true);
@@ -86,6 +89,55 @@ public sealed class RemoteHostTests : IDisposable
         Assert.Equal(id, host.Id);
         Assert.Equal("user@lab", host.Destination);
         Assert.Equal("Lab", host.Name);
+    }
+
+    [Fact]
+    public void WslHostUsesDeterministicIdAndDisplayName()
+    {
+        RemoteHost host = RemoteHost.ForWsl("Ubuntu-24.04");
+        Assert.Equal(RemoteHostKind.Wsl, host.Kind);
+        Assert.Equal("Ubuntu-24.04", host.Destination);
+        Assert.Equal("Ubuntu-24.04 (WSL)", host.DisplayName);
+        Assert.Equal(WslDistroCatalog.CreateHostId("Ubuntu-24.04"), host.Id);
+        Assert.Equal(host.Id, RemoteHost.ForWsl("Ubuntu-24.04").Id);
+    }
+
+    [Fact]
+    public void DisabledWslDistrosAreOmittedFromPicker()
+    {
+        WslDistroCatalog.ListOverride = static () =>
+        [
+            new WslDistroInfo("Ubuntu", "Running", 2, true),
+            new WslDistroInfo("Debian", "Stopped", 2, false),
+        ];
+        WslDistroCatalog.SetEnabled("Debian", false);
+        RemoteHostService.Instance.ReloadFromStore();
+
+        IReadOnlyList<RemoteHostPickerItem> items = RemoteHostService.Instance.GetPickerItems("This PC");
+        Assert.Equal(2, items.Count);
+        Assert.Null(items[0].HostId);
+        Assert.Equal("Ubuntu (WSL)", items[1].DisplayName);
+        Assert.True(RemoteHostService.Instance.TryGetHost(items[1].HostId!.Value, out RemoteHost host));
+        Assert.Equal(RemoteHostKind.Wsl, host.Kind);
+    }
+
+    [Fact]
+    public void CatalogSkipsHelpersAndDisabledNames()
+    {
+        WslDistroCatalog.ListOverride = static () =>
+        [
+            new WslDistroInfo("Ubuntu", "Running", 2, true),
+            new WslDistroInfo("docker-desktop", "Running", 2, false),
+        ];
+
+        IReadOnlyList<WslDistroInfo> installed = WslDistroCatalog.ListInstalled();
+        Assert.Equal("Ubuntu", Assert.Single(installed).Name);
+
+        WslDistroCatalog.ListOverride = static () => [new WslDistroInfo("Ubuntu", "Stopped", 2, true)];
+        WslDistroCatalog.SetEnabled("Ubuntu", false);
+        Assert.Empty(WslDistroCatalog.GetEnabledHosts());
+        WslDistroCatalog.SetEnabled("Ubuntu", true);
+        Assert.Equal("Ubuntu", Assert.Single(WslDistroCatalog.GetEnabledHosts()).Destination);
     }
 }
 
@@ -288,5 +340,68 @@ public sealed class RemotePackageIdentityTests
         Assert.NotEqual(remoteA.GetHash(), remoteB.GetHash());
         Assert.False(local.IsEquivalentTo(remoteA));
         Assert.True(remoteA.IsEquivalentTo(new PackageBuilder().WithId("bash").WithRemoteHostId(hostA).Build()));
+    }
+}
+
+public sealed class WslListParserTests
+{
+    private const string VerboseUtf8 = """
+  NAME              STATE           VERSION
+* Ubuntu            Running         2
+  Debian            Stopped         1
+  docker-desktop    Running         2
+  docker-desktop-data Stopped       2
+  podman-data       Stopped         2
+""";
+
+    [Fact]
+    public void ParseVerboseListReadsDefaultStateAndVersion()
+    {
+        IReadOnlyList<WslDistroInfo> distros = WslListParser.ParseVerboseList(VerboseUtf8);
+        Assert.Equal(5, distros.Count);
+        Assert.Equal("Ubuntu", distros[0].Name);
+        Assert.True(distros[0].IsDefault);
+        Assert.Equal("Running", distros[0].State);
+        Assert.Equal(2, distros[0].Version);
+        Assert.Equal("Debian", distros[1].Name);
+        Assert.False(distros[1].IsDefault);
+        Assert.Equal(1, distros[1].Version);
+    }
+
+    [Fact]
+    public void HelperDistrosAreDetected()
+    {
+        Assert.True(WslListParser.IsHelperDistro("docker-desktop"));
+        Assert.True(WslListParser.IsHelperDistro("docker-desktop-data"));
+        Assert.True(WslListParser.IsHelperDistro("podman-data"));
+        Assert.False(WslListParser.IsHelperDistro("Ubuntu"));
+        Assert.False(WslListParser.IsHelperDistro("Debian"));
+    }
+
+    [Fact]
+    public void DecodeListOutputHandlesUtf16LeWithBom()
+    {
+        byte[] raw = System.Text.Encoding.Unicode.GetPreamble()
+            .Concat(System.Text.Encoding.Unicode.GetBytes(VerboseUtf8))
+            .ToArray();
+        string text = WslListParser.DecodeListOutput(raw);
+        WslDistroInfo ubuntu = Assert.Single(WslListParser.ParseVerboseList(text), d => d.Name == "Ubuntu");
+        Assert.True(ubuntu.IsDefault);
+    }
+
+    [Fact]
+    public void DecodeListOutputHandlesUtf16LeWithoutBom()
+    {
+        byte[] raw = System.Text.Encoding.Unicode.GetBytes(VerboseUtf8);
+        string text = WslListParser.DecodeListOutput(raw);
+        Assert.Contains(WslListParser.ParseVerboseList(text), d => d.Name == "Debian");
+    }
+
+    [Fact]
+    public void DecodeListOutputHandlesUtf8()
+    {
+        byte[] raw = System.Text.Encoding.UTF8.GetBytes(VerboseUtf8);
+        string text = WslListParser.DecodeListOutput(raw);
+        Assert.Equal(5, WslListParser.ParseVerboseList(text).Count);
     }
 }

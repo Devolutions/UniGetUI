@@ -110,6 +110,7 @@ public static partial class Settings
         // instead of using local UAC elevation. Change default here when ready for production.
         UseAgentBroker,
         RemoteHosts,
+        DisabledWslDistros,
 
         Test1,
         Test2,
@@ -229,6 +230,7 @@ public static partial class Settings
             K.DisableAutoSoftwareRenderingOnGpuLessHosts => "DisableAutoSoftwareRenderingOnGpuLessHosts",
             K.UseAgentBroker => "UseAgentBroker",
             K.RemoteHosts => "RemoteHosts",
+            K.DisabledWslDistros => "DisabledWslDistros",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

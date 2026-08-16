@@ -454,7 +454,7 @@
   "Use a custom icon and screenshot database URL": "Использовать пользовательский значок и URL-адрес базы данных снимков экрана",
   "Enable background CPU Usage optimizations (see Pull Request #3278)": "Включить фоновую оптимизацию использования процессора",
   "Perform integrity checks at startup": "Выполнять проверку целостности при запуске.",
-  "When batch installing packages from a bundle, install also packages that are already installed": "При групповой установке пакетов из бандла также установить пакеты, которые уже установлены",
+  "When batch installing packages from a bundle, install also packages that are already installed": "При пакетной установке пакетов из пакета, установить также пакеты, которые уже установлены",
   "Experimental settings and developer options": "Экспериментальные настройки и опции разработчика",
   "Show UniGetUI's version and build number on the titlebar.": "Показать версию UniGetUI на панели заголовка",
   "Language": "Язык",

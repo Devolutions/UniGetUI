@@ -111,7 +111,7 @@ internal static partial class MacOsNotificationBridge
                 message = CoreTools.Translate("{0} packages can be updated", upgradable.Count);
             }
             DeliverNotification(title, message, MainWindow.RuntimeNotificationLevel.Success,
-                launchAction: NotificationArguments.ShowOnUpdatesTab);
+                inAppLaunchAction: NotificationArguments.ShowOnUpdatesTab);
         }
         catch (Exception ex)
         {
@@ -198,13 +198,13 @@ internal static partial class MacOsNotificationBridge
         string message,
         MainWindow.RuntimeNotificationLevel level,
         bool allowInAppFallback = true,
-        string? launchAction = null)
+        string? inAppLaunchAction = null)
     {
         if (MainWindow.IsWindowOnScreen)
         {
             if (allowInAppFallback)
                 Dispatcher.UIThread.Post(() =>
-                    MainWindow.Instance?.ShowRuntimeNotification(title, message, level, launchAction));
+                    MainWindow.Instance?.ShowRuntimeNotification(title, message, level, inAppLaunchAction));
             return;
         }
 

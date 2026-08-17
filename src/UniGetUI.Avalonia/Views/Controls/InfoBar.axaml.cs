@@ -1,4 +1,6 @@
 using Avalonia;
+using Avalonia.Automation;
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
@@ -21,6 +23,10 @@ public partial class InfoBar : UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        KeyDown += OnKeyDown;
+        GotFocus += (_, e) =>
+            BodyBorder.Classes.Set("body-focused", _vm?.IsBodyClickable == true && e.Source == this);
+        LostFocus += (_, _) => BodyBorder.Classes.Remove("body-focused");
 
         // Play the slide-in entrance only when the OS isn't set to minimize motion.
         if (!MotionPreference.ReducedMotion)
@@ -51,8 +57,19 @@ public partial class InfoBar : UserControl
             ApplyClickable();
     }
 
-    private void ApplyClickable() =>
-        BodyBorder.Classes.Set("clickable", _vm?.IsBodyClickable == true);
+    private void ApplyClickable()
+    {
+        bool clickable = _vm?.IsBodyClickable == true;
+        BodyBorder.Classes.Set("clickable", clickable);
+        Focusable = clickable;
+
+        var controlType = clickable ? (AutomationControlType?)AutomationControlType.Button : null;
+        AutomationProperties.SetControlTypeOverride(this, controlType);
+        AutomationProperties.SetControlTypeOverride(BodyBorder, controlType);
+
+        if (!clickable)
+            BodyBorder.Classes.Remove("body-focused");
+    }
 
     private void Body_Tapped(object? sender, TappedEventArgs e)
     {
@@ -64,6 +81,20 @@ public partial class InfoBar : UserControl
 
         if (command.CanExecute(null))
             command.Execute(null);
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_vm?.BodyCommand is not { } command)
+            return;
+
+        if (e.Source != this) return;
+        if (e.Key is not (Key.Enter or Key.Space)) return;
+        if (e.KeyModifiers is not KeyModifiers.None) return;
+
+        if (command.CanExecute(null))
+            command.Execute(null);
+        e.Handled = true;
     }
 
     private void ApplySeverity(InfoBarSeverity severity)

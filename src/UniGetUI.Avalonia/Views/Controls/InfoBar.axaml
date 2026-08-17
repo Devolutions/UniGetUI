@@ -26,6 +26,10 @@
         <Style Selector="Border#BodyBorder.clickable">
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
+        <Style Selector="Border#BodyBorder.body-focused">
+            <Setter Property="BorderBrush"     Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+        </Style>
         <!-- Toast entrance: slide in from the right + fade. Gated on the .animate-in class
              (added in code-behind only when motion is allowed). Animate TranslateTransform.X,
              not RenderTransform (the latter has no Avalonia animator). -->

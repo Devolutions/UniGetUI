@@ -12,12 +12,13 @@ public sealed partial class Administrator : UserControl, ISettingsPage
     public string ShortTitle => CoreTools.Translate("Administrator rights and other dangerous settings");
 
     public event EventHandler? RestartRequired;
-    public event EventHandler<Type>? NavigationRequested { add { } remove { } }
+    public event EventHandler<Type>? NavigationRequested;
 
     public Administrator()
     {
         DataContext = new AdministratorViewModel();
         InitializeComponent();
         VM.RestartRequired += (s, e) => RestartRequired?.Invoke(s, e);
+        VM.NavigationRequested += (s, e) => NavigationRequested?.Invoke(s, e);
     }
 }

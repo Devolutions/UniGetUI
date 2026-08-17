@@ -90,6 +90,15 @@
                                        Text="{t:Translate Delegate package operations to the Devolutions Agent broker}"
                                        WarningText="{t:Translate Text='When enabled, install, update and uninstall operations for supported package managers will be performed by the Devolutions Agent service instead of requesting UAC elevation. Operations will fail unless the agent is installed and running.'}"
                                        CornerRadius="8"/>
+
+                <UserControl Height="16"/>
+
+                <settings:SettingsPageButton x:Name="AgentPolicyInspectorCard"
+                                            Icon="ClipboardList"
+                                            Text="{t:Translate Inspect active package broker policy}"
+                                            UnderText="{t:Translate Check Devolutions Agent reachability and review the policy currently enforced for package operations.}"
+                                            Command="{Binding NavigateToAgentPolicyInspectorCommand}"
+                                            CornerRadius="8"/>
             </StackPanel>
 
             <settings:TranslatedTextBlock Text="Restrictions on package operations"

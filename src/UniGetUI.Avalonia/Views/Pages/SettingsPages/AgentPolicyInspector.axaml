@@ -1,0 +1,172 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.AgentPolicyInspector"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:AgentPolicyInspectorViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Border.policy-section">
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="Margin" Value="40,0"/>
+        </Style>
+        <Style Selector="TextBlock.field-label">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+    </UserControl.Styles>
+
+    <UserControl.DataTemplates>
+        <DataTemplate DataType="vm:PolicyDetailRow" x:DataType="vm:PolicyDetailRow">
+            <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                <TextBlock Classes="field-label" Text="{Binding Label}"/>
+                <SelectableTextBlock Grid.Column="1"
+                                     Text="{Binding Value}"
+                                     TextWrapping="Wrap"
+                                     automation:AutomationProperties.Name="{Binding AutomationName}"/>
+            </Grid>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical" Margin="0,8,0,24">
+            <Grid ColumnDefinitions="*,Auto" Margin="40,0,40,8">
+                <TextBlock Text="{t:Translate Active package broker policy}"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           automation:AutomationProperties.HeadingLevel="1"/>
+                <Button Grid.Column="1"
+                        Command="{Binding RefreshCommand}"
+                        IsEnabled="{Binding !IsLoading}"
+                        Content="{t:Translate Refresh}"
+                        automation:AutomationProperties.Name="{t:Translate Refresh active policy}"/>
+            </Grid>
+
+            <ProgressBar IsIndeterminate="{Binding IsLoading}"
+                         IsVisible="{Binding IsLoading}"
+                         Margin="40,0,40,8"
+                         automation:AutomationProperties.Name="{t:Translate Loading active package broker policy}"/>
+
+            <controls:InfoBar DataContext="{Binding Status}" Margin="40,0"/>
+
+            <StackPanel IsVisible="{Binding HasPolicy}">
+                <TextBlock Text="{t:Translate Policy metadata}"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Margin="44,32,4,8"
+                           automation:AutomationProperties.HeadingLevel="2"/>
+                <Border Classes="settings-card policy-section">
+                    <ItemsControl ItemsSource="{Binding MetadataRows}"/>
+                </Border>
+
+                <TextBlock Text="{t:Translate Enforcement}"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Margin="44,32,4,8"
+                           automation:AutomationProperties.HeadingLevel="2"/>
+                <Border Classes="settings-card policy-section">
+                    <ItemsControl ItemsSource="{Binding EnforcementRows}"/>
+                </Border>
+
+                <TextBlock Text="{t:Translate Rules}"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Margin="44,32,4,8"
+                           automation:AutomationProperties.HeadingLevel="2"/>
+                <Border Classes="settings-card policy-section" IsVisible="{Binding HasNoRules}">
+                    <TextBlock Text="{t:Translate The active policy contains no rules.}"
+                               TextWrapping="Wrap"/>
+                </Border>
+                <ItemsControl ItemsSource="{Binding Rules}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PolicyRuleViewModel">
+                            <Expander Margin="40,0,40,8"
+                                      HorizontalAlignment="Stretch"
+                                      HorizontalContentAlignment="Stretch"
+                                      automation:AutomationProperties.Name="{Binding AutomationName}">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <TextBlock Text="{Binding AutomationName}"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Decision}"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Expander.Header>
+                                <StackPanel Margin="12,8,4,12">
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                                        <TextBlock Classes="field-label" Text="{t:Translate Rule ID}"/>
+                                        <SelectableTextBlock Grid.Column="1" Text="{Binding Id}" TextWrapping="Wrap"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                                        <TextBlock Classes="field-label" Text="{t:Translate Enabled}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Enabled}"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                                        <TextBlock Classes="field-label" Text="{t:Translate Priority}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Priority}"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                                        <TextBlock Classes="field-label" Text="{t:Translate Decision}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Decision}"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                                        <TextBlock Classes="field-label" Text="{t:Translate Reason}"/>
+                                        <SelectableTextBlock Grid.Column="1" Text="{Binding Reason}" TextWrapping="Wrap"/>
+                                    </Grid>
+
+                                    <TextBlock Text="{t:Translate Match criteria}"
+                                               FontWeight="SemiBold"
+                                               FontSize="14"
+                                               Margin="0,16,0,4"
+                                               automation:AutomationProperties.HeadingLevel="3"/>
+                                    <ItemsControl ItemsSource="{Binding MatchRows}"/>
+
+                                    <TextBlock Text="{t:Translate Constraints}"
+                                               FontWeight="SemiBold"
+                                               FontSize="14"
+                                               Margin="0,16,0,4"
+                                               automation:AutomationProperties.HeadingLevel="3"/>
+                                    <ItemsControl ItemsSource="{Binding ConstraintRows}"/>
+                                </StackPanel>
+                            </Expander>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Grid ColumnDefinitions="*,Auto" Margin="44,24,40,8">
+                    <TextBlock Text="{t:Translate Canonical policy JSON}"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               automation:AutomationProperties.HeadingLevel="2"/>
+                    <Button Grid.Column="1"
+                            Command="{Binding CopyRawJsonCommand}"
+                            Content="{t:Translate Copy to clipboard}"
+                            automation:AutomationProperties.Name="{t:Translate Copy canonical policy JSON to clipboard}"/>
+                </Grid>
+                <Border Classes="settings-card policy-section">
+                    <TextBox Text="{Binding RawJson}"
+                             IsReadOnly="True"
+                             AcceptsReturn="True"
+                             TextWrapping="NoWrap"
+                             MinHeight="260"
+                             MaxHeight="520"
+                             FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             automation:AutomationProperties.Name="{t:Translate Canonical policy JSON}"/>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

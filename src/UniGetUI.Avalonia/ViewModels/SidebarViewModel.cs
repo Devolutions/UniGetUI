@@ -12,6 +12,7 @@ public partial class SidebarViewModel : ViewModelBase
 {
     // ─── Badge properties ─────────────────────────────────────────────────────
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdatesBadgeText))]
     private int _updatesBadgeCount;
 
     [ObservableProperty]
@@ -19,6 +20,8 @@ public partial class SidebarViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _bundlesBadgeVisible;
+
+    public string UpdatesBadgeText => UpdatesBadgeCount > 99 ? "99+" : UpdatesBadgeCount.ToString();
 
     // When the count changes, sync the badge visibility
     partial void OnUpdatesBadgeCountChanged(int value) =>

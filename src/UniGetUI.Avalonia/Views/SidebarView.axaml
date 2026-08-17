@@ -74,9 +74,9 @@
                             IsVisible="{Binding UpdatesBadgeVisible}"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Top"
-                            Margin="26,5,0,0">
-                        <TextBlock Text="{Binding UpdatesBadgeCount}"
-                                   FontSize="11"
+                            Margin="26,5,-20,0">
+                        <TextBlock Text="{Binding UpdatesBadgeText}"
+                                   FontSize="9"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                                    HorizontalAlignment="Center"

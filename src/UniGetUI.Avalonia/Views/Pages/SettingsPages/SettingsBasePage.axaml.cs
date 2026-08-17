@@ -126,6 +126,7 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
         if (t == typeof(Experimental)) return new Experimental();
         if (t == typeof(Notifications)) return new Notifications();
         if (t == typeof(Updates)) return new Updates();
+        if (t == typeof(Scheduler)) return new Scheduler();
         if (t == typeof(Operations)) return new Operations();
         if (t == typeof(Administrator)) return new Administrator();
         return null;

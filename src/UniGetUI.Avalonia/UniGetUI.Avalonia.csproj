@@ -269,6 +269,8 @@
       <Compile Include="Infrastructure\TrayService.cs" />
       <Compile Include="Infrastructure\MicaWindowHelper.cs" />
       <Compile Include="Infrastructure\MemoryTrimmer.cs" />
+      <Compile Include="Infrastructure\MaintenanceScheduler.cs" />
+      <Compile Include="Infrastructure\PowerConditions.cs" />
       <Compile Include="Infrastructure\EntrancePageTransition.cs" />
       <Compile Include="Infrastructure\DirectionalSlideTransition.cs" />
       <Compile Include="Infrastructure\MacOsNotificationBridge.cs" />

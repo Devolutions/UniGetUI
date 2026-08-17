@@ -12,7 +12,7 @@ public sealed partial class Backup : UserControl, ISettingsPage, IDisposable
     public string ShortTitle => CoreTools.Translate("Backup and Restore");
 
     public event EventHandler? RestartRequired;
-    public event EventHandler<Type>? NavigationRequested { add { } remove { } }
+    public event EventHandler<Type>? NavigationRequested;
 
     public Backup()
     {
@@ -21,13 +21,17 @@ public sealed partial class Backup : UserControl, ISettingsPage, IDisposable
         InitializeComponent();
 
         _viewModel.RestartRequired += OnRestartRequired;
+        _viewModel.NavigationRequested += OnNavigationRequested;
     }
 
     private void OnRestartRequired(object? sender, EventArgs e) => RestartRequired?.Invoke(sender, e);
 
+    private void OnNavigationRequested(object? sender, Type page) => NavigationRequested?.Invoke(sender, page);
+
     public void Dispose()
     {
         _viewModel.RestartRequired -= OnRestartRequired;
+        _viewModel.NavigationRequested -= OnNavigationRequested;
         _viewModel.Dispose();
     }
 }

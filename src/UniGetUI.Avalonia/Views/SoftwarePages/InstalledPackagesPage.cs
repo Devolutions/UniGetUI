@@ -9,6 +9,7 @@ using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.Core.Tools.Scheduling;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Enums;
@@ -63,9 +64,9 @@ public class InstalledPackagesPage : AbstractPackagesPage
             if (!_hasBackedUp)
             {
                 _hasBackedUp = true;
-                if (Settings.Get(Settings.K.EnablePackageBackup_LOCAL))
+                if (MaintenanceScheduler.ShouldRunAtAppStart(MaintenanceTaskKind.LocalBackup))
                     _ = BackupViewModel.DoLocalBackupStatic();
-                if (Settings.Get(Settings.K.EnablePackageBackup_CLOUD))
+                if (MaintenanceScheduler.ShouldRunAtAppStart(MaintenanceTaskKind.CloudBackup))
                     _ = BackupViewModel.DoCloudBackupStatic();
             }
 

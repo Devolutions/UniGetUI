@@ -12,6 +12,7 @@ public partial class SettingsHomepageViewModel : ViewModelBase
     [RelayCommand] private void NavigateToInterface() => NavigationRequested?.Invoke(this, typeof(Interface_P));
     [RelayCommand] private void NavigateToNotifications() => NavigationRequested?.Invoke(this, typeof(Notifications));
     [RelayCommand] private void NavigateToUpdates() => NavigationRequested?.Invoke(this, typeof(Updates));
+    [RelayCommand] private void NavigateToScheduler() => NavigationRequested?.Invoke(this, typeof(Scheduler));
     [RelayCommand] private void NavigateToOperations() => NavigationRequested?.Invoke(this, typeof(Operations));
     [RelayCommand] private void NavigateToInternet() => NavigationRequested?.Invoke(this, typeof(Internet));
     [RelayCommand] private void NavigateToBackup() => NavigationRequested?.Invoke(this, typeof(Backup));

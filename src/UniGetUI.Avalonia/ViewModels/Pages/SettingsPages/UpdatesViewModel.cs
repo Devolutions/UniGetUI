@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.Tools;
+using UniGetUI.Core.Tools.Scheduling;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
@@ -20,6 +21,13 @@ public partial class UpdatesViewModel : ViewModelBase
 
     [ObservableProperty] private bool _isAutoCheckEnabled;
     [ObservableProperty] private bool _isCustomAgeSelected;
+    [ObservableProperty] private bool _isIntervalSelectionEnabled;
+
+    private readonly bool _isCheckOnAFixedInterval;
+
+    public string? IntervalDescription { get; }
+
+    public string? AutomaticUpdatesDescription { get; }
 
     /// <summary>Items for the minimum update age ComboboxCard, in display/value pairs.</summary>
     public IReadOnlyList<(string Name, string Value)> MinimumAgeItems { get; } =
@@ -53,6 +61,19 @@ public partial class UpdatesViewModel : ViewModelBase
     {
         _isAutoCheckEnabled = !CoreSettings.Get(CoreSettings.K.DisableAutoCheckforUpdates);
         _isCustomAgeSelected = CoreSettings.GetValue(CoreSettings.K.MinimumUpdateAge) == "custom";
+
+        var checkSchedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates);
+        var installSchedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
+
+        _isCheckOnAFixedInterval = checkSchedule.Frequency is ScheduleFrequency.Interval;
+        _isIntervalSelectionEnabled = _isAutoCheckEnabled && _isCheckOnAFixedInterval;
+
+        IntervalDescription = _isCheckOnAFixedInterval
+            ? null
+            : CoreTools.Translate("Update checks happen on the schedule set on the Scheduled maintenance page");
+        AutomaticUpdatesDescription = installSchedule.Frequency is ScheduleFrequency.AfterEveryUpdateCheck
+            ? null
+            : CoreTools.Translate("Updates are installed on the schedule set on the Scheduled maintenance page");
     }
 
     public Control BuildReleaseDateCompatTable()
@@ -137,10 +158,14 @@ public partial class UpdatesViewModel : ViewModelBase
     private void UpdateAutoCheckEnabled()
     {
         IsAutoCheckEnabled = !CoreSettings.Get(CoreSettings.K.DisableAutoCheckforUpdates);
+        IsIntervalSelectionEnabled = IsAutoCheckEnabled && _isCheckOnAFixedInterval;
     }
 
     [RelayCommand]
     private void ShowRestartRequired() => RestartRequired?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void NavigateToScheduler() => NavigationRequested?.Invoke(this, typeof(Scheduler));
 
     [RelayCommand]
     private void NavigateToOperations() => NavigationRequested?.Invoke(this, typeof(Operations));

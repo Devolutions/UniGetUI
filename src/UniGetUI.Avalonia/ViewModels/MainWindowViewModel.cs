@@ -457,6 +457,8 @@ public partial class MainWindowViewModel : ViewModelBase
             // Notifications and auto-update logic are handled by SoftwareUpdatesPage.WhenPackagesLoaded
         }
 
+        MaintenanceScheduler.Start();
+
         WindowsAppNotificationBridge.NotificationActivated += action =>
             Dispatcher.UIThread.Post(() => HandleNotificationActivation(action));
 

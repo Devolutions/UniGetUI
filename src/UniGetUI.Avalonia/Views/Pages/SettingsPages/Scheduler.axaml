@@ -1,0 +1,197 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.Scheduler"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:SchedulerViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical">
+
+            <settings:TranslatedTextBlock Text="Scheduled maintenance"
+                                          FontSize="14"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <settings:SettingsCard CornerRadius="8"
+                                   Header="{t:Translate Text='Choose when UniGetUI should run each automated maintenance task.'}"
+                                   Description="{t:Translate Text='Scheduled tasks run while UniGetUI is running, including when it sits on the notification area. A task whose time was missed runs on the next launch when the corresponding option is enabled.'}"/>
+
+            <Border Height="16"/>
+
+            <ItemsControl ItemsSource="{Binding Tasks}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Vertical" Spacing="8"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ScheduledTaskViewModel">
+                        <Border Classes="settings-card"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16,12">
+                            <StackPanel Orientation="Vertical">
+
+                                <Grid ColumnDefinitions="*,Auto,Auto" MinHeight="44">
+                                    <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}"
+                                                   FontSize="14"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding TaskDescription}"
+                                                   FontSize="12"
+                                                   Opacity="0.7"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding SummaryText}"
+                                                   FontSize="12"
+                                                   IsVisible="{Binding IsEnabled}"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding StateLabel}"
+                                               VerticalAlignment="Center"
+                                               Margin="16,0,8,0"
+                                               automation:AutomationProperties.AccessibilityView="Raw"/>
+
+                                    <ToggleSwitch Grid.Column="2"
+                                                  IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                  OnContent="{x:Null}"
+                                                  OffContent="{x:Null}"
+                                                  VerticalAlignment="Center"
+                                                  automation:AutomationProperties.Name="{Binding Title}"/>
+                                </Grid>
+
+                                <StackPanel Orientation="Vertical"
+                                            Spacing="8"
+                                            Margin="0,12,0,0"
+                                            IsVisible="{Binding IsEnabled}">
+
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{t:Translate Repeat:}"
+                                                   Width="130"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox MinWidth="240"
+                                                  ItemsSource="{Binding FrequencyOptions}"
+                                                  SelectedIndex="{Binding FrequencyIndex, Mode=TwoWay}"
+                                                  automation:AutomationProperties.Name="{t:Translate Repeat:}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="8"
+                                                IsVisible="{Binding IsIntervalVisible}">
+                                        <TextBlock Text="{t:Translate Every:}"
+                                                   Width="130"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox MinWidth="240"
+                                                  ItemsSource="{Binding IntervalOptions}"
+                                                  SelectedIndex="{Binding IntervalIndex, Mode=TwoWay}"
+                                                  automation:AutomationProperties.Name="{t:Translate Every:}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="8"
+                                                IsVisible="{Binding IsDaySelectorVisible}">
+                                        <TextBlock Text="{t:Translate Days:}"
+                                                   Width="130"
+                                                   VerticalAlignment="Center"/>
+                                        <ItemsControl ItemsSource="{Binding Days}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:DayToggleViewModel">
+                                                    <ToggleButton MinWidth="48"
+                                                                  Content="{Binding Label}"
+                                                                  IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                                  automation:AutomationProperties.Name="{Binding Label}"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="8"
+                                                IsVisible="{Binding IsTimeVisible}">
+                                        <TextBlock Text="{t:Translate Start time:}"
+                                                   Width="130"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox MinWidth="100"
+                                                  ItemsSource="{Binding HourOptions}"
+                                                  SelectedIndex="{Binding HourIndex, Mode=TwoWay}"
+                                                  automation:AutomationProperties.Name="{t:Translate Hour}"/>
+                                        <TextBlock Text=":" VerticalAlignment="Center"/>
+                                        <ComboBox MinWidth="100"
+                                                  ItemsSource="{Binding MinuteOptions}"
+                                                  SelectedIndex="{Binding MinuteIndex, Mode=TwoWay}"
+                                                  automation:AutomationProperties.Name="{t:Translate Minute}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="8"
+                                                IsVisible="{Binding IsTimeVisible}">
+                                        <TextBlock Text="{t:Translate Time window:}"
+                                                   Width="130"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox MinWidth="240"
+                                                  ItemsSource="{Binding WindowOptions}"
+                                                  SelectedIndex="{Binding WindowIndex, Mode=TwoWay}"
+                                                  automation:AutomationProperties.Name="{t:Translate Time window:}"/>
+                                    </StackPanel>
+
+                                    <CheckBox IsVisible="{Binding IsTimeVisible}"
+                                              IsChecked="{Binding RunMissed, Mode=TwoWay}"
+                                              Content="{t:Translate Text='Run the task on the next launch when its scheduled time was missed'}"/>
+
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding StatusText}"
+                                                   FontSize="12"
+                                                   Opacity="0.7"
+                                                   VerticalAlignment="Center"
+                                                   TextWrapping="Wrap"/>
+                                        <Button Grid.Column="1"
+                                                Classes="secondary-action"
+                                                Content="{t:Translate Run now}"
+                                                Command="{Binding RunNowCommand}"
+                                                automation:AutomationProperties.Name="{t:Translate Run now}"/>
+                                    </Grid>
+
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <settings:TranslatedTextBlock Text="Related settings"
+                                          FontSize="14"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <settings:SettingsCard BorderThickness="1,1,1,0"
+                                   CornerRadius="8,8,0,0"
+                                   IsClickEnabled="True"
+                                   Command="{Binding NavigateToUpdatesCommand}"
+                                   Header="{t:Translate Package update preferences}"
+                                   Description="{t:Translate Text='Battery and metered connection restrictions, minimum update age, etc.'}"/>
+
+            <settings:SettingsCard CornerRadius="0,0,8,8"
+                                   IsClickEnabled="True"
+                                   Command="{Binding NavigateToBackupCommand}"
+                                   Header="{t:Translate Package backup}"
+                                   Description="{t:Translate Text='Backup destination, file name and cloud backup account.'}"/>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

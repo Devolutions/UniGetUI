@@ -28,10 +28,11 @@
             <settings:ComboboxCard x:Name="UpdatesCheckIntervalSelector"
                                    SettingName="UpdatesCheckInterval"
                                    Text="{t:Translate Check for updates every:}"
+                                   Description="{Binding IntervalDescription}"
                                    ValueChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    BorderThickness="1,0"
                                    CornerRadius="0,0,8,8"
-                                   IsEnabled="{Binding IsAutoCheckEnabled}"/>
+                                   IsEnabled="{Binding IsIntervalSelectionEnabled}"/>
 
             <settings:TranslatedTextBlock Text="Automatic updates"
                                           FontSize="14"
@@ -42,6 +43,7 @@
             <settings:CheckboxCard x:Name="UpdatesAutomaticCard"
                                    SettingName="AutomaticallyUpdatePackages"
                                    Text="{t:Translate Install available updates automatically}"
+                                   Description="{Binding AutomaticUpdatesDescription}"
                                    CornerRadius="8,8,0,0"
                                    IsEnabled="{Binding IsAutoCheckEnabled}"/>
 
@@ -106,6 +108,13 @@
 
             <settings:SettingsCard BorderThickness="1,1,1,0"
                                    CornerRadius="8,8,0,0"
+                                   IsClickEnabled="True"
+                                   Command="{Binding NavigateToSchedulerCommand}"
+                                   Header="{t:Translate Scheduled maintenance}"
+                                   Description="{t:Translate Text='Choose the days and hours when updates are checked and installed.'}"/>
+
+            <settings:SettingsCard BorderThickness="1,0,1,0"
+                                   CornerRadius="0"
                                    IsClickEnabled="True"
                                    Command="{Binding NavigateToOperationsCommand}"
                                    Header="{t:Translate Package operation preferences}"

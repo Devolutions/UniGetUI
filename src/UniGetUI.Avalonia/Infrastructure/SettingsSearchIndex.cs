@@ -79,6 +79,13 @@ public static class SettingsSearchIndex
         new("Warn me when the installer URL host changes between the installed version and the new version (WinGet only)", ["installer host", "url host"], typeof(Updates), "InstallerHostWarningCard"),
         new("Package update preferences", ["updates"], typeof(Updates), null),
 
+        // ── Scheduler ────────────────────────────────────────────────────────
+        new("Scheduled maintenance", ["scheduler", "schedule", "time window", "maintenance window", "days", "hours", "at night"], typeof(Scheduler), null),
+        new("Check for package updates", ["schedule update check", "check daily", "check weekly"], typeof(Scheduler), null),
+        new("Install available updates", ["schedule updates", "install at night", "install weekly", "maintenance window"], typeof(Scheduler), null),
+        new("Local package backup", ["schedule local backup", "backup daily"], typeof(Scheduler), null),
+        new("Cloud package backup", ["schedule cloud backup"], typeof(Scheduler), null),
+
         // ── Operations ───────────────────────────────────────────────────────
         new("Choose how many operations should be performed in parallel", ["parallel", "concurrency"], typeof(Operations), "ParallelOperationCount"),
         new("Clear successful operations from the operation list after a 5 second delay", ["clear successful", "maintain installs"], typeof(Operations), "ClearSuccessfulOpsCard"),
@@ -259,6 +266,7 @@ public static class SettingsSearchIndex
         nameof(Interface_P) => "User interface preferences",
         nameof(Notifications) => "Notification preferences",
         nameof(Updates) => "Package update preferences",
+        nameof(Scheduler) => "Scheduled maintenance",
         nameof(Operations) => "Package operation preferences",
         nameof(Internet) => "Internet connection settings",
         nameof(Backup) => "Package backup",

@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.Pages;
+using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
@@ -20,6 +21,7 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 public partial class BackupViewModel : ViewModelBase, IDisposable
 {
     public event EventHandler? RestartRequired;
+    public event EventHandler<Type>? NavigationRequested;
 
     public IReadOnlyList<string> InfoLines { get; } =
     [
@@ -73,6 +75,9 @@ public partial class BackupViewModel : ViewModelBase, IDisposable
     }
 
     /* ─────────────── Local backup ─────────────── */
+
+    [RelayCommand]
+    private void NavigateToScheduler() => NavigationRequested?.Invoke(this, typeof(Scheduler));
 
     [RelayCommand]
     private void EnableLocalBackupChanged()

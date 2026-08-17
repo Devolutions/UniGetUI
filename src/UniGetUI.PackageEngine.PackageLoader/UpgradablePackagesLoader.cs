@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Core.Tools.Scheduling;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 
@@ -114,37 +115,36 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         protected void StartAutoCheckTimeout()
         {
-            if (!Settings.Get(Settings.K.DisableAutoCheckforUpdates))
+            var schedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates);
+
+            if (UpdatesTimer is not null)
             {
-                long waitTime = 3600;
-                try
-                {
-                    waitTime = long.Parse(Settings.GetValue(Settings.K.UpdatesCheckInterval));
-                    Logger.Debug(
-                        $"Starting check for updates wait interval with waitTime={waitTime}"
-                    );
-                }
-                catch
-                {
-                    Logger.Debug(
-                        "Invalid value for UpdatesCheckInterval, using default value of 3600 seconds"
-                    );
-                }
-
-                if (UpdatesTimer is not null)
-                {
-                    UpdatesTimer.Stop();
-                    UpdatesTimer.Dispose();
-                }
-
-                UpdatesTimer = new System.Timers.Timer(waitTime * 1000)
-                {
-                    Enabled = false,
-                    AutoReset = false,
-                };
-                UpdatesTimer.Elapsed += (s, e) => _ = ReloadPackages();
-                UpdatesTimer.Start();
+                UpdatesTimer.Stop();
+                UpdatesTimer.Dispose();
+                UpdatesTimer = null;
             }
+
+            if (!schedule.Enabled)
+                return;
+
+            if (schedule.Frequency is not ScheduleFrequency.Interval)
+            {
+                Logger.Debug(
+                    $"Update checks are driven by the maintenance scheduler (frequency={schedule.Frequency})"
+                );
+                return;
+            }
+
+            long waitTime = schedule.IntervalSeconds;
+            Logger.Debug($"Starting check for updates wait interval with waitTime={waitTime}");
+
+            UpdatesTimer = new System.Timers.Timer(waitTime * 1000)
+            {
+                Enabled = false,
+                AutoReset = false,
+            };
+            UpdatesTimer.Elapsed += (s, e) => _ = ReloadPackages();
+            UpdatesTimer.Start();
         }
     }
 }

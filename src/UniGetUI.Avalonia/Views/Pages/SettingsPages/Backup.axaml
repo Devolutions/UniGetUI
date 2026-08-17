@@ -192,6 +192,19 @@
                                    BorderThickness="1,0,1,1"
                                    IsEnabled="{Binding IsLocalBackupEnabled}"/>
 
+            <settings:TranslatedTextBlock Text="Related settings"
+                                          FontSize="14"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <settings:SettingsCard x:Name="BackupScheduleCard"
+                                   CornerRadius="8"
+                                   IsClickEnabled="True"
+                                   Command="{Binding NavigateToSchedulerCommand}"
+                                   Header="{t:Translate Scheduled maintenance}"
+                                   Description="{t:Translate Text='Choose the days and hours when the backups are performed.'}"/>
+
         </StackPanel>
     </ScrollViewer>
 

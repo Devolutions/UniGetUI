@@ -52,11 +52,17 @@
                 UnderText="{t:Translate Text='Change how UniGetUI checks and installs available updates for your packages'}"
                 Command="{Binding NavigateToOperationsCommand}"/>
             <settings:SettingsPageButton BorderThickness="1,0,1,1"
-                CornerRadius="0,0,8,8"
+                CornerRadius="0"
                 Icon="Update"
                 Text="{t:Translate Package update preferences}"
                 UnderText="{t:Translate Text='Update check frequency, automatically install updates, etc.'}"
                 Command="{Binding NavigateToUpdatesCommand}"/>
+            <settings:SettingsPageButton BorderThickness="1,0,1,1"
+                CornerRadius="0,0,8,8"
+                Icon="SandClock"
+                Text="{t:Translate Scheduled maintenance}"
+                UnderText="{t:Translate Text='Choose the days and hours when updates are checked and installed, and when backups are made'}"
+                Command="{Binding NavigateToSchedulerCommand}"/>
 
             <Border Height="16"/>
 

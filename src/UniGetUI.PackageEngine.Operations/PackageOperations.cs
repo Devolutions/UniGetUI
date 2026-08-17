@@ -16,7 +16,6 @@ using UniGetUI.PackageOperations;
 using BrokerClient = Devolutions.Now.Policy.Client.BrokerClient;
 using BrokerClientErrorKind = Devolutions.Now.Policy.Client.BrokerClientErrorKind;
 using BrokerClientException = Devolutions.Now.Policy.Client.BrokerClientException;
-using BrokerClientOptions = Devolutions.Now.Policy.Client.BrokerClientOptions;
 using BrokerDecision = Devolutions.Now.Policy.Api.Decision;
 using BrokerElevation = Devolutions.Now.Policy.Api.Elevation;
 using BrokerEventFrame = Devolutions.Now.Policy.Api.EventFrame;
@@ -802,23 +801,9 @@ namespace UniGetUI.PackageEngine.Operations
         }
 
         private static BrokerClient CreateBrokerClient(bool requestedElevation) =>
-            new(
-                new BrokerClientOptions
-                {
-                    Transport = BrokerTransportFactory?.Invoke(),
-                    RequestedElevation = requestedElevation
-                        ? BrokerElevation.Elevated
-                        : BrokerElevation.Standard,
-                    EffectiveUser = GetEffectiveUser(),
-                    ClientExecutablePath = Environment.ProcessPath,
-                    ClientVersion =
-                        System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString()
-                        ?? "0.0.0",
-                }
-            )
-            {
-                Trace = message => Logger.Info($"[AgentBroker] {message}"),
-            };
+            BrokerClientFactory.Create(
+                requestedElevation ? BrokerElevation.Elevated : BrokerElevation.Standard,
+                BrokerTransportFactory?.Invoke());
 
         private static string GetEffectiveUser()
         {

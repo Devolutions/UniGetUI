@@ -36,6 +36,8 @@
         <ProjectReference Include="..\UniGetUI.Core.SecureSettings\UniGetUI.Core.SecureSettings.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Settings\UniGetUI.Core.Settings.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Tools\UniGetUI.Core.Tools.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.AgentBroker\UniGetUI.PackageEngine.AgentBroker.csproj" />
+        <ProjectReference Include="..\UniGetUI.Avalonia\UniGetUI.Avalonia.csproj" />
     </ItemGroup>
 
     <ItemGroup>

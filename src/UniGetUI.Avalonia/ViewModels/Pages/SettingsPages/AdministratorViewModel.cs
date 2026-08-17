@@ -4,12 +4,14 @@ using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
+using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
 public partial class AdministratorViewModel : ViewModelBase
 {
     public event EventHandler? RestartRequired;
+    public event EventHandler<Type>? NavigationRequested;
 
     // ── Warning banner strings ────────────────────────────────────────────
     public string WarningTitle { get; } = CoreTools.Translate("Warning") + "!";
@@ -67,4 +69,8 @@ public partial class AdministratorViewModel : ViewModelBase
     {
         IsPrePostCommandsEnabled = SecureSettings.Get(SecureSettings.K.AllowPrePostOpCommand);
     }
+
+    [RelayCommand]
+    private void NavigateToAgentPolicyInspector() =>
+        NavigationRequested?.Invoke(this, typeof(AgentPolicyInspector));
 }

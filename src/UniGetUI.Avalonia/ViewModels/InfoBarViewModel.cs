@@ -16,6 +16,12 @@ public partial class InfoBarViewModel : ObservableObject
     [ObservableProperty] private string _actionButtonText = "";
     [ObservableProperty] private ICommand? _actionButtonCommand;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsBodyClickable))]
+    private ICommand? _bodyCommand;
+
+    public bool IsBodyClickable => BodyCommand is not null;
+
     public Action? OnClosed { get; set; }
 
     partial void OnIsOpenChanged(bool value)

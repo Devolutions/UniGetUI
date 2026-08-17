@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 
@@ -38,12 +40,30 @@ public partial class InfoBar : UserControl
         _vm?.PropertyChanged += OnViewModelPropertyChanged;
         if (_vm is not null)
             ApplySeverity(_vm.Severity);
+        ApplyClickable();
     }
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(InfoBarViewModel.Severity) && _vm is not null)
             ApplySeverity(_vm.Severity);
+        else if (e.PropertyName == nameof(InfoBarViewModel.IsBodyClickable))
+            ApplyClickable();
+    }
+
+    private void ApplyClickable() =>
+        BodyBorder.Classes.Set("clickable", _vm?.IsBodyClickable == true);
+
+    private void Body_Tapped(object? sender, TappedEventArgs e)
+    {
+        if (_vm?.BodyCommand is not { } command)
+            return;
+
+        if (e.Source is Visual source && source.FindAncestorOfType<Button>(includeSelf: true) is not null)
+            return;
+
+        if (command.CanExecute(null))
+            command.Execute(null);
     }
 
     private void ApplySeverity(InfoBarSeverity severity)

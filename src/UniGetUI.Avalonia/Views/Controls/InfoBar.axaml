@@ -23,6 +23,9 @@
             <Setter Property="Background"   Value="{DynamicResource StatusInfoBackground}"/>
             <Setter Property="BorderBrush"  Value="{DynamicResource StatusInfoBorderBrush}"/>
         </Style>
+        <Style Selector="Border#BodyBorder.clickable">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
         <!-- Toast entrance: slide in from the right + fade. Gated on the .animate-in class
              (added in code-behind only when motion is allowed). Animate TranslateTransform.X,
              not RenderTransform (the latter has no Avalonia animator). -->
@@ -44,6 +47,7 @@
 
     <Border x:Name="BodyBorder"
             IsVisible="{Binding IsOpen}"
+            Tapped="Body_Tapped"
             BorderThickness="1"
             CornerRadius="6"
             ClipToBounds="True"

@@ -1796,7 +1796,7 @@ public partial class MainWindow : Window
 
     // ─── Public API (legacy compat) ───────────────────────────────────────────
     // Surfaces a fresh, auto-dismissing toast per call (name kept for pre-toast callers).
-    public void ShowBanner(string title, string message, RuntimeNotificationLevel level)
+    public void ShowBanner(string title, string message, RuntimeNotificationLevel level, string? launchAction = null)
     {
         if (level == RuntimeNotificationLevel.Progress) return;
 
@@ -1816,6 +1816,16 @@ public partial class MainWindow : Window
             IsOpen = true,
         };
         toast.OnClosed = () => ViewModel.DismissToast(toast);
+
+        if (launchAction == UniGetUI.Interface.Enums.NotificationArguments.ShowOnUpdatesTab)
+        {
+            toast.BodyCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() =>
+            {
+                ViewModel.NavigateTo(PageType.Updates);
+                ViewModel.DismissToast(toast);
+            });
+        }
+
         ViewModel.ShowToast(toast);
     }
 
@@ -1837,8 +1847,8 @@ public partial class MainWindow : Window
     private void UpdateOnScreenState()
         => _isOnScreen = IsVisible && WindowState != WindowState.Minimized;
 
-    public void ShowRuntimeNotification(string title, string message, RuntimeNotificationLevel level) =>
-        ShowBanner(title, message, level);
+    public void ShowRuntimeNotification(string title, string message, RuntimeNotificationLevel level, string? launchAction = null) =>
+        ShowBanner(title, message, level, launchAction);
 
     // ─── BackgroundAPI integration ────────────────────────────────────────────
     public void ShowFromTray()

@@ -244,19 +244,20 @@ internal static class WindowsAppNotificationBridge
         }
 #endif
 
-        return allowInAppFallback && ShowInAppBanner(title, message, level);
+        return allowInAppFallback && ShowInAppBanner(title, message, level, launchAction);
     }
 
     private static bool ShowInAppBanner(
         string title,
         string message,
-        MainWindow.RuntimeNotificationLevel level)
+        MainWindow.RuntimeNotificationLevel level,
+        string launchAction)
     {
         var mainWindow = MainWindow.Instance;
         if (mainWindow is null)
             return false;
 
-        mainWindow.ShowRuntimeNotification(title, message, level);
+        mainWindow.ShowRuntimeNotification(title, message, level, launchAction);
         return true;
     }
 

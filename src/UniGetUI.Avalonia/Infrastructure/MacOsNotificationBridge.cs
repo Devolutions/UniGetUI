@@ -6,6 +6,7 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageOperations;
 
@@ -109,7 +110,8 @@ internal static partial class MacOsNotificationBridge
                 title = CoreTools.Translate("Updates found!");
                 message = CoreTools.Translate("{0} packages can be updated", upgradable.Count);
             }
-            DeliverNotification(title, message, MainWindow.RuntimeNotificationLevel.Success);
+            DeliverNotification(title, message, MainWindow.RuntimeNotificationLevel.Success,
+                launchAction: NotificationArguments.ShowOnUpdatesTab);
         }
         catch (Exception ex)
         {
@@ -195,13 +197,14 @@ internal static partial class MacOsNotificationBridge
         string title,
         string message,
         MainWindow.RuntimeNotificationLevel level,
-        bool allowInAppFallback = true)
+        bool allowInAppFallback = true,
+        string? launchAction = null)
     {
         if (MainWindow.IsWindowOnScreen)
         {
             if (allowInAppFallback)
                 Dispatcher.UIThread.Post(() =>
-                    MainWindow.Instance?.ShowRuntimeNotification(title, message, level));
+                    MainWindow.Instance?.ShowRuntimeNotification(title, message, level, launchAction));
             return;
         }
 

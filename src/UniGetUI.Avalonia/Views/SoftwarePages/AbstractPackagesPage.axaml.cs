@@ -84,7 +84,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // Reload button added before subclass toolbar items (mirrors WinUI AbstractPackagesPage)
         if (!ViewModel.DisableReload)
         {
-            var reloadBtn = ViewModel.AddToolbarButton("reload", CoreTools.Translate("Reload"),
+            var reloadBtn = ViewModel.AddToolbarButton("reload", ViewModel.ReloadButtonLabel,
                 ViewModel.TriggerReload);
             UpdateReloadButtonTooltip(reloadBtn);
         }

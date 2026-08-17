@@ -34,6 +34,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         PageTitle = CoreTools.Translate("Software Updates"),
         IconName = "update",
         PageRole = OperationType.Update,
+        ReloadButtonLabel = CoreTools.Translate("Check for updates"),
         Loader = UpgradablePackagesLoader.Instance ?? new UpgradablePackagesLoader([]),
         MegaQueryBlockEnabled = false,
         DisableSuggestedResultsRadio = true,

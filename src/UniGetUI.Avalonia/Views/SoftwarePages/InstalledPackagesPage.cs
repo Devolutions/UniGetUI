@@ -42,6 +42,7 @@ public class InstalledPackagesPage : AbstractPackagesPage
         PageTitle = CoreTools.Translate("Installed Packages"),
         IconName = "InstalledPackages",
         PageRole = OperationType.Uninstall,
+        ReloadButtonLabel = CoreTools.Translate("Scan installed"),
         Loader = InstalledPackagesLoader.Instance ?? new InstalledPackagesLoader([]),
         MegaQueryBlockEnabled = false,
         DisableSuggestedResultsRadio = true,

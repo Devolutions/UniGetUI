@@ -30,6 +30,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         PageTitle = CoreTools.Translate("Discover Packages"),
         IconName = "DiscoverPackage",
         PageRole = OperationType.Install,
+        ReloadButtonLabel = CoreTools.Translate("Scan"),
         Loader = DiscoverablePackagesLoader.Instance ?? new DiscoverablePackagesLoader([]),
         MegaQueryBlockEnabled = true,
         DisableSuggestedResultsRadio = false,

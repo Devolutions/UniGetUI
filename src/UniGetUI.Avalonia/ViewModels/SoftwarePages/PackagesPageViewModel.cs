@@ -41,6 +41,7 @@ public enum ReloadReason
 
 public struct PackagesPageData
 {
+    public string ReloadButtonLabel;
     public bool DisableAutomaticPackageLoadOnStart;
     public bool MegaQueryBlockEnabled;
     public bool PackagesAreCheckedByDefault;
@@ -148,6 +149,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     public readonly string NoPackagesText;
     public readonly string NoMatchesText;
     public readonly string SearchBoxPlaceholder;
+    public readonly string ReloadButtonLabel;
     private readonly string _noPackagesSubtitleBase;
     private readonly string _stillLoadingSubtitle;
     private readonly bool _showLastCheckedTime;
@@ -247,6 +249,9 @@ public partial class PackagesPageViewModel : ViewModelBase
         RoleIsUpdateLike = data.PageRole == OperationType.Update;
         NewVersionHeaderVisible = RoleIsUpdateLike;
         ReloadButtonVisible = !DisableReload;
+        ReloadButtonLabel = string.IsNullOrWhiteSpace(data.ReloadButtonLabel)
+            ? CoreTools.Translate("Reload")
+            : data.ReloadButtonLabel;
         SearchBoxPlaceholder = CoreTools.Translate("Search for packages");
 
         AllPackagesChecked = data.PackagesAreCheckedByDefault;

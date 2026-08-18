@@ -9,18 +9,13 @@ public static class MaintenanceScheduleStore
     public const int DefaultCheckIntervalSeconds = 3600;
 
     private static readonly object CacheLock = new();
+    private static readonly object LastRunLock = new();
     private static Dictionary<string, MaintenanceTaskSchedule>? _cachedSchedules;
     private static string _cachedRaw = "";
 
-    public static event EventHandler<MaintenanceTaskKind>? Changed;
-
     public static MaintenanceTaskSchedule Get(MaintenanceTaskKind kind)
     {
-        var stored = ReadAll();
-        MaintenanceTaskSchedule schedule =
-            stored.TryGetValue(MaintenanceTasks.GetId(kind), out var found) && found is not null
-                ? found.Clone()
-                : NewDefault(kind);
+        MaintenanceTaskSchedule schedule = GetStoredCopy(kind) ?? NewDefault(kind);
 
         schedule.Enabled = IsEnabled(kind);
 
@@ -50,11 +45,15 @@ public static class MaintenanceScheduleStore
             );
         }
 
-        var stored = ReadAll();
-        stored[MaintenanceTasks.GetId(kind)] = schedule.Clone();
-        Persist(stored);
-
-        Changed?.Invoke(null, kind);
+        string raw = Settings.GetValue(Settings.K.MaintenanceSchedules);
+        lock (CacheLock)
+        {
+            Dictionary<string, MaintenanceTaskSchedule> updated = new(GetCachedSchedulesLocked(raw))
+            {
+                [MaintenanceTasks.GetId(kind)] = schedule.Clone(),
+            };
+            PersistLocked(updated);
+        }
     }
 
     public static bool IsEnabled(MaintenanceTaskKind kind) => kind switch
@@ -88,11 +87,14 @@ public static class MaintenanceScheduleStore
 
     public static void SetLastRun(MaintenanceTaskKind kind, DateTime runTimeUtc)
     {
-        Settings.SetDictionaryItem(
-            Settings.K.MaintenanceTaskLastRun,
-            MaintenanceTasks.GetId(kind),
-            runTimeUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)
-        );
+        lock (LastRunLock)
+        {
+            Settings.SetDictionaryItem(
+                Settings.K.MaintenanceTaskLastRun,
+                MaintenanceTasks.GetId(kind),
+                runTimeUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)
+            );
+        }
     }
 
     public static MaintenanceTaskSchedule NewDefault(MaintenanceTaskKind kind)
@@ -142,47 +144,51 @@ public static class MaintenanceScheduleStore
             : DefaultCheckIntervalSeconds;
     }
 
-    private static Dictionary<string, MaintenanceTaskSchedule> ReadAll()
+    private static MaintenanceTaskSchedule? GetStoredCopy(MaintenanceTaskKind kind)
     {
         string raw = Settings.GetValue(Settings.K.MaintenanceSchedules);
 
         lock (CacheLock)
         {
-            if (_cachedSchedules is not null && raw == _cachedRaw)
-                return _cachedSchedules;
-
-            Dictionary<string, MaintenanceTaskSchedule> parsed = [];
-            if (!string.IsNullOrWhiteSpace(raw))
-            {
-                try
-                {
-                    parsed = SchedulingJson.DeserializeSchedules(raw) ?? [];
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn("Could not read the stored maintenance schedules, falling back to defaults");
-                    Logger.Warn(ex);
-                }
-            }
-
-            _cachedRaw = raw;
-            _cachedSchedules = parsed;
-            return parsed;
+            return GetCachedSchedulesLocked(raw)
+                .TryGetValue(MaintenanceTasks.GetId(kind), out var found) && found is not null
+                    ? found.Clone()
+                    : null;
         }
     }
 
-    private static void Persist(Dictionary<string, MaintenanceTaskSchedule> schedules)
+    private static Dictionary<string, MaintenanceTaskSchedule> GetCachedSchedulesLocked(string raw)
+    {
+        if (_cachedSchedules is not null && raw == _cachedRaw)
+            return _cachedSchedules;
+
+        Dictionary<string, MaintenanceTaskSchedule> parsed = [];
+        if (!string.IsNullOrWhiteSpace(raw))
+        {
+            try
+            {
+                parsed = SchedulingJson.DeserializeSchedules(raw) ?? [];
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("Could not read the stored maintenance schedules, falling back to defaults");
+                Logger.Warn(ex);
+            }
+        }
+
+        _cachedRaw = raw;
+        _cachedSchedules = parsed;
+        return parsed;
+    }
+
+    private static void PersistLocked(Dictionary<string, MaintenanceTaskSchedule> schedules)
     {
         try
         {
             string raw = SchedulingJson.SerializeSchedules(schedules);
             Settings.SetValue(Settings.K.MaintenanceSchedules, raw);
-
-            lock (CacheLock)
-            {
-                _cachedRaw = raw;
-                _cachedSchedules = schedules;
-            }
+            _cachedRaw = raw;
+            _cachedSchedules = schedules;
         }
         catch (Exception ex)
         {

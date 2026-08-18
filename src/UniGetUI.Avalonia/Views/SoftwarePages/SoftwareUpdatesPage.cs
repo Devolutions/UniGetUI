@@ -388,6 +388,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     {
         try
         {
+            bool shouldAutoInstall = MaintenanceScheduler.ShouldAutoInstallNow();
+
             var upgradable = UpgradablePackagesLoader.Instance.Packages
                 .Where(p => p.Tag is not PackageTag.OnQueue and not PackageTag.BeingProcessed)
                 .ToList();
@@ -409,7 +411,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
                 Logger.Warn("Updates will not be installed automatically because the current internet connection is metered.");
                 ShowAvailableUpdatesNotification(upgradable);
             }
-            else if (MaintenanceScheduler.ShouldAutoInstallNow())
+            else if (shouldAutoInstall)
             {
                 _ = AvaloniaPackageOperationHelper.UpdateAllAsync();
                 ShowUpgradingPackagesNotification(upgradable);

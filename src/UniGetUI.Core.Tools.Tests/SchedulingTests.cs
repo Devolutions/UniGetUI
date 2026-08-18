@@ -135,6 +135,30 @@ public class SchedulingTests
     }
 
     [Fact]
+    public void AWeeklyTaskOnItsOnlyDayRollsForwardAFullWeek()
+    {
+        var schedule = Weekly(DayOfWeek.Monday);
+        var afterTodaysOccurrence = MondayMorning.Date.AddHours(10);
+
+        Assert.Equal(
+            MondayMorning.Date.AddDays(7).AddHours(9),
+            ScheduleEvaluator.GetNextOccurrence(schedule, null, afterTodaysOccurrence)
+        );
+    }
+
+    [Fact]
+    public void AWeeklyTaskOnItsOnlyDayLooksBackAFullWeek()
+    {
+        var schedule = Weekly(DayOfWeek.Monday);
+        var beforeTodaysOccurrence = MondayMorning.Date.AddHours(7);
+
+        Assert.Equal(
+            MondayMorning.Date.AddDays(-7).AddHours(9),
+            ScheduleEvaluator.GetMostRecentOccurrence(schedule, beforeTodaysOccurrence)
+        );
+    }
+
+    [Fact]
     public void NextOccurrenceIsTodayWhenTheStartTimeIsStillAhead()
     {
         Assert.Equal(

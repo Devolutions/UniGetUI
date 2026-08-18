@@ -136,6 +136,52 @@ public class MaintenanceScheduleStoreTests : IDisposable
     }
 
     [Fact]
+    public void ConcurrentReadsAndWritesNeitherThrowNorDropEntries()
+    {
+        var errors = new System.Collections.Concurrent.ConcurrentBag<Exception>();
+
+        for (int round = 0; round < 60; round++)
+        {
+            Settings.SetValue(Settings.K.MaintenanceSchedules, "");
+
+            Parallel.For(0, 64, i =>
+            {
+                try
+                {
+                    if (i % 2 == 0)
+                    {
+                        var kind = MaintenanceTasks.All[(i / 2) % MaintenanceTasks.All.Count];
+                        Save(kind, s => s.StartMinutes = 60 * (i % 24));
+                    }
+                    else
+                    {
+                        foreach (var kind in MaintenanceTasks.All)
+                            _ = MaintenanceScheduleStore.Get(kind).StartMinutes;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errors.Add(ex);
+                }
+            });
+        }
+
+        Assert.Empty(errors);
+
+        Save(MaintenanceTaskKind.LocalBackup, s =>
+        {
+            s.Frequency = ScheduleFrequency.Daily;
+            s.StartMinutes = 600;
+        });
+        Save(MaintenanceTaskKind.CloudBackup, s => s.StartMinutes = 300);
+
+        var local = MaintenanceScheduleStore.Get(MaintenanceTaskKind.LocalBackup);
+        Assert.Equal(ScheduleFrequency.Daily, local.Frequency);
+        Assert.Equal(600, local.StartMinutes);
+        Assert.Equal(300, MaintenanceScheduleStore.Get(MaintenanceTaskKind.CloudBackup).StartMinutes);
+    }
+
+    [Fact]
     public void TimingFieldsSurviveARoundTripThroughTheSettingsFile()
     {
         Save(MaintenanceTaskKind.InstallUpdates, s =>

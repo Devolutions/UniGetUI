@@ -14,7 +14,7 @@ internal static class MaintenanceScheduler
 
     private static DispatcherTimer? _timer;
     private static bool _started;
-    private static bool _updatesWereLoaded;
+    private static volatile bool _updatesWereLoaded;
     private static DateTime? _pendingInstallSince;
 
     public static event EventHandler<MaintenanceTaskKind>? TaskFinished;

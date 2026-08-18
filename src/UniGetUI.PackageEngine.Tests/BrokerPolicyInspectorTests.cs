@@ -1,12 +1,12 @@
+using System.Text.Json.Nodes;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Client;
 using Devolutions.Now.Policy.Model;
-using System.Text.Json.Nodes;
 using UniGetUI.PackageEngine.AgentBroker;
+using ApiElevation = Devolutions.Now.Policy.Api.Elevation;
 using ApiTransport = Devolutions.Now.Policy.Api.Transport;
 using PolicyDecision = Devolutions.Now.Policy.Model.Decision;
 using PolicyOperation = Devolutions.Now.Policy.Model.Operation;
-using ApiElevation = Devolutions.Now.Policy.Api.Elevation;
 
 namespace UniGetUI.PackageEngine.Tests;
 

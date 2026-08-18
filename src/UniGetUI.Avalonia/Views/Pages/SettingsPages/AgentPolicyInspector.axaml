@@ -38,11 +38,6 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Vertical" Margin="0,8,0,24">
             <Grid ColumnDefinitions="*,Auto" Margin="40,0,40,8">
-                <TextBlock Text="{t:Translate Active package broker policy}"
-                           FontSize="20"
-                           FontWeight="SemiBold"
-                           VerticalAlignment="Center"
-                           automation:AutomationProperties.HeadingLevel="1"/>
                 <Button Grid.Column="1"
                         Command="{Binding RefreshCommand}"
                         IsEnabled="{Binding !IsLoading}"

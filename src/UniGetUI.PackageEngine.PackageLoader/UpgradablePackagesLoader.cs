@@ -95,6 +95,9 @@ namespace UniGetUI.PackageEngine.PackageLoader
             return true;
         }
 
+        protected override bool DidManagerReportFailure(IPackageManager manager)
+            => manager.LastUpdatesListingFailed;
+
         protected override IReadOnlyList<IPackage> LoadPackagesFromManager(IPackageManager manager)
         {
             return manager.GetAvailableUpdates();

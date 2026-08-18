@@ -37,6 +37,8 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         public bool LastLoadReportedFailures { get; private set; }
 
+        public DateTime? LastLoadFinishedUtc { get; private set; }
+
         public bool Any()
         {
             return !PackageReference.IsEmpty;
@@ -99,6 +101,31 @@ namespace UniGetUI.PackageEngine.PackageLoader
         /// <summary>
         /// Stops the current loading process
         /// </summary>
+        public Task WaitForCurrentLoadAsync()
+        {
+            if (!IsLoading)
+                return Task.CompletedTask;
+
+            var completion = new TaskCompletionSource();
+            EventHandler<EventArgs>? handler = null;
+            handler = (_, _) =>
+            {
+                FinishedLoading -= handler;
+                completion.TrySetResult();
+            };
+            FinishedLoading += handler;
+
+            if (!IsLoading)
+            {
+                FinishedLoading -= handler;
+                completion.TrySetResult();
+            }
+
+            return completion.Task;
+        }
+
+        protected virtual bool DidManagerReportFailure(IPackageManager manager) => false;
+
         public void StopLoading(bool emitFinishSignal = true)
         {
             LoadOperationIdentifier = -1;
@@ -215,8 +242,15 @@ namespace UniGetUI.PackageEngine.PackageLoader
                     }
                 }
 
+                foreach (IPackageManager manager in Managers)
+                {
+                    if (manager.IsReady() && DidManagerReportFailure(manager))
+                        LastLoadReportedFailures = true;
+                }
+
                 if (LoadOperationIdentifier == current_identifier)
                 {
+                    LastLoadFinishedUtc = DateTime.UtcNow;
                     InvokeFinishedLoadingEvent();
                     IsLoaded = true;
                 }

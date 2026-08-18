@@ -12,6 +12,7 @@ internal static class MaintenanceScheduler
     private static readonly TimeSpan PendingInstallLifetime = TimeSpan.FromHours(2);
     private static readonly TimeSpan RetryDelay = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan TaskTimeout = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan InstalledListMaxAge = TimeSpan.FromMinutes(15);
     private const int MaxRetriesPerOccurrence = 2;
 
     private static readonly HashSet<MaintenanceTaskKind> RunningTasks = [];
@@ -35,6 +36,7 @@ internal static class MaintenanceScheduler
         _started = true;
 
         WatchUpdateLoads();
+        MaintenanceScheduleStore.Changed += (_, kind) => ClearRetries(kind);
 
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TickInterval };
         _timer.Tick += (_, _) => Evaluate();
@@ -49,6 +51,7 @@ internal static class MaintenanceScheduler
         _updatesWereLoaded = true;
 
         WatchUpdateLoads();
+        MaintenanceScheduleStore.Changed += (_, kind) => ClearRetries(kind);
 
         _headlessTimer = new System.Timers.Timer(TickInterval.TotalMilliseconds) { AutoReset = true };
         _headlessTimer.Elapsed += (_, _) => Evaluate();
@@ -56,24 +59,28 @@ internal static class MaintenanceScheduler
         Logger.ImportantInfo("The maintenance scheduler is running headless, only update checks are scheduled");
     }
 
-    public static bool ShouldAutoInstallNow()
+    public static bool IsAutoInstallDue()
     {
+        if (_pendingInstallSince is { } since && DateTime.Now - since > PendingInstallLifetime)
+            _pendingInstallSince = null;
+
         var schedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
         if (!schedule.Enabled)
-            return false;
-
-        if (schedule.Frequency is ScheduleFrequency.AfterEveryUpdateCheck)
-            return true;
-
-        if (_pendingInstallSince is { } since)
         {
             _pendingInstallSince = null;
-            if (DateTime.Now - since <= PendingInstallLifetime)
-                return true;
+            return false;
         }
 
-        return false;
+        if (schedule.Frequency is ScheduleFrequency.AfterEveryUpdateCheck)
+        {
+            _pendingInstallSince = null;
+            return true;
+        }
+
+        return _pendingInstallSince is not null;
     }
+
+    public static void MarkAutoInstallHandled() => _pendingInstallSince = null;
 
     public static bool ShouldRunAtAppStart(MaintenanceTaskKind kind)
     {
@@ -146,13 +153,13 @@ internal static class MaintenanceScheduler
                 break;
 
             case MaintenanceTaskKind.LocalBackup:
-                await EnsureInstalledPackagesAreLoadedAsync();
+                await PrepareInstalledPackagesForBackupAsync();
                 if (!await BackupViewModel.DoLocalBackupStatic())
                     throw new InvalidOperationException("The local backup did not complete, see the log for details");
                 break;
 
             case MaintenanceTaskKind.CloudBackup:
-                await EnsureInstalledPackagesAreLoadedAsync();
+                await PrepareInstalledPackagesForBackupAsync();
                 if (!await BackupViewModel.DoCloudBackupStatic())
                     throw new InvalidOperationException("The cloud backup did not complete, see the log for details");
                 break;
@@ -280,18 +287,33 @@ internal static class MaintenanceScheduler
 
     private static async Task ReloadUpdatesAsync()
     {
-        if (UpgradablePackagesLoader.Instance is not { } loader || loader.IsLoading)
+        if (UpgradablePackagesLoader.Instance is not { } loader)
             return;
 
-        await loader.ReloadPackages();
+        if (loader.IsLoading)
+            await loader.WaitForCurrentLoadAsync();
+        else
+            await loader.ReloadPackages();
 
         if (loader.LastLoadReportedFailures)
             throw new InvalidOperationException("The update check reported failures, see the log for details");
     }
 
-    private static async Task EnsureInstalledPackagesAreLoadedAsync()
+    private static async Task PrepareInstalledPackagesForBackupAsync()
     {
-        if (InstalledPackagesLoader.Instance is { IsLoaded: false } loader)
+        if (InstalledPackagesLoader.Instance is not { } loader)
+            throw new InvalidOperationException("The installed package list is unavailable, see the log for details");
+
+        if (loader.IsLoading)
+            await loader.WaitForCurrentLoadAsync();
+        else if (!loader.IsLoaded || IsInstalledListStale(loader))
             await loader.ReloadPackages();
+
+        if (!loader.Any())
+            throw new InvalidOperationException("The installed package list is empty, refusing to overwrite the previous backup");
     }
+
+    private static bool IsInstalledListStale(InstalledPackagesLoader loader)
+        => loader.LastLoadFinishedUtc is not { } finished
+            || DateTime.UtcNow - finished > InstalledListMaxAge;
 }

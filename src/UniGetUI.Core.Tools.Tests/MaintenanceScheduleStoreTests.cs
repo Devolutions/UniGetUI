@@ -21,6 +21,7 @@ public class MaintenanceScheduleStoreTests : IDisposable
 
     public void Dispose()
     {
+        CoreData.TEST_DataDirectoryOverride = null;
         Directory.Delete(_testRoot, true);
         GC.SuppressFinalize(this);
     }

@@ -15,6 +15,8 @@ public static class MaintenanceScheduleStore
     private static Dictionary<string, MaintenanceTaskSchedule>? _cachedSchedules;
     private static string _cachedRaw = "";
 
+    public static event EventHandler<MaintenanceTaskKind>? Changed;
+
     public static MaintenanceTaskSchedule Get(MaintenanceTaskKind kind)
     {
         MaintenanceTaskSchedule schedule = GetStoredCopy(kind) ?? NewDefault(kind);
@@ -56,6 +58,8 @@ public static class MaintenanceScheduleStore
             };
             PersistLocked(updated);
         }
+
+        Changed?.Invoke(null, kind);
     }
 
     public static bool IsEnabled(MaintenanceTaskKind kind) => kind switch

@@ -388,7 +388,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     {
         try
         {
-            bool shouldAutoInstall = MaintenanceScheduler.ShouldAutoInstallNow();
+            bool shouldAutoInstall = MaintenanceScheduler.IsAutoInstallDue();
 
             var upgradable = UpgradablePackagesLoader.Instance.Packages
                 .Where(p => p.Tag is not PackageTag.OnQueue and not PackageTag.BeingProcessed)
@@ -413,6 +413,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             }
             else if (shouldAutoInstall)
             {
+                MaintenanceScheduler.MarkAutoInstallHandled();
                 _ = AvaloniaPackageOperationHelper.UpdateAllAsync();
                 ShowUpgradingPackagesNotification(upgradable);
             }

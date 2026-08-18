@@ -55,6 +55,8 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// </summary>
         public IReadOnlyList<IPackage> GetAvailableUpdates();
 
+        public bool LastUpdatesListingFailed { get; }
+
         /// <summary>
         /// Returns an array of Package objects that represent the installed reported by the manager.
         /// This method is fail-safe and will return an empty array if an error occurs.

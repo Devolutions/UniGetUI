@@ -247,6 +247,39 @@ public class MaintenanceScheduleStoreTests : IDisposable
     }
 
     [Fact]
+    public void AFailedAttemptIsRecordedSeparatelyFromTheLastRun()
+    {
+        var runTime = DateTime.UtcNow.AddHours(-2);
+        MaintenanceScheduleStore.SetLastRun(MaintenanceTaskKind.LocalBackup, runTime);
+        Assert.Null(MaintenanceScheduleStore.GetLastFailure(MaintenanceTaskKind.LocalBackup));
+
+        var failureTime = DateTime.UtcNow;
+        MaintenanceScheduleStore.SetLastFailure(MaintenanceTaskKind.LocalBackup, failureTime);
+
+        var storedFailure = MaintenanceScheduleStore.GetLastFailure(MaintenanceTaskKind.LocalBackup);
+        Assert.NotNull(storedFailure);
+        Assert.Equal(failureTime, storedFailure.Value, TimeSpan.FromSeconds(1));
+
+        var storedRun = MaintenanceScheduleStore.GetLastRun(MaintenanceTaskKind.LocalBackup);
+        Assert.NotNull(storedRun);
+        Assert.Equal(runTime, storedRun.Value, TimeSpan.FromSeconds(1));
+
+        MaintenanceScheduleStore.ClearLastFailure(MaintenanceTaskKind.LocalBackup);
+        Assert.Null(MaintenanceScheduleStore.GetLastFailure(MaintenanceTaskKind.LocalBackup));
+        Assert.NotNull(MaintenanceScheduleStore.GetLastRun(MaintenanceTaskKind.LocalBackup));
+    }
+
+    [Fact]
+    public void FailureStateIsTrackedPerTask()
+    {
+        MaintenanceScheduleStore.SetLastFailure(MaintenanceTaskKind.CloudBackup, DateTime.UtcNow);
+
+        Assert.NotNull(MaintenanceScheduleStore.GetLastFailure(MaintenanceTaskKind.CloudBackup));
+        Assert.Null(MaintenanceScheduleStore.GetLastFailure(MaintenanceTaskKind.LocalBackup));
+        Assert.Null(MaintenanceScheduleStore.GetLastFailure(MaintenanceTaskKind.CheckForUpdates));
+    }
+
+    [Fact]
     public void TimingFieldsSurviveARoundTripThroughTheSettingsFile()
     {
         Save(MaintenanceTaskKind.InstallUpdates, s =>

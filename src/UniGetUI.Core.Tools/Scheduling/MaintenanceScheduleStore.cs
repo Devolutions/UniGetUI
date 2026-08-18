@@ -110,6 +110,49 @@ public static class MaintenanceScheduleStore
         }
     }
 
+    public static DateTime? GetLastFailure(MaintenanceTaskKind kind)
+    {
+        string? raw = Settings.GetDictionaryItem<string, string>(
+            Settings.K.MaintenanceTaskLastFailure,
+            MaintenanceTasks.GetId(kind)
+        );
+
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        return DateTime.TryParse(
+            raw,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.RoundtripKind,
+            out DateTime parsed
+        )
+            ? parsed.ToUniversalTime()
+            : null;
+    }
+
+    public static void SetLastFailure(MaintenanceTaskKind kind, DateTime failureTimeUtc)
+    {
+        lock (LastRunLock)
+        {
+            Settings.SetDictionaryItem(
+                Settings.K.MaintenanceTaskLastFailure,
+                MaintenanceTasks.GetId(kind),
+                failureTimeUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)
+            );
+        }
+    }
+
+    public static void ClearLastFailure(MaintenanceTaskKind kind)
+    {
+        lock (LastRunLock)
+        {
+            Settings.RemoveDictionaryKey<string, string>(
+                Settings.K.MaintenanceTaskLastFailure,
+                MaintenanceTasks.GetId(kind)
+            );
+        }
+    }
+
     public static MaintenanceTaskSchedule NewDefault(MaintenanceTaskKind kind)
     {
         var schedule = new MaintenanceTaskSchedule

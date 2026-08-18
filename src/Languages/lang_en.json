@@ -979,5 +979,6 @@
   "Skip until the next occurrence": "Skip until the next occurrence",
   "Run whenever UniGetUI next starts": "Run whenever UniGetUI next starts",
   "Run within {0}": "Run within {0}",
-  "Choose the days and hours when updates are checked and installed": "Choose the days and hours when updates are checked and installed"
+  "Choose the days and hours when updates are checked and installed": "Choose the days and hours when updates are checked and installed",
+  "The last attempt failed on {0}, see the log for details": "The last attempt failed on {0}, see the log for details"
 }

@@ -252,6 +252,11 @@
                                                            FontSize="12"
                                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                            TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding FailureText}"
+                                                           IsVisible="{Binding HasFailure}"
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource SettingWarningTextForeground}"
+                                                           TextWrapping="Wrap"/>
                                             </StackPanel>
                                             <Button Grid.Column="1"
                                                     Classes="secondary-action"

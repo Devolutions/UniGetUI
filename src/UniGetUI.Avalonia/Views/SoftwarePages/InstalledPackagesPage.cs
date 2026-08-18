@@ -65,9 +65,9 @@ public class InstalledPackagesPage : AbstractPackagesPage
             {
                 _hasBackedUp = true;
                 if (MaintenanceScheduler.ShouldRunAtAppStart(MaintenanceTaskKind.LocalBackup))
-                    _ = BackupViewModel.DoLocalBackupStatic();
+                    _ = MaintenanceScheduler.RunAsync(MaintenanceTaskKind.LocalBackup);
                 if (MaintenanceScheduler.ShouldRunAtAppStart(MaintenanceTaskKind.CloudBackup))
-                    _ = BackupViewModel.DoCloudBackupStatic();
+                    _ = MaintenanceScheduler.RunAsync(MaintenanceTaskKind.CloudBackup);
             }
 
             if (OperatingSystem.IsWindows()

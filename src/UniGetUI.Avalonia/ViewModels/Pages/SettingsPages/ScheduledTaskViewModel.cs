@@ -86,6 +86,8 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     [ObservableProperty] private bool _hasNoOccurrences;
     [ObservableProperty] private double _headerOpacity = 1;
     [ObservableProperty] private string _statusText = "";
+    [ObservableProperty] private string _failureText = "";
+    [ObservableProperty] private bool _hasFailure;
 
     public event EventHandler? RestartRequired;
 
@@ -205,6 +207,7 @@ public partial class ScheduledTaskViewModel : ViewModelBase
             SchedulePrimaryFontSize = 14;
             HeaderOpacity = IsEnabled ? 1 : 0.7;
             StatusText = BuildStatus();
+            RefreshFailure();
             return;
         }
 
@@ -231,6 +234,7 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         HasScheduleSecondaryText = ScheduleSecondaryText.Length > 0;
         HeaderOpacity = IsEnabled ? 1 : 0.7;
         StatusText = BuildStatus();
+        RefreshFailure();
     }
 
     private string GetGraceSuffix()
@@ -239,6 +243,17 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         return grace > 0
             ? " · " + CoreTools.Translate("within {0}", GetGraceDurationLabel(grace))
             : "";
+    }
+
+    private void RefreshFailure()
+    {
+        var failure = MaintenanceScheduleStore.GetLastFailure(Kind);
+        HasFailure = failure is not null;
+        FailureText = failure is null
+            ? ""
+            : CoreTools.Translate(
+                "The last attempt failed on {0}, see the log for details",
+                failure.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture));
     }
 
     private string BuildStatus()

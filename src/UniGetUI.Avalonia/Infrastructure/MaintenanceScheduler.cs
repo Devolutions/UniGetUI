@@ -11,6 +11,7 @@ internal static class MaintenanceScheduler
     private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan PendingInstallLifetime = TimeSpan.FromHours(2);
     private static readonly TimeSpan RetryDelay = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan TaskTimeout = TimeSpan.FromMinutes(30);
     private const int MaxRetriesPerOccurrence = 2;
 
     private static readonly HashSet<MaintenanceTaskKind> RunningTasks = [];
@@ -95,34 +96,23 @@ internal static class MaintenanceScheduler
             MaintenanceScheduleStore.SetLastRun(kind, DateTime.UtcNow);
             Logger.ImportantInfo($"Running the maintenance task \"{MaintenanceTasks.GetId(kind)}\"");
 
-            switch (kind)
+            Task work = ExecuteAsync(kind);
+            if (!await TaskCompletion.CompletesWithin(work, TaskTimeout))
             {
-                case MaintenanceTaskKind.CheckForUpdates:
-                    await ReloadUpdatesAsync();
-                    break;
-
-                case MaintenanceTaskKind.InstallUpdates:
-                    _pendingInstallSince = DateTime.Now;
-                    await ReloadUpdatesAsync();
-                    break;
-
-                case MaintenanceTaskKind.LocalBackup:
-                    await EnsureInstalledPackagesAreLoadedAsync();
-                    await BackupViewModel.DoLocalBackupStatic();
-                    break;
-
-                case MaintenanceTaskKind.CloudBackup:
-                    await EnsureInstalledPackagesAreLoadedAsync();
-                    await BackupViewModel.DoCloudBackupStatic();
-                    break;
+                ObserveAbandoned(work, kind);
+                throw new TimeoutException(
+                    $"The maintenance task \"{MaintenanceTasks.GetId(kind)}\" did not finish within {TaskTimeout.TotalMinutes:0} minutes"
+                );
             }
 
             ClearRetries(kind);
+            MaintenanceScheduleStore.ClearLastFailure(kind);
         }
         catch (Exception ex)
         {
             Logger.Error($"The maintenance task \"{MaintenanceTasks.GetId(kind)}\" failed");
             Logger.Error(ex);
+            MaintenanceScheduleStore.SetLastFailure(kind, DateTime.UtcNow);
             ScheduleRetry(kind, previousRun);
         }
         finally
@@ -135,6 +125,41 @@ internal static class MaintenanceScheduler
             else
                 Dispatcher.UIThread.Post(() => TaskFinished?.Invoke(null, kind));
         }
+    }
+
+    private static async Task ExecuteAsync(MaintenanceTaskKind kind)
+    {
+        switch (kind)
+        {
+            case MaintenanceTaskKind.CheckForUpdates:
+                await ReloadUpdatesAsync();
+                break;
+
+            case MaintenanceTaskKind.InstallUpdates:
+                _pendingInstallSince = DateTime.Now;
+                await ReloadUpdatesAsync();
+                break;
+
+            case MaintenanceTaskKind.LocalBackup:
+                await EnsureInstalledPackagesAreLoadedAsync();
+                await BackupViewModel.DoLocalBackupStatic();
+                break;
+
+            case MaintenanceTaskKind.CloudBackup:
+                await EnsureInstalledPackagesAreLoadedAsync();
+                await BackupViewModel.DoCloudBackupStatic();
+                break;
+        }
+    }
+
+    private static void ObserveAbandoned(Task work, MaintenanceTaskKind kind)
+    {
+        _ = work.ContinueWith(
+            finished => Logger.Warn(
+                $"The abandoned maintenance task \"{MaintenanceTasks.GetId(kind)}\" ended with {finished.Exception?.GetBaseException().Message ?? "no result"}"
+            ),
+            TaskScheduler.Default
+        );
     }
 
     private static void WatchUpdateLoads()

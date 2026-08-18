@@ -311,6 +311,9 @@ internal static class MaintenanceScheduler
 
         if (!loader.Any())
             throw new InvalidOperationException("The installed package list is empty, refusing to overwrite the previous backup");
+
+        if (loader.LastLoadReportedFailures)
+            throw new InvalidOperationException("A package manager failed to list its packages, refusing to overwrite the previous backup with an incomplete list");
     }
 
     private static bool IsInstalledListStale(InstalledPackagesLoader loader)

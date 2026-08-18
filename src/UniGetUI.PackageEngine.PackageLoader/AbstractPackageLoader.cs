@@ -39,6 +39,8 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         public DateTime? LastLoadFinishedUtc { get; private set; }
 
+        private TaskCompletionSource? _loadCompletion;
+
         public bool Any()
         {
             return !PackageReference.IsEmpty;
@@ -103,26 +105,12 @@ namespace UniGetUI.PackageEngine.PackageLoader
         /// </summary>
         public Task WaitForCurrentLoadAsync()
         {
-            if (!IsLoading)
-                return Task.CompletedTask;
-
-            var completion = new TaskCompletionSource();
-            EventHandler<EventArgs>? handler = null;
-            handler = (_, _) =>
-            {
-                FinishedLoading -= handler;
-                completion.TrySetResult();
-            };
-            FinishedLoading += handler;
-
-            if (!IsLoading)
-            {
-                FinishedLoading -= handler;
-                completion.TrySetResult();
-            }
-
-            return completion.Task;
+            var completion = Volatile.Read(ref _loadCompletion);
+            return IsLoading && completion is not null ? completion.Task : Task.CompletedTask;
         }
+
+        private void CompleteCurrentLoad()
+            => Interlocked.Exchange(ref _loadCompletion, null)?.TrySetResult();
 
         protected virtual bool DidManagerReportFailure(IPackageManager manager) => false;
 
@@ -131,6 +119,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
             LoadOperationIdentifier = -1;
             IsLoaded = false;
             IsLoading = false;
+            CompleteCurrentLoad();
             if (emitFinishSignal)
                 InvokeFinishedLoadingEvent();
         }
@@ -175,6 +164,10 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
                 LoadOperationIdentifier = new Random().Next();
                 int current_identifier = LoadOperationIdentifier;
+                Volatile.Write(
+                    ref _loadCompletion,
+                    new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+                );
                 IsLoading = true;
                 LastLoadReportedFailures = false;
                 StartedLoading?.Invoke(this, EventArgs.Empty);
@@ -262,6 +255,10 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 Logger.Error(ex);
                 LastLoadReportedFailures = true;
                 IsLoading = false;
+            }
+            finally
+            {
+                CompleteCurrentLoad();
             }
         }
 

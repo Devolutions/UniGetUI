@@ -57,6 +57,8 @@ namespace UniGetUI.PackageEngine.Interfaces
 
         public bool LastUpdatesListingFailed { get; }
 
+        public bool LastInstalledListingFailed { get; }
+
         /// <summary>
         /// Returns an array of Package objects that represent the installed reported by the manager.
         /// This method is fail-safe and will return an empty array if an error occurs.

@@ -33,7 +33,7 @@ public partial class DayToggleViewModel : ViewModelBase
 public partial class ScheduledTaskViewModel : ViewModelBase
 {
     private static readonly int[] DefaultIntervalValues = [600, 1800, 3600, 7200, 14400, 28800, 43200, 86400, 172800, 259200, 604800];
-    private static readonly int[] WindowValues = [0, 30, 60, 120, 240, 480];
+    private static readonly int[] DefaultGraceValues = [0, 30, 60, 120, 240, 480];
     private static readonly int[] DefaultMinuteValues = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
     private static readonly bool Uses12HourClock =
@@ -42,6 +42,7 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     private readonly List<ScheduleFrequency> _frequencies;
     private readonly int[] _intervalValues;
     private readonly int[] _minuteValues;
+    private readonly int[] _graceValues;
     private bool _isLoading;
 
     public MaintenanceTaskKind Kind { get; }
@@ -56,7 +57,7 @@ public partial class ScheduledTaskViewModel : ViewModelBase
 
     public IReadOnlyList<string> IntervalOptions { get; }
 
-    public IReadOnlyList<string> WindowOptions { get; }
+    public IReadOnlyList<string> GraceOptions { get; }
 
     public IReadOnlyList<string> HourOptions { get; }
 
@@ -71,11 +72,10 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     [ObservableProperty] private bool _isEnabled;
     [ObservableProperty] private int _frequencyIndex;
     [ObservableProperty] private int _intervalIndex;
-    [ObservableProperty] private int _windowIndex;
+    [ObservableProperty] private int _graceIndex;
     [ObservableProperty] private int _hourIndex;
     [ObservableProperty] private int _minuteIndex;
     [ObservableProperty] private int _meridiemIndex;
-    [ObservableProperty] private bool _runMissed;
     [ObservableProperty] private bool _isIntervalVisible;
     [ObservableProperty] private bool _isTimeVisible;
     [ObservableProperty] private bool _isDaySelectorVisible;
@@ -103,7 +103,9 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         _minuteValues = WithExtraValue(DefaultMinuteValues, stored.StartMinutes % 60);
 
         IntervalOptions = _intervalValues.Select(GetIntervalLabel).ToList();
-        WindowOptions = WindowValues.Select(GetWindowLabel).ToList();
+        _graceValues = BuildGraceValues(stored.GraceMinutes);
+
+        GraceOptions = _graceValues.Select(GetGraceLabel).ToList();
         var format = CultureInfo.CurrentCulture.DateTimeFormat;
         HourOptions = Uses12HourClock
             ? [.. Enumerable.Range(0, 12).Select(h => (h == 0 ? 12 : h).ToString(CultureInfo.CurrentCulture))]
@@ -136,13 +138,12 @@ public partial class ScheduledTaskViewModel : ViewModelBase
             IsEnabled = schedule.Enabled;
             FrequencyIndex = Math.Max(0, _frequencies.IndexOf(schedule.Frequency));
             IntervalIndex = GetNearestIndex(_intervalValues, schedule.IntervalSeconds);
-            WindowIndex = GetNearestIndex(WindowValues, schedule.WindowMinutes);
+            GraceIndex = GetGraceIndex(schedule.GraceMinutes);
             int startMinutes = Math.Clamp(schedule.StartMinutes, 0, MaintenanceTaskSchedule.MinutesPerDay - 1);
             int hour24 = startMinutes / 60;
             HourIndex = Uses12HourClock ? hour24 % 12 : hour24;
             MinuteIndex = GetNearestIndex(_minuteValues, startMinutes % 60);
             MeridiemIndex = hour24 >= 12 ? 1 : 0;
-            RunMissed = schedule.RunMissed;
 
             Days.Clear();
             foreach (var day in GetCultureOrderedDays())
@@ -165,9 +166,8 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         schedule.Enabled = IsEnabled;
         schedule.Frequency = _frequencies[Math.Clamp(FrequencyIndex, 0, _frequencies.Count - 1)];
         schedule.IntervalSeconds = _intervalValues[Math.Clamp(IntervalIndex, 0, _intervalValues.Length - 1)];
-        schedule.WindowMinutes = WindowValues[Math.Clamp(WindowIndex, 0, WindowValues.Length - 1)];
+        schedule.GraceMinutes = _graceValues[Math.Clamp(GraceIndex, 0, _graceValues.Length - 1)];
         schedule.StartMinutes = GetStartMinutes();
-        schedule.RunMissed = RunMissed;
 
         foreach (var day in Days)
             schedule.SetDay(day.Day, day.IsSelected);
@@ -219,8 +219,8 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         ScheduleSecondaryText = frequency switch
         {
             ScheduleFrequency.Interval => GetFrequencyLabel(ScheduleFrequency.Interval),
-            ScheduleFrequency.Daily => CoreTools.Translate("Every day") + GetWindowSuffix(),
-            ScheduleFrequency.Weekly => GetSelectedDaysLabel() + GetWindowSuffix(),
+            ScheduleFrequency.Daily => CoreTools.Translate("Every day") + GetGraceSuffix(),
+            ScheduleFrequency.Weekly => GetSelectedDaysLabel() + GetGraceSuffix(),
             _ => "",
         };
 
@@ -233,10 +233,13 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         StatusText = BuildStatus();
     }
 
-    private string GetWindowSuffix()
-        => WindowValues[Math.Clamp(WindowIndex, 0, WindowValues.Length - 1)] > 0
-            ? " · " + CoreTools.Translate("within {0}", WindowOptions[WindowIndex])
+    private string GetGraceSuffix()
+    {
+        int grace = _graceValues[Math.Clamp(GraceIndex, 0, _graceValues.Length - 1)];
+        return grace > 0
+            ? " · " + CoreTools.Translate("within {0}", GetGraceDurationLabel(grace))
             : "";
+    }
 
     private string BuildStatus()
     {
@@ -314,6 +317,21 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         _ => CoreTools.Translate("{0} minutes", Math.Max(1, seconds / 60)),
     };
 
+    private int GetGraceIndex(int graceMinutes)
+    {
+        int index = Array.IndexOf(_graceValues, graceMinutes);
+        return index >= 0 ? index : Array.IndexOf(_graceValues, MaintenanceTaskSchedule.UnlimitedGrace);
+    }
+
+    private static int[] BuildGraceValues(int graceMinutes)
+    {
+        int[] bounded = graceMinutes > 0
+            ? WithExtraValue(DefaultGraceValues, graceMinutes)
+            : DefaultGraceValues;
+
+        return [.. bounded, MaintenanceTaskSchedule.UnlimitedGrace];
+    }
+
     private static int[] WithExtraValue(int[] defaults, int value)
     {
         if (defaults.Contains(value))
@@ -322,14 +340,18 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         return [.. defaults.Append(value).Order()];
     }
 
-    private static string GetWindowLabel(int minutes) => minutes switch
+    private static string GetGraceLabel(int minutes) => minutes switch
     {
-        0 => CoreTools.Translate("Any time that day"),
-        30 => CoreTools.Translate("{0} minutes", 30),
+        MaintenanceTaskSchedule.UnlimitedGrace => CoreTools.Translate("Run whenever UniGetUI next starts"),
+        0 => CoreTools.Translate("Skip until the next occurrence"),
+        _ => CoreTools.Translate("Run within {0}", GetGraceDurationLabel(minutes)),
+    };
+
+    private static string GetGraceDurationLabel(int minutes) => minutes switch
+    {
         60 => CoreTools.Translate("1 hour"),
-        120 => CoreTools.Translate("{0} hours", 2),
-        240 => CoreTools.Translate("{0} hours", 4),
-        _ => CoreTools.Translate("{0} hours", 8),
+        _ when minutes % 60 == 0 => CoreTools.Translate("{0} hours", minutes / 60),
+        _ => CoreTools.Translate("{0} minutes", minutes),
     };
 
     private static int GetNearestIndex(int[] values, int value)
@@ -361,7 +383,7 @@ public partial class ScheduledTaskViewModel : ViewModelBase
             RestartRequired?.Invoke(this, EventArgs.Empty);
     }
 
-    partial void OnWindowIndexChanged(int value) => Save();
+    partial void OnGraceIndexChanged(int value) => Save();
 
     partial void OnHourIndexChanged(int value) => Save();
 
@@ -369,5 +391,4 @@ public partial class ScheduledTaskViewModel : ViewModelBase
 
     partial void OnMeridiemIndexChanged(int value) => Save();
 
-    partial void OnRunMissedChanged(bool value) => Save();
 }

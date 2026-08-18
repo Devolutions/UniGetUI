@@ -8,21 +8,18 @@ public class SchedulingTests
 
     private static MaintenanceTaskSchedule Daily(
         int startMinutes = 9 * 60,
-        int windowMinutes = 0,
-        bool runMissed = true) => new()
+        int graceMinutes = MaintenanceTaskSchedule.UnlimitedGrace) => new()
         {
             Enabled = true,
             Frequency = ScheduleFrequency.Daily,
             StartMinutes = startMinutes,
-            WindowMinutes = windowMinutes,
-            RunMissed = runMissed,
+            GraceMinutes = graceMinutes,
         };
 
     private static MaintenanceTaskSchedule Weekly(
         DayOfWeek day,
         int startMinutes = 9 * 60,
-        int windowMinutes = 0,
-        bool runMissed = true)
+        int graceMinutes = MaintenanceTaskSchedule.UnlimitedGrace)
     {
         var schedule = new MaintenanceTaskSchedule
         {
@@ -30,8 +27,7 @@ public class SchedulingTests
             Frequency = ScheduleFrequency.Weekly,
             Days = 0,
             StartMinutes = startMinutes,
-            WindowMinutes = windowMinutes,
-            RunMissed = runMissed,
+            GraceMinutes = graceMinutes,
         };
         schedule.SetDay(day, true);
         return schedule;
@@ -72,39 +68,57 @@ public class SchedulingTests
     }
 
     [Fact]
-    public void MissedOccurrenceOutsideTheWindowIsSkippedWhenRunMissedIsDisabled()
+    public void AMissedOccurrenceIsSkippedOnceTheGracePeriodHasElapsed()
     {
         var now = MondayMorning.Date.AddHours(14);
 
-        Assert.False(ScheduleEvaluator.IsDue(Daily(windowMinutes: 30, runMissed: false), null, now));
-        Assert.True(ScheduleEvaluator.IsDue(Daily(windowMinutes: 30, runMissed: true), null, now));
+        Assert.False(ScheduleEvaluator.IsDue(Daily(graceMinutes: 30), null, now));
+        Assert.True(ScheduleEvaluator.IsDue(Daily(graceMinutes: MaintenanceTaskSchedule.UnlimitedGrace), null, now));
     }
 
     [Fact]
-    public void WindowIsOnlyOpenForTheConfiguredAmountOfMinutes()
+    public void ABoundedGraceOnlyAllowsALateStartWithinItsSpan()
     {
-        var schedule = Daily(windowMinutes: 30);
+        var schedule = Daily(graceMinutes: 30);
 
-        Assert.True(ScheduleEvaluator.IsInsideWindow(schedule, MondayMorning.Date.AddHours(9)));
-        Assert.True(ScheduleEvaluator.IsInsideWindow(schedule, MondayMorning.Date.AddHours(9).AddMinutes(30)));
-        Assert.False(ScheduleEvaluator.IsInsideWindow(schedule, MondayMorning.Date.AddHours(9).AddMinutes(31)));
-        Assert.False(ScheduleEvaluator.IsInsideWindow(schedule, MondayMorning.Date.AddHours(8)));
+        Assert.True(ScheduleEvaluator.IsDue(schedule, null, MondayMorning.Date.AddHours(9)));
+        Assert.True(ScheduleEvaluator.IsDue(schedule, null, MondayMorning.Date.AddHours(9).AddMinutes(30)));
+        Assert.False(ScheduleEvaluator.IsDue(schedule, null, MondayMorning.Date.AddHours(9).AddMinutes(31)));
     }
 
     [Fact]
-    public void AnEmptyWindowStaysOpenForADay()
+    public void AZeroGraceStillToleratesTheSchedulerTickInterval()
     {
-        var schedule = Weekly(DayOfWeek.Saturday);
-        var occurrence = new DateTime(2026, 8, 15, 9, 0, 0, DateTimeKind.Local);
+        var schedule = Daily(graceMinutes: 0);
 
-        Assert.True(ScheduleEvaluator.IsInsideWindow(schedule, occurrence.AddHours(23)));
-        Assert.False(ScheduleEvaluator.IsInsideWindow(schedule, occurrence.AddHours(25)));
+        Assert.True(ScheduleEvaluator.IsDue(schedule, null, MondayMorning.Date.AddHours(9).AddSeconds(45)));
+        Assert.False(ScheduleEvaluator.IsDue(schedule, null, MondayMorning.Date.AddHours(9).AddMinutes(10)));
+    }
+
+    [Fact]
+    public void AnUnlimitedGraceRunsAMissedOccurrenceHoweverLate()
+    {
+        var schedule = Daily();
+
+        Assert.Equal(MaintenanceTaskSchedule.UnlimitedGrace, schedule.GraceMinutes);
+        Assert.True(ScheduleEvaluator.IsDue(schedule, null, MondayMorning.Date.AddHours(23)));
+    }
+
+    [Fact]
+    public void TheGraceCheckIsIndependentOfWhenTheTaskLastRan()
+    {
+        var bounded = Daily(graceMinutes: 30);
+
+        Assert.True(ScheduleEvaluator.IsWithinGrace(bounded, MondayMorning.Date.AddHours(9).AddMinutes(20)));
+        Assert.False(ScheduleEvaluator.IsWithinGrace(bounded, MondayMorning.Date.AddHours(11)));
+        Assert.True(ScheduleEvaluator.IsWithinGrace(Daily(), MondayMorning.Date.AddHours(23)));
+        Assert.False(ScheduleEvaluator.IsWithinGrace(Weekly(DayOfWeek.Saturday, graceMinutes: 60), MondayMorning));
     }
 
     [Fact]
     public void WeeklyTaskOnlyRunsOnTheSelectedDays()
     {
-        var schedule = Weekly(DayOfWeek.Saturday, windowMinutes: 60, runMissed: false);
+        var schedule = Weekly(DayOfWeek.Saturday, graceMinutes: 60);
         var saturday = new DateTime(2026, 8, 22, 9, 30, 0, DateTimeKind.Local);
 
         Assert.True(ScheduleEvaluator.IsDue(schedule, null, saturday));
@@ -112,9 +126,9 @@ public class SchedulingTests
     }
 
     [Fact]
-    public void WeeklyTaskCatchesUpOnAMissedDayWhenRunMissedIsEnabled()
+    public void WeeklyTaskCatchesUpOnAMissedDayWhenTheGraceIsUnlimited()
     {
-        var schedule = Weekly(DayOfWeek.Saturday, windowMinutes: 60);
+        var schedule = Weekly(DayOfWeek.Saturday);
 
         Assert.True(ScheduleEvaluator.IsDue(schedule, null, MondayMorning));
         Assert.Equal(
@@ -184,7 +198,7 @@ public class SchedulingTests
     [Fact]
     public void MidnightStartTimeIsSupported()
     {
-        var schedule = Daily(startMinutes: 0, windowMinutes: 30, runMissed: false);
+        var schedule = Daily(startMinutes: 0, graceMinutes: 30);
 
         Assert.True(ScheduleEvaluator.IsDue(schedule, null, MondayMorning.Date.AddMinutes(5)));
         Assert.False(ScheduleEvaluator.IsDue(schedule, null, MondayMorning.Date.AddMinutes(45)));
@@ -277,7 +291,6 @@ public class SchedulingTests
 
         Assert.Equal(0, schedule.Days);
         Assert.False(ScheduleEvaluator.IsDue(schedule, null, MondayMorning));
-        Assert.False(ScheduleEvaluator.IsInsideWindow(schedule, MondayMorning));
         Assert.Null(ScheduleEvaluator.GetMostRecentOccurrence(schedule, MondayMorning));
         Assert.Null(ScheduleEvaluator.GetNextOccurrence(schedule, null, MondayMorning));
     }
@@ -291,7 +304,7 @@ public class SchedulingTests
             Frequency = ScheduleFrequency.Weekly,
             Days = 0,
             StartMinutes = 9 * 60,
-            WindowMinutes = 60,
+            GraceMinutes = 60,
         };
         schedule.SetDay(DayOfWeek.Saturday, true);
         schedule.Normalize();
@@ -306,13 +319,13 @@ public class SchedulingTests
         {
             IntervalSeconds = 5,
             StartMinutes = 5000,
-            WindowMinutes = -10,
+            GraceMinutes = -10,
         };
         schedule.Normalize();
 
         Assert.Equal(MaintenanceScheduleStore.DefaultCheckIntervalSeconds, schedule.IntervalSeconds);
         Assert.Equal(MaintenanceTaskSchedule.MinutesPerDay - 1, schedule.StartMinutes);
-        Assert.Equal(0, schedule.WindowMinutes);
+        Assert.Equal(MaintenanceTaskSchedule.UnlimitedGrace, schedule.GraceMinutes);
     }
 
     [Fact]
@@ -332,7 +345,7 @@ public class SchedulingTests
     [Fact]
     public void SchedulesSurviveAJsonRoundTrip()
     {
-        var schedule = Weekly(DayOfWeek.Saturday, startMinutes: 150, windowMinutes: 120, runMissed: false);
+        var schedule = Weekly(DayOfWeek.Saturday, startMinutes: 150, graceMinutes: 120);
         schedule.IntervalSeconds = 7200;
 
         string json = SchedulingJson.SerializeSchedules(
@@ -352,9 +365,8 @@ public class SchedulingTests
         Assert.Equal(ScheduleFrequency.Weekly, value.Frequency);
         Assert.Equal(schedule.Days, value.Days);
         Assert.Equal(150, value.StartMinutes);
-        Assert.Equal(120, value.WindowMinutes);
+        Assert.Equal(120, value.GraceMinutes);
         Assert.Equal(7200, value.IntervalSeconds);
-        Assert.False(value.RunMissed);
         Assert.False(value.Enabled);
     }
 

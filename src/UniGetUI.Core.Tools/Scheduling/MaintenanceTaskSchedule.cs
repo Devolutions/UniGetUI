@@ -6,6 +6,7 @@ public sealed class MaintenanceTaskSchedule
 {
     public const byte AllDays = 0b0111_1111;
     public const int MinutesPerDay = 24 * 60;
+    public const int UnlimitedGrace = -1;
 
     [JsonIgnore]
     public bool Enabled { get; set; }
@@ -18,9 +19,7 @@ public sealed class MaintenanceTaskSchedule
 
     public int StartMinutes { get; set; } = 9 * 60;
 
-    public int WindowMinutes { get; set; }
-
-    public bool RunMissed { get; set; } = true;
+    public int GraceMinutes { get; set; } = UnlimitedGrace;
 
     public DateTime? ConfiguredAtUtc { get; set; }
 
@@ -39,8 +38,7 @@ public sealed class MaintenanceTaskSchedule
         IntervalSeconds = IntervalSeconds,
         Days = Days,
         StartMinutes = StartMinutes,
-        WindowMinutes = WindowMinutes,
-        RunMissed = RunMissed,
+        GraceMinutes = GraceMinutes,
         ConfiguredAtUtc = ConfiguredAtUtc,
     };
 
@@ -53,7 +51,7 @@ public sealed class MaintenanceTaskSchedule
 
         StartMinutes = Math.Clamp(StartMinutes, 0, MinutesPerDay - 1);
 
-        if (WindowMinutes < 0)
-            WindowMinutes = 0;
+        if (GraceMinutes < 0)
+            GraceMinutes = UnlimitedGrace;
     }
 }

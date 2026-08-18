@@ -9,7 +9,6 @@ namespace UniGetUI.Core.Tools.Scheduling;
 public static class MaintenanceScheduleStore
 {
     public const int DefaultCheckIntervalSeconds = 3600;
-    public const int DefaultWindowMinutes = 120;
 
     private static readonly object CacheLock = new();
     private static readonly object LastRunLock = new();
@@ -123,7 +122,6 @@ public static class MaintenanceScheduleStore
                 _ => 9 * 60,
             },
             IntervalSeconds = DefaultCheckIntervalSeconds,
-            WindowMinutes = DefaultWindowMinutes,
         };
         schedule.Normalize();
         return schedule;

@@ -182,15 +182,15 @@ public class MaintenanceScheduleStoreTests : IDisposable
     }
 
     [Fact]
-    public void ANewScheduleGetsABoundedWindowRatherThanTheWholeDay()
+    public void ANewScheduleRunsAMissedOccurrenceRatherThanSkippingIt()
     {
         Settings.SetValue(Settings.K.MaintenanceSchedules, "");
 
         foreach (var kind in MaintenanceTasks.All)
         {
             var schedule = MaintenanceScheduleStore.Get(kind);
-            Assert.Equal(MaintenanceScheduleStore.DefaultWindowMinutes, schedule.WindowMinutes);
-            Assert.True(ScheduleEvaluator.GetEffectiveWindow(schedule) < TimeSpan.FromDays(1));
+            Assert.Equal(MaintenanceTaskSchedule.UnlimitedGrace, schedule.GraceMinutes);
+            Assert.Equal(TimeSpan.MaxValue, ScheduleEvaluator.GetGracePeriod(schedule));
         }
     }
 
@@ -201,7 +201,7 @@ public class MaintenanceScheduleStoreTests : IDisposable
         {
             s.Frequency = ScheduleFrequency.Weekly;
             s.StartMinutes = 480;
-            s.WindowMinutes = 60;
+            s.GraceMinutes = 60;
         });
 
         string good = Settings.GetValue(Settings.K.MaintenanceSchedules);
@@ -214,7 +214,7 @@ public class MaintenanceScheduleStoreTests : IDisposable
         var salvaged = MaintenanceScheduleStore.Get(MaintenanceTaskKind.LocalBackup);
         Assert.Equal(ScheduleFrequency.Weekly, salvaged.Frequency);
         Assert.Equal(480, salvaged.StartMinutes);
-        Assert.Equal(60, salvaged.WindowMinutes);
+        Assert.Equal(60, salvaged.GraceMinutes);
 
         var lost = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
         Assert.Equal(MaintenanceTasks.GetDefaultFrequency(MaintenanceTaskKind.InstallUpdates), lost.Frequency);
@@ -256,8 +256,7 @@ public class MaintenanceScheduleStoreTests : IDisposable
             s.Days = 0;
             s.SetDay(DayOfWeek.Saturday, true);
             s.StartMinutes = 150;
-            s.WindowMinutes = 120;
-            s.RunMissed = false;
+            s.GraceMinutes = 120;
         });
 
         var stored = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
@@ -265,8 +264,7 @@ public class MaintenanceScheduleStoreTests : IDisposable
         Assert.True(stored.HasDay(DayOfWeek.Saturday));
         Assert.False(stored.HasDay(DayOfWeek.Sunday));
         Assert.Equal(150, stored.StartMinutes);
-        Assert.Equal(120, stored.WindowMinutes);
-        Assert.False(stored.RunMissed);
+        Assert.Equal(120, stored.GraceMinutes);
         Assert.NotNull(stored.ConfiguredAtUtc);
     }
 }

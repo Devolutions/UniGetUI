@@ -232,25 +232,12 @@
                                         <Grid ColumnDefinitions="*,Auto">
                                             <TextBlock Grid.Column="0"
                                                        Classes="schedule-row-label"
-                                                       Text="{t:Translate Time window}"/>
+                                                       Text="{t:Translate If the scheduled time is missed}"/>
                                             <ComboBox Grid.Column="1"
                                                       MinWidth="220"
-                                                      ItemsSource="{Binding WindowOptions}"
-                                                      SelectedIndex="{Binding WindowIndex, Mode=TwoWay}"
-                                                      automation:AutomationProperties.Name="{t:Translate Time window}"/>
-                                        </Grid>
-                                    </Border>
-
-                                    <Border Classes="schedule-row" IsVisible="{Binding IsTimeVisible}">
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <TextBlock Grid.Column="0"
-                                                       Classes="schedule-row-label"
-                                                       Text="{t:Translate Run missed occurrences on the next launch}"/>
-                                            <ToggleSwitch Grid.Column="1"
-                                                          IsChecked="{Binding RunMissed, Mode=TwoWay}"
-                                                          OnContent="{x:Null}"
-                                                          OffContent="{x:Null}"
-                                                          automation:AutomationProperties.Name="{t:Translate Run missed occurrences on the next launch}"/>
+                                                      ItemsSource="{Binding GraceOptions}"
+                                                      SelectedIndex="{Binding GraceIndex, Mode=TwoWay}"
+                                                      automation:AutomationProperties.Name="{t:Translate If the scheduled time is missed}"/>
                                         </Grid>
                                     </Border>
 

@@ -968,14 +968,16 @@
   "Choose the days and hours when the backups are performed.": "Choose the days and hours when the backups are performed.",
   "Maintenance tasks": "Maintenance tasks",
   "Tasks run while UniGetUI is running, including from the notification area.": "Tasks run while UniGetUI is running, including from the notification area.",
-  "Run missed occurrences on the next launch": "Run missed occurrences on the next launch",
   "Repeat": "Repeat",
   "Check every": "Check every",
   "Days": "Days",
   "Start time": "Start time",
-  "Time window": "Time window",
   "Run this task now": "Run this task now",
   "No days selected": "No days selected",
   "Automatic update restrictions": "Automatic update restrictions",
-  "Any time that day": "Any time that day"
+  "If the scheduled time is missed": "If the scheduled time is missed",
+  "Skip until the next occurrence": "Skip until the next occurrence",
+  "Run whenever UniGetUI next starts": "Run whenever UniGetUI next starts",
+  "Run within {0}": "Run within {0}",
+  "Choose the days and hours when updates are checked and installed": "Choose the days and hours when updates are checked and installed"
 }

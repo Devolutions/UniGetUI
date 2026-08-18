@@ -71,8 +71,7 @@ internal static class MaintenanceScheduler
                 return true;
         }
 
-        return ScheduleEvaluator.IsTimeBased(schedule.Frequency)
-            && ScheduleEvaluator.IsInsideWindow(schedule, DateTime.Now);
+        return false;
     }
 
     public static bool ShouldRunAtAppStart(MaintenanceTaskKind kind)
@@ -169,9 +168,18 @@ internal static class MaintenanceScheduler
                 if (!schedule.Enabled || !ScheduleEvaluator.IsTimeBased(schedule.Frequency))
                     continue;
 
-                if (!IsRetryDue(kind, now)
-                    && !ScheduleEvaluator.IsDue(schedule, MaintenanceScheduleStore.GetLastRun(kind), now))
+                if (IsRetryDue(kind, now))
+                {
+                    if (!ScheduleEvaluator.IsWithinGrace(schedule, now))
+                    {
+                        ClearRetries(kind);
+                        continue;
+                    }
+                }
+                else if (!ScheduleEvaluator.IsDue(schedule, MaintenanceScheduleStore.GetLastRun(kind), now))
+                {
                     continue;
+                }
 
                 _ = RunAsync(kind);
             }

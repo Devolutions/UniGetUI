@@ -3,14 +3,15 @@ namespace UniGetUI.Core.Tools.Scheduling;
 public static class ScheduleEvaluator
 {
     private const int DaysToScan = 7;
+    private const int MinimumGraceMinutes = 2;
 
     public static bool IsTimeBased(ScheduleFrequency frequency)
         => frequency is ScheduleFrequency.Daily or ScheduleFrequency.Weekly;
 
-    public static TimeSpan GetEffectiveWindow(MaintenanceTaskSchedule schedule)
-        => schedule.WindowMinutes > 0
-            ? TimeSpan.FromMinutes(schedule.WindowMinutes)
-            : TimeSpan.FromDays(1);
+    public static TimeSpan GetGracePeriod(MaintenanceTaskSchedule schedule)
+        => schedule.GraceMinutes < 0
+            ? TimeSpan.MaxValue
+            : TimeSpan.FromMinutes(Math.Max(schedule.GraceMinutes, MinimumGraceMinutes));
 
     public static DateTime? GetMostRecentOccurrence(MaintenanceTaskSchedule schedule, DateTime nowLocal)
     {
@@ -65,16 +66,6 @@ public static class ScheduleEvaluator
         return null;
     }
 
-    public static bool IsInsideWindow(MaintenanceTaskSchedule schedule, DateTime nowLocal)
-    {
-        DateTime? occurrence = GetMostRecentOccurrence(schedule, nowLocal);
-        if (occurrence is null)
-            return false;
-
-        TimeSpan elapsed = nowLocal - occurrence.Value;
-        return elapsed >= TimeSpan.Zero && elapsed <= GetEffectiveWindow(schedule);
-    }
-
     public static bool IsDue(MaintenanceTaskSchedule schedule, DateTime? lastRunUtc, DateTime nowLocal)
     {
         if (!schedule.Enabled)
@@ -98,7 +89,17 @@ public static class ScheduleEvaluator
         if (floorLocal is not null && floorLocal.Value >= occurrence.Value)
             return false;
 
-        return schedule.RunMissed || nowLocal - occurrence.Value <= GetEffectiveWindow(schedule);
+        return IsWithinGrace(schedule, nowLocal);
+    }
+
+    public static bool IsWithinGrace(MaintenanceTaskSchedule schedule, DateTime nowLocal)
+    {
+        DateTime? occurrence = GetMostRecentOccurrence(schedule, nowLocal);
+        if (occurrence is null)
+            return false;
+
+        TimeSpan grace = GetGracePeriod(schedule);
+        return grace == TimeSpan.MaxValue || nowLocal - occurrence.Value <= grace;
     }
 
     private static DateTime? GetFloor(MaintenanceTaskSchedule schedule, DateTime? lastRunUtc)

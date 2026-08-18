@@ -1,10 +1,10 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
-using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 

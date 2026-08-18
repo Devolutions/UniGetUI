@@ -1,8 +1,8 @@
+using System.Text;
+using System.Text.RegularExpressions;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Client;
 using Devolutions.Now.Policy.Model;
-using System.Text;
-using System.Text.RegularExpressions;
 using UniGetUI.Core.Logging;
 using ApiElevation = Devolutions.Now.Policy.Api.Elevation;
 using PolicySchemaUris = Devolutions.Now.Policy.Model.SchemaUris;

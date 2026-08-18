@@ -16,18 +16,10 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
 public partial class UpdatesViewModel : ViewModelBase
 {
-    public event EventHandler? RestartRequired;
     public event EventHandler<Type>? NavigationRequested;
 
-    [ObservableProperty] private bool _isAutoCheckEnabled;
+    [ObservableProperty] private bool _isAutomaticUpdatesEnabled;
     [ObservableProperty] private bool _isCustomAgeSelected;
-    [ObservableProperty] private bool _isIntervalSelectionEnabled;
-
-    private readonly bool _isCheckOnAFixedInterval;
-
-    public string? IntervalDescription { get; }
-
-    public string? AutomaticUpdatesDescription { get; }
 
     /// <summary>Items for the minimum update age ComboboxCard, in display/value pairs.</summary>
     public IReadOnlyList<(string Name, string Value)> MinimumAgeItems { get; } =
@@ -41,39 +33,10 @@ public partial class UpdatesViewModel : ViewModelBase
         (CoreTools.Translate("Custom..."),         "custom"),
     ];
 
-    /// <summary>Items for the update interval ComboboxCard, in display/value pairs.</summary>
-    public IReadOnlyList<(string Name, string Value)> IntervalItems { get; } =
-    [
-        (CoreTools.Translate("{0} minutes", 10), "600"),
-        (CoreTools.Translate("{0} minutes", 30), "1800"),
-        (CoreTools.Translate("1 hour"),           "3600"),
-        (CoreTools.Translate("{0} hours", 2),    "7200"),
-        (CoreTools.Translate("{0} hours", 4),    "14400"),
-        (CoreTools.Translate("{0} hours", 8),    "28800"),
-        (CoreTools.Translate("{0} hours", 12),   "43200"),
-        (CoreTools.Translate("1 day"),            "86400"),
-        (CoreTools.Translate("{0} days", 2),    "172800"),
-        (CoreTools.Translate("{0} days", 3),    "259200"),
-        (CoreTools.Translate("1 week"),          "604800"),
-    ];
-
     public UpdatesViewModel()
     {
-        _isAutoCheckEnabled = !CoreSettings.Get(CoreSettings.K.DisableAutoCheckforUpdates);
+        _isAutomaticUpdatesEnabled = MaintenanceScheduleStore.IsEnabled(MaintenanceTaskKind.InstallUpdates);
         _isCustomAgeSelected = CoreSettings.GetValue(CoreSettings.K.MinimumUpdateAge) == "custom";
-
-        var checkSchedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates);
-        var installSchedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
-
-        _isCheckOnAFixedInterval = checkSchedule.Frequency is ScheduleFrequency.Interval;
-        _isIntervalSelectionEnabled = _isAutoCheckEnabled && _isCheckOnAFixedInterval;
-
-        IntervalDescription = _isCheckOnAFixedInterval
-            ? null
-            : CoreTools.Translate("Update checks happen on the schedule set on the Scheduled maintenance page");
-        AutomaticUpdatesDescription = installSchedule.Frequency is ScheduleFrequency.AfterEveryUpdateCheck
-            ? null
-            : CoreTools.Translate("Updates are installed on the schedule set on the Scheduled maintenance page");
     }
 
     public Control BuildReleaseDateCompatTable()
@@ -153,16 +116,6 @@ public partial class UpdatesViewModel : ViewModelBase
         BorderBrush = new SolidColorBrush(Color.FromArgb(120, color.R, color.G, color.B)),
         Child = new TextBlock { Text = text, TextAlignment = TextAlignment.Center },
     };
-
-    [RelayCommand]
-    private void UpdateAutoCheckEnabled()
-    {
-        IsAutoCheckEnabled = !CoreSettings.Get(CoreSettings.K.DisableAutoCheckforUpdates);
-        IsIntervalSelectionEnabled = IsAutoCheckEnabled && _isCheckOnAFixedInterval;
-    }
-
-    [RelayCommand]
-    private void ShowRestartRequired() => RestartRequired?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand]
     private void NavigateToScheduler() => NavigationRequested?.Invoke(this, typeof(Scheduler));

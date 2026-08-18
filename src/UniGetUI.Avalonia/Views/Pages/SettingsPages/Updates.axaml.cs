@@ -13,7 +13,7 @@ public sealed partial class Updates : UserControl, ISettingsPage
     public bool CanGoBack => true;
     public string ShortTitle => CoreTools.Translate("Package update preferences");
 
-    public event EventHandler? RestartRequired;
+    public event EventHandler? RestartRequired { add { } remove { } }
     public event EventHandler<Type>? NavigationRequested;
 
     public Updates()
@@ -21,12 +21,7 @@ public sealed partial class Updates : UserControl, ISettingsPage
         DataContext = new UpdatesViewModel();
         InitializeComponent();
 
-        VM.RestartRequired += (s, e) => RestartRequired?.Invoke(s, e);
         VM.NavigationRequested += (s, t) => NavigationRequested?.Invoke(s, t);
-
-        foreach (var (name, val) in VM.IntervalItems)
-            UpdatesCheckIntervalSelector.AddItem(name, val, false);
-        UpdatesCheckIntervalSelector.ShowAddedItems();
 
         foreach (var (name, val) in VM.MinimumAgeItems)
             MinimumUpdateAgeSelector.AddItem(name, val, false);

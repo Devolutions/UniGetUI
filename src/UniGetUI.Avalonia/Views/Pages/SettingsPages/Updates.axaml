@@ -13,62 +13,42 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Vertical" Spacing="0">
 
-            <settings:TranslatedTextBlock Text="Update checking"
+            <settings:SettingsPageButton x:Name="SchedulerCard"
+                                         Margin="0,32,0,0"
+                                         CornerRadius="8"
+                                         Icon="SandClock"
+                                         Text="{t:Translate Scheduled maintenance}"
+                                         UnderText="{t:Translate Text='Choose the days and hours when updates are checked and installed'}"
+                                         Command="{Binding NavigateToSchedulerCommand}"/>
+
+            <settings:TranslatedTextBlock Text="Automatic update restrictions"
                                           FontSize="14"
                                           FontWeight="SemiBold"
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
-
-            <settings:CheckboxCard x:Name="UpdatesCheckingCard"
-                                   SettingName="DisableAutoCheckforUpdates"
-                                   Text="{t:Translate Check for package updates periodically}"
-                                   StateChangedCommand="{Binding UpdateAutoCheckEnabledCommand}"
-                                   CornerRadius="8,8,0,0"/>
-
-            <settings:ComboboxCard x:Name="UpdatesCheckIntervalSelector"
-                                   SettingName="UpdatesCheckInterval"
-                                   Text="{t:Translate Check for updates every:}"
-                                   Description="{Binding IntervalDescription}"
-                                   ValueChangedCommand="{Binding ShowRestartRequiredCommand}"
-                                   BorderThickness="1,0"
-                                   CornerRadius="0,0,8,8"
-                                   IsEnabled="{Binding IsIntervalSelectionEnabled}"/>
-
-            <settings:TranslatedTextBlock Text="Automatic updates"
-                                          FontSize="14"
-                                          FontWeight="SemiBold"
-                                          Margin="44,32,4,8"
-                                          automation:AutomationProperties.HeadingLevel="2"/>
-
-            <settings:CheckboxCard x:Name="UpdatesAutomaticCard"
-                                   SettingName="AutomaticallyUpdatePackages"
-                                   Text="{t:Translate Install available updates automatically}"
-                                   Description="{Binding AutomaticUpdatesDescription}"
-                                   CornerRadius="8,8,0,0"
-                                   IsEnabled="{Binding IsAutoCheckEnabled}"/>
 
             <settings:CheckboxCard x:Name="AUPMeteredCard"
                                    SettingName="DisableAUPOnMeteredConnections"
                                    ForceInversion="True"
                                    Text="{t:Translate Do not automatically install updates when the network connection is metered}"
-                                   BorderThickness="1,0"
-                                   CornerRadius="0"
-                                   IsEnabled="{Binding IsAutoCheckEnabled}"/>
+                                   CornerRadius="8,8,0,0"
+                                   IsEnabled="{Binding IsAutomaticUpdatesEnabled}"/>
 
             <settings:CheckboxCard x:Name="AUPBatteryCard"
                                    SettingName="DisableAUPOnBattery"
                                    ForceInversion="True"
                                    Text="{t:Translate Do not automatically install updates when the device runs on battery}"
-                                   BorderThickness="1,1,1,0"
+                                   BorderThickness="1,0,1,1"
                                    CornerRadius="0"
-                                   IsEnabled="{Binding IsAutoCheckEnabled}"/>
+                                   IsEnabled="{Binding IsAutomaticUpdatesEnabled}"/>
 
             <settings:CheckboxCard x:Name="AUPBatterySaverCard"
                                    SettingName="DisableAUPOnBatterySaver"
                                    ForceInversion="True"
                                    Text="{t:Translate Do not automatically install updates when the battery saver is on}"
+                                   BorderThickness="1,0,1,1"
                                    CornerRadius="0,0,8,8"
-                                   IsEnabled="{Binding IsAutoCheckEnabled}"/>
+                                   IsEnabled="{Binding IsAutomaticUpdatesEnabled}"/>
 
             <settings:TranslatedTextBlock Text="Update security"
                                           FontSize="14"
@@ -108,13 +88,6 @@
 
             <settings:SettingsCard BorderThickness="1,1,1,0"
                                    CornerRadius="8,8,0,0"
-                                   IsClickEnabled="True"
-                                   Command="{Binding NavigateToSchedulerCommand}"
-                                   Header="{t:Translate Scheduled maintenance}"
-                                   Description="{t:Translate Text='Choose the days and hours when updates are checked and installed.'}"/>
-
-            <settings:SettingsCard BorderThickness="1,0,1,0"
-                                   CornerRadius="0"
                                    IsClickEnabled="True"
                                    Command="{Binding NavigateToOperationsCommand}"
                                    Header="{t:Translate Package operation preferences}"

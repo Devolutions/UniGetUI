@@ -1,0 +1,161 @@
+using UniGetUI.Core.Data;
+using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Core.Tools.Scheduling;
+
+namespace UniGetUI.Core.Tools.Tests;
+
+public class MaintenanceScheduleStoreTests : IDisposable
+{
+    private static readonly int[] LegacyIntervalOptions =
+        [600, 1800, 3600, 7200, 14400, 28800, 43200, 86400, 172800, 259200, 604800];
+
+    private readonly string _testRoot;
+
+    public MaintenanceScheduleStoreTests()
+    {
+        _testRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(_testRoot);
+        CoreData.TEST_DataDirectoryOverride = Path.Combine(_testRoot, "Data");
+        Directory.CreateDirectory(CoreData.UniGetUIUserConfigurationDirectory);
+    }
+
+    public void Dispose()
+    {
+        Directory.Delete(_testRoot, true);
+        GC.SuppressFinalize(this);
+    }
+
+    private static void Save(MaintenanceTaskKind kind, Action<MaintenanceTaskSchedule> edit)
+    {
+        var schedule = MaintenanceScheduleStore.Get(kind);
+        edit(schedule);
+        MaintenanceScheduleStore.Set(kind, schedule);
+    }
+
+    [Fact]
+    public void ThePeriodicCheckToggleReadsAndWritesDisableAutoCheckforUpdates()
+    {
+        Settings.Set(Settings.K.DisableAutoCheckforUpdates, false);
+        Assert.True(MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates).Enabled);
+
+        Settings.Set(Settings.K.DisableAutoCheckforUpdates, true);
+        Assert.False(MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates).Enabled);
+
+        Save(MaintenanceTaskKind.CheckForUpdates, s => s.Enabled = true);
+        Assert.False(Settings.Get(Settings.K.DisableAutoCheckforUpdates));
+
+        Save(MaintenanceTaskKind.CheckForUpdates, s => s.Enabled = false);
+        Assert.True(Settings.Get(Settings.K.DisableAutoCheckforUpdates));
+    }
+
+    [Fact]
+    public void TheCheckIntervalReadsAndWritesUpdatesCheckInterval()
+    {
+        Settings.SetValue(Settings.K.UpdatesCheckInterval, "7200");
+        Assert.Equal(7200, MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates).IntervalSeconds);
+
+        Save(MaintenanceTaskKind.CheckForUpdates, s => s.IntervalSeconds = 43200);
+        Assert.Equal("43200", Settings.GetValue(Settings.K.UpdatesCheckInterval));
+    }
+
+    [Fact]
+    public void AnUnsetCheckIntervalFallsBackToTheLegacyDefault()
+    {
+        Settings.SetValue(Settings.K.UpdatesCheckInterval, "");
+        Assert.Equal(3600, MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates).IntervalSeconds);
+
+        Settings.SetValue(Settings.K.UpdatesCheckInterval, "not-a-number");
+        Assert.Equal(3600, MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates).IntervalSeconds);
+    }
+
+    [Fact]
+    public void EveryIntervalOfferedByTheOldUpdatesPageRoundTrips()
+    {
+        foreach (int seconds in LegacyIntervalOptions)
+        {
+            Save(MaintenanceTaskKind.CheckForUpdates, s =>
+            {
+                s.Frequency = ScheduleFrequency.Interval;
+                s.IntervalSeconds = seconds;
+            });
+
+            var stored = MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates);
+            Assert.Equal(seconds, stored.IntervalSeconds);
+            Assert.Equal(ScheduleFrequency.Interval, stored.Frequency);
+            Assert.Equal(seconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Settings.GetValue(Settings.K.UpdatesCheckInterval));
+        }
+    }
+
+    [Fact]
+    public void TheAutomaticInstallToggleReadsAndWritesAutomaticallyUpdatePackages()
+    {
+        Settings.Set(Settings.K.AutomaticallyUpdatePackages, true);
+        Assert.True(MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates).Enabled);
+
+        Settings.Set(Settings.K.AutomaticallyUpdatePackages, false);
+        Assert.False(MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates).Enabled);
+
+        Save(MaintenanceTaskKind.InstallUpdates, s => s.Enabled = true);
+        Assert.True(Settings.Get(Settings.K.AutomaticallyUpdatePackages));
+
+        Save(MaintenanceTaskKind.InstallUpdates, s => s.Enabled = false);
+        Assert.False(Settings.Get(Settings.K.AutomaticallyUpdatePackages));
+    }
+
+    [Fact]
+    public void TheBackupTogglesReadAndWriteTheBackupSettings()
+    {
+        Settings.Set(Settings.K.EnablePackageBackup_LOCAL, true);
+        Settings.Set(Settings.K.EnablePackageBackup_CLOUD, false);
+        Assert.True(MaintenanceScheduleStore.Get(MaintenanceTaskKind.LocalBackup).Enabled);
+        Assert.False(MaintenanceScheduleStore.Get(MaintenanceTaskKind.CloudBackup).Enabled);
+
+        Save(MaintenanceTaskKind.LocalBackup, s => s.Enabled = false);
+        Save(MaintenanceTaskKind.CloudBackup, s => s.Enabled = true);
+        Assert.False(Settings.Get(Settings.K.EnablePackageBackup_LOCAL));
+        Assert.True(Settings.Get(Settings.K.EnablePackageBackup_CLOUD));
+    }
+
+    [Fact]
+    public void ADefaultCheckScheduleMatchesTheLegacyBehaviour()
+    {
+        Settings.Set(Settings.K.DisableAutoCheckforUpdates, false);
+        Settings.SetValue(Settings.K.UpdatesCheckInterval, "3600");
+        Settings.SetValue(Settings.K.MaintenanceSchedules, "");
+
+        var check = MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates);
+        Assert.True(check.Enabled);
+        Assert.Equal(ScheduleFrequency.Interval, check.Frequency);
+        Assert.Equal(3600, check.IntervalSeconds);
+
+        Settings.Set(Settings.K.AutomaticallyUpdatePackages, true);
+        var install = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
+        Assert.True(install.Enabled);
+        Assert.Equal(ScheduleFrequency.AfterEveryUpdateCheck, install.Frequency);
+    }
+
+    [Fact]
+    public void TimingFieldsSurviveARoundTripThroughTheSettingsFile()
+    {
+        Save(MaintenanceTaskKind.InstallUpdates, s =>
+        {
+            s.Enabled = true;
+            s.Frequency = ScheduleFrequency.Weekly;
+            s.Days = 0;
+            s.SetDay(DayOfWeek.Saturday, true);
+            s.StartMinutes = 150;
+            s.WindowMinutes = 120;
+            s.RunMissed = false;
+        });
+
+        var stored = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
+        Assert.Equal(ScheduleFrequency.Weekly, stored.Frequency);
+        Assert.True(stored.HasDay(DayOfWeek.Saturday));
+        Assert.False(stored.HasDay(DayOfWeek.Sunday));
+        Assert.Equal(150, stored.StartMinutes);
+        Assert.Equal(120, stored.WindowMinutes);
+        Assert.False(stored.RunMissed);
+        Assert.NotNull(stored.ConfiguredAtUtc);
+    }
+}

@@ -619,8 +619,6 @@
   "Reload sources": "Reload sources",
   "Delete source": "Delete source",
   "Known sources": "Known sources",
-  "Update checking": "Update checking",
-  "Automatic updates": "Automatic updates",
   "Check for package updates periodically": "Check for package updates periodically",
   "Check for updates every:": "Check for updates every:",
   "Install available updates automatically": "Install available updates automatically",
@@ -968,10 +966,7 @@
   "Battery and metered connection restrictions, minimum update age, etc.": "Battery and metered connection restrictions, minimum update age, etc.",
   "Backup destination, file name and cloud backup account.": "Backup destination, file name and cloud backup account.",
   "Choose the days and hours when updates are checked and installed, and when backups are made": "Choose the days and hours when updates are checked and installed, and when backups are made",
-  "Choose the days and hours when updates are checked and installed.": "Choose the days and hours when updates are checked and installed.",
   "Choose the days and hours when the backups are performed.": "Choose the days and hours when the backups are performed.",
-  "Update checks happen on the schedule set on the Scheduled maintenance page": "Update checks happen on the schedule set on the Scheduled maintenance page",
-  "Updates are installed on the schedule set on the Scheduled maintenance page": "Updates are installed on the schedule set on the Scheduled maintenance page",
   "Maintenance tasks": "Maintenance tasks",
   "Tasks run while UniGetUI is running, including from the notification area.": "Tasks run while UniGetUI is running, including from the notification area.",
   "Run missed occurrences on the next launch": "Run missed occurrences on the next launch",
@@ -981,5 +976,6 @@
   "Start time": "Start time",
   "Time window": "Time window",
   "Run this task now": "Run this task now",
-  "No days selected": "No days selected"
+  "No days selected": "No days selected",
+  "Automatic update restrictions": "Automatic update restrictions"
 }

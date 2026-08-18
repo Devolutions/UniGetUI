@@ -68,9 +68,9 @@ public static class SettingsSearchIndex
         new("Notification preferences", ["notifications"], typeof(Notifications), null),
 
         // ── Updates ──────────────────────────────────────────────────────────
-        new("Check for package updates periodically", ["check for updates", "periodically"], typeof(Updates), "UpdatesCheckingCard"),
-        new("Check for updates every:", ["update frequency", "update interval"], typeof(Updates), "UpdatesCheckIntervalSelector"),
-        new("Install available updates automatically", ["automatic updates", "auto install updates"], typeof(Updates), "UpdatesAutomaticCard"),
+        new("Check for package updates periodically", ["check for updates", "periodically"], typeof(Scheduler), null),
+        new("Check for updates every:", ["update frequency", "update interval"], typeof(Scheduler), null),
+        new("Install available updates automatically", ["automatic updates", "auto install updates"], typeof(Scheduler), null),
         new("Do not automatically install updates when the network connection is metered", ["metered connection"], typeof(Updates), "AUPMeteredCard"),
         new("Do not automatically install updates when the device runs on battery", ["battery"], typeof(Updates), "AUPBatteryCard"),
         new("Do not automatically install updates when the battery saver is on", ["battery saver"], typeof(Updates), "AUPBatterySaverCard"),

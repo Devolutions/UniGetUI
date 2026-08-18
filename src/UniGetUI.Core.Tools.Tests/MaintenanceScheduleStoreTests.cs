@@ -182,6 +182,71 @@ public class MaintenanceScheduleStoreTests : IDisposable
     }
 
     [Fact]
+    public void ANewScheduleGetsABoundedWindowRatherThanTheWholeDay()
+    {
+        Settings.SetValue(Settings.K.MaintenanceSchedules, "");
+
+        foreach (var kind in MaintenanceTasks.All)
+        {
+            var schedule = MaintenanceScheduleStore.Get(kind);
+            Assert.Equal(MaintenanceScheduleStore.DefaultWindowMinutes, schedule.WindowMinutes);
+            Assert.True(ScheduleEvaluator.GetEffectiveWindow(schedule) < TimeSpan.FromDays(1));
+        }
+    }
+
+    [Fact]
+    public void OneUnreadableEntryDoesNotDiscardTheOtherTasks()
+    {
+        Save(MaintenanceTaskKind.LocalBackup, s =>
+        {
+            s.Frequency = ScheduleFrequency.Weekly;
+            s.StartMinutes = 480;
+            s.WindowMinutes = 60;
+        });
+
+        string good = Settings.GetValue(Settings.K.MaintenanceSchedules);
+        Assert.Contains("local-backup", good);
+
+        string corrupted = good.TrimEnd().TrimEnd('}').TrimEnd().TrimEnd(',')
+            + ",\"install-updates\": {\"Frequency\": \"NotAFrequency\"} }";
+        Settings.SetValue(Settings.K.MaintenanceSchedules, corrupted);
+
+        var salvaged = MaintenanceScheduleStore.Get(MaintenanceTaskKind.LocalBackup);
+        Assert.Equal(ScheduleFrequency.Weekly, salvaged.Frequency);
+        Assert.Equal(480, salvaged.StartMinutes);
+        Assert.Equal(60, salvaged.WindowMinutes);
+
+        var lost = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
+        Assert.Equal(MaintenanceTasks.GetDefaultFrequency(MaintenanceTaskKind.InstallUpdates), lost.Frequency);
+    }
+
+    [Fact]
+    public void SyntacticallyBrokenSchedulesAreKeptAsideForRecovery()
+    {
+        Settings.SetValue(Settings.K.MaintenanceSchedules, "{ this is not json");
+
+        var schedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.LocalBackup);
+        Assert.Equal(MaintenanceTasks.GetDefaultFrequency(MaintenanceTaskKind.LocalBackup), schedule.Frequency);
+
+        string backup = Path.Join(
+            CoreData.UniGetUIUserConfigurationDirectory,
+            $"{Settings.ResolveKey(Settings.K.MaintenanceSchedules)}.invalid"
+        );
+        Assert.True(File.Exists(backup));
+        Assert.Contains("this is not json", File.ReadAllText(backup));
+    }
+
+    [Fact]
+    public void ClearingTheLastRunMakesATaskDueAgain()
+    {
+        MaintenanceScheduleStore.SetLastRun(MaintenanceTaskKind.LocalBackup, DateTime.UtcNow);
+        Assert.NotNull(MaintenanceScheduleStore.GetLastRun(MaintenanceTaskKind.LocalBackup));
+
+        MaintenanceScheduleStore.ClearLastRun(MaintenanceTaskKind.LocalBackup);
+        Assert.Null(MaintenanceScheduleStore.GetLastRun(MaintenanceTaskKind.LocalBackup));
+    }
+
+    [Fact]
     public void TimingFieldsSurviveARoundTripThroughTheSettingsFile()
     {
         Save(MaintenanceTaskKind.InstallUpdates, s =>

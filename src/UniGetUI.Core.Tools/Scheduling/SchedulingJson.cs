@@ -16,6 +16,11 @@ public static class SchedulingJson
         return JsonSerializer.Deserialize(json, GetRequiredTypeInfo<Dictionary<string, MaintenanceTaskSchedule>>());
     }
 
+    public static MaintenanceTaskSchedule? DeserializeSchedule(string json)
+    {
+        return JsonSerializer.Deserialize(json, GetRequiredTypeInfo<MaintenanceTaskSchedule>());
+    }
+
     private static JsonTypeInfo<T> GetRequiredTypeInfo<T>()
     {
         return SchedulingJsonContext.Default.GetTypeInfo(typeof(T)) as JsonTypeInfo<T>

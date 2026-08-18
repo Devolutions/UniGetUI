@@ -958,7 +958,6 @@
   "Every day": "Every day",
   "On a fixed interval": "On a fixed interval",
   "On selected days": "On selected days",
-  "Any time after the scheduled time": "Any time after the scheduled time",
   "Last run: {0}": "Last run: {0}",
   "Next run: {0}": "Next run: {0}",
   "Never": "Never",
@@ -977,5 +976,6 @@
   "Time window": "Time window",
   "Run this task now": "Run this task now",
   "No days selected": "No days selected",
-  "Automatic update restrictions": "Automatic update restrictions"
+  "Automatic update restrictions": "Automatic update restrictions",
+  "Any time that day": "Any time that day"
 }

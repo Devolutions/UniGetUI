@@ -12,6 +12,7 @@ internal static class HeadlessDaemonHost
             ProcessEnvironmentConfigurator.PrepareForCurrentPlatform();
             PEInterface.LoadLoaders();
             await Task.Run(PEInterface.LoadManagers);
+            MaintenanceScheduler.StartHeadless();
         });
     }
 }

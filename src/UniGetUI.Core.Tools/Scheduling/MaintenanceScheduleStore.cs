@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Text.Json;
+using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 
@@ -7,6 +9,7 @@ namespace UniGetUI.Core.Tools.Scheduling;
 public static class MaintenanceScheduleStore
 {
     public const int DefaultCheckIntervalSeconds = 3600;
+    public const int DefaultWindowMinutes = 120;
 
     private static readonly object CacheLock = new();
     private static readonly object LastRunLock = new();
@@ -97,6 +100,17 @@ public static class MaintenanceScheduleStore
         }
     }
 
+    public static void ClearLastRun(MaintenanceTaskKind kind)
+    {
+        lock (LastRunLock)
+        {
+            Settings.RemoveDictionaryKey<string, string>(
+                Settings.K.MaintenanceTaskLastRun,
+                MaintenanceTasks.GetId(kind)
+            );
+        }
+    }
+
     public static MaintenanceTaskSchedule NewDefault(MaintenanceTaskKind kind)
     {
         var schedule = new MaintenanceTaskSchedule
@@ -109,6 +123,7 @@ public static class MaintenanceScheduleStore
                 _ => 9 * 60,
             },
             IntervalSeconds = DefaultCheckIntervalSeconds,
+            WindowMinutes = DefaultWindowMinutes,
         };
         schedule.Normalize();
         return schedule;
@@ -171,14 +186,69 @@ public static class MaintenanceScheduleStore
             }
             catch (Exception ex)
             {
-                Logger.Warn("Could not read the stored maintenance schedules, falling back to defaults");
+                Logger.Warn("The stored maintenance schedules could not be read as a whole, salvaging per task");
                 Logger.Warn(ex);
+                parsed = SalvageSchedules(raw);
             }
         }
 
         _cachedRaw = raw;
         _cachedSchedules = parsed;
         return parsed;
+    }
+
+    private static Dictionary<string, MaintenanceTaskSchedule> SalvageSchedules(string raw)
+    {
+        Dictionary<string, MaintenanceTaskSchedule> salvaged = [];
+
+        try
+        {
+            using var document = JsonDocument.Parse(raw);
+            if (document.RootElement.ValueKind is not JsonValueKind.Object)
+                return salvaged;
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (MaintenanceTasks.FromId(property.Name) is null)
+                    continue;
+
+                try
+                {
+                    if (SchedulingJson.DeserializeSchedule(property.Value.GetRawText()) is { } schedule)
+                        salvaged[property.Name] = schedule;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"Discarding the unreadable schedule stored for \"{property.Name}\"");
+                    Logger.Warn(ex);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("The stored maintenance schedules are not valid JSON, every task falls back to its default");
+            Logger.Error(ex);
+            BackUpInvalidSchedules(raw);
+        }
+
+        return salvaged;
+    }
+
+    private static void BackUpInvalidSchedules(string raw)
+    {
+        try
+        {
+            string path = Path.Join(
+                CoreData.UniGetUIUserConfigurationDirectory,
+                $"{Settings.ResolveKey(Settings.K.MaintenanceSchedules)}.invalid"
+            );
+            File.WriteAllText(path, raw);
+            Logger.ImportantInfo($"A copy of the unreadable maintenance schedules was kept at {path}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(ex);
+        }
     }
 
     private static void PersistLocked(Dictionary<string, MaintenanceTaskSchedule> schedules)

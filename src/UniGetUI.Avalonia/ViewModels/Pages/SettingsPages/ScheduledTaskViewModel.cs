@@ -32,14 +32,16 @@ public partial class DayToggleViewModel : ViewModelBase
 
 public partial class ScheduledTaskViewModel : ViewModelBase
 {
-    private static readonly int[] IntervalValues = [600, 1800, 3600, 7200, 14400, 28800, 43200, 86400, 172800, 259200, 604800];
+    private static readonly int[] DefaultIntervalValues = [600, 1800, 3600, 7200, 14400, 28800, 43200, 86400, 172800, 259200, 604800];
     private static readonly int[] WindowValues = [0, 30, 60, 120, 240, 480];
-    private static readonly int[] MinuteValues = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+    private static readonly int[] DefaultMinuteValues = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
     private static readonly bool Uses12HourClock =
         CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern.Contains('h', StringComparison.Ordinal);
 
     private readonly List<ScheduleFrequency> _frequencies;
+    private readonly int[] _intervalValues;
+    private readonly int[] _minuteValues;
     private bool _isLoading;
 
     public MaintenanceTaskKind Kind { get; }
@@ -96,13 +98,17 @@ public partial class ScheduledTaskViewModel : ViewModelBase
 
         _frequencies = MaintenanceTasks.GetSupportedFrequencies(kind).ToList();
         FrequencyOptions = _frequencies.Select(GetFrequencyLabel).ToList();
-        IntervalOptions = IntervalValues.Select(GetIntervalLabel).ToList();
+        var stored = MaintenanceScheduleStore.Get(kind);
+        _intervalValues = WithExtraValue(DefaultIntervalValues, stored.IntervalSeconds);
+        _minuteValues = WithExtraValue(DefaultMinuteValues, stored.StartMinutes % 60);
+
+        IntervalOptions = _intervalValues.Select(GetIntervalLabel).ToList();
         WindowOptions = WindowValues.Select(GetWindowLabel).ToList();
         var format = CultureInfo.CurrentCulture.DateTimeFormat;
         HourOptions = Uses12HourClock
             ? [.. Enumerable.Range(0, 12).Select(h => (h == 0 ? 12 : h).ToString(CultureInfo.CurrentCulture))]
             : [.. Enumerable.Range(0, 24).Select(h => h.ToString("00", CultureInfo.CurrentCulture))];
-        MinuteOptions = [.. MinuteValues.Select(m => m.ToString("00", CultureInfo.CurrentCulture))];
+        MinuteOptions = [.. _minuteValues.Select(m => m.ToString("00", CultureInfo.CurrentCulture))];
         MeridiemOptions = [format.AMDesignator, format.PMDesignator];
 
         Load();
@@ -129,12 +135,12 @@ public partial class ScheduledTaskViewModel : ViewModelBase
 
             IsEnabled = schedule.Enabled;
             FrequencyIndex = Math.Max(0, _frequencies.IndexOf(schedule.Frequency));
-            IntervalIndex = GetNearestIndex(IntervalValues, schedule.IntervalSeconds);
+            IntervalIndex = GetNearestIndex(_intervalValues, schedule.IntervalSeconds);
             WindowIndex = GetNearestIndex(WindowValues, schedule.WindowMinutes);
             int startMinutes = Math.Clamp(schedule.StartMinutes, 0, MaintenanceTaskSchedule.MinutesPerDay - 1);
             int hour24 = startMinutes / 60;
             HourIndex = Uses12HourClock ? hour24 % 12 : hour24;
-            MinuteIndex = GetNearestIndex(MinuteValues, startMinutes % 60);
+            MinuteIndex = GetNearestIndex(_minuteValues, startMinutes % 60);
             MeridiemIndex = hour24 >= 12 ? 1 : 0;
             RunMissed = schedule.RunMissed;
 
@@ -158,7 +164,7 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         var schedule = MaintenanceScheduleStore.Get(Kind);
         schedule.Enabled = IsEnabled;
         schedule.Frequency = _frequencies[Math.Clamp(FrequencyIndex, 0, _frequencies.Count - 1)];
-        schedule.IntervalSeconds = IntervalValues[Math.Clamp(IntervalIndex, 0, IntervalValues.Length - 1)];
+        schedule.IntervalSeconds = _intervalValues[Math.Clamp(IntervalIndex, 0, _intervalValues.Length - 1)];
         schedule.WindowMinutes = WindowValues[Math.Clamp(WindowIndex, 0, WindowValues.Length - 1)];
         schedule.StartMinutes = GetStartMinutes();
         schedule.RunMissed = RunMissed;
@@ -261,7 +267,7 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         if (Uses12HourClock)
             hour = (hour % 12) + (MeridiemIndex == 1 ? 12 : 0);
 
-        return hour * 60 + MinuteValues[Math.Clamp(MinuteIndex, 0, MinuteValues.Length - 1)];
+        return hour * 60 + _minuteValues[Math.Clamp(MinuteIndex, 0, _minuteValues.Length - 1)];
     }
 
     private string GetTimeLabel() => GetClockLabel(GetStartMinutes());
@@ -300,22 +306,25 @@ public partial class ScheduledTaskViewModel : ViewModelBase
 
     private static string GetIntervalLabel(int seconds) => seconds switch
     {
-        600 => CoreTools.Translate("{0} minutes", 10),
-        1800 => CoreTools.Translate("{0} minutes", 30),
         3600 => CoreTools.Translate("1 hour"),
-        7200 => CoreTools.Translate("{0} hours", 2),
-        14400 => CoreTools.Translate("{0} hours", 4),
-        28800 => CoreTools.Translate("{0} hours", 8),
-        43200 => CoreTools.Translate("{0} hours", 12),
         86400 => CoreTools.Translate("1 day"),
-        172800 => CoreTools.Translate("{0} days", 2),
-        259200 => CoreTools.Translate("{0} days", 3),
-        _ => CoreTools.Translate("1 week"),
+        604800 => CoreTools.Translate("1 week"),
+        _ when seconds % 86400 == 0 => CoreTools.Translate("{0} days", seconds / 86400),
+        _ when seconds % 3600 == 0 => CoreTools.Translate("{0} hours", seconds / 3600),
+        _ => CoreTools.Translate("{0} minutes", Math.Max(1, seconds / 60)),
     };
+
+    private static int[] WithExtraValue(int[] defaults, int value)
+    {
+        if (defaults.Contains(value))
+            return defaults;
+
+        return [.. defaults.Append(value).Order()];
+    }
 
     private static string GetWindowLabel(int minutes) => minutes switch
     {
-        0 => CoreTools.Translate("Any time after the scheduled time"),
+        0 => CoreTools.Translate("Any time that day"),
         30 => CoreTools.Translate("{0} minutes", 30),
         60 => CoreTools.Translate("1 hour"),
         120 => CoreTools.Translate("{0} hours", 2),

@@ -268,7 +268,12 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         if (TryGetCachedIcon(hash, out Bitmap? cached))
         {
             if (cached is not null)
-                IconBitmap = cached;
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (!token.IsCancellationRequested) IconBitmap = cached;
+                });
+            }
             return;
         }
 

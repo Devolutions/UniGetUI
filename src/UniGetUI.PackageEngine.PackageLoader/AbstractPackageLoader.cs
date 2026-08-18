@@ -35,6 +35,8 @@ namespace UniGetUI.PackageEngine.PackageLoader
         /// </summary>
         public bool IsLoading { get; protected set; }
 
+        public bool LastLoadReportedFailures { get; private set; }
+
         public bool Any()
         {
             return !PackageReference.IsEmpty;
@@ -147,6 +149,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 LoadOperationIdentifier = new Random().Next();
                 int current_identifier = LoadOperationIdentifier;
                 IsLoading = true;
+                LastLoadReportedFailures = false;
                 StartedLoading?.Invoke(this, EventArgs.Empty);
 
                 // Clear packages only after signaling the load started, so the UI shows the
@@ -184,6 +187,9 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
                         if (task.IsCompleted)
                         {
+                            if (task.IsFaulted || task.IsCanceled)
+                                LastLoadReportedFailures = true;
+
                             if (
                                 LoadOperationIdentifier == current_identifier
                                 && task.IsCompletedSuccessfully
@@ -220,6 +226,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
             catch (Exception ex)
             {
                 Logger.Error(ex);
+                LastLoadReportedFailures = true;
                 IsLoading = false;
             }
         }

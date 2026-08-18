@@ -47,9 +47,9 @@ public static class MaintenanceScheduleStore
             );
         }
 
-        string raw = Settings.GetValue(Settings.K.MaintenanceSchedules);
         lock (CacheLock)
         {
+            string raw = Settings.GetValue(Settings.K.MaintenanceSchedules);
             Dictionary<string, MaintenanceTaskSchedule> updated = new(GetCachedSchedulesLocked(raw))
             {
                 [MaintenanceTasks.GetId(kind)] = schedule.Clone(),
@@ -202,10 +202,9 @@ public static class MaintenanceScheduleStore
 
     private static MaintenanceTaskSchedule? GetStoredCopy(MaintenanceTaskKind kind)
     {
-        string raw = Settings.GetValue(Settings.K.MaintenanceSchedules);
-
         lock (CacheLock)
         {
+            string raw = Settings.GetValue(Settings.K.MaintenanceSchedules);
             return GetCachedSchedulesLocked(raw)
                 .TryGetValue(MaintenanceTasks.GetId(kind), out var found) && found is not null
                     ? found.Clone()

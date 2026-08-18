@@ -89,8 +89,6 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     [ObservableProperty] private string _failureText = "";
     [ObservableProperty] private bool _hasFailure;
 
-    public event EventHandler? RestartRequired;
-
     public ScheduledTaskViewModel(MaintenanceTaskKind kind, string title, string description, string iconName)
     {
         Kind = kind;
@@ -389,14 +387,7 @@ public partial class ScheduledTaskViewModel : ViewModelBase
 
     partial void OnFrequencyIndexChanged(int value) => Save();
 
-    partial void OnIntervalIndexChanged(int value)
-    {
-        bool wasLoading = _isLoading;
-        Save();
-
-        if (!wasLoading && Kind is MaintenanceTaskKind.CheckForUpdates)
-            RestartRequired?.Invoke(this, EventArgs.Empty);
-    }
+    partial void OnIntervalIndexChanged(int value) => Save();
 
     partial void OnGraceIndexChanged(int value) => Save();
 

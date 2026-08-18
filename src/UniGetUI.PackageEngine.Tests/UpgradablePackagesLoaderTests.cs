@@ -165,21 +165,4 @@ public sealed class UpgradablePackagesLoaderTests : IDisposable
         Assert.Equal(PackageTag.IsUpgradable, availablePackage.Tag);
         Assert.Equal(PackageTag.IsUpgradable, installedPackage.Tag);
     }
-
-    [Theory]
-    [InlineData("120", 120000)]
-    [InlineData("not-a-number", 3600000)]
-    public void StartTimer_UsesConfiguredIntervalOrDefault(string configuredValue, double expectedInterval)
-    {
-        var manager = new PackageManagerBuilder().Build();
-        _ = new InstalledPackagesLoader([manager]);
-        _ = new DiscoverablePackagesLoader([manager]);
-        var loader = new TestUpgradablePackagesLoader([manager]);
-        Settings.Set(Settings.K.DisableAutoCheckforUpdates, false);
-        Settings.SetValue(Settings.K.UpdatesCheckInterval, configuredValue);
-
-        loader.StartTimer();
-
-        Assert.Equal(expectedInterval, loader.GetTimerIntervalMilliseconds());
-    }
 }

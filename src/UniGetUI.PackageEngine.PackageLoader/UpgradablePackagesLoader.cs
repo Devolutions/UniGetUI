@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
-using UniGetUI.Core.Tools.Scheduling;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 
@@ -10,7 +9,6 @@ namespace UniGetUI.PackageEngine.PackageLoader
 {
     public class UpgradablePackagesLoader : AbstractPackageLoader
     {
-        private System.Timers.Timer? UpdatesTimer;
         public static UpgradablePackagesLoader Instance = null!;
 
         /// <summary>
@@ -29,7 +27,6 @@ namespace UniGetUI.PackageEngine.PackageLoader
             )
         {
             Instance = this;
-            FinishedLoading += (_, _) => StartAutoCheckTimeout();
         }
 
         protected override async Task<bool> IsPackageValid(IPackage package)
@@ -111,40 +108,6 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 p.SetTag(PackageTag.IsUpgradable);
 
             return Task.CompletedTask;
-        }
-
-        protected void StartAutoCheckTimeout()
-        {
-            var schedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.CheckForUpdates);
-
-            if (UpdatesTimer is not null)
-            {
-                UpdatesTimer.Stop();
-                UpdatesTimer.Dispose();
-                UpdatesTimer = null;
-            }
-
-            if (!schedule.Enabled)
-                return;
-
-            if (schedule.Frequency is not ScheduleFrequency.Interval)
-            {
-                Logger.Debug(
-                    $"Update checks are driven by the maintenance scheduler (frequency={schedule.Frequency})"
-                );
-                return;
-            }
-
-            long waitTime = schedule.IntervalSeconds;
-            Logger.Debug($"Starting check for updates wait interval with waitTime={waitTime}");
-
-            UpdatesTimer = new System.Timers.Timer(waitTime * 1000)
-            {
-                Enabled = false,
-                AutoReset = false,
-            };
-            UpdatesTimer.Elapsed += (s, e) => _ = ReloadPackages();
-            UpdatesTimer.Start();
         }
     }
 }

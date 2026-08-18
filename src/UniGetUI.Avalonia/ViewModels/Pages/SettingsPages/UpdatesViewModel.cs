@@ -35,8 +35,13 @@ public partial class UpdatesViewModel : ViewModelBase
 
     public UpdatesViewModel()
     {
-        _isAutomaticUpdatesEnabled = MaintenanceScheduleStore.IsEnabled(MaintenanceTaskKind.InstallUpdates);
-        _isCustomAgeSelected = CoreSettings.GetValue(CoreSettings.K.MinimumUpdateAge) == "custom";
+        RefreshState();
+    }
+
+    public void RefreshState()
+    {
+        IsAutomaticUpdatesEnabled = MaintenanceScheduleStore.IsEnabled(MaintenanceTaskKind.InstallUpdates);
+        IsCustomAgeSelected = CoreSettings.GetValue(CoreSettings.K.MinimumUpdateAge) == "custom";
     }
 
     public Control BuildReleaseDateCompatTable()

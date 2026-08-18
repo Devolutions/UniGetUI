@@ -11,7 +11,6 @@ public partial class SchedulerViewModel : ViewModelBase, IDisposable
 {
     private bool _isDisposed;
 
-    public event EventHandler? RestartRequired;
     public event EventHandler<Type>? NavigationRequested;
 
     public ObservableCollection<ScheduledTaskViewModel> Tasks { get; } = [];
@@ -42,14 +41,8 @@ public partial class SchedulerViewModel : ViewModelBase, IDisposable
             CoreTools.Translate("Save the list of installed packages to the configured cloud backup"),
             "share"));
 
-        foreach (var task in Tasks)
-            task.RestartRequired += OnTaskRestartRequired;
-
         MaintenanceScheduler.TaskFinished += OnTaskFinished;
     }
-
-    private void OnTaskRestartRequired(object? sender, EventArgs e)
-        => RestartRequired?.Invoke(this, EventArgs.Empty);
 
     private void OnTaskFinished(object? sender, MaintenanceTaskKind kind)
     {
@@ -71,7 +64,5 @@ public partial class SchedulerViewModel : ViewModelBase, IDisposable
         _isDisposed = true;
         MaintenanceScheduler.TaskFinished -= OnTaskFinished;
 
-        foreach (var task in Tasks)
-            task.RestartRequired -= OnTaskRestartRequired;
     }
 }

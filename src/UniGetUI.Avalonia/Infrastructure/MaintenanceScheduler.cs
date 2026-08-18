@@ -90,6 +90,7 @@ internal static class MaintenanceScheduler
         }
 
         DateTime? previousRun = MaintenanceScheduleStore.GetLastRun(kind);
+        bool abandoned = false;
 
         try
         {
@@ -99,6 +100,7 @@ internal static class MaintenanceScheduler
             Task work = ExecuteAsync(kind);
             if (!await TaskCompletion.CompletesWithin(work, TaskTimeout))
             {
+                abandoned = true;
                 ObserveAbandoned(work, kind);
                 throw new TimeoutException(
                     $"The maintenance task \"{MaintenanceTasks.GetId(kind)}\" did not finish within {TaskTimeout.TotalMinutes:0} minutes"
@@ -117,8 +119,11 @@ internal static class MaintenanceScheduler
         }
         finally
         {
-            lock (RunningTasks)
-                RunningTasks.Remove(kind);
+            if (!abandoned)
+            {
+                lock (RunningTasks)
+                    RunningTasks.Remove(kind);
+            }
 
             if (_isHeadless)
                 TaskFinished?.Invoke(null, kind);
@@ -142,12 +147,14 @@ internal static class MaintenanceScheduler
 
             case MaintenanceTaskKind.LocalBackup:
                 await EnsureInstalledPackagesAreLoadedAsync();
-                await BackupViewModel.DoLocalBackupStatic();
+                if (!await BackupViewModel.DoLocalBackupStatic())
+                    throw new InvalidOperationException("The local backup did not complete, see the log for details");
                 break;
 
             case MaintenanceTaskKind.CloudBackup:
                 await EnsureInstalledPackagesAreLoadedAsync();
-                await BackupViewModel.DoCloudBackupStatic();
+                if (!await BackupViewModel.DoCloudBackupStatic())
+                    throw new InvalidOperationException("The cloud backup did not complete, see the log for details");
                 break;
         }
     }
@@ -155,9 +162,15 @@ internal static class MaintenanceScheduler
     private static void ObserveAbandoned(Task work, MaintenanceTaskKind kind)
     {
         _ = work.ContinueWith(
-            finished => Logger.Warn(
-                $"The abandoned maintenance task \"{MaintenanceTasks.GetId(kind)}\" ended with {finished.Exception?.GetBaseException().Message ?? "no result"}"
-            ),
+            finished =>
+            {
+                lock (RunningTasks)
+                    RunningTasks.Remove(kind);
+
+                Logger.Warn(
+                    $"The abandoned maintenance task \"{MaintenanceTasks.GetId(kind)}\" ended with {finished.Exception?.GetBaseException().Message ?? "no result"}"
+                );
+            },
             TaskScheduler.Default
         );
     }
@@ -190,12 +203,16 @@ internal static class MaintenanceScheduler
                     continue;
 
                 var schedule = MaintenanceScheduleStore.Get(kind);
-                if (!schedule.Enabled || !ScheduleEvaluator.IsTimeBased(schedule.Frequency))
+                if (!schedule.Enabled || !IsClockDriven(schedule.Frequency))
                     continue;
 
-                if (IsRetryDue(kind, now))
+                if (TryGetPendingRetry(kind, out var retry))
                 {
-                    if (!ScheduleEvaluator.IsWithinGrace(schedule, now))
+                    if (retry.NextAttemptLocal > now)
+                        continue;
+
+                    if (ScheduleEvaluator.IsTimeBased(schedule.Frequency)
+                        && !ScheduleEvaluator.IsWithinGrace(schedule, now))
                     {
                         ClearRetries(kind);
                         continue;
@@ -215,16 +232,19 @@ internal static class MaintenanceScheduler
         }
     }
 
+    private static bool IsClockDriven(ScheduleFrequency frequency)
+        => frequency is ScheduleFrequency.Interval || ScheduleEvaluator.IsTimeBased(frequency);
+
     private static bool IsReadyFor(MaintenanceTaskKind kind) => kind switch
     {
         MaintenanceTaskKind.CheckForUpdates or MaintenanceTaskKind.InstallUpdates => _updatesWereLoaded,
         _ => InstalledPackagesLoader.Instance is { IsLoaded: true },
     };
 
-    private static bool IsRetryDue(MaintenanceTaskKind kind, DateTime now)
+    private static bool TryGetPendingRetry(MaintenanceTaskKind kind, out RetryState retry)
     {
         lock (RetryLock)
-            return Retries.TryGetValue(kind, out var retry) && retry.NextAttemptLocal <= now;
+            return Retries.TryGetValue(kind, out retry!);
     }
 
     private static void ClearRetries(MaintenanceTaskKind kind)
@@ -260,8 +280,13 @@ internal static class MaintenanceScheduler
 
     private static async Task ReloadUpdatesAsync()
     {
-        if (UpgradablePackagesLoader.Instance is { } loader)
-            await loader.ReloadPackages();
+        if (UpgradablePackagesLoader.Instance is not { } loader || loader.IsLoading)
+            return;
+
+        await loader.ReloadPackages();
+
+        if (loader.LastLoadReportedFailures)
+            throw new InvalidOperationException("The update check reported failures, see the log for details");
     }
 
     private static async Task EnsureInstalledPackagesAreLoadedAsync()

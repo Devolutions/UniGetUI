@@ -182,6 +182,24 @@ public class MaintenanceScheduleStoreTests : IDisposable
     }
 
     [Fact]
+    public void ConcurrentWritesToDifferentTasksAllSurvive()
+    {
+        for (int round = 0; round < 40; round++)
+        {
+            Settings.SetValue(Settings.K.MaintenanceSchedules, "");
+
+            Parallel.ForEach(MaintenanceTasks.All, kind => Save(kind, s => s.StartMinutes = 123));
+
+            string raw = Settings.GetValue(Settings.K.MaintenanceSchedules);
+            foreach (var kind in MaintenanceTasks.All)
+            {
+                Assert.Contains(MaintenanceTasks.GetId(kind), raw);
+                Assert.Equal(123, MaintenanceScheduleStore.Get(kind).StartMinutes);
+            }
+        }
+    }
+
+    [Fact]
     public void ANewScheduleRunsAMissedOccurrenceRatherThanSkippingIt()
     {
         Settings.SetValue(Settings.K.MaintenanceSchedules, "");

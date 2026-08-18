@@ -11,7 +11,7 @@ public sealed partial class Scheduler : UserControl, ISettingsPage, IDisposable
     public bool CanGoBack => true;
     public string ShortTitle => CoreTools.Translate("Scheduled maintenance");
 
-    public event EventHandler? RestartRequired;
+    public event EventHandler? RestartRequired { add { } remove { } }
     public event EventHandler<Type>? NavigationRequested;
 
     public Scheduler()
@@ -19,7 +19,6 @@ public sealed partial class Scheduler : UserControl, ISettingsPage, IDisposable
         DataContext = new SchedulerViewModel();
         InitializeComponent();
 
-        VM.RestartRequired += (s, e) => RestartRequired?.Invoke(s, e);
         VM.NavigationRequested += (s, t) => NavigationRequested?.Invoke(s, t);
     }
 

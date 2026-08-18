@@ -23,6 +23,8 @@ public sealed partial class Updates : UserControl, ISettingsPage
 
         VM.NavigationRequested += (s, t) => NavigationRequested?.Invoke(s, t);
 
+        AttachedToVisualTree += (_, _) => VM.RefreshState();
+
         foreach (var (name, val) in VM.MinimumAgeItems)
             MinimumUpdateAgeSelector.AddItem(name, val, false);
         MinimumUpdateAgeSelector.ShowAddedItems();

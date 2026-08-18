@@ -240,12 +240,39 @@ public class SchedulingTests
     }
 
     [Fact]
-    public void NormalizeRestoresEveryDayWhenAWeeklyScheduleHasNoDays()
+    public void AWeeklyScheduleWithNoDaysNeverRuns()
     {
-        var schedule = new MaintenanceTaskSchedule { Frequency = ScheduleFrequency.Weekly, Days = 0 };
+        var schedule = new MaintenanceTaskSchedule
+        {
+            Enabled = true,
+            Frequency = ScheduleFrequency.Weekly,
+            Days = 0,
+            StartMinutes = 9 * 60,
+        };
         schedule.Normalize();
 
-        Assert.Equal(MaintenanceTaskSchedule.AllDays, schedule.Days);
+        Assert.Equal(0, schedule.Days);
+        Assert.False(ScheduleEvaluator.IsDue(schedule, null, MondayMorning));
+        Assert.False(ScheduleEvaluator.IsInsideWindow(schedule, MondayMorning));
+        Assert.Null(ScheduleEvaluator.GetMostRecentOccurrence(schedule, MondayMorning));
+        Assert.Null(ScheduleEvaluator.GetNextOccurrence(schedule, null, MondayMorning));
+    }
+
+    [Fact]
+    public void ReselectingADayAfterClearingThemAllRestoresTheSchedule()
+    {
+        var schedule = new MaintenanceTaskSchedule
+        {
+            Enabled = true,
+            Frequency = ScheduleFrequency.Weekly,
+            Days = 0,
+            StartMinutes = 9 * 60,
+            WindowMinutes = 60,
+        };
+        schedule.SetDay(DayOfWeek.Saturday, true);
+        schedule.Normalize();
+
+        Assert.True(ScheduleEvaluator.IsDue(schedule, null, new DateTime(2026, 8, 22, 9, 30, 0, DateTimeKind.Local)));
     }
 
     [Fact]

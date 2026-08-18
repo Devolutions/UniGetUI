@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Infrastructure;
@@ -35,6 +36,9 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     private static readonly int[] WindowValues = [0, 30, 60, 120, 240, 480];
     private static readonly int[] MinuteValues = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
+    private static readonly bool Uses12HourClock =
+        CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern.Contains('h', StringComparison.Ordinal);
+
     private readonly List<ScheduleFrequency> _frequencies;
     private bool _isLoading;
 
@@ -43,6 +47,8 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     public string Title { get; }
 
     public string TaskDescription { get; }
+
+    public string IconPath { get; }
 
     public IReadOnlyList<string> FrequencyOptions { get; }
 
@@ -54,6 +60,10 @@ public partial class ScheduledTaskViewModel : ViewModelBase
 
     public IReadOnlyList<string> MinuteOptions { get; }
 
+    public IReadOnlyList<string> MeridiemOptions { get; }
+
+    public bool IsMeridiemVisible => Uses12HourClock;
+
     public ObservableCollection<DayToggleViewModel> Days { get; } = [];
 
     [ObservableProperty] private bool _isEnabled;
@@ -62,28 +72,38 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     [ObservableProperty] private int _windowIndex;
     [ObservableProperty] private int _hourIndex;
     [ObservableProperty] private int _minuteIndex;
+    [ObservableProperty] private int _meridiemIndex;
     [ObservableProperty] private bool _runMissed;
     [ObservableProperty] private bool _isIntervalVisible;
     [ObservableProperty] private bool _isTimeVisible;
     [ObservableProperty] private bool _isDaySelectorVisible;
-    [ObservableProperty] private string _stateLabel = "";
-    [ObservableProperty] private string _summaryText = "";
+    [ObservableProperty] private string _schedulePrimaryText = "";
+    [ObservableProperty] private string _scheduleSecondaryText = "";
+    [ObservableProperty] private bool _hasScheduleSecondaryText;
+    [ObservableProperty] private double _schedulePrimaryFontSize = 16;
+    [ObservableProperty] private bool _hasNoOccurrences;
+    [ObservableProperty] private double _headerOpacity = 1;
     [ObservableProperty] private string _statusText = "";
 
     public event EventHandler? RestartRequired;
 
-    public ScheduledTaskViewModel(MaintenanceTaskKind kind, string title, string description)
+    public ScheduledTaskViewModel(MaintenanceTaskKind kind, string title, string description, string iconName)
     {
         Kind = kind;
         Title = title;
         TaskDescription = description;
+        IconPath = $"avares://UniGetUI/Assets/Symbols/{iconName}.svg";
 
         _frequencies = MaintenanceTasks.GetSupportedFrequencies(kind).ToList();
         FrequencyOptions = _frequencies.Select(GetFrequencyLabel).ToList();
         IntervalOptions = IntervalValues.Select(GetIntervalLabel).ToList();
         WindowOptions = WindowValues.Select(GetWindowLabel).ToList();
-        HourOptions = Enumerable.Range(0, 24).Select(h => h.ToString("00", CultureInfo.CurrentCulture)).ToList();
-        MinuteOptions = MinuteValues.Select(m => m.ToString("00", CultureInfo.CurrentCulture)).ToList();
+        var format = CultureInfo.CurrentCulture.DateTimeFormat;
+        HourOptions = Uses12HourClock
+            ? [.. Enumerable.Range(0, 12).Select(h => (h == 0 ? 12 : h).ToString(CultureInfo.CurrentCulture))]
+            : [.. Enumerable.Range(0, 24).Select(h => h.ToString("00", CultureInfo.CurrentCulture))];
+        MinuteOptions = [.. MinuteValues.Select(m => m.ToString("00", CultureInfo.CurrentCulture))];
+        MeridiemOptions = [format.AMDesignator, format.PMDesignator];
 
         Load();
     }
@@ -111,8 +131,11 @@ public partial class ScheduledTaskViewModel : ViewModelBase
             FrequencyIndex = Math.Max(0, _frequencies.IndexOf(schedule.Frequency));
             IntervalIndex = GetNearestIndex(IntervalValues, schedule.IntervalSeconds);
             WindowIndex = GetNearestIndex(WindowValues, schedule.WindowMinutes);
-            HourIndex = Math.Clamp(schedule.StartMinutes / 60, 0, 23);
-            MinuteIndex = GetNearestIndex(MinuteValues, schedule.StartMinutes % 60);
+            int startMinutes = Math.Clamp(schedule.StartMinutes, 0, MaintenanceTaskSchedule.MinutesPerDay - 1);
+            int hour24 = startMinutes / 60;
+            HourIndex = Uses12HourClock ? hour24 % 12 : hour24;
+            MinuteIndex = GetNearestIndex(MinuteValues, startMinutes % 60);
+            MeridiemIndex = hour24 >= 12 ? 1 : 0;
             RunMissed = schedule.RunMissed;
 
             Days.Clear();
@@ -137,8 +160,7 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         schedule.Frequency = _frequencies[Math.Clamp(FrequencyIndex, 0, _frequencies.Count - 1)];
         schedule.IntervalSeconds = IntervalValues[Math.Clamp(IntervalIndex, 0, IntervalValues.Length - 1)];
         schedule.WindowMinutes = WindowValues[Math.Clamp(WindowIndex, 0, WindowValues.Length - 1)];
-        schedule.StartMinutes = Math.Clamp(HourIndex, 0, 23) * 60
-            + MinuteValues[Math.Clamp(MinuteIndex, 0, MinuteValues.Length - 1)];
+        schedule.StartMinutes = GetStartMinutes();
         schedule.RunMissed = RunMissed;
 
         foreach (var day in Days)
@@ -153,15 +175,6 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     private void OnDayToggled()
     {
         if (_isLoading) return;
-
-        if (Days.All(d => !d.IsSelected))
-        {
-            _isLoading = true;
-            foreach (var day in Days)
-                day.IsSelected = true;
-            _isLoading = false;
-        }
-
         Save();
     }
 
@@ -175,28 +188,49 @@ public partial class ScheduledTaskViewModel : ViewModelBase
 
     private void RefreshLabels()
     {
-        StateLabel = IsEnabled ? CoreTools.Translate("Enabled") : CoreTools.Translate("Disabled");
-        SummaryText = BuildSummary();
-        StatusText = BuildStatus();
-    }
+        var frequency = GetSelectedFrequency();
 
-    private string BuildSummary()
-    {
-        string time = GetTimeLabel();
-        string window = WindowValues[Math.Clamp(WindowIndex, 0, WindowValues.Length - 1)] > 0
-            ? " · " + CoreTools.Translate("within {0}", WindowOptions[WindowIndex])
-            : "";
+        HasNoOccurrences = frequency is ScheduleFrequency.Weekly && Days.All(d => !d.IsSelected);
+        if (HasNoOccurrences)
+        {
+            SchedulePrimaryText = CoreTools.Translate("Never");
+            ScheduleSecondaryText = CoreTools.Translate("No days selected");
+            HasScheduleSecondaryText = true;
+            SchedulePrimaryFontSize = 14;
+            HeaderOpacity = IsEnabled ? 1 : 0.7;
+            StatusText = BuildStatus();
+            return;
+        }
 
-        return GetSelectedFrequency() switch
+        SchedulePrimaryText = frequency switch
         {
             ScheduleFrequency.AtAppStart => CoreTools.Translate("When UniGetUI starts"),
             ScheduleFrequency.AfterEveryUpdateCheck => CoreTools.Translate("After every update check"),
-            ScheduleFrequency.Interval => CoreTools.Translate("Every {0}", IntervalOptions[Math.Clamp(IntervalIndex, 0, IntervalOptions.Count - 1)]),
-            ScheduleFrequency.Daily => CoreTools.Translate("Every day at {0}", time) + window,
-            ScheduleFrequency.Weekly => CoreTools.Translate("{0} at {1}", GetSelectedDaysLabel(), time) + window,
+            ScheduleFrequency.Interval => IntervalOptions[Math.Clamp(IntervalIndex, 0, IntervalOptions.Count - 1)],
+            _ => GetTimeLabel(),
+        };
+
+        ScheduleSecondaryText = frequency switch
+        {
+            ScheduleFrequency.Interval => GetFrequencyLabel(ScheduleFrequency.Interval),
+            ScheduleFrequency.Daily => CoreTools.Translate("Every day") + GetWindowSuffix(),
+            ScheduleFrequency.Weekly => GetSelectedDaysLabel() + GetWindowSuffix(),
             _ => "",
         };
+
+        SchedulePrimaryFontSize = frequency is ScheduleFrequency.AtAppStart or ScheduleFrequency.AfterEveryUpdateCheck
+            ? 13
+            : 16;
+
+        HasScheduleSecondaryText = ScheduleSecondaryText.Length > 0;
+        HeaderOpacity = IsEnabled ? 1 : 0.7;
+        StatusText = BuildStatus();
     }
+
+    private string GetWindowSuffix()
+        => WindowValues[Math.Clamp(WindowIndex, 0, WindowValues.Length - 1)] > 0
+            ? " · " + CoreTools.Translate("within {0}", WindowOptions[WindowIndex])
+            : "";
 
     private string BuildStatus()
     {
@@ -221,12 +255,19 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     private ScheduleFrequency GetSelectedFrequency()
         => _frequencies[Math.Clamp(FrequencyIndex, 0, _frequencies.Count - 1)];
 
-    private string GetTimeLabel()
+    private int GetStartMinutes()
     {
-        int minutes = Math.Clamp(HourIndex, 0, 23) * 60
-            + MinuteValues[Math.Clamp(MinuteIndex, 0, MinuteValues.Length - 1)];
-        return DateTime.Today.AddMinutes(minutes).ToString("t", CultureInfo.CurrentCulture);
+        int hour = Math.Clamp(HourIndex, 0, HourOptions.Count - 1);
+        if (Uses12HourClock)
+            hour = (hour % 12) + (MeridiemIndex == 1 ? 12 : 0);
+
+        return hour * 60 + MinuteValues[Math.Clamp(MinuteIndex, 0, MinuteValues.Length - 1)];
     }
+
+    private string GetTimeLabel() => GetClockLabel(GetStartMinutes());
+
+    private static string GetClockLabel(int minutesFromMidnight)
+        => DateTime.Today.AddMinutes(minutesFromMidnight).ToString("t", CultureInfo.CurrentCulture);
 
     private string GetSelectedDaysLabel()
     {
@@ -316,6 +357,8 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     partial void OnHourIndexChanged(int value) => Save();
 
     partial void OnMinuteIndexChanged(int value) => Save();
+
+    partial void OnMeridiemIndexChanged(int value) => Save();
 
     partial void OnRunMissedChanged(bool value) => Save();
 }

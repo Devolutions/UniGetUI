@@ -50,8 +50,6 @@ public sealed class MaintenanceTaskSchedule
             IntervalSeconds = 3600;
 
         Days = (byte)(Days & AllDays);
-        if (Frequency is ScheduleFrequency.Weekly && Days is 0)
-            Days = AllDays;
 
         StartMinutes = Math.Clamp(StartMinutes, 0, MinutesPerDay - 1);
 

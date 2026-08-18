@@ -21,22 +21,26 @@ public partial class SchedulerViewModel : ViewModelBase, IDisposable
         Tasks.Add(new ScheduledTaskViewModel(
             MaintenanceTaskKind.CheckForUpdates,
             CoreTools.Translate("Check for package updates"),
-            CoreTools.Translate("Look for new versions of the installed packages")));
+            CoreTools.Translate("Look for new versions of the installed packages"),
+            "reload"));
 
         Tasks.Add(new ScheduledTaskViewModel(
             MaintenanceTaskKind.InstallUpdates,
             CoreTools.Translate("Install available updates"),
-            CoreTools.Translate("Update every upgradable package, respecting the battery and metered connection restrictions")));
+            CoreTools.Translate("Update every upgradable package, respecting the battery and metered connection restrictions"),
+            "update"));
 
         Tasks.Add(new ScheduledTaskViewModel(
             MaintenanceTaskKind.LocalBackup,
             CoreTools.Translate("Local package backup"),
-            CoreTools.Translate("Save the list of installed packages to the local backup directory")));
+            CoreTools.Translate("Save the list of installed packages to the local backup directory"),
+            "disk"));
 
         Tasks.Add(new ScheduledTaskViewModel(
             MaintenanceTaskKind.CloudBackup,
             CoreTools.Translate("Cloud package backup"),
-            CoreTools.Translate("Save the list of installed packages to the configured cloud backup")));
+            CoreTools.Translate("Save the list of installed packages to the configured cloud backup"),
+            "share"));
 
         foreach (var task in Tasks)
             task.RestartRequired += OnTaskRestartRequired;

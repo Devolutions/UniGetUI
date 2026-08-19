@@ -44,7 +44,16 @@
                                    Text="{t:Translate Automatically switch to software rendering when Windows has no hardware GPU}"
                                    WarningText="{t:Translate Restart UniGetUI to apply this change}"
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
-                                   CornerRadius="8"
+                                   CornerRadius="8,8,0,0"
+                                   IsVisible="{Binding IsWindows}"/>
+
+            <settings:CheckboxCard x:Name="UseSystemUIFontCard"
+                                   SettingName="UseSystemUIFont"
+                                   Text="{t:Translate Use the font configured in Windows instead of the default interface font}"
+                                   WarningText="{t:Translate Restart UniGetUI to apply this change}"
+                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
+                                   CornerRadius="0,0,8,8"
+                                   BorderThickness="1,0,1,1"
                                    IsVisible="{Binding IsWindows}"/>
 
             <Border Height="16"/>

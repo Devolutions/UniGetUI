@@ -1,6 +1,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using Avalonia;
+using Avalonia.Media;
 #if WINDOWS
 using Avalonia.Win32;
 #endif
@@ -91,6 +92,11 @@ public static class AvaloniaAppHost
     {
         AppBuilder builder = AppBuilder.Configure<App>()
             .UsePlatformDetect();
+
+        if (UiFontPolicy.ResolveDefaultFamilyName() is { } fontFamily)
+        {
+            builder = builder.With(new FontManagerOptions { DefaultFamilyName = fontFamily });
+        }
 
 #if WINDOWS
         if (WindowsAvaloniaRenderingPolicy.ShouldUseSoftwareRendering)

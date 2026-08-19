@@ -526,6 +526,7 @@
   "Appearance": "Appearance",
   "Rendering": "Rendering",
   "Automatically switch to software rendering when Windows has no hardware GPU": "Automatically switch to software rendering when Windows has no hardware GPU",
+  "Use the font configured in Windows instead of the default interface font": "Use the font configured in Windows instead of the default interface font",
   "UniGetUI on the background and system tray": "UniGetUI on the background and system tray",
   "Package lists": "Package lists",
   "Use classic mode": "Use classic mode",

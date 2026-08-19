@@ -33,6 +33,7 @@ public abstract partial class AbstractOperation : IDisposable
     private bool Disposed;
 
     private readonly List<(string, LineType)> LogList = [];
+    private readonly object LogListLock = new();
     private OperationStatus _status = OperationStatus.InQueue;
     public OperationStatus Status
     {
@@ -176,17 +177,27 @@ public abstract partial class AbstractOperation : IDisposable
     {
         // LogList stays raw: it is the source of truth for result parsing. Only display redacts.
         if (type != LineType.ProgressIndicator)
-            LogList.Add((line, type));
+        {
+            lock (LogListLock)
+                LogList.Add((line, type));
+        }
         LogLineAdded?.Invoke(this, (Logger.Redact(line), type));
     }
 
-    protected IReadOnlyList<(string, LineType)> GetRawOutput() => LogList;
+    protected IReadOnlyList<(string, LineType)> GetRawOutput()
+    {
+        lock (LogListLock)
+            return LogList.ToArray();
+    }
 
     public IReadOnlyList<(string, LineType)> GetOutput()
     {
-        if (!Logger.RedactUsername)
-            return LogList;
-        return LogList.Select(l => (Logger.Redact(l.Item1), l.Item2)).ToList();
+        lock (LogListLock)
+        {
+            if (!Logger.RedactUsername)
+                return LogList.ToArray();
+            return LogList.Select(l => (Logger.Redact(l.Item1), l.Item2)).ToArray();
+        }
     }
 
     public Task MainThread()

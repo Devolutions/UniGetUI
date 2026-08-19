@@ -400,6 +400,32 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task OutputSnapshotsDoNotThrowWhileLinesAreAppended()
+    {
+        using var operation = new LoggingStubOperation();
+        const int lines = 20_000;
+
+        var writer = Task.Run(() =>
+        {
+            for (int i = 0; i < lines; i++)
+                operation.EmitLine($"line {i}", AbstractOperation.LineType.Information);
+        });
+
+        var reader = Task.Run(() =>
+        {
+            while (!writer.IsCompleted)
+            {
+                foreach (var _ in operation.GetOutput()) { }
+                foreach (var _ in operation.RawOutputForTests()) { }
+            }
+        });
+
+        await Task.WhenAll(writer, reader);
+
+        Assert.Equal(lines, operation.GetOutput().Count);
+    }
+
+    [Fact]
     public void UsernameRedactionAppliesToDisplayOutputButNeverToResultParsingOutput()
     {
         // Regression: result parsing must see raw output; only display (GetOutput) may redact.

@@ -376,6 +376,11 @@ namespace UniGetUI.Core.Tools.Tests
         [InlineData("4.0.0.1.05", 4, 0, 0, 105)]
         [InlineData("2024.30.04.1223", 2024, 30, 4, 1223)]
         [InlineData("0.0", 0, 0, 0, 0)]
+        // Build revisions appended with '_' (Homebrew) must become their own segment, so that
+        // 18.4_1 stays below 18.6 instead of being read as 18.41 (issue #5293).
+        [InlineData("18.4_1", 18, 4, 1, 0)]
+        [InlineData("3.14.3_1", 3, 14, 3, 1)]
+        [InlineData("1_2_3_4", 1, 2, 3, 4)]
         public void TestGetVersionStringAsFloat(string version, int i1, int i2, int i3, int i4)
         {
             CoreTools.Version v = CoreTools.VersionStringToStruct(version);

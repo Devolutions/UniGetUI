@@ -41,6 +41,10 @@ public sealed class NewerVersionIsInstalledTests : IDisposable
     [InlineData("2.0.0", "8b640eef", false)]
     [InlineData("", "2.0.0", false)]
     [InlineData("1.0.0;3.0.0", "2.0.0", true)]
+    // Issue #5293: a Homebrew build revision ("18.4_1") used to parse as 18.41 and shadow the
+    // newer upstream release, silently hiding the update.
+    [InlineData("18.4_1", "18.6", false)]
+    [InlineData("18.6_1", "18.6", true)]
     public async Task NewerVersionIsInstalled_ReturnsExpectedResult(string installedVersions, string newVersion, bool expected)
     {
         var manager = new PackageManagerBuilder().Build();

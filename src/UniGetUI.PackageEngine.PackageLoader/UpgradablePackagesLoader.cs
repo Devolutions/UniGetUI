@@ -35,7 +35,12 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 return false;
 
             if (package.NewerVersionIsInstalled())
+            {
+                Logger.Info(
+                    $"Ignoring package {package.Id} because a newer or equal version than {package.NewVersionString} is already installed."
+                );
                 return false;
+            }
 
             var installOptions = await package.GetInstallOptions();
             if (installOptions.SkipMinorUpdates && package.IsUpdateMinor(installOptions.SkipMinorUpdatesLevel))

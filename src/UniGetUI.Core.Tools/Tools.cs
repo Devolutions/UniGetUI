@@ -501,7 +501,11 @@ namespace UniGetUI.Core.Tools
         {
             try
             {
-                char[] separators = ['.', '-', '/', '#'];
+                // '_' is a segment separator too: package managers use it to append a build
+                // revision to an upstream version (e.g. Homebrew's `18.4_1`). Without it, the
+                // revision digits get concatenated into the previous segment (18.41), which
+                // compares as greater than later upstream releases (18.6) and hides updates.
+                char[] separators = ['.', '-', '/', '#', '_'];
                 string[] versionItems = ["", "", "", ""];
 
                 string[] segments = version.Split(separators, StringSplitOptions.RemoveEmptyEntries);

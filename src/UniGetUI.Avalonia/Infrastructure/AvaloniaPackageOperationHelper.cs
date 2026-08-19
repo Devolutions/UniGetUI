@@ -29,12 +29,22 @@ namespace UniGetUI.Avalonia.Infrastructure;
 /// </summary>
 internal static class AvaloniaPackageOperationHelper
 {
+    internal static bool HasPendingOperation(IPackage package, OperationType role)
+    {
+        if (package.Tag is not (PackageTag.OnQueue or PackageTag.BeingProcessed))
+            return false;
+
+        Logger.Warn(
+            $"Skipping {role} of {package.Id} because an operation for this package is already queued or running");
+        return true;
+    }
+
     public static async Task UpdateAllAsync()
     {
         foreach (var pkg in UpgradablePackagesLoader.Instance.Packages.ToList())
         {
-            if (pkg.Tag is PackageTag.BeingProcessed or PackageTag.OnQueue) continue;
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
+            if (HasPendingOperation(pkg, OperationType.Update)) continue;
             var op = new UpdatePackageOperation(pkg, opts);
             op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
             op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
@@ -49,8 +59,8 @@ internal static class AvaloniaPackageOperationHelper
             .Where(p => p.Manager.Id == managerName)
             .ToList())
         {
-            if (pkg.Tag is PackageTag.BeingProcessed or PackageTag.OnQueue) continue;
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
+            if (HasPendingOperation(pkg, OperationType.Update)) continue;
             var op = new UpdatePackageOperation(pkg, opts);
             op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
             op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
@@ -69,6 +79,7 @@ internal static class AvaloniaPackageOperationHelper
         }
 
         var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
+        if (HasPendingOperation(pkg, OperationType.Update)) return;
         var op = new UpdatePackageOperation(pkg, opts);
         op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
         op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);

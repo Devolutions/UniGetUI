@@ -110,7 +110,11 @@ namespace UniGetUI.PackageEngine.Operations
 
                 Package.SetTag(PackageTag.OnQueue);
             };
-            CancelRequested += (_, _) => Package.SetTag(PackageTag.Default);
+            StatusChanged += (_, status) =>
+            {
+                if (status is OperationStatus.Canceled)
+                    Package.SetTag(PackageTag.Default);
+            };
             OperationSucceeded += (_, _) => HandleSuccess();
             OperationFailed += (_, _) => HandleFailure();
         }

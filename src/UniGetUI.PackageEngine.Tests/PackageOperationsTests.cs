@@ -251,6 +251,41 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task InstallOperationCanceledByManagerClearsPackageTag()
+    {
+        var package = CreatePackage();
+        InitializeLoaders();
+        using var operation = new SimulatedInstallPackageOperation(
+            package,
+            new InstallOptions(),
+            OperationVeredict.Canceled
+        );
+
+        await operation.MainThread();
+
+        Assert.Equal(OperationStatus.Canceled, operation.Status);
+        Assert.Equal(PackageTag.Default, package.Tag);
+    }
+
+    [Fact]
+    public async Task InstallOperationCanceledWhileQueuedClearsPackageTag()
+    {
+        var package = CreatePackage();
+        InitializeLoaders();
+        using var operation = new SimulatedInstallPackageOperation(
+            package,
+            new InstallOptions(),
+            OperationVeredict.Success
+        );
+        operation.Enqueued += (_, _) => operation.Cancel();
+
+        await operation.MainThread();
+
+        Assert.Equal(OperationStatus.Canceled, operation.Status);
+        Assert.Equal(PackageTag.Default, package.Tag);
+    }
+
+    [Fact]
     public async Task InstallOperationSuccessfulRunPrefersAuthoritativeInstalledVersion()
     {
         TestPackageManager? manager = null;

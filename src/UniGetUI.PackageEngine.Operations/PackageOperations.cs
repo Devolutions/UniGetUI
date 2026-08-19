@@ -119,6 +119,17 @@ namespace UniGetUI.PackageEngine.Operations
             OperationFailed += (_, _) => HandleFailure();
         }
 
+        public static bool HasPendingOperation(IPackage package, OperationType role)
+        {
+            if (package.Tag is not (PackageTag.OnQueue or PackageTag.BeingProcessed))
+                return false;
+
+            Logger.Warn(
+                $"Skipping {role} of {package.Id} because an operation for this package is already queued or running"
+            );
+            return true;
+        }
+
         private bool RequiresAdminRights() =>
             !Settings.Get(Settings.K.ProhibitElevation)
             && (Package.OverridenOptions.RunAsAdministrator is true || Options.RunAsAdministrator);
@@ -871,7 +882,7 @@ namespace UniGetUI.PackageEngine.Operations
                 return;
 
             Metadata.FailureMessage = CoreTools.Translate(
-                "{package} was not updated because no applicable upgrade was found. It may already be up to date, or no available installer matches this system.",
+                "{package} may already be up to date, or no installer matches this system",
                 new Dictionary<string, object?> { { "package", Package.Name } }
             );
 #endif

@@ -343,7 +343,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         {
             var opts = await InstallOptionsFactory.LoadApplicableAsync(
                 pkg, elevated: elevated, interactive: interactive, no_integrity: no_integrity);
-            if (AvaloniaPackageOperationHelper.HasPendingOperation(pkg, OperationType.Update)) continue;
+            if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
             var op = new UpdatePackageOperation(pkg, opts);
             op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
             op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
@@ -357,7 +357,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         foreach (var pkg in packages)
         {
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
-            if (AvaloniaPackageOperationHelper.HasPendingOperation(pkg, OperationType.Uninstall)) continue;
+            if (PackageOperation.HasPendingOperation(pkg, OperationType.Uninstall)) continue;
             var op = new UninstallPackageOperation(pkg, opts);
             op.OperationSucceeded += (_, _) => TelemetryHandler.UninstallPackage(pkg, TEL_OP_RESULT.SUCCESS);
             op.OperationFailed += (_, _) => TelemetryHandler.UninstallPackage(pkg, TEL_OP_RESULT.FAILED);
@@ -371,7 +371,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         if (package is null || package.Source.IsVirtualManager) return;
         var uninstallOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
         var updateOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
-        if (AvaloniaPackageOperationHelper.HasPendingOperation(package, OperationType.Update)) return;
+        if (PackageOperation.HasPendingOperation(package, OperationType.Update)) return;
         var uninstallOp = new UninstallPackageOperation(package, uninstallOpts);
         uninstallOp.OperationSucceeded += (_, _) => TelemetryHandler.UninstallPackage(package, TEL_OP_RESULT.SUCCESS);
         uninstallOp.OperationFailed += (_, _) => TelemetryHandler.UninstallPackage(package, TEL_OP_RESULT.FAILED);

@@ -524,6 +524,8 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
             no_integrity: no_integrity,
             remove_data: remove_data);
 
+        if (PackageOperation.HasPendingOperation(pkg, role)) return;
+
         AbstractOperation op = role switch
         {
             OperationType.Install => new InstallPackageOperation(pkg, opts),

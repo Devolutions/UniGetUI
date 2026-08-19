@@ -8,6 +8,7 @@ using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.WingetManager;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
@@ -1541,6 +1542,83 @@ public sealed class WinGetManagerTests : IDisposable
             "Truncated": false
         }
         """;
+
+    [Fact]
+    public async Task WinGetUpdateNotApplicableExplainsTheFailureToTheUser()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Klocman.BulkCrapUninstaller")
+            .WithVersion("6.1")
+            .WithNewVersion("6.2")
+            .Build();
+        package.OverridenOptions.WinGet_DropArchAndScope = true;
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions());
+        string defaultMessage = operation.Metadata.FailureMessage;
+
+        var veredict = await operation.ProbeProcessVeredict(unchecked((int)0x8A15002B), []);
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.NotEqual(defaultMessage, operation.Metadata.FailureMessage);
+        Assert.Contains("may already be up to date", operation.Metadata.FailureMessage);
+        Assert.False(operation.Metadata.FailureMessage.EndsWith('.'));
+    }
+
+    [Fact]
+    public async Task WinGetUpdateNotApplicableExplainsTheFailureOnlyOnTheFinalAttempt()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Klocman.BulkCrapUninstaller")
+            .WithVersion("6.1")
+            .WithNewVersion("6.2")
+            .Build();
+        package.OverridenOptions.Scope = PackageScope.Machine;
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions());
+        string defaultMessage = operation.Metadata.FailureMessage;
+
+        var firstAttempt = await operation.ProbeProcessVeredict(unchecked((int)0x8A15002B), []);
+
+        OperationAssert.HasVeredict(firstAttempt, OperationVeredict.AutoRetry);
+        Assert.Equal(defaultMessage, operation.Metadata.FailureMessage);
+
+        var finalAttempt = await operation.ProbeProcessVeredict(unchecked((int)0x8A15002B), []);
+
+        OperationAssert.HasVeredict(finalAttempt, OperationVeredict.Failure);
+        Assert.Contains("may already be up to date", operation.Metadata.FailureMessage);
+    }
+
+    [Fact]
+    public async Task WinGetUpdateFailureUnrelatedToApplicabilityKeepsTheDefaultMessage()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Klocman.BulkCrapUninstaller")
+            .WithVersion("6.1")
+            .WithNewVersion("6.2")
+            .Build();
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions());
+        string defaultMessage = operation.Metadata.FailureMessage;
+
+        var veredict = await operation.ProbeProcessVeredict(1, []);
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.Equal(defaultMessage, operation.Metadata.FailureMessage);
+        Assert.DoesNotContain("may already be up to date", operation.Metadata.FailureMessage);
+    }
+
+    private sealed class VeredictProbingUpdateOperation : UpdatePackageOperation
+    {
+        public VeredictProbingUpdateOperation(IPackage package, InstallOptions options)
+            : base(package, options) { }
+
+        public Task<OperationVeredict> ProbeProcessVeredict(int returnCode, List<string> output)
+            => GetProcessVeredict(returnCode, output);
+    }
 
     private static void SetCliToolKind(WinGet manager, WinGetCliToolKind kind)
     {

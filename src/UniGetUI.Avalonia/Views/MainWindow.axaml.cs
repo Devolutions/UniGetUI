@@ -90,6 +90,10 @@ public partial class MainWindow : Window
     private const uint WM_MOUSEMOVE = 0x0200;
     private const uint WM_SYSCOMMAND = 0x0112;
     private const uint WM_SETTINGCHANGE = 0x001A;
+    private const uint WM_SIZE = 0x0005;
+    private const uint WM_SHOWWINDOW = 0x0018;
+    private const nint SIZE_RESTORED = 0;
+    private const nint SIZE_MAXIMIZED = 2;
     private const uint WM_DWMCOLORIZATIONCOLORCHANGED = 0x0320;
     private const nint SC_MAXIMIZE = 0xF030;
     private const nint SC_RESTORE = 0xF120;
@@ -112,6 +116,7 @@ public partial class MainWindow : Window
     // accent-colored window border that tracks focus.
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     private const int DWMWA_BORDER_COLOR = 34;
+    private const int DWMWCP_DONOTROUND = 1;
     private const int DWMWCP_ROUND = 2;
     private const int WINDOW_BORDER_COLOR_LIGHT = 0x00B9B9B9;
     private const int WINDOW_BORDER_COLOR_DARK = 0x004A4A4A;
@@ -218,6 +223,7 @@ public partial class MainWindow : Window
         }
 
         SetupMicaAndAccentBorder();
+        UpdateWindowCornerPreference();
 
         ActualThemeVariantChanged += (_, _) =>
         {
@@ -1042,15 +1048,23 @@ public partial class MainWindow : Window
             return;
         }
 
-        // The custom NCCALCSIZE frame keeps WS_THICKFRAME, so DWM still has a frame to round.
-        int corner = DWMWCP_ROUND;
-        NativeMethods.DwmSetWindowAttribute(handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, sizeof(int));
-
         // Transparent window + transparent MicaPageBackground (from Styles.WindowsMica) let
         // the backdrop show through the chrome and page area.
         Background = Brushes.Transparent;
 
         ApplyWindowBorderColor(handle);
+    }
+
+    private void UpdateWindowCornerPreference()
+    {
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+            return;
+
+        if (TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
+            return;
+
+        int corner = WindowState == WindowState.Normal ? DWMWCP_ROUND : DWMWCP_DONOTROUND;
+        NativeMethods.DwmSetWindowAttribute(handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, sizeof(int));
     }
 
     private void ApplyWindowBorderColor(nint handle)
@@ -1091,6 +1105,12 @@ public partial class MainWindow : Window
             && Instance is { } borderOwner && MicaWindowHelper.IsMicaEnabled())
         {
             borderOwner.ApplyWindowBorderColor(hWnd);
+        }
+
+        if ((msg == WM_SHOWWINDOW || (msg == WM_SIZE && (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED)))
+            && Instance is { } cornerOwner)
+        {
+            Dispatcher.UIThread.Post(cornerOwner.UpdateWindowCornerPreference);
         }
 
         if (msg == WM_SETTINGCHANGE && Instance is { } trayOwner)

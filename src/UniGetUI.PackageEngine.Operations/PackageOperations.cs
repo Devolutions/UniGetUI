@@ -848,9 +848,33 @@ namespace UniGetUI.PackageEngine.Operations
             List<string> Output
         )
         {
-            return Task.FromResult(
-                Package.Manager.OperationHelper.GetResult(Package, Role, Output, ReturnCode)
+            var veredict = Package.Manager.OperationHelper.GetResult(
+                Package,
+                Role,
+                Output,
+                ReturnCode
             );
+
+            if (veredict is OperationVeredict.Failure && Role is OperationType.Update)
+                ExplainNotApplicableUpdate(Output, ReturnCode);
+
+            return Task.FromResult(veredict);
+        }
+
+        private void ExplainNotApplicableUpdate(List<string> output, int returnCode)
+        {
+#if WINDOWS
+            if (Package.Manager is not WinGet winget)
+                return;
+
+            if (!winget.ReportedUpdateNotApplicable(output, returnCode))
+                return;
+
+            Metadata.FailureMessage = CoreTools.Translate(
+                "{package} was not updated because no applicable upgrade was found. It may already be up to date, or no available installer matches this system.",
+                new Dictionary<string, object?> { { "package", Package.Name } }
+            );
+#endif
         }
 
         private static bool IsWinGetManager(IPackageManager manager)

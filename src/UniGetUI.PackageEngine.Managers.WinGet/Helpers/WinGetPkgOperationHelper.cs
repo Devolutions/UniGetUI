@@ -283,14 +283,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             return OperationVeredict.Failure;
         }
 
-        bool pingetReportedNotApplicable =
-            ((WinGet)Manager).SelectedCliToolKind is WinGetCliToolKind.BundledPinget
-            && processOutput.Any(line =>
-                line.Contains("No applicable installer found", StringComparison.OrdinalIgnoreCase)
-                || line.Contains("No applicable upgrade found", StringComparison.OrdinalIgnoreCase)
-            );
-
-        if (uintCode is 0x8A15002B || pingetReportedNotApplicable)
+        if (ReportedUpdateNotApplicable(processOutput, returnCode))
         { // The update is not applicable to the platform
             // The scope/architecture we forced may exclude the only installer the package ships
             // (e.g. forcing --architecture x64 on a package that only has an x86 installer). Retry
@@ -421,6 +414,21 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             id,
             $"{count}{AttemptSeparator}{version}"
         );
+    }
+
+    internal bool ReportedUpdateNotApplicable(
+        IReadOnlyList<string> processOutput,
+        int returnCode
+    )
+    {
+        if ((uint)returnCode is 0x8A15002B)
+            return true;
+
+        return ((WinGet)Manager).SelectedCliToolKind is WinGetCliToolKind.BundledPinget
+            && processOutput.Any(line =>
+                line.Contains("No applicable installer found", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("No applicable upgrade found", StringComparison.OrdinalIgnoreCase)
+            );
     }
 
     public static void SuppressPhantomUpgrade(IPackage package)

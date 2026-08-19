@@ -225,6 +225,15 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             return PingetPackageDetailsProvider.TryGetInstallerHostsForVersion(package, version);
         }
 
+        public bool ReportedUpdateNotApplicable(
+            IReadOnlyList<string> processOutput,
+            int returnCode
+        )
+        {
+            return OperationHelper is WinGetPkgOperationHelper helper
+                && helper.ReportedUpdateNotApplicable(processOutput, returnCode);
+        }
+
         protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
         {
             return WinGetHelper.Instance.FindPackages_UnSafe(query);

@@ -761,6 +761,7 @@
   "{package} was updated successfully": "{package} was updated successfully",
   "Update failed": "Update failed",
   "{package} could not be updated": "{package} could not be updated",
+  "{package} was not updated because no applicable upgrade was found. It may already be up to date, or no available installer matches this system.": "{package} was not updated because no applicable upgrade was found. It may already be up to date, or no available installer matches this system.",
   "{package} Uninstall": "{package} Uninstall",
   "{0} is being uninstalled": "{0} is being uninstalled",
   "Uninstall succeeded": "Uninstall succeeded",

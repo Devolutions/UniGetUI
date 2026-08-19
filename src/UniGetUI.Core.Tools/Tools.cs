@@ -428,7 +428,7 @@ namespace UniGetUI.Core.Tools
 
         public static Task<string> GetFileNameAsync(Uri url) => Task.Run(() => GetFileName(url));
 
-        public struct Version : IComparable
+        public struct Version : IComparable, IComparable<Version>, IEquatable<Version>
         {
             public static readonly Version Null = new(-1, -1, -1, -1);
 
@@ -491,11 +491,10 @@ namespace UniGetUI.Core.Tools
             private int ExtraSegment(int index) =>
                 _extraSegments is not null && index < _extraSegments.Length ? _extraSegments[index] : 0;
 
-            public int CompareTo(object? other_)
-            {
-                if (other_ is not Version other)
-                    return 0;
+            public int CompareTo(object? other_) => other_ is Version other ? CompareTo(other) : 0;
 
+            public int CompareTo(Version other)
+            {
                 int major = Major.CompareTo(other.Major);
                 if (major != 0)
                     return major;
@@ -589,7 +588,18 @@ namespace UniGetUI.Core.Tools
                 // compares as greater than later upstream releases (18.6) and hides updates.
                 char[] separators = ['.', '-', '/', '#', '_'];
 
-                string[] segments = version.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+                // The ambiguity check below deliberately does NOT split on '_', so that a version
+                // whose underscore introduces a pre-release tag rather than a numeric revision
+                // ("2.0.0_rc1") keeps reporting as unknown, exactly as it did before '_' became a
+                // separator. Parsing it instead would rank the pre-release above the final release
+                // and hide the 2.0.0_rc1 -> 2.0.0 update. A numeric revision ("18.4_1") still
+                // passes, because '_' is neither a digit nor a letter and so trips no flag.
+                char[] ambiguityCheckSeparators = ['.', '-', '/', '#'];
+
+                string[] segments = version.Split(
+                    ambiguityCheckSeparators,
+                    StringSplitOptions.RemoveEmptyEntries
+                );
                 foreach (var segment in segments)
                 {
                     bool seenDigit = false;

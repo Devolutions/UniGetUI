@@ -50,6 +50,10 @@ public sealed class NewerVersionIsInstalledTests : IDisposable
     [InlineData("1.2.3.4_1", "1.2.3.5", false)]
     [InlineData("1.2.3.4_1", "1.2.3.4_2", false)]
     [InlineData("1.2.3.4_2", "1.2.3.4_1", true)]
+    // An underscore before a pre-release tag stays unparseable, so upgrading off a pre-release
+    // onto the final release must remain visible rather than being read as 2.0.0.1 >= 2.0.0.
+    [InlineData("2.0.0_rc1", "2.0.0", false)]
+    [InlineData("2.0.0_beta2", "2.0.0", false)]
     public async Task NewerVersionIsInstalled_ReturnsExpectedResult(string installedVersions, string newVersion, bool expected)
     {
         var manager = new PackageManagerBuilder().Build();

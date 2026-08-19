@@ -399,6 +399,37 @@ namespace UniGetUI.Core.Tools.Tests
             Assert.Equal(CoreTools.Version.Null, v);
         }
 
+        // An underscore introducing a pre-release tag rather than a numeric revision must keep
+        // reporting as unknown, as it did before '_' became a segment separator. Parsing these
+        // would rank the pre-release above the final release and hide the 2.0.0_rc1 -> 2.0.0
+        // update, so the ambiguity check deliberately does not split on '_'.
+        [Theory]
+        [InlineData("2.0.0_rc1")]
+        [InlineData("2.0.0_beta2")]
+        [InlineData("1.0.0+build_1")]
+        [InlineData("1.2_3a4")]
+        public void TestGetVersionStringAsFloat_WithUnderscoredPreReleaseTag_ReturnsNull(string version)
+        {
+            Assert.Equal(CoreTools.Version.Null, CoreTools.VersionStringToStruct(version));
+        }
+
+        // ...while an underscore introducing a numeric revision must parse, since that is the
+        // whole point of treating '_' as a separator.
+        [Theory]
+        [InlineData("18.4_1", 18, 4, 1, 0)]
+        [InlineData("1.2.3_1", 1, 2, 3, 1)]
+        [InlineData("2.0.0_alpha", 2, 0, 0, 0)]
+        public void TestGetVersionStringAsFloat_WithUnderscoredRevision_Parses(
+            string version, int i1, int i2, int i3, int i4)
+        {
+            CoreTools.Version v = CoreTools.VersionStringToStruct(version);
+            Assert.NotEqual(CoreTools.Version.Null, v);
+            Assert.Equal(i1, v.Major);
+            Assert.Equal(i2, v.Minor);
+            Assert.Equal(i3, v.Patch);
+            Assert.Equal(i4, v.Remainder);
+        }
+
         // Versions that only differ past the fourth segment must still order correctly. The
         // four-component assertions above cannot express this, since the difference lives in the
         // segments beyond Remainder.

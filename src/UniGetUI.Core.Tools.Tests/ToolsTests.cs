@@ -372,8 +372,10 @@ namespace UniGetUI.Core.Tools.Tests
         [InlineData("", 0, 0, 0, 0)]
         [InlineData("dfgfdsgdfg", 0, 0, 0, 0)]
         [InlineData("-12", 12, 0, 0, 0)]
-        [InlineData("4.0.0.1.0", 4, 0, 0, 10)]
-        [InlineData("4.0.0.1.05", 4, 0, 0, 105)]
+        // Segments past the fourth are kept separately instead of being appended to Remainder,
+        // which used to turn "1" followed by "0" into 10 and "1" followed by "05" into 105.
+        [InlineData("4.0.0.1.0", 4, 0, 0, 1)]
+        [InlineData("4.0.0.1.05", 4, 0, 0, 1)]
         [InlineData("2024.30.04.1223", 2024, 30, 4, 1223)]
         [InlineData("0.0", 0, 0, 0, 0)]
         // Build revisions appended with '_' (Homebrew) must become their own segment, so that
@@ -395,6 +397,42 @@ namespace UniGetUI.Core.Tools.Tests
         {
             CoreTools.Version v = CoreTools.VersionStringToStruct("10c8e557");
             Assert.Equal(CoreTools.Version.Null, v);
+        }
+
+        // Versions that only differ past the fourth segment must still order correctly. The
+        // four-component assertions above cannot express this, since the difference lives in the
+        // segments beyond Remainder.
+        [Theory]
+        // A build revision on a four-part version used to inflate Remainder (1.2.3.41), making
+        // the installed version compare as greater than the newer release (issue #5293).
+        [InlineData("1.2.3.4_1", "1.2.3.5")]
+        [InlineData("1.2.3.4_1", "1.2.3.4_2")]
+        [InlineData("3.1.4.1_1", "3.1.4.2")]
+        [InlineData("4.0.0.1.0", "4.0.0.1.05")]
+        [InlineData("4.0.0.1.5", "4.0.0.1.10")]
+        public void TestVersionOrderingBeyondFourthSegment(string lower, string higher)
+        {
+            CoreTools.Version low = CoreTools.VersionStringToStruct(lower);
+            CoreTools.Version high = CoreTools.VersionStringToStruct(higher);
+
+            Assert.True(low < high, $"expected {lower} < {higher}");
+            Assert.True(high > low, $"expected {higher} > {lower}");
+            Assert.NotEqual(low, high);
+        }
+
+        [Theory]
+        // Trailing zeroes past the fourth segment are trimmed, so these are the same version and
+        // must agree on equality and hash code.
+        [InlineData("1.2.3.4", "1.2.3.4.0")]
+        [InlineData("1.2.3.4", "1.2.3.4.0.0")]
+        [InlineData("18.4_1", "18.4.1")]
+        public void TestVersionEqualityIgnoresTrailingZeroSegments(string left, string right)
+        {
+            CoreTools.Version a = CoreTools.VersionStringToStruct(left);
+            CoreTools.Version b = CoreTools.VersionStringToStruct(right);
+
+            Assert.Equal(a, b);
+            Assert.Equal(a.GetHashCode(), b.GetHashCode());
         }
 
         [Theory]

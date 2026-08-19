@@ -330,11 +330,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
         {
             if (NormalizedVersion == CoreTools.Version.Null || NormalizedNewVersion == CoreTools.Version.Null)
                 return 0;
-            if (NormalizedVersion.Major != NormalizedNewVersion.Major) return 1;
-            if (NormalizedVersion.Minor != NormalizedNewVersion.Minor) return 2;
-            if (NormalizedVersion.Patch != NormalizedNewVersion.Patch) return 3;
-            if (NormalizedVersion.Remainder != NormalizedNewVersion.Remainder) return 4;
-            return 0;
+            return NormalizedVersion.FirstDifferingComponent(NormalizedNewVersion);
         }
 
         public virtual bool IsUpdateMinor(int level = InstallOptions.DefaultSkipMinorLevel)

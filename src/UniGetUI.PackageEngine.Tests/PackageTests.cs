@@ -45,6 +45,11 @@ public sealed class NewerVersionIsInstalledTests : IDisposable
     // newer upstream release, silently hiding the update.
     [InlineData("18.4_1", "18.6", false)]
     [InlineData("18.6_1", "18.6", true)]
+    // Same bug on a four-part upstream version, where the revision used to be folded into the
+    // fourth component (1.2.3.4_1 -> 1.2.3.41) because the parser only kept four segments.
+    [InlineData("1.2.3.4_1", "1.2.3.5", false)]
+    [InlineData("1.2.3.4_1", "1.2.3.4_2", false)]
+    [InlineData("1.2.3.4_2", "1.2.3.4_1", true)]
     public async Task NewerVersionIsInstalled_ReturnsExpectedResult(string installedVersions, string newVersion, bool expected)
     {
         var manager = new PackageManagerBuilder().Build();

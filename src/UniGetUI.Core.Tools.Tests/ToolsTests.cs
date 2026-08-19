@@ -418,7 +418,6 @@ namespace UniGetUI.Core.Tools.Tests
         [Theory]
         [InlineData("18.4_1", 18, 4, 1, 0)]
         [InlineData("1.2.3_1", 1, 2, 3, 1)]
-        [InlineData("2.0.0_alpha", 2, 0, 0, 0)]
         public void TestGetVersionStringAsFloat_WithUnderscoredRevision_Parses(
             string version, int i1, int i2, int i3, int i4)
         {
@@ -428,6 +427,27 @@ namespace UniGetUI.Core.Tools.Tests
             Assert.Equal(i2, v.Minor);
             Assert.Equal(i3, v.Patch);
             Assert.Equal(i4, v.Remainder);
+        }
+
+        // Known limitation, recorded rather than endorsed: a pre-release tag carrying no number is
+        // dropped entirely, so the pre-release parses equal to its final release and
+        // NewerVersionIsInstalled() hides the upgrade onto that release. Every separator behaves
+        // this way, which is why '_' is not special-cased for it -- fixing this means ranking
+        // pre-releases below their release for all managers, well beyond the scope of the '_' work.
+        // Asserted against the '-' and '.' spellings so all variants move together when it is
+        // fixed.
+        [Theory]
+        [InlineData("2.0.0_alpha", "2.0.0")]
+        [InlineData("2.0.0-alpha", "2.0.0")]
+        [InlineData("2.0.0.alpha", "2.0.0")]
+        [InlineData("1.0.0_pre", "1.0.0")]
+        public void TestPreReleaseTagWithoutNumberStillParsesEqualToItsRelease(
+            string preRelease, string release)
+        {
+            Assert.Equal(
+                CoreTools.VersionStringToStruct(release),
+                CoreTools.VersionStringToStruct(preRelease)
+            );
         }
 
         // Versions that only differ past the fourth segment must still order correctly. The

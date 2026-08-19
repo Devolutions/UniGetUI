@@ -60,7 +60,10 @@ internal static class NativeWebViewSupport
     ];
 
     private static bool? _isAvailable;
-    private static bool _failedAtRuntime;
+
+    // Set whenever the web view is unusable for a reason we cannot pin on a missing runtime,
+    // so UnavailableReason stops offering remediation that may not apply.
+    private static bool _causeUnknown;
 
     /// <summary>
     /// Raised (on the UI thread) when a web view that was believed to work failed to
@@ -92,9 +95,10 @@ internal static class NativeWebViewSupport
     {
         get
         {
-            // A runtime failure says nothing about what is or isn't installed, so it gets the
-            // generic wording rather than the (possibly wrong) "not installed" one.
-            if (!_failedAtRuntime)
+            // A runtime failure, or a probe that could not complete, says nothing about what
+            // is or isn't installed: those get the generic wording rather than the (possibly
+            // wrong) "not installed" one.
+            if (!_causeUnknown)
             {
                 if (OperatingSystem.IsLinux())
                     return CoreTools.Translate("The built-in browser is not supported on Linux yet.");
@@ -117,7 +121,7 @@ internal static class NativeWebViewSupport
             return;
 
         _isAvailable = false;
-        _failedAtRuntime = true;
+        _causeUnknown = true;
 
         try
         {
@@ -195,7 +199,10 @@ internal static class NativeWebViewSupport
         catch (Exception ex)
         {
             // A failed probe must not be treated as "runtime present": embedding the web view
-            // is the crashing path, showing the fallback is not.
+            // is the crashing path, showing the fallback is not. It is no proof of absence
+            // either, though, so the user must not be told to go install something they may
+            // well already have.
+            _causeUnknown = true;
             Logger.Warn("Could not determine whether the Edge WebView2 runtime is installed");
             Logger.Warn(ex);
             return false;

@@ -33,51 +33,52 @@
     <Grid RowDefinitions="Auto,2,*" Margin="8,4,8,8">
 
         <!-- Toolbar -->
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" Margin="0,0,0,6">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,6">
 
-            <Button Grid.Column="0"
-                    x:Name="BackButton"
-                    Classes="nav"
-                    Width="35" Height="35" Padding="6"
-                    CornerRadius="4,0,0,4"
-                    automation:AutomationProperties.Name="{t:Translate Go back}"
-                    Click="BackButton_Click">
-                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/backward.svg"
-                                  Width="16" Height="16"/>
-            </Button>
+            <!-- Grouped so the whole set can be hidden when the built-in browser is unavailable -->
+            <StackPanel Grid.Column="0" x:Name="NavigationButtons" Orientation="Horizontal">
 
-            <Button Grid.Column="1"
-                    x:Name="ForwardButton"
-                    Classes="nav"
-                    Width="35" Height="35" Padding="6"
-                    CornerRadius="0"
-                    automation:AutomationProperties.Name="{t:Translate Go forward}"
-                    Click="ForwardButton_Click">
-                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/forward.svg"
-                                  Width="16" Height="16"/>
-            </Button>
+                <Button x:Name="BackButton"
+                        Classes="nav"
+                        Width="35" Height="35" Padding="6"
+                        CornerRadius="4,0,0,4"
+                        automation:AutomationProperties.Name="{t:Translate Go back}"
+                        Click="BackButton_Click">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/backward.svg"
+                                      Width="16" Height="16"/>
+                </Button>
+
+                <Button x:Name="ForwardButton"
+                        Classes="nav"
+                        Width="35" Height="35" Padding="6"
+                        CornerRadius="0"
+                        automation:AutomationProperties.Name="{t:Translate Go forward}"
+                        Click="ForwardButton_Click">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/forward.svg"
+                                      Width="16" Height="16"/>
+                </Button>
+
+                <Button Classes="nav"
+                        Width="35" Height="35" Padding="6"
+                        CornerRadius="0"
+                        automation:AutomationProperties.Name="{t:Translate Go to home page}"
+                        Click="HomeButton_Click">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/home.svg"
+                                      Width="16" Height="16"/>
+                </Button>
+
+                <Button Classes="nav"
+                        Width="35" Height="35" Padding="6"
+                        CornerRadius="0,4,4,0"
+                        automation:AutomationProperties.Name="{t:Translate Reload page}"
+                        Click="ReloadButton_Click">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg"
+                                      Width="16" Height="16"/>
+                </Button>
+
+            </StackPanel>
 
             <Button Grid.Column="2"
-                    Classes="nav"
-                    Width="35" Height="35" Padding="6"
-                    CornerRadius="0"
-                    automation:AutomationProperties.Name="{t:Translate Go to home page}"
-                    Click="HomeButton_Click">
-                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/home.svg"
-                                  Width="16" Height="16"/>
-            </Button>
-
-            <Button Grid.Column="3"
-                    Classes="nav"
-                    Width="35" Height="35" Padding="6"
-                    CornerRadius="0,4,4,0"
-                    automation:AutomationProperties.Name="{t:Translate Reload page}"
-                    Click="ReloadButton_Click">
-                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg"
-                                  Width="16" Height="16"/>
-            </Button>
-
-            <Button Grid.Column="5"
                     Classes="flat"
                     Height="35"
                     Command="{Binding OpenInBrowserCommand}"
@@ -102,11 +103,12 @@
             <controls:UniGetUiWebView x:Name="WebViewControl"/>
         </Border>
 
-        <!-- Linux fallback -->
-        <StackPanel x:Name="LinuxFallbackPanel" Grid.Row="2"
+        <!-- Shown instead of the web view when no usable browser engine is embeddable
+             (Linux, or Windows without the Edge WebView2 runtime — see #5285) -->
+        <StackPanel x:Name="WebViewFallbackPanel" Grid.Row="2"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
                     Spacing="12" IsVisible="False">
-            <TextBlock Text="{t:Translate The built-in browser is not supported on Linux yet.}"
+            <TextBlock x:Name="WebViewFallbackMessage"
                        TextAlignment="Center" TextWrapping="Wrap" MaxWidth="400"/>
             <Button Classes="flat" HorizontalAlignment="Center" Command="{Binding OpenInBrowserCommand}">
                 <TextBlock Text="{t:Translate Open in browser}"

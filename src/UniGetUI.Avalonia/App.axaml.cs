@@ -69,6 +69,19 @@ public partial class App : Application
                     && msg.Contains("child window for native control host"))
                 {
                     e.Handled = true;
+                    return;
+                }
+
+                // #5285: the web view reports adapter-initialization failures from an
+                // `async void` continuation, so they land here instead of at the call site.
+                // NativeWebViewSupport pre-checks the common cause (no WebView2 runtime), but
+                // a runtime that is present and broken can still fail this late.
+                if (NativeWebViewSupport.IsWebViewFailure(e.Exception))
+                {
+                    Logger.Error("The built-in browser failed to initialize; falling back to the system browser");
+                    Logger.Error(e.Exception);
+                    NativeWebViewSupport.MarkUnavailable();
+                    e.Handled = true;
                 }
             };
         }

@@ -443,6 +443,8 @@
   "Reload page": "Reload page",
   "View page on browser": "View page on browser",
   "The built-in browser is not supported on Linux yet.": "The built-in browser is not supported on Linux yet.",
+  "The built-in browser requires the Microsoft Edge WebView2 Runtime, which is not installed on this computer.": "The built-in browser requires the Microsoft Edge WebView2 Runtime, which is not installed on this computer.",
+  "The built-in browser could not be loaded on this computer.": "The built-in browser could not be loaded on this computer.",
   "Open in browser": "Open in browser",
   "Copy to clipboard": "Copy to clipboard",
   "Export to a file": "Export to a file",

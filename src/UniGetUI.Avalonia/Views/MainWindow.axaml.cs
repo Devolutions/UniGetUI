@@ -97,6 +97,7 @@ public partial class MainWindow : Window
     private const uint WM_DWMCOLORIZATIONCOLORCHANGED = 0x0320;
     private const nint SC_MAXIMIZE = 0xF030;
     private const nint SC_RESTORE = 0xF120;
+    private const int HTCLIENT = 1;
     private const int HTMAXBUTTON = 9;
     private const uint TME_LEAVE = 0x0002;
     private const uint TME_NONCLIENT = 0x0010;
@@ -978,8 +979,7 @@ public partial class MainWindow : Window
             return false;
         try
         {
-            int x = unchecked((short)(lParam.ToInt64() & 0xFFFF));
-            int y = unchecked((short)((lParam.ToInt64() >> 16) & 0xFFFF));
+            var (x, y) = ScreenPointFromLParam(lParam);
             PixelPoint topLeft = MaximizeButton.PointToScreen(new Point(0, 0));
             PixelPoint bottomRight = MaximizeButton.PointToScreen(
                 new Point(MaximizeButton.Bounds.Width, MaximizeButton.Bounds.Height));
@@ -989,6 +989,30 @@ public partial class MainWindow : Window
         {
             return false;
         }
+    }
+
+    private bool HitTestCaptionButtons(nint lParam)
+    {
+        if (!WindowButtons.IsVisible)
+            return false;
+        try
+        {
+            var (x, y) = ScreenPointFromLParam(lParam);
+            PixelPoint topLeft = WindowButtons.PointToScreen(new Point(0, 0));
+            PixelPoint bottomRight = WindowButtons.PointToScreen(
+                new Point(WindowButtons.Bounds.Width, WindowButtons.Bounds.Height));
+            return x >= topLeft.X && x < bottomRight.X && y >= topLeft.Y && y < bottomRight.Y;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static (int X, int Y) ScreenPointFromLParam(nint lParam)
+    {
+        long packed = lParam.ToInt64();
+        return (unchecked((short)(packed & 0xFFFF)), unchecked((short)((packed >> 16) & 0xFFFF)));
     }
 
     // Emulates the button's pointer-over/pressed fill (lost once input is non-client) using the
@@ -1129,6 +1153,11 @@ public partial class MainWindow : Window
                     {
                         handled = true;
                         return HTMAXBUTTON;
+                    }
+                    if (self.HitTestCaptionButtons(lParam))
+                    {
+                        handled = true;
+                        return HTCLIENT;
                     }
                     break;
 

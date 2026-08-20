@@ -829,6 +829,11 @@ public partial class MainWindow : Window
     {
         try
         {
+            // Width/Height stay NaN until the window has been laid out, which never happens on a
+            // daemon launch the user has not opened yet. Saving then would persist a 0x0 size.
+            if (double.IsNaN(Width) || double.IsNaN(Height))
+                return;
+
             int state = WindowState == WindowState.Maximized ? 1 : 0;
             string geometry = $"v2,{Position.X},{Position.Y},{(int)Width},{(int)Height},{state}";
             Settings.SetValue(Settings.K.WindowGeometry, geometry);

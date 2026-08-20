@@ -149,19 +149,6 @@ public partial class App : Application
             };
         }
 
-        if (CoreData.WasDaemon)
-        {
-            // Start silently: hide the window on first open only.
-            // Opened fires on every Show() in Avalonia, so we must unsubscribe
-            // immediately or every ShowFromTray() call would hide the window again.
-            void HideOnce(object? s, EventArgs e)
-            {
-                mainWindow.Opened -= HideOnce;
-                mainWindow.Hide();
-            }
-            mainWindow.Opened += HideOnce;
-        }
-
         if (splash is not null)
         {
             var splashRef = splash;
@@ -173,9 +160,10 @@ public partial class App : Application
             mainWindow.Opened += CloseSplashOnce;
         }
 
-        // Framework auto-show already passed (we deferred via Dispatcher.Post),
-        // so we have to open the window ourselves.
-        mainWindow.Show();
+        // Framework auto-show already passed (we deferred via Dispatcher.Post), so we have to
+        // open the window ourselves. Daemon mode never shows it at all.
+        if (!CoreData.WasDaemon)
+            mainWindow.Show();
 
         _ = StartupAsync(mainWindow);
     }
@@ -194,9 +182,9 @@ public partial class App : Application
                 // ShowDialog tries to attach to it as owner.
                 await Task.Yield();
 
-                // ShowDialog requires a visible owner. In daemon mode the main window
-                // is hidden, so temporarily show it and re-hide after the dialog closes.
-                bool reshide = CoreData.WasDaemon;
+                // The dialog is hosted inside the main window, so it is only reachable while
+                // that window is on screen. Bring it up for the dialog and put it back after.
+                bool reshide = !mainWindow.IsVisible;
                 if (reshide) mainWindow.Show();
                 await new CrashReportWindow(report).ShowDialog(mainWindow);
                 if (reshide) mainWindow.Hide();

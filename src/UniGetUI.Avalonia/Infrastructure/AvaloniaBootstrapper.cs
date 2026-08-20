@@ -91,14 +91,30 @@ internal static class AvaloniaBootstrapper
     private static async Task ShowIntegrityViolationDialogAsync()
     {
         if (MainWindow.Instance is not { } owner) return;
-        await new IntegrityViolationDialog().ShowDialog(owner);
+        await ShowStartupDialogAsync(owner, new IntegrityViolationDialog());
     }
 
     private static async Task ShowMissingDependencyDialogAsync(
         ManagerDependency dep, int current, int total)
     {
         if (MainWindow.Instance is not { } owner) return;
-        await new MissingDependencyDialog(dep, current, total).ShowDialog(owner);
+        await ShowStartupDialogAsync(owner, new MissingDependencyDialog(dep, current, total));
+    }
+
+    // Startup dialogs live inside the main window, so they are unreachable — and never complete —
+    // while it is off screen (daemon launch). Bring it up for the dialog and put it back after.
+    private static async Task ShowStartupDialogAsync(MainWindow owner, ImmersiveDialog dialog)
+    {
+        bool reshide = !owner.IsVisible;
+        if (reshide) owner.Show();
+        try
+        {
+            await dialog.ShowDialog(owner);
+        }
+        finally
+        {
+            if (reshide) owner.Hide();
+        }
     }
 
     private static Task InitializeSharedServicesAsync()

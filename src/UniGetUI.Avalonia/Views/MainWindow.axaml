@@ -68,6 +68,9 @@
             <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
             <Setter Property="CornerRadius" Value="0"/>
         </Style>
+        <Style Selector="Button.caption:pressed">
+            <Setter Property="RenderTransform" Value="none"/>
+        </Style>
         <Style Selector="Button.caption:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
             <Setter Property="CornerRadius" Value="0"/>

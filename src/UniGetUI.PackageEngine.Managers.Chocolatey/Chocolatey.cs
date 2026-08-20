@@ -67,6 +67,7 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
         ];
         private const string DefaultSystemChocoPath = @"C:\ProgramData\chocolatey\bin\choco.exe";
         private const string LegacyInstallVariable = "ChocolateyInstall";
+        private static int _inheritedProcessValueSanitized;
         private static readonly string[] LegacyBundledChocolateyPaths =
         [
             Path.Join(
@@ -241,6 +242,49 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
             }
         }
 
+        internal readonly record struct LegacyInstallVariablePlan(
+            bool RemoveUserValue,
+            bool ReplaceProcessValue,
+            string? NewProcessValue
+        );
+
+        internal static LegacyInstallVariablePlan PlanStaleLegacyInstallVariableRemoval(
+            string? userValue,
+            string? machineValue,
+            string? processValue
+        )
+        {
+            bool removeUserValue = IsLegacyBundledChocolateyRoot(userValue);
+            string? remainingUserValue = removeUserValue ? null : userValue;
+
+            if (!IsLegacyBundledChocolateyRoot(processValue))
+            {
+                return new LegacyInstallVariablePlan(removeUserValue, false, processValue);
+            }
+
+            string? replacement = null;
+            if (!string.IsNullOrWhiteSpace(remainingUserValue))
+            {
+                replacement = remainingUserValue;
+            }
+            else if (!string.IsNullOrWhiteSpace(machineValue))
+            {
+                replacement = machineValue;
+            }
+
+            if (IsLegacyBundledChocolateyRoot(replacement))
+            {
+                replacement = null;
+            }
+
+            return new LegacyInstallVariablePlan(removeUserValue, true, replacement);
+        }
+
+        internal static void TEST_ResetInheritedProcessValueSanitation()
+        {
+            Interlocked.Exchange(ref _inheritedProcessValueSanitized, 0);
+        }
+
         internal static void RemoveStaleLegacyInstallVariable()
         {
             if (!OperatingSystem.IsWindows())
@@ -250,36 +294,53 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
 
             try
             {
+                bool sanitizeInheritedProcessValue =
+                    Interlocked.Exchange(ref _inheritedProcessValueSanitized, 1) == 0;
+
                 string? userValue = Environment.GetEnvironmentVariable(
                     LegacyInstallVariable,
                     EnvironmentVariableTarget.User
                 );
-
-                if (!IsLegacyBundledChocolateyRoot(userValue))
-                {
-                    return;
-                }
-
-                Logger.ImportantInfo(
-                    $"Removing the stale {LegacyInstallVariable} user environment variable, which "
-                        + $"pointed at the no longer supported bundled Chocolatey path {userValue}"
-                );
-
-                Environment.SetEnvironmentVariable(
+                string? machineValue = Environment.GetEnvironmentVariable(
                     LegacyInstallVariable,
-                    null,
-                    EnvironmentVariableTarget.User
+                    EnvironmentVariableTarget.Machine
+                );
+                string? processValue = Environment.GetEnvironmentVariable(
+                    LegacyInstallVariable,
+                    EnvironmentVariableTarget.Process
                 );
 
-                if (
-                    IsLegacyBundledChocolateyRoot(
-                        Environment.GetEnvironmentVariable(LegacyInstallVariable)
-                    )
-                )
+                LegacyInstallVariablePlan plan = PlanStaleLegacyInstallVariableRemoval(
+                    userValue,
+                    machineValue,
+                    processValue
+                );
+
+                if (plan.RemoveUserValue)
                 {
+                    Logger.ImportantInfo(
+                        $"Removing the stale {LegacyInstallVariable} user environment variable, which "
+                            + $"pointed at the no longer supported bundled Chocolatey path {userValue}"
+                    );
+
                     Environment.SetEnvironmentVariable(
                         LegacyInstallVariable,
                         null,
+                        EnvironmentVariableTarget.User
+                    );
+                }
+
+                if (sanitizeInheritedProcessValue && plan.ReplaceProcessValue)
+                {
+                    Logger.ImportantInfo(
+                        $"Refreshing the inherited {LegacyInstallVariable} process environment "
+                            + $"variable, which pointed at the no longer supported bundled Chocolatey "
+                            + $"path {processValue}, to {plan.NewProcessValue ?? "no value"}"
+                    );
+
+                    Environment.SetEnvironmentVariable(
+                        LegacyInstallVariable,
+                        plan.NewProcessValue,
                         EnvironmentVariableTarget.Process
                     );
                 }

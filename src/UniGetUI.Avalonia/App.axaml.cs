@@ -182,12 +182,7 @@ public partial class App : Application
                 // ShowDialog tries to attach to it as owner.
                 await Task.Yield();
 
-                // The dialog is hosted inside the main window, so it is only reachable while
-                // that window is on screen. Bring it up for the dialog and put it back after.
-                bool reshide = !mainWindow.IsVisible;
-                if (reshide) mainWindow.Show();
-                await new CrashReportWindow(report).ShowDialog(mainWindow);
-                if (reshide) mainWindow.Hide();
+                await mainWindow.ShowDialogAndRestoreVisibilityAsync(new CrashReportWindow(report));
             }
             catch { /* must not prevent normal startup */ }
         }

@@ -1561,6 +1561,25 @@ public partial class MainWindow : Window
         await ShowImmersiveDialogAsync(dialog);
     }
 
+    // Immersive dialogs are hosted inside this window, so they are unreachable — and never complete —
+    // while it is off screen (daemon launch). Bring it up for the dialog and put it back after.
+    public async Task ShowDialogAndRestoreVisibilityAsync(ImmersiveDialog dialog)
+    {
+        bool reshide = !IsVisible;
+        if (reshide)
+            Show();
+
+        try
+        {
+            await dialog.ShowDialog(this);
+        }
+        finally
+        {
+            if (reshide)
+                Hide();
+        }
+    }
+
     public async Task ShowImmersiveDialogAsync(ImmersiveDialog dialog)
     {
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

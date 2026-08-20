@@ -66,6 +66,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         );
         protected abstract void _loadManagerVersion(out string version);
 
+        protected virtual void _performPreInitializationSteps() { }
+
         protected virtual void _performExtraLoadingSteps() { }
 
         public virtual void Initialize()
@@ -74,6 +76,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             {
                 _ready = false;
                 _ensurePropertlyConstructed();
+                _performPreInitializationSteps();
 
                 if (!IsEnabled())
                 { // Do NOT initialise disabled package managers

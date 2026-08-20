@@ -66,6 +66,7 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
             "no",
         ];
         private const string DefaultSystemChocoPath = @"C:\ProgramData\chocolatey\bin\choco.exe";
+        private const string LegacyInstallVariable = "ChocolateyInstall";
         private static readonly string[] LegacyBundledChocolateyPaths =
         [
             Path.Join(
@@ -73,6 +74,14 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
                 "Programs\\WingetUI\\choco-cli"
             ),
             Path.Join(CoreData.UniGetUIDataDirectory, "Chocolatey"),
+            Path.Join(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "UniGetUI\\Chocolatey"
+            ),
+            Path.Join(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".wingetui\\Chocolatey"
+            ),
         ];
 
         // AttemptFastRepair is a no-op here, so retrying a timed-out choco listing just spawns another (#4974).
@@ -169,6 +178,119 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
             }
 
             return false;
+        }
+
+        protected override void _performPreInitializationSteps()
+        {
+            RemoveStaleLegacyInstallVariable();
+        }
+
+        public static bool IsLegacyBundledChocolateyRoot(string? path)
+        {
+            string? normalized = NormalizeDirectory(path);
+            if (normalized is null)
+            {
+                return false;
+            }
+
+            foreach (string legacyPath in LegacyBundledChocolateyPaths)
+            {
+                string? legacyRoot = NormalizeDirectory(legacyPath);
+                if (legacyRoot is null)
+                {
+                    continue;
+                }
+
+                if (normalized.Equals(legacyRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                if (
+                    normalized.StartsWith(
+                        legacyRoot + Path.DirectorySeparatorChar,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string? NormalizeDirectory(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+            try
+            {
+                return Path.TrimEndingDirectorySeparator(
+                    Path.GetFullPath(
+                        Environment.ExpandEnvironmentVariables(path.Trim().Trim('"'))
+                    )
+                );
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        internal static void RemoveStaleLegacyInstallVariable()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return;
+            }
+
+            try
+            {
+                string? userValue = Environment.GetEnvironmentVariable(
+                    LegacyInstallVariable,
+                    EnvironmentVariableTarget.User
+                );
+
+                if (!IsLegacyBundledChocolateyRoot(userValue))
+                {
+                    return;
+                }
+
+                Logger.ImportantInfo(
+                    $"Removing the stale {LegacyInstallVariable} user environment variable, which "
+                        + $"pointed at the no longer supported bundled Chocolatey path {userValue}"
+                );
+
+                Environment.SetEnvironmentVariable(
+                    LegacyInstallVariable,
+                    null,
+                    EnvironmentVariableTarget.User
+                );
+
+                if (
+                    IsLegacyBundledChocolateyRoot(
+                        Environment.GetEnvironmentVariable(LegacyInstallVariable)
+                    )
+                )
+                {
+                    Environment.SetEnvironmentVariable(
+                        LegacyInstallVariable,
+                        null,
+                        EnvironmentVariableTarget.Process
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(
+                    $"Could not remove the stale {LegacyInstallVariable} user environment variable"
+                );
+                Logger.Error(ex);
+            }
         }
 
         internal IReadOnlyList<Package> ParseAvailableUpdates(IEnumerable<string> lines)

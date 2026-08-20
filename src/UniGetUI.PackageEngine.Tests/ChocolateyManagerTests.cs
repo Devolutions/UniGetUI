@@ -268,6 +268,61 @@ public sealed class ChocolateyManagerTests : IDisposable
         OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
     }
 
+    [Fact]
+    public void IsLegacyBundledChocolateyRootMatchesTheBundledUniGetUiLocation()
+    {
+        string legacyRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "UniGetUI",
+            "Chocolatey"
+        );
+
+        Assert.True(Chocolatey.IsLegacyBundledChocolateyRoot(legacyRoot));
+        Assert.True(
+            Chocolatey.IsLegacyBundledChocolateyRoot(Path.Combine(legacyRoot, "bin"))
+        );
+        Assert.True(
+            Chocolatey.IsLegacyBundledChocolateyRoot(legacyRoot + Path.DirectorySeparatorChar)
+        );
+        Assert.True(Chocolatey.IsLegacyBundledChocolateyRoot(legacyRoot.ToUpperInvariant()));
+    }
+
+    [Fact]
+    public void IsLegacyBundledChocolateyRootMatchesTheBundledWingetUiLocation()
+    {
+        string legacyRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Programs",
+            "WingetUI",
+            "choco-cli"
+        );
+
+        Assert.True(Chocolatey.IsLegacyBundledChocolateyRoot(legacyRoot));
+    }
+
+    [Fact]
+    public void IsLegacyBundledChocolateyRootIgnoresSystemAndUnrelatedLocations()
+    {
+        Assert.False(
+            Chocolatey.IsLegacyBundledChocolateyRoot(@"C:\ProgramData\chocolatey")
+        );
+        Assert.False(Chocolatey.IsLegacyBundledChocolateyRoot(@"D:\Tools\chocolatey"));
+        Assert.False(Chocolatey.IsLegacyBundledChocolateyRoot(null));
+        Assert.False(Chocolatey.IsLegacyBundledChocolateyRoot(""));
+        Assert.False(Chocolatey.IsLegacyBundledChocolateyRoot("   "));
+    }
+
+    [Fact]
+    public void IsLegacyBundledChocolateyRootResolvesUnexpandedEnvironmentSyntax()
+    {
+        Assert.True(
+            Chocolatey.IsLegacyBundledChocolateyRoot("%LOCALAPPDATA%\\UniGetUI\\Chocolatey")
+        );
+        Assert.False(
+            Chocolatey.IsLegacyBundledChocolateyRoot("%PROGRAMDATA%\\chocolatey")
+        );
+    }
+
     private static string[] ReadFixtureLines(string relativePath)
     {
         return PackageEngineFixtureFiles.ReadAllText(relativePath).Replace("\r\n", "\n").Split('\n');

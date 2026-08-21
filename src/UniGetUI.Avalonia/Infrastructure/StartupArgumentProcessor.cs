@@ -39,7 +39,12 @@ internal static class StartupArgumentProcessor
                 $"{bundles.Count} package bundles were passed on the command line; only {bundles[0]} will be loaded");
         }
 
-        await AvaloniaBootstrapper.Initialized;
+        if (!await AvaloniaBootstrapper.Initialized)
+        {
+            Logger.Warn(
+                $"Could not load the package bundle {bundles[0]}: UniGetUI failed to finish initializing");
+            return;
+        }
 
         if (MainWindow.Instance is not { } window)
         {

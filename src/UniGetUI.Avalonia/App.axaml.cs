@@ -188,6 +188,14 @@ public partial class App : Application
         }
 
         await AvaloniaBootstrapper.InitializeAsync();
+
+        if (CoreData.WasDaemon)
+        {
+            StartupArgumentProcessor.WarnIfBundlesIgnored(
+                args, $"the launch requested {AvaloniaCliHandler.DAEMON}");
+            return;
+        }
+
         await StartupArgumentProcessor.ProcessAsync(args);
     }
 

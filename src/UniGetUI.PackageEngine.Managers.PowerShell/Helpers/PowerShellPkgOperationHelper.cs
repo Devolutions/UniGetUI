@@ -7,6 +7,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager;
 
 internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
 {
+    internal const string ErrorVariableName = "UniGetUIOperationError";
+
     public PowerShellPkgOperationHelper(PowerShell manager)
         : base(manager) { }
 
@@ -53,18 +55,29 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
                 parameters.AddRange(["-RequiredVersion", options.Version]);
         }
 
-        parameters.AddRange(
-            operation switch
-            {
-                OperationType.Update => options.CustomParameters_Update,
-                OperationType.Uninstall => options.CustomParameters_Uninstall,
-                _ => options.CustomParameters_Install,
-            }
+        IReadOnlyList<string> customParameters = operation switch
+        {
+            OperationType.Update => options.CustomParameters_Update,
+            OperationType.Uninstall => options.CustomParameters_Uninstall,
+            _ => options.CustomParameters_Install,
+        };
+
+        bool bindsOwnErrorVariable = customParameters.Any(parameter =>
+            parameter.StartsWith("-ev", StringComparison.OrdinalIgnoreCase)
+            || parameter.StartsWith("-errorv", StringComparison.OrdinalIgnoreCase)
         );
+
+        if (!bindsOwnErrorVariable)
+            parameters.AddRange(["-ErrorVariable", ErrorVariableName]);
+
+        parameters.AddRange(customParameters);
 
         // Windows PowerShell 5.x defaults to TLS 1.0/1.1, which the PowerShell Gallery rejects; force TLS 1.2 so gallery operations can connect under -NoProfile
         if (operation is not OperationType.Uninstall)
             parameters.Insert(0, "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;");
+
+        if (!bindsOwnErrorVariable)
+            parameters.Add($";if(${ErrorVariableName}){{exit(1)}}");
 
         return parameters;
     }

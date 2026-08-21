@@ -95,6 +95,58 @@ public sealed class PowerShellManagerTests
         Assert.DoesNotContain("-Scope", parameters);
     }
 
+    [Theory]
+    [InlineData(OperationType.Install)]
+    [InlineData(OperationType.Update)]
+    [InlineData(OperationType.Uninstall)]
+    public void GetParameters_PropagatesNonTerminatingErrorsToTheExitCode(OperationType operation)
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var parameters = manager.OperationHelper.GetParameters(package, new InstallOptions(), operation);
+
+        var errorVariableIndex = parameters.ToList().IndexOf("-ErrorVariable");
+        Assert.True(errorVariableIndex >= 0);
+        Assert.Equal(PowerShellPkgOperationHelper.ErrorVariableName, parameters[errorVariableIndex + 1]);
+        Assert.Equal(
+            $";if(${PowerShellPkgOperationHelper.ErrorVariableName}){{exit(1)}}",
+            parameters[^1]
+        );
+    }
+
+    [Theory]
+    [InlineData("-ErrorVariable")]
+    [InlineData("-ev")]
+    [InlineData("-errorvariable:mine")]
+    public void GetParameters_YieldsToACustomErrorVariable(string customParameter)
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var options = new InstallOptions { CustomParameters_Update = [customParameter, "mine"] };
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+        Assert.DoesNotContain(PowerShellPkgOperationHelper.ErrorVariableName, parameters);
+        Assert.DoesNotContain(
+            $";if(${PowerShellPkgOperationHelper.ErrorVariableName}){{exit(1)}}",
+            parameters
+        );
+    }
+
+    [Fact]
+    public void GetParameters_KeepsCustomParametersBoundToTheCmdlet()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var options = new InstallOptions { CustomParameters_Update = ["-Proxy", "http://proxy"] };
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+        Assert.Equal("-Proxy", parameters[^3]);
+        Assert.Equal("http://proxy", parameters[^2]);
+    }
+
     [Fact]
     public void Capabilities_ScopeAppliesToInstallOnly()
     {

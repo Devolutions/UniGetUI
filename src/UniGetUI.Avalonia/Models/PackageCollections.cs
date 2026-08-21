@@ -40,10 +40,12 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     // reference the bitmap, so dropping it here only makes it GC-eligible.
     private const int MaxIconCacheEntries = 512;
     private static readonly object _iconCacheLock = new();
-    private static readonly Dictionary<long, LinkedListNode<(long Hash, Bitmap? Bitmap)>> _iconCache = new();
-    private static readonly LinkedList<(long Hash, Bitmap? Bitmap)> _iconCacheOrder = new();
+    private static readonly Dictionary<long, LinkedListNode<(long Hash, Bitmap Bitmap)>> _iconCache = new();
+    private static readonly LinkedList<(long Hash, Bitmap Bitmap)> _iconCacheOrder = new();
+    private static readonly Dictionary<long, long> _failedIcons = new();
+    private static readonly TimeSpan IconRetryInterval = TimeSpan.FromMinutes(5);
 
-    private static bool TryGetCachedIcon(long hash, out Bitmap? bitmap)
+    private static Bitmap? GetCachedIcon(long hash)
     {
         lock (_iconCacheLock)
         {
@@ -51,18 +53,39 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
             {
                 _iconCacheOrder.Remove(node);
                 _iconCacheOrder.AddFirst(node);
-                bitmap = node.Value.Bitmap;
-                return true;
+                return node.Value.Bitmap;
             }
         }
-        bitmap = null;
-        return false;
+        return null;
     }
 
-    private static void CacheIcon(long hash, Bitmap? bitmap)
+    private static bool HasRecentIconFailure(long hash)
     {
         lock (_iconCacheLock)
         {
+            if (!_failedIcons.TryGetValue(hash, out long failedAt))
+                return false;
+
+            if (Environment.TickCount64 - failedAt < (long)IconRetryInterval.TotalMilliseconds)
+                return true;
+
+            _failedIcons.Remove(hash);
+            return false;
+        }
+    }
+
+    private static void MarkIconFailed(long hash)
+    {
+        lock (_iconCacheLock)
+            _failedIcons[hash] = Environment.TickCount64;
+    }
+
+    private static void CacheIcon(long hash, Bitmap bitmap)
+    {
+        lock (_iconCacheLock)
+        {
+            _failedIcons.Remove(hash);
+
             if (_iconCache.TryGetValue(hash, out var existing))
             {
                 existing.Value = (hash, bitmap);
@@ -71,7 +94,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            var node = new LinkedListNode<(long, Bitmap?)>((hash, bitmap));
+            var node = new LinkedListNode<(long, Bitmap)>((hash, bitmap));
             _iconCache[hash] = node;
             _iconCacheOrder.AddFirst(node);
 
@@ -89,6 +112,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         {
             _iconCache.Clear();
             _iconCacheOrder.Clear();
+            _failedIcons.Clear();
         }
     }
 
@@ -265,17 +289,16 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     {
         CancellationToken token = _lifetimeCts.Token;
         long hash = Package.GetHash();
-        if (TryGetCachedIcon(hash, out Bitmap? cached))
+        if (GetCachedIcon(hash) is { } cached)
         {
-            if (cached is not null)
+            await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    if (!token.IsCancellationRequested) IconBitmap = cached;
-                });
-            }
+                if (!token.IsCancellationRequested) IconBitmap = cached;
+            });
             return;
         }
+
+        if (HasRecentIconFailure(hash)) return;
 
         try
         {
@@ -289,15 +312,17 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
             });
         }
         catch (OperationCanceledException) { /* row discarded before its icon finished loading */ }
-        catch { CacheIcon(hash, null); }
+        catch { MarkIconFailed(hash); }
     }
 
     private static Task<Bitmap?> GetSharedIconLoad(long hash, IPackage package)
     {
         lock (_inflightIconLoadsLock)
         {
-            if (TryGetCachedIcon(hash, out Bitmap? cached))
-                return Task.FromResult(cached);
+            if (GetCachedIcon(hash) is { } cached)
+                return Task.FromResult<Bitmap?>(cached);
+            if (HasRecentIconFailure(hash))
+                return Task.FromResult<Bitmap?>(null);
             if (_inflightIconLoads.TryGetValue(hash, out Task<Bitmap?>? existing))
                 return existing;
 
@@ -328,14 +353,14 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         try
         {
             var uri = await Task.Run(package.GetIconUrlIfAny).ConfigureAwait(false);
-            if (uri is null) { CacheIcon(hash, null); return null; }
+            if (uri is null) { MarkIconFailed(hash); return null; }
 
             Bitmap? decoded;
             if (uri.IsFile)
             {
-                if (!IsSkiaDecodableExtension(uri.LocalPath))
+                if (IsKnownUndecodableExtension(uri.LocalPath))
                 {
-                    CacheIcon(hash, null);
+                    MarkIconFailed(hash);
                     return null;
                 }
                 decoded = await Task.Run(() => TryDecodeIcon(uri.LocalPath)).ConfigureAwait(false);
@@ -348,7 +373,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
                 response.EnsureSuccessStatusCode();
                 if (response.Content.Headers.ContentLength > MaxIconDownloadBytes)
                 {
-                    CacheIcon(hash, null);
+                    MarkIconFailed(hash);
                     return null;
                 }
 
@@ -356,14 +381,20 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
                 var bytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
                 decoded = TryDecodeIcon(bytes, uri.Host);
             }
-            else { CacheIcon(hash, null); return null; }
+            else { MarkIconFailed(hash); return null; }
+
+            if (decoded is null)
+            {
+                MarkIconFailed(hash);
+                return null;
+            }
 
             CacheIcon(hash, decoded);
             return decoded;
         }
         catch
         {
-            CacheIcon(hash, null);
+            MarkIconFailed(hash);
             return null;
         }
         finally
@@ -373,7 +404,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     }
 
     // Icons come from a shared on-disk cache that can hold empty or partial entries after an
-    // interrupted download; decoding those throws. Skip them quietly instead of surfacing an error.
+    // interrupted download; decoding those throws. Skip those entries instead of failing the row.
     private static Bitmap? TryDecodeIcon(string filePath)
     {
         var info = new FileInfo(filePath);
@@ -387,7 +418,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     private static Bitmap? TryDecodeIcon(Func<Bitmap> decode, string source)
     {
         try { return decode(); }
-        catch (Exception ex) { Logger.Debug($"Discarding undecodable icon '{source}': {ex.Message}"); return null; }
+        catch (Exception ex) { Logger.Warn($"Discarding undecodable icon '{source}': {ex.Message}"); return null; }
     }
 
     // Decode directly at the display-cache width. This avoids allocating a full-size bitmap first,
@@ -395,15 +426,13 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     private static Bitmap DecodeDownscaled(Stream stream)
         => Bitmap.DecodeToWidth(stream, MaxIconSide, BitmapInterpolationMode.HighQuality);
 
-    private static bool IsSkiaDecodableExtension(string path)
+    private static bool IsKnownUndecodableExtension(string path)
     {
         string ext = Path.GetExtension(path);
-        return ext.Equals(".png", StringComparison.OrdinalIgnoreCase)
-            || ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
-            || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
-            || ext.Equals(".gif", StringComparison.OrdinalIgnoreCase)
-            || ext.Equals(".bmp", StringComparison.OrdinalIgnoreCase)
-            || ext.Equals(".webp", StringComparison.OrdinalIgnoreCase);
+        return ext.Equals(".svg", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".tif", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".tiff", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".avif", StringComparison.OrdinalIgnoreCase);
     }
 
     private void Package_PropertyChanged(object? sender, PropertyChangedEventArgs e)

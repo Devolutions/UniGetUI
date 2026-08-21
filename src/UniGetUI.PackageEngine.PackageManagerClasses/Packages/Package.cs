@@ -28,7 +28,14 @@ namespace UniGetUI.PackageEngine.PackageClasses
         private readonly string _ignoredId;
         private readonly string _iconId;
 
-        private static readonly ConcurrentDictionary<int, Uri?> _cachedIconPaths = new();
+        private static readonly ConcurrentDictionary<int, Uri> _cachedIconPaths = new();
+        private static readonly ConcurrentDictionary<int, long> _failedIconLookups = new();
+        private static readonly TimeSpan _iconLookupRetryInterval = TimeSpan.FromMinutes(5);
+
+        public static TimeSpan? TEST_IconLookupRetryIntervalOverride { private get; set; }
+
+        private static TimeSpan IconLookupRetryInterval =>
+            TEST_IconLookupRetryIntervalOverride ?? _iconLookupRetryInterval;
 
         private IPackageDetails? __details;
         public IPackageDetails Details
@@ -162,12 +169,30 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         public virtual Uri? GetIconUrlIfAny()
         {
-            if (_cachedIconPaths.TryGetValue(this.GetHashCode(), out Uri? path))
+            int cacheKey = this.GetHashCode();
+            if (_cachedIconPaths.TryGetValue(cacheKey, out Uri? path))
             {
                 return path;
             }
+
+            if (
+                _failedIconLookups.TryGetValue(cacheKey, out long failedAt)
+                && Environment.TickCount64 - failedAt
+                    < (long)IconLookupRetryInterval.TotalMilliseconds
+            )
+            {
+                return null;
+            }
+
             var CachedIcon = LoadIconUrlIfAny();
-            _cachedIconPaths.TryAdd(this.GetHashCode(), CachedIcon);
+            if (CachedIcon is null)
+            {
+                _failedIconLookups[cacheKey] = Environment.TickCount64;
+                return null;
+            }
+
+            _failedIconLookups.TryRemove(cacheKey, out _);
+            _cachedIconPaths[cacheKey] = CachedIcon;
             return CachedIcon;
         }
 
@@ -377,6 +402,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
         public static void ResetIconCache()
         {
             _cachedIconPaths.Clear();
+            _failedIconLookups.Clear();
         }
 
         private static string GenerateIconId(Package p)

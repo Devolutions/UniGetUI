@@ -43,6 +43,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     private static readonly Dictionary<long, LinkedListNode<(long Hash, Bitmap Bitmap)>> _iconCache = new();
     private static readonly LinkedList<(long Hash, Bitmap Bitmap)> _iconCacheOrder = new();
     private static readonly Dictionary<long, long> _failedIcons = new();
+    private const int MaxFailedIconEntries = 512;
     private static readonly TimeSpan IconRetryInterval = TimeSpan.FromMinutes(5);
 
     private static Bitmap? GetCachedIcon(long hash)
@@ -77,7 +78,26 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     private static void MarkIconFailed(long hash)
     {
         lock (_iconCacheLock)
+        {
             _failedIcons[hash] = Environment.TickCount64;
+            if (_failedIcons.Count > MaxFailedIconEntries)
+                TrimFailedIcons();
+        }
+    }
+
+    private static void TrimFailedIcons()
+    {
+        long now = Environment.TickCount64;
+        long retryMs = (long)IconRetryInterval.TotalMilliseconds;
+        foreach (var expired in _failedIcons.Where(e => now - e.Value >= retryMs).ToArray())
+            _failedIcons.Remove(expired.Key);
+
+        int excess = _failedIcons.Count - MaxFailedIconEntries;
+        if (excess <= 0)
+            return;
+
+        foreach (var oldest in _failedIcons.OrderBy(e => e.Value).Take(excess).ToArray())
+            _failedIcons.Remove(oldest.Key);
     }
 
     private static void CacheIcon(long hash, Bitmap bitmap)

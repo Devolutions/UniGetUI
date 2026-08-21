@@ -28,8 +28,8 @@ namespace UniGetUI.PackageEngine.PackageClasses
         private readonly string _ignoredId;
         private readonly string _iconId;
 
-        private static readonly ConcurrentDictionary<int, Uri> _cachedIconPaths = new();
-        private static readonly ConcurrentDictionary<int, long> _failedIconLookups = new();
+        private static readonly ConcurrentDictionary<long, Uri> _cachedIconPaths = new();
+        private static readonly ConcurrentDictionary<long, long> _failedIconLookups = new();
         private static readonly TimeSpan _iconLookupRetryInterval = TimeSpan.FromMinutes(5);
 
         public static TimeSpan? TEST_IconLookupRetryIntervalOverride { private get; set; }
@@ -169,7 +169,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         public virtual Uri? GetIconUrlIfAny()
         {
-            int cacheKey = this.GetHashCode();
+            long cacheKey = _versionedHash;
             if (_cachedIconPaths.TryGetValue(cacheKey, out Uri? path))
             {
                 return path;

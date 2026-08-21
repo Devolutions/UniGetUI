@@ -1,0 +1,7 @@
+kind: randy/v1
+
+ai-review-approval:
+  enabled: true
+  authorized-authors: ["GabrielDuf"]
+  human-review-paths:
+    - ".github/"

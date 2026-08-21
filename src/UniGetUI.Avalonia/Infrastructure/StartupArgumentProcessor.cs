@@ -8,6 +8,18 @@ namespace UniGetUI.Avalonia.Infrastructure;
 
 internal static class StartupArgumentProcessor
 {
+    public static void WarnIfBundlesIgnored(IReadOnlyList<string> args, string reason)
+    {
+        if (args.Count == 0)
+            return;
+
+        List<string> bundles = StartupBundleArguments.Resolve(args, Environment.CurrentDirectory);
+        foreach (string bundle in bundles)
+        {
+            Logger.Warn($"Ignoring the package bundle {bundle}: {reason}");
+        }
+    }
+
     public static async Task ProcessAsync(IReadOnlyList<string> args)
     {
         if (args.Count == 0)

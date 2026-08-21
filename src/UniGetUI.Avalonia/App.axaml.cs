@@ -212,7 +212,11 @@ public partial class App : Application
         }
 
         if (isDaemonLaunch)
+        {
+            StartupArgumentProcessor.WarnIfBundlesIgnored(
+                args, $"the launch requested {AvaloniaCliHandler.DAEMON}");
             return;
+        }
 
         mainWindow.ShowFromTray();
 

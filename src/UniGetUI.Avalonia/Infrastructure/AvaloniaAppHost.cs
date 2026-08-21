@@ -19,7 +19,41 @@ public static class AvaloniaAppHost
     private static Mutex? _singleInstanceMutex;
     private static FileStream? _singleInstanceLock;
 
-    public static event Action<string[]>? SecondaryInstanceArgsReceived;
+    private static Action<string[]>? _secondaryInstanceArgsReceived;
+    private static readonly Queue<string[]> _bufferedSecondaryInstanceArgs = new();
+
+    public static event Action<string[]>? SecondaryInstanceArgsReceived
+    {
+        add
+        {
+            _secondaryInstanceArgsReceived += value;
+
+            if (value is null || _bufferedSecondaryInstanceArgs.Count == 0)
+                return;
+
+            string[][] buffered = [.. _bufferedSecondaryInstanceArgs];
+            _bufferedSecondaryInstanceArgs.Clear();
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                foreach (string[] bufferedArgs in buffered)
+                    value(bufferedArgs);
+            });
+        }
+        remove => _secondaryInstanceArgsReceived -= value;
+    }
+
+    private static void RaiseSecondaryInstanceArgs(string[] args)
+    {
+        if (_secondaryInstanceArgsReceived is null)
+        {
+            Logger.Info("Buffering forwarded arguments until the main window is ready");
+            _bufferedSecondaryInstanceArgs.Enqueue(args);
+            return;
+        }
+
+        _secondaryInstanceArgsReceived(args);
+    }
 
     public static void Run(string[] args)
     {
@@ -142,7 +176,7 @@ public static class AvaloniaAppHost
 
         if (createdNew)
         {
-            SingleInstanceRedirector.StartListener(a => SecondaryInstanceArgsReceived?.Invoke(a));
+            SingleInstanceRedirector.StartListener(RaiseSecondaryInstanceArgs);
             return true;
         }
 
@@ -176,7 +210,7 @@ public static class AvaloniaAppHost
             return true;
         }
 
-        SingleInstanceRedirector.StartListener(a => SecondaryInstanceArgsReceived?.Invoke(a));
+        SingleInstanceRedirector.StartListener(RaiseSecondaryInstanceArgs);
         return true;
     }
 }

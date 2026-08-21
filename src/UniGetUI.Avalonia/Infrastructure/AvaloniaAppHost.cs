@@ -10,6 +10,7 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface;
+using UniGetUI.Shared;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
@@ -79,6 +80,8 @@ public static class AvaloniaAppHost
         // listener starts: if a second instance connects mid-startup, the listener's Dispatcher.UIThread.Post
         // would otherwise bind it to the worker thread and make Win32Platform.Initialize throw.
         _ = Dispatcher.UIThread;
+
+        args = StartupBundleArguments.Normalize(args, Environment.CurrentDirectory);
 
         if (!TryRegisterSingleInstance(args))
         {

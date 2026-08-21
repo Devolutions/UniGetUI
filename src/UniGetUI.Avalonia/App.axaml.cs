@@ -165,10 +165,10 @@ public partial class App : Application
         if (!CoreData.WasDaemon)
             mainWindow.Show();
 
-        _ = StartupAsync(mainWindow);
+        _ = StartupAsync(mainWindow, desktop.Args ?? []);
     }
 
-    private static async Task StartupAsync(MainWindow mainWindow)
+    private static async Task StartupAsync(MainWindow mainWindow, string[] args)
     {
         // Show crash report from the previous session and wait for the user
         // to dismiss it before continuing with normal startup.
@@ -188,6 +188,7 @@ public partial class App : Application
         }
 
         await AvaloniaBootstrapper.InitializeAsync();
+        await StartupArgumentProcessor.ProcessAsync(args);
     }
 
     private static void HandleSecondaryInstanceArgs(MainWindow mainWindow, string[] args)
@@ -214,6 +215,8 @@ public partial class App : Application
             return;
 
         mainWindow.ShowFromTray();
+
+        _ = StartupArgumentProcessor.ProcessAsync(args);
     }
 
     public static void ApplyTheme(string value)

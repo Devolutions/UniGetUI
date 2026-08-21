@@ -22,6 +22,10 @@ namespace UniGetUI.Avalonia.Infrastructure;
 internal static class AvaloniaBootstrapper
 {
     private static bool _hasStarted;
+    private static readonly TaskCompletionSource _initialized =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public static Task Initialized => _initialized.Task;
 
     // Coalesces broker-unavailable notifications: during bulk operations every failed
     // package raises the event, but only one dialog should be visible at a time.
@@ -38,12 +42,19 @@ internal static class AvaloniaBootstrapper
         _hasStarted = true;
         Logger.Info("Starting Avalonia shell bootstrap");
 
-        await Task.WhenAll(
-            InitializeSharedServicesAsync(),
-            InitializePackageEngineAsync()
-        );
+        try
+        {
+            await Task.WhenAll(
+                InitializeSharedServicesAsync(),
+                InitializePackageEngineAsync()
+            );
 
-        await RunPostLoadChecksAsync();
+            await RunPostLoadChecksAsync();
+        }
+        finally
+        {
+            _initialized.TrySetResult();
+        }
 
         Logger.Info("Avalonia shell bootstrap completed");
     }

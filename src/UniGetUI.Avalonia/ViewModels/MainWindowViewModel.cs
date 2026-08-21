@@ -758,6 +758,12 @@ public partial class MainWindowViewModel : ViewModelBase
         await BundlesPage.OpenFromString(content, BundleFormatType.UBUNDLE, "GitHub Gist");
     }
 
+    public async Task LoadBundleFromFileAsync(string path)
+    {
+        NavigateTo(PageType.Bundles);
+        await BundlesPage.OpenFromFile(path);
+    }
+
     private async Task ShowAboutDialog()
     {
         Sidebar.SelectNavButtonForPage(PageType.Null);

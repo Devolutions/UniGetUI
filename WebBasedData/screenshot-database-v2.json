@@ -1,10 +1,10 @@
 {
   "package_count": {
-    "total": 12411,
+    "total": 12412,
     "done": 5933,
-    "packages_with_icon": 5933,
-    "packages_with_screenshot": 1368,
-    "total_screenshots": 4140
+    "packages_with_icon": 5934,
+    "packages_with_screenshot": 1369,
+    "total_screenshots": 4141
   },
   "icons_and_screenshots": {
     "edde746/Plezy": {
@@ -7701,6 +7701,12 @@
     "client": {
       "icon": "",
       "images": []
+    },
+    "Tsabo.ClipMate": {
+      "icon": "https://raw.githubusercontent.com/Tsabo/ClipMate/master/Resources/icons8-clipboard-color-256.png",
+      "images": [
+        "https://raw.githubusercontent.com/Tsabo/ClipMate/master/Resources/Images/explorer-window.png"
+      ]
     },
     "clingo": {
       "icon": "",

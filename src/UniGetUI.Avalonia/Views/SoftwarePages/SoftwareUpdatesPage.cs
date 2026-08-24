@@ -301,7 +301,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         if (package is null) return;
         if (GetMainWindow() is not { } win) return;
 
-        var dialog = new PackageDetailsWindow(package, OperationType.Update);
+        var dialog = new PackageDetailsWindow(
+            package, OperationType.Update, TEL_InstallReferral.ALREADY_INSTALLED);
         await dialog.ShowDialog(win);
 
         if (dialog.ShouldProceedWithOperation)

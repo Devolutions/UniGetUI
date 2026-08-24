@@ -36,11 +36,16 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     public bool ShouldProceedWithOperation { get; private set; }
 
     private readonly PackageDetailsViewModel _vm;
+    private readonly TEL_InstallReferral _referral;
     private InstallOptionsViewModel? _installVm;
     private InstallOptions? _installOpts;
 
-    public PackageDetailsWindow(IPackage package, OperationType operation)
+    public PackageDetailsWindow(
+        IPackage package,
+        OperationType operation,
+        TEL_InstallReferral referral = TEL_InstallReferral.DIRECT_SEARCH)
     {
+        _referral = referral;
         _vm = new PackageDetailsViewModel(package, operation);
         DataContext = _vm;
         InitializeComponent();
@@ -466,10 +471,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     {
         if (!_vm.Package.Manager.Capabilities.CanDownloadInstaller) return;
         Close();
-        _ = AvaloniaPackageOperationHelper.AskLocationAndDownloadAsync(
-            _vm.Package,
-            TEL_InstallReferral.DIRECT_SEARCH
-        );
+        _ = AvaloniaPackageOperationHelper.AskLocationAndDownloadAsync(_vm.Package, _referral);
     }
 
     // ── Action flyout ────────────────────────────────────────────────────────
@@ -537,8 +539,8 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         switch (role)
         {
             case OperationType.Install:
-                op.OperationSucceeded += (_, _) => TelemetryHandler.InstallPackage(pkg, TEL_OP_RESULT.SUCCESS, TEL_InstallReferral.DIRECT_SEARCH);
-                op.OperationFailed += (_, _) => TelemetryHandler.InstallPackage(pkg, TEL_OP_RESULT.FAILED, TEL_InstallReferral.DIRECT_SEARCH);
+                op.OperationSucceeded += (_, _) => TelemetryHandler.InstallPackage(pkg, TEL_OP_RESULT.SUCCESS, _referral);
+                op.OperationFailed += (_, _) => TelemetryHandler.InstallPackage(pkg, TEL_OP_RESULT.FAILED, _referral);
                 break;
             case OperationType.Update:
                 op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);

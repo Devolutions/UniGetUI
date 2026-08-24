@@ -286,7 +286,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
         if (package is null) return;
         if (GetMainWindow() is not { } win) return;
 
-        var dialog = new PackageDetailsWindow(package, OperationType.Uninstall);
+        var dialog = new PackageDetailsWindow(
+            package, OperationType.Uninstall, TEL_InstallReferral.ALREADY_INSTALLED);
         await dialog.ShowDialog(win);
 
         if (dialog.ShouldProceedWithOperation)

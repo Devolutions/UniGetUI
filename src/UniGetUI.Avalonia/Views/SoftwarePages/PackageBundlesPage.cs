@@ -217,7 +217,8 @@ public class PackageBundlesPage : AbstractPackagesPage
         if (package is null || package is InvalidImportedPackage) return;
         if (GetMainWindow() is not { } win) return;
 
-        var dialog = new PackageDetailsWindow(package, OperationType.None);
+        var dialog = new PackageDetailsWindow(
+            package, OperationType.None, TEL_InstallReferral.FROM_BUNDLE);
         await dialog.ShowDialog(win);
 
         if (dialog.ShouldProceedWithOperation)

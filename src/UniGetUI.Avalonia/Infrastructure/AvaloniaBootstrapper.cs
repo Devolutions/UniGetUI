@@ -324,7 +324,8 @@ internal static class AvaloniaBootstrapper
             ?? throw new InvalidOperationException("The application window is not available.");
         IPackage package = IpcPackageApi.ResolvePackage(request);
         window.ShowFromTray();
-        _ = new PackageDetailsWindow(package, OperationType.Install).ShowDialog(window);
+        _ = new PackageDetailsWindow(
+            package, OperationType.Install, TEL_InstallReferral.DIRECT_SEARCH).ShowDialog(window);
         return IpcCommandResult.Success("show-package");
     }
 

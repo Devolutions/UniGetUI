@@ -43,7 +43,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     public PackageDetailsWindow(
         IPackage package,
         OperationType operation,
-        TEL_InstallReferral referral = TEL_InstallReferral.DIRECT_SEARCH)
+        TEL_InstallReferral referral)
     {
         _referral = referral;
         _vm = new PackageDetailsViewModel(package, operation);

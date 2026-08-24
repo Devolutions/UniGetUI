@@ -171,7 +171,8 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         if (package is null) return;
         if (GetMainWindow() is not { } win) return;
 
-        var dialog = new PackageDetailsWindow(package, OperationType.Install);
+        var dialog = new PackageDetailsWindow(
+            package, OperationType.Install, TEL_InstallReferral.DIRECT_SEARCH);
         await dialog.ShowDialog(win);
 
         if (dialog.ShouldProceedWithOperation)

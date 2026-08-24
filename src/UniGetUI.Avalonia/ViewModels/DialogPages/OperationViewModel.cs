@@ -14,6 +14,7 @@ using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Operations;
@@ -296,7 +297,10 @@ public sealed partial class OperationViewModel : ViewModelBase
     private static void ShowPackageDetails(PackageOperation packageOp)
     {
         if (GetMainWindow() is not { } mainWindow) return;
-        var win = new PackageDetailsWindow(packageOp.Package, OperationType.None);
+        var referral = packageOp.Role is OperationType.Update or OperationType.Uninstall
+            ? TEL_InstallReferral.ALREADY_INSTALLED
+            : TEL_InstallReferral.DIRECT_SEARCH;
+        var win = new PackageDetailsWindow(packageOp.Package, OperationType.None, referral);
         _ = win.ShowDialog(mainWindow);
     }
 

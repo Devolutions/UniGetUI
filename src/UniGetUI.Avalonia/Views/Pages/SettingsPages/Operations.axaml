@@ -41,6 +41,18 @@
                                    WarningText="{t:Translate You may lose unsaved data}"
                                    CornerRadius="8"/>
 
+            <settings:TranslatedTextBlock Text="Installer downloads"
+                                          FontSize="14"
+                                          FontWeight="SemiBold"
+                                          Margin="44,32,4,8"
+                                          automation:AutomationProperties.HeadingLevel="2"/>
+
+            <settings:ComboboxCard x:Name="InstallerNameSchemeCard"
+                                   SettingName="InstallerFileNameScheme"
+                                   Text="{t:Translate Name of the downloaded installer files}"
+                                   Description="{t:Translate Text='Adding the version to the file name makes downloaded installers sortable and keeps a new download from overwriting the installer of an older version.'}"
+                                   CornerRadius="8"/>
+
             <settings:TranslatedTextBlock Text="Environment variables in custom install options"
                                           FontSize="14"
                                           FontWeight="SemiBold"

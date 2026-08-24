@@ -90,6 +90,7 @@ public static class SettingsSearchIndex
         new("Choose how many operations should be performed in parallel", ["parallel", "concurrency"], typeof(Operations), "ParallelOperationCount"),
         new("Clear successful operations from the operation list after a 5 second delay", ["clear successful", "maintain installs"], typeof(Operations), "ClearSuccessfulOpsCard"),
         new("Try to kill the processes that refuse to close when requested to", ["kill processes"], typeof(Operations), "KillProcessesCard"),
+        new("Name of the downloaded installer files", ["installer name", "download name", "file name", "version in file name", "rename installers"], typeof(Operations), "InstallerNameSchemeCard"),
         new("Ask to delete desktop shortcuts created during an install or upgrade.", ["desktop shortcuts", "shortcut remover"], typeof(Operations), "AskToDeleteNewDesktopShortcuts"),
         new("Package operation preferences", ["operations"], typeof(Operations), null),
 

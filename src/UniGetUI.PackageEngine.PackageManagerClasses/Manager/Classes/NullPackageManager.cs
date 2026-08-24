@@ -25,6 +25,7 @@ namespace UniGetUI.PackageEngine.Classes.Manager
         public ManagerCapabilities Capabilities { get; }
         public ManagerStatus Status { get; }
         public Encoding OutputEncoding => Encoding.UTF8;
+        public bool InstallerUrlFollowsPackageVersion => false;
         public string Id
         {
             get => string.IsNullOrWhiteSpace(Properties.Id) ? Properties.Name : Properties.Id;

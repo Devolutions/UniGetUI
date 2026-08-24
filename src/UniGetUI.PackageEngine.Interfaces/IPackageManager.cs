@@ -28,6 +28,8 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// </summary>
         public Encoding OutputEncoding { get; }
 
+        public bool InstallerUrlFollowsPackageVersion { get; }
+
         /// <summary>
         /// Initializes the Package Manager (asynchronously). Must be run before using any other method of the manager.
         /// </summary>

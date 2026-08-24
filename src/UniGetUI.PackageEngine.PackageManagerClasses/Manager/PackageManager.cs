@@ -44,6 +44,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public IPackageDetailsHelper DetailsHelper { get; protected set; } = null!;
         public IPackageOperationHelper OperationHelper { get; protected set; } = null!;
         public virtual Encoding OutputEncoding => Encoding.UTF8;
+        public virtual bool InstallerUrlFollowsPackageVersion => false;
 
         private readonly bool _baseConstructorCalled;
         private bool _ready;

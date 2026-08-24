@@ -21,6 +21,8 @@ public partial class Cargo : PackageManager
     [GeneratedRegex(@"([\w-]+)\s=\s""(\d+\.\d+\.\d+)""\s*#\s(.*)")]
     private static partial Regex SearchLineRegex();
 
+    public override bool InstallerUrlFollowsPackageVersion => true;
+
     public Cargo()
     {
         string cargoCommand = OperatingSystem.IsWindows() ? "cargo.exe" : "cargo";

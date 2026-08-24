@@ -24,6 +24,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         protected virtual bool UseSubstringSearch => false;
         public static Dictionary<long, string> Manifests = new();
 
+        public override bool InstallerUrlFollowsPackageVersion => true;
+
         public sealed override void Initialize()
         {
             static void ThrowIC(string name)

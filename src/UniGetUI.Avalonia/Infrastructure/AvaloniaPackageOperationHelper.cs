@@ -106,8 +106,8 @@ internal static class AvaloniaPackageOperationHelper
         if (string.IsNullOrWhiteSpace(suggestedName))
             suggestedName = CoreTools.MakeValidFileName(package.Id) + ".exe";
 
-        string ext = suggestedName.Contains('.')
-            ? CoreTools.MakeValidFileName(suggestedName.Split('.')[^1])
+        string ext = InstallerFileNaming.ExtractExtension(suggestedName) is { Length: > 1 } extension
+            ? CoreTools.MakeValidFileName(extension[1..])
             : "exe";
 
         var file = await win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions

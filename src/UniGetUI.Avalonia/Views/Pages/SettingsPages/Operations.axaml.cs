@@ -29,6 +29,24 @@ public sealed partial class Operations : UserControl, ISettingsPage
             ParallelOperationCount.AddItem(v, v, false);
         ParallelOperationCount.ShowAddedItems();
 
+        InstallerNameSchemeCard.AddItem(
+            "Name given by the publisher",
+            InstallerFileNaming.PublisherNameValue
+        );
+        InstallerNameSchemeCard.AddItem(
+            "Package name and version",
+            InstallerFileNaming.NameAndVersionValue
+        );
+        InstallerNameSchemeCard.AddItem(
+            "Package identifier and version",
+            InstallerFileNaming.IdAndVersionValue
+        );
+        InstallerNameSchemeCard.AddItem(
+            "Name given by the publisher, followed by the version",
+            InstallerFileNaming.PublisherNameAndVersionValue
+        );
+        InstallerNameSchemeCard.ShowAddedItems();
+
         AskToDeleteNewDesktopShortcuts.Click += async (_, _) =>
         {
             if (Application.Current?.ApplicationLifetime

@@ -1,12 +1,30 @@
+using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 
 namespace UniGetUI.Core.Tools.Tests;
 
 public class InstallerFileNamingTests : IDisposable
 {
+    private readonly string _testRoot;
+
+    public InstallerFileNamingTests()
+    {
+        _testRoot = Path.Combine(
+            Path.GetTempPath(),
+            nameof(InstallerFileNamingTests),
+            Guid.NewGuid().ToString("N")
+        );
+        CoreData.TEST_DataDirectoryOverride = Path.Combine(_testRoot, "Data");
+        Directory.CreateDirectory(CoreData.UniGetUIUserConfigurationDirectory);
+        Settings.ResetSettings();
+    }
+
     public void Dispose()
     {
-        Settings.SetValue(Settings.K.InstallerFileNameScheme, "");
+        Settings.ResetSettings();
+        CoreData.TEST_DataDirectoryOverride = null;
+        if (Directory.Exists(_testRoot))
+            Directory.Delete(_testRoot, recursive: true);
         GC.SuppressFinalize(this);
     }
 

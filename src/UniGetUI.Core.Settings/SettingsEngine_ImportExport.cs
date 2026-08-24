@@ -40,6 +40,7 @@ public partial class Settings
                     "MaintenanceTaskLastRun.json",
                     "MaintenanceTaskLastFailure.json",
                     "MaintenanceSchedules.invalid",
+                    "KnownLocalBackupNames.json",
                     "TelemetryClientToken",
                     "CurrentSessionToken",
                 }.Contains(Path.GetFileName(entry))
@@ -68,6 +69,7 @@ public partial class Settings
                     "MaintenanceTaskLastRun.json",
                     "MaintenanceTaskLastFailure.json",
                     "MaintenanceSchedules.invalid",
+                    "KnownLocalBackupNames.json",
                     "TelemetryClientToken",
                     "CurrentSessionToken",
                 }.Contains(entry.Key)

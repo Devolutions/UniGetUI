@@ -27,6 +27,7 @@ public class LocalBackupManagerTests : IDisposable
         Settings.SetValue(Settings.K.MaxLocalBackupCountCustom, "");
         Settings.SetValue(Settings.K.ChangeBackupFileName, "");
         Settings.Set(Settings.K.EnableBackupTimestamping, false);
+        Settings.ClearDictionary(Settings.K.KnownLocalBackupNames);
         CoreData.TEST_DataDirectoryOverride = null;
         Directory.Delete(_testRoot, true);
         GC.SuppressFinalize(this);
@@ -46,6 +47,9 @@ public class LocalBackupManagerTests : IDisposable
             + timestamp.ToString("yyyy-MM-dd HH-mm-ss", CultureInfo.InvariantCulture)
             + ".ubundle");
 
+    private static DateTime? GetTimestamp(string fileName, string fileNameBase)
+        => LocalBackupManager.GetBackupIdentity(fileName, fileNameBase)?.Timestamp;
+
     private IReadOnlyList<string> RemainingFiles() => Directory
         .GetFiles(_backupDirectory)
         .Select(Path.GetFileName)
@@ -60,7 +64,7 @@ public class LocalBackupManagerTests : IDisposable
         for (int day = 1; day <= 5; day++)
             CreateTimestampedBackup(new DateTime(2026, 8, day, 10, 0, 0));
 
-        int deleted = LocalBackupManager.ApplyRetentionLimit(_backupDirectory, BaseName, 2);
+        int deleted = LocalBackupManager.ApplyRetentionLimit(_backupDirectory, [BaseName], 2);
 
         Assert.Equal(3, deleted);
         Assert.Equal(
@@ -77,7 +81,7 @@ public class LocalBackupManagerTests : IDisposable
         CreateTimestampedBackup(new DateTime(2026, 8, 1, 10, 0, 0));
         CreateTimestampedBackup(new DateTime(2026, 8, 2, 10, 0, 0));
 
-        Assert.Equal(0, LocalBackupManager.ApplyRetentionLimit(_backupDirectory, BaseName, 2));
+        Assert.Equal(0, LocalBackupManager.ApplyRetentionLimit(_backupDirectory, [BaseName], 2));
         Assert.Equal(2, RemainingFiles().Count);
     }
 
@@ -87,8 +91,8 @@ public class LocalBackupManagerTests : IDisposable
         for (int day = 1; day <= 4; day++)
             CreateTimestampedBackup(new DateTime(2026, 8, day, 10, 0, 0));
 
-        Assert.Equal(0, LocalBackupManager.ApplyRetentionLimit(_backupDirectory, BaseName, 0));
-        Assert.Equal(0, LocalBackupManager.ApplyRetentionLimit(_backupDirectory, BaseName, -1));
+        Assert.Equal(0, LocalBackupManager.ApplyRetentionLimit(_backupDirectory, [BaseName], 0));
+        Assert.Equal(0, LocalBackupManager.ApplyRetentionLimit(_backupDirectory, [BaseName], -1));
         Assert.Equal(4, RemainingFiles().Count);
     }
 
@@ -103,7 +107,7 @@ public class LocalBackupManagerTests : IDisposable
         CreateTimestampedBackup(new DateTime(2020, 1, 1, 10, 0, 0), "Another computer installed packages");
         CreateBackup($"{BaseName} 2026-08-03 10-00-00.txt");
 
-        int deleted = LocalBackupManager.ApplyRetentionLimit(_backupDirectory, BaseName, 1);
+        int deleted = LocalBackupManager.ApplyRetentionLimit(_backupDirectory, [BaseName], 1);
 
         Assert.Equal(1, deleted);
         Assert.Equal(
@@ -124,7 +128,7 @@ public class LocalBackupManagerTests : IDisposable
         Assert.Equal(
             0,
             LocalBackupManager.ApplyRetentionLimit(
-                Path.Combine(_testRoot, "Missing"), BaseName, 1));
+                Path.Combine(_testRoot, "Missing"), [BaseName], 1));
     }
 
     [Fact]
@@ -190,13 +194,13 @@ public class LocalBackupManagerTests : IDisposable
             CultureInfo.CurrentCulture = new CultureInfo("th-TH");
             Assert.Equal(
                 new DateTime(2026, 8, 24, 10, 0, 0),
-                LocalBackupManager.GetBackupTimestamp($"{BaseName} 2569-08-24 10-00-00.ubundle", BaseName));
+                GetTimestamp($"{BaseName} 2569-08-24 10-00-00.ubundle", BaseName));
 
             CreateBackup($"{BaseName} 2569-08-24 10-00-00.ubundle");
             CreateTimestampedBackup(new DateTime(2026, 8, 20, 10, 0, 0));
             CreateTimestampedBackup(new DateTime(2026, 8, 21, 10, 0, 0));
 
-            Assert.Equal(1, LocalBackupManager.ApplyRetentionLimit(_backupDirectory, BaseName, 2));
+            Assert.Equal(1, LocalBackupManager.ApplyRetentionLimit(_backupDirectory, [BaseName], 2));
             Assert.Equal(
                 [
                     $"{BaseName} 2026-08-21 10-00-00.ubundle",
@@ -213,9 +217,108 @@ public class LocalBackupManagerTests : IDisposable
     [Fact]
     public void ImplausibleDatesAreNotTreatedAsBackupTimestamps()
     {
-        Assert.Null(LocalBackupManager.GetBackupTimestamp($"{BaseName} 1999-01-01 00-00-00.ubundle", BaseName));
-        Assert.Null(LocalBackupManager.GetBackupTimestamp(
+        Assert.Null(GetTimestamp($"{BaseName} 1999-01-01 00-00-00.ubundle", BaseName));
+        Assert.Null(GetTimestamp(
             $"{BaseName} " + DateTime.Now.AddYears(3).ToString("yyyy-MM-dd HH-mm-ss", CultureInfo.InvariantCulture) + ".ubundle", BaseName));
+    }
+
+    [Fact]
+    public async Task BackupsTakenWithinTheSameSecondGetDistinctFiles()
+    {
+        Settings.SetValue(Settings.K.ChangeBackupOutputDirectory, _backupDirectory);
+        Settings.SetValue(Settings.K.ChangeBackupFileName, BaseName);
+        Settings.Set(Settings.K.EnableBackupTimestamping, true);
+        var timestamp = new DateTime(2026, 8, 24, 15, 30, 45);
+
+        string first = await LocalBackupManager.SaveBackupAsync("first", timestamp);
+        string second = await LocalBackupManager.SaveBackupAsync("second", timestamp);
+        string third = await LocalBackupManager.SaveBackupAsync("third", timestamp);
+
+        Assert.Equal($"{BaseName} 2026-08-24 15-30-45.ubundle", Path.GetFileName(first));
+        Assert.Equal($"{BaseName} 2026-08-24 15-30-45 (2).ubundle", Path.GetFileName(second));
+        Assert.Equal($"{BaseName} 2026-08-24 15-30-45 (3).ubundle", Path.GetFileName(third));
+        Assert.Equal("first", await File.ReadAllTextAsync(first));
+        Assert.Equal("second", await File.ReadAllTextAsync(second));
+        Assert.Equal(3, RemainingFiles().Count);
+    }
+
+    [Fact]
+    public async Task TheSingleBackupFileIsStillOverwrittenWhenTimestampingIsDisabled()
+    {
+        Settings.SetValue(Settings.K.ChangeBackupOutputDirectory, _backupDirectory);
+        Settings.SetValue(Settings.K.ChangeBackupFileName, BaseName);
+        Settings.Set(Settings.K.EnableBackupTimestamping, false);
+
+        string first = await LocalBackupManager.SaveBackupAsync("first");
+        string second = await LocalBackupManager.SaveBackupAsync("second");
+
+        Assert.Equal(first, second);
+        Assert.Equal([$"{BaseName}.ubundle"], RemainingFiles());
+        Assert.Equal("second", await File.ReadAllTextAsync(second));
+    }
+
+    [Fact]
+    public void SameSecondBackupsAreCountedAndOrderedBySequence()
+    {
+        CreateTimestampedBackup(new DateTime(2026, 8, 24, 10, 0, 0));
+        CreateBackup($"{BaseName} 2026-08-24 10-00-00 (2).ubundle");
+        CreateBackup($"{BaseName} 2026-08-24 10-00-00 (3).ubundle");
+
+        Assert.Equal(
+            (new DateTime(2026, 8, 24, 10, 0, 0), 3),
+            LocalBackupManager.GetBackupIdentity($"{BaseName} 2026-08-24 10-00-00 (3).ubundle", BaseName));
+        Assert.Equal(2, LocalBackupManager.ApplyRetentionLimit(_backupDirectory, [BaseName], 1));
+        Assert.Equal([$"{BaseName} 2026-08-24 10-00-00 (3).ubundle"], RemainingFiles());
+    }
+
+    [Fact]
+    public void ParenthesesThatAreNotASequenceAreNotBackupNames()
+    {
+        Assert.Null(LocalBackupManager.GetBackupIdentity($"{BaseName} 2026-08-24 10-00-00 (1).ubundle", BaseName));
+        Assert.Null(LocalBackupManager.GetBackupIdentity($"{BaseName} 2026-08-24 10-00-00 (0).ubundle", BaseName));
+        Assert.Null(LocalBackupManager.GetBackupIdentity($"{BaseName} 2026-08-24 10-00-00 (-2).ubundle", BaseName));
+        Assert.Null(LocalBackupManager.GetBackupIdentity($"{BaseName} 2026-08-24 10-00-00 (copy).ubundle", BaseName));
+        Assert.Null(LocalBackupManager.GetBackupIdentity($"{BaseName} (2).ubundle", BaseName));
+    }
+
+    [Fact]
+    public async Task BackupsWrittenUnderAnEarlierNameStillCountTowardsTheLimit()
+    {
+        Settings.SetValue(Settings.K.ChangeBackupOutputDirectory, _backupDirectory);
+        Settings.SetValue(Settings.K.ChangeBackupFileName, "Old name");
+        Settings.SetValue(Settings.K.MaxLocalBackupCount, "2");
+        Settings.Set(Settings.K.EnableBackupTimestamping, true);
+        await LocalBackupManager.SaveBackupAsync("old", new DateTime(2026, 8, 1, 10, 0, 0));
+        await LocalBackupManager.SaveBackupAsync("old", new DateTime(2026, 8, 2, 10, 0, 0));
+
+        Settings.SetValue(Settings.K.ChangeBackupFileName, "New name");
+        await LocalBackupManager.SaveBackupAsync("new", new DateTime(2026, 8, 3, 10, 0, 0));
+
+        Assert.Contains("Old name", LocalBackupManager.ResolveKnownFileNameBases());
+        Assert.Contains("New name", LocalBackupManager.ResolveKnownFileNameBases());
+        Assert.Equal(1, LocalBackupManager.ApplyRetentionLimit());
+        Assert.Equal(
+            [
+                "New name 2026-08-03 10-00-00.ubundle",
+                "Old name 2026-08-02 10-00-00.ubundle",
+            ],
+            RemainingFiles());
+    }
+
+    [Fact]
+    public async Task BackupsFromANameThisInstallNeverUsedAreLeftAlone()
+    {
+        Settings.SetValue(Settings.K.ChangeBackupOutputDirectory, _backupDirectory);
+        Settings.SetValue(Settings.K.ChangeBackupFileName, BaseName);
+        Settings.SetValue(Settings.K.MaxLocalBackupCount, "1");
+        Settings.Set(Settings.K.EnableBackupTimestamping, true);
+        CreateTimestampedBackup(new DateTime(2026, 8, 1, 10, 0, 0), "Another computer installed packages");
+        CreateTimestampedBackup(new DateTime(2026, 8, 2, 10, 0, 0), "Another computer installed packages");
+
+        await LocalBackupManager.SaveBackupAsync("mine", new DateTime(2026, 8, 3, 10, 0, 0));
+
+        Assert.Equal(0, LocalBackupManager.ApplyRetentionLimit());
+        Assert.Equal(3, RemainingFiles().Count);
     }
 
     [Fact]
@@ -224,12 +327,12 @@ public class LocalBackupManagerTests : IDisposable
         Settings.SetValue(Settings.K.ChangeBackupFileName, BaseName);
 
         Settings.Set(Settings.K.EnableBackupTimestamping, false);
-        Assert.Equal($"{BaseName}.ubundle", LocalBackupManager.BuildFileName());
+        Assert.Equal($"{BaseName}.ubundle", LocalBackupManager.BuildFileName(new DateTime(2026, 8, 24, 15, 30, 45)));
 
         Settings.Set(Settings.K.EnableBackupTimestamping, true);
         var timestamp = new DateTime(2026, 8, 24, 15, 30, 45);
         string fileName = LocalBackupManager.BuildFileName(timestamp);
         Assert.Equal($"{BaseName} 2026-08-24 15-30-45.ubundle", fileName);
-        Assert.Equal(timestamp, LocalBackupManager.GetBackupTimestamp(fileName, BaseName));
+        Assert.Equal(timestamp, GetTimestamp(fileName, BaseName));
     }
 }

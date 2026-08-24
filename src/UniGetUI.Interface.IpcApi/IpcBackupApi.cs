@@ -135,13 +135,9 @@ public static class IpcBackupApi
     public static async Task<IpcLocalBackupResult> CreateLocalBackupAsync()
     {
         var packages = GetInstalledPackagesForBackup();
-        string fileName = LocalBackupManager.BuildFileName();
-        string outputDirectory = LocalBackupManager.ResolveOutputDirectory();
-        Directory.CreateDirectory(outputDirectory);
-
-        string filePath = Path.Combine(outputDirectory, fileName);
         string content = await IpcBundleApi.CreateBundleAsync(packages);
-        await File.WriteAllTextAsync(filePath, content);
+        string filePath = await LocalBackupManager.SaveBackupAsync(content);
+        string fileName = Path.GetFileName(filePath);
 
         Logger.ImportantInfo("Local backup saved to " + filePath);
         int deletedBackupCount = await Task.Run(LocalBackupManager.ApplyRetentionLimit);

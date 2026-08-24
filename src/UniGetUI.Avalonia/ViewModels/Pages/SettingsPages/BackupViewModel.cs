@@ -142,12 +142,7 @@ public partial class BackupViewModel : ViewModelBase, IDisposable
                 ?? [];
             string backupContents = await PackageBundlesPage.CreateBundle(packages);
 
-            string dirName = LocalBackupManager.ResolveOutputDirectory();
-            if (!Directory.Exists(dirName))
-                Directory.CreateDirectory(dirName);
-
-            string filePath = Path.Combine(dirName, LocalBackupManager.BuildFileName());
-            await File.WriteAllTextAsync(filePath, backupContents);
+            string filePath = await LocalBackupManager.SaveBackupAsync(backupContents);
             Logger.ImportantInfo("Local backup saved to " + filePath);
             await Task.Run(LocalBackupManager.ApplyRetentionLimit);
             return true;

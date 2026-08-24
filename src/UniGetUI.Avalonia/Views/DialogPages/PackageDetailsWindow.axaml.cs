@@ -466,10 +466,10 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     {
         if (!_vm.Package.Manager.Capabilities.CanDownloadInstaller) return;
         Close();
-        // Hook into the platform's download path if/when wired up. For now, fall back to opening
-        // the installer URL so the user can still grab the file.
-        if (_vm.InstallerUrl is not null)
-            OpenUrl(_vm.InstallerUrl.ToString());
+        _ = AvaloniaPackageOperationHelper.AskLocationAndDownloadAsync(
+            _vm.Package,
+            TEL_InstallReferral.DIRECT_SEARCH
+        );
     }
 
     // ── Action flyout ────────────────────────────────────────────────────────

@@ -991,5 +991,12 @@
   "Backup file names include the date and time each backup was created.": "Backup file names include the date and time each backup was created.",
   "Keep all backups": "Keep all backups",
   "Keep the last {0} backups": "Keep the last {0} backups",
-  "Custom maximum number of backups": "Custom maximum number of backups"
+  "Custom maximum number of backups": "Custom maximum number of backups",
+  "Installer downloads": "Installer downloads",
+  "Name of the downloaded installer files": "Name of the downloaded installer files",
+  "Adding the version to the file name makes downloaded installers sortable and keeps a new download from overwriting the installer of an older version.": "Adding the version to the file name makes downloaded installers sortable and keeps a new download from overwriting the installer of an older version.",
+  "Name given by the publisher": "Name given by the publisher",
+  "Package name and version": "Package name and version",
+  "Package identifier and version": "Package identifier and version",
+  "Name given by the publisher, followed by the version": "Name given by the publisher, followed by the version"
 }

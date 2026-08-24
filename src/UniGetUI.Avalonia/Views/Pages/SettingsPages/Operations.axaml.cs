@@ -30,19 +30,19 @@ public sealed partial class Operations : UserControl, ISettingsPage
         ParallelOperationCount.ShowAddedItems();
 
         InstallerNameSchemeCard.AddItem(
-            "Name given by the publisher",
+            CoreTools.Translate("Name given by the publisher"),
             InstallerFileNaming.PublisherNameValue
         );
         InstallerNameSchemeCard.AddItem(
-            "Package name and version",
+            CoreTools.Translate("Package name and version"),
             InstallerFileNaming.NameAndVersionValue
         );
         InstallerNameSchemeCard.AddItem(
-            "Package identifier and version",
+            CoreTools.Translate("Package identifier and version"),
             InstallerFileNaming.IdAndVersionValue
         );
         InstallerNameSchemeCard.AddItem(
-            "Name given by the publisher, followed by the version",
+            CoreTools.Translate("Name given by the publisher, followed by the version"),
             InstallerFileNaming.PublisherNameAndVersionValue
         );
         InstallerNameSchemeCard.ShowAddedItems();

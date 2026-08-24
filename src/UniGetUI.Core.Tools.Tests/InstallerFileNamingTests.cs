@@ -67,6 +67,28 @@ public class InstallerFileNamingTests : IDisposable
     }
 
     [Theory]
+    [InlineData("exe", "Node_20.11.1.exe")]
+    [InlineData("nullsoft", "Node_20.11.1.exe")]
+    [InlineData("msix", "Node_20.11.1.msix")]
+    [InlineData("appx", "Node_20.11.1.appx")]
+    [InlineData(".exe", "Node_20.11.1.exe")]
+    [InlineData("Homebrew Formula", "Node_20.11.1")]
+    public void Build_MapsInstallerTypeToItsOwnExtension(string installerType, string expected)
+    {
+        Assert.Equal(
+            expected,
+            InstallerFileNaming.Build(
+                "download",
+                "Node",
+                "OpenJS.NodeJS",
+                "20.11.1",
+                installerType,
+                InstallerNameScheme.NameAndVersion
+            )
+        );
+    }
+
+    [Theory]
     [InlineData("setup.tar.gz", "Node_20.11.1.tar.gz")]
     [InlineData("setup.msixbundle", "Node_20.11.1.msixbundle")]
     [InlineData("setup.appinstaller", "Node_20.11.1.appinstaller")]

@@ -33,7 +33,7 @@ public static class InstallerFileNaming
         ["portable"] = ".exe",
         ["msi"] = ".msi",
         ["msix"] = ".msix",
-        ["appx"] = ".msix",
+        ["appx"] = ".appx",
         ["msixbundle"] = ".msixbundle",
         ["appxbundle"] = ".appxbundle",
         ["zip"] = ".zip",

@@ -187,10 +187,30 @@
 
             <settings:CheckboxCard x:Name="BackupTimestampCard"
                                    SettingName="EnableBackupTimestamping"
-                                   Text="{t:Translate Add a timestamp to the backup file names}"
-                                   CornerRadius="0,0,8,8"
+                                   Text="{t:Translate Keep a separate file for each backup}"
+                                   Description="{t:Translate Text='Backup file names include the date and time each backup was created.'}"
+                                   StateChangedCommand="{Binding EnableBackupTimestampingChangedCommand}"
+                                   CornerRadius="0"
                                    BorderThickness="1,0,1,1"
                                    IsEnabled="{Binding IsLocalBackupEnabled}"/>
+
+            <settings:ComboboxCard x:Name="MaxBackupCountCard"
+                                   SettingName="MaxLocalBackupCount"
+                                   Text="{t:Translate Maximum number of local backups to keep}"
+                                   Description="{t:Translate Text='The oldest backups are deleted once this limit is exceeded.'}"
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0,0,8,8"
+                                   IsEnabled="{Binding IsBackupRetentionAvailable}"/>
+
+            <settings:TextboxCard x:Name="MaxBackupCountCustomInput"
+                                  SettingName="MaxLocalBackupCountCustom"
+                                  Text="{t:Translate Custom maximum number of backups}"
+                                  Placeholder="{t:Translate e.g. 10}"
+                                  IsNumericOnly="True"
+                                  IsVisible="{Binding IsCustomBackupCountSelected}"
+                                  BorderThickness="1,0,1,1"
+                                  CornerRadius="0,0,8,8"
+                                  IsEnabled="{Binding IsBackupRetentionAvailable}"/>
 
             <settings:TranslatedTextBlock Text="Related settings"
                                           FontSize="14"

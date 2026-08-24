@@ -109,7 +109,9 @@ public static class SettingsSearchIndex
         new("Perform a local backup now", ["local backup now"], typeof(Backup), "BackupNowButton_LOCAL"),
         new("Change backup output directory", ["backup directory", "backup folder"], typeof(Backup), "BackupDirectoryCard"),
         new("Set a custom backup file name", ["backup file name"], typeof(Backup), "BackupFileNameCard"),
-        new("Add a timestamp to the backup file names", ["backup timestamp"], typeof(Backup), "BackupTimestampCard"),
+        new("Keep a separate file for each backup", ["backup timestamp", "timestamped file names", "separate backups"], typeof(Backup), "BackupTimestampCard"),
+        new("Maximum number of local backups to keep", ["backup retention", "backup limit", "delete old backups"], typeof(Backup), "MaxBackupCountCard"),
+        new("Custom maximum number of backups", ["custom backup count"], typeof(Backup), "MaxBackupCountCustomInput"),
         new("Package backup", ["backup"], typeof(Backup), null),
 
         // ── Administrator ────────────────────────────────────────────────────

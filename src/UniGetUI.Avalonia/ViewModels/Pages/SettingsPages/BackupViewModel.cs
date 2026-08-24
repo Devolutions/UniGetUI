@@ -32,8 +32,22 @@ public partial class BackupViewModel : ViewModelBase, IDisposable
     ];
 
     /* ── Local backup ── */
-    [ObservableProperty] private bool _isLocalBackupEnabled;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsBackupRetentionAvailable))] private bool _isLocalBackupEnabled;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsBackupRetentionAvailable))] private bool _isBackupTimestampingEnabled;
+    [ObservableProperty] private bool _isCustomBackupCountSelected;
     [ObservableProperty] private string _backupDirectoryLabel = "";
+
+    public bool IsBackupRetentionAvailable => IsLocalBackupEnabled && IsBackupTimestampingEnabled;
+
+    public IReadOnlyList<(string Name, string Value)> MaxBackupCountItems { get; } =
+    [
+        (CoreTools.Translate("Keep all backups"),              "0"),
+        (CoreTools.Translate("Keep the last {0} backups", 5),  "5"),
+        (CoreTools.Translate("Keep the last {0} backups", 10), "10"),
+        (CoreTools.Translate("Keep the last {0} backups", 25), "25"),
+        (CoreTools.Translate("Keep the last {0} backups", 50), "50"),
+        (CoreTools.Translate("Custom..."),                     "custom"),
+    ];
 
     /* ── Cloud backup ── */
     [ObservableProperty] private bool _isLoggedIn;
@@ -55,6 +69,7 @@ public partial class BackupViewModel : ViewModelBase, IDisposable
     {
         _lifetimeToken = _lifetimeCancellation.Token;
         _isLocalBackupEnabled = CoreSettings.Get(CoreSettings.K.EnablePackageBackup_LOCAL);
+        _isBackupTimestampingEnabled = CoreSettings.Get(CoreSettings.K.EnableBackupTimestamping);
         RefreshDirectoryLabel();
 
         GitHubAuthService.AuthStatusChanged += OnAuthStatusChanged;
@@ -85,6 +100,13 @@ public partial class BackupViewModel : ViewModelBase, IDisposable
         if (IsDisposed) return;
         IsLocalBackupEnabled = CoreSettings.Get(CoreSettings.K.EnablePackageBackup_LOCAL);
         RestartRequired?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void EnableBackupTimestampingChanged()
+    {
+        if (IsDisposed) return;
+        IsBackupTimestampingEnabled = CoreSettings.Get(CoreSettings.K.EnableBackupTimestamping);
     }
 
     private void RefreshDirectoryLabel()
@@ -120,28 +142,14 @@ public partial class BackupViewModel : ViewModelBase, IDisposable
                 ?? [];
             string backupContents = await PackageBundlesPage.CreateBundle(packages);
 
-            string dirName = CoreSettings.GetValue(CoreSettings.K.ChangeBackupOutputDirectory);
-            if (string.IsNullOrEmpty(dirName))
-                dirName = CoreData.UniGetUI_DefaultBackupDirectory;
-
+            string dirName = LocalBackupManager.ResolveOutputDirectory();
             if (!Directory.Exists(dirName))
                 Directory.CreateDirectory(dirName);
 
-            string fileName = CoreSettings.GetValue(CoreSettings.K.ChangeBackupFileName);
-            if (string.IsNullOrEmpty(fileName))
-                fileName = CoreTools.Translate(
-                    "{pcName} installed packages",
-                    new Dictionary<string, object?> { { "pcName", Environment.MachineName } }
-                );
-
-            if (CoreSettings.Get(CoreSettings.K.EnableBackupTimestamping))
-                fileName += " " + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss");
-
-            fileName += ".ubundle";
-
-            string filePath = Path.Combine(dirName, fileName);
+            string filePath = Path.Combine(dirName, LocalBackupManager.BuildFileName());
             await File.WriteAllTextAsync(filePath, backupContents);
             Logger.ImportantInfo("Local backup saved to " + filePath);
+            await Task.Run(LocalBackupManager.ApplyRetentionLimit);
             return true;
         }
         catch (Exception ex)

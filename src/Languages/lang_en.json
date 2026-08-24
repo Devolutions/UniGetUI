@@ -984,5 +984,12 @@
   "Run whenever UniGetUI next starts": "Run whenever UniGetUI next starts",
   "Run within {0}": "Run within {0}",
   "Choose the days and hours when updates are checked and installed": "Choose the days and hours when updates are checked and installed",
-  "The last attempt failed on {0}, see the log for details": "The last attempt failed on {0}, see the log for details"
+  "The last attempt failed on {0}, see the log for details": "The last attempt failed on {0}, see the log for details",
+  "Maximum number of local backups to keep": "Maximum number of local backups to keep",
+  "The oldest backups are deleted once this limit is exceeded.": "The oldest backups are deleted once this limit is exceeded.",
+  "Keep a separate file for each backup": "Keep a separate file for each backup",
+  "Backup file names include the date and time each backup was created.": "Backup file names include the date and time each backup was created.",
+  "Keep all backups": "Keep all backups",
+  "Keep the last {0} backups": "Keep the last {0} backups",
+  "Custom maximum number of backups": "Custom maximum number of backups"
 }

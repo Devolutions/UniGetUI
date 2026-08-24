@@ -1,4 +1,3 @@
-using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SecureSettings;
 using UniGetUI.Core.SettingsEngine;
@@ -28,6 +27,7 @@ public sealed class IpcBackupStatus
     public string? CustomBackupDirectory { get; set; }
     public string BackupFileName { get; set; } = "";
     public bool TimestampingEnabled { get; set; }
+    public int MaxLocalBackupCount { get; set; }
     public string CurrentMachineBackupKey { get; set; } = "";
     public IpcGitHubAuthInfo Auth { get; set; } = new();
 }
@@ -44,6 +44,7 @@ public sealed class IpcLocalBackupResult : IpcBackupCommandResult
     public string Path { get; set; } = "";
     public string FileName { get; set; } = "";
     public int PackageCount { get; set; }
+    public int DeletedBackupCount { get; set; }
 }
 
 public sealed class IpcCloudBackupEntry
@@ -115,25 +116,17 @@ public static class IpcBackupApi
         string? customBackupDirectory = Settings.Get(Settings.K.ChangeBackupOutputDirectory)
             ? Settings.GetValue(Settings.K.ChangeBackupOutputDirectory)
             : null;
-        string backupFileName = Settings.GetValue(Settings.K.ChangeBackupFileName);
-        if (string.IsNullOrWhiteSpace(backupFileName))
-        {
-            backupFileName = CoreTools.Translate(
-                "{pcName} installed packages",
-                new Dictionary<string, object?> { ["pcName"] = Environment.MachineName }
-            );
-        }
-
         return new IpcBackupStatus
         {
             LocalBackupEnabled = Settings.Get(Settings.K.EnablePackageBackup_LOCAL),
             CloudBackupEnabled = Settings.Get(Settings.K.EnablePackageBackup_CLOUD),
-            BackupDirectory = ResolveBackupDirectory(),
+            BackupDirectory = LocalBackupManager.ResolveOutputDirectory(),
             CustomBackupDirectory = string.IsNullOrWhiteSpace(customBackupDirectory)
                 ? null
                 : customBackupDirectory,
-            BackupFileName = backupFileName,
+            BackupFileName = LocalBackupManager.ResolveFileNameBase(),
             TimestampingEnabled = Settings.Get(Settings.K.EnableBackupTimestamping),
+            MaxLocalBackupCount = LocalBackupManager.GetRetentionLimit(),
             CurrentMachineBackupKey = BuildGistFileKey().Split(' ')[^1],
             Auth = await GetGitHubAuthInfoAsync(),
         };
@@ -142,8 +135,8 @@ public static class IpcBackupApi
     public static async Task<IpcLocalBackupResult> CreateLocalBackupAsync()
     {
         var packages = GetInstalledPackagesForBackup();
-        string fileName = BuildBackupFileName();
-        string outputDirectory = ResolveBackupDirectory();
+        string fileName = LocalBackupManager.BuildFileName();
+        string outputDirectory = LocalBackupManager.ResolveOutputDirectory();
         Directory.CreateDirectory(outputDirectory);
 
         string filePath = Path.Combine(outputDirectory, fileName);
@@ -151,6 +144,7 @@ public static class IpcBackupApi
         await File.WriteAllTextAsync(filePath, content);
 
         Logger.ImportantInfo("Local backup saved to " + filePath);
+        int deletedBackupCount = await Task.Run(LocalBackupManager.ApplyRetentionLimit);
         return new IpcLocalBackupResult
         {
             Status = "success",
@@ -158,6 +152,7 @@ public static class IpcBackupApi
             Path = filePath,
             FileName = fileName,
             PackageCount = packages.Count,
+            DeletedBackupCount = deletedBackupCount,
         };
     }
 
@@ -366,33 +361,6 @@ public static class IpcBackupApi
     {
         return InstalledPackagesLoader.Instance?.Packages.ToList()
             ?? throw new InvalidOperationException("The installed packages loader is not available.");
-    }
-
-    private static string ResolveBackupDirectory()
-    {
-        string directory = Settings.GetValue(Settings.K.ChangeBackupOutputDirectory);
-        return string.IsNullOrWhiteSpace(directory)
-            ? CoreData.UniGetUI_DefaultBackupDirectory
-            : directory;
-    }
-
-    private static string BuildBackupFileName()
-    {
-        string fileName = Settings.GetValue(Settings.K.ChangeBackupFileName);
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            fileName = CoreTools.Translate(
-                "{pcName} installed packages",
-                new Dictionary<string, object?> { ["pcName"] = Environment.MachineName }
-            );
-        }
-
-        if (Settings.Get(Settings.K.EnableBackupTimestamping))
-        {
-            fileName += " " + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss");
-        }
-
-        return fileName + ".ubundle";
     }
 
     private static async Task<IpcGitHubAuthInfo> GetGitHubAuthInfoAsync()

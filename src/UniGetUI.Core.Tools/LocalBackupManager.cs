@@ -80,19 +80,37 @@ public static class LocalBackupManager
                     : $"{stem} ({sequence}){BackupExtension}"
             );
 
+            FileStream stream;
             try
             {
-                using (new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                {
-                }
+                stream = new FileStream(
+                    path,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None,
+                    4096,
+                    useAsync: true
+                );
             }
             catch (IOException) when (File.Exists(path))
             {
                 continue;
             }
 
-            await File.WriteAllTextAsync(path, contents);
-            return path;
+            try
+            {
+                await using (StreamWriter writer = new(stream))
+                {
+                    await writer.WriteAsync(contents);
+                }
+
+                return path;
+            }
+            catch
+            {
+                DeleteIncompleteBackup(path);
+                throw;
+            }
         }
 
         throw new IOException(
@@ -151,7 +169,11 @@ public static class LocalBackupManager
             {
                 if (GetBackupIdentity(fileName, fileNameBase) is { } identity)
                 {
-                    backups.Add((identity.Timestamp, identity.Sequence, path));
+                    backups.Add((
+                        identity.Timestamp ?? File.GetLastWriteTime(path),
+                        identity.Sequence,
+                        path
+                    ));
                     break;
                 }
             }
@@ -183,7 +205,7 @@ public static class LocalBackupManager
         return deletedCount;
     }
 
-    public static (DateTime Timestamp, int Sequence)? GetBackupIdentity(
+    public static (DateTime? Timestamp, int Sequence)? GetBackupIdentity(
         string fileName,
         string fileNameBase)
     {
@@ -212,12 +234,45 @@ public static class LocalBackupManager
             value = value[..separator];
         }
 
-        if (TryParseTimestamp(value, CultureInfo.InvariantCulture, out DateTime timestamp))
+        if (!HasTimestampShape(value))
+            return null;
+
+        if (TryParseTimestamp(value, CultureInfo.InvariantCulture, out DateTime timestamp)
+            || TryParseTimestamp(value, CultureInfo.CurrentCulture, out timestamp))
             return (timestamp, sequence);
 
-        return TryParseTimestamp(value, CultureInfo.CurrentCulture, out timestamp)
-            ? (timestamp, sequence)
-            : null;
+        return (null, sequence);
+    }
+
+    private static bool HasTimestampShape(string value)
+    {
+        const string shape = "dddd-dd-dd dd-dd-dd";
+        if (value.Length != shape.Length)
+            return false;
+
+        for (int index = 0; index < shape.Length; index++)
+        {
+            bool matches = shape[index] == 'd'
+                ? char.IsAsciiDigit(value[index])
+                : value[index] == shape[index];
+            if (!matches)
+                return false;
+        }
+
+        return true;
+    }
+
+    private static void DeleteIncompleteBackup(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"The incomplete local backup {path} could not be removed:");
+            Logger.Warn(ex);
+        }
     }
 
     private static void RememberFileNameBase()

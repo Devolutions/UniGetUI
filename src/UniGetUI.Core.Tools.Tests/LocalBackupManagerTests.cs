@@ -215,11 +215,54 @@ public class LocalBackupManagerTests : IDisposable
     }
 
     [Fact]
-    public void ImplausibleDatesAreNotTreatedAsBackupTimestamps()
+    public void NamesThatDoNotCarryOurTimestampShapeAreNotBackups()
     {
-        Assert.Null(GetTimestamp($"{BaseName} 1999-01-01 00-00-00.ubundle", BaseName));
-        Assert.Null(GetTimestamp(
-            $"{BaseName} " + DateTime.Now.AddYears(3).ToString("yyyy-MM-dd HH-mm-ss", CultureInfo.InvariantCulture) + ".ubundle", BaseName));
+        Assert.Null(LocalBackupManager.GetBackupIdentity($"{BaseName} 2026-8-4 10-00-00.ubundle", BaseName));
+        Assert.Null(LocalBackupManager.GetBackupIdentity($"{BaseName} 20260824 100000.ubundle", BaseName));
+        Assert.Null(LocalBackupManager.GetBackupIdentity($"{BaseName} 2026-08-24T10-00-00.ubundle", BaseName));
+        Assert.Null(LocalBackupManager.GetBackupIdentity($"{BaseName} not-a-timestamp.ubundle", BaseName));
+    }
+
+    [Fact]
+    public void UntrustworthyDatesKeepTheFileAsABackupWithoutATimestamp()
+    {
+        Assert.Equal(
+            (null, 1),
+            LocalBackupManager.GetBackupIdentity($"{BaseName} 1999-01-01 00-00-00.ubundle", BaseName));
+        Assert.Equal(
+            (null, 2),
+            LocalBackupManager.GetBackupIdentity(
+                $"{BaseName} " + DateTime.Now.AddYears(3).ToString("yyyy-MM-dd HH-mm-ss", CultureInfo.InvariantCulture) + " (2).ubundle",
+                BaseName));
+    }
+
+    [Fact]
+    public void BackupsNamedUnderACalendarNoLongerInUseArePrunedByTheirWriteTime()
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("en-US");
+            string legacy = CreateBackup($"{BaseName} 2569-08-19 10-00-00.ubundle");
+            File.SetLastWriteTime(legacy, new DateTime(2026, 8, 19, 10, 0, 0));
+            CreateTimestampedBackup(new DateTime(2026, 8, 20, 10, 0, 0));
+            CreateTimestampedBackup(new DateTime(2026, 8, 21, 10, 0, 0));
+
+            Assert.Equal(
+                (null, 1),
+                LocalBackupManager.GetBackupIdentity(Path.GetFileName(legacy), BaseName));
+            Assert.Equal(1, LocalBackupManager.ApplyRetentionLimit(_backupDirectory, [BaseName], 2));
+            Assert.Equal(
+                [
+                    $"{BaseName} 2026-08-20 10-00-00.ubundle",
+                    $"{BaseName} 2026-08-21 10-00-00.ubundle",
+                ],
+                RemainingFiles());
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+        }
     }
 
     [Fact]
@@ -239,6 +282,7 @@ public class LocalBackupManagerTests : IDisposable
         Assert.Equal($"{BaseName} 2026-08-24 15-30-45 (3).ubundle", Path.GetFileName(third));
         Assert.Equal("first", await File.ReadAllTextAsync(first));
         Assert.Equal("second", await File.ReadAllTextAsync(second));
+        Assert.Equal("first"u8.ToArray(), await File.ReadAllBytesAsync(first));
         Assert.Equal(3, RemainingFiles().Count);
     }
 

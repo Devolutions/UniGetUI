@@ -998,5 +998,7 @@
   "Name given by the publisher": "Name given by the publisher",
   "Package name and version": "Package name and version",
   "Package identifier and version": "Package identifier and version",
-  "Name given by the publisher, followed by the version": "Name given by the publisher, followed by the version"
+  "Name given by the publisher, followed by the version": "Name given by the publisher, followed by the version",
+  "Installer host": "Installer host",
+  "Show the installer host on package lists": "Show the installer host on package lists"
 }

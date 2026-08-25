@@ -225,6 +225,14 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             return PingetPackageDetailsProvider.TryGetInstallerHostsForVersion(package, version);
         }
 
+        public static IReadOnlyList<string>? TryGetInstallerUrls(
+            UniGetUI.PackageEngine.Interfaces.IPackage package,
+            string? version
+        )
+        {
+            return PingetPackageDetailsProvider.TryGetInstallerUrls(package, version);
+        }
+
         public bool ReportedUpdateNotApplicable(
             IReadOnlyList<string> processOutput,
             int returnCode

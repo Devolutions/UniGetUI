@@ -474,6 +474,35 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
         string version
     )
     {
+        IReadOnlyList<string>? urls = TryGetInstallerUrls(package, version, requireExactVersion: true);
+        if (urls is null)
+            return null;
+
+        HashSet<string> hosts = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string url in urls)
+        {
+            if (TryCreateUri(url, out Uri? uri) && uri is not null)
+                hosts.Add(uri.Host);
+        }
+
+        return hosts.Count > 0 ? hosts : null;
+    }
+
+    internal static IReadOnlyList<string>? TryGetInstallerUrls(IPackage package, string? version)
+    {
+        IReadOnlyList<string>? urls = TryGetInstallerUrls(package, version, requireExactVersion: false);
+        if (urls is not null || string.IsNullOrWhiteSpace(version))
+            return urls;
+
+        return TryGetInstallerUrls(package, null, requireExactVersion: false);
+    }
+
+    private static IReadOnlyList<string>? TryGetInstallerUrls(
+        IPackage package,
+        string? version,
+        bool requireExactVersion
+    )
+    {
         try
         {
             PackageQuery query = CreateQuery(package, version);
@@ -487,29 +516,35 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
             // isn't in the index (yanked / expired / never indexed). That fallback would
             // make the host-change check return false-negatives, so reject any result whose
             // manifest version doesn't match what we asked for.
-            string returnedVersion = result.Manifest.Version ?? "";
-            if (!string.Equals(returnedVersion, version, StringComparison.OrdinalIgnoreCase))
+            if (requireExactVersion)
             {
-                Logger.Info(
-                    $"Pinget returned manifest version '{returnedVersion}' when '{version}' "
-                    + $"was requested for {package.Id}; treating as not found"
-                );
-                return null;
+                string returnedVersion = result.Manifest.Version ?? "";
+                if (!string.Equals(returnedVersion, version, StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.Info(
+                        $"Pinget returned manifest version '{returnedVersion}' when '{version}' "
+                        + $"was requested for {package.Id}; treating as not found"
+                    );
+                    return null;
+                }
             }
 
-            HashSet<string> hosts = new(StringComparer.OrdinalIgnoreCase);
+            List<string> urls = [];
             foreach (Installer installer in result.Manifest.Installers)
             {
-                if (TryCreateUri(installer.Url, out Uri? uri) && uri is not null)
-                    hosts.Add(uri.Host);
+                if (string.IsNullOrWhiteSpace(installer.Url))
+                    continue;
+                if (urls.Contains(installer.Url, StringComparer.OrdinalIgnoreCase))
+                    continue;
+                urls.Add(installer.Url);
             }
 
-            return hosts.Count > 0 ? hosts : null;
+            return urls.Count > 0 ? urls : null;
         }
         catch (Exception ex)
         {
             Logger.Warn(
-                $"Could not resolve installer hosts for {package.Id} version {version}: {ex.Message}"
+                $"Could not resolve installer URLs for {package.Id} version {version}: {ex.Message}"
             );
             return null;
         }

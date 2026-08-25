@@ -650,6 +650,29 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
+                                <DataGridTemplateColumn CanUserSort="False"
+                                                        Header="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).InstallerHostHeaderText}"
+                                                        Width="*"
+                                                        IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).InstallerHostColumnVisible}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="pkg:PackageWrapper">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0"
+                                                        controls:PackageInstallerHostLoader.Track="True">
+                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/launch.svg"
+                                                                  Width="24" Height="24" VerticalAlignment="Center"
+                                                                  IsVisible="{Binding !InstallerHostChanged}"/>
+                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/warning_filled.svg"
+                                                                  Width="22" Height="22" VerticalAlignment="Center"
+                                                                  Foreground="#F59E0B"
+                                                                  IsVisible="{Binding InstallerHostChanged}"
+                                                                  ToolTip.Tip="{Binding InstallerHostChangeTooltip}"/>
+                                                <TextBlock Text="{Binding InstallerHostText}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip.Tip="{Binding InstallerHostTooltip}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
 

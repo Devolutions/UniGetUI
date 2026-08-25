@@ -46,6 +46,12 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     private const int MaxFailedIconEntries = 512;
     private static readonly TimeSpan IconRetryInterval = TimeSpan.FromMinutes(5);
 
+    private const string UnknownInstallerHost = "\u2014";
+    private const int MaxInstallerHostCacheEntries = 1024;
+    private static readonly SemaphoreSlim _installerHostSemaphore = new(4, 4);
+    private static readonly object _installerHostCacheLock = new();
+    private static readonly Dictionary<long, (string Host, string Urls)> _installerHostCache = new();
+
     private static Bitmap? GetCachedIcon(long hash)
     {
         lock (_iconCacheLock)
@@ -178,6 +184,9 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     public bool InstallerHostChanged { get; private set; }
     public string InstallerHostChangeTooltip { get; private set; } = "";
 
+    public string InstallerHostText { get; private set; } = "";
+    public string? InstallerHostTooltip { get; private set; }
+
     private CancellationTokenSource? _installerHostCheckCts;
     // Cancels this row's queued/in-flight icon load on disposal so it stops rooting the wrapper.
     private readonly CancellationTokenSource _lifetimeCts = new();
@@ -230,6 +239,111 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         if (Settings.Get(Settings.K.DisableIconsOnPackageLists)) return Task.CompletedTask;
         lock (_iconLoadLock)
             return _iconLoadTask ??= LoadIconAsync();
+    }
+
+    private int _installerHostLoadStarted;
+
+    public void EnsureInstallerHostLoaded()
+    {
+        if (!_page.InstallerHostColumnVisible) return;
+        if (Interlocked.Exchange(ref _installerHostLoadStarted, 1) != 0) return;
+        _ = LoadInstallerHostAsync();
+    }
+
+    private string InstallerHostVersion =>
+        Package.IsUpgradable ? Package.NewVersionString : Package.VersionString;
+
+    private async Task LoadInstallerHostAsync()
+    {
+        long hash = CoreTools.HashStringAsLong(
+            $"{Package.GetVersionedHash()}|{InstallerHostVersion}"
+        );
+        if (TryGetCachedInstallerHost(hash, out var cached))
+        {
+            ApplyInstallerHost(cached.Host, cached.Urls);
+            return;
+        }
+
+        CancellationToken token = _lifetimeCts.Token;
+        try
+        {
+            await _installerHostSemaphore.WaitAsync(token).ConfigureAwait(false);
+            (string Host, string Urls) resolved;
+            try
+            {
+                if (!TryGetCachedInstallerHost(hash, out resolved))
+                {
+                    IReadOnlyList<string>? urls = await ResolveInstallerUrlsAsync(token)
+                        .ConfigureAwait(false);
+                    resolved = (
+                        InstallerHostDisplay.FromUrls(urls),
+                        InstallerHostDisplay.JoinUrls(urls)
+                    );
+                    CacheInstallerHost(hash, resolved.Host, resolved.Urls);
+                }
+            }
+            finally
+            {
+                _installerHostSemaphore.Release();
+            }
+
+            if (token.IsCancellationRequested) return;
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (!token.IsCancellationRequested)
+                    ApplyInstallerHost(resolved.Host, resolved.Urls);
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not resolve the installer host for {Package.Id}: {ex.Message}");
+        }
+    }
+
+    private async Task<IReadOnlyList<string>?> ResolveInstallerUrlsAsync(CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+#if WINDOWS
+        if (Package.Manager is WinGet)
+        {
+            string version = InstallerHostVersion;
+            return await Task.Run(() => WinGet.TryGetInstallerUrls(Package, version), token)
+                .ConfigureAwait(false);
+        }
+#endif
+        if (!Package.Details.IsPopulated)
+            await Package.Details.Load().ConfigureAwait(false);
+
+        return Package.Details.InstallerUrl is { } url ? [url.ToString()] : null;
+    }
+
+    private void ApplyInstallerHost(string host, string urls)
+    {
+        InstallerHostText = host.Length > 0 ? host : UnknownInstallerHost;
+        InstallerHostTooltip = urls.Length > 0 ? urls : null;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InstallerHostText)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InstallerHostTooltip)));
+    }
+
+    private static bool TryGetCachedInstallerHost(long hash, out (string Host, string Urls) entry)
+    {
+        lock (_installerHostCacheLock)
+            return _installerHostCache.TryGetValue(hash, out entry);
+    }
+
+    private static void CacheInstallerHost(long hash, string host, string urls)
+    {
+        lock (_installerHostCacheLock)
+        {
+            if (_installerHostCache.Count >= MaxInstallerHostCacheEntries
+                && !_installerHostCache.ContainsKey(hash))
+            {
+                _installerHostCache.Clear();
+            }
+
+            _installerHostCache[hash] = (host, urls);
+        }
     }
 
     /// <summary>

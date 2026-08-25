@@ -96,12 +96,26 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         public List<IPackageDetails.Dependency> Dependencies { get; set; } = [];
 
+        private readonly object _loadLock = new();
+        private Task? _loadTask;
+
         public PackageDetails(IPackage package)
         {
             Package = package;
         }
 
-        public async Task Load()
+        public Task Load()
+        {
+            lock (_loadLock)
+            {
+                if (_loadTask is { IsCompleted: false })
+                    return _loadTask;
+
+                return _loadTask = LoadCore();
+            }
+        }
+
+        private async Task LoadCore()
         {
             try
             {

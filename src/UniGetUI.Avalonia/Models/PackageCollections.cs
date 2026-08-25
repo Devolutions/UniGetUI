@@ -48,9 +48,12 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
 
     private const string UnknownInstallerHost = "\u2014";
     private const int MaxInstallerHostCacheEntries = 1024;
+    private const int MaxUnresolvedInstallerHostEntries = 512;
+    private static readonly TimeSpan InstallerHostRetryInterval = TimeSpan.FromMinutes(5);
     private static readonly SemaphoreSlim _installerHostSemaphore = new(4, 4);
     private static readonly object _installerHostCacheLock = new();
     private static readonly Dictionary<long, (string Host, string Urls)> _installerHostCache = new();
+    private static readonly Dictionary<long, long> _unresolvedInstallerHosts = new();
 
     private static Bitmap? GetCachedIcon(long hash)
     {
@@ -264,6 +267,12 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        if (HasRecentInstallerHostFailure(hash))
+        {
+            ApplyInstallerHost("", "");
+            return;
+        }
+
         CancellationToken token = _lifetimeCts.Token;
         try
         {
@@ -279,7 +288,10 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
                         InstallerHostDisplay.FromUrls(urls),
                         InstallerHostDisplay.JoinUrls(urls)
                     );
-                    CacheInstallerHost(hash, resolved.Host, resolved.Urls);
+                    if (resolved.Host.Length > 0)
+                        CacheInstallerHost(hash, resolved.Host, resolved.Urls);
+                    else
+                        MarkInstallerHostUnresolved(hash);
                 }
             }
             finally
@@ -330,6 +342,43 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     {
         lock (_installerHostCacheLock)
             return _installerHostCache.TryGetValue(hash, out entry);
+    }
+
+    private static bool HasRecentInstallerHostFailure(long hash)
+    {
+        lock (_installerHostCacheLock)
+        {
+            if (!_unresolvedInstallerHosts.TryGetValue(hash, out long failedAt))
+                return false;
+
+            if (Environment.TickCount64 - failedAt < (long)InstallerHostRetryInterval.TotalMilliseconds)
+                return true;
+
+            _unresolvedInstallerHosts.Remove(hash);
+            return false;
+        }
+    }
+
+    private static void MarkInstallerHostUnresolved(long hash)
+    {
+        lock (_installerHostCacheLock)
+        {
+            long now = Environment.TickCount64;
+            _unresolvedInstallerHosts[hash] = now;
+            if (_unresolvedInstallerHosts.Count <= MaxUnresolvedInstallerHostEntries)
+                return;
+
+            long retryMs = (long)InstallerHostRetryInterval.TotalMilliseconds;
+            foreach (var expired in _unresolvedInstallerHosts.Where(e => now - e.Value >= retryMs).ToArray())
+                _unresolvedInstallerHosts.Remove(expired.Key);
+
+            int excess = _unresolvedInstallerHosts.Count - MaxUnresolvedInstallerHostEntries;
+            if (excess <= 0)
+                return;
+
+            foreach (var oldest in _unresolvedInstallerHosts.OrderBy(e => e.Value).Take(excess).ToArray())
+                _unresolvedInstallerHosts.Remove(oldest.Key);
+        }
     }
 
     private static void CacheInstallerHost(long hash, string host, string urls)

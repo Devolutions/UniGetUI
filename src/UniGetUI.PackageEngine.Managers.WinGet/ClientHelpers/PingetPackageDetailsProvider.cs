@@ -471,10 +471,16 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
     /// </summary>
     internal static IReadOnlySet<string>? TryGetInstallerHostsForVersion(
         IPackage package,
-        string version
+        string version,
+        Func<PackageQuery, ShowResult>? showPackage = null
     )
     {
-        IReadOnlyList<string>? urls = TryGetInstallerUrls(package, version, requireExactVersion: true);
+        IReadOnlyList<string>? urls = TryGetInstallerUrlsCore(
+            package,
+            version,
+            requireExactVersion: true,
+            showPackage
+        );
         if (urls is null)
             return null;
 
@@ -488,29 +494,35 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
         return hosts.Count > 0 ? hosts : null;
     }
 
-    internal static IReadOnlyList<string>? TryGetInstallerUrls(IPackage package, string? version)
+    internal static IReadOnlyList<string>? TryGetInstallerUrls(
+        IPackage package,
+        string? version,
+        Func<PackageQuery, ShowResult>? showPackage = null
+    )
     {
-        IReadOnlyList<string>? urls = TryGetInstallerUrls(package, version, requireExactVersion: false);
+        IReadOnlyList<string>? urls = TryGetInstallerUrlsCore(
+            package,
+            version,
+            requireExactVersion: false,
+            showPackage
+        );
         if (urls is not null || string.IsNullOrWhiteSpace(version))
             return urls;
 
-        return TryGetInstallerUrls(package, null, requireExactVersion: false);
+        return TryGetInstallerUrlsCore(package, null, requireExactVersion: false, showPackage);
     }
 
-    private static IReadOnlyList<string>? TryGetInstallerUrls(
+    private static IReadOnlyList<string>? TryGetInstallerUrlsCore(
         IPackage package,
         string? version,
-        bool requireExactVersion
+        bool requireExactVersion,
+        Func<PackageQuery, ShowResult>? showPackage
     )
     {
         try
         {
             PackageQuery query = CreateQuery(package, version);
-            ShowResult result;
-            using (Repository repository = OpenRepository())
-            {
-                result = repository.ShowFirstMatchAcrossSources(query);
-            }
+            ShowResult result = (showPackage ?? ShowWithRepository)(query);
 
             // Pinget silently falls back to the latest manifest when the requested version
             // isn't in the index (yanked / expired / never indexed). That fallback would

@@ -673,6 +673,102 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void TryGetInstallerUrlsCollectsEveryInstallerUrlWithoutDuplicates()
+    {
+        var package = CreatePingetQueryPackage();
+        var urls = PingetPackageDetailsProvider.TryGetInstallerUrls(
+            package,
+            null,
+            _ => CreatePingetShowResult(
+                installerUrls:
+                [
+                    "https://example.test/tool-x64.exe",
+                    "https://EXAMPLE.test/TOOL-X64.exe",
+                    "",
+                    "https://cdn.example.test/tool-arm64.exe",
+                ]
+            )
+        );
+
+        Assert.Equal(
+            ["https://example.test/tool-x64.exe", "https://cdn.example.test/tool-arm64.exe"],
+            urls
+        );
+    }
+
+    [Fact]
+    public void TryGetInstallerUrlsFallsBackToTheLatestManifestWhenTheVersionIsNotIndexed()
+    {
+        var package = CreatePingetQueryPackage();
+        List<string?> requestedVersions = [];
+
+        var urls = PingetPackageDetailsProvider.TryGetInstallerUrls(
+            package,
+            "9.9.9",
+            query =>
+            {
+                requestedVersions.Add(query.Version);
+                if (query.Version is not null)
+                    throw new InvalidOperationException("version not found in index");
+
+                return CreatePingetShowResult(installerUrls: ["https://example.test/latest.exe"]);
+            }
+        );
+
+        Assert.Equal(["9.9.9", null], requestedVersions);
+        Assert.Equal(["https://example.test/latest.exe"], urls);
+    }
+
+    [Fact]
+    public void TryGetInstallerUrlsReturnsNullWhenTheManifestHasNoInstaller()
+    {
+        var package = CreatePingetQueryPackage();
+
+        Assert.Null(
+            PingetPackageDetailsProvider.TryGetInstallerUrls(
+                package,
+                null,
+                _ => CreatePingetShowResult(installerUrls: [])
+            )
+        );
+    }
+
+    [Fact]
+    public void TryGetInstallerHostsForVersionRejectsAManifestOfAnotherVersion()
+    {
+        var package = CreatePingetQueryPackage();
+
+        Assert.Null(
+            PingetPackageDetailsProvider.TryGetInstallerHostsForVersion(
+                package,
+                "9.9.9",
+                _ => CreatePingetShowResult(installerUrls: ["https://example.test/latest.exe"])
+            )
+        );
+    }
+
+    [Fact]
+    public void TryGetInstallerHostsForVersionReturnsTheHostsOfTheRequestedVersion()
+    {
+        var package = CreatePingetQueryPackage();
+
+        var hosts = PingetPackageDetailsProvider.TryGetInstallerHostsForVersion(
+            package,
+            "1.2.3",
+            _ => CreatePingetShowResult(
+                installerUrls:
+                [
+                    "https://example.test/tool-x64.exe",
+                    "https://cdn.example.test/tool-arm64.exe",
+                ]
+            )
+        );
+
+        Assert.NotNull(hosts);
+        Assert.Equal(["cdn.example.test", "example.test"], hosts.Order());
+    }
+
+    [Fact]
     public void PingetPackageDetailsProviderKeepsExistingDetailsWhenShowFails()
     {
         var manager = new WinGet();
@@ -1653,9 +1749,20 @@ public sealed class WinGetManagerTests : IDisposable
             .Invoke(null, [value]);
     }
 
+    private static IPackage CreatePingetQueryPackage()
+    {
+        return new PackageBuilder()
+            .WithManager(new WinGet())
+            .WithName("Contoso Tool")
+            .WithId("Contoso.Tool")
+            .WithVersion("1.2.3")
+            .Build();
+    }
+
     private static ShowResult CreatePingetShowResult(
         string? description = "Contoso description",
-        string? shortDescription = null
+        string? shortDescription = null,
+        IReadOnlyList<string>? installerUrls = null
     )
     {
         var package = new SearchMatch
@@ -1675,6 +1782,9 @@ public sealed class WinGetManagerTests : IDisposable
             ReleaseDate = "2026-04-27",
             PackageDependencies = ["Contoso.Dependency [2.0]"],
         };
+        List<Installer> installers = installerUrls is null
+            ? [installer]
+            : [.. installerUrls.Select(url => installer with { Url = url })];
 
         return new ShowResult
         {
@@ -1693,9 +1803,9 @@ public sealed class WinGetManagerTests : IDisposable
                 ReleaseNotes = "Release notes",
                 Tags = ["utility"],
                 PackageDependencies = ["Contoso.Runtime"],
-                Installers = [installer],
+                Installers = installers,
             },
-            SelectedInstaller = installer,
+            SelectedInstaller = installers.FirstOrDefault(),
             StructuredDocument = new Dictionary<string, object?>(),
         };
     }

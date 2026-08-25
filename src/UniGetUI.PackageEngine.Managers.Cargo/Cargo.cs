@@ -33,23 +33,30 @@ public partial class Cargo : PackageManager
             ? "cargo-binstall.exe"
             : "cargo-binstall";
 
+        string CargoPath() =>
+            Status.ExecutablePath is { Length: > 0 } path ? path : cargoCommand;
+
         Dependencies =
         [
-            // cargo-update is required to check for installed and upgradable packages
-            new ManagerDependency(
-                "cargo-update",
-                cargoCommand,
-                "install cargo-update",
-                "cargo install cargo-update",
-                async () => (await CoreTools.WhichAsync(cargoUpdateBinary)).Item1
-            ),
             // Cargo-binstall is required to install and update cargo binaries
             new ManagerDependency(
                 "cargo-binstall",
                 cargoCommand,
-                "install cargo-binstall",
-                "cargo install cargo-binstall",
-                async () => (await CoreTools.WhichAsync(cargoBinstallBinary)).Item1
+                "install cargo-binstall --locked",
+                "cargo install cargo-binstall --locked",
+                async () => (await CoreTools.WhichAsync(cargoBinstallBinary)).Item1,
+                () => (CargoPath(), "install cargo-binstall --locked")
+            ),
+            // cargo-update is required to check for installed and upgradable packages
+            new ManagerDependency(
+                "cargo-update",
+                cargoCommand,
+                "install cargo-update --locked",
+                "cargo install cargo-update --locked",
+                async () => (await CoreTools.WhichAsync(cargoUpdateBinary)).Item1,
+                () => CoreTools.Which(cargoBinstallBinary).Item1
+                    ? (CargoPath(), "binstall --no-confirm cargo-update")
+                    : (CargoPath(), "install cargo-update --locked")
             ),
         ];
 

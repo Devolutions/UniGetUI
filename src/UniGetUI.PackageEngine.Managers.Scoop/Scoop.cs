@@ -43,7 +43,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 new ManagerDependency(
                     "Scoop-Search",
                     CoreData.PowerShell5,
-                    "-ExecutionPolicy Bypass -NoLogo -NoProfile -Command \"& {scoop install main/scoop-search; if($error.count -ne 0){pause}}\"",
+                    "-ExecutionPolicy Bypass -NoLogo -NoProfile -Command \"& {scoop install main/scoop-search}\"",
                     "scoop install main/scoop-search",
                     async () => (await CoreTools.WhichAsync("scoop-search.exe")).Item1
                 ),
@@ -51,7 +51,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 new ManagerDependency(
                     "Git",
                     CoreData.PowerShell5,
-                    "-ExecutionPolicy Bypass -NoLogo -NoProfile -Command \"& {scoop install main/git; if($error.count -ne 0){pause}}\"",
+                    "-ExecutionPolicy Bypass -NoLogo -NoProfile -Command \"& {scoop install main/git}\"",
                     "scoop install main/git",
                     async () => (await CoreTools.WhichAsync("git.exe")).Item1
                 ),

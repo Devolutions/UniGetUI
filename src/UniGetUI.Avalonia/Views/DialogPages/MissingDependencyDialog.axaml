@@ -31,6 +31,23 @@
                                  Margin="0,0,0,4"
                                  FontFamily="Consolas"
                                  Opacity="0.7"/>
+            <Border x:Name="OutputBorder"
+                    IsVisible="False"
+                    Margin="0,0,0,4"
+                    Padding="8,6"
+                    CornerRadius="4"
+                    Background="{DynamicResource AppDialogSubtleBackground}"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource AppBorderBrush}">
+                <ScrollViewer MaxHeight="120"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto">
+                    <SelectableTextBlock x:Name="OutputBlock"
+                                         FontFamily="Consolas"
+                                         FontSize="11"
+                                         Opacity="0.8"/>
+                </ScrollViewer>
+            </Border>
             <CheckBox x:Name="DontShowCheck"
                       IsVisible="False"/>
             <ProgressBar x:Name="ProgressBar"

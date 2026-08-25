@@ -8,12 +8,15 @@ namespace UniGetUI.PackageEngine.Classes.Manager.Classes
         public readonly Func<Task<bool>> IsInstalled;
         public readonly string FancyInstallCommand;
 
+        private readonly Func<(string FileName, string Arguments)>? ResolveCommand;
+
         public ManagerDependency(
             string name,
             string installFileName,
             string installArguments,
             string fancyInstallCommand,
-            Func<Task<bool>> isInstalled
+            Func<Task<bool>> isInstalled,
+            Func<(string FileName, string Arguments)>? resolveCommand = null
         )
         {
             Name = name;
@@ -21,6 +24,10 @@ namespace UniGetUI.PackageEngine.Classes.Manager.Classes
             InstallArguments = installArguments;
             IsInstalled = isInstalled;
             FancyInstallCommand = fancyInstallCommand;
+            ResolveCommand = resolveCommand;
         }
+
+        public (string FileName, string Arguments) GetInstallCommand() =>
+            ResolveCommand?.Invoke() ?? (InstallFileName, InstallArguments);
     }
 }

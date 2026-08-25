@@ -32,7 +32,7 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
                     "Git",
                     CoreData.PowerShell5,
                     "-ExecutionPolicy Bypass -NoLogo -NoProfile -Command \"& {winget install --id Git.Git --exact "
-                        + "--source winget --accept-source-agreements --accept-package-agreements --force; if($error.count -ne 0){pause}}\"",
+                        + "--source winget --accept-source-agreements --accept-package-agreements --force}\"",
                     "winget install --id Git.Git --exact --source winget",
                     async () => (await CoreTools.WhichAsync("git.exe")).Item1
                 ),

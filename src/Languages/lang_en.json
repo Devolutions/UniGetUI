@@ -1000,5 +1000,9 @@
   "Package identifier and version": "Package identifier and version",
   "Name given by the publisher, followed by the version": "Name given by the publisher, followed by the version",
   "Installer host": "Installer host",
-  "Show the installer host on package lists": "Show the installer host on package lists"
+  "Show the installer host on package lists": "Show the installer host on package lists",
+  "Please wait while {0} is being installed. This may take several minutes.": "Please wait while {0} is being installed. This may take several minutes.",
+  "The installer finished, but {0} could not be found on your system.": "The installer finished, but {0} could not be found on your system.",
+  "{0} could not be installed. The installer exited with code {1}.": "{0} could not be installed. The installer exited with code {1}.",
+  "You can try again, or install it manually with the command below.": "You can try again, or install it manually with the command below."
 }

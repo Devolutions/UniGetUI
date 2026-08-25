@@ -16,7 +16,7 @@ public sealed class CargoBinDirectoryTests
     }
 
     [Fact]
-    public void GetCargoBinDirectories_HonorsCargoHome()
+    public void GetCargoBinDirectories_ReplacesTheDefaultWhenCargoHomeIsSet()
     {
         var directories = Cargo.GetCargoBinDirectories(
             Env(("CARGO_HOME", Path.Join("D:", "scoop", "persist", "rustup", ".cargo"))),
@@ -24,10 +24,7 @@ public sealed class CargoBinDirectoryTests
         );
 
         Assert.Equal(
-            [
-                Path.Join("D:", "scoop", "persist", "rustup", ".cargo", "bin"),
-                Path.Join("C:", "Users", "tester", ".cargo", "bin"),
-            ],
+            [Path.Join("D:", "scoop", "persist", "rustup", ".cargo", "bin")],
             directories
         );
     }

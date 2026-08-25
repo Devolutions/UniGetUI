@@ -32,8 +32,7 @@ public partial class Cargo : PackageManager
 
         if (readEnvironmentVariable("CARGO_HOME")?.Trim() is { Length: > 0 } cargoHome)
             directories.Add(Path.Join(cargoHome, "bin"));
-
-        if (userProfileDirectory.Trim() is { Length: > 0 } userProfile)
+        else if (userProfileDirectory.Trim() is { Length: > 0 } userProfile)
             directories.Add(Path.Join(userProfile, ".cargo", "bin"));
 
         return directories;

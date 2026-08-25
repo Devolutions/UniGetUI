@@ -258,24 +258,24 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
 
     private async Task LoadInstallerHostAsync()
     {
+        CancellationToken token = _lifetimeCts.Token;
         long hash = CoreTools.HashStringAsLong(
             $"{Package.GetVersionedHash()}|{InstallerHostVersion}"
         );
-        if (TryGetCachedInstallerHost(hash, out var cached))
-        {
-            ApplyInstallerHost(cached.Host, cached.Urls);
-            return;
-        }
-
-        if (HasRecentInstallerHostFailure(hash))
-        {
-            ApplyInstallerHost("", "");
-            return;
-        }
-
-        CancellationToken token = _lifetimeCts.Token;
         try
         {
+            if (TryGetCachedInstallerHost(hash, out var cached))
+            {
+                ApplyInstallerHost(cached.Host, cached.Urls);
+                return;
+            }
+
+            if (HasRecentInstallerHostFailure(hash))
+            {
+                ApplyInstallerHost("", "");
+                return;
+            }
+
             await _installerHostSemaphore.WaitAsync(token).ConfigureAwait(false);
             (string Host, string Urls) resolved;
             try
@@ -310,6 +310,10 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             Logger.Warn($"Could not resolve the installer host for {Package.Id}: {ex.Message}");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _installerHostLoadStarted, 0);
         }
     }
 

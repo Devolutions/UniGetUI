@@ -30,11 +30,8 @@ public partial class Cargo : PackageManager
     {
         List<string> directories = [];
 
-        foreach (string variable in (string[])["CARGO_INSTALL_ROOT", "CARGO_HOME"])
-        {
-            if (readEnvironmentVariable(variable)?.Trim() is { Length: > 0 } root)
-                directories.Add(Path.Join(root, "bin"));
-        }
+        if (readEnvironmentVariable("CARGO_HOME")?.Trim() is { Length: > 0 } cargoHome)
+            directories.Add(Path.Join(cargoHome, "bin"));
 
         if (userProfileDirectory.Trim() is { Length: > 0 } userProfile)
             directories.Add(Path.Join(userProfile, ".cargo", "bin"));
@@ -60,7 +57,36 @@ public partial class Cargo : PackageManager
                 ReadEnvironmentVariable,
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
             )
-            .Any(directory => File.Exists(Path.Join(directory, binaryName)));
+            .Any(directory => IsExecutableFile(Path.Join(directory, binaryName)));
+
+    private static bool IsExecutableFile(string path)
+    {
+        if (!File.Exists(path))
+            return false;
+
+        if (OperatingSystem.IsWindows())
+            return true;
+
+        const UnixFileMode ExecutableBits =
+            UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
+
+        try
+        {
+            return (File.GetUnixFileMode(path) & ExecutableBits) is not 0;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+        catch (NotSupportedException)
+        {
+            return false;
+        }
+    }
 
     public Cargo()
     {

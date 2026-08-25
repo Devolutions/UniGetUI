@@ -23,9 +23,11 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
     private readonly List<string> _output = [];
     private string? _pendingOutputLine;
 
+    private Process? _installProcess;
     private bool _hasInstalled;
     private bool _blockClose;
     private bool _installRunning;
+    private bool _canceled;
 
     public MissingDependencyDialog(ManagerDependency dep, int current, int total)
     {
@@ -65,7 +67,13 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
             };
         }
 
-        SkipButton.Click += (_, _) => { if (!_blockClose) Close(); };
+        SkipButton.Click += (_, _) =>
+        {
+            if (_installRunning)
+                CancelInstall();
+            else if (!_blockClose)
+                Close();
+        };
         InstallButton.Click += async (_, _) => await OnInstallClickedAsync();
 
         Closing += (_, e) => e.Cancel = _blockClose;
@@ -96,7 +104,9 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
     private async Task RunInstallAsync()
     {
         InstallButton.IsEnabled = false;
-        SkipButton.IsEnabled = false;
+        SkipButton.IsEnabled = true;
+        SkipButton.IsVisible = true;
+        SkipButton.Content = CoreTools.Translate("Cancel");
         DontShowCheck.IsEnabled = false;
         OutputBorder.IsVisible = false;
         OutputBlock.Text = "";
@@ -104,6 +114,7 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
         ProgressBar.IsVisible = true;
         _blockClose = true;
         _installRunning = true;
+        _canceled = false;
 
         InfoBlock.Text = CoreTools.Translate(
             "Please wait while {0} is being installed. This may take several minutes.",
@@ -128,6 +139,9 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
 
             if (installed)
                 ShowSuccess();
+            else if (_canceled)
+                ShowFailure(
+                    CoreTools.Translate("Installation was canceled while in progress."));
             else
                 ShowFailure(FailureSummary(exitCode));
         }
@@ -166,9 +180,43 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
         p.BeginOutputReadLine();
         p.BeginErrorReadLine();
         p.StandardInput.Close();
+        _installProcess = p;
+        if (_canceled)
+            KillInstallProcess();
 
-        await p.WaitForExitAsync();
-        return p.ExitCode;
+        try
+        {
+            await p.WaitForExitAsync();
+            return p.ExitCode;
+        }
+        finally
+        {
+            _installProcess = null;
+        }
+    }
+
+    private void CancelInstall()
+    {
+        _canceled = true;
+        SkipButton.IsEnabled = false;
+        Logger.Warn($"Canceling the installation of dependency {_dep.Name}");
+        KillInstallProcess();
+    }
+
+    private void KillInstallProcess()
+    {
+        if (_installProcess is not { } process)
+            return;
+
+        try
+        {
+            process.Kill(entireProcessTree: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Could not cancel the installation of dependency {_dep.Name}");
+            Logger.Error(ex);
+        }
     }
 
     private void OnOutputLine(string? line)

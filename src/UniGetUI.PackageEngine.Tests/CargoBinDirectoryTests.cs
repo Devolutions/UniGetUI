@@ -33,24 +33,22 @@ public sealed class CargoBinDirectoryTests
     }
 
     [Fact]
-    public void GetCargoBinDirectories_PrefersCargoInstallRoot()
+    public void GetCargoBinDirectories_IgnoresCargoInstallRoot()
     {
         var directories = Cargo.GetCargoBinDirectories(
-            Env(
-                ("CARGO_INSTALL_ROOT", Path.Join("D:", "tools", "cargo-bins")),
-                ("CARGO_HOME", Path.Join("D:", "cargo-home"))
-            ),
+            Env(("CARGO_INSTALL_ROOT", Path.Join("D:", "tools", "cargo-bins"))),
             Path.Join("C:", "Users", "tester")
         );
 
-        Assert.Equal(
-            [
-                Path.Join("D:", "tools", "cargo-bins", "bin"),
-                Path.Join("D:", "cargo-home", "bin"),
-                Path.Join("C:", "Users", "tester", ".cargo", "bin"),
-            ],
-            directories
-        );
+        Assert.Equal([Path.Join("C:", "Users", "tester", ".cargo", "bin")], directories);
+    }
+
+    [Fact]
+    public void GetCargoBinDirectories_IgnoresBlankValues()
+    {
+        var directories = Cargo.GetCargoBinDirectories(Env(("CARGO_HOME", "   ")), "");
+
+        Assert.Empty(directories);
     }
 
     [Fact]
@@ -61,6 +59,7 @@ public sealed class CargoBinDirectoryTests
             : "cargo-unigetui-detection-probe";
         string cargoHome = Path.Join(Path.GetTempPath(), Path.GetRandomFileName());
         string binDirectory = Path.Join(cargoHome, "bin");
+        string binaryPath = Path.Join(binDirectory, binaryName);
         string? previous = Environment.GetEnvironmentVariable("CARGO_HOME");
 
         try
@@ -68,8 +67,17 @@ public sealed class CargoBinDirectoryTests
             Assert.False(Cargo.IsCargoBinaryPresent(binaryName));
 
             Directory.CreateDirectory(binDirectory);
-            File.WriteAllText(Path.Join(binDirectory, binaryName), "");
+            File.WriteAllText(binaryPath, "");
             Environment.SetEnvironmentVariable("CARGO_HOME", cargoHome);
+
+            if (!OperatingSystem.IsWindows())
+            {
+                Assert.False(Cargo.IsCargoBinaryPresent(binaryName));
+                File.SetUnixFileMode(
+                    binaryPath,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
+                );
+            }
 
             Assert.True(Cargo.IsCargoBinaryPresent(binaryName));
         }
@@ -79,16 +87,5 @@ public sealed class CargoBinDirectoryTests
             if (Directory.Exists(cargoHome))
                 Directory.Delete(cargoHome, true);
         }
-    }
-
-    [Fact]
-    public void GetCargoBinDirectories_IgnoresBlankValues()
-    {
-        var directories = Cargo.GetCargoBinDirectories(
-            Env(("CARGO_INSTALL_ROOT", ""), ("CARGO_HOME", "   ")),
-            ""
-        );
-
-        Assert.Empty(directories);
     }
 }

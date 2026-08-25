@@ -396,7 +396,6 @@
   "Alternatively, you can also install {0} by running the following command in a Windows PowerShell prompt:": "Alternatively, you can also install {0} by running the following command in a Windows PowerShell prompt:",
   "Install {0}": "Install {0}",
   "Do not show this dialog again for {0}": "Do not show this dialog again for {0}",
-  "Please wait while {0} is being installed. A black window may show up. Please wait until it closes.": "Please wait while {0} is being installed. A black (or blue) window may show up. Please wait until it closes.",
   "{0} has been installed successfully.": "{0} has been installed successfully.",
   "Please click on \"Continue\" to continue": "Please click on \"Continue\" to continue",
   "Continue": "Continue",

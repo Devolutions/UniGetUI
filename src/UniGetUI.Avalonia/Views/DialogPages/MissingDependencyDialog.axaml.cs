@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.Infrastructure;
@@ -53,8 +54,8 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
             "Alternatively, you can also install {0} by running the following command in a Windows PowerShell prompt:",
             dep.Name);
         CommandBlock.Text = dep.FancyInstallCommand;
-        InstallButton.Content = CoreTools.Translate("Install {0}", dep.Name);
-        SkipButton.Content = CoreTools.Translate("Not right now");
+        SetButtonLabel(InstallButton, CoreTools.Translate("Install {0}", dep.Name));
+        SetButtonLabel(SkipButton, CoreTools.Translate("Not right now"));
 
         if (notFirstTime)
         {
@@ -77,6 +78,12 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
         InstallButton.Click += async (_, _) => await OnInstallClickedAsync();
 
         Closing += (_, e) => e.Cancel = _blockClose;
+    }
+
+    private static void SetButtonLabel(Button button, string label)
+    {
+        button.Content = label;
+        AutomationProperties.SetName(button, label);
     }
 
     protected override void OnOpened(EventArgs e)
@@ -106,7 +113,7 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
         InstallButton.IsEnabled = false;
         SkipButton.IsEnabled = true;
         SkipButton.IsVisible = true;
-        SkipButton.Content = CoreTools.Translate("Cancel");
+        SetButtonLabel(SkipButton, CoreTools.Translate("Cancel"));
         DontShowCheck.IsEnabled = false;
         OutputBorder.IsVisible = false;
         OutputBlock.Text = "";
@@ -301,7 +308,7 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
                 CoreTools.Translate("{0} has been installed successfully.", _dep.Name)
                 + " "
                 + CoreTools.Translate("Please click on \"Continue\" to continue", _dep.Name);
-            InstallButton.Content = CoreTools.Translate("Continue");
+            SetButtonLabel(InstallButton, CoreTools.Translate("Continue"));
             SkipButton.IsVisible = false;
         }
         else
@@ -309,8 +316,8 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
             InfoBlock.Text = CoreTools.Translate(
                 "{0} has been installed successfully. It is recommended to restart UniGetUI to finish the installation",
                 _dep.Name);
-            InstallButton.Content = CoreTools.Translate("Restart UniGetUI");
-            SkipButton.Content = CoreTools.Translate("Restart later");
+            SetButtonLabel(InstallButton, CoreTools.Translate("Restart UniGetUI"));
+            SetButtonLabel(SkipButton, CoreTools.Translate("Restart later"));
         }
     }
 
@@ -334,8 +341,8 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
             OutputBorder.IsVisible = false;
         }
 
-        InstallButton.Content = CoreTools.Translate("Retry");
-        SkipButton.Content = CoreTools.Translate("Not right now");
+        SetButtonLabel(InstallButton, CoreTools.Translate("Retry"));
+        SetButtonLabel(SkipButton, CoreTools.Translate("Not right now"));
         SkipButton.IsVisible = true;
     }
 }

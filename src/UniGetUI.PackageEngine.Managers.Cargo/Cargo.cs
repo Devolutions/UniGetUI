@@ -39,22 +39,10 @@ public partial class Cargo : PackageManager
         return directories;
     }
 
-    private static string? ReadEnvironmentVariable(string name)
-    {
-        if (Environment.GetEnvironmentVariable(name) is { Length: > 0 } processValue)
-            return processValue;
-
-        if (!OperatingSystem.IsWindows())
-            return null;
-
-        return Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
-            ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Machine);
-    }
-
     internal static bool IsCargoBinaryPresent(string binaryName) =>
         CoreTools.Which(binaryName).Item1
         || GetCargoBinDirectories(
-                ReadEnvironmentVariable,
+                Environment.GetEnvironmentVariable,
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
             )
             .Any(directory => IsExecutableFile(Path.Join(directory, binaryName)));

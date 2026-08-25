@@ -1,8 +1,6 @@
 <dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
-        xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
-        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.MissingDependencyDialog"
         MaxWidth="560"
         MinHeight="230"
@@ -60,8 +58,7 @@
                     HorizontalAlignment="Right"
                     Spacing="8">
             <Button x:Name="SkipButton"
-                    MinWidth="110"
-                    automation:AutomationProperties.Name="{t:Translate Not right now}"/>
+                    MinWidth="110"/>
             <Button x:Name="InstallButton"
                     MinWidth="140"
                     Classes="accent"/>

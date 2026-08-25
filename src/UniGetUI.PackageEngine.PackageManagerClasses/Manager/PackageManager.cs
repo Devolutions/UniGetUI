@@ -301,7 +301,38 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 }
         }
 
-        private T RunListingTaskWithTimeout<T>(Func<T> method, string taskName)
+        private void RefreshPackageIndexesSafely()
+        {
+            try
+            {
+                RunListingTaskWithTimeout<object?>(
+                    () =>
+                    {
+                        RefreshPackageIndexes();
+                        return null;
+                    },
+                    "RefreshPackageIndexes",
+                    allowDisablingTimeout: false
+                );
+            }
+            catch (Exception e)
+            {
+                while (e is AggregateException)
+                    e = e.InnerException ?? new InvalidOperationException("How did we get here?");
+
+                Logger.Warn(
+                    $"Manager {DisplayName} could not refresh its package indexes "
+                        + $"({e.GetType().Name}: {e.Message}). The available updates will be listed "
+                        + "with the indexes as they are, which may result in an incomplete list."
+                );
+            }
+        }
+
+        private T RunListingTaskWithTimeout<T>(
+            Func<T> method,
+            string taskName,
+            bool allowDisablingTimeout = true
+        )
         {
             List<Process> processes = [];
             var task = Task.Run(() =>
@@ -312,7 +343,10 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
             if (!task.Wait(TimeSpan.FromSeconds(PackageListingTaskTimeout)))
             {
-                if (!Settings.Get(Settings.K.DisableTimeoutOnPackageListingTasks))
+                if (
+                    !allowDisablingTimeout
+                    || !Settings.Get(Settings.K.DisableTimeoutOnPackageListingTasks)
+                )
                 {
                     KillListingProcesses(processes);
                     CoreTools.FinalizeDangerousTask(task);
@@ -397,8 +431,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             }
             try
             {
-                Task.Run(RefreshPackageIndexes)
-                    .Wait(TimeSpan.FromSeconds(PackageListingTaskTimeout));
+                RefreshPackageIndexesSafely();
 
                 var packages = RunListingTaskWithTimeout(
                     GetAvailableUpdates_UnSafe,

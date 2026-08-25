@@ -72,9 +72,10 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             );
 
             p.Start();
+            Task<string> stdErr = ScoopProcess.ReadStdErrAsync(p);
             string JsonString = p.StandardOutput.ReadToEnd();
             logger.AddToStdOut(JsonString);
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
+            logger.AddToStdErr(stdErr.GetAwaiter().GetResult());
 
             if (JsonNode.Parse(JsonString) is not JsonObject contents)
             {

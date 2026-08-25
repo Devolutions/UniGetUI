@@ -66,19 +66,9 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             );
 
             p.Start();
+            p.StandardInput.Close();
 
-            List<string> lines = [];
-            string? line;
-            while ((line = p.StandardOutput.ReadLine()) is not null)
-            {
-                logger.AddToStdOut(line);
-                lines.Add(line);
-            }
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
-            p.WaitForExit();
-            logger.Close(p.ExitCode);
-
-            return ParseSources(lines);
+            return ParseSources(ScoopProcess.ReadLines(p, logger));
         }
 
         internal IReadOnlyList<IManagerSource> ParseSources(IEnumerable<string> lines)

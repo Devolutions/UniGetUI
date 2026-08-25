@@ -33,6 +33,9 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             "removed,",
         ];
 
+        private const int VersionProbeTimeout = 20_000;
+        private const int StreamDrainTimeout = 5_000;
+
         private long LastScoopSourceUpdateTime;
 
         public Scoop()
@@ -391,10 +394,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                     proc
                 );
                 proc.Start();
-                aux_logger.AddToStdOut(proc.StandardOutput.ReadToEnd());
-                aux_logger.AddToStdErr(proc.StandardError.ReadToEnd());
-                proc.WaitForExit();
-                aux_logger.Close(proc.ExitCode);
+                ScoopProcess.ReadToEnd(proc, aux_logger);
                 path = "scoop-search.exe";
             }
 
@@ -415,23 +415,14 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages, p);
 
             p.Start();
+            RegisterListingProcess(p);
 
-            List<string> lines = [];
-            string? line;
-            while ((line = p.StandardOutput.ReadLine()) is not null)
-            {
-                logger.AddToStdOut(line);
-                lines.Add(line);
-            }
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
-            p.WaitForExit();
-            logger.Close(p.ExitCode);
-            return ParseSearchOutput(lines);
+            return ParseSearchOutput(ScoopProcess.ReadLines(p, logger));
         }
 
         protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
         {
-            IReadOnlyList<IPackage> installedPackages = GetInstalledPackages();
+            IReadOnlyList<IPackage> installedPackages = GetInstalledPackages_UnSafe();
 
             using Process p = new()
             {
@@ -449,18 +440,9 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates, p);
 
             p.Start();
+            RegisterListingProcess(p);
 
-            List<string> lines = [];
-            string? line;
-            while ((line = p.StandardOutput.ReadLine()) is not null)
-            {
-                logger.AddToStdOut(line);
-                lines.Add(line);
-            }
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
-            p.WaitForExit();
-            logger.Close(p.ExitCode);
-            return ParseAvailableUpdates(lines, installedPackages);
+            return ParseAvailableUpdates(ScoopProcess.ReadLines(p, logger), installedPackages);
         }
 
         protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe() =>
@@ -487,17 +469,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             );
             p.Start();
 
-            List<string> lines = [];
-            string? line;
-            while ((line = p.StandardOutput.ReadLine()) is not null)
-            {
-                logger.AddToStdOut(line);
-                lines.Add(line);
-            }
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
-            p.WaitForExit();
-            logger.Close(p.ExitCode);
-            return ParseInstalledPackages(lines);
+            return ParseInstalledPackages(ScoopProcess.ReadLines(p, logger));
         }
 
         public override void RefreshPackageIndexes()
@@ -525,10 +497,10 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             p.StartInfo = StartInfo;
             IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.RefreshIndexes, p);
             p.Start();
-            logger.AddToStdOut(p.StandardOutput.ReadToEnd());
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
-            p.WaitForExit();
-            logger.Close(p.ExitCode);
+            RegisterListingProcess(p);
+            p.StandardInput.Close();
+
+            ScoopProcess.ReadToEnd(p, logger);
         }
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
@@ -567,7 +539,36 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 },
             };
             process.Start();
-            version = process.StandardOutput.ReadToEnd().Trim();
+            Task<string> stdOut = ScoopProcess.ReadStdOutAsync(process);
+            Task<string> stdErr = ScoopProcess.ReadStdErrAsync(process);
+
+            if (!process.WaitForExit(VersionProbeTimeout))
+            {
+                Logger.Warn(
+                    $"\"scoop --version\" did not finish after {VersionProbeTimeout / 1000} seconds, "
+                        + "it will be killed and Scoop will be loaded with an unknown version"
+                );
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"Could not kill the timed-out scoop version process: {ex.Message}");
+                }
+            }
+
+            string errors = ScoopProcess.ReadWithTimeout(stdErr, StreamDrainTimeout);
+            if (errors.Length > 0)
+            {
+                Logger.Warn($"\"scoop --version\" reported errors: {errors}");
+            }
+
+            version = ScoopProcess.ReadWithTimeout(stdOut, StreamDrainTimeout);
+            if (version.Length == 0)
+            {
+                version = CoreTools.Translate("Unknown");
+            }
         }
 
         protected override void _performExtraLoadingSteps()

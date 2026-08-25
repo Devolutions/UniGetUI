@@ -352,8 +352,12 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     CoreTools.FinalizeDangerousTask(task);
                     throw new TimeoutException(
                         $"Task {taskName} for manager {Name} did not finish after "
-                            + $"{PackageListingTaskTimeout} seconds, aborting.  You may disable "
-                            + $"timeouts from UniGetUI Advanced Settings"
+                            + $"{PackageListingTaskTimeout} seconds, aborting."
+                            + (
+                                allowDisablingTimeout
+                                    ? "  You may disable timeouts from UniGetUI Advanced Settings"
+                                    : ""
+                            )
                     );
                 }
 

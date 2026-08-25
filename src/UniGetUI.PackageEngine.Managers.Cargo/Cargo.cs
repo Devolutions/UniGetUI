@@ -23,6 +23,45 @@ public partial class Cargo : PackageManager
 
     public override bool InstallerUrlFollowsPackageVersion => true;
 
+    internal static IReadOnlyList<string> GetCargoBinDirectories(
+        Func<string, string?> readEnvironmentVariable,
+        string userProfileDirectory
+    )
+    {
+        List<string> directories = [];
+
+        foreach (string variable in (string[])["CARGO_INSTALL_ROOT", "CARGO_HOME"])
+        {
+            if (readEnvironmentVariable(variable)?.Trim() is { Length: > 0 } root)
+                directories.Add(Path.Join(root, "bin"));
+        }
+
+        if (userProfileDirectory.Trim() is { Length: > 0 } userProfile)
+            directories.Add(Path.Join(userProfile, ".cargo", "bin"));
+
+        return directories;
+    }
+
+    private static string? ReadEnvironmentVariable(string name)
+    {
+        if (Environment.GetEnvironmentVariable(name) is { Length: > 0 } processValue)
+            return processValue;
+
+        if (!OperatingSystem.IsWindows())
+            return null;
+
+        return Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
+            ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Machine);
+    }
+
+    internal static bool IsCargoBinaryPresent(string binaryName) =>
+        CoreTools.Which(binaryName).Item1
+        || GetCargoBinDirectories(
+                ReadEnvironmentVariable,
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            )
+            .Any(directory => File.Exists(Path.Join(directory, binaryName)));
+
     public Cargo()
     {
         string cargoCommand = OperatingSystem.IsWindows() ? "cargo.exe" : "cargo";
@@ -44,7 +83,7 @@ public partial class Cargo : PackageManager
                 cargoCommand,
                 "install cargo-binstall --locked",
                 "cargo install cargo-binstall --locked",
-                async () => (await CoreTools.WhichAsync(cargoBinstallBinary)).Item1,
+                async () => await Task.Run(() => IsCargoBinaryPresent(cargoBinstallBinary)),
                 () => (CargoPath(), "install cargo-binstall --locked")
             ),
             // cargo-update is required to check for installed and upgradable packages
@@ -53,8 +92,8 @@ public partial class Cargo : PackageManager
                 cargoCommand,
                 "install cargo-update --locked",
                 "cargo install cargo-update --locked",
-                async () => (await CoreTools.WhichAsync(cargoUpdateBinary)).Item1,
-                () => CoreTools.Which(cargoBinstallBinary).Item1
+                async () => await Task.Run(() => IsCargoBinaryPresent(cargoUpdateBinary)),
+                () => IsCargoBinaryPresent(cargoBinstallBinary)
                     ? (CargoPath(), "binstall --no-confirm cargo-update")
                     : (CargoPath(), "install cargo-update --locked")
             ),
@@ -167,7 +206,7 @@ public partial class Cargo : PackageManager
     }
 
     public readonly bool HasBinstall =
-        CoreTools.Which(OperatingSystem.IsWindows() ? "cargo-binstall.exe" : "cargo-binstall").Item1;
+        IsCargoBinaryPresent(OperatingSystem.IsWindows() ? "cargo-binstall.exe" : "cargo-binstall");
 
     public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
         CoreTools.WhichMultiple(OperatingSystem.IsWindows() ? "cargo.exe" : "cargo");

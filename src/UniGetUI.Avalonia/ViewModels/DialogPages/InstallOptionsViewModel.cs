@@ -164,8 +164,15 @@ public partial class InstallOptionsViewModel : ObservableObject
     // Index 0 => keep first 1 number significant (level 2), 1 => first 2 (level 3), 2 => first 3 (level 4).
     public ObservableCollection<string> SkipMinorLevelOptions { get; } = ["1", "2", "3"];
     [ObservableProperty] private int _skipMinorLevelIndex;
-    [ObservableProperty] private bool _autoUpdateChecked;
-    [ObservableProperty] private bool _ignoreUpdatesChecked;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAutoUpdateHintVisible))]
+    private bool _autoUpdateChecked;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAutoUpdateHintVisible))]
+    private bool _ignoreUpdatesChecked;
+
+    public bool IsAutoUpdateHintVisible => AutoUpdateChecked && !IgnoreUpdatesChecked;
 
     partial void OnAdminCheckedChanged(bool value) => Refresh();
     partial void OnInteractiveCheckedChanged(bool value) => Refresh();
@@ -280,6 +287,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         UninstallPrevChecked = options.UninstallPreviousVersionsOnUpdate;
         SkipMinorChecked = options.SkipMinorUpdates;
         SkipMinorLevelIndex = options.SkipMinorUpdatesLevel - 2; // level is validated to 2..4 by the getter
+        AutoUpdateChecked = AutoUpdatesDatabase.IsAutoUpdated(package);
 
         // Version
         VersionOptions.Add(CoreTools.Translate("Latest"));
@@ -352,7 +360,6 @@ public partial class InstallOptionsViewModel : ObservableObject
             _ = LoadVersionsAsync(options.Version);
 
         _ = LoadIgnoredUpdatesAsync();
-        _ = LoadAutoUpdateAsync();
 
         _uiLoaded = true;
         // Apply the operation-dependent enable gates for the initial operation, matching
@@ -455,33 +462,15 @@ public partial class InstallOptionsViewModel : ObservableObject
         return CoreTools.Translate("This package will be updated when the scheduled maintenance task runs.");
     }
 
-    private bool _autoUpdateStateLoaded;
-
-    private async Task LoadAutoUpdateAsync()
+    private void ApplyAutoUpdate()
     {
-        try
-        {
-            AutoUpdateChecked = await Task.Run(() => AutoUpdatesDatabase.IsAutoUpdated(_package));
-            _autoUpdateStateLoaded = true;
-        }
-        catch (Exception ex) { Logger.Warn($"[InstallOptionsViewModel] Failed to read automatic-update state: {ex.Message}"); }
-    }
-
-    private async Task ApplyAutoUpdateAsync()
-    {
-        if (!_autoUpdateStateLoaded) return;
-
         try
         {
             string id = AutoUpdatesDatabase.GetIdForPackage(_package);
-            bool marked = AutoUpdateChecked && !IgnoreUpdatesChecked;
-            await Task.Run(() =>
-            {
-                if (marked)
-                    AutoUpdatesDatabase.Add(id);
-                else if (AutoUpdatesDatabase.IsAutoUpdated(id))
-                    AutoUpdatesDatabase.Remove(id);
-            });
+            if (AutoUpdateChecked)
+                AutoUpdatesDatabase.Add(id);
+            else if (AutoUpdatesDatabase.IsAutoUpdated(id))
+                AutoUpdatesDatabase.Remove(id);
         }
         catch (Exception ex) { Logger.Warn($"[InstallOptionsViewModel] Failed to apply automatic-update state: {ex.Message}"); }
     }
@@ -644,7 +633,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         _options.KillBeforeOperation = KillProcessEntries.Select(e => e.Name).ToList();
         Settings.Set(Settings.K.KillProcessesThatRefuseToDie, ForceKillChecked);
         _ = ApplyIgnoredUpdatesAsync();
-        _ = ApplyAutoUpdateAsync();
+        ApplyAutoUpdate();
     }
 
     private static string ScopeToString(string? selected)

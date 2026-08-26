@@ -142,6 +142,32 @@ public sealed class AutoUpdatesDatabaseTests : IDisposable
     }
 
     [Fact]
+    public void TheMigrationIsOnlyMarkedDoneOnceTheScheduleIsInPlace()
+    {
+        var manager = new PackageManagerBuilder().WithName("TestManager").Build();
+        WriteOptions(manager.Name, "Contoso.Tool", autoUpdate: true);
+
+        AutoUpdatesMigration.RunOnce([manager]);
+
+        Assert.True(Settings.Get(Settings.K.AutoUpdatedPackagesImported));
+        Assert.True(MaintenanceScheduleStore.IsEnabled(MaintenanceTaskKind.InstallUpdates));
+        Assert.Equal(
+            ScheduleInstallTargets.MarkedPackagesOnly,
+            MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates).InstallTargets);
+    }
+
+    [Fact]
+    public void TheMigrationIsRetriedWhenNothingWasImportedYet()
+    {
+        var manager = new PackageManagerBuilder().WithName("TestManager").Build();
+
+        AutoUpdatesMigration.RunOnce([manager]);
+        Assert.True(Settings.Get(Settings.K.AutoUpdatedPackagesImported));
+        Assert.Equal(0, AutoUpdatesDatabase.Count);
+        Assert.False(MaintenanceScheduleStore.IsEnabled(MaintenanceTaskKind.InstallUpdates));
+    }
+
+    [Fact]
     public void TheMigrationLeavesAnAlreadyEnabledTaskAlone()
     {
         var manager = new PackageManagerBuilder().WithName("TestManager").Build();

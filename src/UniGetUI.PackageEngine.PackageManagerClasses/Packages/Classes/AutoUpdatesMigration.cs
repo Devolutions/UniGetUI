@@ -20,15 +20,16 @@ public static class AutoUpdatesMigration
         try
         {
             int imported = Import(managers);
+
+            if (imported > 0)
+            {
+                Logger.ImportantInfo(
+                    $"{imported} package(s) marked with the per-package automatic update option were imported into the automatic updates list"
+                );
+                PreserveLegacyBehaviour();
+            }
+
             Settings.Set(Settings.K.AutoUpdatedPackagesImported, true);
-
-            if (imported <= 0)
-                return;
-
-            Logger.ImportantInfo(
-                $"{imported} package(s) marked with the per-package automatic update option were imported into the automatic updates list"
-            );
-            PreserveLegacyBehaviour();
         }
         catch (Exception ex)
         {

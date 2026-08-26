@@ -110,7 +110,7 @@ public partial class ManageAutoUpdatesViewModel : ObservableObject
                 package.Id,
                 package.Name,
                 package.VersionString,
-                package.Source.AsString_DisplayName,
+                package.Manager.DisplayName,
                 ManagerIconResolver.Resolve(package.Manager.Properties.Name.ToLower()),
                 isInstalled: true,
                 isIgnored: ignored.Contains(autoUpdateId)

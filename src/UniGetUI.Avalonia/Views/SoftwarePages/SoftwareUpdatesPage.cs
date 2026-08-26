@@ -6,6 +6,7 @@ using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.Core.Tools.Scheduling;
 using UniGetUI.Interface.Enums;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
@@ -26,6 +27,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     private MenuItem? _menuSkipHash;
     private MenuItem? _menuDownloadInstaller;
     private MenuItem? _menuOpenInstallLocation;
+    private MenuItem? _menuAutoUpdate;
 
     public SoftwareUpdatesPage() : base(new PackagesPageData
     {
@@ -105,6 +107,11 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         });
         ViewModel.AddToolbarButton("clipboard_list", CoreTools.Translate("Manage ignored updates"),
             () => vm.RequestManageIgnoredCommand.Execute(null));
+        ViewModel.AddToolbarSeparator();
+        ViewModel.AddToolbarButton("sandclock", CoreTools.Translate("Automatically update selected packages"),
+            () => MarkForAutoUpdates(vm.FilteredPackages.GetCheckedPackages()));
+        ViewModel.AddToolbarButton("clipboard_list", CoreTools.Translate("Manage automatic updates"),
+            () => vm.RequestManageAutoUpdatesCommand.Execute(null));
         ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("save_as", CoreTools.Translate("Export to CSV"),
             () => _ = ExportPackagesToCsvAsync());
@@ -195,6 +202,23 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             UpgradablePackagesLoader.Instance.IgnoredPackages[pkg.Id] = pkg;
         };
 
+        _menuAutoUpdate = new MenuItem
+        {
+            Header = CoreTools.Translate("Update this package automatically"),
+            Icon = LoadMenuIcon("sandclock"),
+            ToggleType = MenuItemToggleType.CheckBox,
+        };
+        _menuAutoUpdate.Click += (_, _) =>
+        {
+            var pkg = SelectedItem;
+            if (pkg is null) return;
+            string id = AutoUpdatesDatabase.GetIdForPackage(pkg);
+            if (AutoUpdatesDatabase.IsAutoUpdated(id))
+                AutoUpdatesDatabase.Remove(id);
+            else
+                MarkForAutoUpdates([pkg]);
+        };
+
         var menuSkipVersion = new MenuItem
         {
             Header = CoreTools.Translate("Skip this version"),
@@ -262,6 +286,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         menu.Items.Add(menuUninstallThenUpdate);
         menu.Items.Add(menuUninstall);
         menu.Items.Add(new Separator());
+        menu.Items.Add(_menuAutoUpdate);
+        menu.Items.Add(new Separator());
         menu.Items.Add(menuIgnore);
         menu.Items.Add(menuSkipVersion);
         menu.Items.Add(menuPause);
@@ -274,7 +300,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     protected override void WhenShowingContextMenu(IPackage package)
     {
         if (_menuAsAdmin is null || _menuInteractive is null || _menuSkipHash is null
-            || _menuDownloadInstaller is null || _menuOpenInstallLocation is null)
+            || _menuDownloadInstaller is null || _menuOpenInstallLocation is null
+            || _menuAutoUpdate is null)
         {
             Logger.Warn("Context menu items are null on SoftwareUpdatesPage");
             return;
@@ -287,6 +314,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         _menuDownloadInstaller.IsEnabled = caps.CanDownloadInstaller;
         _menuOpenInstallLocation.IsEnabled =
             package.Manager.DetailsHelper.GetInstallLocation(package) is not null;
+        _menuAutoUpdate.IsChecked = AutoUpdatesDatabase.IsAutoUpdated(package);
     }
 
     // ─── Abstract action overrides ────────────────────────────────────────────
@@ -418,8 +446,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             else if (shouldAutoInstall)
             {
                 MaintenanceScheduler.MarkAutoInstallHandled();
-                _ = AvaloniaPackageOperationHelper.UpdateAllAsync();
-                ShowUpgradingPackagesNotification(upgradable);
+                await LaunchScheduledUpdate(upgradable);
             }
             else if (Environment.GetCommandLineArgs().Contains("--updateapps"))
             {
@@ -429,12 +456,6 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             }
             else
             {
-                foreach (var package in upgradable)
-                {
-                    var opts = await InstallOptionsFactory.LoadApplicableAsync(package);
-                    if (opts.AutoUpdatePackage)
-                        await LaunchUpdate([package]);
-                }
                 ShowAvailableUpdatesNotification(upgradable);
             }
         }
@@ -442,6 +463,61 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         {
             Logger.Error(ex);
         }
+    }
+
+    private static void MarkForAutoUpdates(IEnumerable<IPackage> packages)
+    {
+        int marked = 0;
+        foreach (var pkg in packages)
+        {
+            string id = AutoUpdatesDatabase.GetIdForPackage(pkg);
+            if (AutoUpdatesDatabase.IsAutoUpdated(id)) continue;
+            AutoUpdatesDatabase.Add(id);
+            marked++;
+        }
+
+        if (marked is 0) return;
+
+        var schedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
+        string message = !schedule.Enabled
+            ? CoreTools.Translate("Turn on \"Install available updates\" in the scheduled maintenance settings for this to take effect.")
+            : schedule.InstallTargets is ScheduleInstallTargets.AllPackages
+                ? CoreTools.Translate("Every upgradable package is already installed automatically, so this changes nothing until the scheduled task is limited to marked packages.")
+                : CoreTools.Translate("They will be updated when the scheduled maintenance task runs.");
+
+        GetMainWindow()?.ShowBanner(
+            CoreTools.Translate("{0} package(s) marked for automatic updates", marked),
+            message,
+            MainWindow.RuntimeNotificationLevel.Success);
+    }
+
+    private static async Task LaunchScheduledUpdate(IReadOnlyList<IPackage> upgradable)
+    {
+        bool markedOnly = MaintenanceScheduleStore.GetInstallTargets()
+            is ScheduleInstallTargets.MarkedPackagesOnly;
+
+        List<IPackage> targets = [];
+        List<IPackage> skipped = [];
+        foreach (var package in upgradable)
+        {
+            if (!markedOnly || AutoUpdatesDatabase.IsAutoUpdated(package))
+                targets.Add(package);
+            else
+                skipped.Add(package);
+        }
+
+        if (targets.Count > 0)
+        {
+            await LaunchUpdate(targets);
+            ShowUpgradingPackagesNotification(targets);
+        }
+        else
+        {
+            Logger.Info("No upgradable package is marked for automatic updates, nothing will be installed");
+        }
+
+        if (skipped.Count > 0)
+            ShowAvailableUpdatesNotification(skipped);
     }
 
     private static void ShowAvailableUpdatesNotification(IReadOnlyList<IPackage> upgradable)

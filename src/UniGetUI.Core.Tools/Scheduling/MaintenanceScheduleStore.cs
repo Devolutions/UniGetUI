@@ -29,9 +29,15 @@ public static class MaintenanceScheduleStore
         if (!MaintenanceTasks.GetSupportedFrequencies(kind).Contains(schedule.Frequency))
             schedule.Frequency = MaintenanceTasks.GetDefaultFrequency(kind);
 
+        if (kind is not MaintenanceTaskKind.InstallUpdates)
+            schedule.InstallTargets = ScheduleInstallTargets.AllPackages;
+
         schedule.Normalize();
         return schedule;
     }
+
+    public static ScheduleInstallTargets GetInstallTargets()
+        => Get(MaintenanceTaskKind.InstallUpdates).InstallTargets;
 
     public static void Set(MaintenanceTaskKind kind, MaintenanceTaskSchedule schedule)
     {

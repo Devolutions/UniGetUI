@@ -13,6 +13,8 @@ public partial class SchedulerViewModel : ViewModelBase, IDisposable
 
     public event EventHandler<Type>? NavigationRequested;
 
+    public event EventHandler? ManageAutoUpdatesRequested;
+
     public ObservableCollection<ScheduledTaskViewModel> Tasks { get; } = [];
 
     public SchedulerViewModel()
@@ -41,7 +43,22 @@ public partial class SchedulerViewModel : ViewModelBase, IDisposable
             CoreTools.Translate("Save the list of installed packages to the configured cloud backup"),
             "share"));
 
+        foreach (var task in Tasks)
+            task.ManageAutoUpdatesRequested += OnManageAutoUpdatesRequested;
+
         MaintenanceScheduler.TaskFinished += OnTaskFinished;
+    }
+
+    private void OnManageAutoUpdatesRequested(object? sender, EventArgs e)
+    {
+        if (_isDisposed) return;
+        ManageAutoUpdatesRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void RefreshTasks()
+    {
+        foreach (var task in Tasks)
+            task.Refresh();
     }
 
     private void OnTaskFinished(object? sender, MaintenanceTaskKind kind)
@@ -63,6 +80,9 @@ public partial class SchedulerViewModel : ViewModelBase, IDisposable
         if (_isDisposed) return;
         _isDisposed = true;
         MaintenanceScheduler.TaskFinished -= OnTaskFinished;
+
+        foreach (var task in Tasks)
+            task.ManageAutoUpdatesRequested -= OnManageAutoUpdatesRequested;
 
     }
 }

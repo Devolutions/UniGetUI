@@ -54,7 +54,7 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
             string managerDisplay = managerMap.TryGetValue(managerKey, out var mgr)
                 ? mgr.DisplayName
                 : managerKey;
-            string managerIconPath = ResolveManagerIcon(managerKey);
+            string managerIconPath = ManagerIconResolver.Resolve(managerKey);
             string packageName = CoreTools.FormatAsName(packageId);
 
             string versionDisplay = version == "*"
@@ -106,7 +106,11 @@ public partial class ManageIgnoredUpdatesViewModel : ObservableObject
             await entry.RemoveAsync();
     }
 
-    private static string ResolveManagerIcon(string managerKey)
+}
+
+internal static class ManagerIconResolver
+{
+    public static string Resolve(string managerKey)
     {
         string name = managerKey switch
         {

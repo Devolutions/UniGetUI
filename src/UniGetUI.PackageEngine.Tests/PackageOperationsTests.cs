@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using System.Reflection;
 using System.Text;
+using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -48,7 +49,41 @@ using LineType = UniGetUI.PackageOperations.AbstractOperation.LineType;
 namespace UniGetUI.PackageEngine.Tests;
 
 [CollectionDefinition(nameof(OperationOrchestrationTestCollection), DisableParallelization = true)]
-public sealed class OperationOrchestrationTestCollection;
+public sealed class OperationOrchestrationTestCollection
+    : ICollectionFixture<IsolatedUserConfigurationFixture>;
+
+/// <summary>
+/// Redirects the settings store to a throwaway directory for every test in the collection.
+/// These tests toggle real setting keys (UseAgentBroker, ProhibitElevation) and restore them in a
+/// finally block, which never runs when a test host is killed — without this the developer's own
+/// configuration keeps the toggled value.
+/// </summary>
+public sealed class IsolatedUserConfigurationFixture : IDisposable
+{
+    private readonly string _root = Path.Combine(
+        Path.GetTempPath(),
+        nameof(IsolatedUserConfigurationFixture),
+        Guid.NewGuid().ToString("N")
+    );
+
+    public IsolatedUserConfigurationFixture()
+    {
+        Directory.CreateDirectory(_root);
+        CoreData.TEST_DataDirectoryOverride = Path.Combine(_root, "Data");
+        Directory.CreateDirectory(CoreData.UniGetUIUserConfigurationDirectory);
+        Settings.ResetSettings();
+    }
+
+    public void Dispose()
+    {
+        Settings.ResetSettings();
+        CoreData.TEST_DataDirectoryOverride = null;
+        if (Directory.Exists(_root))
+        {
+            Directory.Delete(_root, recursive: true);
+        }
+    }
+}
 
 [Collection(nameof(OperationOrchestrationTestCollection))]
 public sealed class PackageOperationsTests

@@ -1,9 +1,13 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
-using UniGetUI.PackageEngine.PackageClasses;
 
 namespace UniGetUI.Avalonia.Views.Controls;
+
+public interface IPackageIconHost
+{
+    void EnsureIconLoaded();
+}
 
 // Calls PackageWrapper.EnsureIconLoaded when the icon element attaches or is rebound, so only
 // realized (visible) rows in the virtualized list load their icons.
@@ -45,6 +49,6 @@ public static class PackageIconLoader
 
     private static void TryLoad(Control control)
     {
-        if (control.DataContext is PackageWrapper wrapper) wrapper.EnsureIconLoaded();
+        if (control.DataContext is IPackageIconHost host) host.EnsureIconLoaded();
     }
 }

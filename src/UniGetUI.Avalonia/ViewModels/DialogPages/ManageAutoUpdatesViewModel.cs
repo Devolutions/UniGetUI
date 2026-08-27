@@ -179,7 +179,11 @@ public partial class ManageAutoUpdatesViewModel : ObservableObject
     private void SetAllFiltered(bool marked)
     {
         var affected = Entries.Where(e => e.CanBeMarked && e.IsMarked != marked).ToList();
-        if (affected.Count is 0) return;
+        if (affected.Count is 0)
+        {
+            RefreshAllMarkedState();
+            return;
+        }
 
         var ids = affected.Select(e => e.AutoUpdateId).ToList();
         if (marked)

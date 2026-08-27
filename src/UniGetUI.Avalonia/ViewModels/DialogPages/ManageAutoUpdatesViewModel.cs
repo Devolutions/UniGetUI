@@ -253,12 +253,14 @@ public partial class AutoUpdateCandidateViewModel : ObservableObject, IPackageIc
     public string ManagerIconPath { get; }
     public bool IsInstalled { get; }
     public bool IsIgnored { get; }
-    public bool CanBeMarked => !IsIgnored;
+    public bool CanBeMarked => !IsIgnored || IsMarked;
     public double RowOpacity => IsInstalled ? 1.0 : 0.6;
     public string StatusTip { get; }
     public string AutomationName { get; }
 
-    [ObservableProperty] private bool _isMarked;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanBeMarked))]
+    private bool _isMarked;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCustomIcon))]

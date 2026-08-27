@@ -157,7 +157,7 @@ public sealed class AutoUpdatesDatabaseTests : IDisposable
     }
 
     [Fact]
-    public void TheMigrationIsRetriedWhenNothingWasImportedYet()
+    public void TheMigrationCompletesWithoutTouchingTheScheduleWhenNothingIsMarked()
     {
         var manager = new PackageManagerBuilder().WithName("TestManager").Build();
 

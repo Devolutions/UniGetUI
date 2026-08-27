@@ -296,17 +296,18 @@ public static class AvaloniaOperationRegistry
             await CoreTools.ResetUACForCurrentProcess();
         }
 
-        if (!anyStillRunning && Settings.Get(Settings.K.AskToDeleteNewDesktopShortcuts))
+        if (!anyStillRunning)
         {
-            var unknownShortcuts = DesktopShortcutsDatabase.GetUnknownShortcuts();
-            if (unknownShortcuts.Count > 0)
+            var unknownShortcuts = GetPendingDesktopShortcuts();
+
+            if (unknownShortcuts.Count > 0 || HasPendingStartMenuShortcuts())
             {
                 if (OperatingSystem.IsWindows())
                 {
                     if (Views.MainWindow.IsWindowOnScreen)
                         Dispatcher.UIThread.Post(() => _ = AutoOpenShortcutsDialogAsync(unknownShortcuts));
                 }
-                else if (OperatingSystem.IsMacOS())
+                else if (OperatingSystem.IsMacOS() && unknownShortcuts.Count > 0)
                 {
                     MacOsNotificationBridge.ShowNewShortcutsNotification(unknownShortcuts);
                 }
@@ -317,10 +318,22 @@ public static class AvaloniaOperationRegistry
     public static void PromptPendingShortcutsIfAny()
     {
         if (!OperatingSystem.IsWindows()) return;
-        if (!Settings.Get(Settings.K.AskToDeleteNewDesktopShortcuts)) return;
-        var unknownShortcuts = DesktopShortcutsDatabase.GetUnknownShortcuts();
-        if (unknownShortcuts.Count == 0) return;
+        var unknownShortcuts = GetPendingDesktopShortcuts();
+        if (unknownShortcuts.Count == 0 && !HasPendingStartMenuShortcuts()) return;
         Dispatcher.UIThread.Post(() => _ = AutoOpenShortcutsDialogAsync(unknownShortcuts));
+    }
+
+    private static List<string> GetPendingDesktopShortcuts()
+    {
+        return Settings.Get(Settings.K.AskToDeleteNewDesktopShortcuts)
+            ? DesktopShortcutsDatabase.GetUnknownShortcuts()
+            : [];
+    }
+
+    private static bool HasPendingStartMenuShortcuts()
+    {
+        return Settings.Get(Settings.K.AskAboutNewStartMenuShortcuts)
+            && StartMenuShortcutsDatabase.GetPendingShortcuts().Count > 0;
     }
 
     private static async Task AutoOpenShortcutsDialogAsync(IReadOnlyList<string> shortcuts)
@@ -333,7 +346,18 @@ public static class AvaloniaOperationRegistry
         _shortcutDialogOpen = true;
         try
         {
-            await new Views.ManageDesktopShortcutsWindow(pending).ShowDialog(owner);
+            bool startMenuPending = HasPendingStartMenuShortcuts();
+            var scope = (pending.Count > 0, startMenuPending) switch
+            {
+                (true, true) => ShortcutDialogScope.All,
+                (false, true) => ShortcutDialogScope.StartMenu,
+                _ => ShortcutDialogScope.Desktop,
+            };
+
+            await new Views.ManageShortcutsWindow(
+                pending.Count > 0 ? pending : null,
+                scope
+            ).ShowDialog(owner);
         }
         finally
         {

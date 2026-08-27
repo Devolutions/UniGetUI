@@ -93,6 +93,7 @@ public static class SettingsSearchIndex
         new("Try to kill the processes that refuse to close when requested to", ["kill processes"], typeof(Operations), "KillProcessesCard"),
         new("Name of the downloaded installer files", ["installer name", "download name", "file name", "version in file name", "rename installers"], typeof(Operations), "InstallerNameSchemeCard"),
         new("Ask to delete desktop shortcuts created during an install or upgrade.", ["desktop shortcuts", "shortcut remover"], typeof(Operations), "AskToDeleteNewDesktopShortcuts"),
+        new("Ask about the Start Menu shortcuts created during an install or upgrade.", ["start menu shortcuts", "start menu folder", "move shortcuts", "relocate shortcuts", "organize start menu"], typeof(Operations), "AskAboutNewStartMenuShortcuts"),
         new("Package operation preferences", ["operations"], typeof(Operations), null),
 
         // ── Internet ─────────────────────────────────────────────────────────

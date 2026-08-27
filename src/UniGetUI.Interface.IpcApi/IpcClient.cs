@@ -580,6 +580,119 @@ public sealed class IpcClient : IDisposable
             };
     }
 
+    public async Task<IReadOnlyList<IpcStartMenuShortcutInfo>> ListStartMenuShortcutsAsync()
+    {
+        return await ReadAuthenticatedJsonAsync<IReadOnlyList<IpcStartMenuShortcutInfo>>(
+            HttpMethod.Get,
+            IpcHttpRoutes.Path("/start-menu-shortcuts")
+        ) ?? [];
+    }
+
+    public async Task<IpcStartMenuShortcutOperationResult> SetStartMenuShortcutAsync(
+        IpcStartMenuShortcutRequest request
+    )
+    {
+        return await SendStartMenuShortcutOperationAsync(
+            IpcHttpRoutes.Path("/start-menu-shortcuts/set"),
+            request
+        );
+    }
+
+    public async Task<IpcStartMenuShortcutOperationResult> ResetStartMenuShortcutAsync(
+        string shortcutPath
+    )
+    {
+        return await SendStartMenuShortcutOperationAsync(
+            IpcHttpRoutes.Path("/start-menu-shortcuts/reset"),
+            new IpcStartMenuShortcutRequest { Path = shortcutPath }
+        );
+    }
+
+    public async Task<IpcCommandResult> ResetStartMenuShortcutsAsync()
+    {
+        return await ReadAuthenticatedJsonAsync<IpcCommandResult>(
+                HttpMethod.Post,
+                IpcHttpRoutes.Path("/start-menu-shortcuts/reset-all")
+            )
+            ?? new IpcCommandResult
+            {
+                Status = "error",
+                Message = "The IPC API returned an empty response.",
+            };
+    }
+
+    public async Task<IReadOnlyList<IpcStartMenuFolderInfo>> ListStartMenuFoldersAsync()
+    {
+        return await ReadAuthenticatedJsonAsync<IReadOnlyList<IpcStartMenuFolderInfo>>(
+            HttpMethod.Get,
+            IpcHttpRoutes.Path("/start-menu-folders")
+        ) ?? [];
+    }
+
+    public async Task<IpcStartMenuFolderOperationResult> SetStartMenuFolderAsync(
+        IpcStartMenuFolderRequest request
+    )
+    {
+        var query = new Dictionary<string, string> { ["package"] = request.PackageId };
+        if (!string.IsNullOrWhiteSpace(request.Folder))
+            query["folder"] = request.Folder;
+        if (request.RelocateExisting)
+            query["relocate-existing"] = "true";
+
+        return await SendStartMenuFolderOperationAsync(
+            IpcHttpRoutes.Path("/start-menu-folders/set"),
+            query
+        );
+    }
+
+    public async Task<IpcStartMenuFolderOperationResult> RemoveStartMenuFolderAsync(
+        string packageId
+    )
+    {
+        return await SendStartMenuFolderOperationAsync(
+            IpcHttpRoutes.Path("/start-menu-folders/remove"),
+            new Dictionary<string, string> { ["package"] = packageId }
+        );
+    }
+
+    private async Task<IpcStartMenuShortcutOperationResult> SendStartMenuShortcutOperationAsync(
+        string route,
+        IpcStartMenuShortcutRequest request
+    )
+    {
+        var query = new Dictionary<string, string> { ["path"] = request.Path };
+        if (!string.IsNullOrWhiteSpace(request.Status))
+            query["status"] = request.Status;
+
+        return await ReadAuthenticatedJsonAsync<IpcStartMenuShortcutOperationResult>(
+                HttpMethod.Post,
+                route,
+                query
+            )
+            ?? new IpcStartMenuShortcutOperationResult
+            {
+                Status = "error",
+                Message = "The IPC API returned an empty response.",
+            };
+    }
+
+    private async Task<IpcStartMenuFolderOperationResult> SendStartMenuFolderOperationAsync(
+        string route,
+        Dictionary<string, string> query
+    )
+    {
+        return await ReadAuthenticatedJsonAsync<IpcStartMenuFolderOperationResult>(
+                HttpMethod.Post,
+                route,
+                query
+            )
+            ?? new IpcStartMenuFolderOperationResult
+            {
+                Status = "error",
+                Message = "The IPC API returned an empty response.",
+            };
+    }
+
     public async Task<IReadOnlyList<IpcAppLogEntry>> GetAppLogAsync(int level = 4)
     {
         return await ReadAuthenticatedJsonAsync<IReadOnlyList<IpcAppLogEntry>>(

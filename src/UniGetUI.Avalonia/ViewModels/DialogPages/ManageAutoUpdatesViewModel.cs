@@ -228,8 +228,8 @@ public partial class ManageAutoUpdatesViewModel : ObservableObject
     {
         if (OnlyMarked && !candidate.IsMarked)
         {
-            Entries.Remove(candidate);
-            HasEntries = Entries.Count > 0;
+            ApplyFilter();
+            return;
         }
 
         RefreshSummary();

@@ -84,11 +84,14 @@ namespace UniGetUI.PackageEngine.Operations
         protected void SnapshotStartMenuShortcutsOnStart()
         {
             OperationStarting += (_, _) =>
-                StartMenuShortcutsBeforeStart = StartMenuShortcutsDatabase.ShouldTrackShortcuts(
-                    Package
-                )
-                    ? StartMenuShortcutsDatabase.GetShortcutsOnDisk()
-                    : null;
+            {
+                if (StartMenuShortcutsBeforeStart is not null)
+                    return;
+
+                if (StartMenuShortcutsDatabase.ShouldTrackShortcuts(Package))
+                    StartMenuShortcutsBeforeStart =
+                        StartMenuShortcutsDatabase.GetShortcutsOnDisk();
+            };
         }
 
         public PackageOperation(

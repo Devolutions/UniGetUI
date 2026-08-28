@@ -303,7 +303,7 @@ public static class IpcStartMenuShortcutsApi
             );
         }
 
-        return normalizedPath;
+        return System.IO.Path.GetFullPath(normalizedPath);
     }
 
     private static string NormalizePackageId(string packageId)

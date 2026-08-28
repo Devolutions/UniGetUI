@@ -93,7 +93,7 @@
 
                     <TextBlock Grid.Row="0" TextWrapping="Wrap" Opacity="0.75">
                         <TextBlock.Text>
-                            <t:Translate Text="Checking a shortcut will make UniGetUI delete it if if gets created on a future upgrade. Unchecking it will keep the shortcut intact"/>
+                            <t:Translate Text="Checking a shortcut will make UniGetUI delete it if it gets created on a future upgrade. Unchecking it will keep the shortcut intact"/>
                         </TextBlock.Text>
                     </TextBlock>
 
@@ -348,14 +348,14 @@
                                                                 <CheckBox IsChecked="{Binding IsMoveSelected}"
                                                                           HorizontalAlignment="Center"
                                                                           VerticalAlignment="Center"
-                                                                          automation:AutomationProperties.Name="{Binding Name}"
+                                                                          automation:AutomationProperties.Name="{Binding MoveAutomationName}"
                                                                           ToolTip.Tip="{t:Translate Text='Move this shortcut into the folder'}"/>
 
                                                                 <CheckBox Grid.Column="1"
                                                                           IsChecked="{Binding IsDeleteSelected}"
                                                                           HorizontalAlignment="Center"
                                                                           VerticalAlignment="Center"
-                                                                          automation:AutomationProperties.Name="{Binding Name}"
+                                                                          automation:AutomationProperties.Name="{Binding DeleteAutomationName}"
                                                                           ToolTip.Tip="{t:Translate Text='Delete this shortcut, now and whenever an upgrade creates it again'}"/>
 
                                                                 <StackPanel Grid.Column="2"

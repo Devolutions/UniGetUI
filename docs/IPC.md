@@ -316,14 +316,16 @@ These keys are used by package-related endpoints such as install, update, uninst
 ### Start Menu shortcuts
 
 Deletion verdicts are keyed by shortcut path and are re-applied whenever an upgrade recreates
-the shortcut. Paths outside a Start Menu `Programs` directory are rejected.
+the shortcut. Paths outside a Start Menu `Programs` directory, and paths that are not a `.lnk`
+or `.url` shortcut, are rejected. `reset-all` forgets every verdict; the folder rules and the
+relocations they recorded are left alone, and are managed by the folder endpoints below.
 
 | Method | Path | Auth | Parameters/body | CLI equivalent |
 | --- | --- | --- | --- | --- |
 | `GET` | `/uniget/v1/start-menu-shortcuts` | Yes | None | `start-menu shortcut list` |
 | `POST` | `/uniget/v1/start-menu-shortcuts/set` | Yes | Query `path`, `status` | `start-menu shortcut set` |
 | `POST` | `/uniget/v1/start-menu-shortcuts/reset` | Yes | Query `path` | `start-menu shortcut reset` |
-| `POST` | `/uniget/v1/start-menu-shortcuts/reset-all` | Yes | None | `start-menu reset-all` |
+| `POST` | `/uniget/v1/start-menu-shortcuts/reset-all` | Yes | None | `start-menu shortcut reset-all` |
 
 ### Start Menu folders
 

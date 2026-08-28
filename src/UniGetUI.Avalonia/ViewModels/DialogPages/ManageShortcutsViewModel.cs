@@ -293,8 +293,6 @@ public partial class ManageShortcutsViewModel : ObservableObject
 
             if (File.Exists(entry.Path))
                 StartMenuShortcutsDatabase.DeleteFromDisk(entry.Path);
-
-            StartMenuShortcutsDatabase.ForgetRelocationsTo(entry.Path);
         }
 
         foreach (var rule in StartMenuRules)
@@ -308,19 +306,21 @@ public partial class ManageShortcutsViewModel : ObservableObject
 
                 if (File.Exists(shortcut))
                     StartMenuShortcutsDatabase.DeleteFromDisk(shortcut);
-
-                StartMenuShortcutsDatabase.ForgetRelocationsTo(shortcut);
             }
 
             StartMenuShortcutsDatabase.SetRule(rule.PackageId, rule.Folder);
-            StartMenuShortcutsDatabase.ApplyRule(rule.PackageId, rule.ShortcutsToMove);
-
-            bool folderIsUsable =
-                StartMenuShortcutsDatabase.ResolveTargetDirectory(rule.Folder) is not null;
+            StartMenuShortcutsDatabase.ApplyRule(
+                rule.PackageId,
+                rule.ShortcutsToMove,
+                out var movedShortcuts
+            );
 
             foreach (var candidate in rule.Candidates)
             {
-                if (candidate.IsMoveSelected && !folderIsUsable)
+                if (
+                    candidate.IsMoveSelected
+                    && !movedShortcuts.Contains(candidate.Path, StringComparer.OrdinalIgnoreCase)
+                )
                     continue;
 
                 StartMenuShortcutsDatabase.RemoveFromPending(rule.PackageId, candidate.Path);
@@ -570,6 +570,11 @@ public partial class ShortcutCandidateViewModel : ObservableObject
     public string Name { get; }
     public string Location { get; }
     public bool IsNew { get; }
+
+    public string MoveAutomationName => CoreTools.Translate("Move {0} into the folder", Name);
+
+    public string DeleteAutomationName =>
+        CoreTools.Translate("Delete {0}, now and whenever an upgrade creates it again", Name);
 
     [ObservableProperty]
     private bool _isMoveSelected;

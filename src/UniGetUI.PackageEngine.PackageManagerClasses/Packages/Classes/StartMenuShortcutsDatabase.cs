@@ -18,7 +18,12 @@ public static class StartMenuShortcutsDatabase
     private const int ContainmentMatchLength = 6;
     private const string PendingShortcutsKey = "PendingStartMenuShortcuts";
 
-    private static readonly string[] ShortcutPatterns = ["*.lnk", "*.url"];
+    private static readonly string[] ShortcutExtensions = [".lnk", ".url"];
+
+    private static readonly string[] ShortcutPatterns =
+        ShortcutExtensions.Select(extension => "*" + extension).ToArray();
+
+    private static readonly Lock DatabaseLock = new();
 
     private static readonly EnumerationOptions ShortcutEnumeration = new()
     {
@@ -87,6 +92,14 @@ public static class StartMenuShortcutsDatabase
         return GetShortcutRoots().Any(root => IsUnder(root, shortcutPath));
     }
 
+    public static bool IsShortcutFile(string path)
+    {
+        return ShortcutExtensions.Contains(
+            Path.GetExtension(path),
+            StringComparer.OrdinalIgnoreCase
+        );
+    }
+
     private static bool IsUnderUserPrograms(string path)
     {
         string root = UserProgramsDirectory;
@@ -145,30 +158,40 @@ public static class StartMenuShortcutsDatabase
 
     public static void SetRule(string packageId, string folder)
     {
-        if (string.IsNullOrWhiteSpace(folder))
+        lock (DatabaseLock)
         {
-            RemoveRule(packageId);
-            return;
-        }
+            if (string.IsNullOrWhiteSpace(folder))
+            {
+                RemoveRule(packageId);
+                return;
+            }
 
-        Settings.SetDictionaryItem(Settings.K.StartMenuShortcutFolders, packageId, folder.Trim());
+            Settings.SetDictionaryItem(
+                Settings.K.StartMenuShortcutFolders,
+                packageId,
+                folder.Trim()
+            );
+        }
     }
 
     public static bool RemoveRule(string packageId)
     {
-        if (
-            !Settings.DictionaryContainsKey<string, string>(
+        lock (DatabaseLock)
+        {
+            if (
+                !Settings.DictionaryContainsKey<string, string>(
+                    Settings.K.StartMenuShortcutFolders,
+                    packageId
+                )
+            )
+                return false;
+
+            Settings.RemoveDictionaryKey<string, string>(
                 Settings.K.StartMenuShortcutFolders,
                 packageId
-            )
-        )
-            return false;
-
-        Settings.RemoveDictionaryKey<string, string>(
-            Settings.K.StartMenuShortcutFolders,
-            packageId
-        );
-        return true;
+            );
+            return true;
+        }
     }
 
     public static IReadOnlyDictionary<string, bool> GetVerdicts()
@@ -192,32 +215,35 @@ public static class StartMenuShortcutsDatabase
 
     public static void SetStatus(string shortcutPath, Status status)
     {
-        foreach (
-            string key in GetVerdicts()
-                .Keys.Where(key =>
-                    string.Equals(key, shortcutPath, StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(key, shortcutPath, StringComparison.Ordinal)
-                )
-                .ToList()
-        )
+        lock (DatabaseLock)
         {
-            Settings.RemoveDictionaryKey<string, bool>(
-                Settings.K.DeletableStartMenuShortcuts,
-                key
-            );
-        }
+            foreach (
+                string key in GetVerdicts()
+                    .Keys.Where(key =>
+                        string.Equals(key, shortcutPath, StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(key, shortcutPath, StringComparison.Ordinal)
+                    )
+                    .ToList()
+            )
+            {
+                Settings.RemoveDictionaryKey<string, bool>(
+                    Settings.K.DeletableStartMenuShortcuts,
+                    key
+                );
+            }
 
-        if (status is Status.Unknown)
-            Settings.RemoveDictionaryKey<string, bool>(
-                Settings.K.DeletableStartMenuShortcuts,
-                shortcutPath
-            );
-        else
-            Settings.SetDictionaryItem(
-                Settings.K.DeletableStartMenuShortcuts,
-                shortcutPath,
-                status is Status.Delete
-            );
+            if (status is Status.Unknown)
+                Settings.RemoveDictionaryKey<string, bool>(
+                    Settings.K.DeletableStartMenuShortcuts,
+                    shortcutPath
+                );
+            else
+                Settings.SetDictionaryItem(
+                    Settings.K.DeletableStartMenuShortcuts,
+                    shortcutPath,
+                    status is Status.Delete
+                );
+        }
     }
 
     public static List<string> GetAllShortcuts()
@@ -267,45 +293,57 @@ public static class StartMenuShortcutsDatabase
 
     public static void MarkPending(string packageId, string shortcutPath)
     {
-        string record = BuildRecordKey(packageId, shortcutPath);
-        if (Settings.ListContains(PendingShortcutsKey, record))
-            return;
+        lock (DatabaseLock)
+        {
+            string record = BuildRecordKey(packageId, shortcutPath);
+            if (Settings.ListContains(PendingShortcutsKey, record))
+                return;
 
-        Logger.Info($"Marking the Start Menu shortcut {shortcutPath} to be asked about");
-        Settings.AddToList(PendingShortcutsKey, record);
+            Logger.Info($"Marking the Start Menu shortcut {shortcutPath} to be asked about");
+            Settings.AddToList(PendingShortcutsKey, record);
+        }
     }
 
     public static IReadOnlyList<(string PackageId, string ShortcutPath)> GetPendingShortcuts()
     {
-        List<(string, string)> pending = [];
-
-        foreach (string record in Settings.GetList<string>(PendingShortcutsKey) ?? [])
+        lock (DatabaseLock)
         {
-            var parsed = ParseRecordKey(record);
+            List<(string, string)> pending = [];
 
-            if (parsed is null || !File.Exists(parsed.Value.OriginalPath))
+            foreach (string record in Settings.GetList<string>(PendingShortcutsKey) ?? [])
             {
-                Settings.RemoveFromList(PendingShortcutsKey, record);
-                continue;
+                var parsed = ParseRecordKey(record);
+
+                if (parsed is null || !File.Exists(parsed.Value.OriginalPath))
+                {
+                    Settings.RemoveFromList(PendingShortcutsKey, record);
+                    continue;
+                }
+
+                pending.Add((parsed.Value.PackageId, parsed.Value.OriginalPath));
             }
 
-            pending.Add((parsed.Value.PackageId, parsed.Value.OriginalPath));
+            return pending;
         }
-
-        return pending;
     }
 
     public static bool RemoveFromPending(string packageId, string shortcutPath)
     {
-        return Settings.RemoveFromList(
-            PendingShortcutsKey,
-            BuildRecordKey(packageId, shortcutPath)
-        );
+        lock (DatabaseLock)
+        {
+            return Settings.RemoveFromList(
+                PendingShortcutsKey,
+                BuildRecordKey(packageId, shortcutPath)
+            );
+        }
     }
 
     public static void ClearPendingShortcuts()
     {
-        Settings.ClearList(PendingShortcutsKey);
+        lock (DatabaseLock)
+        {
+            Settings.ClearList(PendingShortcutsKey);
+        }
     }
 
     /// The folders that already exist under the user's Start Menu Programs directory,
@@ -395,93 +433,99 @@ public static class StartMenuShortcutsDatabase
 
     public static int ReplayRelocations(string packageId)
     {
-        int relocated = 0;
-
-        foreach ((string originalPath, string relocatedPath) in GetRelocationsForPackage(packageId))
+        lock (DatabaseLock)
         {
-            if (!File.Exists(originalPath) || AreSamePath(originalPath, relocatedPath))
-                continue;
+            int relocated = 0;
 
-            if (MoveShortcut(originalPath, relocatedPath, true) is not null)
-                relocated++;
+            foreach ((string originalPath, string relocatedPath) in GetRelocationsForPackage(packageId))
+            {
+                if (!File.Exists(originalPath) || AreSamePath(originalPath, relocatedPath))
+                    continue;
+
+                if (MoveShortcut(originalPath, relocatedPath, true) is not null)
+                    relocated++;
+            }
+
+            return relocated;
         }
-
-        return relocated;
     }
 
     public static int HandleNewShortcuts(IPackage package, IReadOnlyList<string> previousShortcuts)
     {
-        if (!OperatingSystem.IsWindows())
-            return 0;
-
-        string packageId = GetIdForPackage(package);
-        string? rule = GetRule(packageId);
-        string? targetDirectory = rule is null ? null : ResolveTargetDirectory(rule);
-
-        if (rule is not null && targetDirectory is null)
+        lock (DatabaseLock)
         {
-            Logger.Warn(
-                $"The Start Menu folder {{folder={rule}}} set for {packageId} is not a valid Start Menu subfolder, no shortcut will be relocated"
-            );
-        }
+            if (!OperatingSystem.IsWindows())
+                return 0;
 
-        bool askAboutNewShortcuts = Settings.Get(Settings.K.AskAboutNewStartMenuShortcuts);
-        var identifiers = GetIdentifiers(package);
+            string packageId = GetIdForPackage(package);
+            string? rule = GetRule(packageId);
+            string? targetDirectory = rule is null ? null : ResolveTargetDirectory(rule);
 
-        // Recorded destinations are only replayed while the package still has a folder:
-        // dropping the folder has to stop the relocations, not just the new ones.
-        int handled = rule is null ? 0 : ReplayRelocations(packageId);
-        HashSet<string> previous = new(previousShortcuts, StringComparer.OrdinalIgnoreCase);
-
-        foreach (string shortcut in GetShortcutsOnDisk())
-        {
-            Status status = GetStatus(shortcut);
-
-            if (status is Status.Delete)
+            if (rule is not null && targetDirectory is null)
             {
-                if (DeleteFromDisk(shortcut))
-                    handled++;
-                continue;
-            }
-
-            if (previous.Contains(shortcut))
-                continue;
-
-            if (!IsPlausibleMatch(shortcut, identifiers))
-            {
-                Logger.Info(
-                    $"The new Start Menu shortcut {shortcut} will not be handled, since it does not seem to belong to {packageId}"
+                Logger.Warn(
+                    $"The Start Menu folder {{folder={rule}}} set for {packageId} is not a valid Start Menu subfolder, no shortcut will be relocated"
                 );
-                continue;
             }
 
-            if (targetDirectory is not null)
+            bool askAboutNewShortcuts = Settings.Get(Settings.K.AskAboutNewStartMenuShortcuts);
+            var identifiers = GetIdentifiers(package);
+
+            // Recorded destinations are only replayed while the package still has a folder:
+            // dropping the folder has to stop the relocations, not just the new ones.
+            int handled = rule is null ? 0 : ReplayRelocations(packageId);
+            HashSet<string> previous = new(previousShortcuts, StringComparer.OrdinalIgnoreCase);
+
+            foreach (string shortcut in GetShortcutsOnDisk())
             {
-                if (IsUnder(targetDirectory, shortcut))
+                Status status = GetStatus(shortcut);
+
+                if (status is Status.Delete)
+                {
+                    if (DeleteFromDisk(shortcut))
+                        handled++;
+                    continue;
+                }
+
+                if (previous.Contains(shortcut))
                     continue;
 
-                if (!IsUnderUserPrograms(shortcut))
+                if (!IsPlausibleMatch(shortcut, identifiers))
                 {
-                    Logger.Warn(
-                        $"The Start Menu shortcut {shortcut} is shared with every user of this machine and will not be relocated"
+                    Logger.Info(
+                        $"The new Start Menu shortcut {shortcut} will not be handled, since it does not seem to belong to {packageId}"
                     );
                     continue;
                 }
 
-                string destination = Path.Combine(targetDirectory, Path.GetFileName(shortcut));
-                if (MoveShortcut(shortcut, destination) is not { } finalDestination)
-                    continue;
+                if (targetDirectory is not null)
+                {
+                    if (IsUnder(targetDirectory, shortcut))
+                        continue;
 
-                AddRelocationRecord(packageId, shortcut, finalDestination);
-                handled++;
-                continue;
+                    if (!IsUnderUserPrograms(shortcut))
+                    {
+                        Logger.Warn(
+                            $"The Start Menu shortcut {shortcut} is shared with every user of this machine and will not be relocated"
+                        );
+                        continue;
+                    }
+
+                    string destination = Path.Combine(targetDirectory, Path.GetFileName(shortcut));
+                    if (MoveShortcut(shortcut, destination) is not { } finalDestination)
+                        continue;
+
+                    AddRelocationRecord(packageId, shortcut, finalDestination);
+                    handled++;
+                    continue;
+                }
+
+                if (askAboutNewShortcuts && status is Status.Unknown)
+                    MarkPending(packageId, shortcut);
             }
 
-            if (askAboutNewShortcuts && status is Status.Unknown)
-                MarkPending(packageId, shortcut);
+            return handled;
         }
-
-        return handled;
     }
 
     public static IReadOnlyList<string> FindRelocatableShortcuts(
@@ -521,59 +565,103 @@ public static class StartMenuShortcutsDatabase
 
     public static int ApplyRule(string packageId, IEnumerable<string> shortcutPaths)
     {
-        return ApplyRule(packageId, shortcutPaths.Select(path => (path, (string?)null)));
+        return ApplyRule(packageId, shortcutPaths, out _);
+    }
+
+    public static int ApplyRule(
+        string packageId,
+        IEnumerable<string> shortcutPaths,
+        out IReadOnlyList<string> handledPaths
+    )
+    {
+        return ApplyRule(
+            packageId,
+            shortcutPaths.Select(path => (path, (string?)null)),
+            out handledPaths
+        );
+    }
+
+    public static int ApplyRule(
+        string packageId,
+        IEnumerable<(string Path, string? NewName)> shortcuts
+    )
+    {
+        return ApplyRule(packageId, shortcuts, out _);
     }
 
     /// <param name="shortcuts">
     /// The shortcuts to relocate, each with the name it should take in the target folder.
     /// A null or blank name keeps the name the shortcut already has.
     /// </param>
+    /// <param name="handledPaths">
+    /// The given shortcuts that need no further attempt, either because they were relocated
+    /// or because the rule has nothing left to do with them. A shortcut that could not be
+    /// moved is left out, so that the caller can keep it and retry it later.
+    /// </param>
     public static int ApplyRule(
         string packageId,
-        IEnumerable<(string Path, string? NewName)> shortcuts
+        IEnumerable<(string Path, string? NewName)> shortcuts,
+        out IReadOnlyList<string> handledPaths
     )
     {
-        string? targetDirectory = ResolveTargetDirectory(GetRule(packageId));
-        if (targetDirectory is null)
-            return 0;
+        List<string> handled = [];
+        handledPaths = handled;
 
-        int relocated = 0;
-
-        foreach ((string shortcut, string? newName) in shortcuts)
+        lock (DatabaseLock)
         {
-            if (!File.Exists(shortcut))
-                continue;
+            string? targetDirectory = ResolveTargetDirectory(GetRule(packageId));
+            if (targetDirectory is null)
+                return 0;
 
-            string fileName = BuildFileName(shortcut, newName);
-            bool isRename = !string.Equals(
-                fileName,
-                Path.GetFileName(shortcut),
-                StringComparison.Ordinal
-            );
+            int relocated = 0;
 
-            if (!isRename && IsUnder(targetDirectory, shortcut))
-                continue;
-
-            if (!IsUnderUserPrograms(shortcut))
+            foreach ((string shortcut, string? newName) in shortcuts)
             {
-                Logger.Warn(
-                    $"The Start Menu shortcut {shortcut} is shared with every user of this machine and will not be relocated"
+                if (!File.Exists(shortcut))
+                {
+                    handled.Add(shortcut);
+                    continue;
+                }
+
+                string fileName = BuildFileName(shortcut, newName);
+                bool isRename = !string.Equals(
+                    fileName,
+                    Path.GetFileName(shortcut),
+                    StringComparison.Ordinal
                 );
-                continue;
+
+                if (!isRename && IsUnder(targetDirectory, shortcut))
+                {
+                    handled.Add(shortcut);
+                    continue;
+                }
+
+                if (!IsUnderUserPrograms(shortcut))
+                {
+                    Logger.Warn(
+                        $"The Start Menu shortcut {shortcut} is shared with every user of this machine and will not be relocated"
+                    );
+                    handled.Add(shortcut);
+                    continue;
+                }
+
+                string destination = Path.Combine(targetDirectory, fileName);
+                if (AreSamePath(shortcut, destination))
+                {
+                    handled.Add(shortcut);
+                    continue;
+                }
+
+                if (MoveShortcut(shortcut, destination) is not { } finalDestination)
+                    continue;
+
+                AddRelocationRecord(packageId, shortcut, finalDestination);
+                handled.Add(shortcut);
+                relocated++;
             }
 
-            string destination = Path.Combine(targetDirectory, fileName);
-            if (AreSamePath(shortcut, destination))
-                continue;
-
-            if (MoveShortcut(shortcut, destination) is not { } finalDestination)
-                continue;
-
-            AddRelocationRecord(packageId, shortcut, finalDestination);
-            relocated++;
+            return relocated;
         }
-
-        return relocated;
     }
 
     /// The name a relocated shortcut takes, keeping its original extension and
@@ -602,20 +690,23 @@ public static class StartMenuShortcutsDatabase
 
     public static int CleanupForPackage(string packageId)
     {
-        if (!OperatingSystem.IsWindows())
-            return 0;
-
-        int deleted = 0;
-
-        foreach ((string originalPath, string relocatedPath) in GetRelocationsForPackage(packageId))
+        lock (DatabaseLock)
         {
-            if (File.Exists(relocatedPath) && DeleteFromDisk(relocatedPath))
-                deleted++;
+            if (!OperatingSystem.IsWindows())
+                return 0;
 
-            RemoveRelocationRecord(packageId, originalPath);
+            int deleted = 0;
+
+            foreach ((string originalPath, string relocatedPath) in GetRelocationsForPackage(packageId))
+            {
+                if (File.Exists(relocatedPath) && DeleteFromDisk(relocatedPath))
+                    deleted++;
+
+                RemoveRelocationRecord(packageId, originalPath);
+            }
+
+            return deleted;
         }
-
-        return deleted;
     }
 
     public static string? MoveShortcut(
@@ -677,33 +768,23 @@ public static class StartMenuShortcutsDatabase
         }
     }
 
-    /// Forgets that UniGetUI had relocated a shortcut, for use once that shortcut is
-    /// gone: the record only existed to remember where the file had been put.
-    public static int ForgetRelocationsTo(string relocatedPath)
+    public static void ResetShortcutStatuses()
     {
-        int forgotten = 0;
-
-        foreach (var record in GetRelocationRecords())
+        lock (DatabaseLock)
         {
-            if (!string.Equals(record.Value, relocatedPath, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            Settings.RemoveDictionaryKey<string, string>(
-                Settings.K.RelocatedStartMenuShortcuts,
-                record.Key
-            );
-            forgotten++;
+            Settings.ClearDictionary(Settings.K.DeletableStartMenuShortcuts);
         }
-
-        return forgotten;
     }
 
     public static void ResetDatabase()
     {
-        Settings.ClearDictionary(Settings.K.StartMenuShortcutFolders);
-        Settings.ClearDictionary(Settings.K.RelocatedStartMenuShortcuts);
-        Settings.ClearDictionary(Settings.K.DeletableStartMenuShortcuts);
-        ClearPendingShortcuts();
+        lock (DatabaseLock)
+        {
+            Settings.ClearDictionary(Settings.K.StartMenuShortcutFolders);
+            Settings.ClearDictionary(Settings.K.RelocatedStartMenuShortcuts);
+            Settings.ClearDictionary(Settings.K.DeletableStartMenuShortcuts);
+            ClearPendingShortcuts();
+        }
     }
 
     private static IReadOnlyDictionary<string, string> GetRelocationRecords()

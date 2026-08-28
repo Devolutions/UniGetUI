@@ -179,10 +179,17 @@ public static class IpcStartMenuShortcutsApi
             );
         }
 
-        int relocated = StartMenuShortcutsDatabase.ApplyRule(packageId, toRelocate);
+        int relocated = StartMenuShortcutsDatabase.ApplyRule(
+            packageId,
+            toRelocate,
+            out var handledShortcuts
+        );
 
         foreach (string shortcut in pendingShortcuts)
-            StartMenuShortcutsDatabase.RemoveFromPending(packageId, shortcut);
+        {
+            if (handledShortcuts.Contains(shortcut, StringComparer.OrdinalIgnoreCase))
+                StartMenuShortcutsDatabase.RemoveFromPending(packageId, shortcut);
+        }
 
         return new IpcStartMenuFolderOperationResult
         {
@@ -209,7 +216,7 @@ public static class IpcStartMenuShortcutsApi
 
     public static IpcCommandResult ResetAll()
     {
-        StartMenuShortcutsDatabase.ResetDatabase();
+        StartMenuShortcutsDatabase.ResetShortcutStatuses();
         return IpcCommandResult.Success("reset-start-menu-shortcuts");
     }
 
@@ -241,7 +248,7 @@ public static class IpcStartMenuShortcutsApi
                 _ => "unknown",
             },
             ExistsOnDisk = File.Exists(shortcutPath),
-            IsTracked = verdicts.ContainsKey(shortcutPath),
+            IsTracked = verdicts.Keys.Contains(shortcutPath, StringComparer.OrdinalIgnoreCase),
             IsPendingReview = pendingEntry.ShortcutPath is not null,
             PendingForPackage = pendingEntry.PackageId,
         };
@@ -284,6 +291,13 @@ public static class IpcStartMenuShortcutsApi
         {
             throw new InvalidOperationException(
                 "The path parameter must point inside a Start Menu Programs directory."
+            );
+        }
+
+        if (!StartMenuShortcutsDatabase.IsShortcutFile(normalizedPath))
+        {
+            throw new InvalidOperationException(
+                "The path parameter must point to a .lnk or .url shortcut."
             );
         }
 

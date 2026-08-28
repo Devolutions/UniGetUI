@@ -163,9 +163,8 @@ Core commands:
   settings list|get|set|clear|reset
   settings secure list|get|set
   shortcut list|set|reset|reset-all
-  start-menu shortcut list|set|reset
+  start-menu shortcut list|set|reset|reset-all
   start-menu folder list|set|remove   (set: --package --folder [--relocate-existing])
-  start-menu reset-all
   log app|operations|manager
   backup status
   backup local create
@@ -292,10 +291,10 @@ Examples:
             ["start-menu", "shortcut", "list"] => "list-start-menu-shortcuts",
             ["start-menu", "shortcut", "set"] => "set-start-menu-shortcut",
             ["start-menu", "shortcut", "reset"] => "reset-start-menu-shortcut",
+            ["start-menu", "shortcut", "reset-all"] => "reset-start-menu-shortcuts",
             ["start-menu", "folder", "list"] => "list-start-menu-folders",
             ["start-menu", "folder", "set"] => "set-start-menu-folder",
             ["start-menu", "folder", "remove"] => "remove-start-menu-folder",
-            ["start-menu", "reset-all"] => "reset-start-menu-shortcuts",
 
             ["log", "app"] => "get-app-log",
             ["log", "operation"] => "get-operation-history",

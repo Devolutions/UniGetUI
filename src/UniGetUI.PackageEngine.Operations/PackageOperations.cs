@@ -81,6 +81,16 @@ namespace UniGetUI.PackageEngine.Operations
         protected abstract Task HandleFailure();
         protected abstract void Initialize();
 
+        protected void SnapshotStartMenuShortcutsOnStart()
+        {
+            OperationStarting += (_, _) =>
+                StartMenuShortcutsBeforeStart = StartMenuShortcutsDatabase.ShouldTrackShortcuts(
+                    Package
+                )
+                    ? StartMenuShortcutsDatabase.GetShortcutsOnDisk()
+                    : null;
+        }
+
         public PackageOperation(
             IPackage package,
             InstallOptions options,
@@ -1155,10 +1165,7 @@ namespace UniGetUI.PackageEngine.Operations
                 DesktopShortcutsBeforeStart = DesktopShortcutsDatabase.GetShortcutsOnDisk();
             }
 
-            if (StartMenuShortcutsDatabase.ShouldTrackShortcuts(Package))
-            {
-                StartMenuShortcutsBeforeStart = StartMenuShortcutsDatabase.GetShortcutsOnDisk();
-            }
+            SnapshotStartMenuShortcutsOnStart();
         }
     }
 
@@ -1264,10 +1271,7 @@ namespace UniGetUI.PackageEngine.Operations
                 DesktopShortcutsBeforeStart = DesktopShortcutsDatabase.GetShortcutsOnDisk();
             }
 
-            if (StartMenuShortcutsDatabase.ShouldTrackShortcuts(Package))
-            {
-                StartMenuShortcutsBeforeStart = StartMenuShortcutsDatabase.GetShortcutsOnDisk();
-            }
+            SnapshotStartMenuShortcutsOnStart();
         }
     }
 

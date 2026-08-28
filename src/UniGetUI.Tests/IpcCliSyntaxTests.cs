@@ -174,6 +174,7 @@ public sealed class IpcCliSyntaxTests
     [InlineData("list", "list-start-menu-shortcuts")]
     [InlineData("set", "set-start-menu-shortcut")]
     [InlineData("reset", "reset-start-menu-shortcut")]
+    [InlineData("reset-all", "reset-start-menu-shortcuts")]
     public void ParseMapsStartMenuShortcutCommands(string verb, string expected)
     {
         IpcCliParseResult result = IpcCliSyntax.Parse(["start-menu", "shortcut", verb]);
@@ -192,15 +193,6 @@ public sealed class IpcCliSyntaxTests
 
         Assert.Equal(IpcCliParseStatus.Success, result.Status);
         Assert.Equal(expected, GetCommand(result));
-    }
-
-    [Fact]
-    public void ParseMapsStartMenuResetAll()
-    {
-        IpcCliParseResult result = IpcCliSyntax.Parse(["start-menu", "reset-all"]);
-
-        Assert.Equal(IpcCliParseStatus.Success, result.Status);
-        Assert.Equal("reset-start-menu-shortcuts", GetCommand(result));
     }
 
     [Fact]

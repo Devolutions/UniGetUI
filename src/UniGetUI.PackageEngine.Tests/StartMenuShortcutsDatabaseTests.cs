@@ -828,7 +828,7 @@ public sealed class StartMenuShortcutsDatabaseTests : IDisposable
     }
 
     [Fact]
-    public void ForgettingARelocationDropsTheRecordThatKeptItTracked()
+    public void DeletingARelocatedShortcutKeepsItDeletedOnTheNextUpgrade()
     {
         var package = BuildPackage();
         string packageId = StartMenuShortcutsDatabase.GetIdForPackage(package);
@@ -838,24 +838,80 @@ public sealed class StartMenuShortcutsDatabaseTests : IDisposable
         StartMenuShortcutsDatabase.ApplyRule(packageId, [shortcut]);
 
         string relocated = Path.Combine(_userPrograms, "Dev Tools", "Contoso Tool.lnk");
-        Assert.Contains(relocated, StartMenuShortcutsDatabase.GetTrackedShortcuts());
-
+        StartMenuShortcutsDatabase.SetStatus(relocated, StartMenuShortcutsDatabase.Status.Delete);
         StartMenuShortcutsDatabase.DeleteFromDisk(relocated);
-        Assert.Equal(1, StartMenuShortcutsDatabase.ForgetRelocationsTo(relocated));
 
-        Assert.Empty(StartMenuShortcutsDatabase.GetRelocationsForPackage(packageId));
-        Assert.DoesNotContain(relocated, StartMenuShortcutsDatabase.GetTrackedShortcuts());
+        var before = StartMenuShortcutsDatabase.GetShortcutsOnDisk();
+        string recreated = CreateShortcut(
+            Path.Combine(_userPrograms, "Contoso"),
+            "Contoso Tool.lnk"
+        );
+
+        StartMenuShortcutsDatabase.HandleNewShortcuts(package, before);
+
+        Assert.False(File.Exists(recreated));
+        Assert.False(File.Exists(relocated));
     }
 
     [Fact]
-    public void ForgettingARelocationIgnoresPathsItNeverMoved()
+    public void ApplyRuleOnlyReportsTheShortcutsItCouldHandle()
     {
-        Assert.Equal(
-            0,
-            StartMenuShortcutsDatabase.ForgetRelocationsTo(
-                Path.Combine(_userPrograms, "Never Moved.lnk")
-            )
+        var package = BuildPackage();
+        string packageId = StartMenuShortcutsDatabase.GetIdForPackage(package);
+        StartMenuShortcutsDatabase.SetRule(packageId, "Dev Tools");
+
+        string locked = CreateShortcut(Path.Combine(_userPrograms, "Contoso"), "Contoso Tool.lnk");
+        string machineWide = CreateShortcut(
+            Path.Combine(_commonPrograms, "Contoso"),
+            "Contoso Helper.lnk"
         );
+
+        using (
+            new FileStream(locked, FileMode.Open, FileAccess.ReadWrite, FileShare.None)
+        )
+        {
+            Assert.Equal(
+                0,
+                StartMenuShortcutsDatabase.ApplyRule(
+                    packageId,
+                    [locked, machineWide],
+                    out var handled
+                )
+            );
+
+            Assert.DoesNotContain(locked, handled);
+            Assert.Contains(machineWide, handled);
+        }
+    }
+
+    [Fact]
+    public void ResettingTheShortcutStatusesKeepsTheFolderRules()
+    {
+        var package = BuildPackage();
+        string packageId = StartMenuShortcutsDatabase.GetIdForPackage(package);
+        StartMenuShortcutsDatabase.SetRule(packageId, "Dev Tools");
+
+        string shortcut = CreateShortcut(Path.Combine(_userPrograms, "Contoso"), "Contoso Tool.lnk");
+        StartMenuShortcutsDatabase.ApplyRule(packageId, [shortcut]);
+        StartMenuShortcutsDatabase.SetStatus(
+            CreateShortcut(_userPrograms, "Contoso Helper.lnk"),
+            StartMenuShortcutsDatabase.Status.Delete
+        );
+
+        StartMenuShortcutsDatabase.ResetShortcutStatuses();
+
+        Assert.Empty(StartMenuShortcutsDatabase.GetVerdicts());
+        Assert.Equal("Dev Tools", StartMenuShortcutsDatabase.GetRule(packageId));
+        Assert.Single(StartMenuShortcutsDatabase.GetRelocationsForPackage(packageId));
+    }
+
+    [Fact]
+    public void OnlyShortcutFilesAreRecognized()
+    {
+        Assert.True(StartMenuShortcutsDatabase.IsShortcutFile("Contoso Tool.LNK"));
+        Assert.True(StartMenuShortcutsDatabase.IsShortcutFile("Contoso Tool.url"));
+        Assert.False(StartMenuShortcutsDatabase.IsShortcutFile("Contoso Tool.exe"));
+        Assert.False(StartMenuShortcutsDatabase.IsShortcutFile("Contoso Tool"));
     }
 
     [Fact]

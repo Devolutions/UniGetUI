@@ -135,6 +135,24 @@
             </StackPanel>
         </Grid>
 
+        <Border Background="{DynamicResource AppDialogDarkBackground}" CornerRadius="8" Padding="16,8">
+            <StackPanel Orientation="Vertical" Spacing="4">
+                <CheckBox Content="{Binding IgnoreUpdatesCheckBox_Content, FallbackValue='Ignore future updates for this package'}"
+                          IsChecked="{Binding IgnoreUpdatesChecked}"
+                          automation:AutomationProperties.Name="{Binding IgnoreUpdatesCheckBox_Content}"/>
+                <CheckBox Content="{Binding AutoUpdateCheckBox_Content, FallbackValue='Auto-update this package'}"
+                          IsChecked="{Binding AutoUpdateChecked}"
+                          IsEnabled="{Binding !IgnoreUpdatesChecked}"
+                          automation:AutomationProperties.Name="{Binding AutoUpdateCheckBox_Content}"/>
+                <TextBlock Text="{Binding AutoUpdateHint_Content}"
+                           IsVisible="{Binding IsAutoUpdateHintVisible}"
+                           Margin="28,0,0,0"
+                           FontSize="12"
+                           Opacity="0.7"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
         <!-- ── Follow-global-options card ── -->
         <Border Background="{DynamicResource AppDialogDarkBackground}" CornerRadius="8" Padding="16,8">
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8">
@@ -232,12 +250,6 @@
                                 automation:AutomationProperties.AccessibilityView="Raw"/>
 
                         <StackPanel Orientation="Vertical" Spacing="4">
-                            <CheckBox Content="{Binding IgnoreUpdatesCheckBox_Content, FallbackValue='Ignore future updates for this package'}"
-                                      IsChecked="{Binding IgnoreUpdatesChecked}"
-                                      automation:AutomationProperties.Name="{Binding IgnoreUpdatesCheckBox_Content}"/>
-                            <CheckBox Content="{Binding AutoUpdateCheckBox_Content, FallbackValue='Auto-update this package'}"
-                                      IsChecked="{Binding AutoUpdateChecked}"
-                                      automation:AutomationProperties.Name="{Binding AutoUpdateCheckBox_Content}"/>
                             <CheckBox Content="{Binding SkipMinorCheckBox_Content, FallbackValue='Skip minor updates'}"
                                       IsChecked="{Binding SkipMinorChecked}"
                                       automation:AutomationProperties.Name="{Binding SkipMinorCheckBox_Content}"/>

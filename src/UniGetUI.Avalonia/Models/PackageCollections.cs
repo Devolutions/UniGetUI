@@ -7,6 +7,7 @@ using Avalonia.Collections;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels.Pages;
+using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -22,7 +23,7 @@ namespace UniGetUI.PackageEngine.PackageClasses;
 /// <summary>
 /// Avalonia-compatible package wrapper (replaces the WinUI PackageWrapper that uses Microsoft.UI.Xaml).
 /// </summary>
-public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
+public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPackageIconHost
 {
     private static readonly HttpClient _iconHttpClient = new(CoreTools.GenericHttpClientParameters)
     {
@@ -234,6 +235,14 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable
     public void EnsureIconLoaded()
     {
         _ = EnsureIconLoadedAsync();
+    }
+
+    public static Task<Bitmap?> LoadSharedIconAsync(IPackage package)
+    {
+        if (Settings.Get(Settings.K.DisableIconsOnPackageLists))
+            return Task.FromResult<Bitmap?>(null);
+
+        return GetSharedIconLoad(package.GetHash(), package);
     }
 
     /// <summary>Loads this row's icon at most once and returns the shared load operation.</summary>

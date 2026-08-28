@@ -1,0 +1,185 @@
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
+        xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+        xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
+        xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        x:Class="UniGetUI.Avalonia.Views.ManageAutoUpdatesWindow"
+        x:DataType="vm:ManageAutoUpdatesViewModel"
+        Title="{Binding Title}"
+        MaxWidth="900"
+        MinWidth="620"
+        MaxHeight="660"
+        MinHeight="440"
+        HorizontalContentAlignment="Stretch"
+        VerticalContentAlignment="Stretch">
+
+    <dialogs:ImmersiveDialog.Styles>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        </Style>
+    </dialogs:ImmersiveDialog.Styles>
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto"
+          Margin="20"
+          RowSpacing="12">
+
+        <TextBlock Grid.Row="0"
+                   Text="{Binding Description}"
+                   TextWrapping="Wrap"
+                   Opacity="0.75"/>
+
+        <Border Grid.Row="1"
+                IsVisible="{Binding HasScopeWarning}"
+                CornerRadius="6"
+                Padding="12,8"
+                Background="{DynamicResource SubtleFillColorSecondaryBrush}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/warning_round.svg"
+                                  Width="16" Height="16"
+                                  VerticalAlignment="Center"
+                                  automation:AutomationProperties.AccessibilityView="Raw"/>
+                <TextBlock Text="{Binding ScopeWarning}"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox x:Name="SearchBox"
+                     Grid.Column="0"
+                     Text="{Binding SearchQuery, Mode=TwoWay}"
+                     Watermark="{Binding SearchPlaceholder}"
+                     automation:AutomationProperties.Name="{Binding SearchPlaceholder}"/>
+
+            <ToggleButton Grid.Column="1"
+                          Classes="accent-toggle"
+                          Content="{Binding OnlyMarkedLabel}"
+                          IsChecked="{Binding OnlyMarked, Mode=TwoWay}"
+                          automation:AutomationProperties.Name="{Binding OnlyMarkedLabel}"/>
+        </Grid>
+
+        <Border Grid.Row="3"
+                CornerRadius="8"
+                Background="{DynamicResource IgnoredUpdatesListBackground}">
+          <Grid RowDefinitions="Auto,*">
+
+            <Border Grid.Row="0"
+                    IsVisible="{Binding HasEntries}"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="0,0,0,1"
+                    Padding="10,0">
+                <CheckBox IsChecked="{Binding AllMarked, Mode=TwoWay}"
+                          Content="{Binding SelectAllLabel}"
+                          Height="32"
+                          VerticalAlignment="Center"
+                          automation:AutomationProperties.Name="{Binding SelectAllLabel}"/>
+            </Border>
+
+          <Panel Grid.Row="1">
+
+            <StackPanel IsVisible="{Binding IsLoading}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12"
+                        Width="240">
+                <TextBlock Text="{Binding LoadingLabel}"
+                           HorizontalAlignment="Center"
+                           Opacity="0.6"/>
+                <ProgressBar IsIndeterminate="{Binding IsLoading}" Height="4"/>
+            </StackPanel>
+
+            <TextBlock Text="{Binding EmptyLabel}"
+                       IsVisible="{Binding ShowEmptyLabel}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       Opacity="0.5"/>
+
+            <ListBox x:Name="PackagesList"
+                     IsVisible="{Binding HasEntries}"
+                     ItemsSource="{Binding Entries}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="2,4"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     automation:AutomationProperties.Name="{Binding Title}"
+                     automation:AutomationProperties.HelpText="{Binding Description}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:AutoUpdateCandidateViewModel">
+                        <Grid Height="36"
+                              Margin="8,0"
+                              ColumnSpacing="4"
+                              Opacity="{Binding RowOpacity}"
+                              ToolTip.Tip="{Binding StatusTip}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*" MaxWidth="130"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*" MaxWidth="110"/>
+                            </Grid.ColumnDefinitions>
+
+                            <CheckBox Grid.Column="0"
+                                      IsChecked="{Binding IsMarked, Mode=TwoWay}"
+                                      IsEnabled="{Binding CanBeMarked}"
+                                      MinWidth="0"
+                                      Margin="0,0,4,0"
+                                      VerticalAlignment="Center"
+                                      automation:AutomationProperties.Name="{Binding AutomationName}"/>
+
+                            <Panel Grid.Column="1" Width="24" Height="24" VerticalAlignment="Center"
+                                   controls:PackageIconLoader.Track="True">
+                                <Image Source="{Binding IconBitmap}" Width="24" Height="24"
+                                       Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
+                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
+                                                  Width="24" Height="24" IsVisible="{Binding !HasCustomIcon}"/>
+                            </Panel>
+                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="2,0"
+                                       Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+
+                            <controls:SvgIcon Grid.Column="3" Width="24" Height="24" VerticalAlignment="Center"
+                                              Path="avares://UniGetUI/Assets/Symbols/id.svg"/>
+                            <TextBlock Grid.Column="4" VerticalAlignment="Center" Margin="2,0"
+                                       Text="{Binding Id}" TextTrimming="CharacterEllipsis"/>
+
+                            <controls:SvgIcon Grid.Column="5" Width="24" Height="24" VerticalAlignment="Center"
+                                              Path="avares://UniGetUI/Assets/Symbols/version.svg"/>
+                            <TextBlock Grid.Column="6" VerticalAlignment="Center" Margin="2,0"
+                                       Text="{Binding Version}" TextTrimming="CharacterEllipsis"/>
+
+                            <controls:SvgIcon Grid.Column="7" Width="24" Height="24" VerticalAlignment="Center"
+                                              Path="{Binding ManagerIconPath}"/>
+                            <TextBlock Grid.Column="8" VerticalAlignment="Center" Margin="2,0"
+                                       Text="{Binding Manager}" TextTrimming="CharacterEllipsis"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+          </Panel>
+          </Grid>
+        </Border>
+
+        <TextBlock Grid.Row="4"
+                   Text="{Binding SelectionSummary}"
+                   Opacity="0.75"/>
+
+    </Grid>
+</dialogs:ImmersiveDialog>

@@ -105,6 +105,31 @@ public class MaintenanceScheduleStoreTests : IDisposable
     }
 
     [Fact]
+    public void TheInstallTargetsRoundTripAndDefaultToEveryPackage()
+    {
+        Assert.Equal(
+            ScheduleInstallTargets.AllPackages,
+            MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates).InstallTargets);
+
+        Save(MaintenanceTaskKind.InstallUpdates, s => s.InstallTargets = ScheduleInstallTargets.MarkedPackagesOnly);
+
+        Assert.Equal(
+            ScheduleInstallTargets.MarkedPackagesOnly,
+            MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates).InstallTargets);
+        Assert.Equal(ScheduleInstallTargets.MarkedPackagesOnly, MaintenanceScheduleStore.GetInstallTargets());
+    }
+
+    [Fact]
+    public void TheInstallTargetsAreIgnoredForTheOtherTasks()
+    {
+        foreach (var kind in MaintenanceTasks.All.Where(k => k is not MaintenanceTaskKind.InstallUpdates))
+        {
+            Save(kind, s => s.InstallTargets = ScheduleInstallTargets.MarkedPackagesOnly);
+            Assert.Equal(ScheduleInstallTargets.AllPackages, MaintenanceScheduleStore.Get(kind).InstallTargets);
+        }
+    }
+
+    [Fact]
     public void TheBackupTogglesReadAndWriteTheBackupSettings()
     {
         Settings.Set(Settings.K.EnablePackageBackup_LOCAL, true);

@@ -12,6 +12,7 @@ using UniGetUI.Interface;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
+using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
@@ -187,6 +188,8 @@ internal static class AvaloniaBootstrapper
     {
         // LoadLoaders is called synchronously in App.axaml.cs before MainWindow creation
         await Task.Run(PEInterface.LoadManagers);
+
+        await Task.Run(() => AutoUpdatesMigration.RunOnce(PEInterface.Managers));
     }
 
     private static async Task InitializeIpcApiAsync()

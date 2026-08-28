@@ -11,6 +11,8 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
+using UniGetUI.Core.Tools.Scheduling;
+using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.PackageClasses;
@@ -92,6 +94,7 @@ public partial class InstallOptionsViewModel : ObservableObject
     public string SkipMinorLevelSuffix_Content { get; } = CoreTools.Translate("version numbers");
     public string AutoUpdateCheckBox_Content { get; } = CoreTools.Translate("Automatically update this package");
     public string IgnoreUpdatesCheckBox_Content { get; } = CoreTools.Translate("Ignore future updates for this package");
+    public string AutoUpdateHint_Content { get; } = BuildAutoUpdateHint();
 
     // ── Security-gated sections (CLI args & pre/post commands), mirrors WinUI ──
     public bool CliEnabled { get; }
@@ -161,8 +164,15 @@ public partial class InstallOptionsViewModel : ObservableObject
     // Index 0 => keep first 1 number significant (level 2), 1 => first 2 (level 3), 2 => first 3 (level 4).
     public ObservableCollection<string> SkipMinorLevelOptions { get; } = ["1", "2", "3"];
     [ObservableProperty] private int _skipMinorLevelIndex;
-    [ObservableProperty] private bool _autoUpdateChecked;
-    [ObservableProperty] private bool _ignoreUpdatesChecked;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAutoUpdateHintVisible))]
+    private bool _autoUpdateChecked;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAutoUpdateHintVisible))]
+    private bool _ignoreUpdatesChecked;
+
+    public bool IsAutoUpdateHintVisible => AutoUpdateChecked && !IgnoreUpdatesChecked;
 
     partial void OnAdminCheckedChanged(bool value) => Refresh();
     partial void OnInteractiveCheckedChanged(bool value) => Refresh();
@@ -277,7 +287,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         UninstallPrevChecked = options.UninstallPreviousVersionsOnUpdate;
         SkipMinorChecked = options.SkipMinorUpdates;
         SkipMinorLevelIndex = options.SkipMinorUpdatesLevel - 2; // level is validated to 2..4 by the getter
-        AutoUpdateChecked = options.AutoUpdatePackage;
+        AutoUpdateChecked = AutoUpdatesDatabase.IsAutoUpdated(package);
 
         // Version
         VersionOptions.Add(CoreTools.Translate("Latest"));
@@ -439,6 +449,32 @@ public partial class InstallOptionsViewModel : ObservableObject
         catch (Exception ex) { Logger.Warn($"[InstallOptionsViewModel] Failed to apply ignored-updates state: {ex.Message}"); }
     }
 
+    private static string BuildAutoUpdateHint()
+    {
+        var schedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
+
+        if (!schedule.Enabled)
+            return CoreTools.Translate("Turn on \"Install available updates\" in the scheduled maintenance settings for this to take effect.");
+
+        if (schedule.InstallTargets is ScheduleInstallTargets.AllPackages)
+            return CoreTools.Translate("Every upgradable package is already installed automatically, so this changes nothing until the scheduled task is limited to marked packages.");
+
+        return CoreTools.Translate("This package will be updated when the scheduled maintenance task runs.");
+    }
+
+    private void ApplyAutoUpdate()
+    {
+        try
+        {
+            string id = AutoUpdatesDatabase.GetIdForPackage(_package);
+            if (AutoUpdateChecked)
+                AutoUpdatesDatabase.Add(id);
+            else if (AutoUpdatesDatabase.IsAutoUpdated(id))
+                AutoUpdatesDatabase.Remove(id);
+        }
+        catch (Exception ex) { Logger.Warn($"[InstallOptionsViewModel] Failed to apply automatic-update state: {ex.Message}"); }
+    }
+
     // ── Enable/disable based on selected operation profile ────────────────────
     private void ApplyProfileEnableState()
     {
@@ -538,7 +574,6 @@ public partial class InstallOptionsViewModel : ObservableObject
         o.InteractiveInstallation = InteractiveChecked;
         o.SkipHashCheck = SkipHashChecked;
         o.UninstallPreviousVersionsOnUpdate = UninstallPrevChecked;
-        o.AutoUpdatePackage = AutoUpdateChecked;
         o.SkipMinorUpdates = SkipMinorChecked;
         o.SkipMinorUpdatesLevel = SkipMinorLevelIndex + 2;
         o.OverridesNextLevelOpts = !FollowGlobal;
@@ -575,7 +610,6 @@ public partial class InstallOptionsViewModel : ObservableObject
         _options.InteractiveInstallation = s.InteractiveInstallation;
         _options.SkipHashCheck = s.SkipHashCheck;
         _options.UninstallPreviousVersionsOnUpdate = s.UninstallPreviousVersionsOnUpdate;
-        _options.AutoUpdatePackage = s.AutoUpdatePackage;
         _options.SkipMinorUpdates = s.SkipMinorUpdates;
         _options.SkipMinorUpdatesLevel = s.SkipMinorUpdatesLevel;
         _options.OverridesNextLevelOpts = s.OverridesNextLevelOpts;
@@ -599,6 +633,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         _options.KillBeforeOperation = KillProcessEntries.Select(e => e.Name).ToList();
         Settings.Set(Settings.K.KillProcessesThatRefuseToDie, ForceKillChecked);
         _ = ApplyIgnoredUpdatesAsync();
+        ApplyAutoUpdate();
     }
 
     private static string ScopeToString(string? selected)

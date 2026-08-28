@@ -58,6 +58,11 @@ public abstract partial class AbstractPackagesPage : UserControl,
             if (GetMainWindow() is { } win)
                 await win.ShowManageIgnoredUpdatesAsync();
         };
+        ViewModel.ManageAutoUpdatesRequested += async () =>
+        {
+            if (GetMainWindow() is { } win)
+                await win.ShowManageAutoUpdatesAsync();
+        };
 
         // "New version" sort option is only relevant on the updates page
         OrderByNewVersion_Menu.IsVisible = ViewModel.RoleIsUpdateLike;

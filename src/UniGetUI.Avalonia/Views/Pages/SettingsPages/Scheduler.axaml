@@ -241,6 +241,36 @@
                                         </Grid>
                                     </Border>
 
+                                    <Border Classes="card-divider" Margin="0,6,0,0"
+                                            IsVisible="{Binding IsInstallTargetSelectorVisible}"/>
+
+                                    <Border Classes="schedule-row" IsVisible="{Binding IsInstallTargetSelectorVisible}">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Grid.Column="0"
+                                                       Classes="schedule-row-label"
+                                                       Text="{t:Translate Install}"/>
+                                            <ComboBox Grid.Column="1"
+                                                      MinWidth="220"
+                                                      ItemsSource="{Binding InstallTargetOptions}"
+                                                      SelectedIndex="{Binding InstallTargetIndex, Mode=TwoWay}"
+                                                      automation:AutomationProperties.Name="{t:Translate Install}"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Classes="schedule-row" IsVisible="{Binding IsMarkedListVisible}">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Grid.Column="0"
+                                                       Classes="schedule-row-label"
+                                                       Text="{Binding MarkedListSummary}"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            <Button Grid.Column="1"
+                                                    Classes="secondary-action"
+                                                    Content="{t:Translate Manage the list}"
+                                                    Command="{Binding ManageAutoUpdatesCommand}"
+                                                    automation:AutomationProperties.Name="{t:Translate Manage the list}"/>
+                                        </Grid>
+                                    </Border>
+
                                     <Border Classes="card-divider" Margin="0,6,0,0"/>
 
                                     <Border Classes="schedule-row">

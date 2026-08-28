@@ -21,6 +21,8 @@ public sealed class MaintenanceTaskSchedule
 
     public int GraceMinutes { get; set; } = UnlimitedGrace;
 
+    public ScheduleInstallTargets InstallTargets { get; set; }
+
     public DateTime? ConfiguredAtUtc { get; set; }
 
     public bool HasDay(DayOfWeek day) => (Days & (1 << (int)day)) != 0;
@@ -39,6 +41,7 @@ public sealed class MaintenanceTaskSchedule
         Days = Days,
         StartMinutes = StartMinutes,
         GraceMinutes = GraceMinutes,
+        InstallTargets = InstallTargets,
         ConfiguredAtUtc = ConfiguredAtUtc,
     };
 
@@ -53,5 +56,8 @@ public sealed class MaintenanceTaskSchedule
 
         if (GraceMinutes < 0)
             GraceMinutes = UnlimitedGrace;
+
+        if (!Enum.IsDefined(InstallTargets))
+            InstallTargets = ScheduleInstallTargets.AllPackages;
     }
 }

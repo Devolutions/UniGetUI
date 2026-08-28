@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
+using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
@@ -20,6 +21,12 @@ public sealed partial class Scheduler : UserControl, ISettingsPage, IDisposable
         InitializeComponent();
 
         VM.NavigationRequested += (s, t) => NavigationRequested?.Invoke(s, t);
+        VM.ManageAutoUpdatesRequested += async (_, _) =>
+        {
+            if (MainWindow.Instance is not { } win) return;
+            await win.ShowManageAutoUpdatesAsync();
+            VM.RefreshTasks();
+        };
     }
 
     public void Dispose()

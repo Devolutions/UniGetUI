@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Tools;
 using UniGetUI.Core.Tools.Scheduling;
+using UniGetUI.PackageEngine.Classes.Packages.Classes;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
@@ -45,11 +46,13 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     private readonly int[] _graceValues;
     private bool _isLoading;
 
+    public event EventHandler? ManageAutoUpdatesRequested;
+
     public MaintenanceTaskKind Kind { get; }
 
     public string Title { get; }
 
-    public string TaskDescription { get; }
+    private readonly string _baseDescription;
 
     public string IconPath { get; }
 
@@ -58,6 +61,14 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     public IReadOnlyList<string> IntervalOptions { get; }
 
     public IReadOnlyList<string> GraceOptions { get; }
+
+    public IReadOnlyList<string> InstallTargetOptions { get; } =
+    [
+        CoreTools.Translate("All available updates"),
+        CoreTools.Translate("Only packages marked for automatic updates"),
+    ];
+
+    public bool IsInstallTargetSelectorVisible { get; }
 
     public IReadOnlyList<string> HourOptions { get; }
 
@@ -79,6 +90,10 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     [ObservableProperty] private bool _isIntervalVisible;
     [ObservableProperty] private bool _isTimeVisible;
     [ObservableProperty] private bool _isDaySelectorVisible;
+    [ObservableProperty] private int _installTargetIndex;
+    [ObservableProperty] private bool _isMarkedListVisible;
+    [ObservableProperty] private string _markedListSummary = "";
+    [ObservableProperty] private string _taskDescription = "";
     [ObservableProperty] private string _schedulePrimaryText = "";
     [ObservableProperty] private string _scheduleSecondaryText = "";
     [ObservableProperty] private bool _hasScheduleSecondaryText;
@@ -93,8 +108,10 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     {
         Kind = kind;
         Title = title;
+        _baseDescription = description;
         TaskDescription = description;
         IconPath = $"avares://UniGetUI/Assets/Symbols/{iconName}.svg";
+        IsInstallTargetSelectorVisible = kind is MaintenanceTaskKind.InstallUpdates;
 
         _frequencies = MaintenanceTasks.GetSupportedFrequencies(kind).ToList();
         FrequencyOptions = _frequencies.Select(GetFrequencyLabel).ToList();
@@ -128,6 +145,9 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         RefreshLabels();
     }
 
+    [RelayCommand]
+    private void ManageAutoUpdates() => ManageAutoUpdatesRequested?.Invoke(this, EventArgs.Empty);
+
     private void Load()
     {
         _isLoading = true;
@@ -144,6 +164,7 @@ public partial class ScheduledTaskViewModel : ViewModelBase
             HourIndex = Uses12HourClock ? hour24 % 12 : hour24;
             MinuteIndex = GetNearestIndex(_minuteValues, startMinutes % 60);
             MeridiemIndex = hour24 >= 12 ? 1 : 0;
+            InstallTargetIndex = schedule.InstallTargets is ScheduleInstallTargets.MarkedPackagesOnly ? 1 : 0;
 
             Days.Clear();
             foreach (var day in GetCultureOrderedDays())
@@ -168,6 +189,9 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         schedule.IntervalSeconds = _intervalValues[Math.Clamp(IntervalIndex, 0, _intervalValues.Length - 1)];
         schedule.GraceMinutes = _graceValues[Math.Clamp(GraceIndex, 0, _graceValues.Length - 1)];
         schedule.StartMinutes = GetStartMinutes();
+        schedule.InstallTargets = InstallTargetIndex is 1
+            ? ScheduleInstallTargets.MarkedPackagesOnly
+            : ScheduleInstallTargets.AllPackages;
 
         foreach (var day in Days)
             schedule.SetDay(day.Day, day.IsSelected);
@@ -190,6 +214,19 @@ public partial class ScheduledTaskViewModel : ViewModelBase
         IsIntervalVisible = frequency is ScheduleFrequency.Interval;
         IsTimeVisible = ScheduleEvaluator.IsTimeBased(frequency);
         IsDaySelectorVisible = frequency is ScheduleFrequency.Weekly;
+        IsMarkedListVisible = IsInstallTargetSelectorVisible && InstallTargetIndex is 1;
+        MarkedListSummary = IsMarkedListVisible ? BuildMarkedListSummary() : "";
+        TaskDescription = IsMarkedListVisible
+            ? CoreTools.Translate("Update only the packages marked for automatic updates, respecting the battery and metered connection restrictions")
+            : _baseDescription;
+    }
+
+    private static string BuildMarkedListSummary()
+    {
+        int count = AutoUpdatesDatabase.Count;
+        return count is 0
+            ? CoreTools.Translate("No packages are marked yet, so nothing will be installed")
+            : CoreTools.Translate("{0} package(s) are marked", count);
     }
 
     private void RefreshLabels()
@@ -390,6 +427,8 @@ public partial class ScheduledTaskViewModel : ViewModelBase
     partial void OnIntervalIndexChanged(int value) => Save();
 
     partial void OnGraceIndexChanged(int value) => Save();
+
+    partial void OnInstallTargetIndexChanged(int value) => Save();
 
     partial void OnHourIndexChanged(int value) => Save();
 

@@ -689,6 +689,27 @@
         <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
     </Style>
 
+    <!-- Filter chip toggle: accent fill when active, so the on/off state reads at a glance -->
+    <Style Selector="ToggleButton.accent-toggle:checked /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="ToggleButton.accent-toggle:checked:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentFillColorSecondaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorSecondaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+    </Style>
+    <Style Selector="ToggleButton.accent-toggle:checked:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentFillColorTertiaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorTertiaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorSecondaryBrush}"/>
+    </Style>
+    <Style Selector="ToggleButton.accent-toggle:not(:checked) /template/ ContentPresenter">
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+    </Style>
+
     <!-- Filters toolbar toggle: card-like fill (matches SettingsCard) when checked -->
     <Style Selector="ToggleButton.filter-toggle">
         <Style.Resources>

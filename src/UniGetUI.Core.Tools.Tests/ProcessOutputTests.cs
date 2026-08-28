@@ -36,6 +36,28 @@ namespace UniGetUI.Core.Tools.Tests
         }
 
         [Fact]
+        public void TryReadStandardOutput_KeepsTheTotalWaitWithinTheTimeout()
+        {
+            // A child that drops stdout late but never exits used to cost a second full timeout
+            // waiting for the exit, so the advertised budget nearly doubled.
+            // Unix-only: neither cmd nor PowerShell can release their stdout handle mid-script.
+            if (!OperatingSystem.IsWindows())
+            {
+                ProcessStartInfo startInfo =
+                    Redirected("/bin/sh", "-c", "sleep 3; echo late; exec 1>&-; sleep 60");
+
+                var watch = Stopwatch.StartNew();
+                bool succeeded =
+                    CoreTools.TryReadStandardOutput(startInfo, TimeSpan.FromSeconds(4), out string output);
+                watch.Stop();
+
+                Assert.True(succeeded);
+                Assert.Equal("late", output);
+                Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5.5), $"Took {watch.Elapsed}");
+            }
+        }
+
+        [Fact]
         public void TryReadStandardOutput_ReturnsFalseWhenTheCommandDoesNotExist()
         {
             Assert.False(CoreTools.TryReadStandardOutput(

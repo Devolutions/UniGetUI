@@ -967,8 +967,8 @@ namespace UniGetUI.Core.Tools
         }
 
         /// <summary>
-        /// Runs a command and returns its trimmed standard output, giving up after the given timeout.
-        /// The child process (and its own children) are killed when the timeout elapses.
+        /// Runs a command and returns its trimmed standard output. <paramref name="timeout"/> is the
+        /// total budget: anything still running once it elapses is killed, along with its children.
         /// </summary>
         public static bool TryReadStandardOutput(
             ProcessStartInfo startInfo,
@@ -979,6 +979,7 @@ namespace UniGetUI.Core.Tools
             output = "";
             Process? process = null;
             Task<string>? reader = null;
+            var budget = Stopwatch.StartNew();
             try
             {
                 process = Process.Start(startInfo);
@@ -998,7 +999,13 @@ namespace UniGetUI.Core.Tools
                     return false;
                 }
 
-                process.WaitForExit((int)timeout.TotalMilliseconds);
+                // stdout reached EOF, so the output is complete whether or not the child has left
+                // yet. Give it what remains of the budget to exit on its own; the finally kills it
+                // otherwise, so a child that drops stdout early cannot stretch the wait past it.
+                TimeSpan remaining = timeout - budget.Elapsed;
+                if (remaining > TimeSpan.Zero)
+                    process.WaitForExit((int)remaining.TotalMilliseconds);
+
                 output = reader.Result.Trim();
                 return true;
             }

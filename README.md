@@ -114,6 +114,8 @@ macOS builds are available from GitHub Releases. Use the `.dmg` for the standard
 
 Linux builds are available from GitHub Releases. Use the `.deb` package for Debian/Ubuntu-based distributions, the `.rpm` package for Fedora/RHEL-based distributions, or the `.tar.gz` archive for a portable build.
 
+The binaries require **glibc 2.27 or newer** (Ubuntu 18.04+, Debian 10+, RHEL 8+, Fedora 28+). On older distributions the app exits at startup with a `version 'GLIBC_x.y' not found` message.
+
 | Architecture | `.deb` | `.rpm` | `.tar.gz` |
 |---|---|---|---|
 | x64 | [Download](https://github.com/Devolutions/UniGetUI/releases/latest/download/UniGetUI.linux-x64.deb) | [Download](https://github.com/Devolutions/UniGetUI/releases/latest/download/UniGetUI.linux-x64.rpm) | [Download](https://github.com/Devolutions/UniGetUI/releases/latest/download/UniGetUI.linux-x64.tar.gz) |

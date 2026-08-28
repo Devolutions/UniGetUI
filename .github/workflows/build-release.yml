@@ -22,6 +22,9 @@ on:
         type: boolean
         default: true
 
+env:
+  LINUX_GLIBC_BASELINE: '2.27'
+
 jobs:
   preflight:
     name: Preflight
@@ -371,10 +374,14 @@ jobs:
             name: linux-x64
             runtime: linux-x64
             publish_profile: linux-x64-NativeAot
+            cross_image_arch: amd64
+            cross_sysroot: /crossrootfs/x64
           - os: ubuntu-latest
             name: linux-arm64
             runtime: linux-arm64
             publish_profile: linux-arm64-NativeAot
+            cross_image_arch: arm64
+            cross_sysroot: /crossrootfs/arm64
 
     steps:
       - name: Checkout
@@ -393,52 +400,31 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Install Linux arm64 NativeAOT toolchain
-        if: matrix.runtime == 'linux-arm64'
+      - name: Free disk space for cross-build images
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/ghc || true
+          df -h /
+
+      - name: Build Linux cross-compilation image
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           set -euo pipefail
 
-          . /etc/os-release
-          sudo dpkg --add-architecture arm64
+          SDK_TAG="$(jq -er '.sdk.version' global.json)"
 
-          # Keep the runner's default Ubuntu feeds bound to amd64, then add the
-          # Ubuntu Ports arm64 feed that provides the target CRT and zlib objects.
-          if compgen -G "/etc/apt/sources.list.d/*.sources" > /dev/null; then
-            for source in /etc/apt/sources.list.d/*.sources; do
-              if ! grep -q '^Architectures:' "$source"; then
-                sudo sed -i '/^Types: deb$/a Architectures: amd64' "$source"
-              fi
-            done
-          fi
+          docker build --pull --build-arg "SDK_TAG=$SDK_TAG" -t unigetui-cross-build - <<'DOCKERFILE'
+          ARG SDK_TAG
+          FROM mcr.microsoft.com/dotnet/sdk:${SDK_TAG} AS sdk
 
-          if [ -f /etc/apt/sources.list ]; then
-            sudo sed -i -E '/^deb /s/^deb /deb [arch=amd64] /' /etc/apt/sources.list
-          fi
-
-          sudo tee /etc/apt/sources.list.d/ubuntu-arm64.sources >/dev/null <<EOF
-          Types: deb
-          URIs: http://ports.ubuntu.com/ubuntu-ports/
-          Suites: ${VERSION_CODENAME} ${VERSION_CODENAME}-updates ${VERSION_CODENAME}-backports
-          Components: main restricted universe multiverse
-          Architectures: arm64
-          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-
-          Types: deb
-          URIs: http://ports.ubuntu.com/ubuntu-ports/
-          Suites: ${VERSION_CODENAME}-security
-          Components: main restricted universe multiverse
-          Architectures: arm64
-          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-          EOF
-
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            clang \
-            llvm \
-            binutils-aarch64-linux-gnu \
-            gcc-aarch64-linux-gnu \
-            zlib1g-dev:arm64
+          FROM mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net10.0-cross-${{ matrix.cross_image_arch }}
+          COPY --from=sdk /usr/share/dotnet /usr/share/dotnet
+          ENV DOTNET_ROOT=/usr/share/dotnet
+          ENV PATH=/usr/share/dotnet:$PATH
+          ENV DOTNET_NOLOGO=true
+          DOCKERFILE
 
       - name: Set version
         shell: pwsh
@@ -447,10 +433,12 @@ jobs:
           ./scripts/set-version.ps1 -Version $PackageVersion
 
       - name: Restore dependencies
+        if: runner.os != 'Linux'
         working-directory: src
         run: dotnet restore UniGetUI.Avalonia/UniGetUI.Avalonia.csproj --runtime ${{ matrix.runtime }}
 
       - name: Publish
+        if: runner.os != 'Linux'
         working-directory: src
         shell: pwsh
         run: |
@@ -468,6 +456,39 @@ jobs:
           }
           dotnet @PublishArgs
 
+      - name: Publish (Linux cross-build container)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DOCKER_ARGS=(
+            --rm
+            --user "$(id -u):$(id -g)"
+            --volume "${{ github.workspace }}:/source"
+            --workdir /source/src
+            --env HOME=/tmp
+            --env DOTNET_CLI_HOME=/tmp
+            --env NUGET_PACKAGES=/source/.nuget/packages
+            --env UNIGETUI_GITHUB_CLIENT_ID
+            --env UNIGETUI_GITHUB_CLIENT_SECRET
+            --env UNIGETUI_OPENSEARCH_USERNAME
+            --env UNIGETUI_OPENSEARCH_PASSWORD
+          )
+
+          PUBLISH_ARGS=(
+            publish UniGetUI.Avalonia/UniGetUI.Avalonia.csproj
+            --configuration Release
+            --runtime ${{ matrix.runtime }}
+            --self-contained true
+            --output ../bin/${{ matrix.name }}
+            /p:PublishProfile=${{ matrix.publish_profile }}
+            /p:SysRoot=${{ matrix.cross_sysroot }}
+            /p:LinkerFlavor=lld
+          )
+
+          docker run "${DOCKER_ARGS[@]}" unigetui-cross-build dotnet "${PUBLISH_ARGS[@]}"
+
       - name: Remove oversized Linux debug symbols
         if: runner.os == 'Linux'
         shell: pwsh
@@ -483,6 +504,11 @@ jobs:
             $DebugSymbolsToRemove | Remove-Item -Force
             Write-Host ("Removed {0} oversized Linux debug symbols above {1:N2} MiB ({2:N2} MiB total)." -f $DebugSymbolsToRemove.Count, ($MaxDebugSymbolSizeBytes / 1MB), ($RemovedDebugSymbolBytes / 1MB))
           }
+
+      - name: Verify Linux glibc baseline
+        if: runner.os == 'Linux'
+        shell: pwsh
+        run: ./scripts/check-linux-glibc.ps1 -Path "bin/${{ matrix.name }}" -MaxVersion '${{ env.LINUX_GLIBC_BASELINE }}'
 
       - name: Install macOS packaging tools
         if: runner.os == 'macOS'

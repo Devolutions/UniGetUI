@@ -53,6 +53,10 @@
 
 .PARAMETER IconSourcePath
     Source path for the installed desktop icon.
+
+.PARAMETER MinGlibcVersion
+    Minimum glibc version recorded in the .deb Depends field (e.g. "2.27").
+    When omitted, it is detected from the binaries in SourceDir.
 #>
 
 [CmdletBinding()]
@@ -81,7 +85,8 @@ param(
     [string] $Url           = 'https://github.com/Devolutions/UniGetUI',
     [string] $AppExecutableName = 'UniGetUI',
     [string] $LauncherName      = 'unigetui',
-    [string] $IconSourcePath    = (Join-Path $PSScriptRoot '..' 'src' 'SharedAssets' 'Assets' 'Images' 'icon.png')
+    [string] $IconSourcePath    = (Join-Path $PSScriptRoot '..' 'src' 'SharedAssets' 'Assets' 'Images' 'icon.png'),
+    [string] $MinGlibcVersion   = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -179,6 +184,13 @@ try {
         $ControlDir = Join-Path $TmpDir 'control'
         New-Item -ItemType Directory -Path $ControlDir | Out-Null
 
+        $GlibcVersion = $MinGlibcVersion
+        if (-not $GlibcVersion) {
+            $GlibcVersion = & (Join-Path $PSScriptRoot 'check-linux-glibc.ps1') -Path $SourceDir |
+                            Select-Object -Last 1
+        }
+        if (-not $GlibcVersion) { throw "Unable to determine the glibc requirement for '$SourceDir'" }
+
         # dpkg requires LF line endings and a trailing newline in control files
         $ControlLines = @(
             "Package: $PackageName",
@@ -186,6 +198,7 @@ try {
             "Architecture: $Architecture",
             "Maintainer: $Maintainer",
             "Installed-Size: $InstalledSizeKb",
+            "Depends: libc6 (>= $GlibcVersion)",
             "Homepage: $Url",
             "Description: $Description",
             "Priority: optional",

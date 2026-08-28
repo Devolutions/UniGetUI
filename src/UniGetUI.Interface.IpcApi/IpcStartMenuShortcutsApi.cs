@@ -160,6 +160,7 @@ public static class IpcStartMenuShortcutsApi
         }
 
         StartMenuShortcutsDatabase.SetRule(packageId, folder);
+        int rebased = StartMenuShortcutsDatabase.RebaseRelocations(packageId);
 
         var pendingShortcuts = StartMenuShortcutsDatabase
             .GetPendingShortcuts()
@@ -195,7 +196,7 @@ public static class IpcStartMenuShortcutsApi
         return new IpcStartMenuFolderOperationResult
         {
             Command = "set-start-menu-folder",
-            RelocatedShortcuts = relocated,
+            RelocatedShortcuts = relocated + rebased,
             Folder = ToFolderInfo(packageId, folder),
         };
     }

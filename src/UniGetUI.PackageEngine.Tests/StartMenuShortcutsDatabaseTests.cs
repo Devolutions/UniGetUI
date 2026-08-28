@@ -967,6 +967,74 @@ public sealed class StartMenuShortcutsDatabaseTests : IDisposable
     }
 
     [Fact]
+    public void ChangingTheFolderMovesWhatTheOldOneHadTaken()
+    {
+        var package = BuildPackage();
+        string packageId = StartMenuShortcutsDatabase.GetIdForPackage(package);
+        StartMenuShortcutsDatabase.SetRule(packageId, "Dev Tools");
+
+        string shortcut = CreateShortcut(Path.Combine(_userPrograms, "Contoso"), "Contoso Tool.lnk");
+        StartMenuShortcutsDatabase.ApplyRule(packageId, [shortcut]);
+
+        StartMenuShortcutsDatabase.SetRule(packageId, "Utilities");
+
+        Assert.Equal(1, StartMenuShortcutsDatabase.RebaseRelocations(packageId));
+
+        string moved = Path.Combine(_userPrograms, "Utilities", "Contoso Tool.lnk");
+        Assert.True(File.Exists(moved));
+        Assert.False(File.Exists(Path.Combine(_userPrograms, "Dev Tools", "Contoso Tool.lnk")));
+        Assert.Equal(
+            moved,
+            StartMenuShortcutsDatabase.GetRelocationsForPackage(packageId).Single().RelocatedPath
+        );
+    }
+
+    [Fact]
+    public void ReplayFollowsTheFolderThePackageHasNow()
+    {
+        var package = BuildPackage();
+        string packageId = StartMenuShortcutsDatabase.GetIdForPackage(package);
+        StartMenuShortcutsDatabase.SetRule(packageId, "Dev Tools");
+
+        string shortcut = CreateShortcut(Path.Combine(_userPrograms, "Contoso"), "Contoso Tool.lnk");
+        StartMenuShortcutsDatabase.ApplyRule(packageId, [shortcut]);
+
+        StartMenuShortcutsDatabase.SetRule(packageId, "Utilities");
+        CreateShortcut(Path.Combine(_userPrograms, "Contoso"), "Contoso Tool.lnk");
+
+        Assert.Equal(1, StartMenuShortcutsDatabase.ReplayRelocations(packageId));
+        Assert.True(File.Exists(Path.Combine(_userPrograms, "Utilities", "Contoso Tool.lnk")));
+    }
+
+    [Fact]
+    public void AShortcutAnotherPackageOwnsIsLeftAlone()
+    {
+        var owner = BuildPackage("Contoso.Tool", "Contoso Tool");
+        string ownerId = StartMenuShortcutsDatabase.GetIdForPackage(owner);
+        StartMenuShortcutsDatabase.SetRule(ownerId, "Dev Tools");
+
+        string shortcut = CreateShortcut(Path.Combine(_userPrograms, "Contoso"), "Contoso Tool.lnk");
+        StartMenuShortcutsDatabase.ApplyRule(ownerId, [shortcut]);
+
+        string relocated = Path.Combine(_userPrograms, "Dev Tools", "Contoso Tool.lnk");
+        Assert.True(File.Exists(relocated));
+
+        var other = BuildPackage("Contoso.Tool.Helper", "Contoso Tool Helper");
+        string otherId = StartMenuShortcutsDatabase.GetIdForPackage(other);
+        StartMenuShortcutsDatabase.SetRule(otherId, "Helpers");
+
+        Assert.DoesNotContain(
+            relocated,
+            StartMenuShortcutsDatabase.FindRelocatableShortcuts(otherId)
+        );
+
+        StartMenuShortcutsDatabase.HandleNewShortcuts(other, []);
+
+        Assert.True(File.Exists(relocated));
+        Assert.Empty(StartMenuShortcutsDatabase.GetRelocationsForPackage(otherId));
+    }
+
+    [Fact]
     public void PruningNeverDeletesTheStartMenuRoots()
     {
         string shortcut = CreateShortcut(_userPrograms, "Contoso Tool.lnk");

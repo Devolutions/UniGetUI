@@ -459,15 +459,60 @@ public static class StartMenuShortcutsDatabase
     {
         lock (DatabaseLock)
         {
+            string? targetDirectory = ResolveTargetDirectory(GetRule(packageId));
             int relocated = 0;
 
-            foreach ((string originalPath, string relocatedPath) in GetRelocationsForPackage(packageId))
+            foreach (
+                (string originalPath, string relocatedPath) in GetRelocationsForPackage(packageId)
+            )
             {
-                if (!File.Exists(originalPath) || AreSamePath(originalPath, relocatedPath))
+                string destination = targetDirectory is null
+                    ? relocatedPath
+                    : Path.Combine(targetDirectory, Path.GetFileName(relocatedPath));
+
+                if (!File.Exists(originalPath) || AreSamePath(originalPath, destination))
                     continue;
 
-                if (MoveShortcut(originalPath, relocatedPath, true) is not null)
-                    relocated++;
+                if (MoveShortcut(originalPath, destination, true) is not { } finalDestination)
+                    continue;
+
+                if (!AreSamePath(finalDestination, relocatedPath))
+                    AddRelocationRecord(packageId, originalPath, finalDestination);
+
+                relocated++;
+            }
+
+            return relocated;
+        }
+    }
+
+    public static int RebaseRelocations(string packageId)
+    {
+        lock (DatabaseLock)
+        {
+            string? targetDirectory = ResolveTargetDirectory(GetRule(packageId));
+            if (targetDirectory is null)
+                return 0;
+
+            int relocated = 0;
+
+            foreach (
+                (string originalPath, string relocatedPath) in GetRelocationsForPackage(packageId)
+            )
+            {
+                if (!File.Exists(relocatedPath) || IsUnder(targetDirectory, relocatedPath))
+                    continue;
+
+                string destination = Path.Combine(
+                    targetDirectory,
+                    Path.GetFileName(relocatedPath)
+                );
+
+                if (MoveShortcut(relocatedPath, destination) is not { } finalDestination)
+                    continue;
+
+                AddRelocationRecord(packageId, originalPath, finalDestination);
+                relocated++;
             }
 
             return relocated;
@@ -511,7 +556,7 @@ public static class StartMenuShortcutsDatabase
                     continue;
                 }
 
-                if (previous.Contains(shortcut))
+                if (previous.Contains(shortcut) || IsClaimedByAnotherPackage(packageId, shortcut))
                     continue;
 
                 if (!IsPlausibleMatch(shortcut, identifiers))
@@ -575,6 +620,9 @@ public static class StartMenuShortcutsDatabase
         foreach (string shortcut in shortcutsOnDisk ?? GetShortcutsOnDisk())
         {
             if (alreadyRelocated.Contains(shortcut) || !IsUnderUserPrograms(shortcut))
+                continue;
+
+            if (IsClaimedByAnotherPackage(packageId, shortcut))
                 continue;
 
             if (targetDirectory is not null && IsUnder(targetDirectory, shortcut))
@@ -828,6 +876,47 @@ public static class StartMenuShortcutsDatabase
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value!);
     }
 
+    private static bool IsClaimedByAnotherPackage(string packageId, string shortcutPath)
+    {
+        foreach (var record in GetRelocationRecords())
+        {
+            var parsed = ParseRecordKey(record.Key);
+            if (
+                parsed is null
+                || string.Equals(
+                    parsed.Value.PackageId,
+                    packageId,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+                continue;
+
+            if (
+                string.Equals(record.Value, shortcutPath, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(
+                    parsed.Value.OriginalPath,
+                    shortcutPath,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+                return true;
+        }
+
+        return GetPendingShortcuts()
+            .Any(pending =>
+                !string.Equals(
+                    pending.PackageId,
+                    packageId,
+                    StringComparison.OrdinalIgnoreCase
+                )
+                && string.Equals(
+                    pending.ShortcutPath,
+                    shortcutPath,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            );
+    }
+
     private static void AddRelocationRecord(
         string packageId,
         string originalPath,
@@ -1025,13 +1114,13 @@ public static class StartMenuShortcutsDatabase
             if (!IsUnderUserPrograms(candidate))
                 return;
 
-            if (Directory.EnumerateFileSystemEntries(candidate).Any())
-                return;
-
             string? parent = Path.GetDirectoryName(candidate);
 
             try
             {
+                if (Directory.EnumerateFileSystemEntries(candidate).Any())
+                    return;
+
                 Directory.Delete(candidate);
                 Logger.Info($"Deleted the empty Start Menu folder {candidate}");
             }

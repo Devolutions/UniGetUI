@@ -333,6 +333,7 @@ public partial class ManageShortcutsViewModel : ObservableObject
             }
 
             StartMenuShortcutsDatabase.SetRule(rule.PackageId, rule.Folder);
+            StartMenuShortcutsDatabase.RebaseRelocations(rule.PackageId);
             StartMenuShortcutsDatabase.ApplyRule(
                 rule.PackageId,
                 rule.ShortcutsToMove,

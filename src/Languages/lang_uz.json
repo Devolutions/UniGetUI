@@ -860,7 +860,7 @@
     "For security reasons, pre-operation and post-operation scripts are disabled by default. Go to UniGetUI security settings to change this. ": "Xavfsizlik sabablariga ko‘ra, amaldan oldingi va keyingi skriptlar sukut bo‘yicha o‘chirilgan. Buni o‘zgartirish uchun UniGetUI xavfsizlik sozlamalariga o‘ting. ",
     "You can define the commands that will be run before or after this package is installed, updated or uninstalled. They will be run on a command prompt, so CMD scripts will work here.": "Ushbu paket o‘rnatilishi, yangilanishi yoki o‘chirilishidan oldin yoki keyin bajariladigan buyruqlarni belgilashingiz mumkin. Ular buyruq qatorida bajariladi, shuning uchun bu yerda CMD skriptlari ishlaydi.",
     "Change this and unlock": "Buni o‘zgartirish va qulfdan chiqarish",
-    "{0} Install options are currently locked because {0} follows the default install options.": "{0} hozircha standart o‘rnatish sozlamalariga amal qilayotgani uchun o‘rnatish sozlamalari qulflangan.",
+    "{0} Install options are currently locked because {0} follows the default install options.": "{0} o‘rnatish sozlamalari hozircha qulflangan, chunki {0} standart o‘rnatish sozlamalariga amal qilmoqda.",
     "Unset or unknown": "Belgilanmagan yoki noma’lum",
     "This package has no screenshots or is missing the icon? Contrbute to UniGetUI by adding the missing icons and screenshots to our open, public database.": "Ushbu paketda skrinshot yo‘qmi yoki belgisi yetishmayaptimi? Yetishmayotgan belgi va skrinshotlarni ochiq, ommaviy ma’lumotlar bazamizga qo‘shib, UniGetUI'ga hissa qo‘shing.",
     "Become a contributor": "Hissa qo‘shuvchi bo‘ling",

@@ -1088,6 +1088,61 @@ public sealed class StartMenuShortcutsDatabaseTests : IDisposable
     }
 
     [Fact]
+    public void ARuleWrittenWithAnotherCasingIsStillTheSameRule()
+    {
+        var package = BuildPackage();
+        string packageId = StartMenuShortcutsDatabase.GetIdForPackage(package);
+
+        StartMenuShortcutsDatabase.SetRule(packageId.ToUpperInvariant(), "Dev Tools");
+
+        Assert.Equal("Dev Tools", StartMenuShortcutsDatabase.GetRule(packageId));
+        Assert.True(StartMenuShortcutsDatabase.HasRule(package));
+
+        StartMenuShortcutsDatabase.SetRule(packageId.ToLowerInvariant(), "Utilities");
+
+        Assert.Single(StartMenuShortcutsDatabase.GetRules());
+        Assert.Equal("Utilities", StartMenuShortcutsDatabase.GetRule(packageId));
+
+        Assert.True(StartMenuShortcutsDatabase.RemoveRule(packageId));
+        Assert.Empty(StartMenuShortcutsDatabase.GetRules());
+    }
+
+    [Fact]
+    public void ARuleWrittenWithAnotherCasingStillRelocates()
+    {
+        var package = BuildPackage();
+        string packageId = StartMenuShortcutsDatabase.GetIdForPackage(package);
+
+        StartMenuShortcutsDatabase.SetRule(packageId.ToUpperInvariant(), "Dev Tools");
+
+        var before = StartMenuShortcutsDatabase.GetShortcutsOnDisk();
+        CreateShortcut(_userPrograms, "Contoso Tool.lnk");
+
+        Assert.Equal(1, StartMenuShortcutsDatabase.HandleNewShortcuts(package, before));
+        Assert.True(File.Exists(Path.Combine(_userPrograms, "Dev Tools", "Contoso Tool.lnk")));
+    }
+
+    [Fact]
+    public void APendingReviewIsFoundWhicheverCasingAsksForIt()
+    {
+        var package = BuildPackage();
+        string packageId = StartMenuShortcutsDatabase.GetIdForPackage(package);
+        string shortcut = CreateShortcut(_userPrograms, "Contoso Tool.lnk");
+
+        StartMenuShortcutsDatabase.MarkPending(packageId, shortcut);
+        StartMenuShortcutsDatabase.MarkPending(packageId.ToUpperInvariant(), shortcut);
+
+        Assert.Single(StartMenuShortcutsDatabase.GetPendingShortcuts());
+        Assert.True(
+            StartMenuShortcutsDatabase.RemoveFromPending(
+                packageId.ToUpperInvariant(),
+                shortcut.ToUpperInvariant()
+            )
+        );
+        Assert.Empty(StartMenuShortcutsDatabase.GetPendingShortcuts());
+    }
+
+    [Fact]
     public void PruningNeverDeletesTheStartMenuRoots()
     {
         string shortcut = CreateShortcut(_userPrograms, "Contoso Tool.lnk");

@@ -189,12 +189,13 @@ public static class StartMenuShortcutsDatabase
 
     public static string? GetRule(string packageId)
     {
-        string? folder = Settings.GetDictionaryItem<string, string>(
-            Settings.K.StartMenuShortcutFolders,
-            packageId
-        );
+        foreach (var rule in GetRules())
+        {
+            if (string.Equals(rule.Key, packageId, StringComparison.OrdinalIgnoreCase))
+                return rule.Value;
+        }
 
-        return string.IsNullOrWhiteSpace(folder) ? null : folder;
+        return null;
     }
 
     public static bool HasRule(IPackage package)
@@ -212,6 +213,8 @@ public static class StartMenuShortcutsDatabase
                 return;
             }
 
+            DropRuleKeys(packageId, StringComparison.Ordinal);
+
             Settings.SetDictionaryItem(
                 Settings.K.StartMenuShortcutFolders,
                 packageId,
@@ -224,20 +227,31 @@ public static class StartMenuShortcutsDatabase
     {
         lock (DatabaseLock)
         {
-            if (
-                !Settings.DictionaryContainsKey<string, string>(
-                    Settings.K.StartMenuShortcutFolders,
-                    packageId
-                )
-            )
-                return false;
+            return DropRuleKeys(packageId, null) > 0;
+        }
+    }
 
+    private static int DropRuleKeys(string packageId, StringComparison? keep)
+    {
+        int dropped = 0;
+
+        foreach (
+            string key in GetRules()
+                .Keys.Where(key =>
+                    string.Equals(key, packageId, StringComparison.OrdinalIgnoreCase)
+                    && (keep is null || !string.Equals(key, packageId, keep.Value))
+                )
+                .ToList()
+        )
+        {
             Settings.RemoveDictionaryKey<string, string>(
                 Settings.K.StartMenuShortcutFolders,
-                packageId
+                key
             );
-            return true;
+            dropped++;
         }
+
+        return dropped;
     }
 
     public static IReadOnlyDictionary<string, bool> GetVerdicts()
@@ -341,12 +355,11 @@ public static class StartMenuShortcutsDatabase
     {
         lock (DatabaseLock)
         {
-            string record = BuildRecordKey(packageId, shortcutPath);
-            if (Settings.ListContains(PendingShortcutsKey, record))
+            if (FindPendingRecords(packageId, shortcutPath).Count > 0)
                 return;
 
             Logger.Info($"Marking the Start Menu shortcut {shortcutPath} to be asked about");
-            Settings.AddToList(PendingShortcutsKey, record);
+            Settings.AddToList(PendingShortcutsKey, BuildRecordKey(packageId, shortcutPath));
         }
     }
 
@@ -377,11 +390,39 @@ public static class StartMenuShortcutsDatabase
     {
         lock (DatabaseLock)
         {
-            return Settings.RemoveFromList(
-                PendingShortcutsKey,
-                BuildRecordKey(packageId, shortcutPath)
-            );
+            bool removed = false;
+
+            foreach (string record in FindPendingRecords(packageId, shortcutPath))
+                removed |= Settings.RemoveFromList(PendingShortcutsKey, record);
+
+            return removed;
         }
+    }
+
+    private static IReadOnlyList<string> FindPendingRecords(string packageId, string shortcutPath)
+    {
+        List<string> records = [];
+
+        foreach (string record in Settings.GetList<string>(PendingShortcutsKey) ?? [])
+        {
+            var parsed = ParseRecordKey(record);
+            if (
+                parsed is not null
+                && string.Equals(
+                    parsed.Value.PackageId,
+                    packageId,
+                    StringComparison.OrdinalIgnoreCase
+                )
+                && string.Equals(
+                    parsed.Value.OriginalPath,
+                    shortcutPath,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+                records.Add(record);
+        }
+
+        return records;
     }
 
     public static int RemovePendingShortcuts(string shortcutPath)
@@ -981,19 +1022,43 @@ public static class StartMenuShortcutsDatabase
         string relocatedPath
     )
     {
+        string record = BuildRecordKey(packageId, originalPath);
+        DropRelocationRecords(packageId, originalPath, StringComparison.Ordinal);
+
         Settings.SetDictionaryItem(
             Settings.K.RelocatedStartMenuShortcuts,
-            BuildRecordKey(packageId, originalPath),
+            record,
             relocatedPath
         );
     }
 
     private static void RemoveRelocationRecord(string packageId, string originalPath)
     {
-        Settings.RemoveDictionaryKey<string, string>(
-            Settings.K.RelocatedStartMenuShortcuts,
-            BuildRecordKey(packageId, originalPath)
-        );
+        DropRelocationRecords(packageId, originalPath, null);
+    }
+
+    private static void DropRelocationRecords(
+        string packageId,
+        string originalPath,
+        StringComparison? keep
+    )
+    {
+        string record = BuildRecordKey(packageId, originalPath);
+
+        foreach (
+            string key in GetRelocationRecords()
+                .Keys.Where(key =>
+                    string.Equals(key, record, StringComparison.OrdinalIgnoreCase)
+                    && (keep is null || !string.Equals(key, record, keep.Value))
+                )
+                .ToList()
+        )
+        {
+            Settings.RemoveDictionaryKey<string, string>(
+                Settings.K.RelocatedStartMenuShortcuts,
+                key
+            );
+        }
     }
 
     private static string GetFreeDestination(string destinationPath)

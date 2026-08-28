@@ -129,12 +129,15 @@ public static class IpcStartMenuShortcutsApi
         var shortcutsOnDisk = StartMenuShortcutsDatabase.GetShortcutsOnDisk();
 
         return rules
-            .Keys.Union(pending.Select(entry => entry.PackageId))
+            .Keys.Union(
+                pending.Select(entry => entry.PackageId),
+                StringComparer.OrdinalIgnoreCase
+            )
             .OrderBy(packageId => packageId, StringComparer.OrdinalIgnoreCase)
             .Select(packageId =>
                 ToFolderInfo(
                     packageId,
-                    rules.TryGetValue(packageId, out string? folder) ? folder : "",
+                    StartMenuShortcutsDatabase.GetRule(packageId) ?? "",
                     pending,
                     shortcutsOnDisk
                 )
@@ -164,7 +167,9 @@ public static class IpcStartMenuShortcutsApi
 
         var pendingShortcuts = StartMenuShortcutsDatabase
             .GetPendingShortcuts()
-            .Where(entry => entry.PackageId == packageId)
+            .Where(entry =>
+                string.Equals(entry.PackageId, packageId, StringComparison.OrdinalIgnoreCase)
+            )
             .Select(entry => entry.ShortcutPath)
             .ToList();
 
@@ -273,7 +278,9 @@ public static class IpcStartMenuShortcutsApi
             RelocatedShortcuts = StartMenuShortcutsDatabase
                 .GetRelocationsForPackage(packageId)
                 .Count,
-            PendingShortcuts = pending.Count(entry => entry.PackageId == packageId),
+            PendingShortcuts = pending.Count(entry =>
+                string.Equals(entry.PackageId, packageId, StringComparison.OrdinalIgnoreCase)
+            ),
             MatchingShortcuts = StartMenuShortcutsDatabase.FindRelocatableShortcuts(
                 packageId,
                 shortcutsOnDisk

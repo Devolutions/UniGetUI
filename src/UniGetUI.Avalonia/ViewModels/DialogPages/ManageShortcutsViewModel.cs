@@ -178,7 +178,7 @@ public partial class ManageShortcutsViewModel : ObservableObject
 
         var pendingByPackage = StartMenuShortcutsDatabase
             .GetPendingShortcuts()
-            .GroupBy(pending => pending.PackageId)
+            .GroupBy(pending => pending.PackageId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 group => group.Key,
                 group => (IReadOnlyList<string>)group.Select(pending => pending.ShortcutPath).ToList()
@@ -189,7 +189,7 @@ public partial class ManageShortcutsViewModel : ObservableObject
         var availableFolders = StartMenuShortcutsDatabase.GetUserProgramFolders();
 
         var orderedRules = rules
-            .Keys.Union(pendingByPackage.Keys)
+            .Keys.Union(pendingByPackage.Keys, StringComparer.OrdinalIgnoreCase)
             .Select(packageId =>
             {
                 var pending = pendingByPackage.TryGetValue(packageId, out var found)
@@ -203,7 +203,7 @@ public partial class ManageShortcutsViewModel : ObservableObject
 
                 return new StartMenuFolderRuleViewModel(
                     packageId,
-                    rules.TryGetValue(packageId, out string? folder) ? folder : "",
+                    StartMenuShortcutsDatabase.GetRule(packageId) ?? "",
                     pending,
                     existing,
                     availableFolders

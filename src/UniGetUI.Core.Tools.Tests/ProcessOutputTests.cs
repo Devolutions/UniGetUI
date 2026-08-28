@@ -58,6 +58,28 @@ namespace UniGetUI.Core.Tools.Tests
         }
 
         [Fact]
+        public void TryReadStandardOutput_StillGivesUpWhenADescendantHoldsTheOutputOpen()
+        {
+            // Worst case: the command exits at once but leaves a background process holding stdout,
+            // so no EOF ever arrives and the reparented descendant is beyond Kill's reach. The
+            // budget must still be honoured -- losing the output beats hanging on the splash.
+            // Unix-only: cmd and PowerShell cannot detach a child onto the same stdout handle.
+            if (!OperatingSystem.IsWindows())
+            {
+                ProcessStartInfo startInfo = Redirected("/bin/sh", "-c", "echo orphaned; sleep 5 &");
+
+                var watch = Stopwatch.StartNew();
+                bool succeeded =
+                    CoreTools.TryReadStandardOutput(startInfo, TimeSpan.FromSeconds(2), out string output);
+                watch.Stop();
+
+                Assert.False(succeeded);
+                Assert.Equal("", output);
+                Assert.True(watch.Elapsed < TimeSpan.FromSeconds(4), $"Took {watch.Elapsed}");
+            }
+        }
+
+        [Fact]
         public void TryReadStandardOutput_ReturnsFalseWhenTheCommandDoesNotExist()
         {
             Assert.False(CoreTools.TryReadStandardOutput(

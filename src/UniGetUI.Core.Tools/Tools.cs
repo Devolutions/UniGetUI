@@ -968,8 +968,13 @@ namespace UniGetUI.Core.Tools
 
         /// <summary>
         /// Runs a command and returns its trimmed standard output. <paramref name="timeout"/> is the
-        /// total budget: anything still running once it elapses is killed, along with its children.
+        /// total budget; the command and the children it still owns are killed once it elapses.
         /// </summary>
+        /// <remarks>
+        /// A descendant that outlives the command itself cannot be reached: the OS reparents it as
+        /// soon as the root exits, so it stays out of the process tree while still holding the
+        /// output pipe open. Such a call times out and reports failure instead of returning output.
+        /// </remarks>
         public static bool TryReadStandardOutput(
             ProcessStartInfo startInfo,
             TimeSpan timeout,
@@ -992,9 +997,14 @@ namespace UniGetUI.Core.Tools
                 reader = process.StandardOutput.ReadToEndAsync();
                 if (!reader.Wait(timeout))
                 {
+                    // An exited root means a descendant inherited stdout and is holding it open;
+                    // it is already reparented, so killing the tree below cannot reach it.
+                    string cause = process.HasExited
+                        ? "it exited but something it started still holds its output open"
+                        : "it did not respond in time and will be terminated";
                     Logger.Warn(
-                        $"'{startInfo.FileName}' did not return its output within "
-                            + $"{timeout.TotalSeconds:0.#}s and will be terminated"
+                        $"Could not read the output of '{startInfo.FileName}' within "
+                            + $"{timeout.TotalSeconds:0.#}s: {cause}"
                     );
                     return false;
                 }

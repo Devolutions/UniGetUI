@@ -1035,6 +1035,59 @@ public sealed class StartMenuShortcutsDatabaseTests : IDisposable
     }
 
     [Fact]
+    public void TheClosestNameWinsAShortcutTwoPackagesResemble()
+    {
+        var tool = BuildPackage("Contoso.Tool", "Contoso Tool");
+        var helper = BuildPackage("Contoso.Tool.Helper", "Contoso Tool Helper");
+        string toolId = StartMenuShortcutsDatabase.GetIdForPackage(tool);
+        string helperId = StartMenuShortcutsDatabase.GetIdForPackage(helper);
+
+        StartMenuShortcutsDatabase.SetRule(toolId, "Dev Tools");
+        StartMenuShortcutsDatabase.SetRule(helperId, "Helpers");
+
+        var before = StartMenuShortcutsDatabase.GetShortcutsOnDisk();
+        CreateShortcut(_userPrograms, "Contoso Tool.lnk");
+        CreateShortcut(_userPrograms, "Contoso Tool Helper.lnk");
+
+        StartMenuShortcutsDatabase.HandleNewShortcuts(tool, before);
+
+        Assert.True(File.Exists(Path.Combine(_userPrograms, "Dev Tools", "Contoso Tool.lnk")));
+        Assert.True(File.Exists(Path.Combine(_userPrograms, "Contoso Tool Helper.lnk")));
+
+        StartMenuShortcutsDatabase.HandleNewShortcuts(helper, before);
+
+        Assert.True(
+            File.Exists(Path.Combine(_userPrograms, "Helpers", "Contoso Tool Helper.lnk"))
+        );
+    }
+
+    [Fact]
+    public void ShortcutsBehindAJunctionAreNotManaged()
+    {
+        string outside = Path.Combine(_testRoot, "Outside");
+        Directory.CreateDirectory(outside);
+        string target = CreateShortcut(outside, "Elsewhere.lnk");
+
+        string link = Path.Combine(_userPrograms, "Escape");
+        try
+        {
+            Directory.CreateSymbolicLink(link, outside);
+        }
+        catch (Exception)
+        {
+            return;
+        }
+
+        string throughLink = Path.Combine(link, "Elsewhere.lnk");
+
+        Assert.True(File.Exists(throughLink));
+        Assert.False(StartMenuShortcutsDatabase.IsManagedShortcutPath(throughLink));
+        Assert.DoesNotContain(throughLink, StartMenuShortcutsDatabase.GetShortcutsOnDisk());
+        Assert.Null(StartMenuShortcutsDatabase.ResolveTargetDirectory("Escape"));
+        Assert.True(File.Exists(target));
+    }
+
+    [Fact]
     public void PruningNeverDeletesTheStartMenuRoots()
     {
         string shortcut = CreateShortcut(_userPrograms, "Contoso Tool.lnk");

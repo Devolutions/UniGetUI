@@ -29,7 +29,8 @@ public static class StartMenuShortcutsDatabase
     private static readonly EnumerationOptions ShortcutEnumeration = new()
     {
         RecurseSubdirectories = true,
-        AttributesToSkip = FileAttributes.Hidden | FileAttributes.System,
+        AttributesToSkip =
+            FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint,
         IgnoreInaccessible = true,
     };
 
@@ -90,7 +91,51 @@ public static class StartMenuShortcutsDatabase
     /// Whether the given path lives under a Start Menu directory UniGetUI manages.
     public static bool IsManagedShortcutPath(string shortcutPath)
     {
-        return GetShortcutRoots().Any(root => IsUnder(root, shortcutPath));
+        return GetShortcutRoots()
+            .Any(root => IsUnder(root, shortcutPath) && !LeavesTheStartMenu(root, shortcutPath));
+    }
+
+    private static bool LeavesTheStartMenu(string root, string path)
+    {
+        try
+        {
+            string normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+            string? current = Path.GetFullPath(path);
+
+            while (
+                current is not null
+                && !string.Equals(
+                    Path.TrimEndingDirectorySeparator(current),
+                    normalizedRoot,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+            {
+                if (IsReparsePoint(current))
+                    return true;
+
+                current = Path.GetDirectoryName(current);
+            }
+
+            return false;
+        }
+        catch (Exception)
+        {
+            return true;
+        }
+    }
+
+    private static bool IsReparsePoint(string directory)
+    {
+        try
+        {
+            var info = new DirectoryInfo(directory);
+            return info.Exists && info.Attributes.HasFlag(FileAttributes.ReparsePoint);
+        }
+        catch (Exception)
+        {
+            return true;
+        }
     }
 
     public static bool IsShortcutFile(string path)
@@ -420,7 +465,9 @@ public static class StartMenuShortcutsDatabase
         try
         {
             string resolved = Path.GetFullPath(Path.Combine(root, relative));
-            return IsUnder(root, resolved) ? resolved : null;
+            return IsUnder(root, resolved) && !LeavesTheStartMenu(root, resolved)
+                ? resolved
+                : null;
         }
         catch (Exception ex)
         {
@@ -567,6 +614,14 @@ public static class StartMenuShortcutsDatabase
                     continue;
                 }
 
+                if (AnotherPackageMatchesBetter(packageId, shortcut, identifiers))
+                {
+                    Logger.Info(
+                        $"The new Start Menu shortcut {shortcut} will not be handled, since another package resembles it more than {packageId}"
+                    );
+                    continue;
+                }
+
                 if (targetDirectory is not null)
                 {
                     if (IsUnder(targetDirectory, shortcut))
@@ -628,7 +683,10 @@ public static class StartMenuShortcutsDatabase
             if (targetDirectory is not null && IsUnder(targetDirectory, shortcut))
                 continue;
 
-            if (IsPlausibleMatch(shortcut, identifiers))
+            if (
+                IsPlausibleMatch(shortcut, identifiers)
+                && !AnotherPackageMatchesBetter(packageId, shortcut, identifiers)
+            )
                 candidates.Add(shortcut);
         }
 
@@ -1013,6 +1071,33 @@ public static class StartMenuShortcutsDatabase
         IReadOnlyList<MatchText> identifiers
     )
     {
+        return GetMatchDistance(shortcutPath, identifiers) < int.MaxValue;
+    }
+
+    private static int GetMatchDistance(
+        string shortcutPath,
+        IReadOnlyList<MatchText> identifiers
+    )
+    {
+        int distance = int.MaxValue;
+
+        foreach (MatchText candidate in GetMatchCandidates(shortcutPath))
+        {
+            foreach (MatchText identifier in identifiers)
+            {
+                if (AreRelated(candidate, identifier))
+                    distance = Math.Min(
+                        distance,
+                        Math.Abs(candidate.Value.Length - identifier.Value.Length)
+                    );
+            }
+        }
+
+        return distance;
+    }
+
+    private static IReadOnlyList<MatchText> GetMatchCandidates(string shortcutPath)
+    {
         var roots = GetShortcutRoots();
         List<string> candidates = [Path.GetFileNameWithoutExtension(shortcutPath)];
 
@@ -1023,17 +1108,51 @@ public static class StartMenuShortcutsDatabase
         )
             candidates.Add(Path.GetFileName(parentDirectory));
 
-        foreach (
-            MatchText candidate in candidates
-                .Select(BuildMatchText)
-                .Where(candidate => candidate.Value.Length >= MinimumMatchLength)
-        )
+        return candidates
+            .Select(BuildMatchText)
+            .Where(candidate => candidate.Value.Length >= MinimumMatchLength)
+            .ToList();
+    }
+
+    private static bool AnotherPackageMatchesBetter(
+        string packageId,
+        string shortcutPath,
+        IReadOnlyList<MatchText> identifiers
+    )
+    {
+        int distance = GetMatchDistance(shortcutPath, identifiers);
+        if (distance is 0)
+            return false;
+
+        foreach (string knownId in GetKnownPackageIds())
         {
-            if (identifiers.Any(identifier => AreRelated(candidate, identifier)))
+            if (string.Equals(knownId, packageId, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (GetMatchDistance(shortcutPath, GetIdentifiers(knownId)) < distance)
                 return true;
         }
 
         return false;
+    }
+
+    private static IReadOnlyList<string> GetKnownPackageIds()
+    {
+        List<string> packageIds = [.. GetRules().Keys];
+
+        foreach (
+            string packageId in GetRelocationRecords()
+                .Keys.Select(ParseRecordKey)
+                .Where(parsed => parsed is not null)
+                .Select(parsed => parsed!.Value.PackageId)
+                .Concat(GetPendingShortcuts().Select(pending => pending.PackageId))
+        )
+        {
+            if (!packageIds.Contains(packageId, StringComparer.OrdinalIgnoreCase))
+                packageIds.Add(packageId);
+        }
+
+        return packageIds;
     }
 
     private sealed class MatchText(string value, HashSet<int> boundaries)
@@ -1111,7 +1230,7 @@ public static class StartMenuShortcutsDatabase
             if (roots.Any(root => AreSamePath(root, candidate)))
                 return;
 
-            if (!IsUnderUserPrograms(candidate))
+            if (!IsUnderUserPrograms(candidate) || IsReparsePoint(candidate))
                 return;
 
             string? parent = Path.GetDirectoryName(candidate);

@@ -967,6 +967,67 @@ namespace UniGetUI.Core.Tools
         }
 
         /// <summary>
+        /// Runs a command and returns its trimmed standard output, giving up after the given timeout.
+        /// The child process (and its own children) are killed when the timeout elapses.
+        /// </summary>
+        public static bool TryReadStandardOutput(
+            ProcessStartInfo startInfo,
+            TimeSpan timeout,
+            out string output
+        )
+        {
+            output = "";
+            Process? process = null;
+            Task<string>? reader = null;
+            try
+            {
+                process = Process.Start(startInfo);
+                if (process is null)
+                    return false;
+
+                // StandardOutput.ReadToEnd() blocks until the child closes stdout, which a hung
+                // child never does, making any later WaitForExit(timeout) unreachable. Wait on
+                // the read itself instead, and kill the child so the pipe gets released.
+                reader = process.StandardOutput.ReadToEndAsync();
+                if (!reader.Wait(timeout))
+                {
+                    Logger.Warn(
+                        $"'{startInfo.FileName}' did not return its output within "
+                            + $"{timeout.TotalSeconds:0.#}s and will be terminated"
+                    );
+                    return false;
+                }
+
+                process.WaitForExit((int)timeout.TotalMilliseconds);
+                output = reader.Result.Trim();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Could not read the output of '{startInfo.FileName}':");
+                Logger.Warn(ex);
+                return false;
+            }
+            finally
+            {
+                try
+                {
+                    if (process is not null && !process.HasExited)
+                        process.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    // Best effort: the process may have exited on its own in the meantime.
+                }
+
+                // Dispose() leaves StandardOutput open (we read it in sync mode), so an abandoned
+                // read ends by itself once the killed child's pipe hits EOF. Observe it regardless.
+                reader?.ContinueWith(static t => _ = t.Exception, TaskScheduler.Default);
+                process?.Dispose();
+            }
+        }
+
+        /// <summary>
         /// Pings the update server and 3 well-known sites to check for internet availability
         /// </summary>
         public static async Task WaitForInternetConnection() =>

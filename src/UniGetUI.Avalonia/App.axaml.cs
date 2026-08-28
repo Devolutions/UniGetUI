@@ -119,12 +119,60 @@ public partial class App : Application
             // AppIcon (scripts/macos/AppIcon.icon → Assets.car, via CFBundleIconName) and rendered by
             // the system — for packaged releases and for Debug builds, which also build into a .app
             // (see UniGetUI.Avalonia.csproj). There is nothing to do at runtime.
-            ProcessEnvironmentConfigurator.PrepareForCurrentPlatform();
+            //
+            // Only macOS reads its environment from a login shell, so only macOS finishes startup
+            // asynchronously; every other platform stays on the synchronous path below.
+            ResumeStartupAfterMacOSEnvironment(desktop, splash);
+            return;
         }
-        else
+
+        ProcessEnvironmentConfigurator.ApplyProxySettingsToProcess();
+        CreateAndShowMainWindow(desktop, splash);
+    }
+
+    /// <summary>
+    /// #5236: resolving PATH spawns a login shell that can be slow, or stuck for good. Keep it off
+    /// the UI thread so the splash keeps painting, then finish startup once it answers.
+    /// </summary>
+    /// <remarks>
+    /// `async void` on purpose: it hands failures to Dispatcher.UnhandledException (and from there
+    /// to the crash handler), whereas a dropped Task would swallow them.
+    /// </remarks>
+    private static async void ResumeStartupAfterMacOSEnvironment(
+        IClassicDesktopStyleApplicationLifetime desktop, SplashWindow? splash)
+    {
+        // The dispatcher keeps pumping meanwhile, so the app can be asked to quit before the main
+        // window exists. Nothing routes that through MainWindow.QuitApplication() yet, so watch for
+        // it here and abort instead of resurrecting a window on a lifetime that is shutting down.
+        bool quitRequested = false;
+        void MarkQuitRequested(object? _, EventArgs __) => quitRequested = true;
+
+        desktop.ShutdownRequested += MarkQuitRequested;
+        desktop.Exit += MarkQuitRequested;
+        try
         {
-            ProcessEnvironmentConfigurator.ApplyProxySettingsToProcess();
+            await Task.Run(ProcessEnvironmentConfigurator.PrepareForCurrentPlatform);
         }
+        finally
+        {
+            desktop.ShutdownRequested -= MarkQuitRequested;
+            desktop.Exit -= MarkQuitRequested;
+        }
+
+        if (quitRequested)
+        {
+            Logger.Warn("The application was asked to quit before startup completed; "
+                      + "the main window will not be created");
+            splash?.Close();
+            return;
+        }
+
+        CreateAndShowMainWindow(desktop, splash);
+    }
+
+    private static void CreateAndShowMainWindow(
+        IClassicDesktopStyleApplicationLifetime desktop, SplashWindow? splash)
+    {
         PEInterface.LoadLoaders();
         var mainWindow = new MainWindow();
         desktop.MainWindow = mainWindow;

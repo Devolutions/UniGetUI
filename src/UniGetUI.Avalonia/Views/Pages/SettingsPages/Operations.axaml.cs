@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Tools;
@@ -51,7 +52,18 @@ public sealed partial class Operations : UserControl, ISettingsPage
         {
             if (Application.Current?.ApplicationLifetime
                     is IClassicDesktopStyleApplicationLifetime { MainWindow: { } win })
-                await new ManageDesktopShortcutsWindow().ShowDialog(win);
+                await new ManageShortcutsWindow(scope: ShortcutDialogScope.Desktop).ShowDialog(
+                    win
+                );
+        };
+
+        AskAboutNewStartMenuShortcuts.Click += async (_, _) =>
+        {
+            if (Application.Current?.ApplicationLifetime
+                    is IClassicDesktopStyleApplicationLifetime { MainWindow: { } win })
+                await new ManageShortcutsWindow(scope: ShortcutDialogScope.StartMenu).ShowDialog(
+                    win
+                );
         };
     }
 }

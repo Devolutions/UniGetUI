@@ -1,0 +1,596 @@
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
+    xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+        xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
+        xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+        x:Class="UniGetUI.Avalonia.Views.ManageShortcutsWindow"
+        x:DataType="vm:ManageShortcutsViewModel"
+        MaxWidth="950"
+        MinWidth="640"
+        MaxHeight="760"
+        MinHeight="360"
+        Background="{DynamicResource AppDialogBackground}"
+        Title="{t:Translate Text='Manage shortcuts'}">
+
+    <dialogs:ImmersiveDialog.Styles>
+        <Style Selector="DataGridCell:current /template/ Grid#FocusVisual">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="DataGridCell:current">
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="Border.shortcutRow">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Border.shortcutRow:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
+        </Style>
+    </dialogs:ImmersiveDialog.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto"
+          Margin="16"
+          RowSpacing="8">
+
+        <!-- ── Header: Reset list button ── -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+
+            <TextBlock Text="{t:Translate Text='Here you can change what UniGetUI does with the shortcuts your packages create.'}"
+                       TextWrapping="Wrap"
+                       FontWeight="Bold"
+                       VerticalAlignment="Center"
+                       Opacity="0.75"/>
+
+            <Button x:Name="ResetButton" Grid.Column="1" VerticalAlignment="Center"
+                    IsVisible="{Binding CanResetList}"
+                    automation:AutomationProperties.Name="{t:Translate Text='Reset list'}">
+                <TextBlock Text="{t:Translate Text='Reset list'}"
+                           automation:AutomationProperties.AccessibilityView="Raw"/>
+                <Button.Flyout>
+                    <Flyout Placement="Bottom">
+                        <Flyout.FlyoutPresenterTheme>
+                            <ControlTheme TargetType="FlyoutPresenter">
+                                <Setter Property="Background" Value="{DynamicResource AppDialogPanelBackground}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="CornerRadius" Value="8"/>
+                                <Setter Property="Padding" Value="12"/>
+                            </ControlTheme>
+                        </Flyout.FlyoutPresenterTheme>
+                        <Grid Width="300"
+                              ColumnDefinitions="*,*"
+                              RowDefinitions="Auto,Auto"
+                              ColumnSpacing="8" RowSpacing="16"
+                              Margin="4">
+                            <TextBlock Grid.ColumnSpan="2"
+                                       Text="{t:Translate Text='Do you really want to reset this list? This action cannot be reverted.'}"
+                                       TextWrapping="Wrap"/>
+                            <Button Grid.Row="1" Grid.Column="0"
+                                    Content="{t:Translate Text='Yes'}"
+                                    automation:AutomationProperties.Name="{t:Translate Text='Yes'}"
+                                    HorizontalAlignment="Stretch"
+                                    Click="ResetYes_Click"/>
+                            <Button Grid.Row="1" Grid.Column="1"
+                                    Content="{t:Translate Text='No'}"
+                                    automation:AutomationProperties.Name="{t:Translate Text='No'}"
+                                    HorizontalAlignment="Stretch"
+                                    Classes="accent"
+                                    Click="ResetNo_Click"/>
+                        </Grid>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+
+        </Grid>
+
+        <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" Padding="0,8,0,0">
+
+            <!-- ══ Desktop shortcuts ══ -->
+            <TabItem Header="{t:Translate Text='Desktop shortcuts'}"
+                     IsVisible="{Binding ShowDesktopTab}">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+
+                    <TextBlock Grid.Row="0" TextWrapping="Wrap" Opacity="0.75">
+                        <TextBlock.Text>
+                            <t:Translate Text="Checking a shortcut will make UniGetUI delete it if it gets created on a future upgrade. Unchecking it will keep the shortcut intact"/>
+                        </TextBlock.Text>
+                    </TextBlock>
+
+                    <Border Grid.Row="1"
+                            CornerRadius="8"
+                            BorderThickness="1"
+                            BorderBrush="{DynamicResource AppBorderBrush}">
+                        <DataGrid x:Name="ShortcutsGrid"
+                                  ItemsSource="{Binding Entries}"
+                                  AutoGenerateColumns="False"
+                                  CanUserReorderColumns="True"
+                                  CanUserResizeColumns="True"
+                                  CanUserSortColumns="False"
+                                  SelectionMode="Single"
+                                  HeadersVisibility="None"
+                                  GridLinesVisibility="Horizontal"
+                                  automation:AutomationProperties.Name="{t:Translate Text='Manage shortcuts'}"
+                                  automation:AutomationProperties.HelpText="{t:Translate Desktop shortcuts list}">
+                            <DataGrid.Columns>
+
+                                <!-- Delete? checkbox -->
+                                <DataGridTemplateColumn Width="72">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
+                                            <CheckBox IsChecked="{Binding IsDeletable}"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      automation:AutomationProperties.Name="{Binding Name}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- Name -->
+                                <DataGridTemplateColumn Width="2*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
+                                            <StackPanel Orientation="Horizontal" Spacing="6"
+                                                        VerticalAlignment="Center" Margin="0,0,4,0">
+                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/id.svg"
+                                                                  Width="16" Height="16" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip.Tip="{Binding Name}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- Path -->
+                                <DataGridTemplateColumn Width="3*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
+                                            <StackPanel Orientation="Horizontal" Spacing="6"
+                                                        VerticalAlignment="Center" Margin="0,0,4,0">
+                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/open_folder.svg"
+                                                                  Width="16" Height="16" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip.Tip="{Binding Path}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- Open in explorer -->
+                                <DataGridTemplateColumn Width="48">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
+                                            <Button Width="32" Height="32"
+                                                    Padding="0"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    IsEnabled="{Binding ExistsOnDisk}"
+                                                    Command="{Binding OpenCommand}"
+                                                    ToolTip.Tip="{t:Translate Text='Open in explorer'}"
+                                                    automation:AutomationProperties.Name="{t:Translate Text='Open in explorer'}">
+                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/launch.svg"
+                                                                  Width="16" Height="16"/>
+                                            </Button>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- Reset (remove from list) -->
+                                <DataGridTemplateColumn Width="48">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
+                                            <Button Width="32" Height="32"
+                                                    Padding="0"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Command="{Binding RemoveCommand}"
+                                                    ToolTip.Tip="{t:Translate Text='Remove from list'}"
+                                                    automation:AutomationProperties.Name="{t:Translate Text='Remove from list'}">
+                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/delete.svg"
+                                                                  Width="16" Height="16"/>
+                                            </Button>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+                        <ToggleSwitch IsChecked="{Binding AutoDelete}"
+                                      OnContent="" OffContent=""
+                                      VerticalAlignment="Center"
+                                      automation:AutomationProperties.LabeledBy="{Binding #AutoDeleteLabel}"/>
+                        <TextBlock x:Name="AutoDeleteLabel"
+                                   Text="{t:Translate Text='When new shortcuts are detected, delete them automatically instead of showing this dialog.'}"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"
+                                   MaxWidth="600"
+                                   Opacity="0.85"/>
+                    </StackPanel>
+
+                </Grid>
+            </TabItem>
+
+            <!-- ══ Start Menu folders ══ -->
+            <TabItem Header="{t:Translate Text='Start Menu folders'}"
+                     IsVisible="{Binding ShowStartMenuTabs}">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+
+                    <StackPanel Grid.Row="0" Orientation="Vertical" Spacing="4">
+
+                        <TextBlock TextWrapping="Wrap" Opacity="0.75">
+                            <TextBlock.Text>
+                                <t:Translate Text="Pick the folder each package should keep its Start Menu shortcuts in, and tick the ones you would rather delete."/>
+                            </TextBlock.Text>
+                        </TextBlock>
+
+                        <TextBlock TextWrapping="Wrap" FontSize="11" Opacity="0.6">
+                            <TextBlock.Text>
+                                <t:Translate Text="Moving a shortcut breaks anything pinned to it: a pin on the Start menu or the taskbar points at the file's original location, so it has to be pinned again from the new one."/>
+                            </TextBlock.Text>
+                        </TextBlock>
+
+                    </StackPanel>
+
+                    <Grid Grid.Row="1">
+
+                        <TextBlock Text="{t:Translate Text='No package has a Start Menu folder yet. A package appears here once an install creates shortcuts for it.'}"
+                                   IsVisible="{Binding !HasStartMenuRules}"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="520"
+                                   Opacity="0.7"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   TextAlignment="Center"/>
+
+                        <ScrollViewer IsVisible="{Binding HasStartMenuRules}"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding StartMenuRules}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:StartMenuFolderRuleViewModel">
+                                        <Border CornerRadius="8"
+                                                BorderThickness="1"
+                                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                                Padding="12"
+                                                Margin="0,0,0,8">
+                                            <StackPanel Orientation="Vertical" Spacing="8">
+
+                                                <Grid ColumnDefinitions="*,Auto,200,Auto,Auto" ColumnSpacing="8">
+
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               FontWeight="SemiBold"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip.Tip="{Binding PackageId}"/>
+
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{t:Translate Text='Keep its shortcuts in'}"
+                                                               VerticalAlignment="Center"
+                                                               Opacity="0.75"/>
+
+                                                    <ComboBox Grid.Column="2"
+                                                              ItemsSource="{Binding FolderOptions}"
+                                                              SelectedItem="{Binding SelectedFolderOption}"
+                                                              SelectionChanged="FolderOption_SelectionChanged"
+                                                              HorizontalAlignment="Stretch"
+                                                              VerticalAlignment="Center"
+                                                              automation:AutomationProperties.Name="{Binding DisplayName}"/>
+
+                                                    <TextBox Grid.Column="3"
+                                                             Classes="newFolderName"
+                                                             Text="{Binding NewFolderName}"
+                                                             IsVisible="{Binding IsCreatingFolder}"
+                                                             Width="150"
+                                                             VerticalAlignment="Center"
+                                                             Watermark="{t:Translate Text='Folder name'}"
+                                                             automation:AutomationProperties.Name="{t:Translate Text='Folder name'}"/>
+
+                                                    <Button Grid.Column="4"
+                                                            Width="32" Height="32"
+                                                            Padding="0"
+                                                            VerticalAlignment="Center"
+                                                            Command="{Binding RemoveCommand}"
+                                                            ToolTip.Tip="{t:Translate Text='Stop using a folder for this package. Its shortcuts stay where they are.'}"
+                                                            automation:AutomationProperties.Name="{t:Translate Text='Stop using a folder for this package'}">
+                                                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/cross.svg"
+                                                                          Width="16" Height="16"/>
+                                                    </Button>
+
+                                                </Grid>
+
+                                                <TextBlock Text="{t:Translate Text='Pick a folder from the list above, otherwise nothing will be moved.'}"
+                                                           IsVisible="{Binding NeedsFolder}"
+                                                           FontSize="11"
+                                                           Opacity="0.9"
+                                                           Foreground="{DynamicResource SettingWarningTextForeground}"
+                                                           TextWrapping="Wrap"/>
+
+                                                <TextBlock Text="{t:Translate Text='That folder name cannot be used. Type a plain name, without a drive letter or a .. segment.'}"
+                                                           IsVisible="{Binding FolderIsInvalid}"
+                                                           FontSize="11"
+                                                           Opacity="0.9"
+                                                           Foreground="{DynamicResource SettingWarningTextForeground}"
+                                                           TextWrapping="Wrap"/>
+
+                                                <Border IsVisible="{Binding HasCandidates}"
+                                                        BorderThickness="0,0,0,1"
+                                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                                        Padding="0,0,0,6">
+                                                    <Grid ColumnDefinitions="56,56,*,140,150,40"
+                                                          ColumnSpacing="4">
+                                                        <TextBlock Text="{t:Translate Text='Move'}"
+                                                                   FontSize="14"
+                                                                   HorizontalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="1"
+                                                                   Text="{t:Translate Text='Delete'}"
+                                                                   FontSize="14"
+                                                                   HorizontalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2"
+                                                                   Text="{t:Translate Text='Shortcut'}"
+                                                                   FontSize="14"/>
+                                                        <TextBlock Grid.Column="3"
+                                                                   Text="{t:Translate Text='Currently in'}"
+                                                                   FontSize="14"/>
+                                                        <TextBlock Grid.Column="4"
+                                                                   Text="{t:Translate Text='Rename to'}"
+                                                                   FontSize="14"/>
+                                                    </Grid>
+                                                </Border>
+
+                                                <ItemsControl ItemsSource="{Binding Candidates}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:ShortcutCandidateViewModel">
+                                                          <Border Classes="shortcutRow"
+                                                                  CornerRadius="4"
+                                                                  MinHeight="40"
+                                                                  BorderThickness="0,0,0,1"
+                                                                  BorderBrush="{DynamicResource AppBorderBrush}">
+                                                            <Grid ColumnDefinitions="56,56,*,140,150,40"
+                                                                  ColumnSpacing="4">
+
+                                                                <CheckBox IsChecked="{Binding IsMoveSelected}"
+                                                                          HorizontalAlignment="Center"
+                                                                          VerticalAlignment="Center"
+                                                                          automation:AutomationProperties.Name="{Binding MoveAutomationName}"
+                                                                          ToolTip.Tip="{t:Translate Text='Move this shortcut into the folder'}"/>
+
+                                                                <CheckBox Grid.Column="1"
+                                                                          IsChecked="{Binding IsDeleteSelected}"
+                                                                          HorizontalAlignment="Center"
+                                                                          VerticalAlignment="Center"
+                                                                          automation:AutomationProperties.Name="{Binding DeleteAutomationName}"
+                                                                          ToolTip.Tip="{t:Translate Text='Delete this shortcut, now and whenever an upgrade creates it again'}"/>
+
+                                                                <StackPanel Grid.Column="2"
+                                                                            Orientation="Horizontal"
+                                                                            Spacing="6"
+                                                                            VerticalAlignment="Center">
+                                                                    <TextBlock Text="{Binding Name}"
+                                                                               VerticalAlignment="Center"
+                                                                               TextTrimming="CharacterEllipsis"
+                                                                               ToolTip.Tip="{Binding Path}"/>
+                                                                    <Border Background="{DynamicResource SystemAccentColor}"
+                                                                            CornerRadius="4"
+                                                                            Padding="4,0"
+                                                                            VerticalAlignment="Center"
+                                                                            IsVisible="{Binding IsNew}">
+                                                                        <TextBlock Text="{t:Translate Text='new'}"
+                                                                                   FontSize="10"
+                                                                                   Foreground="White"/>
+                                                                    </Border>
+                                                                </StackPanel>
+
+                                                                <TextBlock Grid.Column="3"
+                                                                           Text="{Binding Location}"
+                                                                           VerticalAlignment="Center"
+                                                                           Opacity="0.6"
+                                                                           TextTrimming="CharacterEllipsis"
+                                                                           ToolTip.Tip="{Binding Path}"/>
+
+                                                                <TextBox Grid.Column="4"
+                                                                         Text="{Binding NewName}"
+                                                                         VerticalAlignment="Center"
+                                                                         Margin="0,2"
+                                                                         Watermark="{Binding Name}"
+                                                                         ToolTip.Tip="{t:Translate Text='Leave empty to keep the current name'}"
+                                                                         automation:AutomationProperties.Name="{t:Translate Text='Rename to'}"/>
+
+                                                                <Button Grid.Column="5"
+                                                                        Width="32" Height="32"
+                                                                        Padding="0"
+                                                                        VerticalAlignment="Center"
+                                                                        Command="{Binding OpenCommand}"
+                                                                        ToolTip.Tip="{t:Translate Text='Open in explorer'}"
+                                                                        automation:AutomationProperties.Name="{t:Translate Text='Open in explorer'}">
+                                                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/launch.svg"
+                                                                                      Width="16" Height="16"/>
+                                                                </Button>
+
+                                                            </Grid>
+                                                          </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                    </Grid>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+                        <ToggleSwitch IsChecked="{Binding AskAboutStartMenuShortcuts}"
+                                      OnContent="" OffContent=""
+                                      VerticalAlignment="Center"
+                                      automation:AutomationProperties.LabeledBy="{Binding #AskAboutStartMenuLabel}"/>
+                        <TextBlock x:Name="AskAboutStartMenuLabel"
+                                   Text="{t:Translate Text='Ask about the Start Menu shortcuts created during an install or upgrade.'}"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"
+                                   MaxWidth="600"
+                                   Opacity="0.85"/>
+                    </StackPanel>
+
+                </Grid>
+            </TabItem>
+
+            <!-- ══ Start Menu shortcuts ══ -->
+            <TabItem Header="{t:Translate Text='Start Menu shortcuts'}"
+                     IsVisible="{Binding ShowStartMenuTabs}">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBlock Text="{t:Translate Text='Tick a shortcut to delete it, now and whenever an upgrade creates it again.'}"
+                                   TextWrapping="Wrap"
+                                   Opacity="0.75"
+                                   VerticalAlignment="Center"/>
+                        <CheckBox Grid.Column="1"
+                                  IsChecked="{Binding ShowAllStartMenuShortcuts}"
+                                  Content="{Binding ShowAllStartMenuShortcutsLabel}"
+                                  VerticalAlignment="Center"
+                                  automation:AutomationProperties.Name="{Binding ShowAllStartMenuShortcutsLabel}"/>
+                    </Grid>
+
+                    <Border Grid.Row="1"
+                            CornerRadius="8"
+                            BorderThickness="1"
+                            BorderBrush="{DynamicResource AppBorderBrush}">
+                        <Grid>
+
+                            <TextBlock Text="{Binding StartMenuEmptyStateText}"
+                                       IsVisible="{Binding !HasStartMenuEntries}"
+                                       TextWrapping="Wrap"
+                                       Opacity="0.7"
+                                       Margin="16"
+                                       MaxWidth="520"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       TextAlignment="Center"/>
+
+                            <DataGrid x:Name="StartMenuShortcutsGrid"
+                                      ItemsSource="{Binding StartMenuEntries}"
+                                      IsVisible="{Binding HasStartMenuEntries}"
+                                      AutoGenerateColumns="False"
+                                      CanUserReorderColumns="True"
+                                      CanUserResizeColumns="True"
+                                      CanUserSortColumns="False"
+                                      SelectionMode="Single"
+                                      HeadersVisibility="None"
+                                      GridLinesVisibility="Horizontal"
+                                      automation:AutomationProperties.Name="{t:Translate Text='Manage shortcuts'}"
+                                      automation:AutomationProperties.HelpText="{t:Translate Start Menu shortcuts list}">
+                                <DataGrid.Columns>
+
+                                    <!-- Delete? checkbox -->
+                                    <DataGridTemplateColumn Width="72">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate x:DataType="vm:StartMenuShortcutEntryViewModel">
+                                                <CheckBox IsChecked="{Binding IsDeletable}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"
+                                                          automation:AutomationProperties.Name="{Binding Name}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <!-- Name -->
+                                    <DataGridTemplateColumn Width="2*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate x:DataType="vm:StartMenuShortcutEntryViewModel">
+                                                <StackPanel Orientation="Horizontal" Spacing="6"
+                                                            VerticalAlignment="Center" Margin="0,0,4,0">
+                                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/id.svg"
+                                                                      Width="16" Height="16" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip.Tip="{Binding Name}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <!-- Folder -->
+                                    <DataGridTemplateColumn Width="3*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate x:DataType="vm:StartMenuShortcutEntryViewModel">
+                                                <StackPanel Orientation="Horizontal" Spacing="6"
+                                                            VerticalAlignment="Center" Margin="0,0,4,0">
+                                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/open_folder.svg"
+                                                                      Width="16" Height="16" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding Location}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip.Tip="{Binding Path}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <!-- Open in explorer -->
+                                    <DataGridTemplateColumn Width="48">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate x:DataType="vm:StartMenuShortcutEntryViewModel">
+                                                <Button Width="32" Height="32"
+                                                        Padding="0"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        IsEnabled="{Binding ExistsOnDisk}"
+                                                        Command="{Binding OpenCommand}"
+                                                        ToolTip.Tip="{t:Translate Text='Open in explorer'}"
+                                                        automation:AutomationProperties.Name="{t:Translate Text='Open in explorer'}">
+                                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/launch.svg"
+                                                                      Width="16" Height="16"/>
+                                                </Button>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <!-- Reset (remove from list) -->
+                                    <DataGridTemplateColumn Width="48">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate x:DataType="vm:StartMenuShortcutEntryViewModel">
+                                                <Button Width="32" Height="32"
+                                                        Padding="0"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        IsVisible="{Binding CanStopTracking}"
+                                                        Command="{Binding RemoveCommand}"
+                                                        ToolTip.Tip="{t:Translate Text='Stop tracking this shortcut. It is not deleted.'}"
+                                                        automation:AutomationProperties.Name="{t:Translate Text='Stop tracking this shortcut'}">
+                                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/cross.svg"
+                                                                      Width="16" Height="16"/>
+                                                </Button>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                        </Grid>
+                    </Border>
+
+                </Grid>
+            </TabItem>
+
+        </TabControl>
+
+        <!-- ── Footer: save button ── -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4,0,0">
+
+            <Button Grid.Column="1"
+                    Classes="accent"
+                    Command="{Binding SaveAndCloseCommand}"
+                    VerticalAlignment="Center"
+                    Content="{t:Translate Text='Save and close'}"/>
+
+        </Grid>
+
+    </Grid>
+</dialogs:ImmersiveDialog>

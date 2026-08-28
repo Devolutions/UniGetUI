@@ -291,6 +291,65 @@ public static class IpcCliCommandRunner
                     output,
                     await client.ResetDesktopShortcutsAsync()
                 ),
+                "list-start-menu-shortcuts" => await WriteWrappedJsonAsync(
+                    output,
+                    "shortcuts",
+                    await client.ListStartMenuShortcutsAsync()
+                ),
+                "set-start-menu-shortcut" => await WriteJsonAsync(
+                    output,
+                    await client.SetStartMenuShortcutAsync(
+                        BuildStartMenuShortcutRequest(args, requireStatus: true)
+                    )
+                ),
+                "reset-start-menu-shortcut" => await WriteJsonAsync(
+                    output,
+                    await client.ResetStartMenuShortcutAsync(
+                        GetRequiredArgument(
+                            args,
+                            "--path",
+                            "start-menu shortcut reset requires --path."
+                        )
+                    )
+                ),
+                "reset-start-menu-shortcuts" => await WriteJsonAsync(
+                    output,
+                    await client.ResetStartMenuShortcutsAsync()
+                ),
+                "list-start-menu-folders" => await WriteWrappedJsonAsync(
+                    output,
+                    "folders",
+                    await client.ListStartMenuFoldersAsync()
+                ),
+                "set-start-menu-folder" => await WriteJsonAsync(
+                    output,
+                    await client.SetStartMenuFolderAsync(
+                        new IpcStartMenuFolderRequest
+                        {
+                            PackageId = GetRequiredArgument(
+                                args,
+                                "--package",
+                                "start-menu folder set requires --package."
+                            ),
+                            Folder = GetRequiredArgument(
+                                args,
+                                "--folder",
+                                "start-menu folder set requires --folder."
+                            ),
+                            RelocateExisting = args.Contains("--relocate-existing"),
+                        }
+                    )
+                ),
+                "remove-start-menu-folder" => await WriteJsonAsync(
+                    output,
+                    await client.RemoveStartMenuFolderAsync(
+                        GetRequiredArgument(
+                            args,
+                            "--package",
+                            "start-menu folder remove requires --package."
+                        )
+                    )
+                ),
                 "get-app-log" => await WriteWrappedJsonAsync(
                     output,
                     "entries",
@@ -621,6 +680,24 @@ public static class IpcCliCommandRunner
                 "This command requires --manager."
             ),
             Enabled = GetRequiredBoolArgument(args, "--enabled"),
+        };
+    }
+
+    private static IpcStartMenuShortcutRequest BuildStartMenuShortcutRequest(
+        IReadOnlyList<string> args,
+        bool requireStatus
+    )
+    {
+        return new IpcStartMenuShortcutRequest
+        {
+            Path = GetRequiredArgument(args, "--path", "This command requires --path."),
+            Status = requireStatus
+                ? GetRequiredArgument(
+                    args,
+                    "--status",
+                    "This command requires --status."
+                )
+                : GetOptionalArgument(args, "--status"),
         };
     }
 

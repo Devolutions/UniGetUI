@@ -169,4 +169,59 @@ public sealed class IpcCliSyntaxTests
     {
         Assert.False(IpcCliSyntax.HasVerbCommand(["foo"]));
     }
+
+    [Theory]
+    [InlineData("list", "list-start-menu-shortcuts")]
+    [InlineData("set", "set-start-menu-shortcut")]
+    [InlineData("reset", "reset-start-menu-shortcut")]
+    [InlineData("reset-all", "reset-start-menu-shortcuts")]
+    public void ParseMapsStartMenuShortcutCommands(string verb, string expected)
+    {
+        IpcCliParseResult result = IpcCliSyntax.Parse(["start-menu", "shortcut", verb]);
+
+        Assert.Equal(IpcCliParseStatus.Success, result.Status);
+        Assert.Equal(expected, GetCommand(result));
+    }
+
+    [Theory]
+    [InlineData("list", "list-start-menu-folders")]
+    [InlineData("set", "set-start-menu-folder")]
+    [InlineData("remove", "remove-start-menu-folder")]
+    public void ParseMapsStartMenuFolderCommands(string verb, string expected)
+    {
+        IpcCliParseResult result = IpcCliSyntax.Parse(["start-menu", "folder", verb]);
+
+        Assert.Equal(IpcCliParseStatus.Success, result.Status);
+        Assert.Equal(expected, GetCommand(result));
+    }
+
+    [Fact]
+    public void ParseNormalizesStartMenuAliases()
+    {
+        IpcCliParseResult result = IpcCliSyntax.Parse(
+            ["startmenu", "folders", "set", "--package", "winget\\Contoso.Tool", "--folder", "Dev Tools"]
+        );
+
+        Assert.Equal(IpcCliParseStatus.Success, result.Status);
+        Assert.Equal("set-start-menu-folder", GetCommand(result));
+        Assert.Equal(
+            ["--package", "winget\\Contoso.Tool", "--folder", "Dev Tools"],
+            GetEffectiveArgs(result)
+        );
+    }
+
+    [Fact]
+    public void ParseKeepsStartMenuShortcutArguments()
+    {
+        IpcCliParseResult result = IpcCliSyntax.Parse(
+            ["start-menu", "shortcut", "set", "--path", "C:\\Programs\\App.lnk", "--status", "delete"]
+        );
+
+        Assert.Equal(IpcCliParseStatus.Success, result.Status);
+        Assert.Equal("set-start-menu-shortcut", GetCommand(result));
+        Assert.Equal(
+            ["--path", "C:\\Programs\\App.lnk", "--status", "delete"],
+            GetEffectiveArgs(result)
+        );
+    }
 }

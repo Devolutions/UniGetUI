@@ -313,6 +313,37 @@ These keys are used by package-related endpoints such as install, update, uninst
 | `POST` | `/uniget/v1/desktop-shortcuts/reset` | Yes | Query `path` | `shortcut reset` |
 | `POST` | `/uniget/v1/desktop-shortcuts/reset-all` | Yes | None | `shortcut reset-all` |
 
+### Start Menu shortcuts
+
+Deletion verdicts are keyed by shortcut path and are re-applied whenever an upgrade recreates
+the shortcut. Paths outside a Start Menu `Programs` directory, and paths that are not a `.lnk`
+or `.url` shortcut, are rejected. `reset-all` forgets every verdict; the folder rules and the
+relocations they recorded are left alone, and are managed by the folder endpoints below.
+
+| Method | Path | Auth | Parameters/body | CLI equivalent |
+| --- | --- | --- | --- | --- |
+| `GET` | `/uniget/v1/start-menu-shortcuts` | Yes | None | `start-menu shortcut list` |
+| `POST` | `/uniget/v1/start-menu-shortcuts/set` | Yes | Query `path`, `status` | `start-menu shortcut set` |
+| `POST` | `/uniget/v1/start-menu-shortcuts/reset` | Yes | Query `path` | `start-menu shortcut reset` |
+| `POST` | `/uniget/v1/start-menu-shortcuts/reset-all` | Yes | None | `start-menu shortcut reset-all` |
+
+### Start Menu folders
+
+A folder rule names the subfolder of the current user's Start Menu `Programs` directory where a
+package should keep its shortcuts. UniGetUI re-applies it after every install and upgrade, and
+deletes the relocated shortcuts when the package is uninstalled. `package` is the package
+identity, `manager\PackageId` (for example `winget\Python.Python.3.13`); the manager segment is
+lower-cased. `folder` must be a subfolder of that directory, so an absolute path, a `..` segment
+or the machine-wide directory is rejected. `relocate-existing` additionally moves the shortcuts
+that already match the package, which are listed as `matchingShortcuts` so a caller can inspect
+them first.
+
+| Method | Path | Auth | Parameters/body | CLI equivalent |
+| --- | --- | --- | --- | --- |
+| `GET` | `/uniget/v1/start-menu-folders` | Yes | None | `start-menu folder list` |
+| `POST` | `/uniget/v1/start-menu-folders/set` | Yes | Query `package`, `folder`, optional `relocate-existing` | `start-menu folder set` |
+| `POST` | `/uniget/v1/start-menu-folders/remove` | Yes | Query `package` | `start-menu folder remove` |
+
 ### Logs
 
 | Method | Path | Auth | Parameters/body | CLI equivalent |

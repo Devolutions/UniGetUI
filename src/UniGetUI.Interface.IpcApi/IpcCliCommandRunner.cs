@@ -336,8 +336,7 @@ public static class IpcCliCommandRunner
                                 "--folder",
                                 "start-menu folder set requires --folder."
                             ),
-                            RelocateExisting =
-                                GetOptionalBoolArgument(args, "--relocate-existing") ?? false,
+                            RelocateExisting = args.Contains("--relocate-existing"),
                         }
                     )
                 ),

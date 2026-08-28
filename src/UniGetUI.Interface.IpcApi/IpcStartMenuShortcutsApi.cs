@@ -91,6 +91,7 @@ public static class IpcStartMenuShortcutsApi
         };
 
         StartMenuShortcutsDatabase.SetStatus(shortcutPath, status);
+        StartMenuShortcutsDatabase.RemovePendingShortcuts(shortcutPath);
 
         if (status is StartMenuShortcutsDatabase.Status.Delete && File.Exists(shortcutPath))
         {

@@ -309,6 +309,13 @@
                                                            Foreground="{DynamicResource SettingWarningTextForeground}"
                                                            TextWrapping="Wrap"/>
 
+                                                <TextBlock Text="{t:Translate Text='That folder name cannot be used. Type a plain name, without a drive letter or a .. segment.'}"
+                                                           IsVisible="{Binding FolderIsInvalid}"
+                                                           FontSize="11"
+                                                           Opacity="0.9"
+                                                           Foreground="{DynamicResource SettingWarningTextForeground}"
+                                                           TextWrapping="Wrap"/>
+
                                                 <Border IsVisible="{Binding HasCandidates}"
                                                         BorderThickness="0,0,0,1"
                                                         BorderBrush="{DynamicResource AppBorderBrush}"

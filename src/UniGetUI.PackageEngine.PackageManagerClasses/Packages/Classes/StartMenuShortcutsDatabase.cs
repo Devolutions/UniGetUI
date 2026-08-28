@@ -1,3 +1,4 @@
+using System.Text;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.PackageEngine.Interfaces;
@@ -335,6 +336,29 @@ public static class StartMenuShortcutsDatabase
                 PendingShortcutsKey,
                 BuildRecordKey(packageId, shortcutPath)
             );
+        }
+    }
+
+    public static int RemovePendingShortcuts(string shortcutPath)
+    {
+        lock (DatabaseLock)
+        {
+            int removed = 0;
+
+            foreach (var pending in GetPendingShortcuts())
+            {
+                if (
+                    string.Equals(
+                        pending.ShortcutPath,
+                        shortcutPath,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    && RemoveFromPending(pending.PackageId, pending.ShortcutPath)
+                )
+                    removed++;
+            }
+
+            return removed;
         }
     }
 
@@ -697,10 +721,17 @@ public static class StartMenuShortcutsDatabase
 
             int deleted = 0;
 
-            foreach ((string originalPath, string relocatedPath) in GetRelocationsForPackage(packageId))
+            foreach (
+                (string originalPath, string relocatedPath) in GetRelocationsForPackage(packageId)
+            )
             {
-                if (File.Exists(relocatedPath) && DeleteFromDisk(relocatedPath))
+                if (File.Exists(relocatedPath))
+                {
+                    if (!DeleteFromDisk(relocatedPath))
+                        continue;
+
                     deleted++;
+                }
 
                 RemoveRelocationRecord(packageId, originalPath);
             }
@@ -860,9 +891,9 @@ public static class StartMenuShortcutsDatabase
         return (recordKey[..separatorIndex], recordKey[(separatorIndex + 1)..]);
     }
 
-    private static IReadOnlyList<string> GetIdentifiers(IPackage package)
+    private static IReadOnlyList<MatchText> GetIdentifiers(IPackage package)
     {
-        return NormalizeIdentifiers(
+        return BuildIdentifiers(
             [
                 package.Name,
                 package.Id,
@@ -872,26 +903,25 @@ public static class StartMenuShortcutsDatabase
         );
     }
 
-    private static IReadOnlyList<string> GetIdentifiers(string packageId)
+    private static IReadOnlyList<MatchText> GetIdentifiers(string packageId)
     {
         int separatorIndex = packageId.IndexOf('\\');
         string id = separatorIndex >= 0 ? packageId[(separatorIndex + 1)..] : packageId;
 
-        return NormalizeIdentifiers([id, id.Split('.')[^1], id.Split('/')[^1]]);
+        return BuildIdentifiers([id, id.Split('.')[^1], id.Split('/')[^1]]);
     }
 
-    private static IReadOnlyList<string> NormalizeIdentifiers(IEnumerable<string> values)
+    private static IReadOnlyList<MatchText> BuildIdentifiers(IEnumerable<string> values)
     {
         return values
-            .Select(Normalize)
-            .Where(identifier => identifier.Length >= MinimumMatchLength)
-            .Distinct()
+            .Select(BuildMatchText)
+            .Where(identifier => identifier.Value.Length >= MinimumMatchLength)
             .ToList();
     }
 
     private static bool IsPlausibleMatch(
         string shortcutPath,
-        IReadOnlyList<string> identifiers
+        IReadOnlyList<MatchText> identifiers
     )
     {
         var roots = GetShortcutRoots();
@@ -905,9 +935,9 @@ public static class StartMenuShortcutsDatabase
             candidates.Add(Path.GetFileName(parentDirectory));
 
         foreach (
-            string candidate in candidates
-                .Select(Normalize)
-                .Where(candidate => candidate.Length >= MinimumMatchLength)
+            MatchText candidate in candidates
+                .Select(BuildMatchText)
+                .Where(candidate => candidate.Value.Length >= MinimumMatchLength)
         )
         {
             if (identifiers.Any(identifier => AreRelated(candidate, identifier)))
@@ -917,22 +947,67 @@ public static class StartMenuShortcutsDatabase
         return false;
     }
 
-    private static bool AreRelated(string candidate, string identifier)
+    private sealed class MatchText(string value, HashSet<int> boundaries)
     {
-        if (candidate.Equals(identifier, StringComparison.Ordinal))
+        public string Value { get; } = value;
+
+        public HashSet<int> Boundaries { get; } = boundaries;
+    }
+
+    private static MatchText BuildMatchText(string value)
+    {
+        var text = new StringBuilder(value.Length);
+        HashSet<int> boundaries = [0];
+
+        foreach (char character in value)
+        {
+            if (char.IsLetterOrDigit(character))
+                text.Append(char.ToLowerInvariant(character));
+            else
+                boundaries.Add(text.Length);
+        }
+
+        boundaries.Add(text.Length);
+        return new MatchText(text.ToString(), boundaries);
+    }
+
+    private static bool AreRelated(MatchText candidate, MatchText identifier)
+    {
+        if (candidate.Value.Equals(identifier.Value, StringComparison.Ordinal))
             return true;
 
-        if (candidate.StartsWith(identifier, StringComparison.Ordinal))
+        if (StartsAtBoundary(candidate, identifier) || StartsAtBoundary(identifier, candidate))
             return true;
 
-        if (identifier.StartsWith(candidate, StringComparison.Ordinal))
-            return true;
-
-        if (Math.Min(candidate.Length, identifier.Length) < ContainmentMatchLength)
+        if (Math.Min(candidate.Value.Length, identifier.Value.Length) < ContainmentMatchLength)
             return false;
 
-        return candidate.Contains(identifier, StringComparison.Ordinal)
-            || identifier.Contains(candidate, StringComparison.Ordinal);
+        return ContainsAtBoundaries(candidate, identifier)
+            || ContainsAtBoundaries(identifier, candidate);
+    }
+
+    private static bool StartsAtBoundary(MatchText text, MatchText part)
+    {
+        return text.Value.StartsWith(part.Value, StringComparison.Ordinal)
+            && text.Boundaries.Contains(part.Value.Length);
+    }
+
+    private static bool ContainsAtBoundaries(MatchText text, MatchText part)
+    {
+        for (
+            int start = text.Value.IndexOf(part.Value, StringComparison.Ordinal);
+            start >= 0;
+            start = text.Value.IndexOf(part.Value, start + 1, StringComparison.Ordinal)
+        )
+        {
+            if (
+                text.Boundaries.Contains(start)
+                && text.Boundaries.Contains(start + part.Value.Length)
+            )
+                return true;
+        }
+
+        return false;
     }
 
     private static void PruneEmptyDirectories(string? directory)
@@ -1004,10 +1079,5 @@ public static class StartMenuShortcutsDatabase
         {
             return false;
         }
-    }
-
-    private static string Normalize(string value)
-    {
-        return new string(value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
     }
 }

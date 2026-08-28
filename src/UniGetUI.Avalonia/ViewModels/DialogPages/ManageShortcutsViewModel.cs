@@ -57,6 +57,10 @@ public partial class ManageShortcutsViewModel : ObservableObject
 
     private HashSet<string> _shortcutsOwnedByRules = new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly Dictionary<string, bool> _unsavedStartMenuVerdicts = new(
+        StringComparer.OrdinalIgnoreCase
+    );
+
     public string ShowAllStartMenuShortcutsLabel =>
         CoreTools.Translate(
             "Show every Start Menu shortcut ({0})",
@@ -120,11 +124,20 @@ public partial class ManageShortcutsViewModel : ObservableObject
         }
     }
 
+    private void CaptureUnsavedStartMenuVerdicts()
+    {
+        foreach (var entry in StartMenuEntries)
+        {
+            if (entry.HasChanged)
+                _unsavedStartMenuVerdicts[entry.Path] = entry.IsDeletable;
+            else
+                _unsavedStartMenuVerdicts.Remove(entry.Path);
+        }
+    }
+
     private void LoadStartMenuEntries()
     {
-        var unsavedVerdicts = StartMenuEntries
-            .Where(entry => entry.HasChanged)
-            .ToDictionary(entry => entry.Path, entry => entry.IsDeletable, StringComparer.OrdinalIgnoreCase);
+        CaptureUnsavedStartMenuVerdicts();
 
         var allShortcuts = StartMenuShortcutsDatabase.GetAllShortcuts();
         AllStartMenuShortcutCount = allShortcuts.Count;
@@ -146,7 +159,7 @@ public partial class ManageShortcutsViewModel : ObservableObject
         {
             var entry = new StartMenuShortcutEntryViewModel(path);
 
-            if (unsavedVerdicts.TryGetValue(path, out bool unsaved))
+            if (_unsavedStartMenuVerdicts.TryGetValue(path, out bool unsaved))
                 entry.IsDeletable = unsaved;
 
             entry.Removed += OnStartMenuEntryRemoved;
@@ -221,7 +234,10 @@ public partial class ManageShortcutsViewModel : ObservableObject
     private void OnStartMenuEntryRemoved(object? sender, EventArgs e)
     {
         if (sender is StartMenuShortcutEntryViewModel entry)
+        {
+            _unsavedStartMenuVerdicts.Remove(entry.Path);
             StartMenuEntries.Remove(entry);
+        }
 
         OnPropertyChanged(nameof(HasStartMenuEntries));
     }
@@ -280,23 +296,31 @@ public partial class ManageShortcutsViewModel : ObservableObject
                 DesktopShortcutsDatabase.DeleteFromDisk(entry.Path);
         }
 
-        foreach (var entry in StartMenuEntries.Where(entry => entry.HasChanged))
+        CaptureUnsavedStartMenuVerdicts();
+
+        foreach ((string path, bool isDeletable) in _unsavedStartMenuVerdicts)
         {
             StartMenuShortcutsDatabase.SetStatus(
-                entry.Path,
-                entry.IsDeletable
+                path,
+                isDeletable
                     ? StartMenuShortcutsDatabase.Status.Delete
                     : StartMenuShortcutsDatabase.Status.Maintain);
+            StartMenuShortcutsDatabase.RemovePendingShortcuts(path);
 
-            if (!entry.IsDeletable)
+            if (!isDeletable)
                 continue;
 
-            if (File.Exists(entry.Path))
-                StartMenuShortcutsDatabase.DeleteFromDisk(entry.Path);
+            if (File.Exists(path))
+                StartMenuShortcutsDatabase.DeleteFromDisk(path);
         }
+
+        _unsavedStartMenuVerdicts.Clear();
 
         foreach (var rule in StartMenuRules)
         {
+            if (rule.FolderIsInvalid)
+                continue;
+
             foreach (var shortcut in rule.ShortcutsToDelete)
             {
                 StartMenuShortcutsDatabase.SetStatus(
@@ -331,6 +355,12 @@ public partial class ManageShortcutsViewModel : ObservableObject
     [RelayCommand]
     public void SaveAndClose()
     {
+        if (StartMenuRules.Any(rule => rule.FolderIsInvalid))
+        {
+            SelectedTabIndex = StartMenuFoldersTabIndex;
+            return;
+        }
+
         SaveChanges();
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
@@ -479,6 +509,10 @@ public partial class StartMenuFolderRuleViewModel : ObservableObject
         string.IsNullOrWhiteSpace(Folder)
         && Candidates.Any(candidate => candidate.IsMoveSelected);
 
+    public bool FolderIsInvalid =>
+        !string.IsNullOrWhiteSpace(Folder)
+        && StartMenuShortcutsDatabase.ResolveTargetDirectory(Folder) is null;
+
     public ObservableCollection<string> FolderOptions { get; } = [];
 
     public string NoFolderOption { get; }
@@ -497,7 +531,11 @@ public partial class StartMenuFolderRuleViewModel : ObservableObject
     [ObservableProperty]
     private bool _isCreatingFolder;
 
-    partial void OnFolderChanged(string value) => OnPropertyChanged(nameof(NeedsFolder));
+    partial void OnFolderChanged(string value)
+    {
+        OnPropertyChanged(nameof(NeedsFolder));
+        OnPropertyChanged(nameof(FolderIsInvalid));
+    }
 
     partial void OnSelectedFolderOptionChanged(string value)
     {

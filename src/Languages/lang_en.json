@@ -383,7 +383,6 @@
   "• Refer to the UniGetUI Logs to get more details regarding the affected file(s)": "• Refer to the UniGetUI Logs to get more details regarding the affected file(s)",
   "• Integrity checks can be disabled from the Experimental Settings": "• Integrity checks can be disabled from the Experimental Settings",
   "Manage shortcuts": "Manage shortcuts",
-  "UniGetUI has detected the following desktop shortcuts which can be removed automatically on future upgrades": "UniGetUI has detected the following desktop shortcuts which can be removed automatically on future upgrades",
   "Do you really want to reset this list? This action cannot be reverted.": "Do you really want to reset this list? This action cannot be reverted.",
   "Desktop shortcuts list": "Desktop shortcuts list",
   "Open in explorer": "Open in explorer",
@@ -562,7 +561,6 @@
   "Show a notification when an operation fails": "Show a notification when an operation fails",
   "Show a notification when an operation finishes successfully": "Show a notification when an operation finishes successfully",
   "Concurrency and execution": "Concurrency and execution",
-  "Automatic desktop shortcut remover": "Automatic desktop shortcut remover",
   "Choose how many operations should be performed in parallel": "Choose how many operations should be performed in parallel",
   "Clear successful operations from the operation list after a 5 second delay": "Clear successful operations from the operation list after a 5 second delay",
   "Download operations are not affected by this setting": "Download operations are not affected by this setting",
@@ -815,7 +813,6 @@
   "[RAN AS ADMINISTRATOR]": "RAN AS ADMINISTRATOR",
   "Portable mode": "Portable mode\n",
   "DEBUG BUILD": "DEBUG BUILD",
-  "Here you can change UniGetUI's behaviour regarding the following shortcuts. Checking a shortcut will make UniGetUI delete it if if gets created on a future upgrade. Unchecking it will keep the shortcut intact": "Here you can change UniGetUI's behaviour regarding the following shortcuts. Checking a shortcut will make UniGetUI delete it if gets created on a future upgrade. Unchecking it will keep the shortcut intact",
   "Manual scan": "Manual scan",
   "Existing shortcuts on your desktop will be scanned, and you will need to pick which ones to keep and which ones to remove.": "Existing shortcuts on your desktop will be scanned, and you will need to pick which ones to keep and which ones to remove.",
   "Delete?": "Delete?",
@@ -1066,5 +1063,6 @@
   "Stop tracking this shortcut. It is not deleted.": "Stop tracking this shortcut. It is not deleted.",
   "Stop tracking this shortcut": "Stop tracking this shortcut",
   "Shortcut management": "Shortcut management",
-  "Manage Start Menu shortcuts": "Manage Start Menu shortcuts"
+  "Manage Start Menu shortcuts": "Manage Start Menu shortcuts",
+  "That folder name cannot be used. Type a plain name, without a drive letter or a .. segment.": "That folder name cannot be used. Type a plain name, without a drive letter or a .. segment."
 }

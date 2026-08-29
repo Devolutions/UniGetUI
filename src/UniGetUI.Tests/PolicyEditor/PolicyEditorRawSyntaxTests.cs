@@ -1,0 +1,223 @@
+using System.Text.Json.Nodes;
+using Devolutions.Now.Policy.Model;
+using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
+
+namespace UniGetUI.Tests.PolicyEditor;
+
+public class PolicyEditorRawSyntaxTests
+{
+    [Fact]
+    public void TryParseStrict_ValidCanonicalRaw_Succeeds()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
+        draft.Rules.Add(PolicyRuleFactory.CreateBlank("rule-a"));
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(raw, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
+
+        Assert.True(ok);
+        Assert.Null(error);
+        Assert.NotNull(parsed);
+        Assert.Equal("id-1", parsed!.Metadata.Id);
+        Assert.Single(parsed.Rules);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void TryParseStrict_EmptyText_FailsWithoutTouchingOutput(string? text)
+    {
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(text, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.NotNull(error);
+    }
+
+    [Fact]
+    public void TryParseStrict_MalformedJson_FailsWithPointerFromException()
+    {
+        string malformed = "{ this is not valid json ";
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(malformed, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.NotNull(error);
+        Assert.False(string.IsNullOrEmpty(error!.Message));
+    }
+
+    private static PolicyDraftDocument BuildValidPackageDraft(string id = "contoso-policy")
+    {
+        return new PolicyDraftDocument
+        {
+            Schema = PolicyEditorPolicyContract.Schema,
+            PolicyVersion = "1.2.3",
+            PolicyType = PolicyEditorPolicyContract.PolicyType,
+            Metadata = new PolicyDraftMetadata { Id = id, Publisher = "Contoso" },
+            Enforcement = new PolicyEnforcement
+            {
+                DefaultDecision = Decision.Deny,
+                RulePrecedence = RulePrecedence.PriorityThenDeny,
+            },
+            Rules = [],
+        };
+    }
+
+    [Fact]
+    public void TryParseStrict_WrongSchema_FailsClosedWithSchemaPointer()
+    {
+        PolicyDraftDocument document = BuildValidPackageDraft();
+        document.Schema = "https://example.com/wrong-schema.json";
+        string raw = PolicyJson.Serialize(document);
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(raw, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.Equal("/schema", error!.Pointer);
+    }
+
+    [Fact]
+    public void TryParseStrict_WrongPolicyType_FailsClosedWithPolicyTypePointer()
+    {
+        PolicyDraftDocument document = BuildValidPackageDraft();
+        document.PolicyType = "SomeOtherPolicy";
+        string raw = PolicyJson.Serialize(document);
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(raw, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.Equal("/policyType", error!.Pointer);
+    }
+
+    [Fact]
+    public void TryParseStrict_WrongRulePrecedence_FailsClosedWithRulePrecedencePointer()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        JsonNode root = JsonNode.Parse(raw)!;
+        root["Enforcement"]!["RulePrecedence"] = "DenyOnly";
+        string tampered = root.ToJsonString();
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(tampered, out PolicyEditorDraftDocument? parsed, out _);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+    }
+
+    [Fact]
+    public void ToCanonicalRaw_ProducesTextThatRoundTripsThroughTryParseStrict()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("round-trip-id", "Contoso");
+        draft.Enforcement.DefaultDecision = Decision.Allow;
+        draft.Rules.Add(PolicyRuleFactory.CreateBlank("rule-a"));
+
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(raw, out PolicyEditorDraftDocument? parsed, out _);
+
+        Assert.True(ok);
+        Assert.Equal(Decision.Allow, parsed!.Enforcement.DefaultDecision);
+    }
+
+    [Fact]
+    public void TryParseStrict_NeverMutatesInputBuffer_OnFailure()
+    {
+        // This documents the "retains invalid text" contract at the seam level: the strict parser
+        // never returns a partially-built draft, and the error always carries a message so the
+        // caller (PolicyEditorSession.SetRawBuffer/TryParseRaw) can safely leave the raw buffer as-is.
+        string invalid = "{ \"schema\": 1, }";
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(invalid, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.NotNull(error);
+    }
+
+    // ---- Correction #1: raw mode is PolicyDraftDocument-shaped; Revision/PublishedAt are absent from
+    // canonical output and rejected as unknown fields on the way in. --------------------------------
+
+    [Fact]
+    public void ToCanonicalRaw_NeverEmitsRevisionOrPublishedAt()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
+        draft.Rules.Add(PolicyRuleFactory.CreateBlank("rule-a"));
+
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+
+        Assert.DoesNotContain("revision", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("publishedAt", raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ToCanonicalRaw_HasNoParametersToCarryRevisionOrPublishedAt()
+    {
+        // The correction requires these arguments be removed entirely, not merely defaulted: this
+        // documents that contract via reflection over the public method signature.
+        System.Reflection.MethodInfo method = typeof(PolicyEditorRawSyntax).GetMethod(nameof(PolicyEditorRawSyntax.ToCanonicalRaw))!;
+        System.Reflection.ParameterInfo[] parameters = method.GetParameters();
+
+        Assert.Single(parameters);
+        Assert.DoesNotContain(parameters, p => p.Name is "revision" or "publishedAt");
+    }
+
+    [Fact]
+    public void TryParseStrict_RejectsInjectedRevisionField_AsUnknown()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        JsonNode root = JsonNode.Parse(raw)!;
+        root["Metadata"]!["Revision"] = 3;
+        string tampered = root.ToJsonString();
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(tampered, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.NotNull(error);
+    }
+
+    [Fact]
+    public void TryParseStrict_RejectsInjectedPublishedAtField_AsUnknown()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        JsonNode root = JsonNode.Parse(raw)!;
+        root["Metadata"]!["PublishedAt"] = "2026-01-01T00:00:00Z";
+        string tampered = root.ToJsonString();
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(tampered, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.NotNull(error);
+    }
+
+    [Fact]
+    public void TryParseStrict_RejectsTopLevelRevisionField_AsUnknown()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        JsonNode root = JsonNode.Parse(raw)!;
+        root["Revision"] = 3;
+        string tampered = root.ToJsonString();
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(tampered, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.NotNull(error);
+    }
+
+    [Fact]
+    public void ToSharedDraft_NeverProducesAPolicyDocument_OnlyThePackageDraftShape()
+    {
+        // Reflection-level contract check for correction #1: PolicyEditorRawSyntax parses/serializes
+        // PolicyDraftDocument, never PolicyDocument.
+        System.Reflection.MethodInfo tryParse = typeof(PolicyEditorRawSyntax).GetMethod(nameof(PolicyEditorRawSyntax.TryParseStrict))!;
+        Assert.Equal(typeof(PolicyEditorDraftDocument).MakeByRefType(), tryParse.GetParameters()[1].ParameterType);
+    }
+}

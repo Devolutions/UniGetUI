@@ -122,6 +122,7 @@ public partial class MainWindow : Window
     private TrayService? _trayService;
     private bool _allowClose;
     private int _isQuitting;
+    private int _quitRequestPending;
 
     // Saved outer size (DIPs) awaiting a native, exact restore in OnOpened on Windows.
     private double _pendingRestoreWidth;
@@ -1859,21 +1860,36 @@ public partial class MainWindow : Window
 
     public bool IsQuitting => Interlocked.CompareExchange(ref _isQuitting, 0, 0) == 1;
 
-    public void QuitApplication()
+    public void QuitApplication() => _ = RequestQuitApplicationAsync();
+
+    private async Task RequestQuitApplicationAsync()
     {
-        if (Interlocked.Exchange(ref _isQuitting, 1) == 1)
+        if (IsQuitting || Interlocked.Exchange(ref _quitRequestPending, 1) == 1)
             return;
 
-        _allowClose = true;
-        ReleaseWindowResources();
+        try
+        {
+            if (!await ViewModel.CanShutdownAsync())
+                return;
 
-        if (IsVisible)
-            Hide();
+            if (Interlocked.Exchange(ref _isQuitting, 1) == 1)
+                return;
 
-        _ = QuitApplicationAsync();
+            _allowClose = true;
+            ReleaseWindowResources();
+
+            if (IsVisible)
+                Hide();
+
+            await StopAndExitApplicationAsync();
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _quitRequestPending, 0);
+        }
     }
 
-    private static async Task QuitApplicationAsync()
+    private static async Task StopAndExitApplicationAsync()
     {
         Logger.Warn("Quitting UniGetUI");
         try

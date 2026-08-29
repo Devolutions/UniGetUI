@@ -130,6 +130,8 @@ begin
     // Elevator (gsudo cache) and pinget live in {app} and lock their own files.
     TaskKillWait('UniGetUI Elevator.exe');
     TaskKillWait('pinget.exe');
+    // The elevated policy helper is short-lived, but it lives in {app} and can hold a file lock.
+    TaskKillWait('UniGetUI.PolicyElevator.exe');
     Sleep(1000); // let the OS release file handles before copying
 
 end;
@@ -346,3 +348,9 @@ Filename: "{app}\{#MyAppExeName}"; Parameters: "--migrate-wingetui-to-unigetui";
 Filename: {sys}\taskkill.exe; Parameters: "/f /im WingetUI.exe"; Flags: skipifdoesntexist runhidden; RunOnceId: "KillWingetUI"
 Filename: {sys}\taskkill.exe; Parameters: "/f /im UniGetUI.exe"; Flags: skipifdoesntexist runhidden; RunOnceId: "KillUniGetUI"
 Filename: {sys}\taskkill.exe; Parameters: "/f /im UniGetUI.Avalonia.exe"; Flags: skipifdoesntexist runhidden; RunOnceId: "KillUniGetUIAvalonia"
+Filename: {sys}\taskkill.exe; Parameters: "/f /im UniGetUI.PolicyElevator.exe"; Flags: skipifdoesntexist runhidden; RunOnceId: "KillUniGetUIPolicyElevator"
+
+[UninstallDelete]
+; The elevated policy helper is authenticated by exact path, so a leftover copy must never
+; survive an uninstall.
+Type: files; Name: "{app}\Assets\Utilities\UniGetUI.PolicyElevator.exe"

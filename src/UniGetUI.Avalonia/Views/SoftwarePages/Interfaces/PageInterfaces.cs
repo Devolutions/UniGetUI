@@ -22,6 +22,21 @@ public interface IEnterLeaveListener
     void OnLeave();
 }
 
+public enum PageLeaveReason
+{
+    Refresh,
+    NestedNavigation,
+    TopLevelNavigation,
+    Shutdown,
+}
+
+public interface IAsyncLeaveGuard
+{
+    Task<bool> CanLeaveAsync(
+        PageLeaveReason reason,
+        CancellationToken cancellationToken = default);
+}
+
 /// <summary>
 /// Implemented by pages that bind to the global search box.
 /// Mirrors UniGetUI.Pages.PageInterfaces.ISearchBoxPage
@@ -40,5 +55,5 @@ public interface ISearchBoxPage
 public interface IInnerNavigationPage
 {
     bool CanGoBack();
-    void GoBack();
+    Task<bool> GoBackAsync(CancellationToken cancellationToken = default);
 }

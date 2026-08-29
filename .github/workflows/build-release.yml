@@ -216,6 +216,13 @@ jobs:
             throw "Windows app host was not produced at unigetui_bin/UniGetUI.exe"
           }
 
+          # The elevated policy-write helper is authenticated by exact path at runtime, and it must
+          # be present here so the code-signing step below signs it and the integrity tree that is
+          # generated afterwards covers it.
+          if (-not (Test-Path "unigetui_bin/Assets/Utilities/UniGetUI.PolicyElevator.exe")) {
+            throw "Elevated policy helper was not staged at unigetui_bin/Assets/Utilities/UniGetUI.PolicyElevator.exe"
+          }
+
           $MaxShippedPdbSizeBytes = 1MB
           $PdbsToRemove = Get-ChildItem "unigetui_bin" -Filter "*.pdb" -File -Recurse | Where-Object {
             $_.Length -gt $MaxShippedPdbSizeBytes
@@ -246,6 +253,14 @@ jobs:
             -ClientSecret '${{ secrets.CODE_SIGNING_CLIENT_SECRET }}' `
             -CertificateName '${{ secrets.CODE_SIGNING_CERTIFICATE_NAME }}' `
             -TimestampServer '${{ vars.CODE_SIGNING_TIMESTAMP_SERVER }}'
+
+          # The helper is the one binary whose signature is checked at runtime by the host before
+          # it is elevated, so an unsigned helper must fail the release rather than ship.
+          $HelperPath = Join-Path $PWD "unigetui_bin/Assets/Utilities/UniGetUI.PolicyElevator.exe"
+          $HelperSignature = Get-AuthenticodeSignature $HelperPath
+          if ($HelperSignature.Status -ne "Valid") {
+            throw "Elevated policy helper is not validly signed (status: $($HelperSignature.Status))."
+          }
 
       - name: Build installer
         shell: pwsh

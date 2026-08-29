@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        The elevated policy-write helper.
+
+        This is deliberately a separate, minimal executable: it is the only UniGetUI binary that
+        ever runs with an elevated administrator token, so it must not drag in the UI, the package
+        engine, settings or logging. It links the shared elevation protocol sources directly rather
+        than referencing UniGetUI.PackageEngine.AgentBroker, which keeps the elevated surface to
+        the wire contract plus the Devolutions broker client.
+    -->
+
+    <PropertyGroup>
+        <TargetFramework>$(WindowsTargetFramework)</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <AssemblyName>UniGetUI.PolicyElevator</AssemblyName>
+        <RootNamespace>UniGetUI.AgentPolicy.ElevatedHelper</RootNamespace>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <UseSystemResourceKeys>true</UseSystemResourceKeys>
+        <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+        <IsAotCompatible>true</IsAotCompatible>
+        <PublishAot>true</PublishAot>
+        <PublishReadyToRun>false</PublishReadyToRun>
+        <PublishTrimmed>true</PublishTrimmed>
+        <TrimMode>full</TrimMode>
+        <TrimmerSingleWarn>false</TrimmerSingleWarn>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+        <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
+        <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+        <AutoreleasePoolSupport>false</AutoreleasePoolSupport>
+        <EventSourceSupport>false</EventSourceSupport>
+        <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Devolutions.Now.Policy.Api" Version="2026.8.29-phase2.ec592a91" />
+        <PackageReference Include="Devolutions.Now.Policy.Client" Version="2026.8.29-phase2.ec592a91" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="..\UniGetUI.PackageEngine.AgentBroker\PolicyWriteElevation\Protocol\*.cs"
+                 Link="Shared\Protocol\%(Filename)%(Extension)" />
+        <Compile Include="..\UniGetUI.PackageEngine.AgentBroker\PolicyWriteElevation\Interop\*.cs"
+                 Link="Shared\Interop\%(Filename)%(Extension)" />
+        <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
+    </ItemGroup>
+
+</Project>

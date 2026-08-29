@@ -37,7 +37,125 @@
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Vertical" Margin="0,8,0,24">
+            <TextBlock x:Name="PolicyManagementHeading"
+                       Text="{t:Translate Policy management}"
+                       FontSize="16"
+                       FontWeight="Bold"
+                       Margin="44,8,4,8"
+                       automation:AutomationProperties.HeadingLevel="2"/>
+
             <Grid ColumnDefinitions="*,Auto" Margin="40,0,40,8">
+                <Button Grid.Column="1"
+                        Command="{Binding RefreshManagementCommand}"
+                        IsEnabled="{Binding !IsManagementLoading}"
+                        Content="{t:Translate Refresh}"
+                        automation:AutomationProperties.Name="{t:Translate Refresh policy management state}"/>
+            </Grid>
+
+            <ProgressBar IsIndeterminate="{Binding IsManagementLoading}"
+                         IsVisible="{Binding IsManagementLoading}"
+                         Margin="40,0,40,8"
+                         automation:AutomationProperties.Name="{t:Translate Loading policy management state}"/>
+
+            <controls:InfoBar DataContext="{Binding ManagementStatus}"
+                              Margin="40,0"
+                              automation:AutomationProperties.LiveSetting="Polite"/>
+
+            <StackPanel IsVisible="{Binding HasManagementSnapshot}">
+                <Border Classes="settings-card policy-section">
+                    <StackPanel>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate State}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ManagementStateText}"
+                                       automation:AutomationProperties.Name="{t:Translate Policy management state}"
+                                       automation:AutomationProperties.HelpText="{Binding ManagementStateText}"
+                                       automation:AutomationProperties.LiveSetting="Polite"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate Configured path}"/>
+                            <SelectableTextBlock Grid.Column="1"
+                                                 Text="{Binding ManagementConfiguredPath}"
+                                                 TextWrapping="Wrap"
+                                                 automation:AutomationProperties.Name="{t:Translate Configured policy path}"
+                                                 automation:AutomationProperties.HelpText="{Binding ManagementConfiguredPath}"
+                                                 automation:AutomationProperties.LiveSetting="Polite"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate Path source}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ManagementSourceText}"
+                                       automation:AutomationProperties.Name="{t:Translate Policy path source}"
+                                       automation:AutomationProperties.HelpText="{Binding ManagementSourceText}"
+                                       automation:AutomationProperties.LiveSetting="Polite"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate Write capability}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ManagementCapabilityText}"
+                                       automation:AutomationProperties.Name="{t:Translate Policy write capability}"
+                                       automation:AutomationProperties.HelpText="{Binding ManagementCapabilityText}"
+                                       automation:AutomationProperties.LiveSetting="Polite"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate Read-only reason}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ManagementReadOnlyReasonText}"
+                                       automation:AutomationProperties.Name="{t:Translate Policy read-only reason}"
+                                       automation:AutomationProperties.HelpText="{Binding ManagementReadOnlyReasonText}"
+                                       automation:AutomationProperties.LiveSetting="Polite"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate Elevation required}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ManagementElevationRequiredText}"
+                                       automation:AutomationProperties.Name="{t:Translate Policy write elevation requirement}"
+                                       automation:AutomationProperties.HelpText="{Binding ManagementElevationRequiredText}"
+                                       automation:AutomationProperties.LiveSetting="Polite"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*" Margin="40,12,40,0" ColumnSpacing="8">
+                    <Button x:Name="EditPolicyButton"
+                            Command="{Binding EditPolicyCommand}"
+                            IsVisible="{Binding CanEdit}"
+                            Content="{t:Translate Edit}"
+                            automation:AutomationProperties.Name="{t:Translate Edit the active policy}"/>
+                    <Button Grid.Column="1"
+                            x:Name="CreatePolicyButton"
+                            Command="{Binding CreatePolicyCommand}"
+                            IsVisible="{Binding CanCreate}"
+                            Content="{t:Translate Create}"
+                            automation:AutomationProperties.Name="{t:Translate Create a new policy}"/>
+                    <Button Grid.Column="2"
+                            x:Name="RepairPolicyButton"
+                            Command="{Binding RepairPolicyCommand}"
+                            IsVisible="{Binding CanRepair}"
+                            Content="{t:Translate Repair}"
+                            automation:AutomationProperties.Name="{t:Translate Repair the stored policy}"/>
+                    <Button Grid.Column="3"
+                            x:Name="ReplaceIdentityButton"
+                            Classes="secondary-action"
+                            Command="{Binding ReplaceIdentityCommand}"
+                            IsVisible="{Binding CanReplaceIdentity}"
+                            Content="{t:Translate Replace identity}"
+                            automation:AutomationProperties.Name="{t:Translate Replace the active policy identity}"/>
+                </Grid>
+
+                <TextBlock Text="{t:Translate Diagnostics}"
+                           IsVisible="{Binding HasManagementDiagnostics}"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Margin="44,24,4,8"
+                           automation:AutomationProperties.HeadingLevel="3"/>
+                <Border Classes="settings-card policy-section" IsVisible="{Binding HasManagementDiagnostics}">
+                    <ItemsControl ItemsSource="{Binding ManagementDiagnosticsRows}"
+                                  automation:AutomationProperties.LiveSetting="Polite"/>
+                </Border>
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,Auto" Margin="40,24,40,8">
                 <Button Grid.Column="1"
                         Command="{Binding RefreshCommand}"
                         IsEnabled="{Binding !IsLoading}"
@@ -50,7 +168,9 @@
                          Margin="40,0,40,8"
                          automation:AutomationProperties.Name="{t:Translate Loading active package broker policy}"/>
 
-            <controls:InfoBar DataContext="{Binding Status}" Margin="40,0"/>
+            <controls:InfoBar DataContext="{Binding Status}"
+                              Margin="40,0"
+                              automation:AutomationProperties.LiveSetting="Polite"/>
 
             <StackPanel IsVisible="{Binding HasPolicy}">
                 <TextBlock Text="{t:Translate Policy metadata}"

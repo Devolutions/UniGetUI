@@ -1,0 +1,434 @@
+using Devolutions.Now.Policy.Api;
+using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
+
+namespace UniGetUI.Tests.PolicyEditor;
+
+/// <summary>
+/// Covers the typed-input guard contract of the UI-only wrappers in
+/// <c>PolicyEditorStructuredUi.cs</c> (<see cref="PolicyEditorDocumentUi"/> and
+/// <see cref="PolicyEditorRuleUi"/>): invalid text typed into <c>ValidFromText</c>/<c>ValidUntilText</c>/
+/// <c>PriorityText</c> must be preserved verbatim (never silently reverted or reformatted), must surface
+/// a localized local error, and must block <c>ValidateCommand</c>/<c>SaveCommand</c> until corrected.
+/// Blank date text must clear the underlying value rather than error. The Save button's <c>IsEnabled</c>
+/// binding (<c>CanValidateOrSave</c>) and <c>SaveCommand.CanExecute</c> are asserted to always agree,
+/// since both are wired to the same busy/error guard and must never diverge.
+/// </summary>
+public class PolicyEditorStructuredInputGuardTests
+{
+    [Fact]
+    public void InvalidValidFromText_IsRetained_ExposesLocalizedError_AndBlocksValidateAndSave()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        AssertSaveGuardAgrees(viewModel);
+        Assert.True(viewModel.ValidateCommand.CanExecute(null));
+        Assert.True(viewModel.SaveCommand.CanExecute(null));
+
+        document.ValidFromText = "not a date";
+
+        Assert.Equal("not a date", document.ValidFromText);
+        Assert.False(string.IsNullOrEmpty(document.ValidFromError));
+        Assert.Null(viewModel.Draft.Metadata.ValidFrom);
+        Assert.True(viewModel.HasLocalInputErrors);
+        Assert.True(viewModel.IsDirty);
+        Assert.False(viewModel.CanValidateOrSave);
+        AssertSaveGuardAgrees(viewModel);
+        Assert.False(viewModel.ValidateCommand.CanExecute(null));
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
+
+        document.ValidFromText = "2026-08-29T12:34:56Z";
+
+        Assert.Null(document.ValidFromError);
+        Assert.Equal("2026-08-29T12:34:56Z", document.ValidFromText);
+        Assert.Equal(
+            DateTimeOffset.Parse("2026-08-29T12:34:56Z"),
+            viewModel.Draft.Metadata.ValidFrom);
+        Assert.False(viewModel.HasLocalInputErrors);
+        Assert.True(viewModel.CanValidateOrSave);
+        AssertSaveGuardAgrees(viewModel);
+    }
+
+    [Fact]
+    public async Task InvalidWrapperOnlyEdit_RequiresDiscardConfirmation()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("test-policy", "Contoso"));
+        var prompt = new FakeConfirmationPrompt { NextResult = false };
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            prompt,
+            new FakeWriteClient());
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        document.ValidFromText = "not a date";
+        bool discarded = await viewModel.ConfirmDiscardAsync();
+
+        Assert.True(viewModel.IsDirty);
+        Assert.False(discarded);
+        Assert.Equal(PolicyEditorConfirmationKind.DiscardChanges, prompt.LastRequest!.Kind);
+    }
+
+    [Fact]
+    public void InvalidValidUntilText_IsRetained_ExposesLocalizedError_AndBlocksValidateAndSave()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        document.ValidUntilText = "banana";
+
+        Assert.Equal("banana", document.ValidUntilText);
+        Assert.False(string.IsNullOrEmpty(document.ValidUntilError));
+        Assert.Null(viewModel.Draft.Metadata.ValidUntil);
+        Assert.True(viewModel.HasLocalInputErrors);
+        AssertSaveGuardAgrees(viewModel);
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
+
+        document.ValidUntilText = "";
+
+        Assert.Null(document.ValidUntilError);
+        Assert.Null(viewModel.Draft.Metadata.ValidUntil);
+        Assert.False(viewModel.HasLocalInputErrors);
+        AssertSaveGuardAgrees(viewModel);
+        Assert.True(viewModel.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void BlankValidFromText_ClearsTheUnderlyingValueWithoutError()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var document = new PolicyEditorDocumentUi(viewModel);
+        document.ValidFromText = "2026-08-29T12:34:56Z";
+        Assert.NotNull(viewModel.Draft.Metadata.ValidFrom);
+
+        document.ValidFromText = "";
+
+        Assert.Equal("", document.ValidFromText);
+        Assert.Null(document.ValidFromError);
+        Assert.Null(viewModel.Draft.Metadata.ValidFrom);
+        Assert.False(viewModel.HasLocalInputErrors);
+        AssertSaveGuardAgrees(viewModel);
+        Assert.True(viewModel.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void LocaleDependentDateText_IsRejectedInsteadOfUsingTheMachineTimeZone()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        document.ValidFromText = "01/02/2026 12:30";
+
+        Assert.Equal("01/02/2026 12:30", document.ValidFromText);
+        Assert.NotNull(document.ValidFromError);
+        Assert.Null(viewModel.Draft.Metadata.ValidFrom);
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [InlineData("2026-08-29T12:34:56Z", true)]
+    [InlineData("2026-08-29T12:34:56+09:00", true)]
+    [InlineData("2026-08-29T12:34:56", false)]
+    public void ValidityDate_RequiresExplicitRfc3339Offset(string text, bool expectedValid)
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        document.ValidFromText = text;
+
+        Assert.Equal(expectedValid, document.ValidFromError is null);
+        Assert.Equal(expectedValid, viewModel.Draft.Metadata.ValidFrom.HasValue);
+        Assert.Equal(expectedValid, viewModel.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void RefreshFromDraft_NotifiesEveryDocumentBoundProperty()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var document = new PolicyEditorDocumentUi(viewModel);
+        var changed = new HashSet<string?>();
+        document.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+        viewModel.Session.SwitchToRaw();
+        string submitted = viewModel.Session.RawBuffer;
+        var canonical = PolicyEditorMapper.ToSharedDraft(viewModel.Draft);
+        canonical.PolicyVersion = "2.0";
+        canonical.Metadata.Id = "replacement-id";
+        canonical.Metadata.Publisher = "Fabrikam";
+        canonical.Metadata.Description = "canonical description";
+        canonical.Metadata.SupportUrl = "https://example.test/support";
+        canonical.Metadata.ValidFrom = DateTimeOffset.Parse("2026-08-29T12:34:56Z");
+        canonical.Metadata.ValidUntil = DateTimeOffset.Parse("2027-08-29T12:34:56Z");
+        canonical.Enforcement.DefaultDecision = Devolutions.Now.Policy.Model.Decision.Allow;
+        canonical.Enforcement.AuditMode = true;
+        viewModel.Session.AcceptValidatedRaw(
+            submitted,
+            new PolicyValidationResult
+            {
+                IsValid = true,
+                CanonicalDraft = canonical,
+                ValidationReceipt = "receipt-refresh",
+            });
+
+        document.RefreshFromDraft();
+
+        string[] expectedProperties =
+        [
+            nameof(PolicyEditorDocumentUi.Id),
+            nameof(PolicyEditorDocumentUi.Publisher),
+            nameof(PolicyEditorDocumentUi.PolicyVersion),
+            nameof(PolicyEditorDocumentUi.Description),
+            nameof(PolicyEditorDocumentUi.SupportUrl),
+            nameof(PolicyEditorDocumentUi.ValidFromText),
+            nameof(PolicyEditorDocumentUi.ValidUntilText),
+            nameof(PolicyEditorDocumentUi.ValidFromError),
+            nameof(PolicyEditorDocumentUi.ValidUntilError),
+            nameof(PolicyEditorDocumentUi.DecisionIndex),
+            nameof(PolicyEditorDocumentUi.AuditModeIndex),
+            nameof(PolicyEditorDocumentUi.RulePrecedenceDisplay),
+            nameof(PolicyEditorDocumentUi.IsIdentityLocked),
+        ];
+        Assert.All(expectedProperties, property => Assert.Contains(property, changed));
+        Assert.Equal("replacement-id", document.Id);
+        Assert.Equal("Fabrikam", document.Publisher);
+        Assert.Equal("2.0", document.PolicyVersion);
+        Assert.Equal("canonical description", document.Description);
+        Assert.Equal("https://example.test/support", document.SupportUrl);
+        Assert.Equal(0, document.DecisionIndex);
+        Assert.Equal(2, document.AuditModeIndex);
+    }
+
+    [Fact]
+    public async Task SuccessfulInflightSave_PreservesNewerInvalidDateBufferAndError()
+    {
+        var validation = new FakeValidationClient();
+        var writer = new FakeWriteClient { Gate = new TaskCompletionSource() };
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("test-policy", "Contoso"));
+        var sessionViewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        using var dialog = new PolicyEditorDialogViewModel(sessionViewModel);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-date",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(sessionViewModel.Draft),
+        });
+        writer.NextOutcome = PolicyWriteOutcome.Success(
+            PolicyEditorTestFixtures.BuildReplacementResponse(
+                PolicyEditorTestFixtures.BuildDocument(id: "test-policy"),
+                "saved-token"));
+
+        Task pending = sessionViewModel.SaveCommand.ExecuteAsync(null);
+        dialog.Document.ValidFromText = "2026-08-29T12:34:56";
+        writer.Gate.SetResult();
+        await pending;
+
+        Assert.Equal("2026-08-29T12:34:56", dialog.Document.ValidFromText);
+        Assert.NotNull(dialog.Document.ValidFromError);
+        Assert.True(sessionViewModel.HasLocalInputErrors);
+        Assert.True(sessionViewModel.IsDirty);
+        Assert.True(sessionViewModel.SavedWithNewerChanges);
+        Assert.Equal(PolicyEditorOperationKind.Update, sessionViewModel.Operation);
+        Assert.Equal(dialog.Document.ValidFromError, dialog.Status.Message);
+        Assert.NotEqual("The package broker policy was saved successfully.", dialog.Status.Message);
+    }
+
+    [Fact]
+    public async Task SuccessfulInflightSave_PreservesNewerInvalidPriorityWrapperAndError()
+    {
+        var validation = new FakeValidationClient();
+        var writer = new FakeWriteClient { Gate = new TaskCompletionSource() };
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("test-policy", "Contoso"));
+        session.AddRule();
+        var sessionViewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        using var dialog = new PolicyEditorDialogViewModel(sessionViewModel);
+        PolicyEditorRuleUi originalWrapper = dialog.Rules[0];
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-priority",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(sessionViewModel.Draft),
+        });
+        writer.NextOutcome = PolicyWriteOutcome.Success(
+            PolicyEditorTestFixtures.BuildReplacementResponse(
+                PolicyEditorTestFixtures.BuildDocument(id: "test-policy"),
+                "saved-token"));
+
+        Task pending = sessionViewModel.SaveCommand.ExecuteAsync(null);
+        originalWrapper.PriorityText = "not-a-priority";
+        writer.Gate.SetResult();
+        await pending;
+
+        Assert.Same(originalWrapper, dialog.Rules[0]);
+        Assert.Equal("not-a-priority", originalWrapper.PriorityText);
+        Assert.NotNull(originalWrapper.PriorityError);
+        Assert.True(sessionViewModel.HasLocalInputErrors);
+        Assert.True(sessionViewModel.SavedWithNewerChanges);
+        Assert.Equal(originalWrapper.PriorityError, dialog.Status.Message);
+        Assert.NotEqual("The package broker policy was saved successfully.", dialog.Status.Message);
+    }
+
+    [Fact]
+    public void InvalidPriorityText_IsRetained_ExposesLocalizedError_AndBlocksValidateAndSave()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
+        var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+        try
+        {
+            uint originalPriority = rule.Rule.Priority;
+
+            rule.PriorityText = "-1";
+
+            Assert.Equal("-1", rule.PriorityText);
+            Assert.Equal(originalPriority, rule.Rule.Priority);
+            Assert.False(string.IsNullOrEmpty(rule.PriorityError));
+            Assert.True(viewModel.HasLocalInputErrors);
+            AssertSaveGuardAgrees(viewModel);
+            Assert.False(viewModel.ValidateCommand.CanExecute(null));
+            Assert.False(viewModel.SaveCommand.CanExecute(null));
+            Assert.False(viewModel.SwitchToRawCommand.CanExecute(null));
+
+            rule.PriorityText = "not a number either";
+
+            Assert.Equal("not a number either", rule.PriorityText);
+            Assert.False(string.IsNullOrEmpty(rule.PriorityError));
+
+            rule.PriorityText = "42";
+
+            Assert.Equal((uint)42, rule.Rule.Priority);
+            Assert.Null(rule.PriorityError);
+            Assert.False(viewModel.HasLocalInputErrors);
+            AssertSaveGuardAgrees(viewModel);
+            Assert.True(viewModel.ValidateCommand.CanExecute(null));
+            Assert.True(viewModel.SaveCommand.CanExecute(null));
+            Assert.True(viewModel.SwitchToRawCommand.CanExecute(null));
+        }
+        finally
+        {
+            rule.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task SaveCommand_IsDisabledWhileBusy_IndependentlyOfTypedInputErrors()
+    {
+        var validation = new FakeValidationClient { Gate = new TaskCompletionSource() };
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel(validation);
+
+        Assert.True(viewModel.SaveCommand.CanExecute(null));
+        Task validateTask = viewModel.ValidateCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsBusy);
+        Assert.False(viewModel.CanValidateOrSave);
+        AssertSaveGuardAgrees(viewModel);
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
+
+        validation.Gate.TrySetResult();
+        await validateTask;
+
+        Assert.False(viewModel.IsBusy);
+        AssertSaveGuardAgrees(viewModel);
+        Assert.True(viewModel.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task DisposeDuringValidation_IgnoresLateCompletion()
+    {
+        var validation = new FakeValidationClient
+        {
+            Gate = new TaskCompletionSource(),
+        };
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel(validation);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-late",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(viewModel.Draft),
+        });
+
+        Task pending = viewModel.ValidateCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsBusy);
+        Assert.False(await viewModel.ConfirmDiscardAsync());
+
+        viewModel.Dispose();
+        validation.Gate.TrySetResult();
+        await pending;
+
+        Assert.Null(viewModel.Session.Validation);
+    }
+
+    [Fact]
+    public async Task DisposeDuringWrite_IgnoresLateSuccessfulResponse()
+    {
+        var validation = new FakeValidationClient();
+        var writer = new FakeWriteClient
+        {
+            Gate = new TaskCompletionSource(),
+        };
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("test-policy", "Contoso");
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            draft);
+        var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-write",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(viewModel.Draft),
+        });
+        writer.NextOutcome = PolicyWriteOutcome.Success(
+            PolicyEditorTestFixtures.BuildReplacementResponse(
+                PolicyEditorTestFixtures.BuildDocument(id: "test-policy"),
+                "late-token"));
+
+        Task pending = viewModel.SaveCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsBusy);
+        Assert.False(await viewModel.ConfirmDiscardAsync());
+
+        viewModel.Dispose();
+        writer.Gate.TrySetResult();
+        await pending;
+
+        Assert.False(viewModel.LastSaveSucceeded);
+        Assert.Equal("token-missing", viewModel.Session.OriginManagement.StoreToken);
+    }
+
+    /// <summary>
+    /// The Save button's <c>IsEnabled</c> binding and <c>SaveCommand</c>'s own <c>CanExecute</c> gate must
+    /// never disagree: both derive from <c>CanValidateOrSave</c>/<c>CanStartRemoteOperation</c> so a
+    /// visually-enabled Save button can never silently no-op, and a disabled one is never bypassable via a
+    /// keyboard shortcut bound directly to the command.
+    /// </summary>
+    private static void AssertSaveGuardAgrees(PolicyEditorSessionViewModel viewModel) =>
+        Assert.Equal(viewModel.CanValidateOrSave, viewModel.SaveCommand.CanExecute(null));
+
+    private static PolicyEditorSessionViewModel CreateViewModel(FakeValidationClient? validation = null)
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("test-policy", "Contoso");
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            draft);
+        return new(
+            session,
+            validation ?? new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+    }
+}

@@ -157,9 +157,62 @@
         />
     </Target>
 
+    <!--
+        The elevated policy-write helper is a separate NativeAOT executable. It is published on
+        its own and staged at the exact protected packaged path both peers authenticate against
+        (<install root>\Assets\Utilities\UniGetUI.PolicyElevator.exe). Staging happens during
+        publish, before the release pipeline code-signs the output tree and before the integrity
+        tree is regenerated, so the helper is signed and hashed like every other shipped binary.
+    -->
     <Target
-        Name="EnsureBundledElevatorFromNuGet"
-        BeforeTargets="PrepareForBuild"
+        Name="PublishElevatedPolicyHelper"
+        AfterTargets="Publish"
+        Condition="'$(DesignTimeBuild)' != 'true' and '$(SkipElevatedPolicyHelper)' != 'true' and $([MSBuild]::IsOSPlatform('Windows')) and $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win'))"
+    >
+        <PropertyGroup>
+            <_PolicyHelperProject>$(MSBuildThisFileDirectory)..\UniGetUI.AgentPolicy.ElevatedHelper\UniGetUI.AgentPolicy.ElevatedHelper.csproj</_PolicyHelperProject>
+            <_PolicyHelperPlatform Condition="'$(RuntimeIdentifier)' == 'win-x64'">x64</_PolicyHelperPlatform>
+            <_PolicyHelperPlatform Condition="'$(RuntimeIdentifier)' == 'win-arm64'">arm64</_PolicyHelperPlatform>
+            <!--
+                PublishDir is resolved relative to the helper project, not to this one, so it has to
+                be absolute. It is also passed without a trailing separator: a trailing backslash in
+                front of a quote is consumed as an escape by the command line parser.
+            -->
+            <_PolicyHelperIntermediateDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)$(BaseIntermediateOutputPath)policy-elevator\$(Configuration)\$(RuntimeIdentifier)'))</_PolicyHelperIntermediateDir>
+            <_PolicyHelperExecutable>$(_PolicyHelperIntermediateDir)\UniGetUI.PolicyElevator.exe</_PolicyHelperExecutable>
+            <_PolicyHelperDestination>$(PublishDir)Assets\Utilities\</_PolicyHelperDestination>
+        </PropertyGroup>
+        <Error
+            Condition="'$(_PolicyHelperPlatform)' == ''"
+            Text="The elevated policy helper only supports the win-x64 and win-arm64 runtime identifiers, but '$(RuntimeIdentifier)' was requested."
+        />
+        <!--
+            The framework must be named explicitly: Directory.Build.props seeds TargetFrameworks for
+            every project, so a publish without -f resolves to an outer build that silently skips
+            NativeAOT and emits a framework-dependent layout instead of the native executable.
+        -->
+        <Exec
+            Command="dotnet publish &quot;$(_PolicyHelperProject)&quot; --configuration $(Configuration) --framework $(WindowsTargetFramework) --runtime $(RuntimeIdentifier) --self-contained true --nologo /p:Platform=$(_PolicyHelperPlatform) /p:PublishAot=true /p:PublishReadyToRun=false /p:PublishDir=&quot;$(_PolicyHelperIntermediateDir)&quot;"
+            WorkingDirectory="$(MSBuildThisFileDirectory)"
+        />
+        <Error
+            Condition="!Exists('$(_PolicyHelperExecutable)')"
+            Text="The elevated policy helper was not produced at '$(_PolicyHelperExecutable)'."
+        />
+        <MakeDir Directories="$(_PolicyHelperDestination)" />
+        <Copy
+            SourceFiles="$(_PolicyHelperExecutable)"
+            DestinationFolder="$(_PolicyHelperDestination)"
+            SkipUnchangedFiles="true"
+        />
+        <Error
+            Condition="!Exists('$(_PolicyHelperDestination)UniGetUI.PolicyElevator.exe')"
+            Text="The elevated policy helper was not staged at '$(_PolicyHelperDestination)UniGetUI.PolicyElevator.exe'."
+        />
+    </Target>
+
+    <Target
+        Name="EnsureBundledElevatorFromNuGet"        BeforeTargets="PrepareForBuild"
         Condition="'$(DesignTimeBuild)' != 'true' and $([MSBuild]::IsOSPlatform('Windows')) and '$(Configuration)' != 'Debug'"
     >
         <Error

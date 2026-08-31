@@ -209,7 +209,19 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             if (candidate.Length is 0)
                 return [];
 
-            string? version = SelectHighestVersion(GetVersions(index, candidate), includePreRelease);
+            List<(SemanticVersion Parsed, string Raw)> available = DescendingCandidates(
+                GetVersions(index, candidate),
+                includePreRelease,
+                null
+            );
+
+            string? version = SelectNewestNotUnlisted(
+                index,
+                candidate,
+                available,
+                acceptUnresolvedStatus: true,
+                out _
+            );
             if (version is null)
                 return [];
 
@@ -369,28 +381,75 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                 return null;
             }
 
-            List<(SemanticVersion Parsed, string Raw)> newer = [];
-            foreach (string version in allVersions)
+            List<(SemanticVersion Parsed, string Raw)> newer = DescendingCandidates(
+                allVersions,
+                includePreRelease,
+                installed
+            );
+
+            string? selected = SelectNewestNotUnlisted(
+                index,
+                packageId,
+                newer,
+                acceptUnresolvedStatus: false,
+                out bool statusUnresolved
+            );
+
+            if (statusUnresolved)
+                requestFailed = true;
+
+            return selected;
+        }
+
+        private static List<(SemanticVersion Parsed, string Raw)> DescendingCandidates(
+            IEnumerable<string> versions,
+            bool includePreRelease,
+            SemanticVersion? mustExceed
+        )
+        {
+            List<(SemanticVersion Parsed, string Raw)> candidates = [];
+            foreach (string version in versions)
             {
                 if (!TryParseNuGetVersion(version, out SemanticVersion parsed))
                     continue;
                 if (parsed.IsPreRelease && !includePreRelease)
                     continue;
-                if (parsed <= installed)
+                if (mustExceed is { } floor && parsed <= floor)
                     continue;
 
-                newer.Add((parsed, version));
+                candidates.Add((parsed, version));
             }
 
-            if (newer.Count is 0)
+            candidates.Sort((left, right) => right.Parsed.CompareTo(left.Parsed));
+            return candidates;
+        }
+
+        /// <summary>
+        /// Returns the newest candidate that is not known to be unlisted. The flat container
+        /// lists withdrawn versions, so every selection made from it goes through here.
+        /// A feed advertising no registration resource cannot answer at all and its newest
+        /// candidate is taken as-is. When the status of a candidate cannot be established,
+        /// update selection reports the check as failed rather than guessing, while an
+        /// exact-id search - where the user named the package explicitly and there is no
+        /// failure channel - shows it instead of hiding it.
+        /// </summary>
+        private static string? SelectNewestNotUnlisted(
+            NuGetV3ServiceIndex index,
+            string packageId,
+            List<(SemanticVersion Parsed, string Raw)> descending,
+            bool acceptUnresolvedStatus,
+            out bool statusUnresolved
+        )
+        {
+            statusUnresolved = false;
+
+            if (descending.Count is 0)
                 return null;
 
-            newer.Sort((left, right) => right.Parsed.CompareTo(left.Parsed));
-
             if (index.RegistrationsBaseUrl is null)
-                return newer[0].Raw;
+                return descending[0].Raw;
 
-            foreach ((SemanticVersion _, string raw) in newer)
+            foreach ((SemanticVersion _, string raw) in descending)
             {
                 switch (GetListedStatus(index, packageId, raw))
                 {
@@ -398,17 +457,18 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                         return raw;
 
                     case ListedStatus.Unlisted:
-                        Logger.Debug(
-                            $"Skipping unlisted NuGet version {packageId} {raw} while looking for updates"
-                        );
+                        Logger.Debug($"Skipping unlisted NuGet version {packageId} {raw}");
                         continue;
 
                     default:
+                        if (acceptUnresolvedStatus)
+                            return raw;
+
                         Logger.Warn(
                             $"Could not establish the listed status of {packageId} {raw}; "
                                 + "reporting the update check for this package as failed"
                         );
-                        requestFailed = true;
+                        statusUnresolved = true;
                         return null;
                 }
             }

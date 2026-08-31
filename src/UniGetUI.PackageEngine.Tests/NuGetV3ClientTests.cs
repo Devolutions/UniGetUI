@@ -703,6 +703,75 @@ public sealed class NuGetV3ClientTests
         Assert.False(entry.HasPackageType("DotnetTool"));
     }
 
+    // A search service returns nothing for a package precisely when it has been withdrawn, so
+    // the exact-id fallback must not resurrect an unlisted version from the flat container -
+    // which does list withdrawn versions.
+    [Fact]
+    public void TheExactIdFallbackSkipsUnlistedVersions()
+    {
+        using var feed = new FakeV3Feed
+        {
+            SearchTotalPackages = 0,
+            Versions = ["1.0.0", "2.0.0", "3.0.0"],
+            UnlistedVersions = ["3.0.0", "2.0.0"],
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        var result = Assert.Single(NuGetV3Client.Search(index, "Contoso.Tool", false, null, 50));
+        Assert.Equal("1.0.0", result.Version);
+    }
+
+    [Fact]
+    public void TheExactIdFallbackReturnsNothingWhenEveryVersionIsUnlisted()
+    {
+        using var feed = new FakeV3Feed
+        {
+            SearchTotalPackages = 0,
+            Versions = ["1.0.0", "2.0.0"],
+            UnlistedVersions = ["1.0.0", "2.0.0"],
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        Assert.Empty(NuGetV3Client.Search(index, "Contoso.Tool", false, null, 50));
+    }
+
+    // Unlike update selection, an exact-id search has no failure channel and the user named the
+    // package explicitly, so an unresolvable listed status shows the package rather than hiding
+    // it. Update selection reports the same condition as a failed check instead.
+    [Fact]
+    public void TheExactIdFallbackShowsThePackageWhenListedStatusCannotBeEstablished()
+    {
+        using var feed = new FakeV3Feed
+        {
+            SearchTotalPackages = 0,
+            Versions = ["1.0.0", "2.0.0"],
+            RegistrationLeafStatusCode = 500,
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        var result = Assert.Single(NuGetV3Client.Search(index, "Contoso.Tool", false, null, 50));
+        Assert.Equal("2.0.0", result.Version);
+    }
+
+    [Fact]
+    public void TheExactIdFallbackTakesTheNewestVersionOnARegistrationLessFeed()
+    {
+        using var feed = new FakeV3Feed
+        {
+            AdvertiseSearchService = false,
+            AdvertiseRegistrations = false,
+            Versions = ["1.0.0", "2.0.0"],
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        var result = Assert.Single(NuGetV3Client.Search(index, "Contoso.Tool", false, null, 50));
+        Assert.Equal("2.0.0", result.Version);
+    }
+
     [Fact]
     public void GetVersionsDescendingOrdersBySemanticVersion()
     {

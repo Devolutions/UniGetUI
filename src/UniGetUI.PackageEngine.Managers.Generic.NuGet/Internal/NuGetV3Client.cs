@@ -263,7 +263,14 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             requestFailed = false;
 
             if (index.PackageBaseAddress is null)
+            {
+                Logger.Warn(
+                    $"The feed at {index.ServiceIndexUrl} advertises no PackageBaseAddress, "
+                        + $"so the versions of {packageId} cannot be enumerated"
+                );
+                requestFailed = true;
                 return [];
+            }
 
             string cacheKey = $"{index.PackageBaseAddress.AbsoluteUri}|{packageId.ToLowerInvariant()}";
             if (

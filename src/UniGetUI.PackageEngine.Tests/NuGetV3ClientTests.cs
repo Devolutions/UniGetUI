@@ -772,6 +772,34 @@ public sealed class NuGetV3ClientTests
         Assert.Equal("2.0.0", result.Version);
     }
 
+    // A registration-only service index is accepted (search and details still work through it),
+    // but versions cannot be enumerated without a PackageBaseAddress. Converting that into an
+    // empty version list would report "no update available" on every check forever, so it is
+    // surfaced as a failure instead.
+    [Fact]
+    public void AFeedWithoutAPackageBaseAddressReportsAVersionEnumerationFailure()
+    {
+        using var feed = new FakeV3Feed { AdvertisePackageBaseAddress = false };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+        Assert.Null(index.PackageBaseAddress);
+        Assert.NotNull(index.RegistrationsBaseUrl);
+
+        Assert.Empty(NuGetV3Client.GetVersions(index, "Contoso.Tool", out bool failed));
+        Assert.True(failed);
+
+        Assert.Null(
+            NuGetV3Client.GetUpdateCandidate(
+                index,
+                "Contoso.Tool",
+                "1.0.0",
+                false,
+                out bool candidateFailed
+            )
+        );
+        Assert.True(candidateFailed);
+    }
+
     [Fact]
     public void GetVersionsDescendingOrdersBySemanticVersion()
     {
@@ -1360,6 +1388,8 @@ public sealed class NuGetV3ClientTests
 
         public bool AdvertiseRegistrations { get; init; } = true;
 
+        public bool AdvertisePackageBaseAddress { get; init; } = true;
+
         public bool UseArrayResourceTypes { get; init; }
 
         public bool InlineCatalogEntry { get; init; }
@@ -1428,19 +1458,17 @@ public sealed class NuGetV3ClientTests
 
         private string BuildServiceIndex()
         {
-            List<string> resources =
-            [
-                Resource($"{BaseUri}flatcontainer/", "PackageBaseAddress/3.0.0"),
-            ];
+            List<string> resources = [];
+
+            if (AdvertisePackageBaseAddress)
+                resources.Add(Resource($"{BaseUri}flatcontainer/", "PackageBaseAddress/3.0.0"));
 
             if (AdvertiseRegistrations)
             {
-                resources.Insert(
-                    0,
+                resources.Add(
                     Resource($"{BaseUri}registration-gz-semver2/", "RegistrationsBaseUrl/3.6.0")
                 );
-                resources.Insert(
-                    1,
+                resources.Add(
                     Resource($"{BaseUri}registration-legacy/", "RegistrationsBaseUrl")
                 );
             }

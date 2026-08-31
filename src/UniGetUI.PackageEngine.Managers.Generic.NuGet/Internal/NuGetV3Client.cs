@@ -190,9 +190,9 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
 
         private static bool IsHigherVersion(string candidate, string current)
         {
-            if (!SemanticVersion.TryParse(candidate, out SemanticVersion parsedCandidate))
+            if (!TryParseNuGetVersion(candidate, out SemanticVersion parsedCandidate))
                 return false;
-            if (!SemanticVersion.TryParse(current, out SemanticVersion parsedCurrent))
+            if (!TryParseNuGetVersion(current, out SemanticVersion parsedCurrent))
                 return true;
 
             return parsedCandidate > parsedCurrent;
@@ -303,7 +303,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             foreach (string version in GetVersions(index, packageId))
             {
                 parsed.Add(
-                    SemanticVersion.TryParse(version, out SemanticVersion semVer)
+                    TryParseNuGetVersion(version, out SemanticVersion semVer)
                         ? (semVer, version)
                         : (SemanticVersion.Invalid(version), version)
                 );
@@ -323,7 +323,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
 
             foreach (string version in versions)
             {
-                if (!SemanticVersion.TryParse(version, out SemanticVersion parsed))
+                if (!TryParseNuGetVersion(version, out SemanticVersion parsed))
                     continue;
                 if (parsed.IsPreRelease && !includePreRelease)
                     continue;
@@ -355,7 +355,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         {
             requestFailed = false;
 
-            if (!SemanticVersion.TryParse(installedVersion, out SemanticVersion installed))
+            if (!TryParseNuGetVersion(installedVersion, out SemanticVersion installed))
                 return null;
 
             IReadOnlyList<string> allVersions = GetVersions(
@@ -372,7 +372,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             List<(SemanticVersion Parsed, string Raw)> newer = [];
             foreach (string version in allVersions)
             {
-                if (!SemanticVersion.TryParse(version, out SemanticVersion parsed))
+                if (!TryParseNuGetVersion(version, out SemanticVersion parsed))
                     continue;
                 if (parsed.IsPreRelease && !includePreRelease)
                     continue;
@@ -704,6 +704,29 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             return Uri.TryCreate(url, UriKind.Absolute, out Uri? leafUrl) ? leafUrl : null;
         }
 
+        internal static bool SupportsEmbeddedIconRoute(Uri packageBaseAddress) =>
+            packageBaseAddress.Host.Equals("nuget.org", StringComparison.OrdinalIgnoreCase)
+            || packageBaseAddress.Host.EndsWith(".nuget.org", StringComparison.OrdinalIgnoreCase);
+
+        public static Uri? GetEmbeddedIconUrl(
+            NuGetV3ServiceIndex index,
+            string packageId,
+            string version
+        )
+        {
+            if (
+                index.PackageBaseAddress is not { } packageBase
+                || !SupportsEmbeddedIconRoute(packageBase)
+            )
+                return null;
+
+            string url =
+                $"{packageBase.AbsoluteUri.TrimEnd('/')}"
+                + $"/{EscapeId(packageId)}/{EscapeVersion(version)}/icon";
+
+            return Uri.TryCreate(url, UriKind.Absolute, out Uri? iconUrl) ? iconUrl : null;
+        }
+
         public static Uri? GetPackageContentUrl(
             NuGetV3ServiceIndex index,
             string packageId,
@@ -721,6 +744,9 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
 
             return Uri.TryCreate(url, UriKind.Absolute, out Uri? contentUrl) ? contentUrl : null;
         }
+
+        internal static bool TryParseNuGetVersion(string? value, out SemanticVersion version) =>
+            SemanticVersion.TryParse(value, SemVerLabels.CaseInsensitive, out version);
 
         internal static string EscapeId(string packageId) =>
             Uri.EscapeDataString(packageId.Trim().ToLowerInvariant());

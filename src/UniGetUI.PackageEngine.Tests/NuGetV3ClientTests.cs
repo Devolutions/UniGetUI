@@ -1104,8 +1104,11 @@ public sealed class NuGetV3ClientTests
         Assert.Equal(requestsAfterDetails, feed.Server.RequestPaths.Count);
     }
 
+    // The flat container defines no /{id}/{version}/icon route - it is a nuget.org extension - so
+    // an embedded icon must not be guessed at on a conforming third-party feed, where the request
+    // would simply 404.
     [Fact]
-    public void GetIconFallsBackToTheEmbeddedIconEndpoint()
+    public void GetIconDoesNotGuessAnEmbeddedIconRouteOnANonNuGetOrgFeed()
     {
         using var feed = new FakeV3Feed();
         NuGetV3ServiceIndex.ClearCache();
@@ -1121,13 +1124,51 @@ public sealed class NuGetV3ClientTests
             .WithVersion("2.0.0")
             .Build();
 
-        var icon = manager.ExposedDetailsHelper.LoadIcon(package);
+        Assert.Null(manager.ExposedDetailsHelper.LoadIcon(package));
+    }
 
-        Assert.NotNull(icon);
+    [Theory]
+    [InlineData("https://api.nuget.org/v3-flatcontainer/", true)]
+    [InlineData("https://nuget.org/v3-flatcontainer/", true)]
+    [InlineData("https://packages.example.test/v3-flatcontainer/", false)]
+    [InlineData("https://nuget.org.example.test/flat/", false)]
+    [InlineData("https://pkgs.dev.azure.com/contoso/_packaging/feed/nuget/v3/flat2/", false)]
+    public void TheEmbeddedIconRouteIsOnlyUsedWhereItExists(string packageBase, bool expected)
+    {
         Assert.Equal(
-            $"{feed.BaseUri}flatcontainer/contoso.tool/2.0.0/icon",
-            icon.Value.Url.AbsoluteUri
+            expected,
+            NuGetV3Client.SupportsEmbeddedIconRoute(new Uri(packageBase))
         );
+    }
+
+    // Comment 16: this client implements NuGet semantics, whose pre-release labels are compared
+    // case-insensitively. Under strict SemVer's ASCII ordering "1.0.0-Z" would sort below
+    // "1.0.0-a", which would pick a different latest version than NuGet does.
+    [Fact]
+    public void VersionSelectionUsesNuGetsCaseInsensitiveLabelOrdering()
+    {
+        using var feed = new FakeV3Feed { Versions = ["1.0.0-a", "1.0.0-Z"] };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        Assert.Equal(["1.0.0-Z", "1.0.0-a"], NuGetV3Client.GetVersionsDescending(index, "Contoso.Tool"));
+        Assert.Equal("1.0.0-Z", NuGetV3Client.SelectHighestVersion(["1.0.0-a", "1.0.0-Z"], true));
+    }
+
+    [Fact]
+    public void TheClientAndTheManagerAgreeOnLabelOrdering()
+    {
+        using var feed = new FakeV3Feed();
+        var manager = new TestNuGetManager($"{feed.BaseUri}v3/index.json");
+
+        Assert.True(NuGetV3Client.TryParseNuGetVersion("1.0.0-Z", out var upper));
+        Assert.True(NuGetV3Client.TryParseNuGetVersion("1.0.0-a", out var lower));
+
+        Assert.Equal(
+            Math.Sign(upper.CompareTo(lower)),
+            Math.Sign(manager.CompareVersions("1.0.0-Z", "1.0.0-a")!.Value)
+        );
+        Assert.True(upper > lower);
     }
 
     [Fact]

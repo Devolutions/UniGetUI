@@ -432,14 +432,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
             if (
                 !string.IsNullOrWhiteSpace(entry.IconFile)
-                && index.PackageBaseAddress is not null
-                && Uri.TryCreate(
-                    $"{index.PackageBaseAddress.AbsoluteUri.TrimEnd('/')}"
-                        + $"/{NuGetV3Client.EscapeId(package.Id)}"
-                        + $"/{NuGetV3Client.EscapeVersion(package.VersionString)}/icon",
-                    UriKind.Absolute,
-                    out Uri? embeddedIconUrl
-                )
+                && NuGetV3Client.GetEmbeddedIconUrl(index, package.Id, package.VersionString)
+                    is { } embeddedIconUrl
             )
                 return new CacheableIcon(embeddedIconUrl, package.VersionString);
 

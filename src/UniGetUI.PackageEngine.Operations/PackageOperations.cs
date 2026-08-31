@@ -1064,10 +1064,16 @@ namespace UniGetUI.PackageEngine.Operations
             else if (role is OperationType.Uninstall && opts.PostUninstallCommand.Any())
                 l.Add(new(new PrePostOperation(opts.PostUninstallCommand), false));
 
+            static bool IsSupersededBy(IPackage installed, IPackage update) =>
+                update.Manager.CompareVersions(installed.VersionString, update.NewVersionString)
+                    is { } comparison
+                    ? comparison < 0
+                    : installed.NormalizedVersion < update.NormalizedNewVersion;
+
             if (role is OperationType.Update && opts.UninstallPreviousVersionsOnUpdate)
             {
                 var matches = InstalledPackagesLoader.Instance.Packages.Where(p =>
-                    p.IsEquivalentTo(package) && p.NormalizedVersion < package.NormalizedNewVersion
+                    p.IsEquivalentTo(package) && IsSupersededBy(p, package)
                 );
                 foreach (var match in matches)
                 {

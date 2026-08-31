@@ -62,17 +62,23 @@ namespace UniGetUI.PackageEngine.Managers.DotNetManager
                 DefaultSource = new ManagerSource(
                     this,
                     "nuget.org",
-                    new Uri("https://www.nuget.org/api/v2")
+                    new Uri("https://api.nuget.org/v3/index.json")
                 ),
                 KnownSources =
                 [
-                    new ManagerSource(this, "nuget.org", new Uri("https://www.nuget.org/api/v2")),
+                    new ManagerSource(
+                        this,
+                        "nuget.org",
+                        new Uri("https://api.nuget.org/v3/index.json")
+                    ),
                 ],
             };
 
             DetailsHelper = new DotNetDetailsHelper(this);
             OperationHelper = new DotNetPkgOperationHelper(this);
         }
+
+        protected override string? V3PackageType => "DotnetTool";
 
         protected override IReadOnlyList<Package> _getInstalledPackages_UnSafe()
         {

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -8,6 +9,7 @@ using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Classes;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
+using UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Structs;
 
@@ -16,15 +18,40 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
     public abstract class BaseNuGet : PackageManager
     {
         /// <summary>
-        /// When true, searches use Packages()?$filter=substringof(query,Id) which searches by
-        /// package name only but returns reliable results (e.g. PSGallery's Search() endpoint
-        /// silently omits some packages). When false, the standard Search() endpoint is used
-        /// which supports full-text search across name, description, and tags.
+        /// Only applies to V2 sources. When true, searches use
+        /// Packages()?$filter=substringof(query,Id) which searches by package name only but
+        /// returns reliable results (e.g. PSGallery's Search() endpoint silently omits some
+        /// packages). When false, the standard Search() endpoint is used which supports
+        /// full-text search across name, description, and tags. V3 sources use
+        /// SearchQueryService and fall back to an exact package-id lookup when the feed
+        /// advertises no search service or returns no results.
         /// </summary>
         protected virtual bool UseSubstringSearch => false;
+
+        /// <summary>
+        /// Only applies to V3 sources. When set, searches are restricted to packages
+        /// advertising this package type (for example "DotnetTool"). V2 sources have no
+        /// equivalent filter and ignore it.
+        /// </summary>
+        protected virtual string? V3PackageType => null;
+
         public static Dictionary<long, string> Manifests = new();
 
+        internal static readonly ConcurrentDictionary<long, string> V3IconUrls = new();
+        internal static readonly ConcurrentDictionary<long, V3CatalogEntry> V3Entries = new();
+
         public override bool InstallerUrlFollowsPackageVersion => true;
+
+        public override int? CompareVersions(string versionA, string versionB)
+        {
+            if (
+                SemanticVersion.TryParse(versionA, out SemanticVersion parsedA)
+                && SemanticVersion.TryParse(versionB, out SemanticVersion parsedB)
+            )
+                return parsedA.CompareTo(parsedB);
+
+            return base.CompareVersions(versionA, versionB);
+        }
 
         public sealed override void Initialize()
         {
@@ -81,6 +108,12 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             {
                 try
                 {
+                    if (NuGetV3ServiceIndex.IsV3Source(source))
+                    {
+                        Packages.AddRange(FindPackagesV3(source, query, canPrerelease, logger));
+                        continue;
+                    }
+
                     string versionFilter = canPrerelease ? "IsAbsoluteLatestVersion eq true" : "IsLatestVersion eq true";
                     string odataQuery = HttpUtility.UrlEncode(query.Replace("'", "''"));
                     Uri? SearchUrl = UseSubstringSearch
@@ -203,6 +236,61 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             return Packages;
         }
 
+        internal IReadOnlyList<Package> FindPackagesV3(
+            IManagerSource source,
+            string query,
+            bool canPrerelease,
+            INativeTaskLogger logger
+        )
+        {
+            NuGetV3ServiceIndex? index = NuGetV3ServiceIndex.Resolve(source);
+            if (index is null)
+            {
+                logger.Error(
+                    $"Could not resolve the NuGet V3 service index for source {source.Name} "
+                        + $"at Url={source.Url} on manager {Name}"
+                );
+                return [];
+            }
+
+            logger.Log(
+                $"Begin V3 package search for query={query} on source {source.Name} of manager {Name}"
+            );
+
+            List<Package> packages = [];
+            foreach (
+                V3SearchResult result in NuGetV3Client.Search(
+                    index,
+                    query,
+                    canPrerelease,
+                    V3PackageType,
+                    50
+                )
+            )
+            {
+                if (result.Id is null || result.Version is null)
+                    continue;
+
+                logger.Log(
+                    $"Found package {result.Id} version {result.Version} on source {source.Name}"
+                );
+
+                var nativePackage = new Package(
+                    CoreTools.FormatAsName(result.Id),
+                    result.Id,
+                    result.Version,
+                    source,
+                    this
+                );
+                packages.Add(nativePackage);
+
+                if (!result.IsExactIdFallback)
+                    V3IconUrls[nativePackage.GetHash()] = result.IconUrl ?? string.Empty;
+            }
+
+            return packages;
+        }
+
         protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
         {
             int errors = 0;
@@ -228,6 +316,22 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             {
                 try
                 {
+                    if (NuGetV3ServiceIndex.IsV3Source(pair.Key))
+                    {
+                        var v3Updates = GetAvailableUpdatesV3(
+                            pair.Key,
+                            pair.Value,
+                            canPrerelease,
+                            logger
+                        );
+                        if (v3Updates is null)
+                            errors++;
+                        else
+                            Packages.AddRange(v3Updates);
+
+                        continue;
+                    }
+
                     var packageIds = new StringBuilder();
                     var packageVers = new StringBuilder();
                     var packageIdVersion = new Dictionary<string, string>();
@@ -285,20 +389,144 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 }
             }
 
-            var maxVersions = new Dictionary<string, CoreTools.Version?>();
-            foreach (var pkg in installedPackages)
+            logger.Close(errors);
+            return KeepUpdatesNewerThanInstalled(Packages, installedPackages);
+        }
+
+        internal IReadOnlyList<Package>? GetAvailableUpdatesV3(
+            IManagerSource source,
+            IReadOnlyList<IPackage> installedPackages,
+            bool canPrerelease,
+            INativeTaskLogger logger
+        )
+        {
+            NuGetV3ServiceIndex? index = NuGetV3ServiceIndex.Resolve(source);
+            if (index is null)
             {
-                maxVersions.TryGetValue(pkg.Id, out var ver);
-                if (ver is null || ver < pkg.NormalizedVersion)
+                logger.Error(
+                    $"Could not resolve the NuGet V3 service index for source {source.Name} "
+                        + $"at Url={source.Url} on manager {Name}"
+                );
+                return null;
+            }
+
+            var installed = new Dictionary<string, (string Id, string Version)>();
+            foreach (var package in installedPackages)
+                installed[package.Id.ToLower()] = (package.Id, package.VersionString);
+
+            var scopeMap = BuildInstalledScopeMap(installedPackages);
+            var candidates = new ConcurrentDictionary<string, string>();
+            var failures = new ConcurrentDictionary<string, Exception>();
+
+            Parallel.ForEach(
+                installed,
+                new ParallelOptions
                 {
-                    maxVersions[pkg.Id.ToLower()] = pkg.NormalizedVersion;
+                    MaxDegreeOfParallelism = NuGetV3Client.MaxConcurrentRequests,
+                },
+                entry =>
+                {
+                    try
+                    {
+                        string? candidate = NuGetV3Client.GetUpdateCandidate(
+                            index,
+                            entry.Value.Id,
+                            entry.Value.Version,
+                            canPrerelease
+                        );
+
+                        if (candidate is not null)
+                            candidates[entry.Key] = candidate;
+                    }
+                    catch (Exception ex)
+                    {
+                        failures[entry.Key] = ex;
+                    }
+                }
+            );
+
+            foreach (var failure in failures)
+            {
+                logger.Error(
+                    $"Failed to check updates for {installed[failure.Key].Id} on source {source.Name}"
+                );
+                logger.Error(failure.Value);
+            }
+
+            List<Package> packages = [];
+            foreach (var candidate in candidates)
+            {
+                (string id, string installedVersion) = installed[candidate.Key];
+                logger.Log(
+                    $"Found package {id} version {candidate.Value} on source {source.Name}"
+                );
+
+                packages.Add(
+                    new Package(
+                        CoreTools.FormatAsName(id),
+                        id,
+                        installedVersion,
+                        candidate.Value,
+                        source,
+                        this,
+                        new OverridenInstallationOptions(scopeMap.GetValueOrDefault(candidate.Key))
+                    )
+                );
+            }
+
+            return packages;
+        }
+
+        /// <summary>
+        /// Drops any update whose new version is not newer than the highest version already
+        /// installed under the same id, so a copy installed in another scope does not get
+        /// offered an update it already satisfies. Comparisons go through the manager so a
+        /// NuGet pre-release is ordered below its stable release.
+        /// </summary>
+        internal IReadOnlyList<Package> KeepUpdatesNewerThanInstalled(
+            IReadOnlyList<Package> candidates,
+            IReadOnlyList<IPackage> installedPackages
+        )
+        {
+            var highestInstalledById = new Dictionary<string, string>();
+            foreach (var package in installedPackages)
+            {
+                string key = package.Id.ToLower();
+                if (
+                    !highestInstalledById.TryGetValue(key, out string? highest)
+                    || CompareVersions(package.VersionString, highest) > 0
+                )
+                {
+                    highestInstalledById[key] = package.VersionString;
                 }
             }
 
-            logger.Close(errors);
-            return Packages
-                .Where(p => maxVersions[p.Id.ToLower()] < p.NormalizedNewVersion)
-                .ToArray();
+            List<Package> kept = [];
+            foreach (var candidate in candidates)
+            {
+                if (
+                    !highestInstalledById.TryGetValue(
+                        candidate.Id.ToLower(),
+                        out string? highestInstalled
+                    )
+                )
+                {
+                    kept.Add(candidate);
+                    continue;
+                }
+
+                bool isNewer =
+                    CompareVersions(highestInstalled, candidate.NewVersionString)
+                    is { } comparison
+                        ? comparison < 0
+                        : CoreTools.VersionStringToStruct(highestInstalled)
+                            < candidate.NormalizedNewVersion;
+
+                if (isNewer)
+                    kept.Add(candidate);
+            }
+
+            return kept;
         }
 
         /// <summary>
@@ -321,7 +549,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         }
 
         /// <summary>
-        /// Parses a NuGet OData GetUpdates() response into update packages, carrying each
+        /// Parses a V2 NuGet OData GetUpdates() response into update packages, carrying each
         /// installed package's scope onto its update so operations (e.g. Update-PSResource
         /// -Scope) don't silently fall back to CurrentUser (regression guard for issue #5163).
         /// </summary>

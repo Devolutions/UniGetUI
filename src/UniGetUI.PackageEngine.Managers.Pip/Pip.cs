@@ -494,6 +494,17 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             callArguments = "-m pip ";
         }
 
+        public override int? CompareVersions(string versionA, string versionB)
+        {
+            if (
+                PythonVersion.TryParse(versionA, out PythonVersion parsedA)
+                && PythonVersion.TryParse(versionB, out PythonVersion parsedB)
+            )
+                return parsedA.CompareTo(parsedB);
+
+            return base.CompareVersions(versionA, versionB);
+        }
+
         protected override void _loadManagerVersion(out string version)
         {
             using Process process = new()

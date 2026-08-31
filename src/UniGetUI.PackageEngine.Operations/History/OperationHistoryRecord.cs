@@ -86,8 +86,10 @@ public sealed class OperationHistoryRecord
                     record.VersionBefore = pop.Role is OperationType.Install ? "" : pop.Package.VersionString;
                     record.VersionAfter = pop.Role switch
                     {
-                        OperationType.Update => pop.Package.NewVersionString,
                         OperationType.Uninstall => "",
+                        _ when pop.Options.Version is { Length: > 0 } pinnedVersion =>
+                            pinnedVersion,
+                        OperationType.Update => pop.Package.NewVersionString,
                         _ => pop.Package.VersionString,
                     };
                     record.OptionsJson = pop.Options.AsJsonString();

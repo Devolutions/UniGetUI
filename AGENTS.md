@@ -38,6 +38,91 @@ Each manager also provides three helper classes (in a `Helpers/` subfolder):
 
 The constructor sets `Capabilities`, `Properties`, and wires the helpers. See `src/UniGetUI.PackageEngine.Managers.Scoop/Scoop.cs` as a clean reference implementation.
 
+## NuGet-backed managers (.NET Tool, PowerShell, PowerShell 7, Chocolatey)
+
+These four managers share `BaseNuGet` / `BaseNuGetDetailsHelper`, which talk to a NuGet feed
+over HTTP. Each source picks its protocol independently, in `NuGetV3ServiceIndex.GetServiceIndexUrl`:
+
+- A source URL whose path ends in `index.json`, or whose last path segment is `v3`, is a
+  **NuGet V3** feed. Its service index is fetched once per session and cached.
+- Every other source URL is treated as a **V2/OData** feed and keeps the legacy code path.
+
+Detection is purely by URL shape, so it costs no probe request and no V2 feed changes behaviour.
+
+### V3 resources used
+
+| Resource `@type` | Used for |
+|---|---|
+| `SearchQueryService` (3.5.0 → 3.0.0-beta → unversioned) | package search |
+| `PackageBaseAddress/3.0.0` | version enumeration, update detection, `.nupkg` and embedded-icon URLs |
+| `RegistrationsBaseUrl` (3.6.0 → 3.4.0 → 3.0.0-rc → 3.0.0-beta → unversioned) | package metadata, listed/unlisted checks |
+
+A feed needs `PackageBaseAddress` or `RegistrationsBaseUrl` to be usable. If it advertises no
+`SearchQueryService` — or its search returns nothing — search degrades to an exact
+package-id lookup against the flat container. Flat-container version lists include unlisted
+versions, so an update candidate is confirmed against its registration leaf before being
+surfaced.
+
+### Fallback behaviour
+
+There is no V2 fallback for a URL that looks like a V3 service index: such a URL is not a
+valid V2 root, so a failed or malformed service index is reported as an error rather than
+retried against a fabricated V2 endpoint. V2-only feeds never enter the V3 path at all.
+
+### Which feed is which
+
+- **.NET Tool** — `https://api.nuget.org/v3/index.json`. Safe to repoint because the manager
+  does not support custom sources and never passes the source URL to the `dotnet` CLI. Also
+  filters search on `packageType=DotnetTool`.
+- **PowerShell / PowerShell 7** — sources are enumerated from `Get-PSRepository`, so the URL is
+  CLI-owned identity (`PowerShellSourceHelper` compares it literally to choose
+  `Register-PSRepository -Default`) and must not be rewritten. The PowerShell Gallery serves no
+  V3 service index, so it stays on V2; a V3-capable custom repository (Azure Artifacts, GitHub
+  Packages, JFrog, MyGet) is picked up automatically.
+- **Chocolatey** — sources come from `choco source list` and `community.chocolatey.org` serves no
+  `index.json`, so it stays on V2. Note that only its updates and version listing are CLI-driven;
+  its search, details and icons run through the shared `BaseNuGet` HTTP path.
+
+V3 has no `IsLatestVersion`, so the client picks "latest" itself using the comparator described
+in the next section.
+
+## Version comparison across ecosystems
+
+`CoreTools.VersionStringToStruct` treats `-`, `_`, `/` and `#` as plain numeric separators and
+drops the letters around them. That is correct for ecosystems where a trailing suffix is a build
+or port revision, and wrong for ecosystems where it is a pre-release - the same string orders
+the opposite way depending on the feed it came from:
+
+| String | Debian / Scoop / Homebrew / vcpkg | npm / crates.io / NuGet | PyPI |
+|---|---|---|---|
+| `1.0.0-1` | **newer** (revision) | **older** (pre-release) | **newer** (implicit post-release) |
+| `1.0.0rc1` | n/a | n/a | **older** (pre-release) |
+
+So the comparison is per-manager, not global. `IPackageManager.CompareVersions(a, b)` returns the
+usual negative/zero/positive, or `null` when two versions cannot be meaningfully compared:
+
+- **Default** (`PackageManager.CompareVersions`) - the numeric comparison above. Used by Scoop,
+  WinGet, Apt, Dnf, Pacman, Homebrew, vcpkg, Snap and Flatpak.
+- **`SemanticVersion`** in `UniGetUI.Core.Tools` - SemVer 2.0 with NuGet's fourth numeric segment
+  allowed. Used by `BaseNuGet` (so Chocolatey, .NET Tool, Windows PowerShell and PowerShell 7),
+  npm, Bun and Cargo.
+- **`PythonVersion`** in `UniGetUI.Core.Tools` - PEP 440, matching Python's packaging library.
+  Used by Pip.
+
+Each override falls back to the base implementation when its own parser rejects the input, so an
+unparseable version behaves exactly as it did before.
+
+Three call sites consume it: `Package.NewerVersionIsInstalled()`, which decides whether an update
+is offered at all; `BaseNuGet.KeepUpdatesNewerThanInstalled`; and the
+`UninstallPreviousVersionsOnUpdate` match, which removes superseded copies. Display sorting
+deliberately does not - those lists mix managers, and a comparison between two packages from
+different ecosystems has no single correct answer.
+
+When adding a manager, pick the comparator its registry actually uses. Getting it wrong hides
+real updates or offers downgrades, and the tests in `PackageTests.cs` assert both directions:
+that SemVer and PEP 440 managers order pre-releases below their releases, and that revision
+ecosystems keep reading a trailing suffix as newer.
+
 ## Build & Test
 
 ```shell

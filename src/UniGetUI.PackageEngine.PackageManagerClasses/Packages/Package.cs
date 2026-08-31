@@ -319,12 +319,12 @@ namespace UniGetUI.PackageEngine.PackageClasses
         {
             foreach (var p in GetInstalledPackages())
             {
-                if (p.NormalizedVersion == CoreTools.Version.Null || this.NormalizedNewVersion == CoreTools.Version.Null)
+                if (Manager.CompareVersions(p.VersionString, this.NewVersionString) is not { } comparison)
                 {
                     continue;
                 }
 
-                if (p.NormalizedVersion >= this.NormalizedNewVersion)
+                if (comparison >= 0)
                 {
                     return true;
                 }

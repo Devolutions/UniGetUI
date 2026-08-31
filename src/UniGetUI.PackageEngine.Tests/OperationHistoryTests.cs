@@ -223,6 +223,81 @@ public sealed class OperationHistoryTests : IDisposable
         Assert.Equal(OperationHistoryRecord.StatusSucceeded, record.Status);
     }
 
+    // The package a Discover install starts from carries the feed's LATEST version, while the
+    // user may have pinned an older one in the install options. Recording the package version
+    // then claims a version that was never installed - and the retry-from-history flow rebuilds
+    // the package from these fields.
+    [Fact]
+    public void FromOperation_Install_RecordsThePinnedVersionRatherThanTheLatest()
+    {
+        var manager = new PackageManagerBuilder().WithName("Scoop").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("3.0.3")
+            .Build();
+
+        using var op = new InstallPackageOperation(
+            package,
+            new InstallOptions { Version = "2.1.7" },
+            IgnoreParallelInstalls: true
+        );
+        var record = OperationHistoryRecord.FromOperation(
+            op,
+            OperationHistoryRecord.StatusSucceeded
+        );
+
+        Assert.Equal("", record.VersionBefore);
+        Assert.Equal("2.1.7", record.VersionAfter);
+    }
+
+    [Fact]
+    public void FromOperation_Update_RecordsThePinnedVersionRatherThanTheNewVersion()
+    {
+        var manager = new PackageManagerBuilder().WithName("Scoop").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+
+        using var op = new UpdatePackageOperation(
+            package,
+            new InstallOptions { Version = "2.0.0" }
+        );
+        var record = OperationHistoryRecord.FromOperation(
+            op,
+            OperationHistoryRecord.StatusSucceeded
+        );
+
+        Assert.Equal("1.0.0", record.VersionBefore);
+        Assert.Equal("2.0.0", record.VersionAfter);
+    }
+
+    [Fact]
+    public void FromOperation_Uninstall_RecordsNoVersionAfterEvenWhenPinned()
+    {
+        var manager = new PackageManagerBuilder().WithName("Scoop").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .Build();
+
+        using var op = new UninstallPackageOperation(
+            package,
+            new InstallOptions { Version = "2.0.0" }
+        );
+        var record = OperationHistoryRecord.FromOperation(
+            op,
+            OperationHistoryRecord.StatusSucceeded
+        );
+
+        Assert.Equal("1.0.0", record.VersionBefore);
+        Assert.Equal("", record.VersionAfter);
+    }
+
     [Fact]
     public void FromOperation_Update_CapturesVersionTransition()
     {

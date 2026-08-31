@@ -206,6 +206,17 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
             callArguments = "";
         }
 
+        public override int? CompareVersions(string versionA, string versionB)
+        {
+            if (
+                SemanticVersion.TryParse(versionA, out SemanticVersion parsedA)
+                && SemanticVersion.TryParse(versionB, out SemanticVersion parsedB)
+            )
+                return parsedA.CompareTo(parsedB);
+
+            return base.CompareVersions(versionA, versionB);
+        }
+
         protected override void _loadManagerVersion(out string version)
         {
             using Process process = new()

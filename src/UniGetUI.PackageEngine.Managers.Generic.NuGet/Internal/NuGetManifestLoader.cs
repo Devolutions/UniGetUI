@@ -27,6 +27,17 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         /// <returns>A Uri object</returns>
         public static Uri GetNuPkgUrl(IPackage package)
         {
+            if (NuGetV3ServiceIndex.Resolve(package.Source) is { } index)
+            {
+                Uri? contentUrl = NuGetV3Client.GetPackageContentUrl(
+                    index,
+                    package.Id,
+                    package.VersionString
+                );
+                if (contentUrl is not null)
+                    return contentUrl;
+            }
+
             return new Uri($"{package.Source.Url}/package/{package.Id}/{package.VersionString}");
         }
 

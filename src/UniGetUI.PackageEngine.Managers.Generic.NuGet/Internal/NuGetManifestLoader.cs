@@ -27,15 +27,23 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         /// <returns>A Uri object</returns>
         public static Uri GetNuPkgUrl(IPackage package)
         {
-            if (NuGetV3ServiceIndex.Resolve(package.Source) is { } index)
+            if (NuGetV3ServiceIndex.IsV3Source(package.Source))
             {
-                Uri? contentUrl = NuGetV3Client.GetPackageContentUrl(
-                    index,
-                    package.Id,
-                    package.VersionString
-                );
-                if (contentUrl is not null)
+                if (
+                    NuGetV3ServiceIndex.Resolve(package.Source) is { } index
+                    && NuGetV3Client.GetPackageContentUrl(
+                        index,
+                        package.Id,
+                        package.VersionString
+                    )
+                        is { } contentUrl
+                )
                     return contentUrl;
+
+                throw new InvalidOperationException(
+                    $"Could not resolve a V3 package content address for {package.Id} "
+                        + $"{package.VersionString} on source {package.Source.Url}"
+                );
             }
 
             return new Uri($"{package.Source.Url}/package/{package.Id}/{package.VersionString}");
@@ -48,7 +56,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         /// <returns>A string containing the contents of the manifest</returns>
         public static string? GetManifestContent(IPackage package)
         {
-            if (BaseNuGet.Manifests.TryGetValue(package.GetHash(), out string? manifest))
+            if (BaseNuGet.Manifests.TryGetValue(package.GetVersionedHash(), out string? manifest))
             {
                 Logger.Debug(
                     $"Loading cached NuGet manifest for package {package.Id} on manager {package.Manager.Name}"
@@ -107,7 +115,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             }
 
             string packageManifestContent = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            BaseNuGet.Manifests[package.GetHash()] = packageManifestContent;
+            BaseNuGet.Manifests[package.GetVersionedHash()] = packageManifestContent;
             return packageManifestContent;
         }
     }

@@ -27,7 +27,6 @@ public sealed class SemanticVersionTests
     [InlineData("1.0.0", "1.0.0.0")]
     [InlineData("1.0.0+build.5", "1.0.0")]
     [InlineData("1.2", "1.2.0")]
-    [InlineData("1.0.0-BETA", "1.0.0-beta")]
     [InlineData("v1.0.0", "1.0.0")]
     public void EquivalentVersionsCompareEqual(string left, string right)
     {
@@ -68,6 +67,32 @@ public sealed class SemanticVersionTests
         var invalid = SemanticVersion.Invalid("garbage");
 
         Assert.True(valid > invalid);
+    }
+
+    // SemVer 2.0 compares pre-release identifiers in ASCII order, so case matters and
+    // "1.0.0-RC" precedes "1.0.0-rc". NuGet's own comparer is case-insensitive, and this type is
+    // shared by both, so the mode has to be explicit.
+    [Fact]
+    public void PreReleaseLabelsAreCaseSensitiveByDefault()
+    {
+        Assert.True(SemanticVersion.TryParse("1.0.0-RC", out var upper));
+        Assert.True(SemanticVersion.TryParse("1.0.0-rc", out var lower));
+
+        Assert.True(upper < lower);
+        Assert.NotEqual(0, upper.CompareTo(lower));
+    }
+
+    [Fact]
+    public void PreReleaseLabelsCompareCaseInsensitivelyForNuGetFeeds()
+    {
+        Assert.True(
+            SemanticVersion.TryParse("1.0.0-RC", SemVerLabels.CaseInsensitive, out var upper)
+        );
+        Assert.True(
+            SemanticVersion.TryParse("1.0.0-rc", SemVerLabels.CaseInsensitive, out var lower)
+        );
+
+        Assert.Equal(0, upper.CompareTo(lower));
     }
 
     [Fact]

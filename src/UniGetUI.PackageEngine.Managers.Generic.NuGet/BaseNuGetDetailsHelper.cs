@@ -322,7 +322,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             NuGetV3ServiceIndex index
         )
         {
-            long hash = package.GetHash();
+            long hash = package.GetVersionedHash();
             if (BaseNuGet.V3Entries.TryGetValue(hash, out V3CatalogEntry? cached))
             {
                 Logger.Debug(
@@ -401,21 +401,29 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
         private static CacheableIcon? GetIconV3(IPackage package)
         {
-            if (BaseNuGet.V3IconUrls.TryGetValue(package.GetHash(), out string? cachedIconUrl))
-            {
-                if (string.IsNullOrWhiteSpace(cachedIconUrl))
-                    return null;
+            long hash = package.GetVersionedHash();
+            bool searchReported = BaseNuGet.V3IconUrls.TryGetValue(
+                hash,
+                out string? searchIconUrl
+            );
 
-                return Uri.TryCreate(cachedIconUrl, UriKind.Absolute, out Uri? cachedUri)
-                    ? new CacheableIcon(cachedUri, package.VersionString)
+            if (searchReported && !string.IsNullOrWhiteSpace(searchIconUrl))
+            {
+                return Uri.TryCreate(searchIconUrl, UriKind.Absolute, out Uri? searchUri)
+                    ? new CacheableIcon(searchUri, package.VersionString)
                     : null;
             }
+
+            V3CatalogEntry? entry = BaseNuGet.V3Entries.GetValueOrDefault(hash);
+
+            if (entry is null && searchReported)
+                return null;
 
             NuGetV3ServiceIndex? index = NuGetV3ServiceIndex.Resolve(package.Source);
             if (index is null)
                 return null;
 
-            V3CatalogEntry? entry = GetOrFetchCatalogEntry(package, index);
+            entry ??= GetOrFetchCatalogEntry(package, index);
             if (entry is null)
                 return null;
 

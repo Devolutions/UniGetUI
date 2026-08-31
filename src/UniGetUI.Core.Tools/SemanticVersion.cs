@@ -4,11 +4,20 @@ namespace UniGetUI.Core.Tools
 {
     /// <summary>
     /// Semantic Versioning 2.0 ordering, with NuGet's fourth numeric segment allowed.
+    /// Pre-release labels compare case-sensitively by default, as SemVer 2.0 requires (ASCII
+    /// order, so "1.0.0-RC" precedes "1.0.0-rc"). NuGet's own comparer is case-insensitive, so
+    /// feeds using NuGet semantics must parse with <see cref="SemVerLabels.CaseInsensitive"/>.
     /// Use it only for ecosystems where a dash introduces a pre-release that is OLDER than the
     /// release it precedes (NuGet, npm, crates.io). Ecosystems whose dash, underscore or hash
     /// introduces a build or port revision that is NEWER than the base version - Debian, Scoop,
     /// Homebrew, vcpkg - must keep using <see cref="CoreTools.VersionStringToStruct"/> instead.
     /// </summary>
+    public enum SemVerLabels
+    {
+        CaseSensitive,
+        CaseInsensitive,
+    }
+
     public readonly struct SemanticVersion : IComparable<SemanticVersion>, IEquatable<SemanticVersion>
     {
         private static readonly int[] EmptyNumbers = [0, 0, 0, 0];
@@ -16,23 +25,38 @@ namespace UniGetUI.Core.Tools
 
         private readonly int[] _numbers;
         private readonly string[] _labels;
+        private readonly SemVerLabels _labelComparison;
 
         public string Original { get; }
         public bool IsValid { get; }
         public bool IsPreRelease => _labels is { Length: > 0 };
 
-        private SemanticVersion(string original, int[] numbers, string[] labels, bool isValid)
+        private SemanticVersion(
+            string original,
+            int[] numbers,
+            string[] labels,
+            bool isValid,
+            SemVerLabels labelComparison
+        )
         {
             Original = original;
             _numbers = numbers;
             _labels = labels;
             IsValid = isValid;
+            _labelComparison = labelComparison;
         }
 
         public static SemanticVersion Invalid(string original) =>
-            new(original, EmptyNumbers, NoLabels, false);
+            new(original, EmptyNumbers, NoLabels, false, SemVerLabels.CaseSensitive);
 
-        public static bool TryParse(string? value, out SemanticVersion version)
+        public static bool TryParse(string? value, out SemanticVersion version) =>
+            TryParse(value, SemVerLabels.CaseSensitive, out version);
+
+        public static bool TryParse(
+            string? value,
+            SemVerLabels labelComparison,
+            out SemanticVersion version
+        )
         {
             version = Invalid(value ?? string.Empty);
 
@@ -78,7 +102,7 @@ namespace UniGetUI.Core.Tools
                 numbers[i] = number;
             }
 
-            version = new SemanticVersion(value, numbers, labels, true);
+            version = new SemanticVersion(value, numbers, labels, true, labelComparison);
             return true;
         }
 
@@ -100,7 +124,12 @@ namespace UniGetUI.Core.Tools
             int shared = Math.Min(_labels.Length, other._labels.Length);
             for (int i = 0; i < shared; i++)
             {
-                int comparison = CompareLabel(_labels[i], other._labels[i]);
+                int comparison = CompareLabel(
+                    _labels[i],
+                    other._labels[i],
+                    _labelComparison is SemVerLabels.CaseInsensitive
+                        || other._labelComparison is SemVerLabels.CaseInsensitive
+                );
                 if (comparison is not 0)
                     return comparison;
             }
@@ -108,7 +137,7 @@ namespace UniGetUI.Core.Tools
             return _labels.Length.CompareTo(other._labels.Length);
         }
 
-        private static int CompareLabel(string left, string right)
+        private static int CompareLabel(string left, string right, bool caseInsensitive)
         {
             bool leftNumeric = int.TryParse(
                 left,
@@ -130,7 +159,9 @@ namespace UniGetUI.Core.Tools
             if (rightNumeric)
                 return 1;
 
-            return string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
+            return caseInsensitive
+                ? string.Compare(left, right, StringComparison.OrdinalIgnoreCase)
+                : string.CompareOrdinal(left, right);
         }
 
         public bool Equals(SemanticVersion other) => CompareTo(other) is 0;

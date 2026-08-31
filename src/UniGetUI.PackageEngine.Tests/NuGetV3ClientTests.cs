@@ -467,14 +467,152 @@ public sealed class NuGetV3ClientTests
         Assert.Null(NuGetV3Client.GetCatalogEntry(index, "Contoso.Tool", "2.0.0"));
     }
 
+    // A registration lookup that cannot be completed must not be reported as "listed": the flat
+    // container includes unlisted versions, so treating an unknown result as listed would let a
+    // transient failure surface a withdrawn release as an update.
     [Fact]
-    public void IsListedTreatsAMalformedRegistrationLeafAsListed()
+    public void AMalformedRegistrationLeafYieldsAnUnknownListedStatus()
     {
         using var feed = new FakeV3Feed { RegistrationLeafBody = "{ oops" };
         var index = feed.Resolve();
         Assert.NotNull(index);
 
-        Assert.True(NuGetV3Client.IsListed(index, "Contoso.Tool", "2.0.0"));
+        Assert.Equal(
+            ListedStatus.Unknown,
+            NuGetV3Client.GetListedStatus(index, "Contoso.Tool", "2.0.0")
+        );
+    }
+
+    [Fact]
+    public void AFeedWithoutRegistrationsYieldsAnUnknownListedStatus()
+    {
+        using var feed = new FakeV3Feed { AdvertiseRegistrations = false };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        Assert.Equal(
+            ListedStatus.Unknown,
+            NuGetV3Client.GetListedStatus(index, "Contoso.Tool", "2.0.0")
+        );
+    }
+
+    [Theory]
+    [InlineData(true, ListedStatus.Listed)]
+    [InlineData(false, ListedStatus.Unlisted)]
+    internal void AnExplicitListedFlagIsReported(bool listed, ListedStatus expected)
+    {
+        using var feed = new FakeV3Feed
+        {
+            RegistrationLeafBody = $"{{\"listed\":{(listed ? "true" : "false")}}}",
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        Assert.Equal(expected, NuGetV3Client.GetListedStatus(index, "Contoso.Tool", "2.0.0"));
+    }
+
+    // Registration predates the listed field, so a feed that omits it is treated as listed
+    // rather than blocking every update on that feed.
+    [Fact]
+    public void AnOmittedListedFlagIsTreatedAsListed()
+    {
+        using var feed = new FakeV3Feed { RegistrationLeafBody = "{\"published\":\"2026-01-02T03:04:05Z\"}" };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        Assert.Equal(
+            ListedStatus.Listed,
+            NuGetV3Client.GetListedStatus(index, "Contoso.Tool", "2.0.0")
+        );
+    }
+
+    // Previously capped at five probes, which hid a valid update when the newest few versions
+    // had been unlisted.
+    [Fact]
+    public void GetUpdateCandidateWalksPastMoreThanFiveUnlistedVersions()
+    {
+        using var feed = new FakeV3Feed
+        {
+            Versions = ["1.0.0", "2.0.1", "2.0.2", "2.0.3", "2.0.4", "2.0.5", "2.0.6", "2.0.7"],
+            UnlistedVersions = ["2.0.7", "2.0.6", "2.0.5", "2.0.4", "2.0.3", "2.0.2"],
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        Assert.Equal(
+            "2.0.1",
+            NuGetV3Client.GetUpdateCandidate(index, "Contoso.Tool", "1.0.0", false, out bool failed)
+        );
+        Assert.False(failed);
+    }
+
+    // A feed outage must be reported, not silently converted into "no update available".
+    [Fact]
+    public void GetUpdateCandidateReportsAFailedVersionRequest()
+    {
+        using var feed = new FakeV3Feed { FlatContainerStatusCode = 500 };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        Assert.Null(
+            NuGetV3Client.GetUpdateCandidate(index, "Contoso.Tool", "1.0.0", false, out bool failed)
+        );
+        Assert.True(failed);
+    }
+
+    [Fact]
+    public void GetUpdateCandidateReportsAnUnresolvableListedStatus()
+    {
+        using var feed = new FakeV3Feed
+        {
+            Versions = ["1.0.0", "2.0.0"],
+            RegistrationLeafStatusCode = 500,
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        Assert.Null(
+            NuGetV3Client.GetUpdateCandidate(index, "Contoso.Tool", "1.0.0", false, out bool failed)
+        );
+        Assert.True(failed);
+    }
+
+    // A registration-less feed cannot answer listed status at all, so the newest matching
+    // version is accepted rather than reporting every check as failed.
+    [Fact]
+    public void GetUpdateCandidateAcceptsTheNewestVersionOnARegistrationLessFeed()
+    {
+        using var feed = new FakeV3Feed
+        {
+            AdvertiseRegistrations = false,
+            Versions = ["1.0.0", "2.0.0"],
+        };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        Assert.Equal(
+            "2.0.0",
+            NuGetV3Client.GetUpdateCandidate(index, "Contoso.Tool", "1.0.0", false, out bool failed)
+        );
+        Assert.False(failed);
+    }
+
+    [Fact]
+    public void GetVersionsDistinguishesAFailedRequestFromAnEmptyFeedAnswer()
+    {
+        using var feed = new FakeV3Feed { FlatContainerStatusCode = 500 };
+        var index = feed.Resolve();
+        Assert.NotNull(index);
+
+        Assert.Empty(NuGetV3Client.GetVersions(index, "Contoso.Tool", out bool failed));
+        Assert.True(failed);
+
+        using var empty = new FakeV3Feed { FlatContainerBody = "{\"versions\":[]}" };
+        var emptyIndex = empty.Resolve();
+        Assert.NotNull(emptyIndex);
+
+        Assert.Empty(NuGetV3Client.GetVersions(emptyIndex, "Contoso.Tool", out bool emptyFailed));
+        Assert.False(emptyFailed);
     }
 
     [Fact]
@@ -897,6 +1035,50 @@ public sealed class NuGetV3ClientTests
         Assert.True(dependency.Mandatory);
     }
 
+    // The metadata cache must be keyed by version. Package.GetHash() covers only
+    // manager + source + id, so keying on it made details for one version answer requests for
+    // every other version of the same package - serving the wrong installer URL, dependencies
+    // and publication date.
+    [Fact]
+    public void DetailsForOneVersionDoNotLeakIntoAnotherVersionOfTheSamePackage()
+    {
+        using var feed = new FakeV3Feed();
+        NuGetV3ServiceIndex.ClearCache();
+        NuGetV3Client.ClearCaches();
+        BaseNuGet.V3Entries.Clear();
+
+        var manager = new TestNuGetManager($"{feed.BaseUri}v3/index.json");
+
+        PackageDetails LoadFor(string version)
+        {
+            var package = new PackageBuilder()
+                .WithManager(manager)
+                .WithSource(manager.Properties.DefaultSource)
+                .WithId("Contoso.Tool")
+                .WithVersion(version)
+                .Build();
+            var details = new PackageDetailsBuilder().Build(package);
+            manager.ExposedDetailsHelper.LoadDetails(details);
+            return details;
+        }
+
+        var first = LoadFor("2.0.0");
+        var second = LoadFor("1.0.0");
+
+        Assert.Equal(
+            $"{feed.BaseUri}flatcontainer/contoso.tool/2.0.0/contoso.tool.2.0.0.nupkg",
+            first.InstallerUrl?.AbsoluteUri
+        );
+        Assert.Equal(
+            $"{feed.BaseUri}flatcontainer/contoso.tool/1.0.0/contoso.tool.1.0.0.nupkg",
+            second.InstallerUrl?.AbsoluteUri
+        );
+        Assert.Equal(
+            $"{feed.BaseUri}registration-gz-semver2/contoso.tool/1.0.0.json",
+            second.ManifestUrl?.AbsoluteUri
+        );
+    }
+
     [Fact]
     public void GetDetailsDoesNotTouchTheNetworkTwiceForDetailsAndIcon()
     {
@@ -964,7 +1146,7 @@ public sealed class NuGetV3ClientTests
             .WithId("Contoso.Tool")
             .WithVersion("2.0.0")
             .Build();
-        BaseNuGet.V3IconUrls[package.GetHash()] = string.Empty;
+        BaseNuGet.V3IconUrls[package.GetVersionedHash()] = string.Empty;
 
         Assert.Null(manager.ExposedDetailsHelper.LoadIcon(package));
         Assert.Empty(feed.Server.RequestPaths);
@@ -1060,6 +1242,10 @@ public sealed class NuGetV3ClientTests
 
         public string? NuspecPackageType { get; init; }
 
+        public int FlatContainerStatusCode { get; init; } = 200;
+
+        public int RegistrationLeafStatusCode { get; init; } = 200;
+
         public bool AdvertiseSearchService { get; init; } = true;
 
         public bool AdvertiseRegistrations { get; init; } = true;
@@ -1103,10 +1289,20 @@ public sealed class NuGetV3ClientTests
                 return (200, NuspecBody ?? RenderedNuspec, "text/xml");
 
             if (path.Contains("/flatcontainer/", StringComparison.OrdinalIgnoreCase))
+            {
+                if (FlatContainerStatusCode is not 200)
+                    return (FlatContainerStatusCode, string.Empty, "application/json");
+
                 return Json(FlatContainerBody ?? BuildFlatContainerIndex());
+            }
 
             if (path.Contains("/registration-gz-semver2/", StringComparison.OrdinalIgnoreCase))
+            {
+                if (RegistrationLeafStatusCode is not 200)
+                    return (RegistrationLeafStatusCode, string.Empty, "application/json");
+
                 return Json(RegistrationLeafBody ?? BuildRegistrationLeaf(path));
+            }
 
             if (path.Contains("/catalog/", StringComparison.OrdinalIgnoreCase))
                 return Json(CatalogEntry);

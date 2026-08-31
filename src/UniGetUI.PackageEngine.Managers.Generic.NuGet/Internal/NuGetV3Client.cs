@@ -9,12 +9,18 @@ using UniGetUI.Core.Tools;
 
 namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
 {
+    internal enum ListedStatus
+    {
+        Listed,
+        Unlisted,
+        Unknown,
+    }
+
     internal static class NuGetV3Client
     {
         public const int MaxConcurrentRequests = 8;
 
         private static readonly TimeSpan VersionCacheLifetime = TimeSpan.FromMinutes(10);
-        private const int MaxUnlistedProbes = 5;
         private const int MaxSearchPages = 5;
 
         private static readonly ConcurrentDictionary<
@@ -231,8 +237,19 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             ];
         }
 
-        public static IReadOnlyList<string> GetVersions(NuGetV3ServiceIndex index, string packageId)
+        public static IReadOnlyList<string> GetVersions(
+            NuGetV3ServiceIndex index,
+            string packageId
+        ) => GetVersions(index, packageId, out _);
+
+        public static IReadOnlyList<string> GetVersions(
+            NuGetV3ServiceIndex index,
+            string packageId,
+            out bool requestFailed
+        )
         {
+            requestFailed = false;
+
             if (index.PackageBaseAddress is null)
                 return [];
 
@@ -253,7 +270,10 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                 return [];
 
             if (!TryDownloadString(versionsUrl, out string content))
+            {
+                requestFailed = true;
                 return [];
+            }
 
             try
             {
@@ -269,6 +289,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             {
                 Logger.Warn($"Malformed NuGet V3 version index at Url={versionsUrl}");
                 Logger.Warn(e);
+                requestFailed = true;
                 return [];
             }
         }
@@ -322,13 +343,34 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             string packageId,
             string installedVersion,
             bool includePreRelease
+        ) => GetUpdateCandidate(index, packageId, installedVersion, includePreRelease, out _);
+
+        public static string? GetUpdateCandidate(
+            NuGetV3ServiceIndex index,
+            string packageId,
+            string installedVersion,
+            bool includePreRelease,
+            out bool requestFailed
         )
         {
+            requestFailed = false;
+
             if (!SemanticVersion.TryParse(installedVersion, out SemanticVersion installed))
                 return null;
 
+            IReadOnlyList<string> allVersions = GetVersions(
+                index,
+                packageId,
+                out bool versionsFailed
+            );
+            if (versionsFailed)
+            {
+                requestFailed = true;
+                return null;
+            }
+
             List<(SemanticVersion Parsed, string Raw)> newer = [];
-            foreach (string version in GetVersions(index, packageId))
+            foreach (string version in allVersions)
             {
                 if (!SemanticVersion.TryParse(version, out SemanticVersion parsed))
                     continue;
@@ -345,28 +387,53 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
 
             newer.Sort((left, right) => right.Parsed.CompareTo(left.Parsed));
 
-            int probes = 0;
+            if (index.RegistrationsBaseUrl is null)
+                return newer[0].Raw;
+
             foreach ((SemanticVersion _, string raw) in newer)
             {
-                if (probes >= MaxUnlistedProbes)
-                    break;
+                switch (GetListedStatus(index, packageId, raw))
+                {
+                    case ListedStatus.Listed:
+                        return raw;
 
-                probes++;
-                if (IsListed(index, packageId, raw))
-                    return raw;
+                    case ListedStatus.Unlisted:
+                        Logger.Debug(
+                            $"Skipping unlisted NuGet version {packageId} {raw} while looking for updates"
+                        );
+                        continue;
 
-                Logger.Debug(
-                    $"Skipping unlisted NuGet version {packageId} {raw} while looking for updates"
-                );
+                    default:
+                        Logger.Warn(
+                            $"Could not establish the listed status of {packageId} {raw}; "
+                                + "reporting the update check for this package as failed"
+                        );
+                        requestFailed = true;
+                        return null;
+                }
             }
 
             return null;
         }
 
-        public static bool IsListed(NuGetV3ServiceIndex index, string packageId, string version)
+        public static ListedStatus GetListedStatus(
+            NuGetV3ServiceIndex index,
+            string packageId,
+            string version
+        )
         {
+            if (index.RegistrationsBaseUrl is null)
+                return ListedStatus.Unknown;
+
             V3RegistrationLeaf? leaf = GetRegistrationLeaf(index, packageId, version);
-            return leaf?.Listed ?? true;
+            if (leaf is null)
+                return ListedStatus.Unknown;
+
+            return leaf.Listed switch
+            {
+                false => ListedStatus.Unlisted,
+                _ => ListedStatus.Listed,
+            };
         }
 
         private static V3RegistrationLeaf? GetRegistrationLeaf(

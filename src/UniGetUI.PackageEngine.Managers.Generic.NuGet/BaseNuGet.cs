@@ -45,8 +45,16 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         public override int? CompareVersions(string versionA, string versionB)
         {
             if (
-                SemanticVersion.TryParse(versionA, out SemanticVersion parsedA)
-                && SemanticVersion.TryParse(versionB, out SemanticVersion parsedB)
+                SemanticVersion.TryParse(
+                    versionA,
+                    SemVerLabels.CaseInsensitive,
+                    out SemanticVersion parsedA
+                )
+                && SemanticVersion.TryParse(
+                    versionB,
+                    SemVerLabels.CaseInsensitive,
+                    out SemanticVersion parsedB
+                )
             )
                 return parsedA.CompareTo(parsedB);
 
@@ -220,7 +228,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                             this
                         );
                         Packages.Add(nativePackage);
-                        Manifests[nativePackage.GetHash()] = package.manifest;
+                        Manifests[nativePackage.GetVersionedHash()] = package.manifest;
                     }
                 }
                 catch (Exception ex)
@@ -285,7 +293,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 packages.Add(nativePackage);
 
                 if (!result.IsExactIdFallback)
-                    V3IconUrls[nativePackage.GetHash()] = result.IconUrl ?? string.Empty;
+                    V3IconUrls[nativePackage.GetVersionedHash()] = result.IconUrl ?? string.Empty;
             }
 
             return packages;
@@ -322,12 +330,18 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                             pair.Key,
                             pair.Value,
                             canPrerelease,
-                            logger
+                            logger,
+                            out int v3Errors
                         );
                         if (v3Updates is null)
+                        {
                             errors++;
+                        }
                         else
+                        {
                             Packages.AddRange(v3Updates);
+                            errors += v3Errors;
+                        }
 
                         continue;
                     }
@@ -398,8 +412,17 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             IReadOnlyList<IPackage> installedPackages,
             bool canPrerelease,
             INativeTaskLogger logger
+        ) => GetAvailableUpdatesV3(source, installedPackages, canPrerelease, logger, out _);
+
+        internal IReadOnlyList<Package>? GetAvailableUpdatesV3(
+            IManagerSource source,
+            IReadOnlyList<IPackage> installedPackages,
+            bool canPrerelease,
+            INativeTaskLogger logger,
+            out int errors
         )
         {
+            errors = 0;
             NuGetV3ServiceIndex? index = NuGetV3ServiceIndex.Resolve(source);
             if (index is null)
             {
@@ -416,7 +439,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
             var scopeMap = BuildInstalledScopeMap(installedPackages);
             var candidates = new ConcurrentDictionary<string, string>();
-            var failures = new ConcurrentDictionary<string, Exception>();
+            var failures = new ConcurrentDictionary<string, Exception?>();
 
             Parallel.ForEach(
                 installed,
@@ -432,10 +455,13 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                             index,
                             entry.Value.Id,
                             entry.Value.Version,
-                            canPrerelease
+                            canPrerelease,
+                            out bool requestFailed
                         );
 
-                        if (candidate is not null)
+                        if (requestFailed)
+                            failures[entry.Key] = null;
+                        else if (candidate is not null)
                             candidates[entry.Key] = candidate;
                     }
                     catch (Exception ex)
@@ -450,8 +476,11 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 logger.Error(
                     $"Failed to check updates for {installed[failure.Key].Id} on source {source.Name}"
                 );
-                logger.Error(failure.Value);
+                if (failure.Value is { } exception)
+                    logger.Error(exception);
             }
+
+            errors = failures.Count;
 
             List<Package> packages = [];
             foreach (var candidate in candidates)
@@ -591,7 +620,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                     new OverridenInstallationOptions(packageIdScope.GetValueOrDefault(id.ToLower()))
                 );
                 packages.Add(nativePackage);
-                Manifests[nativePackage.GetHash()] = match.Value;
+                Manifests[nativePackage.GetVersionedHash()] = match.Value;
             }
 
             return packages;

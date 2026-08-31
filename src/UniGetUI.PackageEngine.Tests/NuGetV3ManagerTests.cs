@@ -31,11 +31,11 @@ public sealed class NuGetV3ManagerTests
         Assert.Equal("2.0.0", packages[0].VersionString);
         Assert.Equal(
             $"{feed.BaseUri}icons/contoso.png",
-            BaseNuGet.V3IconUrls[packages[0].GetHash()]
+            BaseNuGet.V3IconUrls[packages[0].GetVersionedHash()]
         );
 
         Assert.Equal("Fabrikam.Tool", packages[1].Id);
-        Assert.Equal(string.Empty, BaseNuGet.V3IconUrls[packages[1].GetHash()]);
+        Assert.Equal(string.Empty, BaseNuGet.V3IconUrls[packages[1].GetVersionedHash()]);
     }
 
     [Fact]

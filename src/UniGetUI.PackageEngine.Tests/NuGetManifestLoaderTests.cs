@@ -39,7 +39,7 @@ public sealed class NuGetManifestLoaderTests
         BaseNuGet.Manifests.Clear();
         var manager = new PackageManagerBuilder().Build();
         var package = new PackageBuilder().WithManager(manager).WithId("Contoso.Tool").Build();
-        BaseNuGet.Manifests[package.GetHash()] = "<cached />";
+        BaseNuGet.Manifests[package.GetVersionedHash()] = "<cached />";
 
         Assert.Equal("<cached />", NuGetManifestLoader.GetManifestContent(package));
     }

@@ -153,11 +153,11 @@ Windows only. Deletion verdicts are keyed by shortcut path and are re-applied wh
 
 Windows only. A folder rule names the subfolder of the current user's Start Menu `Programs` directory where a package should keep its shortcuts. UniGetUI re-applies it after every install and upgrade, and deletes the relocated shortcuts when the package is uninstalled.
 
-`--package` is the package identity in `manager\PackageId` form, for example `winget\Python.Python.3.13`; the manager segment is lower-cased. `--folder` must be a subfolder of the Start Menu `Programs` directory, so an absolute path, a `..` segment or the machine-wide directory is rejected.
+`--package` is the rule key, in `manager\PackageId` form, for example `winget\Python.Python.3.13`; the manager segment is lower-cased. Note that the key carries no source, unlike package equivalence elsewhere in UniGetUI, so two packages sharing a manager and an id but coming from different sources share a single rule and cannot be placed in different folders. `--folder` must be a subfolder of the Start Menu `Programs` directory, so an absolute path, a `..` segment or the machine-wide directory is rejected.
 
 | Command | Required options | Optional options | Notes |
 | --- | --- | --- | --- |
-| `start-menu folder list` | None | None | Lists the stored folder rules. |
+| `start-menu folder list` | None | None | Lists the stored folder rules, plus any package that only has pending shortcuts. The latter are reported with an empty folder, so a script that wants actual rules has to skip them. |
 | `start-menu folder set` | `--package <manager\id>`, `--folder <name>` | `--relocate-existing` | Stores a folder rule. `--relocate-existing` also moves the shortcuts that already match the package. |
 | `start-menu folder remove` | `--package <manager\id>` | None | Removes the folder rule for one package. |
 

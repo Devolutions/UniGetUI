@@ -8,7 +8,7 @@ This file documents **portable installations**, which keep UniGetUI's data besid
 By default UniGetUI keeps its configuration, caches and package metadata in a per-user directory
 outside the installation folder. Portable mode moves all of that next to the executable, so the
 whole application, settings included, can live on a removable drive or be copied between
-machines.
+machines. A few things deliberately stay outside that folder; see [What changes](#what-changes).
 
 ## Enabling portable mode
 
@@ -60,17 +60,25 @@ whenever the bundle is replaced by an update. Re-create it after upgrading.
 
 | Data | Regular install | Portable install |
 | --- | --- | --- |
-| Root data directory | `%LOCALAPPDATA%\UniGetUI` on Windows; `$XDG_DATA_HOME/UniGetUI`, else `~/.local/share/UniGetUI`, on macOS and Linux | `<install dir>\Settings` |
+| Root data directory | `%LOCALAPPDATA%\UniGetUI` on Windows; `~/Library/Application Support/UniGetUI` on macOS; `$XDG_DATA_HOME/UniGetUI`, else `~/.local/share/UniGetUI`, on Linux | `<install dir>\Settings` |
 | Configuration | `<data dir>\Configuration` | `<install dir>\Settings\Configuration` |
 | Per-package install options | `<data dir>\InstallationOptions` | `<install dir>\Settings\InstallationOptions` |
 | Cached package metadata | `<data dir>\CachedMetadata` | `<install dir>\Settings\CachedMetadata` |
 | Cached icons and screenshots | `<data dir>\CachedMedia` | `<install dir>\Settings\CachedMedia` |
 | Cached language files | `<data dir>\CachedLanguageFiles` | `<install dir>\Settings\CachedLanguageFiles` |
+| Stored secrets, macOS and Linux | `<data dir>/SecureStorage` | `<install dir>/Settings/SecureStorage` |
+| Stored secrets, Windows | Credential Manager | Credential Manager (**not** relocated) |
 | Default package-backup folder | `Documents\UniGetUI` | `Documents\UniGetUI` (**not** relocated) |
 
-Package backups are the one exception: their default location stays in the user's Documents
+Package backups are one exception: their default location stays in the user's Documents
 folder, and portable mode does not move it. Point it somewhere inside the portable folder from
 the Backup settings page if you want backups to travel with the app.
+
+The GitHub backup token is the other exception, and where it lives depends on the platform. On
+macOS and Linux it is written to `SecureStorage` inside the data directory, so it travels with a
+portable folder, as a plain file on disk. On Windows it is held in Credential Manager instead,
+so a portable copy does not carry the login, and every portable copy on one machine shares
+the same stored token unless `UNIGETUI_GITHUB_TOKEN_NAMESPACE` is set to separate them.
 
 Portable mode also does not relocate anything owned by the package managers themselves. WinGet,
 Scoop, Chocolatey, npm and the rest keep their own state in their usual per-user or system
@@ -94,7 +102,8 @@ On first use of the data directory, UniGetUI verifies it can create and write in
 `<install dir>\Settings`. If that fails, for instance on an install under `Program Files`, a
 read-only volume, or a locked-down drive, portable mode is **silently abandoned for that
 session** and the normal per-user directory is used instead. The reason is recorded in the
-**UniGetUI Log** (sidebar menu) as “Could not access/write path”.
+**UniGetUI Log** (sidebar menu) as “Could not acces/write path”, spelled with one “s”
+in the message itself.
 
 Install to a location the running user can write, such as a removable drive or a folder under
 the user profile, if you rely on portable mode.

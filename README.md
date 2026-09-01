@@ -156,12 +156,12 @@ UniGetUI has a built-in autoupdater. On Windows, it can also be updated like any
  - View detailed metadata about any package before installing it. Get the direct download URL or the name of the publisher, as well as the size of the download.
  - Easily bulk-install, update, or uninstall multiple packages at once selecting multiple packages before performing an operation
  - Automatically update packages, or be notified when updates become available. Skip versions or completely ignore updates on a per-package basis, or restrict automatic updating to a hand-picked set of packages.
- - Schedule maintenance: run update checks, install updates, and take local or cloud backups at app start, after every update check, on an interval, or daily/weekly at a chosen time.
+ - Schedule maintenance, with the triggers each task supports: update checks on an interval or daily/weekly at a chosen time, update installation after every update check or daily/weekly, and local or cloud backups at app start or daily/weekly.
  - The system tray icon will also show the available updates and installed packages where supported, to efficiently update a program or remove a package from your system.
  - Easily customize how and where packages are installed. Select different installation options and switches for each package. Install an older version or force a specific architecture where supported. \[But don't worry, those options will be saved for future updates for this package*]
  - Share packages with your friends using generated package links.
  - Export custom lists of packages to then import them to another machine and install those packages with previously specified, custom installation parameters. Setting up machines or configuring a specific software setup has never been easier.
- - Backup your packages to a local file to easily recover your setup in a matter of seconds when migrating to a new machine*, keeping only the most recent backups so the folder does not grow without bound.
+ - Backup your packages to a local file to easily recover your setup in a matter of seconds when migrating to a new machine*. Every backup is kept by default; turn on timestamped file names and pick a retention limit to keep only the most recent ones.
  - Sync those backups to a secret GitHub Gist, so a new machine can restore your package list after a single sign-in.
  - Review every past operation in the operation history, with the full log of each one kept for troubleshooting.
  - On Windows, decide which desktop and Start Menu shortcuts installers are allowed to create, and pin a package's shortcuts to a Start Menu folder of your choosing — both re-applied on every upgrade.

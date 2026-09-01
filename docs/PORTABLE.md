@@ -10,6 +10,9 @@ outside the installation folder. Portable mode moves all of that next to the exe
 whole application, settings included, can live on a removable drive or be copied between
 machines. A few things deliberately stay outside that folder; see [What changes](#what-changes).
 
+The Windows `.zip` release ships in portable mode. The installer, and the macOS and Linux
+archives, do not.
+
 ## Enabling portable mode
 
 Portable mode is controlled by a single marker file named `ForceUniGetUIPortable`, placed in
@@ -50,9 +53,11 @@ New-Item -ItemType File -Path "C:\Path\To\UniGetUI\ForceUniGetUIPortable"
 touch /path/to/unigetui/ForceUniGetUIPortable
 ```
 
-This is how you make the portable `.zip` and `.tar.gz` release archives actually portable.
-They ship **without** the marker, so out of the box they still write to the per-user data
-directory like a regular install.
+The Windows `.zip` already ships with the marker, so it is portable out of the box; creating
+the file by hand is only needed for the macOS and Linux `.tar.gz` archives, which do not carry
+it. Deleting the marker is the supported way to turn portable mode back off in the `.zip`, and
+it is deliberately excluded from `IntegrityTree.json` so removing it cannot fail the integrity
+check.
 
 ### Where the marker goes
 
@@ -98,6 +103,22 @@ the same stored token unless `UNIGETUI_GITHUB_TOKEN_NAMESPACE` is set to separat
 Portable mode also does not relocate anything owned by the package managers themselves. WinGet,
 Scoop, Chocolatey, npm and the rest keep their own state in their usual per-user or system
 locations, and the packages they install are installed normally.
+
+## Importing settings from a per-user installation
+
+A portable folder starts empty, so an existing installation's settings are not picked up
+automatically — they stay in the per-user data directory, untouched.
+
+The first time UniGetUI runs portable and finds settings there, it offers a one-time
+**Import** action in a notification. Accepting copies `Configuration` and `InstallationOptions`
+into the portable folder; caches are skipped because they are rebuilt on demand and are far
+larger than the settings themselves. Nothing is overwritten and nothing is removed from the
+source, so a per-user installation on the same machine keeps working. Restart UniGetUI
+afterwards for the imported settings to take effect.
+
+Dismissing the notification, or importing once, stops it from appearing again. This matters for
+a portable copy carried between machines: it will never silently absorb the settings of a
+machine it happens to be plugged into.
 
 ## What a portable install does not register
 

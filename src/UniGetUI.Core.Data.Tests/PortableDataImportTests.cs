@@ -1,0 +1,101 @@
+using UniGetUI.Core.Logging;
+
+namespace UniGetUI.Core.Data.Tests
+{
+    [Collection("PortableDataImport")]
+    public sealed class PortableDataImportTests : IDisposable
+    {
+        private readonly string _testRoot;
+
+        public PortableDataImportTests()
+        {
+            _testRoot = Path.Combine(
+                Path.GetTempPath(),
+                $"UniGetUI-PortableImportTests-{Guid.NewGuid():N}"
+            );
+            Directory.CreateDirectory(_testRoot);
+        }
+
+        public void Dispose()
+        {
+            CoreData.TEST_DataDirectoryOverride = null;
+            AppPaths.TEST_PortableDataDirectoryOverride = null;
+
+            if (Directory.Exists(_testRoot))
+            {
+                Directory.Delete(_testRoot, true);
+            }
+        }
+
+        private string CreateSource()
+        {
+            string source = Path.Combine(_testRoot, "PerUser");
+            Directory.CreateDirectory(Path.Combine(source, "Configuration"));
+            Directory.CreateDirectory(Path.Combine(source, "InstallationOptions"));
+            Directory.CreateDirectory(Path.Combine(source, "CachedMedia"));
+            File.WriteAllText(Path.Combine(source, "Configuration", "EnableScoop"), "");
+            File.WriteAllText(Path.Combine(source, "Configuration", "Settings.json"), "{}");
+            File.WriteAllText(Path.Combine(source, "InstallationOptions", "winget.pkg.json"), "{}");
+            File.WriteAllText(Path.Combine(source, "CachedMedia", "icon.png"), "not-a-real-icon");
+            return source;
+        }
+
+        private string UsePortableDestination()
+        {
+            string destination = Path.Combine(_testRoot, "Portable");
+            Directory.CreateDirectory(destination);
+            AppPaths.TEST_PortableDataDirectoryOverride = destination;
+            CoreData.TEST_DataDirectoryOverride = destination;
+            return destination;
+        }
+
+        [Fact]
+        public void ImportCopiesUserDataButNotCaches()
+        {
+            string source = CreateSource();
+            string destination = UsePortableDestination();
+
+            int copied = PortableDataImport.Import(source);
+
+            Assert.Equal(3, copied);
+            Assert.True(File.Exists(Path.Combine(destination, "Configuration", "EnableScoop")));
+            Assert.True(File.Exists(Path.Combine(destination, "Configuration", "Settings.json")));
+            Assert.True(File.Exists(Path.Combine(destination, "InstallationOptions", "winget.pkg.json")));
+            Assert.False(Directory.Exists(Path.Combine(destination, "CachedMedia")));
+        }
+
+        [Fact]
+        public void ImportLeavesTheSourceUntouched()
+        {
+            string source = CreateSource();
+            UsePortableDestination();
+
+            PortableDataImport.Import(source);
+
+            Assert.True(File.Exists(Path.Combine(source, "Configuration", "EnableScoop")));
+            Assert.True(File.Exists(Path.Combine(source, "InstallationOptions", "winget.pkg.json")));
+        }
+
+        [Fact]
+        public void ImportNeverOverwritesAnExistingFile()
+        {
+            string source = CreateSource();
+            string destination = UsePortableDestination();
+            Directory.CreateDirectory(Path.Combine(destination, "Configuration"));
+            File.WriteAllText(Path.Combine(destination, "Configuration", "Settings.json"), "portable");
+
+            int copied = PortableDataImport.Import(source);
+
+            Assert.Equal(2, copied);
+            Assert.Equal("portable", File.ReadAllText(Path.Combine(destination, "Configuration", "Settings.json")));
+        }
+
+        [Fact]
+        public void NoSourceIsOfferedWhenNotPortable()
+        {
+            AppPaths.TEST_PortableDataDirectoryOverride = null;
+
+            Assert.Null(PortableDataImport.FindImportableSource());
+        }
+    }
+}

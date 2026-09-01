@@ -20,13 +20,21 @@ one shipped by the installer is empty); only its presence matters.
 
 The installer offers “Perform a portable installation” as an installation type. Selecting
 it copies the marker into the install directory. To choose it from a silent install, use Inno
-Setup's standard `/TASKS` switch:
+Setup's standard `/TASKS` switch, and point `/DIR` at the location the portable copy should
+live in:
 
 ```powershell
-UniGetUI.Installer.exe /VERYSILENT /TASKS="portableinstall"
+UniGetUI.Installer.exe /VERYSILENT /TASKS="portableinstall" /DIR="E:\UniGetUI"
 ```
 
 `portableinstall` and `regularinstall` are mutually exclusive; `regularinstall` is the default.
+
+The install directory has to be writable by the account that runs UniGetUI, or portable mode
+silently falls back, as [described below](#fallback-when-the-folder-is-not-writable). The
+installer defaults to per-user mode (`PrivilegesRequired=lowest`), so without `/DIR` it lands
+in `%LOCALAPPDATA%\Programs\UniGetUI`, which is writable and works. An all-users install, chosen
+in the dialog or with `/ALLUSERS`, lands in `C:\Program Files\UniGetUI` instead, where a
+normally launched UniGetUI cannot create `Settings`.
 
 ### By hand
 

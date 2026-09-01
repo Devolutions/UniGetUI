@@ -163,7 +163,7 @@ UniGetUI has a built-in autoupdater. On Windows, it can also be updated like any
  - Export custom lists of packages to then import them to another machine and install those packages with previously specified, custom installation parameters. Setting up machines or configuring a specific software setup has never been easier.
  - Backup your packages to a local file to easily recover your setup in a matter of seconds when migrating to a new machine*. By default, each backup overwrites the previous file; enable timestamped file names to keep separate backups, and optionally choose a retention limit to keep only the most recent ones.
  - Sync those backups to a secret GitHub Gist, so a new machine can restore your package list after a single sign-in.
- - Review every past operation in the operation history, with the full log of each one kept for troubleshooting.
+- Review the 1,000 most recent operations in the operation history, with up to 5,000 log lines per operation kept for troubleshooting.
  - On Windows, decide which desktop and Start Menu shortcuts installers are allowed to create, and pin a package's shortcuts to a Start Menu folder of your choosing — both re-applied on every upgrade.
  - Drive the whole application from the command line, or from scripts through its local automation API. See the [CLI reference](docs/CLI.md) and the [IPC reference](docs/IPC.md).
  - Run UniGetUI as a portable app that keeps its settings next to the executable. See the [portable mode reference](docs/PORTABLE.md).

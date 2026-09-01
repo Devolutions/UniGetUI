@@ -568,8 +568,6 @@ public partial class MainWindowViewModel : ViewModelBase
         PortableImportBanner.ActionButtonText = CoreTools.Translate("Import");
         PortableImportBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() =>
         {
-            PortableImportBanner.ActionButtonText = "";
-            PortableImportBanner.ActionButtonCommand = null;
             Settings.Set(Settings.K.ShownPortableImportBanner, true);
 
             try
@@ -579,6 +577,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 PortableImportBanner.Title = CoreTools.Translate("Settings imported");
                 PortableImportBanner.Message = CoreTools.Translate(
                     "{0} file(s) were copied. Restart UniGetUI to apply them.", copied);
+                PortableImportBanner.ActionButtonText = CoreTools.Translate("Restart");
+                PortableImportBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(
+                    AppRestartHelper.Restart);
             }
             catch (Exception ex)
             {
@@ -587,6 +588,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 PortableImportBanner.Severity = InfoBarSeverity.Error;
                 PortableImportBanner.Title = CoreTools.Translate("Could not import settings");
                 PortableImportBanner.Message = ex.Message;
+                PortableImportBanner.ActionButtonText = CoreTools.Translate("View log");
+                PortableImportBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(
+                    () => NavigateTo(PageType.OwnLog));
             }
         });
         PortableImportBanner.OnClosed = () => Settings.Set(Settings.K.ShownPortableImportBanner, true);

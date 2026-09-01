@@ -13,7 +13,7 @@ namespace UniGetUI.Core.Logging
 
         private static readonly Lock PortableModeLock = new();
         private static string? __installation_directory;
-        private static bool __portable_mode_resolved;
+        private static volatile bool __portable_mode_resolved;
         private static string? __portable_data_directory;
 
         [ThreadStatic]

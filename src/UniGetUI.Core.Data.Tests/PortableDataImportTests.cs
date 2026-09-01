@@ -1,8 +1,9 @@
 using UniGetUI.Core.Logging;
 
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace UniGetUI.Core.Data.Tests
 {
-    [Collection("PortableDataImport")]
     public sealed class PortableDataImportTests : IDisposable
     {
         private readonly string _testRoot;

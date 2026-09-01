@@ -161,7 +161,7 @@ UniGetUI has a built-in autoupdater. On Windows, it can also be updated like any
  - Easily customize how and where packages are installed. Select different installation options and switches for each package. Install an older version or force a specific architecture where supported. \[But don't worry, those options will be saved for future updates for this package*]
  - Share packages with your friends using generated package links.
  - Export custom lists of packages to then import them to another machine and install those packages with previously specified, custom installation parameters. Setting up machines or configuring a specific software setup has never been easier.
- - Backup your packages to a local file to easily recover your setup in a matter of seconds when migrating to a new machine*. Every backup is kept by default; turn on timestamped file names and pick a retention limit to keep only the most recent ones.
+ - Backup your packages to a local file to easily recover your setup in a matter of seconds when migrating to a new machine*. By default, each backup overwrites the previous file; enable timestamped file names to keep separate backups, and optionally choose a retention limit to keep only the most recent ones.
  - Sync those backups to a secret GitHub Gist, so a new machine can restore your package list after a single sign-in.
  - Review every past operation in the operation history, with the full log of each one kept for troubleshooting.
  - On Windows, decide which desktop and Start Menu shortcuts installers are allowed to create, and pin a package's shortcuts to a Start Menu folder of your choosing — both re-applied on every upgrade.

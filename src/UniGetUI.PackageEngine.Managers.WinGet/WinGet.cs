@@ -628,7 +628,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
             if (CoreTools.IsAdministrator())
             {
-                string WinGetTemp = Path.Join(Path.GetTempPath(), "UniGetUI", "ElevatedWinGetTemp");
+                string WinGetTemp = Path.Join(AppPaths.ScratchDirectory, "ElevatedWinGetTemp");
                 process.StartInfo.Environment["TEMP"] = WinGetTemp;
                 process.StartInfo.Environment["TMP"] = WinGetTemp;
             }
@@ -796,7 +796,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
             if (CoreTools.IsAdministrator())
             {
-                string WinGetTemp = Path.Join(Path.GetTempPath(), "UniGetUI", "ElevatedWinGetTemp");
+                string WinGetTemp = Path.Join(AppPaths.ScratchDirectory, "ElevatedWinGetTemp");
                 logger.AddToStdErr(
                     $"[WARN] Redirecting %TEMP% folder to {WinGetTemp}, since UniGetUI was run as admin"
                 );

@@ -6,6 +6,8 @@ namespace UniGetUI.Core.Logging.Tests
         [Fact]
         public void TestLogger()
         {
+            int baseIndex = Logger.GetLogs().Length;
+
             DateTime startTime = DateTime.Now;
             Logger.Info("Hello World");
             Logger.Debug("Hello World 2");
@@ -14,7 +16,7 @@ namespace UniGetUI.Core.Logging.Tests
 
             DateTime endTime = DateTime.Now;
 
-            LogEntry[] logs = Logger.GetLogs();
+            LogEntry[] logs = Logger.GetLogs()[baseIndex..];
 
             Assert.Equal("Hello World", logs[0].Content);
             Assert.Equal("Hello World 2", logs[1].Content);

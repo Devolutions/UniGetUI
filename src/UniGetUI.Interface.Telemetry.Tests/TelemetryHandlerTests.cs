@@ -19,7 +19,6 @@ public sealed class TelemetryHandlerTests : IDisposable
         "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 
     private readonly string _testRoot;
-    private readonly string _portableMarkerPath;
     private readonly bool _originalWasDaemon;
 
     public TelemetryHandlerTests()
@@ -29,7 +28,6 @@ public sealed class TelemetryHandlerTests : IDisposable
             nameof(TelemetryHandlerTests),
             Guid.NewGuid().ToString("N")
         );
-        _portableMarkerPath = Path.Combine(Environment.CurrentDirectory, "ForceUniGetUIPortable");
         _originalWasDaemon = CoreData.WasDaemon;
 
         CoreData.TEST_DataDirectoryOverride = Path.Combine(_testRoot, "Data");
@@ -42,7 +40,7 @@ public sealed class TelemetryHandlerTests : IDisposable
         Settings.SetValue(Settings.K.TelemetryClientToken, KnownInstallId);
 
         TelemetryHandler.ResetTestState();
-        File.Delete(_portableMarkerPath);
+        AppPaths.TEST_PortableDataDirectoryOverride = null;
         CoreData.WasDaemon = false;
     }
 
@@ -52,11 +50,7 @@ public sealed class TelemetryHandlerTests : IDisposable
         ClearSettingsCaches();
         CoreData.TEST_DataDirectoryOverride = null;
         CoreData.WasDaemon = _originalWasDaemon;
-
-        if (File.Exists(_portableMarkerPath))
-        {
-            File.Delete(_portableMarkerPath);
-        }
+        AppPaths.TEST_PortableDataDirectoryOverride = null;
 
         if (Directory.Exists(_testRoot))
         {
@@ -129,7 +123,7 @@ public sealed class TelemetryHandlerTests : IDisposable
         Settings.Set(Settings.K.EnablePackageBackup_LOCAL, false);
         Settings.Set(Settings.K.DoCacheAdminRights, false);
         Settings.Set(Settings.K.DoCacheAdminRightsForBatches, false);
-        File.WriteAllText(_portableMarkerPath, string.Empty);
+        AppPaths.TEST_PortableDataDirectoryOverride = Path.Combine(_testRoot, "Portable");
         CoreData.WasDaemon = true;
 
         int activeSettings = TelemetryHandler.ComputeActiveSettingsBitmask();
@@ -146,7 +140,7 @@ public sealed class TelemetryHandlerTests : IDisposable
         Settings.Set(Settings.K.DisableNotifications, true);
         Settings.Set(Settings.K.DisableAutoCheckforUpdates, false);
         Settings.Set(Settings.K.AutomaticallyUpdatePackages, true);
-        File.WriteAllText(_portableMarkerPath, string.Empty);
+        AppPaths.TEST_PortableDataDirectoryOverride = Path.Combine(_testRoot, "Portable");
         CoreData.WasDaemon = true;
 
         TelemetryHandler.Configure("telemetry-user", "telemetry-pass");

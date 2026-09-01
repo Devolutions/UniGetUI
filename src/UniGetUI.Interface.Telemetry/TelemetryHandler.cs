@@ -163,7 +163,7 @@ public static class TelemetryHandler
         {
             bool enabled = sp switch
             {
-                "SP1" => File.Exists("ForceUniGetUIPortable"),
+                "SP1" => CoreData.IsPortable,
                 "SP2" => CoreData.WasDaemon,
                 _ => throw new NotImplementedException(),
             };

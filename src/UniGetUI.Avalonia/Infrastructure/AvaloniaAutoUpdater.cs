@@ -106,8 +106,7 @@ internal static partial class AvaloniaAutoUpdater
     private static readonly Lock _updateLogLock = new();
     private static StringBuilder? _updateLogBuilder;
     private static readonly string _updateLogPath = Path.Combine(
-        Path.GetTempPath(),
-        "UniGetUI",
+        AppPaths.ScratchDirectory,
         "last-update-attempt.log"
     );
 

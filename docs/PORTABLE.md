@@ -76,11 +76,18 @@ whenever the bundle is replaced by an update. Re-create it after upgrading.
 | Cached language files | `<data dir>\CachedLanguageFiles` | `<install dir>\Settings\CachedLanguageFiles` |
 | Stored secrets, macOS and Linux | `<data dir>/SecureStorage` | `<install dir>/Settings/SecureStorage` |
 | Stored secrets, Windows | Credential Manager | Credential Manager (**not** relocated) |
+| Session log, WebView2 profile, update logs | `%TEMP%\UniGetUI` on Windows; `$TMPDIR/UniGetUI` elsewhere | `<install dir>\Settings\Temp` |
 | Default package-backup folder | `Documents\UniGetUI` | `Documents\UniGetUI` (**not** relocated) |
 
 Package backups are one exception: their default location stays in the user's Documents
 folder, and portable mode does not move it. Point it somewhere inside the portable folder from
 the Backup settings page if you want backups to travel with the app.
+
+The scratch directory holds files that are rebuilt on demand: the session log, the crash report
+left behind for the next launch, the per-attempt auto-updater log, the WebView2 profile, and the
+`%TEMP%` handed to package-manager subprocesses when UniGetUI runs elevated. Portable mode moves
+it inside the portable folder, so a portable copy leaves nothing behind in the system temporary
+directory. It is safe to delete while UniGetUI is not running.
 
 The GitHub backup token is the other exception, and where it lives depends on the platform. On
 macOS and Linux it is written to `SecureStorage` inside the data directory, so it travels with a

@@ -290,7 +290,7 @@ public partial class App : Application
     }
 
     public static string WebViewUserDataFolder { get; } =
-        Path.Join(Path.GetTempPath(), "UniGetUI", "WebView");
+        Path.Join(AppPaths.ScratchDirectory, "WebView");
 
     private static void SetUpWebViewUserDataFolder()
     {

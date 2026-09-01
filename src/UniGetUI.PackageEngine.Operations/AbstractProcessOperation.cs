@@ -68,7 +68,7 @@ public abstract class AbstractProcessOperation : AbstractOperation
 
     protected void RedirectWinGetTempFolder()
     {
-        string WinGetTemp = Path.Join(Path.GetTempPath(), "UniGetUI", "ElevatedWinGetTemp");
+        string WinGetTemp = Path.Join(AppPaths.ScratchDirectory, "ElevatedWinGetTemp");
         process.StartInfo.Environment["TEMP"] = WinGetTemp;
         process.StartInfo.Environment["TMP"] = WinGetTemp;
     }

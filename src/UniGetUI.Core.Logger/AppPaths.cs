@@ -144,10 +144,7 @@ namespace UniGetUI.Core.Logging
 
         private static string NormalizeDirectoryPath(string path)
         {
-            return Path.GetFullPath(path).TrimEnd(
-                Path.DirectorySeparatorChar,
-                Path.AltDirectorySeparatorChar
-            );
+            return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
         }
 
         private static bool IsInstallRoot(

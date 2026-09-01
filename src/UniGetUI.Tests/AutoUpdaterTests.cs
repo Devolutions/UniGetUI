@@ -36,6 +36,15 @@ public sealed class AutoUpdaterTests
     }
 
     [Fact]
+    public void InstallerArguments_KeepTheSeparatorForAVolumeRoot()
+    {
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(true, @"E:\");
+
+        Assert.Contains(@"/DIR=""E:\""", arguments);
+        Assert.DoesNotContain(@"/DIR=""E:""", arguments);
+    }
+
+    [Fact]
     public void InstallerArguments_FallBackToDefaultsWhenTheDirectoryIsUnknown()
     {
         Assert.DoesNotContain("/DIR=", AutoUpdaterInstallerArguments.ForWindows(true, ""));

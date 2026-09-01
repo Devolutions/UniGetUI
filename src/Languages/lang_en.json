@@ -1064,5 +1064,10 @@
   "Stop tracking this shortcut": "Stop tracking this shortcut",
   "Shortcut management": "Shortcut management",
   "Manage Start Menu shortcuts": "Manage Start Menu shortcuts",
-  "That folder name cannot be used. Type a plain name, without a drive letter or a .. segment.": "That folder name cannot be used. Type a plain name, without a drive letter or a .. segment."
+  "That folder name cannot be used. Type a plain name, without a drive letter or a .. segment.": "That folder name cannot be used. Type a plain name, without a drive letter or a .. segment.",
+  "Import your previous settings?": "Import your previous settings?",
+  "UniGetUI is running in portable mode and started with empty settings. Settings from a previous installation were found at {0}.": "UniGetUI is running in portable mode and started with empty settings. Settings from a previous installation were found at {0}.",
+  "Settings imported": "Settings imported",
+  "{0} file(s) were copied. Restart UniGetUI to apply them.": "{0} file(s) were copied. Restart UniGetUI to apply them.",
+  "Could not import settings": "Could not import settings"
 }

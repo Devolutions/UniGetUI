@@ -18,7 +18,7 @@ internal static class AutoUpdaterInstallerArguments
             return CommonWindowsArguments;
         }
 
-        string directory = installationDirectory.TrimEnd('\\', '/');
+        string directory = Path.TrimEndingDirectorySeparator(installationDirectory);
         return $"{CommonWindowsArguments} /TASKS=\"portableinstall\" /DIR=\"{directory}\"";
     }
 }

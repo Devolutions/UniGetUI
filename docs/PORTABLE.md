@@ -97,8 +97,12 @@ arbitrary commands, so they stay where they are.
 The scratch directory holds files that are rebuilt on demand: the session log, the crash report
 left behind for the next launch, the per-attempt auto-updater log, the WebView2 profile, and the
 `%TEMP%` handed to package-manager subprocesses when UniGetUI runs elevated. Portable mode moves
-it inside the portable folder, so a portable copy leaves nothing behind in the system temporary
-directory. It is safe to delete while UniGetUI is not running.
+all of those inside the portable folder. It is safe to delete while UniGetUI is not running.
+
+Two macOS-only artifacts still land in the system temporary directory and are not covered by
+this: the single-instance lock file, which the OS releases on exit but does not delete, and the
+scratch files written when launching a manual install in Terminal. Both are macOS code paths;
+on Windows the single-instance guard is a named mutex and writes nothing.
 
 The GitHub backup token is the second, and where it lives depends on the platform. On Windows it
 is held in Credential Manager, which encrypts it per user and does not travel with the folder, so

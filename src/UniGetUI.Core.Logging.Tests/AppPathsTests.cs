@@ -52,6 +52,19 @@ namespace UniGetUI.Core.Logging.Tests
             Assert.Null(AppPaths.ResolvePortableDataDirectory(_testRoot));
         }
 
+        [Theory]
+        [InlineData(@"E:\", @"E:\")]
+        [InlineData(@"E:\UniGetUI\", @"E:\UniGetUI")]
+        [InlineData(@"E:\UniGetUI", @"E:\UniGetUI")]
+        public void ResolveInstallationDirectoryTrimsTrailingSeparatorsButKeepsVolumeRoots(
+            string directory,
+            string expected)
+        {
+            Assert.Equal(
+                expected,
+                AppPaths.ResolveInstallationDirectory(directory, static _ => false, static _ => false));
+        }
+
         [Fact]
         public void ScratchDirectoryStaysOutsideTheInstallFolderWhenNotPortable()
         {

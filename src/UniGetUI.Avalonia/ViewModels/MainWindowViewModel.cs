@@ -568,11 +568,10 @@ public partial class MainWindowViewModel : ViewModelBase
         PortableImportBanner.ActionButtonText = CoreTools.Translate("Import");
         PortableImportBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() =>
         {
-            Settings.Set(Settings.K.ShownPortableImportBanner, true);
-
             try
             {
                 int copied = PortableDataImport.Import(importableSource);
+                Settings.Set(Settings.K.ShownPortableImportBanner, true);
                 PortableImportBanner.Severity = InfoBarSeverity.Success;
                 PortableImportBanner.Title = CoreTools.Translate("Settings imported");
                 PortableImportBanner.Message = CoreTools.Translate(
@@ -585,6 +584,7 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 Logger.Error("Could not import settings into the portable folder");
                 Logger.Error(ex);
+                PortableImportBanner.OnClosed = null;
                 PortableImportBanner.Severity = InfoBarSeverity.Error;
                 PortableImportBanner.Title = CoreTools.Translate("Could not import settings");
                 PortableImportBanner.Message = ex.Message;

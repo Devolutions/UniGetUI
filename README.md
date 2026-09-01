@@ -51,6 +51,7 @@ Read more in the [Devolutions announcement](https://devolutions.net/blog/2026/03
  - [Frequently Asked Questions](#frequently-asked-questions)
  - [CLI reference](docs/CLI.md)
  - [IPC reference](docs/IPC.md)
+ - [Portable mode](docs/PORTABLE.md)
 
 ## Installation
 <p>There are multiple ways to install UniGetUI — choose whichever one you prefer!</p>
@@ -138,6 +139,11 @@ tar -xzf UniGetUI.linux-x64.tar.gz
 Replace `x64` with `arm64` in the file name when using the arm64 build.
 
 
+### Portable installations
+
+The `.zip` and `.tar.gz` downloads are portable in the sense that they need no installer, but they still store settings in your user profile. To make UniGetUI keep its data alongside the executable — and for the Windows installer's portable installation type — see [portable mode](docs/PORTABLE.md).
+
+
 ## Update UniGetUI
 
 UniGetUI has a built-in autoupdater. On Windows, it can also be updated like any other package within UniGetUI when installed through WinGet, Scoop, or Chocolatey.
@@ -149,12 +155,18 @@ UniGetUI has a built-in autoupdater. On Windows, it can also be updated like any
  - Discover new packages and filter them to easily find the package you want.
  - View detailed metadata about any package before installing it. Get the direct download URL or the name of the publisher, as well as the size of the download.
  - Easily bulk-install, update, or uninstall multiple packages at once selecting multiple packages before performing an operation
- - Automatically update packages, or be notified when updates become available. Skip versions or completely ignore updates on a per-package basis.
+ - Automatically update packages, or be notified when updates become available. Skip versions or completely ignore updates on a per-package basis, or restrict automatic updating to a hand-picked set of packages.
+ - Schedule maintenance: run update checks, install updates, and take local or cloud backups at app start, after every update check, on an interval, or daily/weekly at a chosen time.
  - The system tray icon will also show the available updates and installed packages where supported, to efficiently update a program or remove a package from your system.
  - Easily customize how and where packages are installed. Select different installation options and switches for each package. Install an older version or force a specific architecture where supported. \[But don't worry, those options will be saved for future updates for this package*]
  - Share packages with your friends using generated package links.
  - Export custom lists of packages to then import them to another machine and install those packages with previously specified, custom installation parameters. Setting up machines or configuring a specific software setup has never been easier.
- - Backup your packages to a local file to easily recover your setup in a matter of seconds when migrating to a new machine*
+ - Backup your packages to a local file to easily recover your setup in a matter of seconds when migrating to a new machine*, keeping only the most recent backups so the folder does not grow without bound.
+ - Sync those backups to a secret GitHub Gist, so a new machine can restore your package list after a single sign-in.
+ - Review every past operation in the operation history, with the full log of each one kept for troubleshooting.
+ - On Windows, decide which desktop and Start Menu shortcuts installers are allowed to create, and pin a package's shortcuts to a Start Menu folder of your choosing — both re-applied on every upgrade.
+ - Drive the whole application from the command line, or from scripts through its local automation API. See the [CLI reference](docs/CLI.md) and the [IPC reference](docs/IPC.md).
+ - Run UniGetUI as a portable app that keeps its settings next to the executable. See the [portable mode reference](docs/PORTABLE.md).
 
 ## Package Managers
 
@@ -240,3 +252,5 @@ Some package managers and repositories implement checks to mitigate the risks of
 ## Command-line interface:
 
 Check out the CLI reference [here](docs/CLI.md) and the IPC reference [here](docs/IPC.md).
+
+For portable installations and where UniGetUI keeps its data, see the [portable mode reference](docs/PORTABLE.md).

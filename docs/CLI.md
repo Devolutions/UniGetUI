@@ -3,6 +3,7 @@
 This file documents the **public command-line surface** exposed by UniGetUI in the 2026 CLI redesign.
 
 - For the background IPC API that powers these commands, see [IPC.md](IPC.md).
+- For portable installations and where UniGetUI stores its data, see [PORTABLE.md](PORTABLE.md).
 - For developer-only Avalonia diagnostics toggles, see the project source and build props; they are intentionally not documented here as public CLI arguments.
 
 ## Quick start
@@ -45,10 +46,13 @@ Related environment variables:
 
 ## Command grammar notes
 
-- Command nouns accept singular or plural forms: `operation`/`operations`, `package`/`packages`, `manager`/`managers`, and so on.
+- Command nouns accept singular or plural forms: `operation`/`operations`, `package`/`packages`, `manager`/`managers`, `source`/`sources`, `shortcut`/`shortcuts`, `log`/`logs`, `backup`/`backups`, and `bundle`/`bundles`.
+- `startmenu` is accepted as a spelling of `start-menu`, and `folders` as a spelling of `folder`.
 - Compatibility aliases are accepted for some flags:
   - `--id` maps to `--package-id` or `--operation-id` where appropriate
   - `--source` maps to `--package-source`
+  - `--source-name` and `--source-url` map to `--name` and `--url` on `source add` and `source remove`
+  - `--name` maps to `--key` on `backup cloud download` and `backup cloud restore`
 - Boolean options use explicit values such as `--enabled true` or `--wait false`.
 - `--detach` is shorthand for asynchronous package operations (`--wait false`).
 - `--manager` uses stable manager ids, not GUI labels. Current ids: `apt`, `bun`, `cargo`, `chocolatey`, `dnf`, `dotnet-tool`, `flatpak`, `homebrew`, `npm`, `pacman`, `pip`, `pwsh`, `scoop`, `snap`, `vcpkg`, `winget`, and `winps`.
@@ -133,6 +137,29 @@ Available keys live in:
 | `shortcut set` | `--path <path>`, `--status <keep\|delete>` | None | Marks a shortcut to keep or delete. |
 | `shortcut reset` | `--path <path>` | None | Clears the stored verdict for one shortcut. |
 | `shortcut reset-all` | None | None | Clears all stored shortcut verdicts. |
+
+### Start Menu shortcuts
+
+Windows only. Deletion verdicts are keyed by shortcut path and are re-applied whenever an upgrade recreates the shortcut. Paths outside a Start Menu `Programs` directory, and paths that are not a `.lnk` or `.url` shortcut, are rejected.
+
+| Command | Required options | Optional options | Notes |
+| --- | --- | --- | --- |
+| `start-menu shortcut list` | None | None | Lists tracked Start Menu shortcuts and stored keep/delete verdicts. |
+| `start-menu shortcut set` | `--path <path>`, `--status <keep\|delete>` | None | Marks a Start Menu shortcut to keep or delete. |
+| `start-menu shortcut reset` | `--path <path>` | None | Clears the stored verdict for one shortcut. |
+| `start-menu shortcut reset-all` | None | None | Clears every stored verdict. Folder rules and the relocations they recorded are left alone. |
+
+### Start Menu folders
+
+Windows only. A folder rule names the subfolder of the current user's Start Menu `Programs` directory where a package should keep its shortcuts. UniGetUI re-applies it after every install and upgrade, and deletes the relocated shortcuts when the package is uninstalled.
+
+`--package` is the package identity in `manager\PackageId` form, for example `winget\Python.Python.3.13`; the manager segment is lower-cased. `--folder` must be a subfolder of the Start Menu `Programs` directory, so an absolute path, a `..` segment or the machine-wide directory is rejected.
+
+| Command | Required options | Optional options | Notes |
+| --- | --- | --- | --- |
+| `start-menu folder list` | None | None | Lists the stored folder rules. |
+| `start-menu folder set` | `--package <manager\id>`, `--folder <name>` | `--relocate-existing` | Stores a folder rule. `--relocate-existing` also moves the shortcuts that already match the package. |
+| `start-menu folder remove` | `--package <manager\id>` | None | Removes the folder rule for one package. |
 
 ### Logs
 
@@ -219,10 +246,9 @@ These parameters are accepted by the app executables in addition to the automati
 | Parameter | Meaning | Notes |
 | --- | --- | --- |
 | `--daemon` | Starts UniGetUI minimized to the notification area. | Requires the corresponding startup setting. |
-| `--welcome` | Opens the setup wizard. | Historical compatibility flag. |
 | `--updateapps` | Forces automatic installation of available updates. | Historical compatibility flag. |
-| `--report-all-errors` | Opens the error report page for any crash while loading. | Troubleshooting flag. |
 | `--uninstall-unigetui` | Unregisters UniGetUI from the notification panel and quits. | Historical; only valid for specific old versions. |
+| `--uninstall-wingetui` | Unregisters the legacy WingetUI install from the notification panel and quits. | Historical; used by the WingetUI uninstaller. |
 | `--migrate-wingetui-to-unigetui` | Migrates legacy WingetUI data and shortcuts, then quits. | Migration helper. |
 | `--help` / `-h` | Prints CLI help. | For the direct verb-based CLI. |
 | `--import-settings <file>` | Imports settings from a JSON file. | Existing settings are replaced. |
@@ -234,17 +260,31 @@ These parameters are accepted by the app executables in addition to the automati
 | `--enable-secure-setting-for-user <user> <key>` / `--disable-secure-setting-for-user <user> <key>` | Toggles one secure setting for a specified user. | May require elevation. |
 | `<bundle-file>` | Loads a valid bundle file into the Package Bundles page. | Supported extensions include `.ubundle`, `.json`, `.yaml`, and `.xml`. |
 
+## Other environment variables
+
+These are read by the application itself rather than by the CLI client.
+
+| Variable | Values | Meaning |
+| --- | --- | --- |
+| `UNIGETUI_WINGET_CLI` | `default`, `winget`, `pinget` | Chooses which WinGet command-line tool the WinGet manager drives. Takes precedence over the `WinGetCliToolPreference` setting. |
+| `UNIGETUI_WINGET_COM` | `default`, `enabled`/`enable`/`on`/`true`/`1`, `disabled`/`disable`/`off`/`false`/`0` | Forces the WinGet COM API on or off instead of letting UniGetUI decide. Takes precedence over the `WinGetComApiPolicy` setting. |
+| `UNIGETUI_FONT_FAMILY` | A font family name | Windows only. Prepends a family to the UI font chain. Ignored when the "use the system UI font" setting is on, and an entry containing the Avalonia `$Default` family is discarded. |
+| `UNIGETUI_FORCE_NATIVE_LINUX_DECORATIONS` | `1`/`true`/`on`/`yes`/`enabled`, `0`/`false`/`off`/`no`/`disabled` | Linux only. Forces the window manager's own title bar on or off instead of auto-detecting. An unrecognized value is ignored with a warning. |
+| `UNIGETUI_GITHUB_TOKEN_NAMESPACE` | Any string | Suffixes the credential-store entry holding the GitHub backup token, so several UniGetUI instances on one machine can hold separate logins. |
+| `WEBVIEW2_BROWSER_EXECUTABLE_FOLDER` | A directory path | Windows only. Points the embedded web view at a fixed-version WebView2 runtime instead of the installed evergreen one. |
+
 ## Deep links
 
-UniGetUI also accepts the following `unigetui://` links:
+The Windows installer registers a `unigetui://` protocol handler for regular installations; a portable install does not register it, see [PORTABLE.md](PORTABLE.md). It is used to route notification clicks back into a running instance, and accepts these actions:
 
 | Deep link | Meaning |
 | --- | --- |
-| `unigetui://showPackage?id={id}&managerName={manager}&sourceName={source}` | Opens package details for the specified package. |
-| `unigetui://showUniGetUI` | Shows UniGetUI and brings the window to the front. |
-| `unigetui://showDiscoverPage` | Opens the Discover page. |
-| `unigetui://showUpdatesPage` | Opens the Updates page. |
-| `unigetui://showInstalledPage` | Opens the Installed page. |
+| `unigetui://openUniGetUI` | Shows UniGetUI and brings the window to the front. |
+| `unigetui://openUniGetUIOnUpdatesTab` | Shows UniGetUI on the Software Updates page. |
+| `unigetui://updateAll` | Starts an update for every available package update. |
+| `unigetui://releaseSelfUpdateLock` | Allows a pending UniGetUI self-update to proceed. |
+
+Anything else after `unigetui://` is ignored. The action is only dispatched when UniGetUI is already running: a link that cold-starts the app launches it normally and the action is dropped. To drive UniGetUI programmatically, use the verb commands above or the [IPC API](IPC.md) rather than deep links.
 
 ## Installer parameters
 
@@ -260,3 +300,5 @@ The installer is Inno Setup based. It supports the standard [Inno Setup command-
 | `/EnableSystemChocolatey` | Deprecated no-op kept for compatibility. |
 | `/NoWinGet` | Do not install WinGet and Microsoft.WinGet.Client if they are missing. |
 | `/MSStore` | Microsoft Store install mode: skip the MSVC and WebView2 dependency installers, do not launch UniGetUI after installation, and disable startup at login. Use with `/CURRENTUSER` to select user-local scope. |
+
+The installation type is an Inno Setup task rather than a switch. Pass `/TASKS="portableinstall"` for a portable installation; the default is `regularinstall`, which additionally accepts `regularinstall\startmenuicon` and `regularinstall\desktopicon`. A portable install keeps its settings beside the executable and registers no protocol handler, file association, shortcuts or startup entry, see [PORTABLE.md](PORTABLE.md).

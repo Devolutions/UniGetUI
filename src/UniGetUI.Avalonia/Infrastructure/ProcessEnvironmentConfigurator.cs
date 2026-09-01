@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -19,6 +20,42 @@ internal static class ProcessEnvironmentConfigurator
         }
 
         ApplyProxySettingsToProcess();
+    }
+
+    /// <summary>
+    /// Points Pinget at the portable folder so a portable copy leaves nothing in
+    /// %LOCALAPPDATA%\Devolutions\Pinget. The source mode has to be set alongside it:
+    /// an app-root override alone makes Pinget fall back to its own private source list
+    /// instead of the machine's real WinGet sources. An externally supplied value wins,
+    /// so an administrator can still place the store elsewhere.
+    /// </summary>
+    public static void ConfigurePingetStorage()
+    {
+        try
+        {
+            if (!CoreData.IsPortable)
+                return;
+
+            SetIfUnset("PINGET_APPROOT", Path.Join(CoreData.UniGetUIDataDirectory, "Pinget"));
+            SetIfUnset("PINGET_SOURCE_MODE", "auto");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Could not point Pinget at the portable folder:");
+            Logger.Error(ex);
+        }
+    }
+
+    private static void SetIfUnset(string name, string value)
+    {
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable(name)))
+        {
+            Logger.Info($"{name} is already set; leaving it untouched");
+            return;
+        }
+
+        Environment.SetEnvironmentVariable(name, value, EnvironmentVariableTarget.Process);
+        Logger.Info($"{name} set to {value}");
     }
 
     public static void ApplyProxySettingsToProcess()

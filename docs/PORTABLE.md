@@ -82,11 +82,17 @@ whenever the bundle is replaced by an update. Re-create it after upgrading.
 | Stored secrets, macOS and Linux | `<data dir>/SecureStorage` | `<install dir>/Settings/SecureStorage` |
 | Stored secrets, Windows | Credential Manager | Credential Manager (**not** relocated) |
 | Session log, WebView2 profile, update logs | `%TEMP%\UniGetUI` on Windows; `$TMPDIR/UniGetUI` elsewhere | `<install dir>\Settings\Temp` |
-| Default package-backup folder | `Documents\UniGetUI` | `Documents\UniGetUI` (**not** relocated) |
+| Default package-backup folder | `Documents\UniGetUI` | `<install dir>\Settings\Backups` |
+| Elevated secure settings, Windows | `%ProgramFiles%\UniGetUI\SecureSettings` | `%ProgramFiles%\UniGetUI\SecureSettings` (**not** relocated) |
 
-Package backups are one exception: their default location stays in the user's Documents
-folder, and portable mode does not move it. Point it somewhere inside the portable folder from
-the Backup settings page if you want backups to travel with the app.
+Package backups follow the portable folder, so they travel with the app. A path chosen on the
+Backup settings page always wins over that default.
+
+Two things deliberately stay put. Elevated secure settings — the toggles that permit CLI
+arguments, custom manager paths and pre/post-operation commands — live under `%ProgramFiles%`
+precisely because writing there needs administrator rights. Moving them into a user-writable
+portable folder would let any process running as the user grant UniGetUI the right to execute
+arbitrary commands, so they stay where they are.
 
 The scratch directory holds files that are rebuilt on demand: the session log, the crash report
 left behind for the next launch, the per-attempt auto-updater log, the WebView2 profile, and the
@@ -94,11 +100,14 @@ left behind for the next launch, the per-attempt auto-updater log, the WebView2 
 it inside the portable folder, so a portable copy leaves nothing behind in the system temporary
 directory. It is safe to delete while UniGetUI is not running.
 
-The GitHub backup token is the other exception, and where it lives depends on the platform. On
-macOS and Linux it is written to `SecureStorage` inside the data directory, so it travels with a
-portable folder, as a plain file on disk. On Windows it is held in Credential Manager instead,
-so a portable copy does not carry the login, and every portable copy on one machine shares
-the same stored token unless `UNIGETUI_GITHUB_TOKEN_NAMESPACE` is set to separate them.
+The GitHub backup token is the second, and where it lives depends on the platform. On Windows it
+is held in Credential Manager, which encrypts it per user and does not travel with the folder, so
+a portable copy asks you to sign in on each machine. On macOS and Linux it is written to
+`SecureStorage` inside the data directory **as a plain file**, so it does travel — treat a
+portable folder carrying one as you would the token itself. Relocating the Windows token into the
+portable folder would mean that same plaintext trade-off, on removable media, so it stays in
+Credential Manager. Every portable copy on one machine shares the same stored token unless
+`UNIGETUI_GITHUB_TOKEN_NAMESPACE` is set to separate them.
 
 Portable mode also does not relocate anything owned by the package managers themselves. WinGet,
 Scoop, Chocolatey, npm and the rest keep their own state in their usual per-user or system

@@ -91,6 +91,22 @@ namespace UniGetUI.Core.Data.Tests
         }
 
         [Fact]
+        public void TheDefaultBackupFolderMovesIntoThePortableFolder()
+        {
+            string destination = UsePortableDestination();
+
+            Assert.Equal(Path.Join(destination, "Backups"), CoreData.UniGetUI_DefaultBackupDirectory);
+        }
+
+        [Fact]
+        public void TheDefaultBackupFolderStaysInDocumentsWhenNotPortable()
+        {
+            AppPaths.TEST_PortableDataDirectoryOverride = null;
+
+            Assert.DoesNotContain("Backups", CoreData.UniGetUI_DefaultBackupDirectory);
+        }
+
+        [Fact]
         public void NoSourceIsOfferedWhenNotPortable()
         {
             AppPaths.TEST_PortableDataDirectoryOverride = null;

@@ -287,6 +287,14 @@ namespace UniGetUI.Core.Data
         {
             get
             {
+                if (AppPaths.PortableDataDirectory is { } portableDirectory)
+                {
+                    string portableBackups = Path.Join(portableDirectory, "Backups");
+                    if (!Directory.Exists(portableBackups))
+                        Directory.CreateDirectory(portableBackups);
+                    return portableBackups;
+                }
+
                 string documentsDirectory = GetDocumentsRoot();
                 string old_dir = Path.Join(documentsDirectory, "WingetUI");
                 string new_dir = Path.Join(documentsDirectory, "UniGetUI");

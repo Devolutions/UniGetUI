@@ -308,8 +308,8 @@
                                                     <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                               VerticalAlignment="Center">
                                                         <CheckBox.Content>
-                                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                        <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="4">
+                                                        <ToggleButton Grid.Column="0" IsChecked="{Binding IsExpanded, Mode=TwoWay}"
                                                                       IsVisible="{Binding HasChildren}"
                                                                       Classes="tree-chevron"
                                                                       BorderThickness="0"
@@ -337,8 +337,8 @@
                                                                       IsVisible="{Binding IsExpanded}"/>
                                                             </Grid>
                                                         </ToggleButton>
-                                                                <TextBlock Text="{Binding PackageName}" VerticalAlignment="Center"/>
-                                                            </StackPanel>
+                                                                <TextBlock Grid.Column="1" Text="{Binding PackageName}" VerticalAlignment="Center"/>
+                                                            </Grid>
                                                         </CheckBox.Content>
                                                     </CheckBox>
                                                     <!-- Child sources, indented, only shown when parent is expanded -->
@@ -562,10 +562,10 @@
                                                         Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
-                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0"
-                                                        automation:AutomationProperties.Name="{Binding Package.AutomationName}"
-                                                        automation:AutomationProperties.ItemType="{t:Translate Package}">
-                                                <Panel Width="24" Height="24" VerticalAlignment="Center"
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
+                                                  automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                                  automation:AutomationProperties.ItemType="{t:Translate Package}">
+                                                <Panel Grid.Column="0" Width="24" Height="24" VerticalAlignment="Center"
                                                        controls:PackageIconLoader.Track="True">
                                                     <Image Source="{Binding IconBitmap}" Width="24" Height="24"
                                                            Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
@@ -586,8 +586,9 @@
                                                                       HorizontalAlignment="Right"
                                                                       VerticalAlignment="Bottom"/>
                                                 </Panel>
-                                                <TextBlock Text="{Binding Package.Name}" VerticalAlignment="Center"/>
-                                            </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="{Binding Package.Name}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -596,11 +597,12 @@
                                                         Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
-                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
-                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/id.svg"
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0">
+                                                <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/id.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding Package.Id}" VerticalAlignment="Center"/>
-                                            </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="{Binding Package.Id}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -609,11 +611,12 @@
                                                         Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
-                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
-                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/version.svg"
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0">
+                                                <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/version.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding VersionComboString}" VerticalAlignment="Center"/>
-                                            </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="{Binding VersionComboString}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -623,17 +626,18 @@
                                                         IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).NewVersionHeaderVisible}">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
-                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
-                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/download.svg"
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0">
+                                                <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/download.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"
                                                                   IsVisible="{Binding !InstallerHostChanged}"/>
-                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/warning_filled.svg"
+                                                <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/warning_filled.svg"
                                                                   Width="22" Height="22" VerticalAlignment="Center"
                                                                   Foreground="#F59E0B"
                                                                   IsVisible="{Binding InstallerHostChanged}"
                                                                   ToolTip.Tip="{Binding InstallerHostChangeTooltip}"/>
-                                                <TextBlock Text="{Binding Package.NewVersionString}" VerticalAlignment="Center"/>
-                                            </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="{Binding Package.NewVersionString}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -642,11 +646,12 @@
                                                         Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
-                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
-                                                <controls:SvgIcon Path="{Binding SourceIconPath}"
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0">
+                                                <controls:SvgIcon Grid.Column="0" Path="{Binding SourceIconPath}"
                                                                   Width="24" Height="24" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding Package.Source.AsString_DisplayName}" VerticalAlignment="Center"/>
-                                            </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="{Binding Package.Source.AsString_DisplayName}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -656,20 +661,20 @@
                                                         IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).InstallerHostColumnVisible}">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
-                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0"
-                                                        controls:PackageInstallerHostLoader.Track="True">
-                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/launch.svg"
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
+                                                  controls:PackageInstallerHostLoader.Track="True">
+                                                <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/launch.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"
                                                                   IsVisible="{Binding !InstallerHostChanged}"/>
-                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/warning_filled.svg"
+                                                <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/warning_filled.svg"
                                                                   Width="22" Height="22" VerticalAlignment="Center"
                                                                   Foreground="#F59E0B"
                                                                   IsVisible="{Binding InstallerHostChanged}"
                                                                   ToolTip.Tip="{Binding InstallerHostChangeTooltip}"/>
-                                                <TextBlock Text="{Binding InstallerHostText}" VerticalAlignment="Center"
+                                                <TextBlock Grid.Column="1" Text="{Binding InstallerHostText}" VerticalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis"
                                                            ToolTip.Tip="{Binding InstallerHostTooltip}"/>
-                                            </StackPanel>
+                                            </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>

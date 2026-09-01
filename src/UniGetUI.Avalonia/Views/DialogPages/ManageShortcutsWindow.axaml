@@ -130,14 +130,14 @@
                                 <DataGridTemplateColumn Width="2*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
-                                            <StackPanel Orientation="Horizontal" Spacing="6"
-                                                        VerticalAlignment="Center" Margin="0,0,4,0">
-                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/id.svg"
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6"
+                                                  VerticalAlignment="Center" Margin="0,0,4,0">
+                                                <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/id.svg"
                                                                   Width="16" Height="16" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis"
                                                            ToolTip.Tip="{Binding Name}"/>
-                                            </StackPanel>
+                                            </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -146,14 +146,14 @@
                                 <DataGridTemplateColumn Width="3*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="vm:ShortcutEntryViewModel">
-                                            <StackPanel Orientation="Horizontal" Spacing="6"
-                                                        VerticalAlignment="Center" Margin="0,0,4,0">
-                                                <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/open_folder.svg"
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6"
+                                                  VerticalAlignment="Center" Margin="0,0,4,0">
+                                                <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/open_folder.svg"
                                                                   Width="16" Height="16" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
+                                                <TextBlock Grid.Column="1" Text="{Binding Path}" VerticalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis"
                                                            ToolTip.Tip="{Binding Path}"/>
-                                            </StackPanel>
+                                            </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -365,15 +365,15 @@
                                                                           automation:AutomationProperties.Name="{Binding DeleteAutomationName}"
                                                                           ToolTip.Tip="{t:Translate Text='Delete this shortcut, now and whenever an upgrade creates it again'}"/>
 
-                                                                <StackPanel Grid.Column="2"
-                                                                            Orientation="Horizontal"
-                                                                            Spacing="6"
-                                                                            VerticalAlignment="Center">
-                                                                    <TextBlock Text="{Binding Name}"
+                                                                <Grid Grid.Column="2"
+                                                                      ColumnDefinitions="*,Auto"
+                                                                      ColumnSpacing="6"
+                                                                      VerticalAlignment="Center">
+                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
                                                                                VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"
                                                                                ToolTip.Tip="{Binding Path}"/>
-                                                                    <Border Background="{DynamicResource SystemAccentColor}"
+                                                                    <Border Grid.Column="1" Background="{DynamicResource SystemAccentColor}"
                                                                             CornerRadius="4"
                                                                             Padding="4,0"
                                                                             VerticalAlignment="Center"
@@ -382,7 +382,7 @@
                                                                                    FontSize="10"
                                                                                    Foreground="White"/>
                                                                     </Border>
-                                                                </StackPanel>
+                                                                </Grid>
 
                                                                 <TextBlock Grid.Column="3"
                                                                            Text="{Binding Location}"
@@ -504,14 +504,14 @@
                                     <DataGridTemplateColumn Width="2*">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate x:DataType="vm:StartMenuShortcutEntryViewModel">
-                                                <StackPanel Orientation="Horizontal" Spacing="6"
-                                                            VerticalAlignment="Center" Margin="0,0,4,0">
-                                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/id.svg"
+                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6"
+                                                      VerticalAlignment="Center" Margin="0,0,4,0">
+                                                    <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/id.svg"
                                                                       Width="16" Height="16" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis"
                                                                ToolTip.Tip="{Binding Name}"/>
-                                                </StackPanel>
+                                                </Grid>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
@@ -520,14 +520,14 @@
                                     <DataGridTemplateColumn Width="3*">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate x:DataType="vm:StartMenuShortcutEntryViewModel">
-                                                <StackPanel Orientation="Horizontal" Spacing="6"
-                                                            VerticalAlignment="Center" Margin="0,0,4,0">
-                                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/open_folder.svg"
+                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6"
+                                                      VerticalAlignment="Center" Margin="0,0,4,0">
+                                                    <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/open_folder.svg"
                                                                       Width="16" Height="16" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding Location}" VerticalAlignment="Center"
+                                                    <TextBlock Grid.Column="1" Text="{Binding Location}" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis"
                                                                ToolTip.Tip="{Binding Path}"/>
-                                                </StackPanel>
+                                                </Grid>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>

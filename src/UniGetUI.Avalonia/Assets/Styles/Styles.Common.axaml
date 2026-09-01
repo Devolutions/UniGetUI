@@ -288,6 +288,10 @@
 
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
 
+    <Style Selector="TextBlock">
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
     <!-- Avalonia's Fluent controls still consume UWP-era accent resources, whose dark-theme
          defaults use the base accent and white foreground. Bind every filled accent control to
          the WinUI v2 tokens above so dark mode consistently uses a lighter fill and dark glyphs. -->

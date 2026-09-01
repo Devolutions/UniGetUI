@@ -44,17 +44,17 @@
                 Margin="16,0,16,8"
                 Padding="4"
                 IsVisible="{Binding IsRestartBannerVisible}">
-            <StackPanel Orientation="Horizontal"
-                        Margin="8,6">
-                <TextBlock Text="{Binding RestartBannerText}"
+            <Grid ColumnDefinitions="*,Auto"
+                  Margin="8,6">
+                <TextBlock Grid.Column="0" Text="{Binding RestartBannerText}"
                            FontSize="14"
                            VerticalAlignment="Center"
                            Margin="0,0,16,0"/>
-                <Button Content="{Binding RestartButtonText}"
+                <Button Grid.Column="1" Content="{Binding RestartButtonText}"
                         automation:AutomationProperties.Name="{Binding RestartButtonText}"
                         Command="{Binding RestartAppCommand}"
                         HorizontalAlignment="Right"/>
-            </StackPanel>
+            </Grid>
         </Border>
 
         <!-- Row 2: Content frame — sub-pages slide in horizontally (WinUI SlideNavigationTransition) -->

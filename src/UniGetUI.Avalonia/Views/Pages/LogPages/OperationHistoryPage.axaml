@@ -113,10 +113,10 @@
                             <DataGridTemplateColumn Header="{t:Translate Operation}" Width="1*" MinWidth="120" Tag="kind">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="vm:OperationHistoryRowViewModel">
-                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="12,0,4,0" VerticalAlignment="Center">
-                                            <controls:SvgIcon Path="{Binding KindIconPath}" Width="24" Height="24" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding KindLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" Margin="12,0,4,0" VerticalAlignment="Center">
+                                            <controls:SvgIcon Grid.Column="0" Path="{Binding KindIconPath}" Width="24" Height="24" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding KindLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        </Grid>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

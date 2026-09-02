@@ -4,6 +4,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools.Scheduling;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.PackageClasses;
 
 namespace UniGetUI.PackageEngine.Classes.Packages.Classes;
 
@@ -54,6 +55,9 @@ public static class AutoUpdatesMigration
         {
             string fileName = Path.GetFileName(path);
             if (fileName.StartsWith(ManagerFilePrefix, StringComparison.Ordinal))
+                continue;
+
+            if (InstallOptionsFactory.IsIdentityScopedOptionsFile(fileName))
                 continue;
 
             var match = prefixes.FirstOrDefault(p =>

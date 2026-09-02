@@ -1214,14 +1214,43 @@ namespace UniGetUI.Core.Tools
             return characters;
         }
 
+        private static readonly HashSet<string> _reservedDeviceNames = BuildReservedDeviceNames();
+
+        private static HashSet<string> BuildReservedDeviceNames()
+        {
+            HashSet<string> names = new(StringComparer.OrdinalIgnoreCase)
+            {
+                "CON",
+                "PRN",
+                "AUX",
+                "NUL",
+            };
+
+            for (int index = 0; index <= 9; index++)
+            {
+                names.Add($"COM{index}");
+                names.Add($"LPT{index}");
+            }
+
+            return names;
+        }
+
         public static string MakeValidFileName(string name)
         {
             string sanitized = string.Concat(name.Where(x => !_illegalPathChars.Contains(x)));
 
-            return sanitized.Length > 0
-                && sanitized.All(character => character is '.' || char.IsWhiteSpace(character))
-                ? "_"
-                : sanitized;
+            if (sanitized.Length is 0)
+                return sanitized;
+
+            if (sanitized.All(character => character is '.' || char.IsWhiteSpace(character)))
+                return "_";
+
+            string trimmed = sanitized.TrimEnd('.', ' ');
+
+            if (trimmed.Length is 0)
+                return "_";
+
+            return _reservedDeviceNames.Contains(trimmed.Split('.')[0]) ? $"_{trimmed}" : trimmed;
         }
 
         public static string EscapeCommandLineArgument(string argument)

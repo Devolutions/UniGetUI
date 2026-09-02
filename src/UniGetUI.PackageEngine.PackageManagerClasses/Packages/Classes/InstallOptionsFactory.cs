@@ -18,8 +18,13 @@ namespace UniGetUI.PackageEngine.PackageClasses
     /// </summary>
     public static class InstallOptionsFactory
     {
+        public static bool IsIdentityScopedOptionsFile(string fileName) =>
+            StoragePath.IsIdentityScoped(fileName);
+
         private static class StoragePath
         {
+            private const int IdentityHashLength = 16;
+
             public static string Get(IPackageManager manager) =>
                 "GlobalValues." + ManagerComponent(manager.Name) + ".json";
 
@@ -37,6 +42,16 @@ namespace UniGetUI.PackageEngine.PackageClasses
             private static string ManagerComponent(string name) =>
                 CoreTools.MakeValidFileName(name.Replace(" ", "").Replace(".", ""));
 
+            public static bool IsIdentityScoped(string fileName)
+            {
+                string stem = Path.GetFileNameWithoutExtension(fileName);
+                int separator = stem.LastIndexOf('_');
+
+                return separator >= 0
+                    && stem.Length - separator - 1 is IdentityHashLength
+                    && stem.Skip(separator + 1).All(Uri.IsHexDigit);
+            }
+
             private static string IdentityHash(IPackage package)
             {
                 string identity = string.Join(
@@ -52,6 +67,21 @@ namespace UniGetUI.PackageEngine.PackageClasses
         }
 
         private static bool TryResolveOptionsPath(string key, out string filePath)
+        {
+            try
+            {
+                return TryResolveOptionsPathCore(key, out filePath);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Could not resolve an options path for key {key}");
+                Logger.Warn(ex);
+                filePath = string.Empty;
+                return false;
+            }
+        }
+
+        private static bool TryResolveOptionsPathCore(string key, out string filePath)
         {
             filePath = string.Empty;
 

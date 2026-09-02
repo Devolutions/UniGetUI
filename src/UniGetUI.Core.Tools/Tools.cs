@@ -1232,6 +1232,12 @@ namespace UniGetUI.Core.Tools
                 names.Add($"LPT{index}");
             }
 
+            foreach (char superscript in "\u00b9\u00b2\u00b3")
+            {
+                names.Add($"COM{superscript}");
+                names.Add($"LPT{superscript}");
+            }
+
             return names;
         }
 

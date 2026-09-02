@@ -288,6 +288,7 @@
   "Nice! Backups will be uploaded to a private gist on your account": "Nice! Backups will be uploaded to a private gist on your account",
   "Select backup": "Select backup",
   "Settings imported from {0}": "Settings imported from {0}",
+  "Could not import all settings from {0}": "Could not import all settings from {0}",
   "UniGetUI Settings": "UniGetUI Settings",
   "Settings exported to {0}": "Settings exported to {0}",
   "UniGetUI settings were reset": "UniGetUI settings were reset",

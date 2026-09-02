@@ -23,13 +23,14 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         private static class StoragePath
         {
-            private const int IdentityHashLength = 16;
+            private const string IdentityScopedPrefix = "PackageOptions.";
 
             public static string Get(IPackageManager manager) =>
                 "GlobalValues." + ManagerComponent(manager.Name) + ".json";
 
             public static string Get(IPackage package) =>
-                ManagerComponent(package.Manager.Name)
+                IdentityScopedPrefix
+                + ManagerComponent(package.Manager.Name)
                 + "."
                 + CoreTools.MakeValidFileName(package.Id)
                 + "_"
@@ -42,15 +43,8 @@ namespace UniGetUI.PackageEngine.PackageClasses
             private static string ManagerComponent(string name) =>
                 CoreTools.MakeValidFileName(name.Replace(" ", "").Replace(".", ""));
 
-            public static bool IsIdentityScoped(string fileName)
-            {
-                string stem = Path.GetFileNameWithoutExtension(fileName);
-                int separator = stem.LastIndexOf('_');
-
-                return separator >= 0
-                    && stem.Length - separator - 1 is IdentityHashLength
-                    && stem.Skip(separator + 1).All(Uri.IsHexDigit);
-            }
+            public static bool IsIdentityScoped(string fileName) =>
+                fileName.StartsWith(IdentityScopedPrefix, StringComparison.Ordinal);
 
             private static string IdentityHash(IPackage package)
             {

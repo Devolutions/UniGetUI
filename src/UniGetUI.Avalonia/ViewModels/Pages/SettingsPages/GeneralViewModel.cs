@@ -47,6 +47,10 @@ public partial class GeneralViewModel : ViewModelBase
         {
             Logger.Error($"Could not import settings from {path}");
             Logger.Error(ex);
+            AccessibilityAnnouncementService.Announce(
+                CoreTools.Translate("Could not import all settings from {0}", Path.GetFileName(path)),
+                AutomationLiveSetting.Assertive);
+            OnRestartRequired();
             return;
         }
 

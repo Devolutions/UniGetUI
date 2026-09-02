@@ -26,6 +26,22 @@ public partial class Settings
 
     private static readonly char[] _rejectedKeyChars = ['/', '\\', ':', '~'];
 
+    private static readonly Lazy<HashSet<string>> _importableSettingNames = new(() =>
+    {
+        HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
+        foreach (K key in Enum.GetValues<K>())
+        {
+            if (key is K.Unset)
+                continue;
+
+            string resolved = ResolveKey(key);
+            names.Add(resolved);
+            names.Add($"{resolved}.json");
+        }
+
+        return names;
+    });
+
     private static readonly string[] _reservedDeviceNames =
     [
         "CON",
@@ -106,6 +122,9 @@ public partial class Settings
             return false;
 
         if (_nonPortableSettings.Contains(key, StringComparer.OrdinalIgnoreCase))
+            return false;
+
+        if (!_importableSettingNames.Value.Contains(key))
             return false;
 
         if (

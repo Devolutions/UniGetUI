@@ -283,6 +283,48 @@ public sealed class SettingsImportExportTests : IDisposable
         Assert.Equal("must-survive", Settings.GetValue(Settings.K.FreshValue));
     }
 
+    [Theory]
+    [InlineData("NotARealSettingName")]
+    [InlineData("evil.bat")]
+    [InlineData("NotARealSettingName.json")]
+    public void ImportFromStringJson_DiscardsKeysThatAreNotKnownSettingNames(string key)
+    {
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string>
+            {
+                [key] = "payload",
+                [Settings.ResolveKey(Settings.K.FreshValue)] = "legitimate",
+            }
+        );
+
+        Settings.ImportFromString_JSON(json);
+
+        Assert.Equal("legitimate", Settings.GetValue(Settings.K.FreshValue));
+        Assert.False(
+            File.Exists(Path.Combine(CoreData.UniGetUIUserConfigurationDirectory, key))
+        );
+    }
+
+    [Fact]
+    public void ImportFromStringJson_AcceptsKnownSettingNamesAndTheirJsonCompanions()
+    {
+        string listKey = $"{Settings.ResolveKey(Settings.K.FreshValue)}.json";
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string>
+            {
+                [Settings.ResolveKey(Settings.K.FreshValue)] = "kept",
+                [listKey] = "[]",
+            }
+        );
+
+        Settings.ImportFromString_JSON(json);
+
+        Assert.Equal("kept", Settings.GetValue(Settings.K.FreshValue));
+        Assert.True(
+            File.Exists(Path.Combine(CoreData.UniGetUIUserConfigurationDirectory, listKey))
+        );
+    }
+
     [Fact]
     public void ImportFromFileJson_CopiesSourceWhenBackupLivesInSettingsDirectory()
     {

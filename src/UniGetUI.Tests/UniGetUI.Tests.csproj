@@ -47,5 +47,6 @@
         <Compile Include="..\Shared\SharedPreUiCommandDispatcher.cs" Link="Shared\SharedPreUiCommandDispatcher.cs" />
         <Compile Include="..\Shared\StartupBundleArguments.cs" Link="Shared\StartupBundleArguments.cs" />
         <Compile Include="..\Shared\AutoUpdater.Helpers.cs" Link="AutoUpdater.Helpers.cs" />
+        <Compile Include="..\Shared\AutoUpdater.InstallerArguments.cs" Link="Shared\AutoUpdater.InstallerArguments.cs" />
     </ItemGroup>
 </Project>

@@ -6,11 +6,7 @@ namespace UniGetUI.Core.Logging
     {
         private static readonly List<LogEntry> LogContents = [];
         private static readonly Lock LogWriteLock = new();
-        private static readonly string SessionLogPath = Path.Combine(
-            Path.GetTempPath(),
-            "UniGetUI",
-            "session.log"
-        );
+        private static string SessionLogPath => Path.Combine(AppPaths.ScratchDirectory, "session.log");
 
         private static readonly string UserName = Environment.UserName;
 
@@ -45,11 +41,12 @@ namespace UniGetUI.Core.Logging
         {
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(SessionLogPath)!);
+                string sessionLogPath = SessionLogPath;
+                Directory.CreateDirectory(Path.GetDirectoryName(sessionLogPath)!);
                 lock (LogWriteLock)
                 {
                     File.AppendAllText(
-                        SessionLogPath,
+                        sessionLogPath,
                         $"[{DateTime.Now:yyyy-MM-dd h:mm:ss tt}] {text}{Environment.NewLine}"
                     );
                 }

@@ -14,6 +14,7 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.Shared;
 
 namespace UniGetUI.Avalonia.Infrastructure;
 
@@ -106,8 +107,7 @@ internal static partial class AvaloniaAutoUpdater
     private static readonly Lock _updateLogLock = new();
     private static StringBuilder? _updateLogBuilder;
     private static readonly string _updateLogPath = Path.Combine(
-        Path.GetTempPath(),
-        "UniGetUI",
+        AppPaths.ScratchDirectory,
         "last-update-attempt.log"
     );
 
@@ -669,13 +669,22 @@ internal static partial class AvaloniaAutoUpdater
             return;
         }
 
+        string installerArguments = AutoUpdaterInstallerArguments.ForWindows(
+            CoreData.IsPortable,
+            CoreData.UniGetUIExecutableDirectory);
+
+        if (CoreData.IsPortable)
+        {
+            LogUpdateInfo($"Portable install: updating in place at {CoreData.UniGetUIExecutableDirectory}");
+        }
+
         LogUpdateInfo($"Launching installer: {installerLocation}");
         using Process p = new()
         {
             StartInfo = new ProcessStartInfo
             {
                 FileName = installerLocation,
-                Arguments = "/SILENT /SUPPRESSMSGBOXES /NORESTART /SP- /NoVCRedist /NoEdgeWebView /NoWinGet /NoRedirectionGuard /NoDesktopShortcut",
+                Arguments = installerArguments,
                 UseShellExecute = true,
                 CreateNoWindow = true,
             },

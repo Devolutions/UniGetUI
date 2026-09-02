@@ -67,6 +67,8 @@ UniGetUI is primarily built for Windows. The Microsoft Store is the recommended 
 ![GitHub Release](https://img.shields.io/github/v/release/Devolutions/UniGetUI?style=for-the-badge)
 Use the installer for the best Windows experience. `UniGetUI.Installer.exe` is the legacy/default x64 installer alias; use the explicit architecture downloads if needed.
 
+The `.zip` is portable: it keeps settings and caches next to the executable rather than in your user profile. See [docs/PORTABLE.md](docs/PORTABLE.md).
+
 | Architecture | Installer | Portable `.zip` |
 |---|---|---|
 | x64 | [UniGetUI.Installer.x64.exe](https://github.com/Devolutions/UniGetUI/releases/latest/download/UniGetUI.Installer.x64.exe) ([default x64 alias](https://github.com/Devolutions/UniGetUI/releases/latest/download/UniGetUI.Installer.exe)) | [UniGetUI.x64.zip](https://github.com/Devolutions/UniGetUI/releases/latest/download/UniGetUI.x64.zip) |

@@ -66,7 +66,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
         if (CoreTools.IsAdministrator())
         {
-            string WinGetTemp = Path.Join(Path.GetTempPath(), "UniGetUI", "ElevatedWinGetTemp");
+            string WinGetTemp = Path.Join(AppPaths.ScratchDirectory, "ElevatedWinGetTemp");
             logger.AddToStdErr(
                 $"[WARN] Redirecting %TEMP% folder to {WinGetTemp}, since UniGetUI was run as admin"
             );
@@ -211,7 +211,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
         if (CoreTools.IsAdministrator())
         {
-            string WinGetTemp = Path.Join(Path.GetTempPath(), "UniGetUI", "ElevatedWinGetTemp");
+            string WinGetTemp = Path.Join(AppPaths.ScratchDirectory, "ElevatedWinGetTemp");
             logger.AddToStdErr(
                 $"[WARN] Redirecting %TEMP% folder to {WinGetTemp}, since UniGetUI was run as admin"
             );
@@ -346,7 +346,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
         if (CoreTools.IsAdministrator())
         {
-            string WinGetTemp = Path.Join(Path.GetTempPath(), "UniGetUI", "ElevatedWinGetTemp");
+            string WinGetTemp = Path.Join(AppPaths.ScratchDirectory, "ElevatedWinGetTemp");
             logger.AddToStdErr(
                 $"[WARN] Redirecting %TEMP% folder to {WinGetTemp}, since UniGetUI was run as admin"
             );
@@ -478,7 +478,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
         );
         if (CoreTools.IsAdministrator())
         {
-            string WinGetTemp = Path.Join(Path.GetTempPath(), "UniGetUI", "ElevatedWinGetTemp");
+            string WinGetTemp = Path.Join(AppPaths.ScratchDirectory, "ElevatedWinGetTemp");
             Logger.Warn(
                 $"[WARN] Redirecting %TEMP% folder to {WinGetTemp}, since UniGetUI was run as admin"
             );
@@ -536,7 +536,7 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
         IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(LoggableTaskType.FindPackages, p);
         if (CoreTools.IsAdministrator())
         {
-            string WinGetTemp = Path.Join(Path.GetTempPath(), "UniGetUI", "ElevatedWinGetTemp");
+            string WinGetTemp = Path.Join(AppPaths.ScratchDirectory, "ElevatedWinGetTemp");
             Logger.Warn(
                 $"[WARN] Redirecting %TEMP% folder to {WinGetTemp}, since UniGetUI was run as admin"
             );

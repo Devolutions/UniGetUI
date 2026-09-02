@@ -6,6 +6,50 @@ namespace UniGetUI.Tests;
 
 public sealed class AutoUpdaterTests
 {
+    [Fact]
+    public void InstallerArguments_LeaveARegularInstallToTheInstallersOwnDirectoryLogic()
+    {
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(false, @"C:\Program Files\UniGetUI");
+
+        Assert.DoesNotContain("/DIR=", arguments);
+        Assert.DoesNotContain("/TASKS=", arguments);
+        Assert.Contains("/SILENT", arguments);
+    }
+
+    [Fact]
+    public void InstallerArguments_PinAPortableInstallToItsOwnDirectory()
+    {
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(true, @"E:\Portable Apps\UniGetUI");
+
+        Assert.Contains(@"/DIR=""E:\Portable Apps\UniGetUI""", arguments);
+        Assert.Contains(@"/TASKS=""portableinstall""", arguments);
+        Assert.Contains("/SILENT", arguments);
+    }
+
+    [Fact]
+    public void InstallerArguments_DoNotLeaveATrailingSeparatorBeforeTheClosingQuote()
+    {
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(true, @"E:\UniGetUI\");
+
+        Assert.Contains(@"/DIR=""E:\UniGetUI""", arguments);
+        Assert.DoesNotContain(@"\""", arguments);
+    }
+
+    [Fact]
+    public void InstallerArguments_KeepTheSeparatorForAVolumeRoot()
+    {
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(true, @"E:\");
+
+        Assert.Contains(@"/DIR=""E:\""", arguments);
+        Assert.DoesNotContain(@"/DIR=""E:""", arguments);
+    }
+
+    [Fact]
+    public void InstallerArguments_FallBackToDefaultsWhenTheDirectoryIsUnknown()
+    {
+        Assert.DoesNotContain("/DIR=", AutoUpdaterInstallerArguments.ForWindows(true, ""));
+    }
+
     [Theory]
     [InlineData("https://devolutions.net/productinfo.json", false, true)]
     [InlineData("https://updates.devolutions.net/productinfo.json", false, true)]

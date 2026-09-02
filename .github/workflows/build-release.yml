@@ -295,6 +295,7 @@ jobs:
 
           # Zip
           Compress-Archive -Path "unigetui_bin/*" -DestinationPath "output/UniGetUI.$Platform.zip" -CompressionLevel Optimal
+          Compress-Archive -Path "InstallerExtras/ForceUniGetUIPortable" -DestinationPath "output/UniGetUI.$Platform.zip" -Update
 
           # Installer is created in output during the previous step
 

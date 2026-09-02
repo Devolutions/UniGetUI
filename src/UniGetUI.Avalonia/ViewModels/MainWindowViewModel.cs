@@ -16,6 +16,7 @@ using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Avalonia.Views.Pages.LogPages;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages;
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
@@ -288,6 +289,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public InfoBarViewModel UpdatesBanner { get; } = new() { Severity = InfoBarSeverity.Success };
     public InfoBarViewModel WinGetWarningBanner { get; } = new() { Severity = InfoBarSeverity.Warning };
     public InfoBarViewModel TelemetryWarner { get; } = new() { Severity = InfoBarSeverity.Informational };
+    public InfoBarViewModel PortableImportBanner { get; } = new() { Severity = InfoBarSeverity.Informational };
 
     // Oldest first (rendered bottom-up so the newest sits nearest the corner).
     public ObservableCollection<InfoBarViewModel> Toasts { get; } = new();
@@ -415,6 +417,7 @@ public partial class MainWindowViewModel : ViewModelBase
         RegisterBannerToast(UpdatesBanner);
         RegisterBannerToast(WinGetWarningBanner);
         RegisterBannerToast(TelemetryWarner);
+        RegisterBannerToast(PortableImportBanner);
 
         DiscoverPage = new DiscoverSoftwarePage();
         UpdatesPage = new SoftwareUpdatesPage();
@@ -538,6 +541,11 @@ public partial class MainWindowViewModel : ViewModelBase
             TelemetryWarner.IsOpen = true;
         }
 
+        if (PortableDataImport.FindImportableSource() is { } importableSource)
+        {
+            ShowPortableImportBanner(importableSource);
+        }
+
         if (WasUpdatedSinceLastRun() && !Settings.Get(Settings.K.DisableReleaseNotesOnUpdate))
         {
             NavigateTo(PageType.ReleaseNotes);
@@ -546,6 +554,47 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             LoadDefaultPage();
         }
+    }
+
+    private void ShowPortableImportBanner(string importableSource)
+    {
+        void RunImport()
+        {
+            try
+            {
+                int copied = PortableDataImport.Import(importableSource);
+                AppPaths.ClearFirstPortableRun();
+                PortableImportBanner.Severity = InfoBarSeverity.Success;
+                PortableImportBanner.Title = CoreTools.Translate("Settings imported");
+                PortableImportBanner.Message = CoreTools.Translate(
+                    "{0} file(s) were copied. Restart UniGetUI to apply them.", copied);
+                PortableImportBanner.ActionButtonText = CoreTools.Translate("Restart");
+                PortableImportBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(
+                    AppRestartHelper.Restart);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Could not import settings into the portable folder");
+                Logger.Error(ex);
+                PortableImportBanner.OnClosed = null;
+                PortableImportBanner.Severity = InfoBarSeverity.Error;
+                PortableImportBanner.Title = CoreTools.Translate("Could not import settings");
+                PortableImportBanner.Message = ex.Message;
+                PortableImportBanner.ActionButtonText = CoreTools.Translate("Retry");
+                PortableImportBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(RunImport);
+            }
+        }
+
+        PortableImportBanner.Title = CoreTools.Translate("Import your previous settings?");
+        PortableImportBanner.Message = CoreTools.Translate(
+            "UniGetUI is running in portable mode and started with empty settings. Settings from a previous installation were found at {0}.",
+            importableSource
+        );
+        PortableImportBanner.IsClosable = true;
+        PortableImportBanner.ActionButtonText = CoreTools.Translate("Import");
+        PortableImportBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(RunImport);
+        PortableImportBanner.OnClosed = AppPaths.ClearFirstPortableRun;
+        PortableImportBanner.IsOpen = true;
     }
 
     // Returns true the first time the app runs after being updated to a newer build

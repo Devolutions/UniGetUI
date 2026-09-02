@@ -169,7 +169,7 @@ internal sealed class PingetCliPackageDetailsProvider(string cliExecutablePath)
 
         if (CoreTools.IsAdministrator())
         {
-            string winGetTemp = Path.Join(Path.GetTempPath(), "UniGetUI", "ElevatedWinGetTemp");
+            string winGetTemp = Path.Join(AppPaths.ScratchDirectory, "ElevatedWinGetTemp");
             logger.Log(
                 $"[WARN] Redirecting %TEMP% folder to {winGetTemp}, since UniGetUI was run as admin"
             );

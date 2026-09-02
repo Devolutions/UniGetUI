@@ -62,6 +62,10 @@ public static class AvaloniaAppHost
 
         args = SharedPreUiCommandDispatcher.IgnoreArgumentsInjectedIntoProtocolLaunch(args);
 
+        Logger.RedactUsername = Core.SettingsEngine.Settings.Get(Core.SettingsEngine.Settings.K.RedactUsernameInLog);
+
+        ProcessEnvironmentConfigurator.ConfigurePingetStorage();
+
         if (ShouldPrepareCliConsole(args))
         {
             WindowsConsoleHost.PrepareCliIO();
@@ -97,8 +101,6 @@ public static class AvaloniaAppHost
             \____/_/ /_/_/\____/\___/\__/\____/___/
                 Welcome to UniGetUI Version {CoreData.VersionName}
             """;
-
-        Logger.RedactUsername = Core.SettingsEngine.Settings.Get(Core.SettingsEngine.Settings.K.RedactUsernameInLog);
 
         Logger.ImportantInfo(textart);
         Logger.ImportantInfo("  ");

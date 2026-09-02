@@ -15,6 +15,7 @@ namespace UniGetUI.Core.Logging
         private static string? __installation_directory;
         private static volatile bool __portable_mode_resolved;
         private static string? __portable_data_directory;
+        private static bool __portable_data_directory_created;
 
         [ThreadStatic]
         private static bool __resolving_portable_mode;
@@ -73,6 +74,19 @@ namespace UniGetUI.Core.Logging
         }
 
         /// <summary>
+        /// Whether this process created the portable data directory, meaning this is the first
+        /// run since the folder became portable. Reading it resolves portable mode first.
+        /// </summary>
+        public static bool PortableDataDirectoryWasCreated
+        {
+            get
+            {
+                _ = PortableDataDirectory;
+                return __portable_data_directory_created;
+            }
+        }
+
+        /// <summary>
         /// The directory for files that must not outlive an uninstall: the session log, the
         /// WebView2 profile, per-attempt update logs, and the %TEMP% handed to elevated
         /// subprocesses. Not created automatically; callers that write must ensure it exists.
@@ -124,7 +138,10 @@ namespace UniGetUI.Core.Logging
             try
             {
                 if (!Directory.Exists(path))
+                {
                     Directory.CreateDirectory(path);
+                    __portable_data_directory_created = true;
+                }
 
                 File.WriteAllText(
                     Path.Join(path, PortablePermissionTestFileName),

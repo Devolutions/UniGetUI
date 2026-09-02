@@ -17,13 +17,17 @@ namespace UniGetUI.Core.Data
 
         /// <summary>
         /// The per-user directory worth importing from, or null when there is nothing to offer.
-        /// Showing this at most once is the caller's business: startup writes settings files
-        /// before anything could ask, so the portable folder's own contents say nothing about
-        /// whether the user has seen the offer.
+        /// Requires that this run created the portable data directory: an established portable
+        /// copy has settings of its own, and merging a per-user installation's settings into it
+        /// is not what the offer promises. The folder's own contents cannot answer that, because
+        /// startup writes settings files before anything could ask.
         /// </summary>
-        public static string? FindImportableSource()
+        public static string? FindImportableSource() =>
+            FindImportableSource(AppPaths.PortableDataDirectoryWasCreated);
+
+        public static string? FindImportableSource(bool portableDirectoryWasCreated)
         {
-            if (!AppPaths.IsPortable)
+            if (!AppPaths.IsPortable || !portableDirectoryWasCreated)
                 return null;
 
             try
@@ -61,7 +65,7 @@ namespace UniGetUI.Core.Data
                 copied += CopyDirectory(source, Path.Join(destination, directoryName));
             }
 
-            Logger.ImportantInfo($"Imported {copied} settings file(s) from {sourceDirectory}");
+            Logger.ImportantInfo($"Imported {copied} settings file(s) into the portable folder");
             return copied;
         }
 

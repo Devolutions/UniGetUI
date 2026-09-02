@@ -52,17 +52,27 @@ namespace UniGetUI.Core.Logging.Tests
             Assert.Null(AppPaths.ResolvePortableDataDirectory(_testRoot));
         }
 
-        [Theory]
-        [InlineData(@"E:\", @"E:\")]
-        [InlineData(@"E:\UniGetUI\", @"E:\UniGetUI")]
-        [InlineData(@"E:\UniGetUI", @"E:\UniGetUI")]
-        public void ResolveInstallationDirectoryTrimsTrailingSeparatorsButKeepsVolumeRoots(
-            string directory,
-            string expected)
+        [Fact]
+        public void ResolveInstallationDirectoryKeepsAVolumeRootIntact()
         {
+            string root = Path.GetPathRoot(Path.GetFullPath("."))!;
+
             Assert.Equal(
-                expected,
-                AppPaths.ResolveInstallationDirectory(directory, static _ => false, static _ => false));
+                root,
+                AppPaths.ResolveInstallationDirectory(root, static _ => false, static _ => false));
+        }
+
+        [Fact]
+        public void ResolveInstallationDirectoryTrimsATrailingSeparator()
+        {
+            string directory = Path.Join(Path.GetFullPath("."), "UniGetUI");
+
+            Assert.Equal(
+                directory,
+                AppPaths.ResolveInstallationDirectory(
+                    directory + Path.DirectorySeparatorChar,
+                    static _ => false,
+                    static _ => false));
         }
 
         [Fact]

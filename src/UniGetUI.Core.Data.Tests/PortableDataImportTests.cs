@@ -20,6 +20,7 @@ namespace UniGetUI.Core.Data.Tests
         public void Dispose()
         {
             CoreData.TEST_DataDirectoryOverride = null;
+            CoreData.TEST_PerUserDataDirectoryOverride = null;
             AppPaths.TEST_PortableDataDirectoryOverride = null;
 
             if (Directory.Exists(_testRoot))
@@ -105,6 +106,30 @@ namespace UniGetUI.Core.Data.Tests
             AppPaths.TEST_PortableDataDirectoryOverride = null;
 
             Assert.DoesNotContain("Backups", CoreData.UniGetUI_DefaultBackupDirectory);
+        }
+
+        [Fact]
+        public void ASourceIsOnlyOfferedToAFreshlyCreatedPortableFolder()
+        {
+            string source = CreateSource();
+            CoreData.TEST_PerUserDataDirectoryOverride = source;
+            UsePortableDestination();
+
+            Assert.Equal(
+                source,
+                PortableDataImport.FindImportableSource(portableDirectoryWasCreated: true));
+            Assert.Null(PortableDataImport.FindImportableSource(portableDirectoryWasCreated: false));
+        }
+
+        [Fact]
+        public void NoSourceIsOfferedWhenThePerUserDirectoryHasNoSettings()
+        {
+            string empty = Path.Combine(_testRoot, "Empty");
+            Directory.CreateDirectory(empty);
+            CoreData.TEST_PerUserDataDirectoryOverride = empty;
+            UsePortableDestination();
+
+            Assert.Null(PortableDataImport.FindImportableSource(portableDirectoryWasCreated: true));
         }
 
         [Fact]

@@ -112,7 +112,10 @@ namespace UniGetUI.Core.Data
         /// Where the per-user data directory lives, regardless of whether portable mode is
         /// active. Unlike <see cref="UniGetUIDataDirectory"/> this creates and migrates nothing.
         /// </summary>
-        public static string PerUserDataDirectoryPath => Path.Join(GetLocalDataRoot(), "UniGetUI");
+        public static string? TEST_PerUserDataDirectoryOverride { private get; set; }
+
+        public static string PerUserDataDirectoryPath =>
+            TEST_PerUserDataDirectoryOverride ?? Path.Join(GetLocalDataRoot(), "UniGetUI");
 
         public static string? TEST_DataDirectoryOverride { private get; set; }
 

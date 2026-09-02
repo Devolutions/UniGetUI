@@ -559,14 +559,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void ShowPortableImportBanner(string importableSource)
     {
-        PortableImportBanner.Title = CoreTools.Translate("Import your previous settings?");
-        PortableImportBanner.Message = CoreTools.Translate(
-            "UniGetUI is running in portable mode and started with empty settings. Settings from a previous installation were found at {0}.",
-            importableSource
-        );
-        PortableImportBanner.IsClosable = true;
-        PortableImportBanner.ActionButtonText = CoreTools.Translate("Import");
-        PortableImportBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() =>
+        void RunImport()
         {
             try
             {
@@ -588,11 +581,19 @@ public partial class MainWindowViewModel : ViewModelBase
                 PortableImportBanner.Severity = InfoBarSeverity.Error;
                 PortableImportBanner.Title = CoreTools.Translate("Could not import settings");
                 PortableImportBanner.Message = ex.Message;
-                PortableImportBanner.ActionButtonText = CoreTools.Translate("View log");
-                PortableImportBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(
-                    () => NavigateTo(PageType.OwnLog));
+                PortableImportBanner.ActionButtonText = CoreTools.Translate("Retry");
+                PortableImportBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(RunImport);
             }
-        });
+        }
+
+        PortableImportBanner.Title = CoreTools.Translate("Import your previous settings?");
+        PortableImportBanner.Message = CoreTools.Translate(
+            "UniGetUI is running in portable mode and started with empty settings. Settings from a previous installation were found at {0}.",
+            importableSource
+        );
+        PortableImportBanner.IsClosable = true;
+        PortableImportBanner.ActionButtonText = CoreTools.Translate("Import");
+        PortableImportBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(RunImport);
         PortableImportBanner.OnClosed = () => Settings.Set(Settings.K.ShownPortableImportBanner, true);
         PortableImportBanner.IsOpen = true;
     }

@@ -95,9 +95,11 @@ public static class InstallerFileNaming
             _ => publisherStem,
         };
 
-        return TrimTrailingSeparators(
+        string built = TrimTrailingSeparators(
             FirstNonEmpty(stem, publisherStem, name, id, FallbackStem) + extension
         );
+
+        return built.Length > 0 ? built : FallbackStem + extension;
     }
 
     private static string Join(string stem, string version)

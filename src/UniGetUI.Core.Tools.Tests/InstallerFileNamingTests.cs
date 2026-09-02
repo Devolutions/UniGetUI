@@ -19,6 +19,48 @@ public class InstallerFileNamingTests : IDisposable
         Settings.ResetSettings();
     }
 
+    [Fact]
+    public void Build_NeverEscapesItsDownloadDirectoryForHostileMetadata()
+    {
+        string[] hostile =
+        [
+            "..",
+            @"..\..\..\evil",
+            "../../evil",
+            ".",
+            "",
+            "   ",
+            @"..\..\evil.exe",
+            "....",
+        ];
+
+        string parent = Path.GetFullPath(
+            Path.Combine(Path.GetTempPath(), "IFN", Guid.NewGuid().ToString("N"))
+        );
+
+        foreach (InstallerNameScheme scheme in Enum.GetValues<InstallerNameScheme>())
+        {
+            foreach (string value in hostile)
+            {
+                string built = InstallerFileNaming.Build(
+                    value,
+                    value,
+                    value,
+                    value,
+                    value,
+                    scheme
+                );
+
+                Assert.NotEqual("", built);
+                Assert.Equal(built, Path.GetFileName(built));
+                Assert.Equal(
+                    parent,
+                    Path.GetDirectoryName(Path.GetFullPath(Path.Join(parent, built)))
+                );
+            }
+        }
+    }
+
     public void Dispose()
     {
         Settings.ResetSettings();

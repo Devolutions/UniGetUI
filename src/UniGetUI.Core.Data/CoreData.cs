@@ -227,9 +227,6 @@ namespace UniGetUI.Core.Data
             }
         }
 
-        /// <summary>
-        /// The directory where the installation options are stored. The directory is automatically created if it does not exist.
-        /// </summary>
         private static string[]? _sanitizedProcessArguments;
 
         /// <summary>
@@ -253,6 +250,9 @@ namespace UniGetUI.Core.Data
             return _sanitizedProcessArguments ?? Environment.GetCommandLineArgs();
         }
 
+        /// <summary>
+        /// The directory where the installation options are stored. The directory is automatically created if it does not exist.
+        /// </summary>
         public static string UniGetUIInstallationOptionsDirectory
         {
             get

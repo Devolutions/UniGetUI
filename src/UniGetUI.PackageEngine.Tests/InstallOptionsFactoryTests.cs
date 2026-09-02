@@ -103,6 +103,32 @@ public sealed class InstallOptionsFactoryTests : IDisposable
     }
 
     [Fact]
+    public void SaveForPackage_DoesNotLetSanitisationCollideDistinctIds()
+    {
+        var manager = new PackageManagerBuilder().WithName("WinGet").Build();
+        var colonId = new PackageBuilder().WithManager(manager).WithId("Contoso:Tool").Build();
+        var plainId = new PackageBuilder().WithManager(manager).WithId("ContosoTool").Build();
+
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { CustomInstallLocation = "FOR-COLON" },
+            colonId
+        );
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { CustomInstallLocation = "FOR-PLAIN" },
+            plainId
+        );
+
+        Assert.Equal(
+            "FOR-COLON",
+            InstallOptionsFactory.LoadForPackage(colonId).CustomInstallLocation
+        );
+        Assert.Equal(
+            "FOR-PLAIN",
+            InstallOptionsFactory.LoadForPackage(plainId).CustomInstallLocation
+        );
+    }
+
+    [Fact]
     public void LoadApplicable_UsesManagerDefaultsAndExpandsPackageToken()
     {
         var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();

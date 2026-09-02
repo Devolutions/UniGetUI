@@ -59,14 +59,6 @@ public static class SecureSettings
 
     public static bool GetForUser(string username, string setting)
     {
-        string purifiedSetting = CoreTools.MakeValidFileName(setting);
-        string purifiedUser = CoreTools.MakeValidFileName(username);
-        string cacheKey = $"{purifiedUser}|{purifiedSetting}";
-        if (_cache.TryGetValue(cacheKey, out var value))
-        {
-            return value;
-        }
-
         if (
             !TryResolveSecureSettingPath(
                 username,
@@ -76,8 +68,15 @@ public static class SecureSettings
             )
         )
         {
-            _cache[cacheKey] = false;
             return false;
+        }
+
+        string purifiedSetting = CoreTools.MakeValidFileName(setting);
+        string purifiedUser = CoreTools.MakeValidFileName(username);
+        string cacheKey = $"{purifiedUser}|{purifiedSetting}";
+        if (_cache.TryGetValue(cacheKey, out var value))
+        {
+            return value;
         }
 
         if (!Directory.Exists(settingsLocation))

@@ -167,6 +167,32 @@ public sealed class SecureSettingsTests : IDisposable
         Assert.True(SecureSettingsStore.GetForUser("CurrentUser", "AllowCLIArguments"));
     }
 
+    [Fact]
+    public void GetForUser_InvalidComponentsDoNotAliasACachedValidEntry()
+    {
+        const string setting = "AllowCLIArguments";
+
+        Assert.Equal(0, SecureSettingsStore.ApplyForUser("_", setting, true));
+        Assert.True(SecureSettingsStore.GetForUser("_", setting));
+
+        Assert.False(SecureSettingsStore.GetForUser("..", setting));
+        Assert.False(SecureSettingsStore.GetForUser(".", setting));
+        Assert.False(SecureSettingsStore.GetForUser("   ", setting));
+
+        Assert.True(SecureSettingsStore.GetForUser("_", setting));
+    }
+
+    [Fact]
+    public void GetForUser_InvalidComponentsDoNotPoisonTheCacheForValidOnes()
+    {
+        const string setting = "AllowCLIArguments";
+
+        Assert.False(SecureSettingsStore.GetForUser("..", setting));
+
+        Assert.Equal(0, SecureSettingsStore.ApplyForUser("_", setting, true));
+        Assert.True(SecureSettingsStore.GetForUser("_", setting));
+    }
+
     private string GetCurrentUserSettingsDirectory() =>
         Path.Combine(_testRoot, CoreTools.MakeValidFileName(Environment.UserName));
 

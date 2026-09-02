@@ -28,7 +28,7 @@ public partial class Settings
 
     private static readonly Lazy<HashSet<string>> _importableSettingNames = new(() =>
     {
-        HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> names = new(StringComparer.Ordinal);
         foreach (K key in Enum.GetValues<K>())
         {
             if (key is K.Unset)
@@ -94,7 +94,12 @@ public partial class Settings
             string entry in Directory.EnumerateFiles(CoreData.UniGetUIUserConfigurationDirectory)
         )
         {
-            if (_nonPortableSettings.Contains(Path.GetFileName(entry)))
+            if (
+                _nonPortableSettings.Contains(
+                    Path.GetFileName(entry),
+                    StringComparer.OrdinalIgnoreCase
+                )
+            )
                 continue;
 
             settings.Add(Path.GetFileName(entry), File.ReadAllText(entry));
@@ -202,7 +207,13 @@ public partial class Settings
         {
             try
             {
-                if (new[] { "TelemetryClientToken" }.Contains(entry.Split("\\")[^1]))
+                if (
+                    string.Equals(
+                        Path.GetFileName(entry),
+                        "TelemetryClientToken",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
                     continue;
 
                 File.Delete(entry);

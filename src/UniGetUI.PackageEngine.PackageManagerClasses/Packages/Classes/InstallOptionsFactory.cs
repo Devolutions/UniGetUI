@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -25,11 +26,27 @@ namespace UniGetUI.PackageEngine.PackageClasses
             public static string Get(IPackage package) =>
                 ManagerComponent(package.Manager.Name)
                 + "."
-                + CoreTools.MakeValidFileName(package.Id)
+                + PackageComponent(package.Id)
                 + ".json";
 
             private static string ManagerComponent(string name) =>
                 CoreTools.MakeValidFileName(name.Replace(" ", "").Replace(".", ""));
+
+            private static string PackageComponent(string id)
+            {
+                string sanitized = CoreTools.MakeValidFileName(id);
+
+                return sanitized.Equals(id, StringComparison.Ordinal)
+                    ? sanitized
+                    : $"{sanitized}_{ShortHash(id)}";
+            }
+
+            private static string ShortHash(string value)
+            {
+                byte[] digest = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+
+                return Convert.ToHexString(digest.AsSpan(0, 4)).ToLowerInvariant();
+            }
         }
 
         private static bool TryResolveOptionsPath(string key, out string filePath)

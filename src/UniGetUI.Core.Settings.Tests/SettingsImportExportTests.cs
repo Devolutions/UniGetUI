@@ -325,6 +325,41 @@ public sealed class SettingsImportExportTests : IDisposable
         );
     }
 
+    [Theory]
+    [InlineData("telemetryclienttoken")]
+    [InlineData("TELEMETRYCLIENTTOKEN")]
+    public void ExportToStringJson_ExcludesSensitiveFilesRegardlessOfCasing(string storedName)
+    {
+        File.WriteAllText(
+            Path.Combine(CoreData.UniGetUIUserConfigurationDirectory, storedName),
+            "secret"
+        );
+
+        var exported = JsonSerializer.Deserialize<Dictionary<string, string>>(
+            Settings.ExportToString_JSON()
+        );
+
+        Assert.NotNull(exported);
+        Assert.DoesNotContain("secret", exported!.Values);
+    }
+
+    [Theory]
+    [InlineData("freshvalue")]
+    [InlineData("FRESHVALUE")]
+    [InlineData("freshvalue.json")]
+    public void ImportFromStringJson_RequiresCanonicalCasingForKnownSettingNames(string key)
+    {
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string> { [key] = "payload" }
+        );
+
+        Settings.ImportFromString_JSON(json);
+
+        Assert.False(
+            File.Exists(Path.Combine(CoreData.UniGetUIUserConfigurationDirectory, key))
+        );
+    }
+
     [Fact]
     public void ImportFromFileJson_CopiesSourceWhenBackupLivesInSettingsDirectory()
     {

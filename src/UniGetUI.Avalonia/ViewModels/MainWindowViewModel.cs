@@ -541,8 +541,7 @@ public partial class MainWindowViewModel : ViewModelBase
             TelemetryWarner.IsOpen = true;
         }
 
-        if (!Settings.Get(Settings.K.ShownPortableImportBanner)
-            && PortableDataImport.FindImportableSource() is { } importableSource)
+        if (PortableDataImport.FindImportableSource() is { } importableSource)
         {
             ShowPortableImportBanner(importableSource);
         }
@@ -564,7 +563,7 @@ public partial class MainWindowViewModel : ViewModelBase
             try
             {
                 int copied = PortableDataImport.Import(importableSource);
-                Settings.Set(Settings.K.ShownPortableImportBanner, true);
+                AppPaths.ClearFirstPortableRun();
                 PortableImportBanner.Severity = InfoBarSeverity.Success;
                 PortableImportBanner.Title = CoreTools.Translate("Settings imported");
                 PortableImportBanner.Message = CoreTools.Translate(
@@ -594,7 +593,7 @@ public partial class MainWindowViewModel : ViewModelBase
         PortableImportBanner.IsClosable = true;
         PortableImportBanner.ActionButtonText = CoreTools.Translate("Import");
         PortableImportBanner.ActionButtonCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(RunImport);
-        PortableImportBanner.OnClosed = () => Settings.Set(Settings.K.ShownPortableImportBanner, true);
+        PortableImportBanner.OnClosed = AppPaths.ClearFirstPortableRun;
         PortableImportBanner.IsOpen = true;
     }
 

@@ -136,10 +136,12 @@ re-downloads the source index.
 A portable folder starts empty, so an existing installation's settings are not picked up
 automatically — they stay in the per-user data directory, untouched.
 
-On the run that creates the portable folder — and only that run — UniGetUI checks the per-user
-directory and, if it holds settings, offers a one-time **Import** action in a notification. An
-established portable copy is never offered the import, because merging another installation's
-settings into a folder already in use is not what the offer is for.
+A new portable folder is marked as awaiting its first run. On the first launch that reaches the
+interface, UniGetUI checks the per-user directory and, if it holds settings, offers a one-time
+**Import** action in a notification. The mark is recorded in the folder, so a first launch that
+never reaches the interface — a headless run, a command-line invocation, a crash — does not
+consume the offer. An established portable copy is never offered the import, because merging
+another installation's settings into a folder already in use is not what the offer is for.
 
 Accepting copies `Configuration` and `InstallationOptions` into the portable folder; caches are
 skipped because they are rebuilt on demand and are far larger than the settings themselves.
@@ -147,9 +149,10 @@ Nothing is overwritten and nothing is removed from the source, so a per-user ins
 same machine keeps working. Restart UniGetUI afterwards for the imported settings to take
 effect.
 
-This matters for a portable copy carried between machines: its folder is created once, on the
-first machine, so it is never offered — and never silently absorbs — the settings of a machine
-it is later plugged into.
+Importing, or dismissing the notification, clears the mark. A failed import does not, so it can
+be retried on the next launch. This matters for a portable copy carried between machines: the
+mark is cleared on the first machine, so the copy is never offered — and never silently absorbs
+— the settings of a machine it is later plugged into.
 
 ## What a portable install does not register
 

@@ -6,6 +6,7 @@ namespace UniGetUI.Core.Logging
         private const string PortableDataDirectoryName = "Settings";
         private const string PortablePermissionTestFileName = "PermissionTestFile";
         private const string PortableScratchDirectoryName = "Temp";
+        private const string FirstRunMarkerFileName = "FirstRun.pending";
         private const string ScratchDirectoryName = "UniGetUI";
         private const string BundledModernAppDirectoryName = "Avalonia";
         private const string WindowsExecutableName = "UniGetUI.exe";
@@ -15,7 +16,6 @@ namespace UniGetUI.Core.Logging
         private static string? __installation_directory;
         private static volatile bool __portable_mode_resolved;
         private static string? __portable_data_directory;
-        private static bool __portable_data_directory_created;
 
         [ThreadStatic]
         private static bool __resolving_portable_mode;
@@ -74,15 +74,28 @@ namespace UniGetUI.Core.Logging
         }
 
         /// <summary>
-        /// Whether this process created the portable data directory, meaning this is the first
-        /// run since the folder became portable. Reading it resolves portable mode first.
+        /// Whether the portable folder has yet to complete a first run. Recorded in the folder
+        /// itself rather than in memory, so it survives a first launch that never reaches the UI
+        /// - a headless run, a pre-UI CLI command, or a crash - and travels with the folder.
         /// </summary>
-        public static bool PortableDataDirectoryWasCreated
+        public static bool IsFirstPortableRun =>
+            PortableDataDirectory is { } directory
+            && File.Exists(Path.Join(directory, FirstRunMarkerFileName));
+
+        /// <summary>
+        /// Records that the portable folder has completed its first run.
+        /// </summary>
+        public static void ClearFirstPortableRun()
         {
-            get
+            try
             {
-                _ = PortableDataDirectory;
-                return __portable_data_directory_created;
+                if (PortableDataDirectory is { } directory)
+                    File.Delete(Path.Join(directory, FirstRunMarkerFileName));
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("Could not clear the portable first-run marker");
+                Logger.Warn(ex);
             }
         }
 
@@ -137,16 +150,18 @@ namespace UniGetUI.Core.Logging
             string path = Path.Join(installationDirectory, PortableDataDirectoryName);
             try
             {
-                if (!Directory.Exists(path))
-                {
+                bool created = !Directory.Exists(path);
+                if (created)
                     Directory.CreateDirectory(path);
-                    __portable_data_directory_created = true;
-                }
 
                 File.WriteAllText(
                     Path.Join(path, PortablePermissionTestFileName),
                     "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
                 );
+
+                if (created)
+                    File.WriteAllText(Path.Join(path, FirstRunMarkerFileName), "");
+
                 return path;
             }
             catch (Exception ex)

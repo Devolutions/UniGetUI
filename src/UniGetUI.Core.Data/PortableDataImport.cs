@@ -17,17 +17,17 @@ namespace UniGetUI.Core.Data
 
         /// <summary>
         /// The per-user directory worth importing from, or null when there is nothing to offer.
-        /// Requires that this run created the portable data directory: an established portable
-        /// copy has settings of its own, and merging a per-user installation's settings into it
-        /// is not what the offer promises. The folder's own contents cannot answer that, because
-        /// startup writes settings files before anything could ask.
+        /// Requires that the portable folder has not completed a first run: an established
+        /// portable copy has settings of its own, and merging a per-user installation's settings
+        /// into it is not what the offer promises. The folder's own contents cannot answer that,
+        /// because startup writes settings files before anything could ask.
         /// </summary>
         public static string? FindImportableSource() =>
-            FindImportableSource(AppPaths.PortableDataDirectoryWasCreated);
+            FindImportableSource(AppPaths.IsFirstPortableRun);
 
-        public static string? FindImportableSource(bool portableDirectoryWasCreated)
+        public static string? FindImportableSource(bool isFirstPortableRun)
         {
-            if (!AppPaths.IsPortable || !portableDirectoryWasCreated)
+            if (!AppPaths.IsPortable || !isFirstPortableRun)
                 return null;
 
             try

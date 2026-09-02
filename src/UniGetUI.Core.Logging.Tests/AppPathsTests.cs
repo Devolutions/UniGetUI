@@ -76,6 +76,37 @@ namespace UniGetUI.Core.Logging.Tests
         }
 
         [Fact]
+        public void ResolvePortableDataDirectoryMarksAFirstRunOnlyWhenItCreatesTheFolder()
+        {
+            File.WriteAllText(Path.Combine(_testRoot, "ForceUniGetUIPortable"), string.Empty);
+
+            string? first = AppPaths.ResolvePortableDataDirectory(_testRoot);
+            Assert.NotNull(first);
+            Assert.True(File.Exists(Path.Combine(first!, "FirstRun.pending")));
+
+            File.Delete(Path.Combine(first!, "FirstRun.pending"));
+            AppPaths.ResolvePortableDataDirectory(_testRoot);
+            Assert.False(
+                File.Exists(Path.Combine(first!, "FirstRun.pending")),
+                "an established portable folder must not be marked as a first run again");
+        }
+
+        [Fact]
+        public void ClearFirstPortableRunRemovesTheMarker()
+        {
+            string portableDirectory = Path.Combine(_testRoot, "Settings");
+            Directory.CreateDirectory(portableDirectory);
+            File.WriteAllText(Path.Combine(portableDirectory, "FirstRun.pending"), string.Empty);
+            AppPaths.TEST_PortableDataDirectoryOverride = portableDirectory;
+
+            Assert.True(AppPaths.IsFirstPortableRun);
+
+            AppPaths.ClearFirstPortableRun();
+
+            Assert.False(AppPaths.IsFirstPortableRun);
+        }
+
+        [Fact]
         public void ScratchDirectoryStaysOutsideTheInstallFolderWhenNotPortable()
         {
             AppPaths.TEST_PortableDataDirectoryOverride = null;

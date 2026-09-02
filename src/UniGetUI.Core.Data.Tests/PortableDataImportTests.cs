@@ -109,7 +109,7 @@ namespace UniGetUI.Core.Data.Tests
         }
 
         [Fact]
-        public void ASourceIsOnlyOfferedToAFreshlyCreatedPortableFolder()
+        public void ASourceIsOnlyOfferedOnTheFirstRunOfAPortableFolder()
         {
             string source = CreateSource();
             CoreData.TEST_PerUserDataDirectoryOverride = source;
@@ -117,8 +117,8 @@ namespace UniGetUI.Core.Data.Tests
 
             Assert.Equal(
                 source,
-                PortableDataImport.FindImportableSource(portableDirectoryWasCreated: true));
-            Assert.Null(PortableDataImport.FindImportableSource(portableDirectoryWasCreated: false));
+                PortableDataImport.FindImportableSource(isFirstPortableRun: true));
+            Assert.Null(PortableDataImport.FindImportableSource(isFirstPortableRun: false));
         }
 
         [Fact]
@@ -129,7 +129,7 @@ namespace UniGetUI.Core.Data.Tests
             CoreData.TEST_PerUserDataDirectoryOverride = empty;
             UsePortableDestination();
 
-            Assert.Null(PortableDataImport.FindImportableSource(portableDirectoryWasCreated: true));
+            Assert.Null(PortableDataImport.FindImportableSource(isFirstPortableRun: true));
         }
 
         [Fact]

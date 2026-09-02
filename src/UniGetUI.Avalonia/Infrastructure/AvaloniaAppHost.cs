@@ -60,6 +60,8 @@ public static class AvaloniaAppHost
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             CrashHandler.ReportFatalException((Exception)e.ExceptionObject);
 
+        args = SharedPreUiCommandDispatcher.IgnoreArgumentsInjectedIntoProtocolLaunch(args);
+
         if (ShouldPrepareCliConsole(args))
         {
             WindowsConsoleHost.PrepareCliIO();

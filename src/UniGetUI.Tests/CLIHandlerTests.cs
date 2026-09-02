@@ -63,6 +63,79 @@ public sealed class CLIHandlerTests : IDisposable
         Assert.Empty(Directory.EnumerateFiles(_testRoot, "evil.bat", SearchOption.AllDirectories));
     }
 
+    [Theory]
+    [InlineData("unigetui://show")]
+    [InlineData("unigetui:show")]
+    [InlineData("UNIGETUI://Show")]
+    [InlineData("unigetui:")]
+    public void ProtocolLaunch_DropsArgumentsInjectedAlongsideTheUri(string uri)
+    {
+        string[] sanitized = SharedPreUiCommandDispatcher.IgnoreArgumentsInjectedIntoProtocolLaunch(
+            [uri, SharedPreUiCommandDispatcher.ImportSettingsArgument, @"C:\poc.json"]
+        );
+
+        Assert.Equal([uri], sanitized);
+        Assert.Null(
+            SharedPreUiCommandDispatcher.TryHandle(
+                sanitized,
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            )
+        );
+    }
+
+    [Fact]
+    public void ProtocolLaunch_InjectedImportDoesNotRunAndDoesNotResetSettings()
+    {
+        Settings.SetValue(Settings.K.FreshValue, "must-survive");
+
+        string pocPath = Path.Combine(_testRoot, "poc.json");
+        File.WriteAllText(
+            pocPath,
+            JsonSerializer.Serialize(
+                new Dictionary<string, string> { [@"..\..\evil.bat"] = "@echo owned" }
+            )
+        );
+
+        string[] injected =
+        [
+            "unigetui://show",
+            SharedPreUiCommandDispatcher.ImportSettingsArgument,
+            pocPath,
+        ];
+
+        string[] sanitized = SharedPreUiCommandDispatcher.IgnoreArgumentsInjectedIntoProtocolLaunch(
+            injected
+        );
+
+        Assert.Null(
+            SharedPreUiCommandDispatcher.TryHandle(
+                sanitized,
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            )
+        );
+        Assert.Equal("must-survive", Settings.GetValue(Settings.K.FreshValue));
+    }
+
+    [Fact]
+    public void ProtocolLaunch_LeavesOrdinaryArgumentsUntouched()
+    {
+        string[][] untouched =
+        [
+            ["--import-settings", "settings.json"],
+            ["--daemon"],
+            ["unigetui://show"],
+            [],
+        ];
+
+        foreach (string[] args in untouched)
+        {
+            Assert.Equal(
+                args,
+                SharedPreUiCommandDispatcher.IgnoreArgumentsInjectedIntoProtocolLaunch(args)
+            );
+        }
+    }
+
     [Fact]
     public void ImportSettings_ReturnsNoSuchFileWhenInputIsMissing()
     {

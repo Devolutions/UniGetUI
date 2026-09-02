@@ -67,6 +67,222 @@ public sealed class SettingsImportExportTests : IDisposable
         Assert.Equal("new-value", Settings.GetValue(Settings.K.FreshValue));
     }
 
+    [Theory]
+    [InlineData(@"..\..\escaped.bat")]
+    [InlineData(@"..\escaped.bat")]
+    [InlineData("../../escaped.bat")]
+    [InlineData("..")]
+    [InlineData(".")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(@"nested\escaped.bat")]
+    [InlineData("nested/escaped.bat")]
+    [InlineData(@"C:\escaped.bat")]
+    [InlineData("escaped.bat:stream")]
+    public void ImportFromStringJson_DiscardsKeysThatAreNotPlainFileNames(string key)
+    {
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string>
+            {
+                [key] = "payload",
+                [Settings.ResolveKey(Settings.K.FreshValue)] = "legitimate",
+            }
+        );
+
+        Settings.ImportFromString_JSON(json);
+
+        Assert.Equal("legitimate", Settings.GetValue(Settings.K.FreshValue));
+        Assert.Empty(
+            Directory.EnumerateFiles(_testRoot, "escaped.bat", SearchOption.AllDirectories)
+        );
+        Assert.DoesNotContain(
+            Directory.EnumerateFiles(CoreData.UniGetUIUserConfigurationDirectory),
+            file => File.ReadAllText(file) == "payload"
+        );
+    }
+
+    [Fact]
+    public void ImportFromStringJson_DoesNotWriteOutsideTheConfigurationDirectory()
+    {
+        string escaped = Path.Combine(_testRoot, "startup-payload.bat");
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string> { [@"..\..\startup-payload.bat"] = "@echo payload" }
+        );
+
+        Settings.ImportFromString_JSON(json);
+
+        Assert.False(File.Exists(escaped));
+    }
+
+    [Theory]
+    [InlineData(@".\TelemetryClientToken")]
+    [InlineData(@"nested\..\TelemetryClientToken")]
+    [InlineData("./TelemetryClientToken")]
+    public void ImportFromStringJson_DiscardsPathQualifiedKeysTargetingExcludedFiles(string key)
+    {
+        string token = Path.Combine(
+            CoreData.UniGetUIUserConfigurationDirectory,
+            "TelemetryClientToken"
+        );
+        File.WriteAllText(token, "original-token");
+
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string> { [key] = "attacker-token" }
+        );
+
+        Settings.ImportFromString_JSON(json);
+
+        Assert.Equal("original-token", File.ReadAllText(token));
+    }
+
+    [Fact]
+    public void ImportFromStringJson_DiscardsExcludedKeys()
+    {
+        string token = Path.Combine(
+            CoreData.UniGetUIUserConfigurationDirectory,
+            "TelemetryClientToken"
+        );
+        File.WriteAllText(token, "original-token");
+
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string>
+            {
+                ["TelemetryClientToken"] = "attacker-token",
+                ["CurrentSessionToken"] = "attacker-session",
+            }
+        );
+
+        Settings.ImportFromString_JSON(json);
+
+        Assert.Equal("original-token", File.ReadAllText(token));
+        Assert.False(
+            File.Exists(
+                Path.Combine(CoreData.UniGetUIUserConfigurationDirectory, "CurrentSessionToken")
+            )
+        );
+    }
+
+    [Theory]
+    [InlineData("TelemetryClientToken ")]
+    [InlineData("TelemetryClientToken.")]
+    [InlineData("TelemetryClientToken..")]
+    [InlineData("telemetryclienttoken")]
+    [InlineData("TELEMETRYCLIENTTOKEN")]
+    public void ImportFromStringJson_DiscardsKeysThatCollideWithExcludedFiles(string key)
+    {
+        string token = Path.Combine(
+            CoreData.UniGetUIUserConfigurationDirectory,
+            "TelemetryClientToken"
+        );
+        File.WriteAllText(token, "original-token");
+
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string> { [key] = "attacker-token" }
+        );
+
+        Settings.ImportFromString_JSON(json);
+
+        Assert.Equal("original-token", File.ReadAllText(token));
+    }
+
+    [Theory]
+    [InlineData("FreshValue ")]
+    [InlineData("FreshValue.")]
+    public void ImportFromStringJson_DiscardsKeysTheFileSystemWouldRewrite(string key)
+    {
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string> { [key] = "mangled" }
+        );
+
+        Settings.ImportFromString_JSON(json);
+
+        Assert.NotEqual("mangled", Settings.GetValue(Settings.K.FreshValue));
+    }
+
+    [Theory]
+    [InlineData("CON")]
+    [InlineData("NUL")]
+    [InlineData("con")]
+    [InlineData("LPT1")]
+    [InlineData("COM1.json")]
+    public void ImportFromStringJson_DiscardsReservedDeviceNames(string key)
+    {
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string>
+            {
+                [key] = "payload",
+                [Settings.ResolveKey(Settings.K.FreshValue)] = "legitimate",
+            }
+        );
+
+        Settings.ImportFromString_JSON(json);
+
+        Assert.Equal("legitimate", Settings.GetValue(Settings.K.FreshValue));
+        Assert.DoesNotContain(
+            Directory.EnumerateFiles(CoreData.UniGetUIUserConfigurationDirectory),
+            file => File.ReadAllText(file) == "payload"
+        );
+    }
+
+    [Theory]
+    [InlineData("TELEME~1")]
+    [InlineData("teleme~1")]
+    [InlineData("CURREN~1")]
+    public void ImportFromStringJson_DiscardsShortNameAliasesOfExcludedFiles(string key)
+    {
+        string token = Path.Combine(
+            CoreData.UniGetUIUserConfigurationDirectory,
+            "TelemetryClientToken"
+        );
+        File.WriteAllText(token, "original-token");
+
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string> { [key] = "attacker-token" }
+        );
+
+        Settings.ImportFromString_JSON(json);
+
+        Assert.Equal("original-token", File.ReadAllText(token));
+    }
+
+    [Fact]
+    public void ImportFromStringJson_ContinuesWhenAKeyCollidesWithAnExistingDirectory()
+    {
+        Directory.CreateDirectory(
+            Path.Combine(CoreData.UniGetUIUserConfigurationDirectory, "IpcApiEndpoints")
+        );
+
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string>
+            {
+                ["IpcApiEndpoints"] = "payload",
+                [Settings.ResolveKey(Settings.K.FreshValue)] = "legitimate",
+            }
+        );
+
+        Settings.ImportFromString_JSON(json);
+
+        Assert.Equal("legitimate", Settings.GetValue(Settings.K.FreshValue));
+        Assert.True(
+            Directory.Exists(
+                Path.Combine(CoreData.UniGetUIUserConfigurationDirectory, "IpcApiEndpoints")
+            )
+        );
+    }
+
+    [Theory]
+    [InlineData("{ not json")]
+    [InlineData("")]
+    [InlineData("[1,2,3]")]
+    public void ImportFromStringJson_KeepsExistingSettingsWhenContentIsMalformed(string content)
+    {
+        Settings.SetValue(Settings.K.FreshValue, "must-survive");
+
+        Assert.ThrowsAny<Exception>(() => Settings.ImportFromString_JSON(content));
+
+        Assert.Equal("must-survive", Settings.GetValue(Settings.K.FreshValue));
+    }
+
     [Fact]
     public void ImportFromFileJson_CopiesSourceWhenBackupLivesInSettingsDirectory()
     {

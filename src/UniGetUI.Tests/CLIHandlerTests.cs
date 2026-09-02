@@ -37,6 +37,33 @@ public sealed class CLIHandlerTests : IDisposable
     }
 
     [Fact]
+    public void ImportSettings_DoesNotWriteOutsideConfigurationDirectoryForCraftedKeys()
+    {
+        string pocPath = Path.Combine(_testRoot, "poc.json");
+        string escaped = Path.Combine(_testRoot, "evil.bat");
+        File.WriteAllText(
+            pocPath,
+            JsonSerializer.Serialize(
+                new Dictionary<string, string>
+                {
+                    [@"..\..\evil.bat"] = "@echo owned",
+                    [@"..\..\..\evil.bat"] = "@echo owned",
+                    ["../../evil.bat"] = "@echo owned",
+                }
+            )
+        );
+
+        int result = SharedPreUiCommandDispatcher.ImportSettings(
+            ["unigetui", SharedPreUiCommandDispatcher.ImportSettingsArgument, pocPath],
+            SharedPreUiCommandDispatcher.WindowsCliExitCodes
+        );
+
+        Assert.Equal(SharedPreUiCommandDispatcher.WindowsCliExitCodes.Success, result);
+        Assert.False(File.Exists(escaped));
+        Assert.Empty(Directory.EnumerateFiles(_testRoot, "evil.bat", SearchOption.AllDirectories));
+    }
+
+    [Fact]
     public void ImportSettings_ReturnsNoSuchFileWhenInputIsMissing()
     {
         int result = SharedPreUiCommandDispatcher.ImportSettings(

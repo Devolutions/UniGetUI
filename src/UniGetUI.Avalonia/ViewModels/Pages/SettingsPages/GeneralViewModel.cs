@@ -39,7 +39,17 @@ public partial class GeneralViewModel : ViewModelBase
         if (files is not [{ } file]) return;
         var path = file.TryGetLocalPath();
         if (path is null) return;
-        await Task.Run(() => CoreSettings.ImportFromFile_JSON(path));
+        try
+        {
+            await Task.Run(() => CoreSettings.ImportFromFile_JSON(path));
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Could not import settings from {path}");
+            Logger.Error(ex);
+            return;
+        }
+
         AccessibilityAnnouncementService.Announce(
             CoreTools.Translate("Settings imported from {0}", Path.GetFileName(path)),
             AutomationLiveSetting.Polite);

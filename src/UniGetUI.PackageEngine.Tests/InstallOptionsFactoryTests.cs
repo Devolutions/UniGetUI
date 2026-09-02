@@ -129,6 +129,40 @@ public sealed class InstallOptionsFactoryTests : IDisposable
     }
 
     [Fact]
+    public void SaveForPackage_KeepsSameIdFromDifferentSourcesApart()
+    {
+        var manager = new PackageManagerBuilder().WithName("WinGet").Build();
+        var fromA = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithSource(new SourceBuilder().WithManager(manager).WithName("winget").Build())
+            .Build();
+        var fromB = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithSource(new SourceBuilder().WithManager(manager).WithName("msstore").Build())
+            .Build();
+
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { CustomInstallLocation = "FROM-A" },
+            fromA
+        );
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { CustomInstallLocation = "FROM-B" },
+            fromB
+        );
+
+        Assert.Equal(
+            "FROM-A",
+            InstallOptionsFactory.LoadForPackage(fromA).CustomInstallLocation
+        );
+        Assert.Equal(
+            "FROM-B",
+            InstallOptionsFactory.LoadForPackage(fromB).CustomInstallLocation
+        );
+    }
+
+    [Fact]
     public void LoadApplicable_UsesManagerDefaultsAndExpandsPackageToken()
     {
         var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();

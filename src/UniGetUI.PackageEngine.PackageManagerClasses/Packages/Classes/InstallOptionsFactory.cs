@@ -26,6 +26,14 @@ namespace UniGetUI.PackageEngine.PackageClasses
             public static string Get(IPackage package) =>
                 ManagerComponent(package.Manager.Name)
                 + "."
+                + PackageComponent(package.Source.Name)
+                + "."
+                + PackageComponent(package.Id)
+                + ".json";
+
+            public static string GetLegacy(IPackage package) =>
+                ManagerComponent(package.Manager.Name)
+                + "."
                 + PackageComponent(package.Id)
                 + ".json";
 
@@ -78,7 +86,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         // Loading from disk (package and manager)
         public static InstallOptions LoadForPackage(IPackage package) =>
-            _loadFromDisk(StoragePath.Get(package));
+            _loadFromDisk(StoragePath.Get(package), StoragePath.GetLegacy(package));
 
         public static Task<InstallOptions> LoadForPackageAsync(IPackage package) =>
             Task.Run(() => LoadForPackage(package));
@@ -219,8 +227,20 @@ namespace UniGetUI.PackageEngine.PackageClasses
             }
         }
 
-        private static InstallOptions _loadFromDisk(string key)
+        private static InstallOptions _loadFromDisk(string key, string? legacyKey = null)
         {
+            if (
+                legacyKey is not null
+                && !_optionsCache.ContainsKey(key)
+                && TryResolveOptionsPath(key, out string preferred)
+                && !File.Exists(preferred)
+                && TryResolveOptionsPath(legacyKey, out string legacy)
+                && File.Exists(legacy)
+            )
+            {
+                key = legacyKey;
+            }
+
             if (!TryResolveOptionsPath(key, out string filePath))
             {
                 Logger.Error($"Refused to load options from an unsafe path for key {key}");

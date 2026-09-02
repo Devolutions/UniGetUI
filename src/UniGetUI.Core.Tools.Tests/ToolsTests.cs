@@ -624,6 +624,9 @@ namespace UniGetUI.Core.Tools.Tests
         [InlineData(".NET Runtime", ".NET Runtime")]
         [InlineData("Contoso.Tool", "Contoso.Tool")]
         [InlineData("Contoso:Tool", "ContosoTool")]
+        [InlineData("a<b>c|d*e?f", "abcdef")]
+        [InlineData("dir/sub", "dirsub")]
+        [InlineData(@"dir\sub", "dirsub")]
         public void MakeValidFileName_NeverReturnsATraversalComponent(
             string input,
             string expected

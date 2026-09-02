@@ -171,6 +171,7 @@ public partial class Settings
             SettingsJson.DeserializeStringDictionary(jsonContent) ?? [];
 
         ResetSettings();
+        int failedWrites = 0;
         foreach (KeyValuePair<string, string> entry in settings)
         {
             if (!TryResolveImportedSettingPath(entry.Key, out string destination))
@@ -187,10 +188,20 @@ public partial class Settings
             }
             catch (Exception ex)
             {
-                Logger.Warn($"Could not import the setting '{entry.Key}'");
-                Logger.Warn(ex);
+                failedWrites++;
+                Logger.Error($"Could not import the setting '{entry.Key}'");
+                Logger.Error(ex);
             }
         }
+
+        if (failedWrites > 0)
+        {
+            throw new IOException(
+                $"{failedWrites} setting(s) could not be written. The previous configuration was "
+                    + "already cleared, so the imported configuration is incomplete."
+            );
+        }
+
         Logger.Info("Settings successfully imported from string content.");
     }
 

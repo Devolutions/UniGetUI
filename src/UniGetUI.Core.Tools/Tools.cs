@@ -1199,8 +1199,20 @@ namespace UniGetUI.Core.Tools
             return LanguageEngine?.Locale ?? "Unset/Unknown";
         }
 
-        private static readonly HashSet<char> _illegalPathChars = Path.GetInvalidFileNameChars()
-            .ToHashSet();
+        private static readonly HashSet<char> _illegalPathChars = BuildIllegalPathChars();
+
+        private static HashSet<char> BuildIllegalPathChars()
+        {
+            HashSet<char> characters = new(Path.GetInvalidFileNameChars());
+
+            foreach (char character in @"""<>|:*?\/")
+                characters.Add(character);
+
+            for (char character = (char)0; character < (char)32; character++)
+                characters.Add(character);
+
+            return characters;
+        }
 
         public static string MakeValidFileName(string name)
         {

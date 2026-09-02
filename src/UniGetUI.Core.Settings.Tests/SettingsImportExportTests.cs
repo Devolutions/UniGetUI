@@ -361,6 +361,25 @@ public sealed class SettingsImportExportTests : IDisposable
     }
 
     [Fact]
+    public void ImportFromStringJson_ThrowsWhenAWriteFailsInsteadOfReportingSuccess()
+    {
+        string blocked = Path.Combine(
+            CoreData.UniGetUIUserConfigurationDirectory,
+            Settings.ResolveKey(Settings.K.FreshValue)
+        );
+        Directory.CreateDirectory(blocked);
+
+        string json = JsonSerializer.Serialize(
+            new Dictionary<string, string>
+            {
+                [Settings.ResolveKey(Settings.K.FreshValue)] = "cannot-be-written",
+            }
+        );
+
+        Assert.ThrowsAny<Exception>(() => Settings.ImportFromString_JSON(json));
+    }
+
+    [Fact]
     public void ImportFromFileJson_CopiesSourceWhenBackupLivesInSettingsDirectory()
     {
         Settings.SetValue(Settings.K.FreshValue, "before-import");

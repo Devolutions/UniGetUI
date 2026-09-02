@@ -1202,8 +1202,15 @@ namespace UniGetUI.Core.Tools
         private static readonly HashSet<char> _illegalPathChars = Path.GetInvalidFileNameChars()
             .ToHashSet();
 
-        public static string MakeValidFileName(string name) =>
-            string.Concat(name.Where(x => !_illegalPathChars.Contains(x)));
+        public static string MakeValidFileName(string name)
+        {
+            string sanitized = string.Concat(name.Where(x => !_illegalPathChars.Contains(x)));
+
+            return sanitized.Length > 0
+                && sanitized.All(character => character is '.' || char.IsWhiteSpace(character))
+                ? "_"
+                : sanitized;
+        }
 
         public static string EscapeCommandLineArgument(string argument)
         {

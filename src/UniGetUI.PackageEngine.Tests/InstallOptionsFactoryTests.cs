@@ -49,6 +49,59 @@ public sealed class InstallOptionsFactoryTests : IDisposable
         }
     }
 
+    [Theory]
+    [InlineData(@"..\..\..\PWNED")]
+    [InlineData("../../../PWNED")]
+    [InlineData("..")]
+    [InlineData(".")]
+    [InlineData("")]
+    public void SaveForPackage_NeverWritesOutsideTheInstallOptionsDirectory(string packageId)
+    {
+        var manager = new PackageManagerBuilder().WithName("WinGet").Build();
+        var package = new PackageBuilder().WithManager(manager).WithId(packageId).Build();
+
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { CustomInstallLocation = "MARKER-CONTENT" },
+            package
+        );
+
+        string optionsDirectory = Path.GetFullPath(
+            CoreData.UniGetUIInstallationOptionsDirectory
+        );
+
+        foreach (string written in Directory.GetFiles(
+            _testRoot,
+            "*",
+            SearchOption.AllDirectories
+        ))
+        {
+            if (Path.GetFileName(written).Contains("PWNED", StringComparison.Ordinal))
+            {
+                Assert.Equal(
+                    optionsDirectory,
+                    Path.GetDirectoryName(Path.GetFullPath(written))
+                );
+            }
+        }
+    }
+
+    [Fact]
+    public void SaveForPackage_StillRoundTripsAnOrdinaryPackageId()
+    {
+        var manager = new PackageManagerBuilder().WithName("WinGet").Build();
+        var package = new PackageBuilder().WithManager(manager).WithId("Contoso:Tool").Build();
+
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { CustomInstallLocation = @"C:\Apps\Contoso" },
+            package
+        );
+
+        Assert.Equal(
+            @"C:\Apps\Contoso",
+            InstallOptionsFactory.LoadForPackage(package).CustomInstallLocation
+        );
+    }
+
     [Fact]
     public void LoadApplicable_UsesManagerDefaultsAndExpandsPackageToken()
     {

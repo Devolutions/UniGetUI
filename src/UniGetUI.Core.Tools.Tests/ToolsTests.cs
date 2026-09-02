@@ -614,5 +614,39 @@ namespace UniGetUI.Core.Tools.Tests
                 );
             }
         }
+        [Theory]
+        [InlineData("..", "_")]
+        [InlineData(".", "_")]
+        [InlineData("...", "_")]
+        [InlineData("", "")]
+        [InlineData("   ", "_")]
+        [InlineData(". . .", "_")]
+        [InlineData(".NET Runtime", ".NET Runtime")]
+        [InlineData("Contoso.Tool", "Contoso.Tool")]
+        [InlineData("Contoso:Tool", "ContosoTool")]
+        public void MakeValidFileName_NeverReturnsATraversalComponent(
+            string input,
+            string expected
+        )
+        {
+            Assert.Equal(expected, CoreTools.MakeValidFileName(input));
+        }
+
+        [Theory]
+        [InlineData(@"..\..\..\evil")]
+        [InlineData("../../evil")]
+        [InlineData("..")]
+        [InlineData(".")]
+        [InlineData("   ")]
+        public void MakeValidFileName_ResultStaysInsideItsParentDirectory(string input)
+        {
+            string parent = Path.Combine(Path.GetTempPath(), "MVFN", Guid.NewGuid().ToString("N"));
+            string resolved = Path.GetFullPath(
+                Path.Join(parent, CoreTools.MakeValidFileName(input))
+            );
+
+            Assert.Equal(Path.GetFullPath(parent), Path.GetDirectoryName(resolved));
+        }
+
     }
 }

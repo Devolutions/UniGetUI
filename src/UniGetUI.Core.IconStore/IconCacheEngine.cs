@@ -131,8 +131,8 @@ namespace UniGetUI.Core.IconEngine
 
             string iconLocation = Path.Join(
                 CoreData.UniGetUICacheDirectory_Icons,
-                ManagerName,
-                PackageId
+                CoreTools.MakeValidFileName(ManagerName),
+                CoreTools.MakeValidFileName(PackageId)
             );
             if (!Directory.Exists(iconLocation))
                 Directory.CreateDirectory(iconLocation);

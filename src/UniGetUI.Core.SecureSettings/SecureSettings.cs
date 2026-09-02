@@ -69,8 +69,8 @@ public static class SecureSettings
 
         if (
             !TryResolveSecureSettingPath(
-                purifiedUser,
-                purifiedSetting,
+                username,
+                setting,
                 out string settingsLocation,
                 out string settingFile
             )
@@ -132,8 +132,8 @@ public static class SecureSettings
 
             if (
                 !TryResolveSecureSettingPath(
-                    purifiedUser,
-                    purifiedSetting,
+                    username,
+                    setting,
                     out string settingsLocation,
                     out string settingFile
                 )
@@ -173,14 +173,20 @@ public static class SecureSettings
     }
 
     private static bool TryResolveSecureSettingPath(
-        string purifiedUser,
-        string purifiedSetting,
+        string username,
+        string setting,
         out string settingsLocation,
         out string settingFile
     )
     {
         settingsLocation = string.Empty;
         settingFile = string.Empty;
+
+        if (!IsSafeRawComponent(username) || !IsSafeRawComponent(setting))
+            return false;
+
+        string purifiedUser = CoreTools.MakeValidFileName(username);
+        string purifiedSetting = CoreTools.MakeValidFileName(setting);
 
         if (!IsSafePathComponent(purifiedUser) || !IsSafePathComponent(purifiedSetting))
             return false;
@@ -201,6 +207,12 @@ public static class SecureSettings
         settingsLocation = location;
         settingFile = file;
         return true;
+    }
+
+    private static bool IsSafeRawComponent(string value)
+    {
+        return !string.IsNullOrWhiteSpace(value)
+            && !value.All(character => character is '.' || char.IsWhiteSpace(character));
     }
 
     private static bool IsSafePathComponent(string value)

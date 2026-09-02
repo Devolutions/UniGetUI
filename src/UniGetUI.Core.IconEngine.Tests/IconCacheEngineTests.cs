@@ -10,6 +10,39 @@ namespace UniGetUI.Core.IconEngine.Tests
         private const string ElevenClockIconUrl =
             "https://raw.githubusercontent.com/Devolutions/UniGetUI/main/src/UniGetUI.Core.IconEngine.Tests/TestData/elevenclock.png";
 
+        [Theory]
+        [InlineData(@"..\..\..\evil")]
+        [InlineData("../../evil")]
+        [InlineData("..")]
+        [InlineData("CON")]
+        [InlineData("icon. ")]
+        [InlineData("")]
+        public static void GetIconCacheDirectory_StaysInsideTheIconCache(string packageId)
+        {
+            string root = Path.GetFullPath(CoreData.UniGetUICacheDirectory_Icons);
+            string resolved = Path.GetFullPath(
+                IconCacheEngine.GetIconCacheDirectory("TestManager", packageId)
+            );
+
+            Assert.StartsWith(root + Path.DirectorySeparatorChar, resolved, StringComparison.Ordinal);
+            Assert.Equal(
+                Path.Combine(root, "TestManager"),
+                Path.GetDirectoryName(resolved)
+            );
+        }
+
+        [Fact]
+        public static void GetIconCacheDirectory_KeepsLossilySanitisedIdsApart()
+        {
+            string[] colliding = ["A/B", "AB", "CON", "_CON", "icon. ", "icon"];
+
+            var directories = colliding
+                .Select(id => IconCacheEngine.GetIconCacheDirectory("TestManager", id))
+                .ToList();
+
+            Assert.Equal(colliding.Length, directories.Distinct(StringComparer.Ordinal).Count());
+        }
+
         [Fact]
         public static void TestCacheEngineForSha256()
         {
@@ -91,9 +124,7 @@ namespace UniGetUI.Core.IconEngine.Tests
 
             string extension = ICON_1.ToString().Split(".")[^1];
             string expectedFile = Path.Join(
-                CoreData.UniGetUICacheDirectory_Icons,
-                managerName,
-                packageId,
+                IconCacheEngine.GetIconCacheDirectory(managerName, packageId),
                 $"icon.{extension}"
             );
             if (File.Exists(expectedFile))
@@ -147,9 +178,7 @@ namespace UniGetUI.Core.IconEngine.Tests
 
             string extension = URI.ToString().Split(".")[^1];
             string expectedFile = Path.Join(
-                CoreData.UniGetUICacheDirectory_Icons,
-                MANAGER_NAME,
-                PACKAGE_ID,
+                IconCacheEngine.GetIconCacheDirectory(MANAGER_NAME, PACKAGE_ID),
                 $"icon.{extension}"
             );
             if (File.Exists(expectedFile))
@@ -202,9 +231,7 @@ namespace UniGetUI.Core.IconEngine.Tests
 
             string extension = URI_1.ToString().Split(".")[^1];
             string expectedFile = Path.Join(
-                CoreData.UniGetUICacheDirectory_Icons,
-                managerName,
-                packageId,
+                IconCacheEngine.GetIconCacheDirectory(managerName, packageId),
                 $"icon.{extension}"
             );
             if (File.Exists(expectedFile))
@@ -255,9 +282,7 @@ namespace UniGetUI.Core.IconEngine.Tests
             // Clear any cache for reproducible data
             string extension = ICON_1.ToString().Split(".")[^1];
             string expectedFile = Path.Join(
-                CoreData.UniGetUICacheDirectory_Icons,
-                managerName,
-                packageId,
+                IconCacheEngine.GetIconCacheDirectory(managerName, packageId),
                 $"icon.{extension}"
             );
             if (File.Exists(expectedFile))

@@ -204,11 +204,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
                     Manager.DetailsHelper.GetIcon,
                     this
                 );
-                string? path = IconCacheEngine.GetCacheOrDownloadIcon(
-                    icon,
-                    Manager.Name,
-                    CoreTools.MakeValidFileName(Id)
-                );
+                string? path = IconCacheEngine.GetCacheOrDownloadIcon(icon, Manager.Name, Id);
                 return path is null ? null : new Uri((path.StartsWith('/') ? "file://" : "file:///") + path);
             }
             catch (Exception ex)

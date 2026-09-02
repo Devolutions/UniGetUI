@@ -66,7 +66,7 @@ public sealed record IpcTransportOptions(
 
     public static IpcTransportOptions LoadForServer(IReadOnlyList<string>? args = null)
     {
-        args ??= Environment.GetCommandLineArgs();
+        args ??= CoreData.GetProcessArguments();
         return Parse(
             args,
             includeCliAliases: false,
@@ -76,7 +76,7 @@ public sealed record IpcTransportOptions(
 
     public static IpcTransportOptions LoadForClient(IReadOnlyList<string>? args = null)
     {
-        args ??= Environment.GetCommandLineArgs();
+        args ??= CoreData.GetProcessArguments();
 
         if (HasExplicitClientOverride(args))
         {

@@ -18,6 +18,8 @@ public partial class Settings
         "KnownLocalBackupNames.json",
         "TelemetryClientToken",
         "CurrentSessionToken",
+        "PendingDesktopShortcuts.json",
+        "PendingStartMenuShortcuts.json",
     ];
 
     private static readonly StringComparison _pathComparison = OperatingSystem.IsWindows()

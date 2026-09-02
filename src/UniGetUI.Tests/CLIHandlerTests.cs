@@ -137,6 +137,37 @@ public sealed class CLIHandlerTests : IDisposable
     }
 
     [Fact]
+    public void ProtocolLaunch_InjectedArgumentsDoNotReachProcessArgumentConsumers()
+    {
+        string[] sanitized = SharedPreUiCommandDispatcher.IgnoreArgumentsInjectedIntoProtocolLaunch(
+            ["unigetui://show", "--updateapps", "--import-settings", "poc.json"]
+        );
+
+        CoreData.SetSanitizedProcessArguments(sanitized);
+        string[] published = CoreData.GetProcessArguments();
+
+        Assert.DoesNotContain("--updateapps", published);
+        Assert.DoesNotContain("--import-settings", published);
+        Assert.Contains("unigetui://show", published);
+        Assert.Equal(Environment.GetCommandLineArgs()[0], published[0]);
+    }
+
+    [Fact]
+    public void OrdinaryLaunch_PublishesTheSameShapeAsTheRawCommandLine()
+    {
+        string[] args = ["--daemon"];
+
+        CoreData.SetSanitizedProcessArguments(
+            SharedPreUiCommandDispatcher.IgnoreArgumentsInjectedIntoProtocolLaunch(args)
+        );
+
+        Assert.Equal(
+            [Environment.GetCommandLineArgs()[0], "--daemon"],
+            CoreData.GetProcessArguments()
+        );
+    }
+
+    [Fact]
     public void ImportSettings_ReturnsNoSuchFileWhenInputIsMissing()
     {
         int result = SharedPreUiCommandDispatcher.ImportSettings(

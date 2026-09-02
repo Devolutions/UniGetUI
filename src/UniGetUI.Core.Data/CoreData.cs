@@ -230,6 +230,29 @@ namespace UniGetUI.Core.Data
         /// <summary>
         /// The directory where the installation options are stored. The directory is automatically created if it does not exist.
         /// </summary>
+        private static string[]? _sanitizedProcessArguments;
+
+        /// <summary>
+        /// Records the process arguments after startup has removed anything that could only
+        /// have been injected, so later consumers do not have to re-read the raw OS command
+        /// line. The executable path is preserved so the shape matches
+        /// Environment.GetCommandLineArgs().
+        /// </summary>
+        public static void SetSanitizedProcessArguments(string[] args)
+        {
+            string[] raw = Environment.GetCommandLineArgs();
+            _sanitizedProcessArguments = raw.Length > 0 ? [raw[0], .. args] : [.. args];
+        }
+
+        /// <summary>
+        /// The sanitized process arguments when startup has published them, and the raw OS
+        /// command line otherwise.
+        /// </summary>
+        public static string[] GetProcessArguments()
+        {
+            return _sanitizedProcessArguments ?? Environment.GetCommandLineArgs();
+        }
+
         public static string UniGetUIInstallationOptionsDirectory
         {
             get

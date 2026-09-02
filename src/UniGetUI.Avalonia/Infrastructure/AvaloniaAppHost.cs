@@ -61,6 +61,7 @@ public static class AvaloniaAppHost
             CrashHandler.ReportFatalException((Exception)e.ExceptionObject);
 
         args = SharedPreUiCommandDispatcher.IgnoreArgumentsInjectedIntoProtocolLaunch(args);
+        CoreData.SetSanitizedProcessArguments(args);
 
         Logger.RedactUsername = Core.SettingsEngine.Settings.Get(Core.SettingsEngine.Settings.K.RedactUsernameInLog);
 

@@ -24,7 +24,7 @@ public sealed class IpcClient : IDisposable
 
     public static IpcClient CreateForCli(IReadOnlyList<string>? args = null)
     {
-        args ??= Environment.GetCommandLineArgs();
+        args ??= CoreData.GetProcessArguments();
         IpcTransportOptions requestedOptions = IpcTransportOptions.LoadForClient(args);
 
         if (IpcTransportOptions.HasExplicitClientOverride(args))

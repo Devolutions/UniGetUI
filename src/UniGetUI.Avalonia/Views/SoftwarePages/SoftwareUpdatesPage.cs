@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views;
+using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
@@ -448,7 +449,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
                 MaintenanceScheduler.MarkAutoInstallHandled();
                 await LaunchScheduledUpdate(upgradable);
             }
-            else if (Environment.GetCommandLineArgs().Contains("--updateapps"))
+            else if (CoreData.GetProcessArguments().Contains("--updateapps"))
             {
                 _ = AvaloniaPackageOperationHelper.UpdateAllAsync();
                 ShowUpgradingPackagesNotification(upgradable);

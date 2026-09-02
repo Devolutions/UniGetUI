@@ -5,6 +5,30 @@ namespace UniGetUI.Core.Tools.Tests;
 public class MetaTests
 {
     [Fact]
+    public void TestProcessArgumentsAreReadFromTheSanitizedSource()
+    {
+        var solutionDirectory = FindRepositoryRoot();
+        var offenders = Directory
+            .GetFiles(solutionDirectory, "*.cs", SearchOption.AllDirectories)
+            .Where(file =>
+                !file.Contains(@"bin\")
+                && !file.Contains(@"obj\")
+                && !file.EndsWith(".g.cs")
+                && !file.EndsWith("Tests.cs")
+                && !file.EndsWith("CoreData.cs")
+            )
+            .Where(file => File.ReadAllText(file).Contains("Environment.GetCommandLineArgs("))
+            .ToList();
+
+        Assert.True(
+            offenders.Count is 0,
+            "Process arguments must be read through CoreData.GetProcessArguments so that "
+                + "arguments injected into a protocol launch cannot reach consumers. Offending "
+                + $"files: {string.Join(", ", offenders)}"
+        );
+    }
+
+    [Fact]
     public void TestJsonSerializationOptions()
     {
         // This test ensures that any json operation has the proper serialization options set (required for TRIM support)

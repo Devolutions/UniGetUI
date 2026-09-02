@@ -380,6 +380,41 @@ public sealed class SettingsImportExportTests : IDisposable
     }
 
     [Fact]
+    public void EveryKeyExportProducesIsAcceptedByImport()
+    {
+        string configuration = CoreData.UniGetUIUserConfigurationDirectory;
+
+        foreach (Settings.K key in Enum.GetValues<Settings.K>())
+        {
+            if (key is Settings.K.Unset)
+                continue;
+
+            string resolved = Settings.ResolveKey(key);
+            File.WriteAllText(Path.Combine(configuration, resolved), "value");
+            File.WriteAllText(Path.Combine(configuration, $"{resolved}.json"), "[]");
+        }
+
+        File.WriteAllText(Path.Combine(configuration, "PendingDesktopShortcuts.json"), "[]");
+        File.WriteAllText(Path.Combine(configuration, "PendingStartMenuShortcuts.json"), "[]");
+
+        var exported = JsonSerializer.Deserialize<Dictionary<string, string>>(
+            Settings.ExportToString_JSON()
+        );
+        Assert.NotNull(exported);
+
+        Settings.ImportFromString_JSON(JsonSerializer.Serialize(exported));
+
+        List<string> lost = exported!
+            .Keys.Where(key => !File.Exists(Path.Combine(configuration, key)))
+            .ToList();
+
+        Assert.True(
+            lost.Count is 0,
+            $"export produced keys that import discarded: {string.Join(", ", lost)}"
+        );
+    }
+
+    [Fact]
     public void ImportFromFileJson_CopiesSourceWhenBackupLivesInSettingsDirectory()
     {
         Settings.SetValue(Settings.K.FreshValue, "before-import");

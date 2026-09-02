@@ -83,6 +83,7 @@ whenever the bundle is replaced by an update. Re-create it after upgrading.
 | Stored secrets, Windows | Credential Manager | Credential Manager (**not** relocated) |
 | Session log, WebView2 profile, update logs | `%TEMP%\UniGetUI` on Windows; `$TMPDIR/UniGetUI` elsewhere | `<install dir>\Settings\Temp` |
 | Default package-backup folder | `Documents\UniGetUI` | `<install dir>\Settings\Backups` |
+| Bundled Pinget store, Windows | `%LOCALAPPDATA%\Devolutions\Pinget` | `<install dir>\Settings\Pinget` |
 | Elevated secure settings, Windows | `%ProgramFiles%\UniGetUI\SecureSettings` | `%ProgramFiles%\UniGetUI\SecureSettings` (**not** relocated) |
 
 Package backups follow the portable folder, so they travel with the app. A path chosen on the
@@ -113,30 +114,49 @@ portable folder would mean that same plaintext trade-off, on removable media, so
 Credential Manager. Every portable copy on one machine shares the same stored token unless
 `UNIGETUI_GITHUB_TOKEN_NAMESPACE` is set to separate them.
 
-Portable mode also does not relocate anything owned by the package managers themselves. WinGet,
-Scoop, Chocolatey, npm and the rest keep their own state in their usual per-user or system
-locations, and the packages they install are installed normally.
+Portable mode does not relocate anything owned by a package manager you installed yourself.
+WinGet, Scoop, Chocolatey, npm and the rest keep their own state in their usual per-user or
+system locations, and the packages they install are installed normally.
+
+Pinget is the exception, because UniGetUI ships it rather than finding it on the machine. It
+backs the WinGet integration, runs on every WinGet configuration rather than only when selected
+as the CLI, and by default keeps its source cache and downloaded manifests in
+`%LOCALAPPDATA%\Devolutions\Pinget`. A portable copy points it at `<install dir>\Settings\Pinget`
+instead, via the `PINGET_APPROOT` environment variable, so that cache travels with the folder
+rather than accumulating in the user profile. Setting `PINGET_APPROOT` yourself takes precedence.
+
+What does *not* change is which sources it resolves against: UniGetUI also sets
+`PINGET_SOURCE_MODE=auto`, so a portable copy still mirrors the machine's configured WinGet
+sources rather than falling back to a private list. Without that, sources you added to WinGet
+would silently be missing. The cache starts empty in a new portable folder, so the first search
+re-downloads the source index.
 
 ## Importing settings from a per-user installation
 
 A portable folder starts empty, so an existing installation's settings are not picked up
 automatically — they stay in the per-user data directory, untouched.
 
-The first time UniGetUI runs portable and finds settings there, it offers a one-time
-**Import** action in a notification. Accepting copies `Configuration` and `InstallationOptions`
-into the portable folder; caches are skipped because they are rebuilt on demand and are far
-larger than the settings themselves. Nothing is overwritten and nothing is removed from the
-source, so a per-user installation on the same machine keeps working. Restart UniGetUI
-afterwards for the imported settings to take effect.
+On the run that creates the portable folder — and only that run — UniGetUI checks the per-user
+directory and, if it holds settings, offers a one-time **Import** action in a notification. An
+established portable copy is never offered the import, because merging another installation's
+settings into a folder already in use is not what the offer is for.
 
-Dismissing the notification, or importing once, stops it from appearing again. This matters for
-a portable copy carried between machines: it will never silently absorb the settings of a
-machine it happens to be plugged into.
+Accepting copies `Configuration` and `InstallationOptions` into the portable folder; caches are
+skipped because they are rebuilt on demand and are far larger than the settings themselves.
+Nothing is overwritten and nothing is removed from the source, so a per-user installation on the
+same machine keeps working. Restart UniGetUI afterwards for the imported settings to take
+effect.
+
+This matters for a portable copy carried between machines: its folder is created once, on the
+first machine, so it is never offered — and never silently absorbs — the settings of a machine
+it is later plugged into.
 
 ## What a portable install does not register
 
 The Windows installer registers these only for a regular installation, so a portable install
-gets none of them:
+gets none of them. An auto-update keeps it that way: the updater re-selects the portable
+installation type and pins the installer to the existing folder, so updating does not quietly
+turn a portable copy into a regular one.
 
 | Feature | Consequence when portable |
 | --- | --- |

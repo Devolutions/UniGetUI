@@ -249,23 +249,29 @@ public sealed class SettingsImportExportTests : IDisposable
     public void ImportFromStringJson_ContinuesWhenAKeyCollidesWithAnExistingDirectory()
     {
         Directory.CreateDirectory(
-            Path.Combine(CoreData.UniGetUIUserConfigurationDirectory, "IpcApiEndpoints")
+            Path.Combine(
+                CoreData.UniGetUIUserConfigurationDirectory,
+                Settings.ResolveKey(Settings.K.Test1)
+            )
         );
 
         string json = JsonSerializer.Serialize(
             new Dictionary<string, string>
             {
-                ["IpcApiEndpoints"] = "payload",
+                [Settings.ResolveKey(Settings.K.Test1)] = "payload",
                 [Settings.ResolveKey(Settings.K.FreshValue)] = "legitimate",
             }
         );
 
-        Settings.ImportFromString_JSON(json);
+        Assert.Throws<IOException>(() => Settings.ImportFromString_JSON(json));
 
         Assert.Equal("legitimate", Settings.GetValue(Settings.K.FreshValue));
         Assert.True(
             Directory.Exists(
-                Path.Combine(CoreData.UniGetUIUserConfigurationDirectory, "IpcApiEndpoints")
+                Path.Combine(
+                    CoreData.UniGetUIUserConfigurationDirectory,
+                    Settings.ResolveKey(Settings.K.Test1)
+                )
             )
         );
     }

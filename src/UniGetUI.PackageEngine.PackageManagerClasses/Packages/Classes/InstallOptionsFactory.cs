@@ -26,34 +26,28 @@ namespace UniGetUI.PackageEngine.PackageClasses
             public static string Get(IPackage package) =>
                 ManagerComponent(package.Manager.Name)
                 + "."
-                + PackageComponent(package.Source.Name)
-                + "."
-                + PackageComponent(package.Id)
+                + CoreTools.MakeValidFileName(package.Id)
+                + "_"
+                + IdentityHash(package)
                 + ".json";
 
             public static string GetLegacy(IPackage package) =>
-                ManagerComponent(package.Manager.Name)
-                + "."
-                + PackageComponent(package.Id)
-                + ".json";
+                ManagerComponent(package.Manager.Name) + "." + package.Id + ".json";
 
             private static string ManagerComponent(string name) =>
                 CoreTools.MakeValidFileName(name.Replace(" ", "").Replace(".", ""));
 
-            private static string PackageComponent(string id)
+            private static string IdentityHash(IPackage package)
             {
-                string sanitized = CoreTools.MakeValidFileName(id);
+                string identity = string.Join(
+                    '\u0000',
+                    package.Manager.Name,
+                    package.Source.Name,
+                    package.Id
+                );
+                byte[] digest = SHA256.HashData(Encoding.UTF8.GetBytes(identity));
 
-                return sanitized.Equals(id, StringComparison.Ordinal)
-                    ? sanitized
-                    : $"{sanitized}_{ShortHash(id)}";
-            }
-
-            private static string ShortHash(string value)
-            {
-                byte[] digest = SHA256.HashData(Encoding.UTF8.GetBytes(value));
-
-                return Convert.ToHexString(digest.AsSpan(0, 4)).ToLowerInvariant();
+                return Convert.ToHexString(digest.AsSpan(0, 8)).ToLowerInvariant();
             }
         }
 

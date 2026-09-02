@@ -163,6 +163,40 @@ public sealed class InstallOptionsFactoryTests : IDisposable
     }
 
     [Fact]
+    public void SaveForPackage_KeepsAmbiguousSourceAndIdSplitsApart()
+    {
+        var manager = new PackageManagerBuilder().WithName("WinGet").Build();
+        var dottedSource = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("c")
+            .WithSource(new SourceBuilder().WithManager(manager).WithName("a.b").Build())
+            .Build();
+        var dottedId = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("b.c")
+            .WithSource(new SourceBuilder().WithManager(manager).WithName("a").Build())
+            .Build();
+
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { CustomInstallLocation = "DOTTED-SOURCE" },
+            dottedSource
+        );
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions { CustomInstallLocation = "DOTTED-ID" },
+            dottedId
+        );
+
+        Assert.Equal(
+            "DOTTED-SOURCE",
+            InstallOptionsFactory.LoadForPackage(dottedSource).CustomInstallLocation
+        );
+        Assert.Equal(
+            "DOTTED-ID",
+            InstallOptionsFactory.LoadForPackage(dottedId).CustomInstallLocation
+        );
+    }
+
+    [Fact]
     public void LoadApplicable_UsesManagerDefaultsAndExpandsPackageToken()
     {
         var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();

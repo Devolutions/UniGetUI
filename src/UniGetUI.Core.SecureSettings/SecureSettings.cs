@@ -203,6 +203,13 @@ public static class SecureSettings
         if (!purifiedSetting.Equals(Path.GetFileName(file), StringComparison.Ordinal))
             return false;
 
+        if (
+            IsLink(new DirectoryInfo(root))
+            || IsLink(new DirectoryInfo(location))
+            || IsLink(new FileInfo(file))
+        )
+            return false;
+
         settingsLocation = location;
         settingFile = file;
         return true;
@@ -219,6 +226,18 @@ public static class SecureSettings
         return !string.IsNullOrWhiteSpace(value)
             && value is not ("." or "..")
             && value.Equals(Path.GetFileName(value), StringComparison.Ordinal);
+    }
+
+    private static bool IsLink(FileSystemInfo entry)
+    {
+        try
+        {
+            return entry.LinkTarget is not null;
+        }
+        catch
+        {
+            return true;
+        }
     }
 
     private static bool IsDirectChildOf(string candidate, string parent)

@@ -193,6 +193,29 @@ public sealed class SecureSettingsTests : IDisposable
         Assert.True(SecureSettingsStore.GetForUser("_", setting));
     }
 
+    [Fact]
+    public void ApplyForUser_RefusesWhenTheUserDirectoryIsALink()
+    {
+        string outside = Path.Combine(Path.GetTempPath(), $"outside-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(outside);
+        string linked = Path.Combine(_testRoot, "LinkedUser");
+
+        try
+        {
+            Directory.CreateSymbolicLink(linked, outside);
+        }
+        catch
+        {
+            return;
+        }
+
+        int result = SecureSettingsStore.ApplyForUser("LinkedUser", "AllowCLIArguments", true);
+
+        Assert.NotEqual(0, result);
+        Assert.Empty(Directory.GetFiles(outside));
+        Directory.Delete(outside, recursive: true);
+    }
+
     private string GetCurrentUserSettingsDirectory() =>
         Path.Combine(_testRoot, CoreTools.MakeValidFileName(Environment.UserName));
 

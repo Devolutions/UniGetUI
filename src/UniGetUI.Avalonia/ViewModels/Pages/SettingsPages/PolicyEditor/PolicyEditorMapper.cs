@@ -54,7 +54,7 @@ public static class PolicyEditorMapper
 
         return new PolicyDraftDocument
         {
-            Schema = PolicyEditorPolicyContract.Schema,
+            Schema = PolicyEditorPolicyContract.DraftSchema,
             PolicyVersion = draft.PolicyVersion,
             PolicyType = PolicyEditorPolicyContract.PolicyType,
             Metadata = new PolicyDraftMetadata
@@ -81,7 +81,7 @@ public static class PolicyEditorMapper
 
         return new PolicyDocument
         {
-            Schema = PolicyEditorPolicyContract.Schema,
+            Schema = PolicyEditorPolicyContract.CommittedSchema,
             PolicyType = PolicyEditorPolicyContract.PolicyType,
             PolicyVersion = draft.PolicyVersion,
             Metadata = ToDocument(draft.Metadata, revision, publishedAt),

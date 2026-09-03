@@ -10,7 +10,7 @@ public class PolicyEditorTemplatesTests
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
 
-        Assert.Equal(PolicyEditorPolicyContract.Schema, draft.Schema);
+        Assert.Equal(PolicyEditorPolicyContract.DraftSchema, draft.Schema);
         Assert.Equal(PolicyEditorPolicyContract.PolicyType, draft.PolicyType);
         Assert.Equal(PolicyEditorPolicyContract.InitialPolicyVersion, draft.PolicyVersion);
         Assert.Equal(RulePrecedence.PriorityThenDeny, draft.Enforcement.RulePrecedence);

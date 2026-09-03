@@ -100,7 +100,7 @@ internal static class PolicyReplacementExecutor
 
     private static JsonElement SerializePayload<T>(T payload)
     {
-        using JsonDocument document = JsonDocument.Parse(BrokerJson.Serialize(payload));
+        using JsonDocument document = JsonDocument.Parse(BrokerSerializer.Serialize(payload));
         return document.RootElement.Clone();
     }
 

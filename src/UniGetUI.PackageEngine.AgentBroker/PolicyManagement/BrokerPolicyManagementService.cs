@@ -106,7 +106,7 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
         }
     }
 
-    // The package's own BrokerJson deserializer already enforces (for both response types below):
+    // The package's own BrokerSerializer deserializer already enforces (for both response types below):
     // canonical-cased enum values, non-null required properties, no unknown/extra properties, and -
     // specifically for PolicyManagementSnapshot/PolicyValidationResult - the State<->Policy/InvalidDiagnostics,
     // WriteCapability<->ReadOnlyReason, and IsValid<->CanonicalDraft/ValidationReceipt/Findings cross-field

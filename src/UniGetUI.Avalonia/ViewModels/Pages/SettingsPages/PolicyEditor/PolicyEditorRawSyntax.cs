@@ -38,7 +38,7 @@ public static partial class PolicyEditorRawSyntax
         PolicyDraftDocument? document;
         try
         {
-            document = PolicyJson.DeserializePolicyDraftDocumentStrict(rawJson);
+            document = PolicySerializer.DeserializePolicyDraftDocumentStrict(rawJson);
         }
         catch (Exception ex) when (ex is JsonException or FormatException or ArgumentException or NotSupportedException)
         {
@@ -65,7 +65,7 @@ public static partial class PolicyEditorRawSyntax
     /// Serializes exactly the editable draft shape. Server-managed metadata is never emitted.
     /// </summary>
     public static string ToCanonicalRaw(PolicyEditorDraftDocument draft) =>
-        PolicyJson.Serialize(PolicyEditorMapper.ToSharedDraft(draft));
+        PolicySerializer.Serialize(PolicyEditorMapper.ToSharedDraft(draft));
 
     private static bool TryCheckFixedContract(PolicyDraftDocument document, out PolicyEditorSyntaxError? error)
     {

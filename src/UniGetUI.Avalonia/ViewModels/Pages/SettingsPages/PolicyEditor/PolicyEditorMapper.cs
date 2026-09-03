@@ -112,7 +112,7 @@ public static class PolicyEditorMapper
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        return PolicyJson.DeserializePolicyDraftDocumentStrict(PolicyJson.Serialize(document))
+        return PolicySerializer.DeserializePolicyDraftDocumentStrict(PolicySerializer.Serialize(document))
             ?? throw new InvalidOperationException("Serialized policy draft unexpectedly deserialized as null.");
     }
 

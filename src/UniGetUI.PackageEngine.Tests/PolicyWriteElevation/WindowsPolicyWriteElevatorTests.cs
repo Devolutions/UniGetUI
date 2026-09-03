@@ -79,7 +79,7 @@ public class WindowsPolicyWriteElevatorTests
                 Policy = policy,
             },
         };
-        using JsonDocument document = JsonDocument.Parse(BrokerJson.Serialize(response));
+        using JsonDocument document = JsonDocument.Parse(BrokerSerializer.Serialize(response));
         return document.RootElement.Clone();
     }
 

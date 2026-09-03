@@ -133,7 +133,7 @@ public class PolicyElevationContractTests
 
     private static JsonElement AsPayload<T>(T document)
     {
-        using JsonDocument parsed = JsonDocument.Parse(BrokerJson.Serialize(document));
+        using JsonDocument parsed = JsonDocument.Parse(BrokerSerializer.Serialize(document));
         return parsed.RootElement.Clone();
     }
 
@@ -476,7 +476,7 @@ public class PolicyElevationContractTests
         Assert.NotNull(result.Response);
 
         // Nothing was summarised away: the relayed document is byte-identical to the broker's.
-        Assert.Equal(BrokerJson.Serialize(expected), BrokerJson.Serialize(result.Response!));
+        Assert.Equal(BrokerSerializer.Serialize(expected), BrokerSerializer.Serialize(result.Response!));
 
         Assert.Equal("policy-id", result.Response!.Policy.Metadata.Id);
         Assert.NotNull(result.Response.Validation.CanonicalDraft);
@@ -514,7 +514,7 @@ public class PolicyElevationContractTests
 
         Assert.Equal(PolicyElevationOutcome.BrokerRejected, result.Outcome);
         Assert.NotNull(result.Error);
-        Assert.Equal(BrokerJson.Serialize(expected), BrokerJson.Serialize(result.Error!));
+        Assert.Equal(BrokerSerializer.Serialize(expected), BrokerSerializer.Serialize(result.Error!));
 
         Assert.Equal(ErrorCode.StalePolicyStoreToken, result.Error!.Code);
         Assert.NotNull(result.Error.Management);
@@ -613,21 +613,21 @@ public class PolicyElevationContractTests
         Assert.NotNull(PolicyElevationJsonContext.Default.PolicyElevationRequestMessage);
         Assert.False(PolicyElevationJsonContext.Default.Options.PropertyNameCaseInsensitive);
 
-        Assert.NotNull(BrokerJson.Options.TypeInfoResolver);
-        Assert.NotNull(BrokerJson.Options.TypeInfoResolver!.GetTypeInfo(
+        Assert.NotNull(BrokerSerializer.Options.TypeInfoResolver);
+        Assert.NotNull(BrokerSerializer.Options.TypeInfoResolver!.GetTypeInfo(
             typeof(PolicyReplacementResponse),
-            BrokerJson.Options));
-        Assert.NotNull(BrokerJson.Options.TypeInfoResolver.GetTypeInfo(
+            BrokerSerializer.Options));
+        Assert.NotNull(BrokerSerializer.Options.TypeInfoResolver.GetTypeInfo(
             typeof(ErrorResponse),
-            BrokerJson.Options));
+            BrokerSerializer.Options));
 
         // Round-tripping through exactly the calls the helper and host make must be lossless.
         PolicyReplacementResponse original = Replacement();
         PolicyReplacementResponse? relayed =
-            BrokerJson.DeserializeStrict<PolicyReplacementResponse>(BrokerJson.Serialize(original));
+            BrokerSerializer.DeserializeStrict<PolicyReplacementResponse>(BrokerSerializer.Serialize(original));
 
         Assert.NotNull(relayed);
-        Assert.Equal(BrokerJson.Serialize(original), BrokerJson.Serialize(relayed!));
+        Assert.Equal(BrokerSerializer.Serialize(original), BrokerSerializer.Serialize(relayed!));
     }
 
     [Fact]

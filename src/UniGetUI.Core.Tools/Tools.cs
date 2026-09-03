@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections;
 using System.Diagnostics;
 using System.Globalization;
@@ -672,20 +673,44 @@ namespace UniGetUI.Core.Tools
         /// <returns>The safe version of the query</returns>
         public static string EnsureSafeQueryString(string query)
         {
-            return query
-                .Replace(";", string.Empty)
-                .Replace("&", string.Empty)
-                .Replace("|", string.Empty)
-                .Replace(">", string.Empty)
-                .Replace("<", string.Empty)
-                .Replace("%", string.Empty)
-                .Replace("\"", string.Empty)
-                .Replace("~", string.Empty)
-                .Replace("?", string.Empty)
-                .Replace("/", string.Empty)
-                .Replace("'", string.Empty)
-                .Replace("\\", string.Empty)
-                .Replace("`", string.Empty);
+            StringBuilder builder = new();
+            foreach (char character in query)
+            {
+                if (char.IsControl(character))
+                    continue;
+
+                if (
+                    character
+                    is ';'
+                        or '&'
+                        or '|'
+                        or '>'
+                        or '<'
+                        or '%'
+                        or '"'
+                        or '~'
+                        or '?'
+                        or '/'
+                        or '\''
+                        or '\\'
+                        or '`'
+                        or '$'
+                        or '('
+                        or ')'
+                        or '{'
+                        or '}'
+                        or '['
+                        or ']'
+                        or '#'
+                        or '!'
+                        or '^'
+                )
+                    continue;
+
+                builder.Append(character);
+            }
+
+            return builder.ToString();
         }
 
         /// <summary>
@@ -1257,6 +1282,81 @@ namespace UniGetUI.Core.Tools
                 return "_";
 
             return _reservedDeviceNames.Contains(trimmed.Split('.')[0]) ? $"_{trimmed}" : trimmed;
+        }
+
+        public const int MaxPackageVersionLength = 128;
+        public const int MaxPackageIdentifierLength = 256;
+
+        private static readonly SearchValues<char> _commandLineSensitiveCharacters =
+            SearchValues.Create(";&|$`()[]{}<>'\"%!^#\r\n\t\v\f ");
+
+        public static bool IsCommandLineInertValue(string value) =>
+            !value.AsSpan().ContainsAny(_commandLineSensitiveCharacters);
+
+        public static bool IsValidPackageVersion(string version)
+        {
+            if (version.Length is 0 or > MaxPackageVersionLength)
+                return false;
+
+            if (!char.IsAsciiLetterOrDigit(version[0]))
+                return false;
+
+            foreach (char character in version)
+            {
+                if (
+                    !char.IsAsciiLetterOrDigit(character)
+                    && character is not ('.' or '_' or '+' or '-' or '~' or ':')
+                )
+                    return false;
+            }
+
+            return true;
+        }
+
+        public static bool IsValidPackageIdentifier(string identifier)
+        {
+            if (identifier.Length is 0 or > MaxPackageIdentifierLength)
+                return false;
+
+            if (identifier[0] is '@')
+            {
+                if (identifier.Length < 2 || !char.IsLetterOrDigit(identifier[1]))
+                    return false;
+            }
+            else if (!char.IsLetterOrDigit(identifier[0]))
+            {
+                return false;
+            }
+
+            foreach (char character in identifier)
+            {
+                if (
+                    !char.IsLetterOrDigit(character)
+                    && character
+                        is not ('.' or '_' or '+' or '-' or '~' or ':' or '@' or '/' or '^' or '*' or '=')
+                )
+                    return false;
+            }
+
+            return true;
+        }
+
+        public static string EscapePowerShellSingleQuoted(string value)
+        {
+            StringBuilder builder = new();
+            builder.Append('\'');
+            foreach (char character in value)
+            {
+                if (character is '"' || char.IsControl(character))
+                    continue;
+
+                if (character is '\'')
+                    builder.Append('\'');
+
+                builder.Append(character);
+            }
+            builder.Append('\'');
+            return builder.ToString();
         }
 
         public static string EscapeCommandLineArgument(string argument)

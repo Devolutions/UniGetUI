@@ -1,3 +1,4 @@
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -21,14 +22,14 @@ internal sealed class BunPkgOperationHelper : BasePkgOperationHelper
             OperationType.Install =>
             [
                 Manager.Properties.InstallVerb,
-                $"{package.Id}@{(options.Version == string.Empty ? package.VersionString : options.Version)}",
+                BuildSpec(package.Id, options.Version == string.Empty ? package.VersionString : options.Version),
             ],
             OperationType.Update =>
             [
                 Manager.Properties.UpdateVerb,
-                $"{package.Id}@{package.NewVersionString}",
+                BuildSpec(package.Id, package.NewVersionString),
             ],
-            OperationType.Uninstall => [Manager.Properties.UninstallVerb, package.Id],
+            OperationType.Uninstall => [Manager.Properties.UninstallVerb, RequireInertId(package.Id)],
             _ => throw new InvalidDataException("Invalid package operation")
         };
 
@@ -44,6 +45,28 @@ internal sealed class BunPkgOperationHelper : BasePkgOperationHelper
         });
 
         return parameters;
+    }
+
+    private static string RequireInertId(string id)
+    {
+        if (!CoreTools.IsCommandLineInertValue(id))
+            throw new InvalidOperationException(
+                $"Refusing to build a Bun command line for the package identifier \"{id}\": it contains characters that would split it into separate arguments."
+            );
+
+        return id;
+    }
+
+    private static string BuildSpec(string id, string version)
+    {
+        string spec = $"{id}@{version}";
+
+        if (!CoreTools.IsCommandLineInertValue(spec))
+            throw new InvalidOperationException(
+                $"Refusing to build a Bun command line for the package specifier \"{spec}\": it contains characters that would split it into separate arguments."
+            );
+
+        return spec;
     }
 
     protected override OperationVeredict _getOperationResult(

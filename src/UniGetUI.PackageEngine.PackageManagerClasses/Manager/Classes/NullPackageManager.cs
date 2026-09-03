@@ -27,6 +27,8 @@ namespace UniGetUI.PackageEngine.Classes.Manager
         public Encoding OutputEncoding => Encoding.UTF8;
         public bool InstallerUrlFollowsPackageVersion => false;
 
+        public bool CommandLineIsShellInterpreted => false;
+
         public int? CompareVersions(string versionA, string versionB)
         {
             var parsedA = CoreTools.VersionStringToStruct(versionA);

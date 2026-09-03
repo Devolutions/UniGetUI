@@ -30,6 +30,8 @@ namespace UniGetUI.PackageEngine.Interfaces
 
         public bool InstallerUrlFollowsPackageVersion { get; }
 
+        public bool CommandLineIsShellInterpreted { get; }
+
         /// <summary>
         /// Compares two version strings using this manager's ecosystem semantics, returning a
         /// negative number, zero or a positive number in the usual way, or null when the two

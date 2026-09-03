@@ -1,4 +1,5 @@
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
@@ -34,6 +35,19 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
         OperationType operation
     )
     {
+        if (Manager.CommandLineIsShellInterpreted)
+        {
+            if (!CoreTools.IsValidPackageIdentifier(package.Id))
+                throw new InvalidOperationException(
+                    $"Refusing to build a {Manager.Name} command line for the package identifier \"{package.Id}\": it is not a valid package identifier."
+                );
+
+            if (options.Version.Length > 0 && !CoreTools.IsValidPackageVersion(options.Version))
+                throw new InvalidOperationException(
+                    $"Refusing to build a {Manager.Name} command line for package {package.Id}: the requested version \"{options.Version}\" is not a valid package version."
+                );
+        }
+
         var parameters = _getOperationParameters(package, options, operation);
         Logger.Info(
             $"Loaded operation parameters for package id={package.Id} on manager {Manager.Name} and operation {operation}: "

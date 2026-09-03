@@ -1,4 +1,5 @@
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
@@ -123,8 +124,12 @@ public static class IpcPackageApi
 
         maxResults = Math.Clamp(maxResults, 1, 500);
 
+        string safeQuery = CoreTools.EnsureSafeQueryString(query);
+        if (safeQuery.Length is 0)
+            return [];
+
         return GetManagers(managerName)
-            .SelectMany(manager => manager.FindPackages(query))
+            .SelectMany(manager => manager.FindPackages(safeQuery))
             .DistinctBy(GetPackageIdentity)
             .Select(ToIpcPackageInfo)
             .OrderBy(package => package.Name, StringComparer.OrdinalIgnoreCase)

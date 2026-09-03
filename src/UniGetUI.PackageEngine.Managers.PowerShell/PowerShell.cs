@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using UniGetUI.Core.Data;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
@@ -16,6 +17,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 {
     public class PowerShell : BaseNuGet
     {
+        public override bool CommandLineIsShellInterpreted => true;
+
         public PowerShell()
         {
             Capabilities = new ManagerCapabilities

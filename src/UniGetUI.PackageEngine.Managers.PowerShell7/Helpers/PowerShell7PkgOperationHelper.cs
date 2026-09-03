@@ -1,3 +1,4 @@
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -39,6 +40,11 @@ internal sealed class PowerShell7PkgOperationHelper : BasePkgOperationHelper
         }
         else if (operation is OperationType.Uninstall)
         {
+            if (!CoreTools.IsValidPackageVersion(package.VersionString))
+                throw new InvalidOperationException(
+                    $"Refusing to build a {Manager.Name} command line for package {package.Id}: the installed version \"{package.VersionString}\" is not a valid package version."
+                );
+
             parameters.AddRange(["-Version", package.VersionString]);
         }
 

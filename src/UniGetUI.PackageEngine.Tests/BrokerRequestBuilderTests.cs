@@ -218,4 +218,50 @@ public class BrokerRequestBuilderTests
         Assert.Equal("1.2.3", request.Package.Version);
         Assert.Equal(package.Source.Name, request.Source.Name);
     }
+
+    [Theory]
+    [InlineData("PowerShell")]
+    [InlineData("PowerShell7")]
+    [InlineData("Scoop")]
+    [InlineData("Npm")]
+    public void Build_RefusesAnInjectedVersionForShellInterpretedManagers(string managerName)
+    {
+        var package = new PackageBuilder()
+            .WithManager(new PackageManagerBuilder().WithName(managerName).Build())
+            .WithId("powershell-yaml")
+            .Build();
+        var options = new InstallOptions { Version = "1.2.3; Start-Process calc" };
+
+        Assert.Throws<InvalidOperationException>(
+            () => BrokerRequestBuilder.Build(package, options, OperationType.Install)
+        );
+    }
+
+    [Fact]
+    public void Build_RefusesAnInjectedIdentifierForShellInterpretedManagers()
+    {
+        var package = new PackageBuilder()
+            .WithManager(new PackageManagerBuilder().WithName("PowerShell").Build())
+            .WithId("powershell-yaml; Start-Process calc")
+            .Build();
+
+        Assert.Throws<InvalidOperationException>(
+            () => BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Install)
+        );
+    }
+
+    [Fact]
+    public void Build_KeepsWinGetVersionsThatAreNotPlainVersions()
+    {
+        var package = new PackageBuilder()
+            .WithManager(new PackageManagerBuilder().WithName("Winget").Build())
+            .WithId("Contoso.Test")
+            .Build();
+        var options = new InstallOptions { Version = "2021 Update" };
+
+        var request = BrokerRequestBuilder.Build(package, options, OperationType.Install);
+
+        Assert.Equal("2021 Update", request.Package.Version);
+    }
+
 }

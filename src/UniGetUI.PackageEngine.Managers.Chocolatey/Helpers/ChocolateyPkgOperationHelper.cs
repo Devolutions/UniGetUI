@@ -1,3 +1,4 @@
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -46,7 +47,12 @@ internal sealed class ChocolateyPkgOperationHelper : BasePkgOperationHelper
                 parameters.AddRange(["--ignore-checksums", "--force"]);
 
             if (options.Version != "")
-                parameters.AddRange([$"--version={options.Version}", "--allow-downgrade"]);
+                parameters.AddRange(
+                    [
+                        CoreTools.EscapeCommandLineArgument($"--version={options.Version}"),
+                        "--allow-downgrade",
+                    ]
+                );
         }
 
         parameters.Add(Chocolatey.GetProxyArgument());

@@ -17,6 +17,8 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
 {
     public class Npm : PackageManager
     {
+        public override bool CommandLineIsShellInterpreted => true;
+
         public Npm()
         {
             Capabilities = new ManagerCapabilities
@@ -60,7 +62,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = Status.ExecutablePath,
-                    Arguments = Status.ExecutableCallArgs + " search \"" + query + "\" --json",
+                    Arguments = BuildSearchArguments(query),
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     RedirectStandardInput = true,
@@ -180,6 +182,17 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
 
             return Packages;
         }
+
+        /// <summary>
+        /// When npm is reached through its own npm.ps1 the query travels as a separate argument, so
+        /// nothing has to be escaped. The remaining case is a Windows install without npm.ps1, where
+        /// the call still goes through powershell -Command and the query has to be quoted.
+        /// </summary>
+        private string BuildSearchArguments(string query) =>
+            Status.ExecutableCallArgs
+            + " search "
+            + CoreTools.EscapePowerShellSingleQuoted(query)
+            + " --json";
 
         public override IReadOnlyList<string> FindCandidateExecutableFiles() =>
             CoreTools.WhichMultiple(OperatingSystem.IsWindows() ? "npm.cmd" : "npm");

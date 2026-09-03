@@ -1,5 +1,6 @@
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Client;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Serializable;
@@ -31,12 +32,26 @@ public static class BrokerRequestBuilder
         // the AutoRetry does not rebuild the same constrained request indefinitely.
         bool dropArchAndScope = package.OverridenOptions.WinGet_DropArchAndScope;
 
+        ManagerName manager = MapManagerName(package.Manager.Name);
+        if (ManagerCommandLineIsShellInterpreted(manager))
+        {
+            if (!CoreTools.IsValidPackageIdentifier(package.Id))
+                throw new InvalidOperationException(
+                    $"Refusing to build a {manager} broker request for the package identifier \"{package.Id}\": it is not a valid package identifier."
+                );
+
+            if (options.Version.Length > 0 && !CoreTools.IsValidPackageVersion(options.Version))
+                throw new InvalidOperationException(
+                    $"Refusing to build a {manager} broker request for package {package.Id}: the requested version \"{options.Version}\" is not a valid package version."
+                );
+        }
+
         return new PackageOperationRequest
         {
             RequestId = BrokerClient.GenerateRequestId(),
             CreatedAt = DateTimeOffset.UtcNow,
             Operation = MapOperation(role),
-            Manager = MapManagerName(package.Manager.Name),
+            Manager = manager,
             CaptureOutput = true,
             Source = new RequestSource
             {
@@ -97,6 +112,13 @@ public static class BrokerRequestBuilder
         TryMapManagerName(managerName, out var mapped)
             ? mapped
             : throw new ArgumentException($"Unsupported manager for the broker: {managerName}");
+
+    private static bool ManagerCommandLineIsShellInterpreted(ManagerName manager) =>
+        manager
+            is ManagerName.PowerShell
+                or ManagerName.PowerShell7
+                or ManagerName.Scoop
+                or ManagerName.Npm;
 
     private static bool TryMapManagerName(string managerName, out ManagerName mapped)
     {

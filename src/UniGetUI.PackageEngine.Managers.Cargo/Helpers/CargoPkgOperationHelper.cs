@@ -14,7 +14,9 @@ internal sealed class CargoPkgOperationHelper(Cargo cargo) : BasePkgOperationHel
         OperationType operation
     )
     {
-        var installVersion = options.Version == string.Empty ? package.VersionString : options.Version;
+        var installVersion = CoreTools.EscapeCommandLineArgument(
+            options.Version == string.Empty ? package.VersionString : options.Version
+        );
 
         bool hasBinstall = ((Cargo)Manager).HasBinstall;
 

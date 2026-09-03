@@ -177,7 +177,7 @@ public sealed class ChocolateyManagerTests : IDisposable
             "--prerelease",
             "--ignore-checksums",
             "--force",
-            "--version=2.48.1",
+            "\"--version=2.48.1\"",
             "--allow-downgrade",
             "--install-arg"
         );

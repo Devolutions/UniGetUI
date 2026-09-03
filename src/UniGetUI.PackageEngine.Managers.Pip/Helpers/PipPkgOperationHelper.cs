@@ -1,3 +1,4 @@
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -27,7 +28,9 @@ internal sealed class PipPkgOperationHelper : BasePkgOperationHelper
             },
         ];
         parameters.AddRange([
-            options.Version.Any() ? $"{package.Id}=={options.Version}" : package.Id,
+            options.Version.Any()
+                ? CoreTools.EscapeCommandLineArgument($"{package.Id}=={options.Version}")
+                : package.Id,
             "--no-input",
             "--no-color",
             "--no-cache",

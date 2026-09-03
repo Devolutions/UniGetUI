@@ -26,8 +26,17 @@ internal static class ManualInstallHelper
     {
         if (package is null || package.Source.IsVirtualManager) return null;
         var options = await InstallOptionsFactory.LoadApplicableAsync(package);
-        var args = await Task.Run(() => package.Manager.OperationHelper.GetParameters(package, options, operation));
-        return package.Manager.Properties.ExecutableFriendlyName + " " + string.Join(' ', args);
+        try
+        {
+            var args = await Task.Run(() =>
+                package.Manager.OperationHelper.GetParameters(package, options, operation));
+            return package.Manager.Properties.ExecutableFriendlyName + " " + string.Join(' ', args);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Logger.Warn($"[ManualInstallHelper] No command line for {package.Id}: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>Entry point for the "Manual install/update/uninstall" menu and toolbar actions.</summary>

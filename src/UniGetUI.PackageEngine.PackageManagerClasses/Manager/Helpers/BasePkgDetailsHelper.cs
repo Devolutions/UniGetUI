@@ -1,5 +1,6 @@
 using UniGetUI.Core.IconEngine;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 
@@ -14,6 +15,17 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
             Manager = manager;
         }
 
+        protected void RequireShellSafeId(IPackage package)
+        {
+            if (
+                Manager.CommandLineIsShellInterpreted
+                && !CoreTools.IsValidPackageIdentifier(package.Id)
+            )
+                throw new InvalidOperationException(
+                    $"Refusing to look up package \"{package.Id}\" on manager {Manager.Name}: the identifier is not a valid package identifier and this manager's command line is interpreted by a shell."
+                );
+        }
+
         public void GetDetails(IPackageDetails details)
         {
             if (!Manager.IsReady())
@@ -25,6 +37,7 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
             }
             try
             {
+                RequireShellSafeId(details.Package);
                 GetDetails_UnSafe(details);
                 Logger.Info(
                     $"Loaded details for package {details.Package.Id} on manager {Manager.Name}"
@@ -48,6 +61,7 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
             }
             try
             {
+                RequireShellSafeId(package);
                 if (Manager.Capabilities.SupportsCustomVersions)
                 {
                     var result = GetInstallableVersions_UnSafe(package);
@@ -77,6 +91,8 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
         {
             try
             {
+                RequireShellSafeId(package);
+
                 // Load native icon
                 if (Manager.Capabilities.SupportsCustomPackageIcons)
                 {
@@ -111,6 +127,8 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
         {
             try
             {
+                RequireShellSafeId(package);
+
                 IReadOnlyList<Uri> URIs = [];
 
                 // Load native screenshots
@@ -182,6 +200,7 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
         {
             try
             {
+                RequireShellSafeId(package);
                 string? path = GetInstallLocation_UnSafe(package);
                 if (path is not null && !Directory.Exists(path))
                 {

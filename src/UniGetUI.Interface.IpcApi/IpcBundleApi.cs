@@ -5,6 +5,7 @@ using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine;
+using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Classes.Serializable;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -610,81 +611,19 @@ public static class IpcBundleApi
         );
 
         var report = new BundleReport { IsEmpty = true };
-        bool allowCliArguments =
-            SecureSettings.Get(SecureSettings.K.AllowCLIArguments)
-            && SecureSettings.Get(SecureSettings.K.AllowImportingCLIArguments);
-        bool allowPrePostCommands =
-            SecureSettings.Get(SecureSettings.K.AllowPrePostOpCommand)
-            && SecureSettings.Get(SecureSettings.K.AllowImportPrePostOpCommands);
+        bool allowCliArguments = BundleImportFilter.CliArgumentsAllowed();
+        bool allowPrePostCommands = BundleImportFilter.PrePostCommandsAllowed();
 
         List<IPackage> packages = [];
         foreach (var package in deserializedData.packages)
         {
-            var options = package.InstallationOptions;
-            ReportList(
+            package.InstallationOptions = BundleImportFilter.Apply(
                 ref report,
                 package.Id,
-                options.CustomParameters_Install,
-                "Custom install arguments",
-                allowCliArguments
-            );
-            ReportList(
-                ref report,
-                package.Id,
-                options.CustomParameters_Update,
-                "Custom update arguments",
-                allowCliArguments
-            );
-            ReportList(
-                ref report,
-                package.Id,
-                options.CustomParameters_Uninstall,
-                "Custom uninstall arguments",
-                allowCliArguments
-            );
-            options.PreInstallCommand = ReportString(
-                ref report,
-                package.Id,
-                options.PreInstallCommand,
-                "Pre-install command",
+                package.InstallationOptions,
+                allowCliArguments,
                 allowPrePostCommands
             );
-            options.PostInstallCommand = ReportString(
-                ref report,
-                package.Id,
-                options.PostInstallCommand,
-                "Post-install command",
-                allowPrePostCommands
-            );
-            options.PreUpdateCommand = ReportString(
-                ref report,
-                package.Id,
-                options.PreUpdateCommand,
-                "Pre-update command",
-                allowPrePostCommands
-            );
-            options.PostUpdateCommand = ReportString(
-                ref report,
-                package.Id,
-                options.PostUpdateCommand,
-                "Post-update command",
-                allowPrePostCommands
-            );
-            options.PreUninstallCommand = ReportString(
-                ref report,
-                package.Id,
-                options.PreUninstallCommand,
-                "Pre-uninstall command",
-                allowPrePostCommands
-            );
-            options.PostUninstallCommand = ReportString(
-                ref report,
-                package.Id,
-                options.PostUninstallCommand,
-                "Post-uninstall command",
-                allowPrePostCommands
-            );
-            package.InstallationOptions = options;
             packages.Add(DeserializePackage(package));
         }
 
@@ -722,59 +661,6 @@ public static class IpcBundleApi
         }
 
         return new ImportedPackage(raw, manager, source);
-    }
-
-    private static void ReportList(
-        ref BundleReport report,
-        string packageId,
-        List<string> values,
-        string label,
-        bool allowed
-    )
-    {
-        if (!values.Any(value => value.Any()))
-        {
-            return;
-        }
-
-        if (!report.Contents.TryGetValue(packageId, out List<BundleReportEntry>? packageEntries))
-        {
-            packageEntries = [];
-            report.Contents[packageId] = packageEntries;
-        }
-
-        packageEntries.Add(
-            new BundleReportEntry($"{label}: [{string.Join(", ", values)}]", allowed)
-        );
-        report.IsEmpty = false;
-        if (!allowed)
-        {
-            values.Clear();
-        }
-    }
-
-    private static string ReportString(
-        ref BundleReport report,
-        string packageId,
-        string value,
-        string label,
-        bool allowed
-    )
-    {
-        if (!value.Any())
-        {
-            return value;
-        }
-
-        if (!report.Contents.TryGetValue(packageId, out List<BundleReportEntry>? packageEntries))
-        {
-            packageEntries = [];
-            report.Contents[packageId] = packageEntries;
-        }
-
-        packageEntries.Add(new BundleReportEntry($"{label}: {value}", allowed));
-        report.IsEmpty = false;
-        return allowed ? value : "";
     }
 
     private static IReadOnlyList<IpcBundleSecurityEntry> FlattenReport(BundleReport report)

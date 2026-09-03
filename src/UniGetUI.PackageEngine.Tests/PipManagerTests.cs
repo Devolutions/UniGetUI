@@ -160,7 +160,7 @@ public sealed class PipManagerTests : IDisposable
         Assert.Equal(
             [
                 "install",
-                "requests==2.31.0",
+                "\"requests==2.31.0\"",
                 "--no-input",
                 "--no-color",
                 "--no-cache",

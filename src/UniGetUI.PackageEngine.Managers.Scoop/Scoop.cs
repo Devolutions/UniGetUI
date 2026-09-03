@@ -21,6 +21,8 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 {
     public class Scoop : PackageManager
     {
+        public override bool CommandLineIsShellInterpreted => true;
+
         public static string[] FALSE_PACKAGE_IDS = ["No", "WARN"];
         public static string[] FALSE_PACKAGE_VERSIONS =
         [

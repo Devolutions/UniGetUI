@@ -13,6 +13,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.Interface.Telemetry;
 using UniGetUI.PackageEngine;
+using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Classes.Serializable;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -433,25 +434,14 @@ public class PackageBundlesPage : AbstractPackagesPage
                 ?? throw new JsonException("Could not parse JSON object")));
 
         var report = new BundleReport { IsEmpty = true };
-        bool allowCLI = SecureSettings.Get(SecureSettings.K.AllowCLIArguments)
-                            && SecureSettings.Get(SecureSettings.K.AllowImportingCLIArguments);
-        bool allowPrePost = SecureSettings.Get(SecureSettings.K.AllowPrePostOpCommand)
-                            && SecureSettings.Get(SecureSettings.K.AllowImportPrePostOpCommands);
+        bool allowCLI = BundleImportFilter.CliArgumentsAllowed();
+        bool allowPrePost = BundleImportFilter.PrePostCommandsAllowed();
 
         var packages = new List<IPackage>();
         foreach (var pkg in deserializedData.packages)
         {
-            var opts = pkg.InstallationOptions;
-            ReportList(ref report, pkg.Id, opts.CustomParameters_Install, "Custom install arguments", allowCLI);
-            ReportList(ref report, pkg.Id, opts.CustomParameters_Update, "Custom update arguments", allowCLI);
-            ReportList(ref report, pkg.Id, opts.CustomParameters_Uninstall, "Custom uninstall arguments", allowCLI);
-            opts.PreInstallCommand = ReportStr(ref report, pkg.Id, opts.PreInstallCommand, "Pre-install command", allowPrePost);
-            opts.PostInstallCommand = ReportStr(ref report, pkg.Id, opts.PostInstallCommand, "Post-install command", allowPrePost);
-            opts.PreUpdateCommand = ReportStr(ref report, pkg.Id, opts.PreUpdateCommand, "Pre-update command", allowPrePost);
-            opts.PostUpdateCommand = ReportStr(ref report, pkg.Id, opts.PostUpdateCommand, "Post-update command", allowPrePost);
-            opts.PreUninstallCommand = ReportStr(ref report, pkg.Id, opts.PreUninstallCommand, "Pre-uninstall command", allowPrePost);
-            opts.PostUninstallCommand = ReportStr(ref report, pkg.Id, opts.PostUninstallCommand, "Post-uninstall command", allowPrePost);
-            pkg.InstallationOptions = opts;
+            pkg.InstallationOptions = BundleImportFilter.Apply(
+                ref report, pkg.Id, pkg.InstallationOptions, allowCLI, allowPrePost);
             packages.Add(DeserializePackage(pkg));
         }
 
@@ -492,25 +482,6 @@ public class PackageBundlesPage : AbstractPackagesPage
     public static IPackage DeserializeIncompatiblePackage(SerializableIncompatiblePackage raw, IManagerSource source)
         => new InvalidImportedPackage(raw, source);
 
-    // ─── Security report helpers ──────────────────────────────────────────────
-    private static void ReportList(ref BundleReport report, string id, List<string> values, string label, bool allowed)
-    {
-        if (!values.Any(x => x.Any())) return;
-        if (!report.Contents.ContainsKey(id)) report.Contents[id] = [];
-        report.Contents[id].Add(new BundleReportEntry($"{label}: [{string.Join(", ", values)}]", allowed));
-        report.IsEmpty = false;
-        if (!allowed) values.Clear();
-    }
-
-    private static string ReportStr(ref BundleReport report, string id, string value, string label, bool allowed)
-    {
-        if (!value.Any()) return value;
-        if (!report.Contents.ContainsKey(id)) report.Contents[id] = [];
-        report.Contents[id].Add(new BundleReportEntry($"{label}: {value}", allowed));
-        report.IsEmpty = false;
-        return allowed ? value : "";
-    }
-
     // ─── Batch script export ──────────────────────────────────────────────────
     private async Task CreateBatchScriptAsync()
     {
@@ -542,13 +513,29 @@ public class PackageBundlesPage : AbstractPackagesPage
                 packages.Add(pkg.Name + " from " + pkg.Manager.DisplayName);
 
                 foreach (var process in pkg.installation_options.KillBeforeOperation)
-                    commands.Add($"taskkill /im \"{process}\"" + (forceKill ? " /f" : ""));
+                {
+                    string safeProcess = new string(
+                        process.Where(c => c is not '"' && !char.IsControl(c)).ToArray()
+                    );
+                    if (safeProcess.Length is 0)
+                        continue;
+                    commands.Add($"taskkill /im \"{safeProcess}\"" + (forceKill ? " /f" : ""));
+                }
 
                 if (pkg.installation_options.PreInstallCommand != "")
                     commands.Add(pkg.installation_options.PreInstallCommand);
 
-                var param = pkg.Manager.OperationHelper.GetParameters(
-                    pkg, pkg.installation_options, OperationType.Install);
+                IReadOnlyList<string> param;
+                try
+                {
+                    param = pkg.Manager.OperationHelper.GetParameters(
+                        pkg, pkg.installation_options, OperationType.Install);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Logger.Warn($"Skipping {pkg.Id} in the exported script: {ex.Message}");
+                    continue;
+                }
                 commands.Add($"{pkg.Manager.Properties.ExecutableFriendlyName} {string.Join(' ', param)}");
 
                 if (pkg.installation_options.PostInstallCommand != "")
@@ -604,7 +591,7 @@ public class PackageBundlesPage : AbstractPackagesPage
             if ($args[0] -ne "/DisablePausePrompts") { pause }
             Write-Host ""
             Write-Host "This script will attempt to install the following packages:"
-            {{string.Join('\n', names.Select(x => $"Write-Host \"  - {x}\""))}}
+            {{string.Join('\n', names.Select(x => $"Write-Host {CoreTools.EscapePowerShellSingleQuoted($"  - {x}")}"))}}
             Write-Host ""
             if ($args[0] -ne "/DisablePausePrompts") { pause }
             Clear-Host

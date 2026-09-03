@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Formats.Asn1;
 using System.Text;
+using UniGetUI.Core.Data;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Classes.Manager;
@@ -16,6 +18,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
 {
     public class PowerShell7 : BaseNuGet
     {
+        public override bool CommandLineIsShellInterpreted => true;
+
         public PowerShell7()
         {
             Capabilities = new ManagerCapabilities

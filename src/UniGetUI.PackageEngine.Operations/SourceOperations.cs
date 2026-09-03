@@ -49,6 +49,21 @@ namespace UniGetUI.PackageEngine.Operations
             }
         }
 
+        protected void RequireShellSafeSource()
+        {
+            string url = Source.Url?.ToString() ?? "";
+
+            if (!CoreTools.IsCommandLineInertValue(Source.Name))
+                throw new InvalidOperationException(
+                    $"Refusing to build a {Source.Manager.Name} command line for the source name \"{Source.Name}\": it contains characters that would alter the command line."
+                );
+
+            if (url.Length > 0 && !CoreTools.IsCommandLineInertValue(url))
+                throw new InvalidOperationException(
+                    $"Refusing to build a {Source.Manager.Name} command line for the source URL \"{url}\": it contains characters that would alter the command line."
+                );
+        }
+
         protected static bool IsWinGetManager(IPackageManager manager)
         {
 #if WINDOWS
@@ -66,6 +81,8 @@ namespace UniGetUI.PackageEngine.Operations
 
         protected override void PrepareProcessStartInfo()
         {
+            RequireShellSafeSource();
+
             var exePath = Source.Manager.Status.ExecutablePath;
             bool admin = false;
             if (RequiresAdminRights())
@@ -163,6 +180,8 @@ namespace UniGetUI.PackageEngine.Operations
 
         protected override void PrepareProcessStartInfo()
         {
+            RequireShellSafeSource();
+
             var exePath = Source.Manager.Status.ExecutablePath;
             bool admin = false;
             if (RequiresAdminRights())

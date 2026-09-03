@@ -9,6 +9,7 @@ namespace UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 public sealed class TestPackageManager : PackageManager
 {
     private bool _installerUrlFollowsPackageVersion;
+    private bool _commandLineIsShellInterpreted;
     private Func<string, IReadOnlyList<Package>> _findPackages = _ => [];
     private Func<IReadOnlyList<Package>> _getAvailableUpdates = static () => [];
     private Func<IReadOnlyList<Package>> _getInstalledPackages = static () => [];
@@ -108,6 +109,13 @@ public sealed class TestPackageManager : PackageManager
     }
 
     public override bool InstallerUrlFollowsPackageVersion => _installerUrlFollowsPackageVersion;
+
+    public override bool CommandLineIsShellInterpreted => _commandLineIsShellInterpreted;
+
+    public void SetCommandLineIsShellInterpreted(bool shellInterpreted)
+    {
+        _commandLineIsShellInterpreted = shellInterpreted;
+    }
 
     public void SetInstallerUrlFollowsPackageVersion(bool followsPackageVersion)
     {

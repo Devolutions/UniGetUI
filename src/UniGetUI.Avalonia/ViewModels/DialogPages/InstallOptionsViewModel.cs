@@ -507,8 +507,17 @@ public partial class InstallOptionsViewModel : ObservableObject
         var snap = SnapshotOptions();
         var op = CurrentOp();
         var applied = await InstallOptionsFactory.LoadApplicableAsync(_package, overridePackageOptions: snap);
-        var args = await Task.Run(() => _package.Manager.OperationHelper.GetParameters(_package, applied, op));
-        return _package.Manager.Properties.ExecutableFriendlyName + " " + string.Join(' ', args);
+        try
+        {
+            var args = await Task.Run(() =>
+                _package.Manager.OperationHelper.GetParameters(_package, applied, op));
+            return _package.Manager.Properties.ExecutableFriendlyName + " " + string.Join(' ', args);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Logger.Warn($"[InstallOptionsViewModel] No command line for {_package.Id}: {ex.Message}");
+            return "";
+        }
     }
 
     private void Refresh() { if (_uiLoaded) _ = RefreshCommandPreviewAsync(); }

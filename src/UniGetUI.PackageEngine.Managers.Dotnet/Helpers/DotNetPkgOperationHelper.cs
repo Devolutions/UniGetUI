@@ -59,7 +59,9 @@ internal sealed class DotNetPkgOperationHelper : BasePkgOperationHelper
         {
             if (options.Version != "")
             {
-                parameters.AddRange(["--version", options.Version]);
+                parameters.AddRange(
+                    ["--version", CoreTools.EscapeCommandLineArgument(options.Version)]
+                );
             }
         }
 

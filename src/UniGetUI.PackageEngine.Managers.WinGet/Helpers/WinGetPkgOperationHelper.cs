@@ -81,11 +81,15 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             && package.OverridenOptions.WinGet_SpecifyVersion is not false
         )
         {
-            parameters.AddRange(["--version", $"\"{package.VersionString}\""]);
+            parameters.AddRange(
+                ["--version", CoreTools.EscapeCommandLineArgument(package.VersionString)]
+            );
         }
         else if (operation is OperationType.Install && options.Version != "")
         {
-            parameters.AddRange(["--version", $"\"{options.Version}\""]);
+            parameters.AddRange(
+                ["--version", CoreTools.EscapeCommandLineArgument(options.Version)]
+            );
         }
 
         if (usePinget && operation is OperationType.Update)

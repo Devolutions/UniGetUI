@@ -36,8 +36,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Devolutions.Now.Policy.Api" Version="2026.8.29-phase2.27dcc5be" />
-        <PackageReference Include="Devolutions.Now.Policy.Client" Version="2026.8.29-phase2.27dcc5be" />
+        <PackageReference Include="Devolutions.Now.Policy.Api" Version="2026.8.29-phase2.bdf80471" />
+        <PackageReference Include="Devolutions.Now.Policy.Client" Version="2026.8.29-phase2.bdf80471" />
     </ItemGroup>
 
     <ItemGroup>

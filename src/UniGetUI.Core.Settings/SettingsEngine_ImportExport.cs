@@ -170,7 +170,8 @@ public partial class Settings
     public static void ImportFromString_JSON(string jsonContent)
     {
         Dictionary<string, string> settings =
-            SettingsJson.DeserializeStringDictionary(jsonContent) ?? [];
+            SettingsJson.DeserializeStringDictionary(jsonContent)
+            ?? throw new JsonException("The settings document must contain a JSON object.");
 
         ResetSettings();
         int failedWrites = 0;

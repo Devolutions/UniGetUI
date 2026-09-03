@@ -35,7 +35,12 @@ public static class PolicyEditorPolicyContract
     public const Decision DefaultTemplateDecision = Decision.Deny;
 
     /// <summary>
-    /// The only <see cref="PolicyDocument.Schema"/> value the editor understands.
+    /// The schema URI used for editable <see cref="PolicyDraftDocument"/> instances.
     /// </summary>
-    public static string Schema => PolicySchemaUris.Policy;
+    public static string DraftSchema => PolicySchemaUris.PolicyDraft;
+
+    /// <summary>
+    /// The schema URI used only when projecting an authoritative committed <see cref="PolicyDocument"/>.
+    /// </summary>
+    public static string CommittedSchema => PolicySchemaUris.Policy;
 }

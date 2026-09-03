@@ -18,7 +18,7 @@ internal static class PolicyEditorTestFixtures
     {
         return new PolicyDocument
         {
-            Schema = PolicyEditorPolicyContract.Schema,
+            Schema = PolicyEditorPolicyContract.CommittedSchema,
             PolicyType = "PackageBrokerPolicy",
             PolicyVersion = "1.2.3",
             Metadata = new PolicyMetadata

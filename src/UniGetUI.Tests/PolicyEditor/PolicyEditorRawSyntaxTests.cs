@@ -52,7 +52,7 @@ public class PolicyEditorRawSyntaxTests
     {
         return new PolicyDraftDocument
         {
-            Schema = PolicyEditorPolicyContract.Schema,
+            Schema = PolicyEditorPolicyContract.DraftSchema,
             PolicyVersion = "1.2.3",
             PolicyType = PolicyEditorPolicyContract.PolicyType,
             Metadata = new PolicyDraftMetadata { Id = id, Publisher = "Contoso" },
@@ -68,23 +68,40 @@ public class PolicyEditorRawSyntaxTests
     [Fact]
     public void TryParseStrict_WrongSchema_FailsClosedWithSchemaPointer()
     {
-        PolicyDraftDocument document = BuildValidPackageDraft();
-        document.Schema = "https://example.com/wrong-schema.json";
-        string raw = PolicySerializer.Serialize(document);
+        JsonNode root = JsonNode.Parse(PolicySerializer.Serialize(BuildValidPackageDraft()))!;
+        root["$schema"] = "https://example.com/wrong-schema.json";
+        string raw = root.ToJsonString();
 
         bool ok = PolicyEditorRawSyntax.TryParseStrict(raw, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
 
         Assert.False(ok);
         Assert.Null(parsed);
-        Assert.Equal("/schema", error!.Pointer);
+        Assert.Equal("/$schema", error!.Pointer);
+    }
+
+    [Fact]
+    public void TryParseStrict_CommittedSchemaForDraft_FailsClosedWithSchemaPointer()
+    {
+        JsonNode root = JsonNode.Parse(PolicySerializer.Serialize(BuildValidPackageDraft()))!;
+        root["$schema"] = SchemaUris.Policy;
+        string raw = root.ToJsonString();
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(
+            raw,
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.Equal("/$schema", error!.Pointer);
     }
 
     [Fact]
     public void TryParseStrict_WrongPolicyType_FailsClosedWithPolicyTypePointer()
     {
-        PolicyDraftDocument document = BuildValidPackageDraft();
-        document.PolicyType = "SomeOtherPolicy";
-        string raw = PolicySerializer.Serialize(document);
+        JsonNode root = JsonNode.Parse(PolicySerializer.Serialize(BuildValidPackageDraft()))!;
+        root["PolicyType"] = "SomeOtherPolicy";
+        string raw = root.ToJsonString();
 
         bool ok = PolicyEditorRawSyntax.TryParseStrict(raw, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
 

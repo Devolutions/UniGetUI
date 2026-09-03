@@ -38,6 +38,11 @@ public static partial class PolicyEditorRawSyntax
         PolicyDraftDocument? document;
         try
         {
+            if (!TryCheckDraftSchema(rawJson, out error))
+            {
+                return false;
+            }
+
             document = PolicySerializer.DeserializePolicyDraftDocumentStrict(rawJson);
         }
         catch (Exception ex) when (ex is JsonException or FormatException or ArgumentException or NotSupportedException)
@@ -61,6 +66,24 @@ public static partial class PolicyEditorRawSyntax
         return true;
     }
 
+    private static bool TryCheckDraftSchema(string rawJson, out PolicyEditorSyntaxError? error)
+    {
+        using JsonDocument json = JsonDocument.Parse(rawJson);
+        if (json.RootElement.ValueKind == JsonValueKind.Object
+            && json.RootElement.TryGetProperty("$schema", out JsonElement schema)
+            && schema.ValueKind == JsonValueKind.String
+            && !string.Equals(schema.GetString(), PolicyEditorPolicyContract.DraftSchema, StringComparison.Ordinal))
+        {
+            error = new PolicyEditorSyntaxError(
+                $"Unsupported schema '{schema.GetString()}'. Expected '{PolicyEditorPolicyContract.DraftSchema}'.",
+                "/$schema");
+            return false;
+        }
+
+        error = null;
+        return true;
+    }
+
     /// <summary>
     /// Serializes exactly the editable draft shape. Server-managed metadata is never emitted.
     /// </summary>
@@ -69,11 +92,11 @@ public static partial class PolicyEditorRawSyntax
 
     private static bool TryCheckFixedContract(PolicyDraftDocument document, out PolicyEditorSyntaxError? error)
     {
-        if (!string.Equals(document.Schema, PolicyEditorPolicyContract.Schema, StringComparison.Ordinal))
+        if (!string.Equals(document.Schema, PolicyEditorPolicyContract.DraftSchema, StringComparison.Ordinal))
         {
             error = new PolicyEditorSyntaxError(
-                $"Unsupported schema '{document.Schema}'. Expected '{PolicyEditorPolicyContract.Schema}'.",
-                "/schema");
+                $"Unsupported schema '{document.Schema}'. Expected '{PolicyEditorPolicyContract.DraftSchema}'.",
+                "/$schema");
             return false;
         }
 

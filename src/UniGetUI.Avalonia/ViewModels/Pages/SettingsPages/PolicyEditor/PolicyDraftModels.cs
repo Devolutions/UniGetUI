@@ -12,7 +12,7 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 /// </summary>
 public sealed class PolicyEditorDraftDocument
 {
-    public string Schema => PolicyEditorPolicyContract.Schema;
+    public string Schema => PolicyEditorPolicyContract.DraftSchema;
 
     public string PolicyType => PolicyEditorPolicyContract.PolicyType;
 

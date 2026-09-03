@@ -40,6 +40,7 @@ public class WindowsPolicyWriteElevatorTests
         };
         var canonicalDraft = new PolicyDraftDocument
         {
+            Schema = Devolutions.Now.Policy.Model.SchemaUris.PolicyDraft,
             Metadata = new PolicyDraftMetadata
             {
                 Id = "policy-id",

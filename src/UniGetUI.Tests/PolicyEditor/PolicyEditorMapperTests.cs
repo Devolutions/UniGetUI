@@ -45,7 +45,7 @@ public class PolicyEditorMapperTests
         PolicyEditorDraftDocument draft = PolicyEditorMapper.ToDraft(document);
 
         Assert.Equal(document.PolicyVersion, draft.PolicyVersion);
-        Assert.Equal(document.Schema, draft.Schema);
+        Assert.Equal(PolicyEditorPolicyContract.DraftSchema, draft.Schema);
         Assert.Equal(document.PolicyType, draft.PolicyType);
 
         Assert.Equal(document.Metadata.Id, draft.Metadata.Id);
@@ -171,7 +171,7 @@ public class PolicyEditorMapperTests
 
         PolicyDocument document = PolicyEditorMapper.ToDocument(draft, revision: 1, publishedAt: DateTimeOffset.UtcNow);
 
-        Assert.Equal(PolicyEditorPolicyContract.Schema, document.Schema);
+        Assert.Equal(PolicyEditorPolicyContract.CommittedSchema, document.Schema);
         Assert.Equal(PolicyEditorPolicyContract.PolicyType, document.PolicyType);
         Assert.Equal(RulePrecedence.PriorityThenDeny, document.Enforcement.RulePrecedence);
     }
@@ -254,7 +254,7 @@ public class PolicyEditorMapperTests
     {
         var packageDraft = new PolicyDraftDocument
         {
-            Schema = PolicyEditorPolicyContract.Schema,
+            Schema = PolicyEditorPolicyContract.DraftSchema,
             PolicyVersion = "2.0.0",
             PolicyType = PolicyEditorPolicyContract.PolicyType,
             Metadata = new PolicyDraftMetadata
@@ -302,7 +302,7 @@ public class PolicyEditorMapperTests
 
         PolicyDraftDocument shared = PolicyEditorMapper.ToSharedDraft(draft);
 
-        Assert.Equal(PolicyEditorPolicyContract.Schema, shared.Schema);
+        Assert.Equal(PolicyEditorPolicyContract.DraftSchema, shared.Schema);
         Assert.Equal(PolicyEditorPolicyContract.PolicyType, shared.PolicyType);
         Assert.Equal(RulePrecedence.PriorityThenDeny, shared.Enforcement.RulePrecedence);
         Assert.Single(shared.Rules);
@@ -335,7 +335,7 @@ public class PolicyEditorMapperTests
     {
         var source = new PolicyDraftDocument
         {
-            Schema = PolicyEditorPolicyContract.Schema,
+            Schema = PolicyEditorPolicyContract.DraftSchema,
             PolicyVersion = "1.0.0",
             PolicyType = PolicyEditorPolicyContract.PolicyType,
             Metadata = new PolicyDraftMetadata { Id = "id-1", Publisher = "Contoso" },

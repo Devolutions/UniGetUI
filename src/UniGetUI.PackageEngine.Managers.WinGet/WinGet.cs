@@ -20,6 +20,10 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 {
     public class WinGet : PackageManager
     {
+        // Add/Remove-programs identifiers legitimately contain spaces, for example
+        // "ARP\Machine\X86\Microsoft Copilot"; GetIdNamePiece quotes them.
+        public override bool IdentifiersAreQuotedOnCommandLine => true;
+
         internal const string CliToolPreferenceEnvironmentVariable = "UNIGETUI_WINGET_CLI";
         internal const string ComApiPolicyEnvironmentVariable = "UNIGETUI_WINGET_COM";
         private const string SystemWinGetExecutableName = "winget.exe";

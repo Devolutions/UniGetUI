@@ -48,6 +48,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
 
         public virtual bool CommandLineIsShellInterpreted => false;
 
+        public virtual bool IdentifiersAreQuotedOnCommandLine => false;
+
         public virtual int? CompareVersions(string versionA, string versionB)
         {
             var parsedA = CoreTools.VersionStringToStruct(versionA);

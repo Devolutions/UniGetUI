@@ -55,6 +55,19 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
         bool standalone
     )
     {
+        // Every manager concatenates these onto a command line, so an identifier that looks like
+        // an option is smuggled in as one even where no shell is involved: a Pip identifier of
+        // "requests --index-url https://host" would otherwise add a real index to the install.
+        if (!CoreTools.IsOptionSafeIdentifier(package.Id, Manager.IdentifiersAreQuotedOnCommandLine))
+            throw new InvalidOperationException(
+                $"Refusing to build a {Manager.Name} command line for the package identifier \"{package.Id}\": it would be read as a command-line option or split into further arguments."
+            );
+
+        if (!CoreTools.IsOptionSafeValue(options.Version))
+            throw new InvalidOperationException(
+                $"Refusing to build a {Manager.Name} command line for package {package.Id}: the requested version \"{options.Version}\" would be read as a command-line option."
+            );
+
         if (Manager.CommandLineIsShellInterpreted)
         {
             if (!CoreTools.IsValidPackageIdentifier(package.Id))

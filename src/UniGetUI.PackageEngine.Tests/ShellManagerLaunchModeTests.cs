@@ -107,36 +107,8 @@ public sealed class ShellManagerLaunchModeTests
         Assert.Equal(PowerShellPkgOperationHelper.ErrorVariableName, parameters[index + 1]);
     }
 
-    [Fact]
-    public void Npm_EmitsAnUnquotedSpecWhenTheLauncherIsUsed()
-    {
-        var manager = new Npm();
-        manager.Status.OperationCallArgs =
-        [
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-File",
-            @"C:\Program Files\nodejs\npm.ps1",
-        ];
-        var package = new PackageBuilder()
-            .WithManager(manager)
-            .WithId("@babel/core")
-            .WithVersion("7.24.0")
-            .Build();
-
-        var parameters = manager.OperationHelper.GetParameters(
-            package,
-            new InstallOptions(),
-            OperationType.Install
-        );
-
-        Assert.Contains("@babel/core@7.24.0", parameters);
-        Assert.DoesNotContain("'@babel/core@7.24.0'", parameters);
-    }
-
-    // The specifier is never quoted now: the exported install script runs commands through cmd,
-    // where single quotes are not delimiters and npm received them as part of the package name.
+    // The specifier is never quoted: the exported install script runs commands through cmd, where
+    // single quotes are not delimiters and npm received them as part of the package name.
     [Fact]
     public void Npm_NeverQuotesTheSpecInEitherLaunchMode()
     {
@@ -161,7 +133,7 @@ public sealed class ShellManagerLaunchModeTests
 
             var parameters = manager.OperationHelper.GetParameters(
                 package,
-                new InstallOptions(),
+                new InstallOptions { Version = "7.24.0" },
                 OperationType.Install
             );
 
@@ -170,32 +142,51 @@ public sealed class ShellManagerLaunchModeTests
         }
     }
 
-    // "Latest" is more than one word in several languages, and an unpinned imported package falls
-    // back to it. Unquoted that would split, and npm would try to install the trailing word as a
-    // package of its own, so it has to be refused instead.
-    [Theory]
-    [InlineData("Piu recente")]
-    [InlineData("Meest recent")]
-    [InlineData("En son")]
-    public void Npm_RefusesAVersionThatWouldSplitIntoASecondArgument(string version)
+    [Fact]
+    public void Npm_PinsTheRequestedVersion()
     {
         var manager = new Npm();
         var package = new PackageBuilder()
             .WithManager(manager)
             .WithId("express")
-            .WithVersion(version)
+            .WithVersion("5.0.0")
             .Build();
 
-        Assert.Throws<InvalidOperationException>(
-            () =>
-                manager.OperationHelper.GetParameters(
-                    package,
-                    new InstallOptions(),
-                    OperationType.Install
-                )
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions { Version = "4.17.21" },
+            OperationType.Install
         );
+
+        Assert.Contains("express@4.17.21", parameters);
     }
 
+    // An unpinned imported package reports the translated "Latest" as its version. That is display
+    // text, not an npm tag, and is more than one word in ten languages. npm already installs the
+    // latest version when no specifier is given, so none is emitted.
+    [Theory]
+    [InlineData("Latest")]
+    [InlineData("Piu recente")]
+    [InlineData("Meest recent")]
+    [InlineData("En son")]
+    public void Npm_OmitsAPlaceholderVersionInsteadOfInventingATag(string placeholder)
+    {
+        var manager = new Npm();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("express")
+            .WithVersion(placeholder)
+            .Build();
+
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Install
+        );
+
+        Assert.Contains("express", parameters);
+        Assert.DoesNotContain(parameters, parameter => parameter.Contains('@'));
+    }
     [Fact]
     public void BothLaunchModesStillRejectAnInjectedVersion()
     {

@@ -17,12 +17,12 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     public static string GetIdNamePiece(IPackage package)
     {
         if (!package.Id.EndsWith("…"))
-            return $"--id \"{package.Id.TrimEnd('…')}\" --exact";
+            return $"--id {CoreTools.EscapeCommandLineArgument(package.Id.TrimEnd('…'))} --exact";
 
         if (!package.Name.EndsWith("…"))
-            return $"--name \"{package.Name}\" --exact";
+            return $"--name {CoreTools.EscapeCommandLineArgument(package.Name)} --exact";
 
-        return $"--id \"{package.Id.TrimEnd('…')}\"";
+        return $"--id {CoreTools.EscapeCommandLineArgument(package.Id.TrimEnd('…'))}";
     }
 
     public WinGetPkgOperationHelper(WinGet manager)

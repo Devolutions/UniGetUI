@@ -33,6 +33,12 @@ namespace UniGetUI.PackageEngine.Interfaces
         public bool CommandLineIsShellInterpreted { get; }
 
         /// <summary>
+        /// Whether this manager quotes the package identifier when it places it on the command
+        /// line. Only such a manager may carry an identifier containing whitespace.
+        /// </summary>
+        public bool IdentifiersAreQuotedOnCommandLine { get; }
+
+        /// <summary>
         /// Compares two version strings using this manager's ecosystem semantics, returning a
         /// negative number, zero or a positive number in the usual way, or null when the two
         /// versions cannot be meaningfully compared.

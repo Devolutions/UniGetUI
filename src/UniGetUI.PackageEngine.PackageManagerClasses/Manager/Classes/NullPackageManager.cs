@@ -29,6 +29,8 @@ namespace UniGetUI.PackageEngine.Classes.Manager
 
         public bool CommandLineIsShellInterpreted => false;
 
+        public bool IdentifiersAreQuotedOnCommandLine => false;
+
         public int? CompareVersions(string versionA, string versionB)
         {
             var parsedA = CoreTools.VersionStringToStruct(versionA);

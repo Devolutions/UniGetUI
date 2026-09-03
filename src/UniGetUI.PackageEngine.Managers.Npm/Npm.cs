@@ -241,6 +241,14 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
             if (script is null)
                 return [];
 
+            // Finding npm.ps1 does not prove this shell may run it, and npm.cmd still works, so
+            // the capability is confirmed before giving up the working fallback.
+            if (!CoreTools.PowerShellLauncherWorks(executablePath, CoreData.PowerShellOperationLauncher))
+            {
+                Logger.Warn("Not using -File for npm operations; falling back to -Command");
+                return [];
+            }
+
             return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script];
         }
 

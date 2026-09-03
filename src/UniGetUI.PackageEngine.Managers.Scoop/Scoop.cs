@@ -534,6 +534,15 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             if (!found)
                 return [];
 
+            // Whether this shell can run a script file at all is the thing in question, and a
+            // machine policy or endpoint protection can refuse it. The bundled launcher is used as
+            // the canary so the answer is cached once per shell instead of probing scoop itself.
+            if (!CoreTools.PowerShellLauncherWorks(executablePath, CoreData.PowerShellOperationLauncher))
+            {
+                Logger.Warn("Not using -File for Scoop operations; falling back to -Command");
+                return [];
+            }
+
             return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", executable];
         }
 

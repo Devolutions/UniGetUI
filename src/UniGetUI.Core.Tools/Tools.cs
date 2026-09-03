@@ -691,7 +691,6 @@ namespace UniGetUI.Core.Tools
                         or '"'
                         or '~'
                         or '?'
-                        or '/'
                         or '\''
                         or '\\'
                         or '`'
@@ -1294,6 +1293,57 @@ namespace UniGetUI.Core.Tools
         public static bool IsCommandLineInertValue(string value) =>
             !value.AsSpan().ContainsAny(_commandLineSensitiveCharacters);
 
+        /// <summary>
+        /// Whether a package identifier can be placed on any command line without being read as an
+        /// option or splitting into further arguments. Quoting is not enough on its own: a quoted
+        /// argument still binds as an option when it starts with a dash. Applies to every manager,
+        /// including those whose command line is not interpreted by a shell.
+        /// </summary>
+        public static bool IsOptionSafeIdentifier(string identifier, bool quotedByTheSink = false)
+        {
+            if (identifier.Length is 0)
+                return false;
+
+            if (identifier[0] is '-' or '/')
+                return false;
+
+            foreach (char character in identifier)
+            {
+                if (char.IsControl(character))
+                    return false;
+
+                // Whitespace only splits an identifier into further arguments where the sink emits
+                // it bare. WinGet quotes it, and its Add/Remove-programs identifiers legitimately
+                // contain spaces, for example "ARP\Machine\X86\Microsoft Copilot".
+                if (!quotedByTheSink && char.IsWhiteSpace(character))
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Whether a value can be placed on a command line without being read as an option. Unlike
+        /// an identifier it may contain spaces, because the sinks that accept such values quote
+        /// them; WinGet publishes versions such as "2021 Update".
+        /// </summary>
+        public static bool IsOptionSafeValue(string value)
+        {
+            if (value.Length is 0)
+                return true;
+
+            if (value[0] is '-' or '/')
+                return false;
+
+            foreach (char character in value)
+            {
+                if (char.IsControl(character))
+                    return false;
+            }
+
+            return true;
+        }
+
         public static bool IsValidPackageVersion(string version)
         {
             if (version.Length is 0 or > MaxPackageVersionLength)
@@ -1344,6 +1394,8 @@ namespace UniGetUI.Core.Tools
 
         private const string LauncherProbeMarker = "UNIGETUI_LAUNCHER_OK";
 
+        private const int LauncherProbeTimeout = 20000;
+
         private static readonly ConcurrentDictionary<string, bool> _launcherProbeCache = new();
 
         /// <summary>
@@ -1393,18 +1445,36 @@ namespace UniGetUI.Core.Tools
                 process.StartInfo.CreateNoWindow = true;
                 process.Start();
 
-                string output = process.StandardOutput.ReadToEnd();
-                if (!process.WaitForExit(20000))
+                // Both pipes have to be drained while waiting, not before: reading to the end first
+                // blocks until the child closes the stream, which makes the timeout unreachable,
+                // and leaving the other pipe unread deadlocks the child once it fills.
+                Task<string> stdout = process.StandardOutput.ReadToEndAsync();
+                Task<string> stderr = process.StandardError.ReadToEndAsync();
+
+                if (!process.WaitForExit(LauncherProbeTimeout))
                 {
+                    Logger.Warn(
+                        "The PowerShell operation launcher probe timed out; falling back to -Command"
+                    );
                     try
                     {
                         process.Kill(true);
                     }
-                    catch (InvalidOperationException) { }
+                    catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException)
+                    {
+                        // The process ended between the wait and the kill.
+                    }
 
-                    Logger.Warn("The PowerShell operation launcher probe timed out");
                     return false;
                 }
+
+                Task reads = Task.WhenAll(stdout, stderr);
+                reads.ContinueWith(
+                    completed => _ = completed.Exception,
+                    TaskContinuationOptions.OnlyOnFaulted
+                );
+
+                string output = reads.Wait(LauncherProbeTimeout) ? stdout.Result : "";
 
                 bool works = process.ExitCode is 0 && output.Contains(LauncherProbeMarker);
                 if (!works)

@@ -49,28 +49,49 @@ namespace UniGetUI.PackageEngine.Operations
             }
         }
 
-        protected void RequireShellSafeSource()
+        /// <summary>
+        /// Validates the source-derived values this operation places on a command line. The
+        /// manager's own flags are not inspected, because several are legitimately written as
+        /// options (Register-PSRepository -Default). The URL is only checked when it is actually
+        /// passed, so a source whose URL contains query delimiters can still be removed, and
+        /// metacharacters are refused only on the concatenated path where a shell would
+        /// reinterpret them; an argument vector carries them as data.
+        /// </summary>
+        protected void RequireSafeSourceParameters(
+            IReadOnlyList<string> sourceParameters,
+            bool usingArgumentVector
+        )
         {
+            RequireSafeSourceValue(Source.Name, "source name", usingArgumentVector);
+
             string url = Source.Url?.ToString() ?? "";
-
-            if (!CoreTools.IsCommandLineInertValue(Source.Name))
-                throw new InvalidOperationException(
-                    $"Refusing to build a {Source.Manager.Name} command line for the source name \"{Source.Name}\": it contains characters that would alter the command line."
-                );
-
-            if (url.Length > 0 && !CoreTools.IsCommandLineInertValue(url))
-                throw new InvalidOperationException(
-                    $"Refusing to build a {Source.Manager.Name} command line for the source URL \"{url}\": it contains characters that would alter the command line."
-                );
+            if (url.Length > 0 && sourceParameters.Contains(url))
+                RequireSafeSourceValue(url, "source URL", usingArgumentVector);
         }
 
+        private void RequireSafeSourceValue(
+            string value,
+            string description,
+            bool usingArgumentVector
+        )
+        {
+            if (!CoreTools.IsOptionSafeValue(value))
+                throw new InvalidOperationException(
+                    $"Refusing to build a {Source.Manager.Name} command line for the {description} \"{value}\": it would be read as a command-line option."
+                );
+
+            if (!usingArgumentVector && !CoreTools.IsCommandLineInertValue(value))
+                throw new InvalidOperationException(
+                    $"Refusing to build a {Source.Manager.Name} command line for the {description} \"{value}\": it contains characters that would alter the command line."
+                );
+        }
         protected void PrepareSourceProcessStartInfo(IReadOnlyList<string> sourceParameters)
         {
-            RequireShellSafeSource();
-
             var exePath = Source.Manager.Status.ExecutablePath;
             var callVector = Source.Manager.Status.OperationCallArgs;
             bool admin = false;
+
+            RequireSafeSourceParameters(sourceParameters, callVector.Count > 0);
 
             if (RequiresAdminRights())
             {

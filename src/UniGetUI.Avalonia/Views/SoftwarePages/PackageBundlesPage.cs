@@ -441,7 +441,8 @@ public class PackageBundlesPage : AbstractPackagesPage
         foreach (var pkg in deserializedData.packages)
         {
             pkg.InstallationOptions = BundleImportFilter.Apply(
-                ref report, pkg.Id, pkg.InstallationOptions, allowCLI, allowPrePost);
+                ref report, pkg.Id, pkg.InstallationOptions, allowCLI, allowPrePost,
+                ResolveManagerForImport(pkg.ManagerName)?.CommandLineIsShellInterpreted ?? false);
             packages.Add(DeserializePackage(pkg));
         }
 
@@ -453,15 +454,25 @@ public class PackageBundlesPage : AbstractPackagesPage
         return (deserializedData.export_version, report);
     }
 
+    private static IPackageManager? ResolveManagerForImport(string managerName)
+    {
+        foreach (var manager in PEInterface.Managers)
+        {
+            if (
+                manager.Id == managerName
+                || manager.Name == managerName
+                || manager.DisplayName == managerName
+            )
+                return manager;
+        }
+
+        return null;
+    }
+
     // ─── Deserialization helpers ──────────────────────────────────────────────
     public static IPackage DeserializePackage(SerializablePackage raw)
     {
-        IPackageManager? manager = null;
-        foreach (var m in PEInterface.Managers)
-        {
-            if (m.Id == raw.ManagerName || m.Name == raw.ManagerName || m.DisplayName == raw.ManagerName)
-            { manager = m; break; }
-        }
+        IPackageManager? manager = ResolveManagerForImport(raw.ManagerName);
 
         IManagerSource? source;
         if (manager?.Capabilities.SupportsCustomSources == true)
@@ -510,6 +521,21 @@ public class PackageBundlesPage : AbstractPackagesPage
             {
                 if (p is not ImportedPackage pkg) continue;
 
+                // Resolved before anything is appended: a package whose command line is refused
+                // must contribute nothing at all, or its imported pre-install command would still
+                // run from the script even though the install itself was dropped.
+                IReadOnlyList<string> param;
+                try
+                {
+                    param = pkg.Manager.OperationHelper.GetStandaloneParameters(
+                        pkg, pkg.installation_options, OperationType.Install);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Logger.Warn($"Skipping {pkg.Id} in the exported script: {ex.Message}");
+                    continue;
+                }
+
                 packages.Add(pkg.Name + " from " + pkg.Manager.DisplayName);
 
                 foreach (var process in pkg.installation_options.KillBeforeOperation)
@@ -525,17 +551,6 @@ public class PackageBundlesPage : AbstractPackagesPage
                 if (pkg.installation_options.PreInstallCommand != "")
                     commands.Add(pkg.installation_options.PreInstallCommand);
 
-                IReadOnlyList<string> param;
-                try
-                {
-                    param = pkg.Manager.OperationHelper.GetStandaloneParameters(
-                        pkg, pkg.installation_options, OperationType.Install);
-                }
-                catch (InvalidOperationException ex)
-                {
-                    Logger.Warn($"Skipping {pkg.Id} in the exported script: {ex.Message}");
-                    continue;
-                }
                 commands.Add($"{pkg.Manager.Properties.ExecutableFriendlyName} {string.Join(' ', param)}");
 
                 if (pkg.installation_options.PostInstallCommand != "")

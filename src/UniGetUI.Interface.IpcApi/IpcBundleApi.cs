@@ -622,7 +622,10 @@ public static class IpcBundleApi
                 package.Id,
                 package.InstallationOptions,
                 allowCliArguments,
-                allowPrePostCommands
+                allowPrePostCommands,
+                IpcManagerSettingsApi.ResolveImportedManager(package.ManagerName)
+                    ?.CommandLineIsShellInterpreted
+                    ?? false
             );
             packages.Add(DeserializePackage(package));
         }

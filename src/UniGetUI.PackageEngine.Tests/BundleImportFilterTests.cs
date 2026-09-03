@@ -9,7 +9,8 @@ public sealed class BundleImportFilterTests
     private static (InstallOptions Options, BundleReport Report) Filter(
         InstallOptions options,
         bool allowCli = true,
-        bool allowPrePost = true
+        bool allowPrePost = true,
+        bool shellInterpreted = true
     )
     {
         var report = new BundleReport { IsEmpty = true };
@@ -18,7 +19,8 @@ public sealed class BundleImportFilterTests
             "Contoso.Test",
             options,
             allowCli,
-            allowPrePost
+            allowPrePost,
+            shellInterpreted
         );
         return (filtered, report);
     }
@@ -60,6 +62,32 @@ public sealed class BundleImportFilterTests
         var entry = Assert.Single(EntriesFor(report));
         Assert.False(entry.Allowed);
         Assert.Contains("Requested version", entry.Line);
+    }
+
+    // WinGet publishes versions containing spaces and receives them as one quoted argument, so
+    // importing such a bundle must not silently clear the pinned version.
+    [Fact]
+    public void AVersionWithSpacesIsKeptForADirectExecManager()
+    {
+        var (options, report) = Filter(
+            new InstallOptions { Version = "2021 Update" },
+            shellInterpreted: false
+        );
+
+        Assert.Equal("2021 Update", options.Version);
+        Assert.True(report.IsEmpty);
+    }
+
+    [Fact]
+    public void ASeparatorInAVersionIsLeftAloneForADirectExecManager()
+    {
+        var (options, report) = Filter(
+            new InstallOptions { Version = "1.0; calc" },
+            shellInterpreted: false
+        );
+
+        Assert.Equal("1.0; calc", options.Version);
+        Assert.True(report.IsEmpty);
     }
 
     [Fact]

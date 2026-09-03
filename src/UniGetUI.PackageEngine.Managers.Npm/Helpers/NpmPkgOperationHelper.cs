@@ -22,20 +22,12 @@ internal sealed class NpmPkgOperationHelper : BasePkgOperationHelper
             OperationType.Install =>
             [
                 Manager.Properties.InstallVerb,
-                ResolveInstallSpec(
-                    package.Id,
-                    RequireVersionThatCannotSplit(
-                        options.Version == string.Empty ? package.VersionString : options.Version
-                    )
-                ),
+                ResolveInstallSpec(package.Id, options.Version),
             ],
             OperationType.Update =>
             [
                 Manager.Properties.UpdateVerb,
-                ResolveInstallSpec(
-                    package.Id,
-                    RequireVersionThatCannotSplit(package.NewVersionString)
-                ),
+                ResolveInstallSpec(package.Id, package.NewVersionString),
             ],
             OperationType.Uninstall => [Manager.Properties.UninstallVerb, ResolveLocalName(package.Id)],
             _ => throw new InvalidDataException("Invalid package operation"),
@@ -98,26 +90,19 @@ internal sealed class NpmPkgOperationHelper : BasePkgOperationHelper
     /// ("localName@npm:targetName@version") for aliased dependencies instead of treating
     /// package.Id as a literal, directly-installable package name.
     /// </summary>
-    // The specifier used to be wrapped in PowerShell quotes, which the exported install script
-    // then handed to cmd, where single quotes are not delimiters and npm received them as part of
-    // the package name. The specifier is instead kept incapable of splitting into more arguments:
-    // package.Id is already validated for this manager, and the version is checked here because
-    // it falls back to a value the operation helper never sees, such as the translated "Latest",
-    // which is more than one word in several languages.
-    private string RequireVersionThatCannotSplit(string version)
+    // A version is appended only when there is a real one to append. An unpinned imported package
+    // reports the translated "Latest" as its version, which is display text rather than an npm
+    // tag, and is more than one word in several languages; npm installs the latest version when no
+    // specifier is given, which is what that placeholder means.
+    private static string ResolveInstallSpec(string id, string version)
     {
-        if (!CoreTools.IsValidPackageVersion(version))
-            throw new InvalidOperationException(
-                $"Refusing to build an {Manager.Name} command line for package version \"{version}\": it is not a valid package version."
-            );
+        bool aliased = TryParseAlias(id, out string localName, out string targetName);
+        string suffix = CoreTools.IsValidPackageVersion(version) && version.Any(char.IsAsciiDigit)
+            ? $"@{version}"
+            : "";
 
-        return version;
+        return aliased ? $"{localName}@npm:{targetName}{suffix}" : $"{id}{suffix}";
     }
-
-    private static string ResolveInstallSpec(string id, string version) =>
-        TryParseAlias(id, out string localName, out string targetName)
-            ? $"{localName}@npm:{targetName}@{version}"
-            : $"{id}@{version}";
 
     protected override OperationVeredict _getOperationResult(
         IPackage package,

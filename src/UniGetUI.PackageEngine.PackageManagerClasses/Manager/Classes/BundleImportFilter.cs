@@ -20,7 +20,8 @@ public static class BundleImportFilter
         string packageId,
         InstallOptions options,
         bool allowCliArguments,
-        bool allowPrePostCommands
+        bool allowPrePostCommands,
+        bool commandLineIsShellInterpreted
     )
     {
         ReportList(
@@ -88,12 +89,16 @@ public static class BundleImportFilter
             allowPrePostCommands
         );
 
-        options.Version = ReportOutOfPatternValue(
-            ref report,
-            packageId,
-            options.Version,
-            "Requested version"
-        );
+        // Only where a shell would reinterpret it. WinGet publishes versions such as
+        // "2021 Update", and stripping those would install something other than what the bundle
+        // asked for; that value reaches WinGet as a single quoted argument.
+        if (commandLineIsShellInterpreted)
+            options.Version = ReportOutOfPatternValue(
+                ref report,
+                packageId,
+                options.Version,
+                "Requested version"
+            );
         return options;
     }
 

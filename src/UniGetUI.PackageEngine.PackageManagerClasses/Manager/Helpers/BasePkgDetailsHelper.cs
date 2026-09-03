@@ -17,6 +17,11 @@ namespace UniGetUI.PackageEngine.Classes.Manager.BaseProviders
 
         protected void RequireShellSafeId(IPackage package)
         {
+            if (!CoreTools.IsOptionSafeIdentifier(package.Id, Manager.IdentifiersAreQuotedOnCommandLine))
+                throw new InvalidOperationException(
+                    $"Refusing to look up package \"{package.Id}\" on manager {Manager.Name}: the identifier would be read as a command-line option or split into further arguments."
+                );
+
             if (
                 Manager.CommandLineIsShellInterpreted
                 && !CoreTools.IsValidPackageIdentifier(package.Id)

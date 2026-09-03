@@ -83,10 +83,21 @@ public sealed class PowerShellOperationLauncherTests
 
         using var process = Process.Start(startInfo)!;
         process.StandardInput.Close();
-        string stdOut = process.StandardOutput.ReadToEnd();
-        string stdErr = process.StandardError.ReadToEnd();
-        Assert.True(process.WaitForExit(60_000), "The launcher did not exit in time.");
-        return new Result(process.ExitCode, stdOut, stdErr);
+
+        // Drained while waiting rather than before it: reading to the end first blocks until the
+        // child closes the stream, which would make the timeout unreachable, and leaving the other
+        // pipe unread would deadlock a child that fills it.
+        Task<string> stdOut = process.StandardOutput.ReadToEndAsync();
+        Task<string> stdErr = process.StandardError.ReadToEndAsync();
+
+        if (!process.WaitForExit(60_000))
+        {
+            process.Kill(true);
+            Assert.Fail("The launcher did not exit in time.");
+        }
+
+        Assert.True(Task.WhenAll(stdOut, stdErr).Wait(30_000), "The launcher output was not read.");
+        return new Result(process.ExitCode, stdOut.Result, stdErr.Result);
     }
 
     [Fact]

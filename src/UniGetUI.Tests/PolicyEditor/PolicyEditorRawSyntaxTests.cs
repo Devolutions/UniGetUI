@@ -70,7 +70,7 @@ public class PolicyEditorRawSyntaxTests
     {
         PolicyDraftDocument document = BuildValidPackageDraft();
         document.Schema = "https://example.com/wrong-schema.json";
-        string raw = PolicyJson.Serialize(document);
+        string raw = PolicySerializer.Serialize(document);
 
         bool ok = PolicyEditorRawSyntax.TryParseStrict(raw, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
 
@@ -84,7 +84,7 @@ public class PolicyEditorRawSyntaxTests
     {
         PolicyDraftDocument document = BuildValidPackageDraft();
         document.PolicyType = "SomeOtherPolicy";
-        string raw = PolicyJson.Serialize(document);
+        string raw = PolicySerializer.Serialize(document);
 
         bool ok = PolicyEditorRawSyntax.TryParseStrict(raw, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
 

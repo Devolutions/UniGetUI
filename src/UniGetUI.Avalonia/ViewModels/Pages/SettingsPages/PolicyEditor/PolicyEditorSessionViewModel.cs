@@ -387,7 +387,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                     return;
             }
 
-            string canonicalRaw = PolicyJson.Serialize(validation.CanonicalDraft);
+            string canonicalRaw = PolicySerializer.Serialize(validation.CanonicalDraft);
 
             PolicyReplacementOperation operation;
             string token;

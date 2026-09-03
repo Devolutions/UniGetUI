@@ -22,7 +22,7 @@ public class BrokerPolicyManagementServiceTests
         var service = CreateService(new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = 200,
-            Body = BrokerJson.Serialize(BuildManagementResponse(snapshot)),
+            Body = BrokerSerializer.Serialize(BuildManagementResponse(snapshot)),
         }));
 
         BrokerPolicyManagementResult result = await service.GetManagementAsync(CancellationToken.None);
@@ -47,7 +47,7 @@ public class BrokerPolicyManagementServiceTests
         var service = CreateService(new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = 200,
-            Body = BrokerJson.Serialize(BuildManagementResponse(snapshot)),
+            Body = BrokerSerializer.Serialize(BuildManagementResponse(snapshot)),
         }));
 
         BrokerPolicyManagementResult result = await service.GetManagementAsync(CancellationToken.None);
@@ -93,7 +93,7 @@ public class BrokerPolicyManagementServiceTests
         var service = CreateService(new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = 200,
-            Body = BrokerJson.Serialize(BuildManagementResponse(snapshot)),
+            Body = BrokerSerializer.Serialize(BuildManagementResponse(snapshot)),
         }));
 
         BrokerPolicyManagementResult result = await service.GetManagementAsync(CancellationToken.None);
@@ -140,7 +140,7 @@ public class BrokerPolicyManagementServiceTests
         var service = CreateService(new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = 200,
-            Body = BrokerJson.Serialize(BuildManagementResponse(snapshot)),
+            Body = BrokerSerializer.Serialize(BuildManagementResponse(snapshot)),
         }));
 
         BrokerPolicyManagementResult result = await service.GetManagementAsync(CancellationToken.None);
@@ -174,7 +174,7 @@ public class BrokerPolicyManagementServiceTests
         var service = CreateService(new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = 200,
-            Body = BrokerJson.Serialize(BuildManagementResponse(snapshot)),
+            Body = BrokerSerializer.Serialize(BuildManagementResponse(snapshot)),
         }));
 
         BrokerPolicyManagementResult result = await service.GetManagementAsync(CancellationToken.None);
@@ -300,7 +300,7 @@ public class BrokerPolicyManagementServiceTests
         var service = CreateService(new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = statusCode,
-            Body = BrokerJson.Serialize(error),
+            Body = BrokerSerializer.Serialize(error),
         }));
 
         BrokerPolicyManagementResult result = await service.GetManagementAsync(CancellationToken.None);
@@ -365,7 +365,7 @@ public class BrokerPolicyManagementServiceTests
         var service = CreateService(new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = 200,
-            Body = BrokerJson.Serialize(BuildValidationResponse(validation)),
+            Body = BrokerSerializer.Serialize(BuildValidationResponse(validation)),
         }));
 
         BrokerPolicyValidationOutcome outcome = await service.ValidateAsync(EmptyDraft(), CancellationToken.None);
@@ -407,7 +407,7 @@ public class BrokerPolicyManagementServiceTests
         var service = CreateService(new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = 200,
-            Body = BrokerJson.Serialize(BuildValidationResponse(validation)),
+            Body = BrokerSerializer.Serialize(BuildValidationResponse(validation)),
         }));
 
         BrokerPolicyValidationOutcome outcome = await service.ValidateAsync(EmptyDraft(), CancellationToken.None);
@@ -447,7 +447,7 @@ public class BrokerPolicyManagementServiceTests
         var service = CreateService(new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = 200,
-            Body = BrokerJson.Serialize(BuildValidationResponse(validation)),
+            Body = BrokerSerializer.Serialize(BuildValidationResponse(validation)),
         }));
 
         BrokerPolicyValidationOutcome outcome =
@@ -520,7 +520,7 @@ public class BrokerPolicyManagementServiceTests
         var service = CreateService(new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = statusCode,
-            Body = BrokerJson.Serialize(error),
+            Body = BrokerSerializer.Serialize(error),
         }));
 
         BrokerPolicyValidationOutcome outcome = await service.ValidateAsync(EmptyDraft(), CancellationToken.None);
@@ -678,7 +678,7 @@ public class BrokerPolicyManagementServiceTests
     };
 
     private static JsonObject ToJsonObject<T>(T value) =>
-        JsonNode.Parse(BrokerJson.Serialize(value))!.AsObject();
+        JsonNode.Parse(BrokerSerializer.Serialize(value))!.AsObject();
 
     private sealed class FakeTransport : IBrokerTransport
     {

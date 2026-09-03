@@ -467,14 +467,14 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
                 if (response.Payload is not { } payload)
                     throw new InvalidDataException("A successful helper response had no payload.");
 
-                replacement = BrokerJson.DeserializeStrict<PolicyReplacementResponse>(payload.GetRawText());
+                replacement = BrokerSerializer.DeserializeStrict<PolicyReplacementResponse>(payload.GetRawText());
                 ValidateReplacement(replacement);
             }
             else if (response.Payload is { ValueKind: not JsonValueKind.Undefined } errorPayload)
             {
                 // Any non-success status may carry the broker's own error document. Relaying it
                 // whole and unmodified is what lets the UI localise a recognised error code.
-                error = BrokerJson.DeserializeStrict<ErrorResponse>(errorPayload.GetRawText());
+                error = BrokerSerializer.DeserializeStrict<ErrorResponse>(errorPayload.GetRawText());
                 ValidateError(error);
             }
 

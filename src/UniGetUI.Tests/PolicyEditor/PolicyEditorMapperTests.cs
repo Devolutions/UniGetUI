@@ -198,8 +198,8 @@ public class PolicyEditorMapperTests
         PolicyDocument roundTripped = PolicyEditorMapper.ToDocument(draft, original.Metadata.Revision, original.Metadata.PublishedAt);
         PolicyEditorDraftDocument redraft = PolicyEditorMapper.ToDraft(roundTripped);
 
-        string originalCanonical = PolicyJson.Serialize(PolicyEditorMapper.ToDocument(draft, original.Metadata.Revision, original.Metadata.PublishedAt));
-        string redraftCanonical = PolicyJson.Serialize(PolicyEditorMapper.ToDocument(redraft, original.Metadata.Revision, original.Metadata.PublishedAt));
+        string originalCanonical = PolicySerializer.Serialize(PolicyEditorMapper.ToDocument(draft, original.Metadata.Revision, original.Metadata.PublishedAt));
+        string redraftCanonical = PolicySerializer.Serialize(PolicyEditorMapper.ToDocument(redraft, original.Metadata.Revision, original.Metadata.PublishedAt));
         Assert.Equal(originalCanonical, redraftCanonical);
     }
 

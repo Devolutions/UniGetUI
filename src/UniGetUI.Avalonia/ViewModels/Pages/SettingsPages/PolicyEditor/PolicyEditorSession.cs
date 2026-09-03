@@ -72,7 +72,7 @@ public sealed class PolicyEditorSession
             if (Validation is null || WarningAcknowledgement is null)
                 return false;
 
-            string canonical = PolicyJson.Serialize(Validation.CanonicalDraft);
+            string canonical = PolicySerializer.Serialize(Validation.CanonicalDraft);
             return string.Equals(
                     WarningAcknowledgement.CanonicalRawJson,
                     canonical,
@@ -193,7 +193,7 @@ public sealed class PolicyEditorSession
                 "Only an authoritative valid result can enter structured mode.");
 
         Draft = PolicyEditorMapper.ToDraft(Validation.CanonicalDraft);
-        RawBuffer = PolicyJson.Serialize(Validation.CanonicalDraft);
+        RawBuffer = PolicySerializer.Serialize(Validation.CanonicalDraft);
         Mode = PolicyEditorMode.Structured;
     }
 
@@ -308,7 +308,7 @@ public sealed class PolicyEditorSession
             throw new InvalidOperationException("There are no current validated warnings.");
 
         WarningAcknowledgement = new PolicyEditorWarningAcknowledgement(
-            PolicyJson.Serialize(Validation.CanonicalDraft),
+            PolicySerializer.Serialize(Validation.CanonicalDraft),
             Validation.Receipt,
             GetWarningKeys(Validation.Findings));
     }
@@ -322,7 +322,7 @@ public sealed class PolicyEditorSession
         ArgumentNullException.ThrowIfNull(submittedCanonicalDraft);
         ArgumentException.ThrowIfNullOrWhiteSpace(validationReceipt);
         ArgumentException.ThrowIfNullOrWhiteSpace(draftId);
-        string submittedCanonicalRawJson = PolicyJson.Serialize(submittedCanonicalDraft);
+        string submittedCanonicalRawJson = PolicySerializer.Serialize(submittedCanonicalDraft);
         PolicyEditorRetryDecision decision =
             PolicyEditorRetryResolver.Resolve(draftId, management);
         Conflict = new PolicyEditorConflictSnapshot(
@@ -439,7 +439,7 @@ public sealed class PolicyEditorSession
                 effectiveRawJson,
                 StringComparison.Ordinal))
         {
-            canonicalRawJson = PolicyJson.Serialize(Validation.CanonicalDraft);
+            canonicalRawJson = PolicySerializer.Serialize(Validation.CanonicalDraft);
             draftId = Validation.CanonicalDraft.Metadata.Id;
             return true;
         }
@@ -464,7 +464,7 @@ public sealed class PolicyEditorSession
         }
 
         PolicyDraftDocument shared = PolicyEditorMapper.ToSharedDraft(parsed);
-        canonicalRawJson = PolicyJson.Serialize(shared);
+        canonicalRawJson = PolicySerializer.Serialize(shared);
         draftId = shared.Metadata.Id;
         return true;
     }

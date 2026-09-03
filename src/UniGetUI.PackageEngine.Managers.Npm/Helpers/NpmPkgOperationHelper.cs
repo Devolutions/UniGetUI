@@ -1,3 +1,4 @@
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -16,26 +17,25 @@ internal sealed class NpmPkgOperationHelper : BasePkgOperationHelper
         OperationType operation
     )
     {
-        // On Windows, npm runs through PowerShell (-Command), so single quotes act as
-        // PowerShell string delimiters and are stripped before reaching npm.
-        // On macOS/Linux, npm is called directly (no shell), so single quotes are passed
-        // literally and must NOT be included.
-        bool useShellQuotes = OperatingSystem.IsWindows();
-
         List<string> parameters = operation switch
         {
             OperationType.Install =>
             [
                 Manager.Properties.InstallVerb,
-                FormatSpec(
-                    ResolveInstallSpec(package.Id, options.Version == string.Empty ? package.VersionString : options.Version),
-                    useShellQuotes
+                ResolveInstallSpec(
+                    package.Id,
+                    RequireVersionThatCannotSplit(
+                        options.Version == string.Empty ? package.VersionString : options.Version
+                    )
                 ),
             ],
             OperationType.Update =>
             [
                 Manager.Properties.UpdateVerb,
-                FormatSpec(ResolveInstallSpec(package.Id, package.NewVersionString), useShellQuotes),
+                ResolveInstallSpec(
+                    package.Id,
+                    RequireVersionThatCannotSplit(package.NewVersionString)
+                ),
             ],
             OperationType.Uninstall => [Manager.Properties.UninstallVerb, ResolveLocalName(package.Id)],
             _ => throw new InvalidDataException("Invalid package operation"),
@@ -64,9 +64,6 @@ internal sealed class NpmPkgOperationHelper : BasePkgOperationHelper
 
         return parameters;
     }
-
-    private static string FormatSpec(string spec, bool useShellQuotes) =>
-        useShellQuotes ? $"'{spec}'" : spec;
 
     /// <summary>
     /// npm-aliased dependencies (package.json entries like "eslint-v9": "npm:eslint@^9.x")
@@ -101,6 +98,22 @@ internal sealed class NpmPkgOperationHelper : BasePkgOperationHelper
     /// ("localName@npm:targetName@version") for aliased dependencies instead of treating
     /// package.Id as a literal, directly-installable package name.
     /// </summary>
+    // The specifier used to be wrapped in PowerShell quotes, which the exported install script
+    // then handed to cmd, where single quotes are not delimiters and npm received them as part of
+    // the package name. The specifier is instead kept incapable of splitting into more arguments:
+    // package.Id is already validated for this manager, and the version is checked here because
+    // it falls back to a value the operation helper never sees, such as the translated "Latest",
+    // which is more than one word in several languages.
+    private string RequireVersionThatCannotSplit(string version)
+    {
+        if (!CoreTools.IsValidPackageVersion(version))
+            throw new InvalidOperationException(
+                $"Refusing to build an {Manager.Name} command line for package version \"{version}\": it is not a valid package version."
+            );
+
+        return version;
+    }
+
     private static string ResolveInstallSpec(string id, string version) =>
         TryParseAlias(id, out string localName, out string targetName)
             ? $"{localName}@npm:{targetName}@{version}"

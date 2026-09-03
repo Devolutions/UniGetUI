@@ -10,6 +10,7 @@ public sealed class TestPackageManager : PackageManager
 {
     private bool _installerUrlFollowsPackageVersion;
     private bool _commandLineIsShellInterpreted;
+    private IReadOnlyList<string> _operationCallArgs = [];
     private Func<string, IReadOnlyList<Package>> _findPackages = _ => [];
     private Func<IReadOnlyList<Package>> _getAvailableUpdates = static () => [];
     private Func<IReadOnlyList<Package>> _getInstalledPackages = static () => [];
@@ -116,6 +117,17 @@ public sealed class TestPackageManager : PackageManager
     {
         _commandLineIsShellInterpreted = shellInterpreted;
     }
+
+    public void SetOperationCallArgs(params string[] operationCallArgs)
+    {
+        _operationCallArgs = operationCallArgs;
+        Status.OperationCallArgs = operationCallArgs;
+    }
+
+    protected override IReadOnlyList<string> _getOperationCallArgs(
+        string executablePath,
+        string callArguments
+    ) => _operationCallArgs;
 
     public void SetInstallerUrlFollowsPackageVersion(bool followsPackageVersion)
     {

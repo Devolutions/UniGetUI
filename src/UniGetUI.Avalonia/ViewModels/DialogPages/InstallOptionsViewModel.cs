@@ -510,7 +510,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         try
         {
             var args = await Task.Run(() =>
-                _package.Manager.OperationHelper.GetParameters(_package, applied, op));
+                _package.Manager.OperationHelper.GetStandaloneParameters(_package, applied, op));
             return _package.Manager.Properties.ExecutableFriendlyName + " " + string.Join(' ', args);
         }
         catch (InvalidOperationException ex)

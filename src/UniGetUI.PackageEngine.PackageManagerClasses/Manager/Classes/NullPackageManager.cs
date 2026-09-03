@@ -164,6 +164,12 @@ namespace UniGetUI.PackageEngine.Classes.Manager
 
     internal sealed class NullPkgOperationHelper : IPackageOperationHelper
     {
+        public IReadOnlyList<string> GetStandaloneParameters(
+            IPackage package,
+            InstallOptions options,
+            OperationType operation
+        ) => GetParameters(package, options, operation);
+
         public IReadOnlyList<string> GetParameters(
             IPackage package,
             InstallOptions options,

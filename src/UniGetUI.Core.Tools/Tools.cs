@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
@@ -1339,6 +1340,86 @@ namespace UniGetUI.Core.Tools
             }
 
             return true;
+        }
+
+        private const string LauncherProbeMarker = "UNIGETUI_LAUNCHER_OK";
+
+        private static readonly ConcurrentDictionary<string, bool> _launcherProbeCache = new();
+
+        /// <summary>
+        /// Runs the operation launcher once to confirm it can actually execute before the manager
+        /// commits to the -File launch path. A machine-wide execution policy overrides the
+        /// -ExecutionPolicy argument, and antivirus or a broken deployment can block the script
+        /// too, so the mechanism is verified rather than assumed. Callers fall back to the
+        /// concatenated -Command form when this returns false.
+        /// </summary>
+        public static bool PowerShellLauncherWorks(string powerShellPath, string launcherPath)
+        {
+            if (!File.Exists(launcherPath))
+                return false;
+
+            return _launcherProbeCache.GetOrAdd(
+                $"{powerShellPath}|{launcherPath}",
+                _ => ProbePowerShellLauncher(powerShellPath, launcherPath)
+            );
+        }
+
+        private static bool ProbePowerShellLauncher(string powerShellPath, string launcherPath)
+        {
+            try
+            {
+                using Process process = new();
+                process.StartInfo.FileName = powerShellPath;
+                foreach (
+                    string argument in new[]
+                    {
+                        "-NoProfile",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-File",
+                        launcherPath,
+                        "plain",
+                        "Write-Output",
+                        LauncherProbeMarker,
+                    }
+                )
+                {
+                    process.StartInfo.ArgumentList.Add(argument);
+                }
+
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
+                process.StartInfo.CreateNoWindow = true;
+                process.Start();
+
+                string output = process.StandardOutput.ReadToEnd();
+                if (!process.WaitForExit(20000))
+                {
+                    try
+                    {
+                        process.Kill(true);
+                    }
+                    catch (InvalidOperationException) { }
+
+                    Logger.Warn("The PowerShell operation launcher probe timed out");
+                    return false;
+                }
+
+                bool works = process.ExitCode is 0 && output.Contains(LauncherProbeMarker);
+                if (!works)
+                    Logger.Warn(
+                        $"The PowerShell operation launcher could not be executed (exit {process.ExitCode}); falling back to -Command"
+                    );
+
+                return works;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("The PowerShell operation launcher probe failed");
+                Logger.Warn(ex);
+                return false;
+            }
         }
 
         public static string EscapePowerShellSingleQuoted(string value)

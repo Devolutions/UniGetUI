@@ -104,7 +104,7 @@ public sealed class PackageOperationCommandInjectionTests
         var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Install);
 
         Assert.Contains(
-            OperatingSystem.IsWindows() ? "'@babel/core@7.24.0'" : "@babel/core@7.24.0",
+            "@babel/core@7.24.0",
             parameters
         );
     }

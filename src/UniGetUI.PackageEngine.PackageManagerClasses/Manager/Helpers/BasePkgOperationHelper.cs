@@ -29,10 +29,30 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
         int returnCode
     );
 
+    protected virtual IReadOnlyList<string> _getOperationParameters(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation,
+        bool standalone
+    ) => _getOperationParameters(package, options, operation);
+
     public IReadOnlyList<string> GetParameters(
         IPackage package,
         InstallOptions options,
         OperationType operation
+    ) => BuildParameters(package, options, operation, standalone: false);
+
+    public IReadOnlyList<string> GetStandaloneParameters(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation
+    ) => BuildParameters(package, options, operation, standalone: true);
+
+    private IReadOnlyList<string> BuildParameters(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation,
+        bool standalone
     )
     {
         if (Manager.CommandLineIsShellInterpreted)
@@ -48,7 +68,7 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
                 );
         }
 
-        var parameters = _getOperationParameters(package, options, operation);
+        var parameters = _getOperationParameters(package, options, operation, standalone);
         Logger.Info(
             $"Loaded operation parameters for package id={package.Id} on manager {Manager.Name} and operation {operation}: "
                 + string.Join(' ', parameters)

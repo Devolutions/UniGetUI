@@ -52,19 +52,18 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             else
                 packageId = $"{details.Package.Source.Name}/{details.Package.Id}";
 
-            using Process p = new()
+            var startInfo = new ProcessStartInfo
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = Manager.Status.ExecutablePath,
-                    Arguments = Manager.Status.ExecutableCallArgs + " cat " + packageId,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
-                },
+                FileName = Manager.Status.ExecutablePath,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = System.Text.Encoding.UTF8,
             };
+            Manager.Status.ApplyArguments(startInfo, "cat", packageId);
+
+            using Process p = new() { StartInfo = startInfo };
 
             IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(
                 Enums.LoggableTaskType.LoadPackageDetails,

@@ -525,6 +525,18 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 $"-NoProfile -ExecutionPolicy Bypass -Command \"{executable.Replace(" ", "` ")}\" ";
         }
 
+        protected override IReadOnlyList<string> _getOperationCallArgs(
+            string executablePath,
+            string callArguments
+        )
+        {
+            var (found, executable) = GetExecutableFile();
+            if (!found)
+                return [];
+
+            return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", executable];
+        }
+
         protected override void _loadManagerVersion(out string version)
         {
             using Process process = new()

@@ -80,6 +80,17 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         );
         protected abstract void _loadManagerVersion(out string version);
 
+        /// <summary>
+        /// The argument vector that precedes the operation parameters, for managers whose command
+        /// line must be built with <see cref="System.Diagnostics.ProcessStartInfo.ArgumentList"/>
+        /// instead of a single concatenated string. An empty vector selects the concatenated
+        /// <see cref="ManagerStatus.ExecutableCallArgs"/> path.
+        /// </summary>
+        protected virtual IReadOnlyList<string> _getOperationCallArgs(
+            string executablePath,
+            string callArguments
+        ) => [];
+
         protected virtual void _performPreInitializationSteps() { }
 
         protected virtual void _performExtraLoadingSteps() { }
@@ -121,6 +132,8 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 }
 
                 Logger.ImportantInfo($"{Name} is enabled and was found on {path}");
+
+                Status.OperationCallArgs = _getOperationCallArgs(path, callArguments);
 
                 // Load manager version
                 _loadManagerVersion(out string version);

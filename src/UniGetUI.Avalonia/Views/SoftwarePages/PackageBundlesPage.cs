@@ -528,7 +528,7 @@ public class PackageBundlesPage : AbstractPackagesPage
                 IReadOnlyList<string> param;
                 try
                 {
-                    param = pkg.Manager.OperationHelper.GetParameters(
+                    param = pkg.Manager.OperationHelper.GetStandaloneParameters(
                         pkg, pkg.installation_options, OperationType.Install);
                 }
                 catch (InvalidOperationException ex)

@@ -576,6 +576,20 @@ namespace UniGetUI.Core.Data
             ? Path.Join(Environment.SystemDirectory, "windowspowershell\\v1.0\\powershell.exe")
             : "pwsh";
 
+        /// <summary>
+        /// The controlled launcher script that runs PowerShell package operations. It lives next to
+        /// the application binary so it carries the same integrity as the executable itself, and it
+        /// is invoked with -File so the operation parameters bind as data instead of being
+        /// reassembled into a script body the way -Command does.
+        /// </summary>
+        public static string PowerShellOperationLauncher =>
+            Path.Join(
+                UniGetUIExecutableDirectory,
+                "Assets",
+                "Utilities",
+                "unigetui_ps_operation.ps1"
+            );
+
         private static string GetLocalDataRoot()
         {
             string localApplicationData = Environment.GetFolderPath(

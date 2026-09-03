@@ -185,6 +185,26 @@ namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager
             callArguments = " -NoProfile -Command";
         }
 
+        protected override IReadOnlyList<string> _getOperationCallArgs(
+            string executablePath,
+            string callArguments
+        )
+        {
+            // Degrade to the concatenated -Command form when the launcher cannot run: operations
+            // keep working exactly as they did before, and the parameter validation in
+            // BasePkgOperationHelper still rejects anything a shell could reinterpret.
+            string launcher = CoreData.PowerShellOperationLauncher;
+            if (!CoreTools.PowerShellLauncherWorks(executablePath, launcher))
+            {
+                Logger.Warn(
+                    $"Not using the PowerShell operation launcher at {launcher}; falling back to -Command"
+                );
+                return [];
+            }
+
+            return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", launcher, "plain"];
+        }
+
         protected override void _loadManagerVersion(out string version)
         {
             using Process process = new()

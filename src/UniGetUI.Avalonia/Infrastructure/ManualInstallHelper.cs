@@ -29,7 +29,7 @@ internal static class ManualInstallHelper
         try
         {
             var args = await Task.Run(() =>
-                package.Manager.OperationHelper.GetParameters(package, options, operation));
+                package.Manager.OperationHelper.GetStandaloneParameters(package, options, operation));
             return package.Manager.Properties.ExecutableFriendlyName + " " + string.Join(' ', args);
         }
         catch (InvalidOperationException ex)

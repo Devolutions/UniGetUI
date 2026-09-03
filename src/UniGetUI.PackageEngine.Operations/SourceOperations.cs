@@ -64,6 +64,62 @@ namespace UniGetUI.PackageEngine.Operations
                 );
         }
 
+        protected void PrepareSourceProcessStartInfo(IReadOnlyList<string> sourceParameters)
+        {
+            RequireShellSafeSource();
+
+            var exePath = Source.Manager.Status.ExecutablePath;
+            var callVector = Source.Manager.Status.OperationCallArgs;
+            bool admin = false;
+
+            if (RequiresAdminRights())
+            {
+                if (
+                    OperatingSystem.IsLinux()
+                    || Settings.Get(Settings.K.DoCacheAdminRights)
+                    || Settings.Get(Settings.K.DoCacheAdminRightsForBatches)
+                )
+                    RequestCachingOfUACPrompt();
+
+                if (IsWinGetManager(Source.Manager))
+                    RedirectWinGetTempFolder();
+
+                admin = true;
+                process.StartInfo.FileName = CoreData.ElevatorPath;
+                if (callVector.Count > 0)
+                {
+                    SetArgumentVector(
+                        [.. ElevatorArgumentPrefix(), exePath, .. callVector, .. sourceParameters]
+                    );
+                }
+                else
+                {
+                    process.StartInfo.Arguments =
+                        ($"{CoreData.ElevatorArgs} \"{exePath}\" "
+                        + Source.Manager.Status.ExecutableCallArgs
+                        + " "
+                        + string.Join(" ", sourceParameters)).TrimStart();
+                }
+            }
+            else
+            {
+                process.StartInfo.FileName = exePath;
+                if (callVector.Count > 0)
+                {
+                    SetArgumentVector([.. callVector, .. sourceParameters]);
+                }
+                else
+                {
+                    process.StartInfo.Arguments =
+                        Source.Manager.Status.ExecutableCallArgs
+                        + " "
+                        + string.Join(" ", sourceParameters);
+                }
+            }
+
+            ApplyCapabilities(admin, false, false, null);
+        }
+
         protected static bool IsWinGetManager(IPackageManager manager)
         {
 #if WINDOWS
@@ -81,40 +137,9 @@ namespace UniGetUI.PackageEngine.Operations
 
         protected override void PrepareProcessStartInfo()
         {
-            RequireShellSafeSource();
-
-            var exePath = Source.Manager.Status.ExecutablePath;
-            bool admin = false;
-            if (RequiresAdminRights())
-            {
-                if (
-                    OperatingSystem.IsLinux()
-                    || Settings.Get(Settings.K.DoCacheAdminRights)
-                    || Settings.Get(Settings.K.DoCacheAdminRightsForBatches)
-                )
-                    RequestCachingOfUACPrompt();
-
-                if (IsWinGetManager(Source.Manager))
-                    RedirectWinGetTempFolder();
-
-                admin = true;
-                process.StartInfo.FileName = CoreData.ElevatorPath;
-                process.StartInfo.Arguments =
-                    ($"{CoreData.ElevatorArgs} \"{exePath}\" "
-                    + Source.Manager.Status.ExecutableCallArgs
-                    + " "
-                    + string.Join(" ", Source.Manager.SourcesHelper.GetAddSourceParameters(Source))).TrimStart();
-            }
-            else
-            {
-                process.StartInfo.FileName = exePath;
-                process.StartInfo.Arguments =
-                    Source.Manager.Status.ExecutableCallArgs
-                    + " "
-                    + string.Join(" ", Source.Manager.SourcesHelper.GetAddSourceParameters(Source));
-            }
-
-            ApplyCapabilities(admin, false, false, null);
+            PrepareSourceProcessStartInfo(
+                Source.Manager.SourcesHelper.GetAddSourceParameters(Source)
+            );
         }
 
         protected override Task<OperationVeredict> GetProcessVeredict(
@@ -180,45 +205,9 @@ namespace UniGetUI.PackageEngine.Operations
 
         protected override void PrepareProcessStartInfo()
         {
-            RequireShellSafeSource();
-
-            var exePath = Source.Manager.Status.ExecutablePath;
-            bool admin = false;
-            if (RequiresAdminRights())
-            {
-                if (
-                    OperatingSystem.IsLinux()
-                    || Settings.Get(Settings.K.DoCacheAdminRights)
-                    || Settings.Get(Settings.K.DoCacheAdminRightsForBatches)
-                )
-                    RequestCachingOfUACPrompt();
-
-                if (IsWinGetManager(Source.Manager))
-                    RedirectWinGetTempFolder();
-
-                admin = true;
-                process.StartInfo.FileName = CoreData.ElevatorPath;
-                process.StartInfo.Arguments =
-                    ($"{CoreData.ElevatorArgs} \"{exePath}\" "
-                    + Source.Manager.Status.ExecutableCallArgs
-                    + " "
-                    + string.Join(
-                        " ",
-                        Source.Manager.SourcesHelper.GetRemoveSourceParameters(Source)
-                    )).TrimStart();
-            }
-            else
-            {
-                process.StartInfo.FileName = exePath;
-                process.StartInfo.Arguments =
-                    Source.Manager.Status.ExecutableCallArgs
-                    + " "
-                    + string.Join(
-                        " ",
-                        Source.Manager.SourcesHelper.GetRemoveSourceParameters(Source)
-                    );
-            }
-            ApplyCapabilities(admin, false, false, null);
+            PrepareSourceProcessStartInfo(
+                Source.Manager.SourcesHelper.GetRemoveSourceParameters(Source)
+            );
         }
 
         protected override Task<OperationVeredict> GetProcessVeredict(

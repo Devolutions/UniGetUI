@@ -57,23 +57,29 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
 
         protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
         {
-            using Process p = new()
+            var startInfo = new ProcessStartInfo
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = Status.ExecutablePath,
-                    Arguments = BuildSearchArguments(query),
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    RedirectStandardInput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WorkingDirectory = Environment.GetFolderPath(
-                        Environment.SpecialFolder.UserProfile
-                    ),
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
-                },
+                FileName = Status.ExecutablePath,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = Environment.GetFolderPath(
+                    Environment.SpecialFolder.UserProfile
+                ),
+                StandardOutputEncoding = System.Text.Encoding.UTF8,
             };
+
+            if (
+                Status.OperationCallArgs.Count is 0
+                && !string.IsNullOrWhiteSpace(Status.ExecutableCallArgs)
+            )
+                startInfo.Arguments = BuildSearchArguments(query);
+            else
+                Status.ApplyArguments(startInfo, "search", query, "--json");
+
+            using Process p = new() { StartInfo = startInfo };
 
             IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages, p);
             p.Start();
@@ -217,6 +223,42 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
 
             path = _executable;
             callArguments = "";
+        }
+
+        protected override IReadOnlyList<string> _getOperationCallArgs(
+            string executablePath,
+            string callArguments
+        )
+        {
+            if (!OperatingSystem.IsWindows())
+                return [];
+
+            var (found, executable) = GetExecutableFile();
+            if (!found)
+                return [];
+
+            string? script = ResolvePowerShellEntryPoint(executable);
+            if (script is null)
+                return [];
+
+            return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script];
+        }
+
+        /// <summary>
+        /// npm ships an npm.ps1 next to the npm.cmd shim. Running that script with -File keeps the
+        /// operation parameters as argv instead of handing them to a shell to re-parse.
+        /// </summary>
+        internal static string? ResolvePowerShellEntryPoint(string executable)
+        {
+            string? directory = Path.GetDirectoryName(executable);
+            if (string.IsNullOrEmpty(directory))
+                return null;
+
+            string candidate = Path.Join(
+                directory,
+                Path.GetFileNameWithoutExtension(executable) + ".ps1"
+            );
+            return File.Exists(candidate) ? candidate : null;
         }
 
         public override int? CompareVersions(string versionA, string versionB)

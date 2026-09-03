@@ -111,7 +111,7 @@ public sealed class NpmManagerTests
         Assert.Equal(
             [
                 "install",
-                OperatingSystem.IsWindows() ? "'contoso-tool@2.0.0'" : "contoso-tool@2.0.0",
+                "contoso-tool@2.0.0",
                 "--global",
                 "--include",
                 "dev",
@@ -143,7 +143,7 @@ public sealed class NpmManagerTests
         Assert.Equal(
             [
                 "install",
-                OperatingSystem.IsWindows() ? "'contoso-tool@3.0.0'" : "contoso-tool@3.0.0",
+                "contoso-tool@3.0.0",
                 "--global",
                 "--audit",
             ],
@@ -171,9 +171,7 @@ public sealed class NpmManagerTests
         Assert.Equal(
             [
                 "install",
-                OperatingSystem.IsWindows()
-                    ? "'eslint-v9@npm:eslint@10.6.0'"
-                    : "eslint-v9@npm:eslint@10.6.0",
+                "eslint-v9@npm:eslint@10.6.0",
             ],
             parameters
         );
@@ -199,9 +197,7 @@ public sealed class NpmManagerTests
         Assert.Equal(
             [
                 "install",
-                OperatingSystem.IsWindows()
-                    ? "'babel-core-legacy@npm:@babel/core@7.28.0'"
-                    : "babel-core-legacy@npm:@babel/core@7.28.0",
+                "babel-core-legacy@npm:@babel/core@7.28.0",
             ],
             parameters
         );
@@ -240,7 +236,7 @@ public sealed class NpmManagerTests
         var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
 
         Assert.Equal(
-            ["install", OperatingSystem.IsWindows() ? "'contoso-tool@2.0.0'" : "contoso-tool@2.0.0"],
+            ["install", "contoso-tool@2.0.0"],
             parameters
         );
     }

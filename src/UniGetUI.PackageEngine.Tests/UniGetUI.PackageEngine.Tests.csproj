@@ -57,5 +57,8 @@
     <ItemGroup>
         <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
         <None Include="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
+        <!-- Mirrors the app layout so the operation launcher resolves in tests exactly as it
+             does at runtime, which is what lets the real managers be exercised here. -->
+        <Content Include="..\SharedAssets\Assets\Utilities\*.ps1" Link="Assets\Utilities\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>

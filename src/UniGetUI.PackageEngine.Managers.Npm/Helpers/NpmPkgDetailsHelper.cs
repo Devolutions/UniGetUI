@@ -32,11 +32,6 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                 p.StartInfo = new ProcessStartInfo
                 {
                     FileName = Manager.Status.ExecutablePath,
-                    Arguments =
-                        Manager.Status.ExecutableCallArgs
-                        + " show "
-                        + identifier.GetRegistryName()
-                        + " --json",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -47,6 +42,12 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                     ),
                     StandardOutputEncoding = System.Text.Encoding.UTF8,
                 };
+                Manager.Status.ApplyArguments(
+                    p.StartInfo,
+                    "show",
+                    identifier.GetRegistryName(),
+                    "--json"
+                );
 
                 IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(
                     LoggableTaskType.LoadPackageDetails,
@@ -191,27 +192,28 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
         protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)
         {
             var identifier = NpmPackageIdentifier.Parse(package.Id);
-            using Process p = new()
+            var startInfo = new ProcessStartInfo
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = Manager.Status.ExecutablePath,
-                    Arguments =
-                        Manager.Status.ExecutableCallArgs
-                        + " show "
-                        + identifier.GetRegistryName()
-                        + " versions --json",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    RedirectStandardInput = true,
-                    CreateNoWindow = true,
-                    WorkingDirectory = Environment.GetFolderPath(
-                        Environment.SpecialFolder.UserProfile
-                    ),
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
-                },
+                FileName = Manager.Status.ExecutablePath,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                CreateNoWindow = true,
+                WorkingDirectory = Environment.GetFolderPath(
+                    Environment.SpecialFolder.UserProfile
+                ),
+                StandardOutputEncoding = System.Text.Encoding.UTF8,
             };
+            Manager.Status.ApplyArguments(
+                startInfo,
+                "show",
+                identifier.GetRegistryName(),
+                "versions",
+                "--json"
+            );
+
+            using Process p = new() { StartInfo = startInfo };
 
             IProcessTaskLogger logger = Manager.TaskLogger.CreateNew(
                 LoggableTaskType.LoadPackageVersions,

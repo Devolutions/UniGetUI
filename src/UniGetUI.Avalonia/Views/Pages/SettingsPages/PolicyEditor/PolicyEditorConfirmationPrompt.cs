@@ -46,7 +46,7 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
             AutomationLiveSetting.Assertive);
 
         using CancellationTokenRegistration registration = cancellationToken.Register(
-            () => Dispatcher.UIThread.Post(dialog.Close));
+            () => Dispatcher.UIThread.Post(dialog.CancelPendingChoice));
         await dialog.ShowDialog(_owner);
         return !cancellationToken.IsCancellationRequested && dialog.Result == true;
     }

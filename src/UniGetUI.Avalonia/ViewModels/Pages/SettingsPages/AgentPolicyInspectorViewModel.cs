@@ -11,6 +11,7 @@ using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.AgentBroker.PolicyManagement;
+using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 using PolicyArchitecture = Devolutions.Now.Policy.Model.Architecture;
 using PolicyDecision = Devolutions.Now.Policy.Model.Decision;
 using PolicyElevation = Devolutions.Now.Policy.Model.Elevation;
@@ -56,6 +57,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     private readonly IBrokerPolicyInspector _inspector;
     private readonly Action<string?, AutomationLiveSetting> _announce;
     private readonly IBrokerPolicyManagementService _managementService;
+    private readonly IPolicyWriteElevationEligibility _writeElevationEligibility;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private CancellationTokenSource? _refreshCancellation;
     private CancellationTokenSource? _managementRefreshCancellation;
@@ -111,6 +113,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         : this(
             new BrokerPolicyInspector(),
             new BrokerPolicyManagementService(),
+            new PackagedPolicyWriteElevationEligibility(),
             AccessibilityAnnouncementService.Announce)
     {
     }
@@ -123,14 +126,22 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     internal AgentPolicyInspectorViewModel(
         IBrokerPolicyInspector inspector,
         Action<string?, AutomationLiveSetting> announce)
-        : this(inspector, new BrokerPolicyManagementService(), announce)
+        : this(
+            inspector,
+            new BrokerPolicyManagementService(),
+            new PackagedPolicyWriteElevationEligibility(),
+            announce)
     {
     }
 
     public AgentPolicyInspectorViewModel(
         IBrokerPolicyInspector inspector,
         IBrokerPolicyManagementService managementService)
-        : this(inspector, managementService, AccessibilityAnnouncementService.Announce)
+        : this(
+            inspector,
+            managementService,
+            new PackagedPolicyWriteElevationEligibility(),
+            AccessibilityAnnouncementService.Announce)
     {
     }
 
@@ -138,10 +149,24 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         IBrokerPolicyInspector inspector,
         IBrokerPolicyManagementService managementService,
         Action<string?, AutomationLiveSetting> announce)
+        : this(
+            inspector,
+            managementService,
+            new PackagedPolicyWriteElevationEligibility(),
+            announce)
+    {
+    }
+
+    internal AgentPolicyInspectorViewModel(
+        IBrokerPolicyInspector inspector,
+        IBrokerPolicyManagementService managementService,
+        IPolicyWriteElevationEligibility writeElevationEligibility,
+        Action<string?, AutomationLiveSetting> announce)
     {
         _inspector = inspector;
         _announce = announce;
         _managementService = managementService;
+        _writeElevationEligibility = writeElevationEligibility;
         SetStatus(
             CoreTools.Translate("Loading active package broker policy"),
             CoreTools.Translate("Contacting the Devolutions Agent service."),
@@ -243,7 +268,20 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
                 await _managementService.GetManagementAsync(cancellation.Token);
             if (!CanApplyManagement(generation, cancellation)) return;
 
-            ApplyManagementResult(result);
+            PolicyWriteElevationEligibility writeEligibility =
+                PolicyWriteElevationEligibility.Eligible;
+            if (result is
+                {
+                    Status: BrokerPolicyManagementStatus.Retrieved,
+                    Snapshot.WriteCapability: PolicyWriteCapability.Writable,
+                })
+            {
+                writeEligibility = await _writeElevationEligibility
+                    .EvaluateAsync(cancellation.Token);
+                if (!CanApplyManagement(generation, cancellation)) return;
+            }
+
+            ApplyManagementResult(result, writeEligibility);
             AnnounceManagementStatus();
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -530,14 +568,16 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         HasNoRules = false;
     }
 
-    private void ApplyManagementResult(BrokerPolicyManagementResult result)
+    private void ApplyManagementResult(
+        BrokerPolicyManagementResult result,
+        PolicyWriteElevationEligibility writeEligibility)
     {
         ClearManagement();
 
         switch (result.Status)
         {
             case BrokerPolicyManagementStatus.Retrieved when result.Snapshot is not null:
-                ApplyManagementSnapshot(result.Snapshot, result.Diagnostics);
+                ApplyManagementSnapshot(result.Snapshot, result.Diagnostics, writeEligibility);
                 break;
             case BrokerPolicyManagementStatus.AgentUnavailable:
                 SetManagementStatus(
@@ -602,7 +642,10 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void ApplyManagementSnapshot(PolicyManagementSnapshot snapshot, BrokerPolicyDiagnosticsView? diagnostics)
+    private void ApplyManagementSnapshot(
+        PolicyManagementSnapshot snapshot,
+        BrokerPolicyDiagnosticsView? diagnostics,
+        PolicyWriteElevationEligibility writeEligibility)
     {
         _managementSnapshot = snapshot;
         HasManagementSnapshot = true;
@@ -619,7 +662,15 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         ManagementElevationRequired = snapshot.ElevationRequired;
         ManagementElevationRequiredText = FormatBoolean(snapshot.ElevationRequired);
 
-        bool writable = snapshot.WriteCapability == PolicyWriteCapability.Writable;
+        bool agentWritable = snapshot.WriteCapability == PolicyWriteCapability.Writable;
+        bool writable = agentWritable && writeEligibility.IsEligible;
+        if (agentWritable && !writeEligibility.IsEligible)
+        {
+            ManagementCapabilityText = CoreTools.Translate("ReadOnly");
+            ManagementReadOnlyReasonText =
+                GetElevationEligibilityReason(writeEligibility.Status);
+        }
+
         CanEdit = writable && snapshot.State == PolicyManagementState.Active;
         CanCreate = writable && snapshot.State == PolicyManagementState.Missing;
         CanRepair = writable && snapshot.State == PolicyManagementState.Invalid;
@@ -672,6 +723,18 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
                 break;
         }
     }
+
+    private static string GetElevationEligibilityReason(
+        PolicyWriteElevationEligibilityStatus status) =>
+        status switch
+        {
+            PolicyWriteElevationEligibilityStatus.HelperMissing => CoreTools.Translate(
+                "The signed policy write helper is missing. Reinstall UniGetUI for all users in an administrator-protected location to enable policy changes."),
+            PolicyWriteElevationEligibilityStatus.ProtectedInstallRequired => CoreTools.Translate(
+                "Policy changes are disabled because this UniGetUI installation is not administrator-protected. Reinstall UniGetUI for all users in an administrator-protected location to enable them."),
+            _ => CoreTools.Translate(
+                "This UniGetUI installation cannot securely launch the policy write helper. Reinstall UniGetUI for all users in an administrator-protected location to enable policy changes."),
+        };
 
     private static PolicyDetailRow BuildDiagnosticRow(BrokerPolicySanitizedFinding finding)
     {

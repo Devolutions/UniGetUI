@@ -111,12 +111,10 @@ public sealed record PolicyElevationTimeouts(TimeSpan Connect, TimeSpan Exchange
 /// </summary>
 public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
 {
-    private readonly IPolicyElevationHelperLocator _locator;
     private readonly IElevatedHelperLauncher _launcher;
-    private readonly IPolicyElevationTrustVerifier _trustVerifier;
     private readonly IPolicyElevationPipePeerAuthenticator _peerAuthenticator;
+    private readonly IPolicyElevationPreflight _preflight;
     private readonly Func<string, NamedPipeServerStream> _pipeFactory;
-    private readonly Func<string?> _selfImagePathProvider;
     private readonly PolicyElevationTimeouts _timeouts;
 
     public WindowsPolicyWriteElevator()
@@ -149,14 +147,14 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
         PolicyElevationTimeouts? timeouts = null,
         Func<string?>? selfImagePathProvider = null)
     {
-        _locator = locator;
         _launcher = launcher;
-        _trustVerifier = trustVerifier;
         _peerAuthenticator = peerAuthenticator;
         _pipeFactory = pipeFactory;
         _timeouts = timeouts ?? PolicyElevationTimeouts.Default;
-        _selfImagePathProvider = selfImagePathProvider
-            ?? WindowsProcessInspector.TryGetCurrentProcessCanonicalPath;
+        _preflight = new WindowsPolicyElevationPreflight(
+            locator,
+            trustVerifier,
+            selfImagePathProvider);
     }
 
     public async Task<PolicyElevationResult> ReplacePolicyAsync(
@@ -180,56 +178,28 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
                 "Elevated policy writes are only supported on Windows.");
         }
 
-        PolicyElevationHelperLocation location = _locator.Locate();
-        if (!location.Found || location.CanonicalHelperPath is null)
+        using PolicyElevationPreflightResult preflight = _preflight.Verify(cancellationToken);
+        if (!preflight.Succeeded)
         {
-            if (location.Detail is not null)
+            if (preflight.Detail is not null)
             {
-                Logger.Warn($"[PolicyElevation] Helper discovery failed: {location.Detail}");
+                Logger.Warn($"[PolicyElevation] Preflight failed: {preflight.Detail}");
             }
 
-            return Fail(request, PolicyElevationOutcome.HelperUnavailable, location.FailureReason);
+            PolicyElevationOutcome outcome =
+                preflight.Failure == PolicyElevationPreflightFailureKind.HelperUnavailable
+                    ? PolicyElevationOutcome.HelperUnavailable
+                    : PolicyElevationOutcome.HelperUntrusted;
+            return Fail(
+                request,
+                outcome,
+                preflight.FailureReason,
+                preflight.Win32ErrorCode);
         }
 
         // The handle lease pins every verified packaged object for the whole exchange, so nothing
         // on the path to the helper can be deleted, renamed or redirected after it was verified.
-        using PolicyElevationLocationVerification? verificationLease = location.Verification;
-
-        string? selfImagePath = _selfImagePathProvider();
-        if (selfImagePath is null
-            || location.CanonicalHostPath is null
-            || !WindowsProcessInspector.PathsAreEqual(selfImagePath, location.CanonicalHostPath))
-        {
-            Logger.Warn(
-                $"[PolicyElevation] The running image '{selfImagePath}' is not the packaged host "
-                + $"'{location.CanonicalHostPath}'.");
-
-            return Fail(
-                request,
-                PolicyElevationOutcome.HelperUntrusted,
-                "This UniGetUI process is not the packaged host binary, so it cannot request an elevated policy write.");
-        }
-
-        // Rotation-safe mutual signer binding: the helper must be signed by exactly the publisher
-        // that signed this installation. Nothing is pinned, so a signer rotation needs no change.
-        PolicyElevationSignerBindingResult binding = PolicyElevationSignerBinding.Bind(
-            _trustVerifier,
-            selfImagePath,
-            location.CanonicalHelperPath);
-
-        if (!binding.IsBound)
-        {
-            if (binding.Detail is not null)
-            {
-                Logger.Warn($"[PolicyElevation] Signer binding failed: {binding.Detail}");
-            }
-
-            return Fail(
-                request,
-                PolicyElevationOutcome.HelperUntrusted,
-                binding.FailureReason,
-                binding.Win32ErrorCode);
-        }
+        PolicyElevationHelperLocation location = preflight.Location;
 
         if (!TryDescribeCurrentProcess(out uint hostProcessId, out long hostCreationTicks, out uint hostSessionId))
         {

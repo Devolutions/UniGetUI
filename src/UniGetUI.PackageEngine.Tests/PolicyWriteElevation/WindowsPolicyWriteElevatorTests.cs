@@ -18,6 +18,7 @@ public class WindowsPolicyWriteElevatorTests
 
     private static readonly PolicyElevationTimeouts FastTimeouts =
         new(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(5));
+    private static readonly TimeSpan TestCloseGuardBound = TimeSpan.FromSeconds(2);
 
     private static PolicyElevationWriteRequest BuildRequest() => new(
         JsonDocument.Parse(DraftJson).RootElement)
@@ -432,6 +433,7 @@ public class WindowsPolicyWriteElevatorTests
             .ReplacePolicyAsync(BuildRequest(), CancellationToken.None);
 
         Assert.Equal(PolicyElevationOutcome.Replaced, result.Outcome);
+        Assert.Equal("new-token", result.CommittedStoreToken);
         Assert.Equal(PolicyElevationProtocol.ExitUnexpectedFailure, result.HelperExitCode);
         AssertDraftPreserved(result);
     }
@@ -439,7 +441,7 @@ public class WindowsPolicyWriteElevatorTests
     [Theory]
     [InlineData(PolicyElevationDisposition.Committed, PolicyElevationOutcome.Replaced)]
     [InlineData(PolicyElevationDisposition.Rejected, PolicyElevationOutcome.BrokerRejected)]
-    public async Task CallerCancellationDuringExitWait_DoesNotOverrideAuthenticatedAcknowledgement(
+    public async Task CallerCancellationAfterAuthenticatedAcknowledgement_SettlesAndPreservesResult(
         PolicyElevationDisposition disposition,
         PolicyElevationOutcome expectedOutcome)
     {
@@ -477,13 +479,29 @@ public class WindowsPolicyWriteElevatorTests
             .ReplacePolicyAsync(BuildRequest(), cancellation.Token);
         await responseWritten.Task.WaitAsync(TimeSpan.FromSeconds(20));
         await launcher.LastProcess!.SecondExitWaitStarted.WaitAsync(TimeSpan.FromSeconds(20));
-        await cancellation.CancelAsync();
-        release.TrySetResult();
 
-        PolicyElevationResult result = await pending;
+        PolicyElevationResult result;
+        try
+        {
+            await cancellation.CancelAsync();
+            result = await pending.WaitAsync(TestCloseGuardBound);
+        }
+        finally
+        {
+            release.TrySetResult();
+        }
 
         Assert.Equal(expectedOutcome, result.Outcome);
         Assert.Equal(PolicyElevationProtocol.ExitSuccess, result.HelperExitCode);
+        if (disposition == PolicyElevationDisposition.Committed)
+        {
+            Assert.Equal("new-token", result.CommittedStoreToken);
+        }
+        else
+        {
+            Assert.Equal(409, result.BrokerStatusCode);
+            Assert.Equal(ErrorCode.WarningConfirmationRequired.ToString(), result.BrokerErrorCode);
+        }
         AssertDraftPreserved(result);
     }
 
@@ -547,27 +565,36 @@ public class WindowsPolicyWriteElevatorTests
     }
 
     [Fact]
-    public async Task CallerCancellation_IsDistinctFromATimeout()
+    public async Task CallerCancellationBeforeAcknowledgement_RemainsWriteResultUnknown()
     {
         using var cancellation = new CancellationTokenSource();
-        var connected = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var requestReceived = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         FakeHelperLauncher launcher = FakeHelperLauncher.Running(async (arguments, _) =>
         {
             await using var client = await FakeHelperClient.ConnectAsync(arguments.PipeName);
-            connected.TrySetResult(true);
+            await PolicyElevationFrame.ReadRequestAsync(client, CancellationToken.None);
+            requestReceived.TrySetResult(true);
             await release.Task.WaitAsync(TimeSpan.FromSeconds(30));
         });
 
         Task<PolicyElevationResult> pending = Build(launcher)
             .ReplacePolicyAsync(BuildRequest(), cancellation.Token);
 
-        await connected.Task.WaitAsync(TimeSpan.FromSeconds(20));
-        await cancellation.CancelAsync();
+        await requestReceived.Task.WaitAsync(TimeSpan.FromSeconds(20));
 
-        PolicyElevationResult result = await pending;
-        release.TrySetResult(true);
+        PolicyElevationResult result;
+        try
+        {
+            await cancellation.CancelAsync();
+            result = await pending.WaitAsync(TestCloseGuardBound);
+        }
+        finally
+        {
+            release.TrySetResult(true);
+        }
 
         Assert.Equal(PolicyElevationOutcome.WriteResultUnknown, result.Outcome);
         AssertDraftPreserved(result);

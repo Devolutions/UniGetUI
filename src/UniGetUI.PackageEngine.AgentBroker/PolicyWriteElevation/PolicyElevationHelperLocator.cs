@@ -4,6 +4,14 @@ using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation.Interop;
 
 namespace UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 
+public enum PolicyElevationHelperLocationFailure
+{
+    None,
+    HelperMissing,
+    ProtectedInstallRequired,
+    InvalidInstallation,
+}
+
 /// <summary>Where the packaged helper and host live, once every check has passed.</summary>
 /// <remarks>
 /// <see cref="FailureReason"/> is written for a user interface and never names a path.
@@ -16,10 +24,16 @@ public sealed record PolicyElevationHelperLocation(
     string? CanonicalInstallRoot = null,
     string? FailureReason = null,
     string? Detail = null,
-    PolicyElevationLocationVerification? Verification = null)
+    PolicyElevationLocationVerification? Verification = null,
+    PolicyElevationHelperLocationFailure Failure =
+        PolicyElevationHelperLocationFailure.None)
 {
-    public static PolicyElevationHelperLocation NotFound(string reason, string? detail = null)
-        => new(false, FailureReason: reason, Detail: detail);
+    public static PolicyElevationHelperLocation NotFound(
+        string reason,
+        string? detail = null,
+        PolicyElevationHelperLocationFailure failure =
+            PolicyElevationHelperLocationFailure.InvalidInstallation)
+        => new(false, FailureReason: reason, Detail: detail, Failure: failure);
 }
 
 public interface IPolicyElevationHelperLocator
@@ -80,7 +94,8 @@ public sealed class PolicyElevationHelperLocator : IPolicyElevationHelperLocator
         {
             return PolicyElevationHelperLocation.NotFound(
                 "The elevated policy helper is not part of this UniGetUI installation.",
-                $"The elevated policy helper is not present at '{helperPath}'.");
+                $"The elevated policy helper is not present at '{helperPath}'.",
+                PolicyElevationHelperLocationFailure.HelperMissing);
         }
 
         if (!_fileExists(hostPath))
@@ -130,7 +145,8 @@ public sealed class PolicyElevationHelperLocator : IPolicyElevationHelperLocator
             return PolicyElevationHelperLocation.NotFound(
                 verification.FailureReason
                 ?? "Elevated policy writes require UniGetUI to be installed in an administrator-protected location.",
-                verification.Detail);
+                verification.Detail,
+                PolicyElevationHelperLocationFailure.ProtectedInstallRequired);
         }
 
         if (!WindowsProcessInspector.PathsAreEqual(verification.CanonicalHelperPath, canonicalHelperPath)

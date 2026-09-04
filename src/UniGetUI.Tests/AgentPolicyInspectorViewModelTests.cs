@@ -5,6 +5,7 @@ using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.AgentBroker.PolicyManagement;
+using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 using ApiTransport = Devolutions.Now.Policy.Api.Transport;
 using PolicyDecision = Devolutions.Now.Policy.Model.Decision;
 using PolicyOperation = Devolutions.Now.Policy.Model.Operation;
@@ -203,7 +204,9 @@ public class AgentPolicyInspectorViewModelTests
             new StubManagementService(
                 new BrokerPolicyManagementResult(
                     BrokerPolicyManagementStatus.Retrieved,
-                    snapshot)));
+                    snapshot)),
+            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
+            (_, _) => { });
         PolicyEditorLaunchRequest? launch = null;
         viewModel.OpenPolicyEditorRequested += (_, request) => launch = request;
         await viewModel.LoadManagementAsync();
@@ -236,7 +239,9 @@ public class AgentPolicyInspectorViewModelTests
             new StubManagementService(
                 new BrokerPolicyManagementResult(
                     BrokerPolicyManagementStatus.Retrieved,
-                    snapshot)));
+                    snapshot)),
+            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
+            (_, _) => { });
         PolicyEditorLaunchRequest? launch = null;
         viewModel.OpenPolicyEditorRequested += (_, request) => launch = request;
 
@@ -245,6 +250,166 @@ public class AgentPolicyInspectorViewModelTests
         Assert.False(viewModel.CanReplaceIdentity);
         viewModel.ReplaceIdentityCommand.Execute(null);
         Assert.Null(launch);
+    }
+
+    [Theory]
+    [InlineData(PolicyManagementState.Active, true, false, false, true)]
+    [InlineData(PolicyManagementState.Missing, false, true, false, false)]
+    [InlineData(PolicyManagementState.Invalid, false, false, true, false)]
+    public async Task ProtectedPackagedInstall_EnablesOnlyTheStateAppropriateWriteActions(
+        PolicyManagementState state,
+        bool canEdit,
+        bool canCreate,
+        bool canRepair,
+        bool canReplaceIdentity)
+    {
+        PolicyDocument? policy = state == PolicyManagementState.Active
+            ? BuildFullResponse().Policy
+            : null;
+        using AgentPolicyInspectorViewModel viewModel = BuildManagementViewModel(
+            state,
+            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
+            policy);
+
+        await viewModel.LoadManagementAsync();
+
+        Assert.Equal(canEdit, viewModel.CanEdit);
+        Assert.Equal(canCreate, viewModel.CanCreate);
+        Assert.Equal(canRepair, viewModel.CanRepair);
+        Assert.Equal(canReplaceIdentity, viewModel.CanReplaceIdentity);
+    }
+
+    [Theory]
+    [InlineData(
+        PolicyWriteElevationEligibilityStatus.HelperMissing,
+        PolicyManagementState.Missing,
+        "helper is missing")]
+    [InlineData(
+        PolicyWriteElevationEligibilityStatus.ProtectedInstallRequired,
+        PolicyManagementState.Active,
+        "not administrator-protected")]
+    [InlineData(
+        PolicyWriteElevationEligibilityStatus.ProtectedInstallRequired,
+        PolicyManagementState.Missing,
+        "not administrator-protected")]
+    [InlineData(
+        PolicyWriteElevationEligibilityStatus.ProtectedInstallRequired,
+        PolicyManagementState.Invalid,
+        "not administrator-protected")]
+    [InlineData(
+        PolicyWriteElevationEligibilityStatus.InvalidInstallation,
+        PolicyManagementState.Active,
+        "cannot securely launch")]
+    public async Task IneligibleInstall_DisablesEveryWriteActionBeforePrompting(
+        PolicyWriteElevationEligibilityStatus status,
+        PolicyManagementState state,
+        string expectedReason)
+    {
+        PolicyResponse inspection = BuildFullResponse();
+        PolicyDocument? managedPolicy = state == PolicyManagementState.Active
+            ? inspection.Policy
+            : null;
+        using var viewModel = new AgentPolicyInspectorViewModel(
+            new StubInspector(new(
+                BrokerPolicyInspectionStatus.Connected,
+                inspection,
+                PolicySerializer.Serialize(inspection.Policy))),
+            new StubManagementService(new(
+                BrokerPolicyManagementStatus.Retrieved,
+                new PolicyManagementSnapshot
+                {
+                    State = state,
+                    StoreToken = "token",
+                    Policy = managedPolicy,
+                    WriteCapability = PolicyWriteCapability.Writable,
+                })),
+            new StubWriteElevationEligibility(status),
+            (_, _) => { });
+        int launchCount = 0;
+        viewModel.OpenPolicyEditorRequested += (_, _) => launchCount++;
+
+        await viewModel.LoadManagementAsync();
+        await viewModel.LoadAsync();
+        viewModel.EditPolicyCommand.Execute(null);
+        viewModel.CreatePolicyCommand.Execute(null);
+        viewModel.RepairPolicyCommand.Execute(null);
+        viewModel.ReplaceIdentityCommand.Execute(null);
+
+        Assert.True(viewModel.HasManagementSnapshot);
+        Assert.True(viewModel.HasPolicy);
+        Assert.Equal("ReadOnly", viewModel.ManagementCapabilityText);
+        Assert.Contains(expectedReason, viewModel.ManagementReadOnlyReasonText);
+        Assert.Contains("all users", viewModel.ManagementReadOnlyReasonText);
+        Assert.False(viewModel.CanEdit);
+        Assert.False(viewModel.CanCreate);
+        Assert.False(viewModel.CanRepair);
+        Assert.False(viewModel.CanReplaceIdentity);
+        Assert.Equal(0, launchCount);
+    }
+
+    [Fact]
+    public async Task AgentReadOnlyCapability_DoesNotProbeLocalWriteEligibility()
+    {
+        var eligibility = new CountingWriteElevationEligibility();
+        PolicyDocument policy = BuildFullResponse().Policy;
+        using var viewModel = new AgentPolicyInspectorViewModel(
+            new StubInspector(new(BrokerPolicyInspectionStatus.Unsupported)),
+            new StubManagementService(new(
+                BrokerPolicyManagementStatus.Retrieved,
+                new PolicyManagementSnapshot
+                {
+                    State = PolicyManagementState.Active,
+                    Policy = policy,
+                    WriteCapability = PolicyWriteCapability.ReadOnly,
+                })),
+            eligibility,
+            (_, _) => { });
+
+        await viewModel.LoadManagementAsync();
+
+        Assert.Equal(0, eligibility.Invocations);
+        Assert.False(viewModel.CanEdit);
+        Assert.True(viewModel.HasManagementSnapshot);
+    }
+
+    [Fact]
+    public async Task ManagementRefresh_CancelsStaleEligibilityProbeAndAppliesNewestResult()
+    {
+        var eligibility = new CancelAwareRefreshWriteElevationEligibility();
+        using AgentPolicyInspectorViewModel viewModel = BuildManagementViewModel(
+            PolicyManagementState.Active,
+            eligibility,
+            BuildFullResponse().Policy);
+
+        Task first = viewModel.LoadManagementAsync();
+        await eligibility.FirstStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await viewModel.RefreshManagementCommand.ExecuteAsync(null);
+        await first;
+
+        Assert.True(eligibility.FirstCanceled);
+        Assert.True(viewModel.CanEdit);
+        Assert.False(viewModel.IsManagementLoading);
+    }
+
+    [Fact]
+    public async Task ManagementRefresh_IgnoresEligibilityResultThatDoesNotHonorCancellation()
+    {
+        var eligibility = new NonCancelableRefreshWriteElevationEligibility();
+        using AgentPolicyInspectorViewModel viewModel = BuildManagementViewModel(
+            PolicyManagementState.Active,
+            eligibility,
+            BuildFullResponse().Policy);
+
+        Task first = viewModel.LoadManagementAsync();
+        await eligibility.FirstStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await viewModel.RefreshManagementCommand.ExecuteAsync(null);
+        Assert.False(viewModel.CanEdit);
+
+        eligibility.CompleteFirst();
+        await first;
+
+        Assert.False(viewModel.CanEdit);
+        Assert.Contains("not administrator-protected", viewModel.ManagementReadOnlyReasonText);
     }
 
     [Fact]
@@ -386,6 +551,103 @@ public class AgentPolicyInspectorViewModelTests
             System.Text.Json.JsonElement draft,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+    }
+
+    private static AgentPolicyInspectorViewModel BuildManagementViewModel(
+        PolicyManagementState state,
+        IPolicyWriteElevationEligibility eligibility,
+        PolicyDocument? policy) =>
+        new(
+            new StubInspector(new(BrokerPolicyInspectionStatus.Unsupported)),
+            new StubManagementService(new(
+                BrokerPolicyManagementStatus.Retrieved,
+                new PolicyManagementSnapshot
+                {
+                    State = state,
+                    StoreToken = "token",
+                    Policy = policy,
+                    WriteCapability = PolicyWriteCapability.Writable,
+                })),
+            eligibility,
+            (_, _) => { });
+
+    private sealed class StubWriteElevationEligibility(
+        PolicyWriteElevationEligibilityStatus status)
+        : IPolicyWriteElevationEligibility
+    {
+        public Task<PolicyWriteElevationEligibility> EvaluateAsync(
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new PolicyWriteElevationEligibility(status));
+    }
+
+    private sealed class CountingWriteElevationEligibility : IPolicyWriteElevationEligibility
+    {
+        public int Invocations { get; private set; }
+
+        public Task<PolicyWriteElevationEligibility> EvaluateAsync(
+            CancellationToken cancellationToken)
+        {
+            Invocations++;
+            return Task.FromResult(PolicyWriteElevationEligibility.Eligible);
+        }
+    }
+
+    private sealed class CancelAwareRefreshWriteElevationEligibility
+        : IPolicyWriteElevationEligibility
+    {
+        private int _invocations;
+
+        public TaskCompletionSource FirstStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool FirstCanceled { get; private set; }
+
+        public async Task<PolicyWriteElevationEligibility> EvaluateAsync(
+            CancellationToken cancellationToken)
+        {
+            if (Interlocked.Increment(ref _invocations) == 1)
+            {
+                FirstStarted.TrySetResult();
+                try
+                {
+                    await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    FirstCanceled = true;
+                    throw;
+                }
+            }
+
+            return PolicyWriteElevationEligibility.Eligible;
+        }
+    }
+
+    private sealed class NonCancelableRefreshWriteElevationEligibility
+        : IPolicyWriteElevationEligibility
+    {
+        private readonly TaskCompletionSource _firstCompletion =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _invocations;
+
+        public TaskCompletionSource FirstStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<PolicyWriteElevationEligibility> EvaluateAsync(
+            CancellationToken cancellationToken)
+        {
+            if (Interlocked.Increment(ref _invocations) == 1)
+            {
+                FirstStarted.TrySetResult();
+                await _firstCompletion.Task;
+                return PolicyWriteElevationEligibility.Eligible;
+            }
+
+            return new(
+                PolicyWriteElevationEligibilityStatus.ProtectedInstallRequired);
+        }
+
+        public void CompleteFirst() => _firstCompletion.TrySetResult();
     }
 
     private sealed class RefreshInspector(PolicyResponse response) : IBrokerPolicyInspector

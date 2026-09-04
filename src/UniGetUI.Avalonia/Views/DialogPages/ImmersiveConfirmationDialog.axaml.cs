@@ -66,4 +66,10 @@ public partial class ImmersiveConfirmationDialog : ImmersiveDialog
         Result = result;
         Close();
     }
+
+    internal void CancelPendingChoice()
+    {
+        RequireChoice = false;
+        Close();
+    }
 }

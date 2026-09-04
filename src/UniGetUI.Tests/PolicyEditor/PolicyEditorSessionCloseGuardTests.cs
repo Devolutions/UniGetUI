@@ -91,6 +91,26 @@ public class PolicyEditorSessionCloseGuardTests
     }
 
     [Fact]
+    public async Task ShutdownDuringConfirmation_CancelsPromptAndSettlesWithinBound()
+    {
+        var validation = new FakeValidationClient();
+        var prompt = new CancelAwareConfirmationPrompt();
+        using PolicyEditorSessionViewModel viewModel =
+            CreateViewModelForSave(validation, new FakeWriteClient(), prompt);
+
+        Task saveTask = viewModel.SaveCommand.ExecuteAsync(null);
+        await prompt.Started.Task.WaitAsync(ShortBound);
+
+        bool settled = await PolicyEditorSessionCloseGuard.TryCancelActiveOperationAsync(
+            viewModel,
+            ShortBound);
+
+        Assert.True(settled);
+        Assert.False(viewModel.IsBusy);
+        await saveTask;
+    }
+
+    [Fact]
     public async Task CloseDuringDispatchedWrite_UnknownResultAndDeclinedDiscard_BlockRetryUntilRefresh()
     {
         var validation = new FakeValidationClient();
@@ -216,6 +236,28 @@ public class PolicyEditorSessionCloseGuardTests
             }
 
             return PolicyWriteOutcome.Failure(PolicyWriteFailureKind.None);
+        }
+    }
+
+    private sealed class CancelAwareConfirmationPrompt : IPolicyEditorConfirmationPrompt
+    {
+        public TaskCompletionSource Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<bool> ConfirmAsync(
+            PolicyEditorConfirmationRequest request,
+            CancellationToken cancellationToken)
+        {
+            Started.TrySetResult();
+            try
+            {
+                await Task.Delay(Timeout.Infinite, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+
+            return false;
         }
     }
 

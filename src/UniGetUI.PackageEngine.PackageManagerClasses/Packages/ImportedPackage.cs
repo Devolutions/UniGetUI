@@ -16,6 +16,8 @@ namespace UniGetUI.PackageEngine.PackageClasses
         private readonly string _version;
         private static readonly string _latestString = CoreTools.Translate("Latest");
 
+        public override bool HasConcreteVersion => installation_options.Version != "";
+
         public override string VersionString
         {
             get

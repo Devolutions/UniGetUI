@@ -33,6 +33,25 @@ public static class BrokerRequestBuilder
         bool dropArchAndScope = package.OverridenOptions.WinGet_DropArchAndScope;
 
         ManagerName manager = MapManagerName(package.Manager.Name);
+
+        // This path does not go through BasePkgOperationHelper, so the checks that apply to every
+        // manager have to be repeated here: the broker builds a command line from these values,
+        // and an identifier such as "requests --index-url https://host" would become real options.
+        if (
+            !CoreTools.IsOptionSafeIdentifier(
+                package.Id,
+                package.Manager.IdentifiersAreQuotedOnCommandLine
+            )
+        )
+            throw new InvalidOperationException(
+                $"Refusing to build a {manager} broker request for the package identifier \"{package.Id}\": it would be read as a command-line option or split into further arguments."
+            );
+
+        if (!CoreTools.IsOptionSafeValue(options.Version))
+            throw new InvalidOperationException(
+                $"Refusing to build a {manager} broker request for package {package.Id}: the requested version \"{options.Version}\" would be read as a command-line option."
+            );
+
         if (ManagerCommandLineIsShellInterpreted(manager))
         {
             if (!CoreTools.IsValidPackageIdentifier(package.Id))

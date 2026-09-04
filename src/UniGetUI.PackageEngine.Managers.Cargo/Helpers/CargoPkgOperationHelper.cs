@@ -14,9 +14,17 @@ internal sealed class CargoPkgOperationHelper(Cargo cargo) : BasePkgOperationHel
         OperationType operation
     )
     {
-        var installVersion = CoreTools.EscapeCommandLineArgument(
-            options.Version == string.Empty ? package.VersionString : options.Version
-        );
+        // --version is omitted when there is nothing to pin, so cargo picks the latest itself. An
+        // unpinned imported package reports the localized "Latest" as its version, which is
+        // display text rather than a version and is more than one word in several languages.
+        string requestedVersion = options.Version.Length > 0
+            ? options.Version
+            : package.HasConcreteVersion
+                ? package.VersionString
+                : "";
+        string[] versionArguments = requestedVersion.Length > 0
+            ? ["--version", CoreTools.EscapeCommandLineArgument(requestedVersion)]
+            : [];
 
         bool hasBinstall = ((Cargo)Manager).HasBinstall;
 
@@ -25,9 +33,10 @@ internal sealed class CargoPkgOperationHelper(Cargo cargo) : BasePkgOperationHel
         {
             case OperationType.Install:
                 if (hasBinstall)
-                    parameters = [Manager.Properties.InstallVerb, "--version", installVersion, package.Id];
+                    parameters =
+                        [Manager.Properties.InstallVerb, .. versionArguments, package.Id];
                 else
-                    parameters = ["install", package.Id, "--version", installVersion];
+                    parameters = ["install", package.Id, .. versionArguments];
                 break;
 
             case OperationType.Update:

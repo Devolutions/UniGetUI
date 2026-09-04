@@ -72,6 +72,8 @@ namespace UniGetUI.PackageEngine.PackageClasses
         public string AutomationName { get; }
         public string Id { get; }
         public virtual string VersionString { get; }
+
+        public virtual bool HasConcreteVersion => true;
         public CoreTools.Version NormalizedVersion { get; }
         public CoreTools.Version NormalizedNewVersion { get; }
         public bool IsPopulated { get; set; }

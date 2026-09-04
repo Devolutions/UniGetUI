@@ -34,6 +34,42 @@ if ($mode -eq 'tls12')
     }
 }
 
+$commandInfo = $null
+try
+{
+    $commandInfo = Get-Command -Name $command -ErrorAction Stop
+}
+catch
+{
+    # Left null: without metadata nothing is coerced, and the call below reports the real error.
+}
+
+# Whether $name names a switch on the command about to be invoked. Only a switch may have its
+# value coerced, because an ordinary string parameter can legitimately be given the text "$false"
+# - a repository named that, for instance - and must reach the cmdlet unchanged.
+function Test-IsSwitchParameter([string]$name)
+{
+    if ($null -eq $commandInfo)
+    {
+        return $false
+    }
+
+    $parameter = $commandInfo.Parameters[$name]
+    if ($null -eq $parameter)
+    {
+        $parameter = $commandInfo.Parameters.Values |
+            Where-Object { $_.Aliases -contains $name } |
+            Select-Object -First 1
+    }
+
+    if ($null -eq $parameter)
+    {
+        return $false
+    }
+
+    return $parameter.ParameterType -eq [System.Management.Automation.SwitchParameter]
+}
+
 $named = @{}
 $rest = @()
 
@@ -49,7 +85,7 @@ for ($i = 2; $i -lt $args.Count; $i++)
         $switchName = $Matches[1]
         $next = [string]$args[$i + 1]
 
-        if ($next -eq '$false' -or $next -eq '$true')
+        if (($next -eq '$false' -or $next -eq '$true') -and (Test-IsSwitchParameter $switchName))
         {
             $named[$switchName] = ($next -eq '$true')
             $i++
@@ -66,6 +102,7 @@ for ($i = 2; $i -lt $args.Count; $i++)
 try
 {
     & $command @named @rest
+    $succeeded = $?
 }
 catch
 {
@@ -75,8 +112,16 @@ catch
     exit 1
 }
 
-# PowerShellGet reports failures as non-terminating errors, so powershell.exe would exit 0
-# even though nothing was installed. The caller binds -ErrorVariable to this name.
+# Running under -Command also failed the process when the command reported failure without
+# throwing. Not every caller binds the error variable below - PowerShell 7 operations and source
+# operations do not - so without this a failed operation would be reported as a success.
+if (-not $succeeded)
+{
+    exit 1
+}
+
+# PowerShellGet reports some failures as non-terminating errors that leave $? true, so the caller
+# binds -ErrorVariable to this name and it is checked as well.
 if ($UniGetUIOperationError)
 {
     exit 1

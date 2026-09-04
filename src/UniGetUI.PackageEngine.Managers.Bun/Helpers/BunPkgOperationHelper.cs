@@ -22,7 +22,7 @@ internal sealed class BunPkgOperationHelper : BasePkgOperationHelper
             OperationType.Install =>
             [
                 Manager.Properties.InstallVerb,
-                BuildSpec(package.Id, options.Version == string.Empty ? package.VersionString : options.Version),
+                BuildSpec(package.Id, ResolveRequestedVersion(package, options)),
             ],
             OperationType.Update =>
             [
@@ -57,9 +57,22 @@ internal sealed class BunPkgOperationHelper : BasePkgOperationHelper
         return id;
     }
 
+    /// <summary>
+    /// The version to install: the requested one, or the package's own when it has a real version.
+    /// An unpinned imported package has none, and bun then installs the latest.
+    /// </summary>
+    private static string ResolveRequestedVersion(IPackage package, InstallOptions options) =>
+        options.Version.Length > 0 ? options.Version
+        : package.HasConcreteVersion ? package.VersionString
+        : "";
+
+    // A version is appended only when there is one to append; bun installs the latest version
+    // when no specifier is given. An unpinned imported package reports the localized "Latest" as
+    // its version, which is display text rather than a tag, and is more than one word in several
+    // languages, so it must not be substituted here.
     private static string BuildSpec(string id, string version)
     {
-        string spec = $"{id}@{version}";
+        string spec = CoreTools.IsValidPackageVersion(version) ? $"{id}@{version}" : id;
 
         if (!CoreTools.IsCommandLineInertValue(spec))
             throw new InvalidOperationException(

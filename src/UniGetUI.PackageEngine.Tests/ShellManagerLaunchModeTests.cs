@@ -3,6 +3,8 @@ using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PowerShellManager;
+using UniGetUI.PackageEngine.Classes.Serializable;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 
@@ -161,22 +163,79 @@ public sealed class ShellManagerLaunchModeTests
         Assert.Contains("express@4.17.21", parameters);
     }
 
-    // An unpinned imported package reports the translated "Latest" as its version. That is display
-    // text, not an npm tag, and is more than one word in ten languages. npm already installs the
-    // latest version when no specifier is given, so none is emitted.
-    [Theory]
-    [InlineData("Latest")]
-    [InlineData("Piu recente")]
-    [InlineData("Meest recent")]
-    [InlineData("En son")]
-    public void Npm_OmitsAPlaceholderVersionInsteadOfInventingATag(string placeholder)
+    // The placeholder is detected structurally rather than by matching its text, so this holds in
+    // every locale: an imported package with no pinned version has no version to substitute, and
+    // npm installs the latest when none is given.
+    [Fact]
+    public void Npm_OmitsTheVersionForAnUnpinnedImportedPackage()
+    {
+        var manager = new Npm();
+        var imported = new ImportedPackage(
+            new SerializablePackage
+            {
+                Id = "express",
+                Name = "express",
+                Version = "1.0.0",
+                ManagerName = manager.Name,
+                Source = manager.DefaultSource.Name,
+            },
+            manager,
+            manager.DefaultSource
+        );
+
+        Assert.False(imported.HasConcreteVersion);
+
+        var parameters = manager.OperationHelper.GetParameters(
+            imported,
+            new InstallOptions(),
+            OperationType.Install
+        );
+
+        Assert.Contains("express", parameters);
+        Assert.DoesNotContain(parameters, parameter => parameter.Contains('@'));
+    }
+
+    [Fact]
+    public void Npm_PinsTheVersionForAPinnedImportedPackage()
+    {
+        var manager = new Npm();
+        var options = new InstallOptions { Version = "4.17.21" };
+        var imported = new ImportedPackage(
+            new SerializablePackage
+            {
+                Id = "express",
+                Name = "express",
+                Version = "1.0.0",
+                ManagerName = manager.Name,
+                Source = manager.DefaultSource.Name,
+                InstallationOptions = options,
+            },
+            manager,
+            manager.DefaultSource
+        );
+
+        Assert.True(imported.HasConcreteVersion);
+
+        var parameters = manager.OperationHelper.GetParameters(
+            imported,
+            options,
+            OperationType.Install
+        );
+
+        Assert.Contains("express@4.17.21", parameters);
+    }
+
+    [Fact]
+    public void ADiscoveredPackageStillPinsItsOwnVersion()
     {
         var manager = new Npm();
         var package = new PackageBuilder()
             .WithManager(manager)
             .WithId("express")
-            .WithVersion(placeholder)
+            .WithVersion("5.0.0")
             .Build();
+
+        Assert.True(package.HasConcreteVersion);
 
         var parameters = manager.OperationHelper.GetParameters(
             package,
@@ -184,8 +243,7 @@ public sealed class ShellManagerLaunchModeTests
             OperationType.Install
         );
 
-        Assert.Contains("express", parameters);
-        Assert.DoesNotContain(parameters, parameter => parameter.Contains('@'));
+        Assert.Contains("express@5.0.0", parameters);
     }
     [Fact]
     public void BothLaunchModesStillRejectAnInjectedVersion()

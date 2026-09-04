@@ -22,7 +22,7 @@ internal sealed class NpmPkgOperationHelper : BasePkgOperationHelper
             OperationType.Install =>
             [
                 Manager.Properties.InstallVerb,
-                ResolveInstallSpec(package.Id, options.Version),
+                ResolveInstallSpec(package.Id, ResolveRequestedVersion(package, options)),
             ],
             OperationType.Update =>
             [
@@ -90,16 +90,23 @@ internal sealed class NpmPkgOperationHelper : BasePkgOperationHelper
     /// ("localName@npm:targetName@version") for aliased dependencies instead of treating
     /// package.Id as a literal, directly-installable package name.
     /// </summary>
-    // A version is appended only when there is a real one to append. An unpinned imported package
-    // reports the translated "Latest" as its version, which is display text rather than an npm
-    // tag, and is more than one word in several languages; npm installs the latest version when no
-    // specifier is given, which is what that placeholder means.
+    /// <summary>
+    /// The version to install: the requested one, or the package's own when it has a real version.
+    /// An unpinned imported package has none, and npm then installs the latest.
+    /// </summary>
+    private static string ResolveRequestedVersion(IPackage package, InstallOptions options) =>
+        options.Version.Length > 0 ? options.Version
+        : package.HasConcreteVersion ? package.VersionString
+        : "";
+
+    // A version is appended only when there is one to append; npm installs the latest version
+    // when no specifier is given. Validity is the only test, so a dist-tag such as "next" or
+    // "beta" is still passed through: the localized "Latest" placeholder an unpinned imported
+    // package reports never reaches here, because install uses the requested version alone.
     private static string ResolveInstallSpec(string id, string version)
     {
         bool aliased = TryParseAlias(id, out string localName, out string targetName);
-        string suffix = CoreTools.IsValidPackageVersion(version) && version.Any(char.IsAsciiDigit)
-            ? $"@{version}"
-            : "";
+        string suffix = CoreTools.IsValidPackageVersion(version) ? $"@{version}" : "";
 
         return aliased ? $"{localName}@npm:{targetName}{suffix}" : $"{id}{suffix}";
     }

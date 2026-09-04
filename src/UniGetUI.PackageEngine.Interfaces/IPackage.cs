@@ -15,6 +15,14 @@ namespace UniGetUI.PackageEngine.Interfaces
         public string Name { get; }
         public string Id { get; }
         public string VersionString { get; }
+
+        /// <summary>
+        /// Whether <see cref="VersionString"/> names an actual version rather than text shown in
+        /// the UI in place of one. An imported package with no pinned version reports the
+        /// translated "Latest" there, which is not a version and is more than one word in several
+        /// languages, so it must never be substituted into a command line.
+        /// </summary>
+        public bool HasConcreteVersion { get; }
         public CoreTools.Version NormalizedVersion { get; }
         public CoreTools.Version NormalizedNewVersion { get; }
         public IManagerSource Source { get; }

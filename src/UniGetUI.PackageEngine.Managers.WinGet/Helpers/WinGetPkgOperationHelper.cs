@@ -17,12 +17,22 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     public static string GetIdNamePiece(IPackage package)
     {
         if (!package.Id.EndsWith("…"))
-            return $"--id {CoreTools.EscapeCommandLineArgument(package.Id.TrimEnd('…'))} --exact";
+            return $"--id {Selector(package.Id.TrimEnd('…'), "identifier")} --exact";
 
         if (!package.Name.EndsWith("…"))
-            return $"--name {CoreTools.EscapeCommandLineArgument(package.Name)} --exact";
+            return $"--name {Selector(package.Name, "name")} --exact";
 
-        return $"--id {CoreTools.EscapeCommandLineArgument(package.Id.TrimEnd('…'))}";
+        return $"--id {Selector(package.Id.TrimEnd('…'), "identifier")}";
+    }
+
+    private static string Selector(string value, string description)
+    {
+        if (!CoreTools.IsOptionSafeIdentifier(value, quotedByTheSink: true))
+            throw new InvalidOperationException(
+                $"Refusing to build a WinGet command line for the package {description} \"{value}\": it would be read as a command-line option."
+            );
+
+        return CoreTools.EscapeCommandLineArgument(value);
     }
 
     public WinGetPkgOperationHelper(WinGet manager)

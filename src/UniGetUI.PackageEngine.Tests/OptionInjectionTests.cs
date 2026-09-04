@@ -155,6 +155,48 @@ public sealed class OptionInjectionTests
     }
 
     [Fact]
+    public void WinGetRefusesAnEllipsizedIdWhoseNameWouldBecomeAnOption()
+    {
+        var manager = new UniGetUI.PackageEngine.Managers.WingetManager.WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("safe…")
+            .WithName("--index-url")
+            .Build();
+
+        Assert.Throws<InvalidOperationException>(
+            () =>
+                manager.OperationHelper.GetParameters(
+                    package,
+                    new InstallOptions(),
+                    OperationType.Install
+                )
+        );
+    }
+
+    [Fact]
+    public void WinGetStillSelectsAnEllipsizedPackageByItsOrdinaryName()
+    {
+        var manager = new UniGetUI.PackageEngine.Managers.WingetManager.WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Microsoft.VisualStu…")
+            .WithName("Microsoft Visual Studio Code")
+            .Build();
+
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Install
+        );
+
+        Assert.Contains(
+            "--name \"Microsoft Visual Studio Code\" --exact",
+            string.Join(" ", parameters)
+        );
+    }
+
+    [Fact]
     public void WinGetAcceptsAnAddRemoveProgramsIdentifierWithSpaces()
     {
         var manager = new UniGetUI.PackageEngine.Managers.WingetManager.WinGet();

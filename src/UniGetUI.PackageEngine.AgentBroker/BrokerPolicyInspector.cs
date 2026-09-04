@@ -250,6 +250,8 @@ public sealed partial class BrokerPolicyInspector : IBrokerPolicyInspector
     {
         return value is null
             || (HasMaximumLength(value, 2048)
+                && (value.StartsWith("http://", StringComparison.Ordinal)
+                    || value.StartsWith("https://", StringComparison.Ordinal))
                 && Uri.TryCreate(value, UriKind.Absolute, out Uri? uri)
                 && uri.Scheme is "http" or "https");
     }
@@ -293,7 +295,8 @@ public sealed partial class BrokerPolicyInspector : IBrokerPolicyInspector
         }
 
         if (ex.StatusCode is 401 or 403
-            || ex.BrokerError?.Code is ErrorCode.Unauthorized or ErrorCode.Forbidden)
+            || ex.BrokerError?.Code is ErrorCode.Unauthorized or ErrorCode.Forbidden
+            || ex.InnerException is UnauthorizedAccessException)
         {
             return BrokerPolicyInspectionStatus.AccessDenied;
         }

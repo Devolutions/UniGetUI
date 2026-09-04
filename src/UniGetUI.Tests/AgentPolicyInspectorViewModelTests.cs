@@ -1,3 +1,4 @@
+using Avalonia.Automation;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Model;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
@@ -15,8 +16,10 @@ public class AgentPolicyInspectorViewModelTests
     {
         PolicyResponse response = BuildFullResponse();
         string json = PolicySerializer.Serialize(response.Policy);
+        (string? Message, AutomationLiveSetting LiveSetting)? announcement = null;
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(BrokerPolicyInspectionStatus.Connected, response, json)));
+            new StubInspector(new(BrokerPolicyInspectionStatus.Connected, response, json)),
+            (message, liveSetting) => announcement = (message, liveSetting));
 
         await viewModel.LoadAsync();
 
@@ -28,6 +31,8 @@ public class AgentPolicyInspectorViewModelTests
         Assert.Equal(13, viewModel.Rules[0].ConstraintRows.Count);
         Assert.Contains(viewModel.MetadataRows, row => row.Label == "Server version" && row.Value == "2026.8-tests");
         Assert.Contains(viewModel.EnforcementRows, row => row.Label == "Default decision" && row.Value == "Deny");
+        Assert.Equal(AutomationLiveSetting.Polite, announcement?.LiveSetting);
+        Assert.Contains("Connected to Devolutions Agent", announcement?.Message);
     }
 
     [Fact]
@@ -108,23 +113,46 @@ public class AgentPolicyInspectorViewModelTests
     }
 
     [Theory]
-    [InlineData(BrokerPolicyInspectionStatus.AgentUnavailable, "Devolutions Agent is unavailable")]
-    [InlineData(BrokerPolicyInspectionStatus.Unsupported, "Policy inspection is unsupported")]
-    [InlineData(BrokerPolicyInspectionStatus.AccessDenied, "Access to the active policy was denied")]
-    [InlineData(BrokerPolicyInspectionStatus.PolicyUnavailable, "The active policy is unavailable")]
-    [InlineData(BrokerPolicyInspectionStatus.InvalidResponse, "The policy response is invalid")]
-    [InlineData(BrokerPolicyInspectionStatus.UnsupportedPlatform, "Policy inspection is available on Windows only")]
+    [InlineData(
+        BrokerPolicyInspectionStatus.AgentUnavailable,
+        "Devolutions Agent is unavailable",
+        AutomationLiveSetting.Assertive)]
+    [InlineData(
+        BrokerPolicyInspectionStatus.Unsupported,
+        "Policy inspection is unsupported",
+        AutomationLiveSetting.Polite)]
+    [InlineData(
+        BrokerPolicyInspectionStatus.AccessDenied,
+        "Access to the active policy was denied",
+        AutomationLiveSetting.Assertive)]
+    [InlineData(
+        BrokerPolicyInspectionStatus.PolicyUnavailable,
+        "The active policy is unavailable",
+        AutomationLiveSetting.Assertive)]
+    [InlineData(
+        BrokerPolicyInspectionStatus.InvalidResponse,
+        "The policy response is invalid",
+        AutomationLiveSetting.Assertive)]
+    [InlineData(
+        BrokerPolicyInspectionStatus.UnsupportedPlatform,
+        "Policy inspection is available on Windows only",
+        AutomationLiveSetting.Polite)]
     public async Task LoadAsync_PresentsFailureState(
         BrokerPolicyInspectionStatus status,
-        string expectedTitle)
+        string expectedTitle,
+        AutomationLiveSetting expectedLiveSetting)
     {
+        (string? Message, AutomationLiveSetting LiveSetting)? announcement = null;
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(status)));
+            new StubInspector(new(status)),
+            (message, liveSetting) => announcement = (message, liveSetting));
 
         await viewModel.LoadAsync();
 
         Assert.False(viewModel.HasPolicy);
         Assert.Equal(expectedTitle, viewModel.Status.Title);
+        Assert.Equal(expectedLiveSetting, announcement?.LiveSetting);
+        Assert.Contains(expectedTitle, announcement?.Message);
     }
 
     [Fact]

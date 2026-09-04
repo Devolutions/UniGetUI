@@ -106,6 +106,20 @@ public class BrokerPolicyInspectorTests
         Assert.Equal(BrokerPolicyInspectionStatus.AgentUnavailable, result.Status);
     }
 
+    [Fact]
+    public async Task InspectAsync_ClassifiesNamedPipePermissionFailureAsAccessDenied()
+    {
+        var exception = new BrokerClientException(
+            BrokerClientErrorKind.BrokerUnavailable,
+            "denied",
+            innerException: new UnauthorizedAccessException());
+        var inspector = CreateInspector(new FakeTransport(exception: exception));
+
+        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
+
+        Assert.Equal(BrokerPolicyInspectionStatus.AccessDenied, result.Status);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("{")]
@@ -384,6 +398,8 @@ public class BrokerPolicyInspectorTests
         yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Id"] = "invalid id")];
         yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Publisher"] = "")];
         yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Revision"] = 0)];
+        yield return [WithSemanticMutation(
+            root => root["Policy"]!["Metadata"]!["SupportUrl"] = "http:foo")];
         yield return [WithSemanticMutation(root => FirstRule(root)["Id"] = "")];
         yield return [WithSemanticMutation(root => FirstRule(root)["Priority"] = int.MaxValue + 1u)];
         yield return [WithSemanticMutation(root => FirstRule(root)["Match"] = new JsonObject())];

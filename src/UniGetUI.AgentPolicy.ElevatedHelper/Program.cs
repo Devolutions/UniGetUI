@@ -184,7 +184,9 @@ internal static class Program
         // flushed, under the same bounded, cancellable token as every other stage. Closing the
         // handle afterwards is enough: a synchronous drain would block on the reader with no
         // timeout and no cancellation, which is exactly the unbounded hang this design forbids.
-        await PolicyElevationFrame.WriteResponseAsync(pipe, response, cancellationToken).ConfigureAwait(false);
+        using var responseWrite =
+            new CancellationTokenSource(PolicyElevationProtocol.ResponseWriteTimeout);
+        await PolicyElevationFrame.WriteResponseAsync(pipe, response, responseWrite.Token).ConfigureAwait(false);
 
         return PolicyElevationProtocol.ExitSuccess;
     }

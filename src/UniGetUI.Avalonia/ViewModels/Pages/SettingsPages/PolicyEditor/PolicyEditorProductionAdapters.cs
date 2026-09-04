@@ -83,15 +83,19 @@ public sealed class BrokerPolicyEditorValidationClient : IPolicyValidationClient
 public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
 {
     private readonly IPolicyWriteElevator _elevator;
+    private readonly IBrokerPolicyManagementService _managementService;
 
     public WindowsPolicyEditorWriteClient()
-        : this(CreateDefaultElevator())
+        : this(CreateDefaultElevator(), new BrokerPolicyManagementService())
     {
     }
 
-    public WindowsPolicyEditorWriteClient(IPolicyWriteElevator elevator)
+    public WindowsPolicyEditorWriteClient(
+        IPolicyWriteElevator elevator,
+        IBrokerPolicyManagementService? managementService = null)
     {
         _elevator = elevator;
+        _managementService = managementService ?? new BrokerPolicyManagementService();
     }
 
     private static IPolicyWriteElevator CreateDefaultElevator()
@@ -124,9 +128,46 @@ public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
             throw;
         }
 
-        if (result.Succeeded && result.Response is not null)
+        if (result.Outcome is PolicyElevationOutcome.Cancelled)
         {
-            return PolicyWriteOutcome.Success(result.Response);
+            if (cancellationToken.IsCancellationRequested)
+                throw new OperationCanceledException(cancellationToken);
+
+            Logger.Warn(
+                "[PolicyEditor] The elevation path reported cancellation without caller cancellation.");
+            return PolicyWriteOutcome.Failure(PolicyWriteFailureKind.ProtocolFailed);
+        }
+
+        if (result.Succeeded && result.CommittedStoreToken is not null)
+        {
+            BrokerPolicyManagementResult refreshed =
+                await _managementService.GetManagementAsync(CancellationToken.None).ConfigureAwait(false);
+            if (refreshed is
+                {
+                    Status: BrokerPolicyManagementStatus.Retrieved,
+                    Snapshot:
+                    {
+                        State: PolicyManagementState.Active,
+                        Policy: not null,
+                    } snapshot,
+                })
+            {
+                var response = new PolicyReplacementResponse
+                {
+                    Policy = snapshot.Policy,
+                    Management = snapshot,
+                };
+                return PolicyWriteOutcome.Success(
+                    response,
+                    savedThenSuperseded: !string.Equals(
+                        result.CommittedStoreToken,
+                        snapshot.StoreToken,
+                        StringComparison.Ordinal));
+            }
+
+            Logger.Warn(
+                "[PolicyEditor] The Agent committed the policy, but management state could not be refreshed.");
+            return PolicyWriteOutcome.Failure(PolicyWriteFailureKind.WriteResultUnknown);
         }
 
         if (result.ErrorMessage is not null)
@@ -134,7 +175,15 @@ public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
             Logger.Warn($"[PolicyEditor] Elevated policy write did not succeed ({result.Outcome}): {result.ErrorMessage}");
         }
 
-        return PolicyWriteOutcome.Failure(MapFailureKind(result.Outcome), result.Error);
+        ErrorCode? errorCode = TryParseErrorCode(result.BrokerErrorCode);
+        ErrorResponse? error = errorCode is null
+            ? null
+            : new ErrorResponse { Code = errorCode.Value };
+        PolicyEditorRetryDecision? conflict = BuildConflictDecision(request, result, errorCode);
+        return PolicyWriteOutcome.Failure(
+            MapFailureKind(result.Outcome),
+            error,
+            conflict);
     }
 
     private static PolicyWriteFailureKind MapFailureKind(PolicyElevationOutcome outcome) => outcome switch
@@ -154,9 +203,44 @@ public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
         PolicyElevationOutcome.BrokerRejected
             or PolicyElevationOutcome.BrokerUnavailable
             or PolicyElevationOutcome.BrokerInvalidResponse => PolicyWriteFailureKind.BrokerRejected,
-        PolicyElevationOutcome.Cancelled => PolicyWriteFailureKind.LaunchFailed,
+        PolicyElevationOutcome.WriteResultUnknown => PolicyWriteFailureKind.WriteResultUnknown,
+        PolicyElevationOutcome.Cancelled => PolicyWriteFailureKind.ProtocolFailed,
         _ => PolicyWriteFailureKind.HelperFailed,
     };
+
+    private static ErrorCode? TryParseErrorCode(string? value) =>
+        Enum.TryParse(value, ignoreCase: false, out ErrorCode parsed)
+        && Enum.IsDefined(parsed)
+            ? parsed
+            : null;
+
+    private static PolicyEditorRetryDecision? BuildConflictDecision(
+        PolicyEditorWriteRequest request,
+        PolicyElevationResult result,
+        ErrorCode? errorCode)
+    {
+        if (errorCode != ErrorCode.StalePolicyStoreToken
+            || result.ConflictStoreToken is null
+            || result.ConflictState is null)
+        {
+            return null;
+        }
+
+        PolicyManagementState state = result.ConflictState.Value switch
+        {
+            PolicyElevationManagementState.Active => PolicyManagementState.Active,
+            PolicyElevationManagementState.Missing => PolicyManagementState.Missing,
+            PolicyElevationManagementState.Invalid => PolicyManagementState.Invalid,
+            _ => throw new InvalidDataException("The helper returned an invalid conflict state."),
+        };
+        string draftId = request.Draft.GetProperty("Metadata").GetProperty("Id").GetString()
+            ?? throw new InvalidDataException("The validated draft did not carry an identity.");
+        return PolicyEditorRetryResolver.Resolve(
+            draftId,
+            state,
+            result.ConflictStoreToken,
+            result.ConflictPolicyId);
+    }
 
     private static PolicyElevationOperation MapOperation(PolicyReplacementOperation operation) => operation switch
     {

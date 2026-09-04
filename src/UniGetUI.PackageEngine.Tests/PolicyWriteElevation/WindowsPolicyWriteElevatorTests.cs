@@ -3,7 +3,6 @@ using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json;
 using Devolutions.Now.Policy.Api;
-using Devolutions.Now.Policy.Model;
 using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation.Interop;
 
@@ -19,70 +18,6 @@ public class WindowsPolicyWriteElevatorTests
 
     private static readonly PolicyElevationTimeouts FastTimeouts =
         new(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(5));
-
-    private static JsonElement BuildReplacementPayload()
-    {
-        var policy = new PolicyDocument
-        {
-            Metadata = new PolicyMetadata
-            {
-                Id = "policy-id",
-                Publisher = "publisher",
-                Revision = 1,
-                PublishedAt = DateTimeOffset.Parse("2026-08-29T00:00:00Z"),
-            },
-            Enforcement = new PolicyEnforcement
-            {
-                DefaultDecision = Devolutions.Now.Policy.Model.Decision.Deny,
-                RulePrecedence = RulePrecedence.PriorityThenDeny,
-            },
-            Rules = [],
-        };
-        var canonicalDraft = new PolicyDraftDocument
-        {
-            Schema = Devolutions.Now.Policy.Model.SchemaUris.PolicyDraft,
-            Metadata = new PolicyDraftMetadata
-            {
-                Id = "policy-id",
-                Publisher = "publisher",
-            },
-            Enforcement = new PolicyEnforcement
-            {
-                DefaultDecision = Devolutions.Now.Policy.Model.Decision.Deny,
-                RulePrecedence = RulePrecedence.PriorityThenDeny,
-            },
-            Rules = [],
-        };
-        var response = new PolicyReplacementResponse
-        {
-            Server = new ServerContext
-            {
-                ServerVersion = "2026.8.29",
-                Transport = Transport.HttpNamedPipe,
-            },
-            Policy = policy,
-            Validation = new PolicyValidationResult
-            {
-                ValidatorVersion = "2026.8.29",
-                IsValid = true,
-                CanonicalDraft = canonicalDraft,
-                ValidationReceipt = "new-receipt",
-                Findings = [],
-            },
-            Management = new PolicyManagementSnapshot
-            {
-                State = PolicyManagementState.Active,
-                ConfiguredPath = @"C:\ProgramData\Devolutions\PackageBroker\package-broker-policy.json",
-                StoreToken = "new-token",
-                Source = PolicyConfigurationSource.DefaultPath,
-                WriteCapability = PolicyWriteCapability.Writable,
-                ElevationRequired = true,
-                Policy = policy,
-            },
-        };
-        using JsonDocument document = JsonDocument.Parse(BrokerSerializer.Serialize(response));
-        return document.RootElement.Clone();
-    }
 
     private static PolicyElevationWriteRequest BuildRequest() => new(
         JsonDocument.Parse(DraftJson).RootElement)
@@ -122,7 +57,7 @@ public class WindowsPolicyWriteElevatorTests
     }
 
     [Fact]
-    public async Task SuccessfulExchange_ReturnsReplacedAndRelaysThePayload()
+    public async Task SuccessfulExchange_ReturnsBoundedCommittedToken()
     {
         PolicyElevationRequestMessage? observed = null;
 
@@ -136,9 +71,8 @@ public class WindowsPolicyWriteElevatorTests
                 new PolicyElevationResponseMessage
                 {
                     RequestId = observed.RequestId,
-                    Outcome = PolicyElevationResponseStatus.Replaced,
-                    BrokerStatusCode = 200,
-                    Payload = BuildReplacementPayload(),
+                    Disposition = PolicyElevationDisposition.Committed,
+                    CommittedStoreToken = "new-token",
                 },
                 CancellationToken.None);
         });
@@ -151,8 +85,9 @@ public class WindowsPolicyWriteElevatorTests
 
         Assert.Equal(PolicyElevationOutcome.Replaced, result.Outcome);
         Assert.True(result.Succeeded);
-        Assert.Equal(200, result.BrokerStatusCode);
-        Assert.Equal("new-token", result.Response!.Management.StoreToken);
+        Assert.Equal("new-token", result.CommittedStoreToken);
+        Assert.Null(result.Response);
+        Assert.Null(result.Payload);
         Assert.True(authenticator.ObservedConnectedPipe);
         AssertDraftPreserved(result);
 
@@ -179,10 +114,9 @@ public class WindowsPolicyWriteElevatorTests
                 new PolicyElevationResponseMessage
                 {
                     RequestId = request.RequestId,
-                    Outcome = PolicyElevationResponseStatus.BrokerRejected,
+                    Disposition = PolicyElevationDisposition.Rejected,
                     BrokerStatusCode = 409,
                     BrokerErrorCode = "StoreTokenMismatch",
-                    Message = "The policy store changed.",
                 },
                 CancellationToken.None);
         });
@@ -356,7 +290,7 @@ public class WindowsPolicyWriteElevatorTests
     }
 
     [Fact]
-    public async Task OversizedResponse_IsReportedAsPayloadTooLarge()
+    public async Task OversizedResponseAfterDispatch_IsReportedAsUnknown()
     {
         FakeHelperLauncher launcher = FakeHelperLauncher.Running(async (arguments, _) =>
         {
@@ -372,12 +306,12 @@ public class WindowsPolicyWriteElevatorTests
         PolicyElevationResult result = await Build(launcher)
             .ReplacePolicyAsync(BuildRequest(), CancellationToken.None);
 
-        Assert.Equal(PolicyElevationOutcome.PayloadTooLarge, result.Outcome);
+        Assert.Equal(PolicyElevationOutcome.WriteResultUnknown, result.Outcome);
         AssertDraftPreserved(result);
     }
 
     [Fact]
-    public async Task MalformedResponse_IsReportedAsMalformed()
+    public async Task MalformedResponseAfterDispatch_IsReportedAsUnknown()
     {
         FakeHelperLauncher launcher = FakeHelperLauncher.Running(async (arguments, _) =>
         {
@@ -396,12 +330,12 @@ public class WindowsPolicyWriteElevatorTests
         PolicyElevationResult result = await Build(launcher)
             .ReplacePolicyAsync(BuildRequest(), CancellationToken.None);
 
-        Assert.Equal(PolicyElevationOutcome.MalformedResponse, result.Outcome);
+        Assert.Equal(PolicyElevationOutcome.WriteResultUnknown, result.Outcome);
         AssertDraftPreserved(result);
     }
 
     [Fact]
-    public async Task ResponseForAnotherRequestId_IsReportedAsMalformed()
+    public async Task ResponseForAnotherRequestId_IsReportedAsUnknown()
     {
         FakeHelperLauncher launcher = FakeHelperLauncher.Running(async (arguments, _) =>
         {
@@ -413,7 +347,8 @@ public class WindowsPolicyWriteElevatorTests
                 new PolicyElevationResponseMessage
                 {
                     RequestId = new string('b', PolicyElevationProtocol.RequestIdCharacters),
-                    Outcome = PolicyElevationResponseStatus.Replaced,
+                    Disposition = PolicyElevationDisposition.Committed,
+                    CommittedStoreToken = "new-token",
                 },
                 CancellationToken.None);
         });
@@ -421,12 +356,12 @@ public class WindowsPolicyWriteElevatorTests
         PolicyElevationResult result = await Build(launcher)
             .ReplacePolicyAsync(BuildRequest(), CancellationToken.None);
 
-        Assert.Equal(PolicyElevationOutcome.MalformedResponse, result.Outcome);
+        Assert.Equal(PolicyElevationOutcome.WriteResultUnknown, result.Outcome);
         AssertDraftPreserved(result);
     }
 
     [Fact]
-    public async Task ClosedConnectionWithoutAnswer_IsReportedAsConnectionClosed()
+    public async Task ClosedConnectionAfterDispatch_IsReportedAsUnknown()
     {
         FakeHelperLauncher launcher = FakeHelperLauncher.Running(async (arguments, _) =>
         {
@@ -437,12 +372,12 @@ public class WindowsPolicyWriteElevatorTests
         PolicyElevationResult result = await Build(launcher)
             .ReplacePolicyAsync(BuildRequest(), CancellationToken.None);
 
-        Assert.Equal(PolicyElevationOutcome.ConnectionClosed, result.Outcome);
+        Assert.Equal(PolicyElevationOutcome.WriteResultUnknown, result.Outcome);
         AssertDraftPreserved(result);
     }
 
     [Fact]
-    public async Task NonZeroExitAfterAnswering_IsReportedAsHelperCrashed()
+    public async Task NonZeroExitAfterCommittedAnswer_DoesNotOverrideCommit()
     {
         FakeHelperLauncher launcher = FakeHelperLauncher.Running(async (arguments, process) =>
         {
@@ -455,8 +390,8 @@ public class WindowsPolicyWriteElevatorTests
                 new PolicyElevationResponseMessage
                 {
                     RequestId = request.RequestId,
-                    Outcome = PolicyElevationResponseStatus.Replaced,
-                    Payload = BuildReplacementPayload(),
+                    Disposition = PolicyElevationDisposition.Committed,
+                    CommittedStoreToken = "new-token",
                 },
                 CancellationToken.None);
 
@@ -466,8 +401,59 @@ public class WindowsPolicyWriteElevatorTests
         PolicyElevationResult result = await Build(launcher)
             .ReplacePolicyAsync(BuildRequest(), CancellationToken.None);
 
-        Assert.Equal(PolicyElevationOutcome.HelperCrashed, result.Outcome);
+        Assert.Equal(PolicyElevationOutcome.Replaced, result.Outcome);
         Assert.Equal(PolicyElevationProtocol.ExitUnexpectedFailure, result.HelperExitCode);
+        AssertDraftPreserved(result);
+    }
+
+    [Theory]
+    [InlineData(PolicyElevationDisposition.Committed, PolicyElevationOutcome.Replaced)]
+    [InlineData(PolicyElevationDisposition.Rejected, PolicyElevationOutcome.BrokerRejected)]
+    public async Task CallerCancellationDuringExitWait_DoesNotOverrideAuthenticatedAcknowledgement(
+        PolicyElevationDisposition disposition,
+        PolicyElevationOutcome expectedOutcome)
+    {
+        using var cancellation = new CancellationTokenSource();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var responseWritten = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        FakeHelperLauncher launcher = FakeHelperLauncher.Running(async (arguments, _) =>
+        {
+            await using var client = await FakeHelperClient.ConnectAsync(arguments.PipeName);
+            PolicyElevationRequestMessage request =
+                await PolicyElevationFrame.ReadRequestAsync(client, CancellationToken.None);
+            await PolicyElevationFrame.WriteResponseAsync(
+                client,
+                new PolicyElevationResponseMessage
+                {
+                    RequestId = request.RequestId,
+                    Disposition = disposition,
+                    CommittedStoreToken = disposition == PolicyElevationDisposition.Committed
+                        ? "new-token"
+                        : null,
+                    BrokerStatusCode = disposition == PolicyElevationDisposition.Rejected
+                        ? 409
+                        : null,
+                    BrokerErrorCode = disposition == PolicyElevationDisposition.Rejected
+                        ? ErrorCode.WarningConfirmationRequired.ToString()
+                        : null,
+                },
+                CancellationToken.None);
+            responseWritten.TrySetResult();
+            await release.Task;
+        });
+
+        Task<PolicyElevationResult> pending = Build(launcher)
+            .ReplacePolicyAsync(BuildRequest(), cancellation.Token);
+        await responseWritten.Task.WaitAsync(TimeSpan.FromSeconds(20));
+        await launcher.LastProcess!.SecondExitWaitStarted.WaitAsync(TimeSpan.FromSeconds(20));
+        await cancellation.CancelAsync();
+        release.TrySetResult();
+
+        PolicyElevationResult result = await pending;
+
+        Assert.Equal(expectedOutcome, result.Outcome);
+        Assert.Equal(PolicyElevationProtocol.ExitSuccess, result.HelperExitCode);
         AssertDraftPreserved(result);
     }
 
@@ -526,7 +512,7 @@ public class WindowsPolicyWriteElevatorTests
         PolicyElevationResult result = await elevator.ReplacePolicyAsync(BuildRequest(), CancellationToken.None);
         release.TrySetResult(true);
 
-        Assert.Equal(PolicyElevationOutcome.TimedOut, result.Outcome);
+        Assert.Equal(PolicyElevationOutcome.WriteResultUnknown, result.Outcome);
         AssertDraftPreserved(result);
     }
 
@@ -553,7 +539,7 @@ public class WindowsPolicyWriteElevatorTests
         PolicyElevationResult result = await pending;
         release.TrySetResult(true);
 
-        Assert.Equal(PolicyElevationOutcome.Cancelled, result.Outcome);
+        Assert.Equal(PolicyElevationOutcome.WriteResultUnknown, result.Outcome);
         AssertDraftPreserved(result);
     }
 
@@ -585,8 +571,8 @@ public class WindowsPolicyWriteElevatorTests
                 new PolicyElevationResponseMessage
                 {
                     RequestId = request.RequestId,
-                    Outcome = PolicyElevationResponseStatus.Replaced,
-                    Payload = BuildReplacementPayload(),
+                    Disposition = PolicyElevationDisposition.Committed,
+                    CommittedStoreToken = "new-token",
                 },
                 CancellationToken.None);
         });

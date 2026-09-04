@@ -316,10 +316,31 @@ public class PolicyEditorStructuredInputGuardTests
             Assert.True(viewModel.SaveCommand.CanExecute(null));
             Assert.True(viewModel.SwitchToRawCommand.CanExecute(null));
         }
+
         finally
         {
             rule.Dispose();
         }
+    }
+
+    [Fact]
+    public void PriorityText_IsLimitedToTheCommittedRevisionCompatibleInt32Range()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+
+        rule.PriorityText = int.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        Assert.Equal((uint)int.MaxValue, rule.Rule.Priority);
+        Assert.Null(rule.PriorityError);
+
+        rule.PriorityText = ((uint)int.MaxValue + 1).ToString(
+            System.Globalization.CultureInfo.InvariantCulture);
+
+        Assert.Equal((uint)int.MaxValue, rule.Rule.Priority);
+        Assert.NotNull(rule.PriorityError);
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
     }
 
     [Fact]
@@ -407,6 +428,7 @@ public class PolicyEditorStructuredInputGuardTests
         await pending;
 
         Assert.False(viewModel.LastSaveSucceeded);
+        Assert.Equal(PolicyWriteFailureKind.None, viewModel.LastWriteFailureKind);
         Assert.Equal("token-missing", viewModel.Session.OriginManagement.StoreToken);
     }
 

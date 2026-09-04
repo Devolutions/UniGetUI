@@ -9,84 +9,109 @@ namespace UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 /// </summary>
 public sealed class PolicyElevationRequestMessage
 {
+    [JsonRequired]
     [JsonPropertyName("protocolVersion")]
     public string ProtocolVersion { get; set; } = PolicyElevationProtocol.Version;
 
+    [JsonRequired]
     [JsonPropertyName("requestId")]
     public string RequestId { get; set; } = string.Empty;
 
+    [JsonRequired]
     [JsonPropertyName("operation")]
     public PolicyElevationOperation Operation { get; set; }
 
+    [JsonRequired]
     [JsonPropertyName("conflictHandling")]
     public PolicyElevationConflictHandling ConflictHandling { get; set; }
 
+    [JsonRequired]
     [JsonPropertyName("expectedStoreToken")]
     public string ExpectedStoreToken { get; set; } = string.Empty;
 
+    [JsonRequired]
     [JsonPropertyName("validationReceipt")]
     public string ValidationReceipt { get; set; } = string.Empty;
 
+    [JsonRequired]
     [JsonPropertyName("warningsAcknowledged")]
     public bool WarningsAcknowledged { get; set; }
 
+    [JsonRequired]
     [JsonPropertyName("draft")]
     public JsonElement Draft { get; set; }
 }
 
 /// <summary>
-/// Result classification produced by the elevated helper. Mapped onto
+/// Bounded write disposition produced by the elevated helper. Mapped onto
 /// <see cref="PolicyElevationOutcome"/> by the host.
 /// </summary>
-[JsonConverter(typeof(PolicyElevationResponseStatusJsonConverter))]
-public enum PolicyElevationResponseStatus
+[JsonConverter(typeof(PolicyElevationDispositionJsonConverter))]
+public enum PolicyElevationDisposition
 {
+    /// <summary>No valid wire disposition was supplied.</summary>
+    Invalid = 0,
+
     /// <summary>The broker accepted and persisted the replacement.</summary>
-    Replaced = 0,
+    Committed = 1,
 
-    /// <summary>The broker rejected the request (validation, conflict, permissions, …).</summary>
-    BrokerRejected = 1,
+    /// <summary>The broker definitively rejected the request without persisting it.</summary>
+    Rejected = 2,
 
-    /// <summary>The broker could not be reached or timed out.</summary>
-    BrokerUnavailable = 2,
-
-    /// <summary>The broker answered with something the helper could not interpret.</summary>
-    BrokerInvalidResponse = 3,
-
-    /// <summary>The helper refused the request before contacting the broker.</summary>
-    HelperRejected = 4,
+    /// <summary>The request may have been persisted, but the helper could not prove the result.</summary>
+    Unknown = 3,
 }
 
 /// <summary>
 /// The single response the helper writes back before closing the connection.
-/// <c>payload</c> relays the broker answer verbatim and is bounded by the shared
-/// policy-management body budget.
+/// It deliberately carries no policy, validation findings, broker message, or raw broker payload:
+/// those are unbounded and could otherwise turn a committed write into a protocol failure.
 /// </summary>
 public sealed class PolicyElevationResponseMessage
 {
+    [JsonRequired]
     [JsonPropertyName("protocolVersion")]
     public string ProtocolVersion { get; set; } = PolicyElevationProtocol.Version;
 
+    [JsonRequired]
     [JsonPropertyName("requestId")]
     public string RequestId { get; set; } = string.Empty;
 
-    [JsonPropertyName("outcome")]
-    public PolicyElevationResponseStatus Outcome { get; set; }
+    [JsonRequired]
+    [JsonPropertyName("disposition")]
+    public PolicyElevationDisposition Disposition { get; set; }
 
-    [JsonPropertyName("win32ErrorCode")]
-    public int? Win32ErrorCode { get; set; }
-
+    [JsonRequired]
     [JsonPropertyName("brokerStatusCode")]
     public int? BrokerStatusCode { get; set; }
 
+    [JsonRequired]
     [JsonPropertyName("brokerErrorCode")]
     public string? BrokerErrorCode { get; set; }
 
-    [JsonPropertyName("message")]
-    public string? Message { get; set; }
+    [JsonRequired]
+    [JsonPropertyName("committedStoreToken")]
+    public string? CommittedStoreToken { get; set; }
 
-    [JsonPropertyName("payload")]
-    public JsonElement? Payload { get; set; }
+    [JsonRequired]
+    [JsonPropertyName("conflictStoreToken")]
+    public string? ConflictStoreToken { get; set; }
+
+    [JsonRequired]
+    [JsonPropertyName("conflictState")]
+    public PolicyElevationManagementState? ConflictState { get; set; }
+
+    [JsonRequired]
+    [JsonPropertyName("conflictPolicyId")]
+    public string? ConflictPolicyId { get; set; }
+}
+
+[JsonConverter(typeof(PolicyElevationManagementStateJsonConverter))]
+public enum PolicyElevationManagementState
+{
+    Active = 0,
+    Missing = 1,
+    Invalid = 2,
 }
 [JsonConverter(typeof(PolicyElevationOperationJsonConverter))]
 public enum PolicyElevationOperation

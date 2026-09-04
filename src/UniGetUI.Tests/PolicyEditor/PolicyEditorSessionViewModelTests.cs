@@ -1,6 +1,9 @@
+using System.Text.Json.Nodes;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Model;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
+using UniGetUI.PackageEngine.AgentBroker.PolicyManagement;
+using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 
 namespace UniGetUI.Tests.PolicyEditor;
 
@@ -193,12 +196,63 @@ public class PolicyEditorSessionViewModelTests
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, _) = CreateForCreateSession();
         vm.SwitchToRawCommand.Execute(null);
         vm.RawBuffer = "{ not valid json";
+        await vm.WaitForRawSyntaxAnalysisAsync();
 
         await vm.SwitchToStructuredCommand.ExecuteAsync(null);
 
         Assert.NotNull(vm.SyntaxError);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.InvalidJson, vm.SyntaxError.Kind);
+        Assert.Equal("The document is not valid JSON", vm.SyntaxErrorTitle);
         Assert.Equal(PolicyEditorMode.Raw, vm.Session.Mode);
         Assert.Equal(0, validation.CallCount); // a local syntax failure never reaches authoritative validation
+    }
+
+    [Fact]
+    public async Task RawSyntaxAnalysis_OnInvalidDraft_UsesDistinctPolicyDraftTitle()
+    {
+        (PolicyEditorSessionViewModel vm, _, _, _) = CreateForCreateSession();
+        vm.SwitchToRawCommand.Execute(null);
+        JsonNode root = JsonNode.Parse(vm.RawBuffer)!;
+        root["Rules"] = "not-an-array";
+
+        vm.RawBuffer = root.ToJsonString();
+        await vm.WaitForRawSyntaxAnalysisAsync();
+
+        Assert.Equal(PolicyEditorSyntaxErrorKind.InvalidPolicyDraft, vm.SyntaxError!.Kind);
+        Assert.Equal("The document is not a valid policy draft", vm.SyntaxErrorTitle);
+    }
+
+    [Fact]
+    public async Task RawSyntaxAnalysis_CancelsStaleWorkAndAppliesOnlyTheLatestBuffer()
+    {
+        (PolicyEditorSessionViewModel vm, _, _, _) = CreateForCreateSession();
+        vm.SwitchToRawCommand.Execute(null);
+        vm.RawBuffer = "{ not valid json";
+        vm.RawBuffer = PolicyEditorRawSyntax.ToCanonicalRaw(vm.Draft);
+
+        await vm.WaitForRawSyntaxAnalysisAsync();
+
+        Assert.Null(vm.SyntaxError);
+        Assert.False(vm.IsRawSyntaxPending);
+        Assert.True(vm.SwitchToStructuredCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task RawSyntaxAnalysis_PendingStateBlocksValidationAndSave()
+    {
+        (PolicyEditorSessionViewModel vm, _, _, _) = CreateForCreateSession();
+        vm.SwitchToRawCommand.Execute(null);
+        vm.RawBuffer = PolicyEditorRawSyntax.ToCanonicalRaw(vm.Draft) + " ";
+
+        Assert.True(vm.IsRawSyntaxPending);
+        Assert.False(vm.ValidateCommand.CanExecute(null));
+        Assert.False(vm.SaveCommand.CanExecute(null));
+        Assert.False(vm.SwitchToStructuredCommand.CanExecute(null));
+
+        await vm.WaitForRawSyntaxAnalysisAsync();
+
+        Assert.False(vm.IsRawSyntaxPending);
+        Assert.True(vm.ValidateCommand.CanExecute(null));
     }
 
     [Fact]
@@ -435,6 +489,164 @@ public class PolicyEditorSessionViewModelTests
     }
 
     [Fact]
+    public async Task SaveCommand_UnknownWriteResult_PreservesDraftAndBlocksRetryUntilRefresh()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, FakeWriteClient writer) =
+            CreateForUpdateSession("id-1");
+        vm.Session.Draft.Metadata.Description = "unsaved change";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+        writer.NextOutcome = PolicyWriteOutcome.Failure(PolicyWriteFailureKind.WriteResultUnknown);
+
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        Assert.False(vm.LastSaveSucceeded);
+        Assert.True(vm.RequiresManagementRefresh);
+        Assert.Equal(PolicyWriteFailureKind.WriteResultUnknown, vm.LastWriteFailureKind);
+        Assert.Equal("unsaved change", vm.Session.Draft.Metadata.Description);
+        Assert.True(vm.IsDirty);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+        Assert.False(vm.ValidateCommand.CanExecute(null));
+        Assert.False(vm.ConfirmOverwriteCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task SaveCommand_CancelAfterDispatchedAuthenticatedCommit_AppliesAuthoritativeSuccess()
+    {
+        PolicyManagementSnapshot initial = PolicyEditorTestFixtures.BuildActiveManagement(
+            PolicyEditorTestFixtures.BuildDocument(id: "id-1"),
+            "token-1");
+        var validation = new FakeValidationClient();
+        PolicyDocument authoritative = PolicyEditorTestFixtures.BuildDocument(id: "id-1");
+        authoritative.Metadata.Description = "committed change";
+        PolicyManagementSnapshot refreshed = PolicyEditorTestFixtures.BuildActiveManagement(
+            authoritative,
+            "committed-token");
+        var management = new GatedManagementService(
+            new(BrokerPolicyManagementStatus.Retrieved, refreshed));
+        var writer = new WindowsPolicyEditorWriteClient(
+            new CommittedElevator("committed-token"),
+            management);
+        using var vm = new PolicyEditorSessionViewModel(
+            PolicyEditorSession.StartUpdate(initial),
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        vm.Session.Draft.Metadata.Description = "committed change";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+
+        Task save = vm.SaveCommand.ExecuteAsync(null);
+        await management.RefreshStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        vm.SaveCommand.Cancel();
+        management.RefreshGate.SetResult();
+        await save;
+
+        Assert.True(vm.LastSaveSucceeded);
+        Assert.False(vm.IsDirty);
+        Assert.False(vm.RequiresManagementRefresh);
+        Assert.Equal("committed-token", vm.Session.OriginManagement.StoreToken);
+        Assert.Equal("committed change", vm.Session.Draft.Metadata.Description);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task SaveCommand_RealAdapterPreDispatchCancellation_LeavesDraftRetryableWithoutFailure()
+    {
+        PolicyManagementSnapshot initial = PolicyEditorTestFixtures.BuildActiveManagement(
+            PolicyEditorTestFixtures.BuildDocument(id: "id-1"),
+            "token-1");
+        var validation = new FakeValidationClient();
+        var elevator = new GatedCancelledElevator();
+        var writer = new WindowsPolicyEditorWriteClient(
+            elevator,
+            new FailIfCalledManagementService());
+        using var vm = new PolicyEditorSessionViewModel(
+            PolicyEditorSession.StartUpdate(initial),
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        vm.Session.Draft.Metadata.Description = "keep this draft";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+
+        Task save = vm.SaveCommand.ExecuteAsync(null);
+        await elevator.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        vm.SaveCommand.Cancel();
+        elevator.Release.SetResult();
+        try
+        {
+            await save;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
+        Assert.False(vm.LastSaveSucceeded);
+        Assert.Equal(PolicyWriteFailureKind.None, vm.LastWriteFailureKind);
+        Assert.Null(vm.LastErrorCode);
+        Assert.Equal("", vm.StatusMessage);
+        Assert.Equal("keep this draft", vm.Session.Draft.Metadata.Description);
+        Assert.True(vm.IsDirty);
+        Assert.False(vm.RequiresManagementRefresh);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task SaveCommand_CancelAfterDispatchedAuthenticatedRejection_AppliesRejection()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, FakeWriteClient writer) =
+            CreateForUpdateSession("id-1");
+        vm.Session.Draft.Metadata.Description = "preserve me";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+        writer.Gate = new TaskCompletionSource();
+        writer.NextOutcome = PolicyWriteOutcome.Failure(
+            PolicyWriteFailureKind.BrokerRejected,
+            new ErrorResponse { Code = ErrorCode.InvalidPolicy });
+
+        Task save = vm.SaveCommand.ExecuteAsync(null);
+        Assert.Equal(1, writer.CallCount);
+        vm.SaveCommand.Cancel();
+        writer.Gate.SetResult();
+        await save;
+
+        Assert.False(vm.LastSaveSucceeded);
+        Assert.Equal(PolicyWriteFailureKind.BrokerRejected, vm.LastWriteFailureKind);
+        Assert.Equal(ErrorCode.InvalidPolicy, vm.LastErrorCode);
+        Assert.Equal("preserve me", vm.Session.Draft.Metadata.Description);
+        Assert.True(vm.IsDirty);
+        Assert.False(vm.RequiresManagementRefresh);
+    }
+
+    [Fact]
+    public async Task SaveCommand_AuthenticatedRejectionForSupersededDraftGeneration_IsIgnored()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, FakeWriteClient writer) =
+            CreateForUpdateSession("id-1");
+        vm.Session.Draft.Metadata.Description = "submitted";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+        writer.Gate = new TaskCompletionSource();
+        writer.NextOutcome = PolicyWriteOutcome.Failure(
+            PolicyWriteFailureKind.BrokerRejected,
+            new ErrorResponse { Code = ErrorCode.InvalidPolicy });
+
+        Task save = vm.SaveCommand.ExecuteAsync(null);
+        Assert.Equal(1, writer.CallCount);
+        vm.Session.Draft.Metadata.Description = "newer generation";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        writer.Gate.SetResult();
+        await save;
+
+        Assert.False(vm.LastSaveSucceeded);
+        Assert.Equal(PolicyWriteFailureKind.None, vm.LastWriteFailureKind);
+        Assert.Null(vm.LastErrorCode);
+        Assert.Equal("newer generation", vm.Session.Draft.Metadata.Description);
+        Assert.True(vm.IsDirty);
+    }
+
+    [Fact]
     public async Task SaveCommand_WarningsPresent_RequiresAcknowledgement_DeclinedDoesNotWrite()
     {
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, FakeConfirmationPrompt prompt, FakeWriteClient writer) =
@@ -450,6 +662,43 @@ public class PolicyEditorSessionViewModelTests
         Assert.Equal(PolicyEditorConfirmationKind.Warnings, prompt.LastRequest!.Kind);
         Assert.Equal(0, writer.CallCount);
         Assert.False(vm.LastSaveSucceeded);
+    }
+
+    [Fact]
+    public async Task SaveCommand_WarningPromptUsesAuthoritativeCountBeyondDisplayedFindingLimit()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, FakeConfirmationPrompt prompt, _) =
+            CreateForUpdateSession();
+        List<PolicyFinding> warnings = Enumerable.Range(
+                0,
+                PolicyEditorFindingIndex.MaxDisplayedFindings + 7)
+            .Select(index => new PolicyFinding
+            {
+                Path = $"/Rules/{index}",
+                Severity = PolicyFindingSeverity.Warning,
+                Message = "warning",
+            })
+            .ToList();
+        validation.NextOutcome = new PolicyEditorValidationOutcome(
+            ValidResultFor(vm, findings: warnings),
+            BoundedFindings:
+            [
+                new PolicyValidationFinding(
+                    "/Rules/0",
+                    null,
+                    PolicyValidationSeverity.Warning,
+                    "warning"),
+            ],
+            OmittedFindingCount: warnings.Count - 1);
+        prompt.NextResult = false;
+
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(warnings.Count, prompt.LastRequest!.WarningCount);
+        Assert.Equal(2, prompt.LastRequest.Findings.Count);
+        Assert.Contains(
+            prompt.LastRequest.Findings,
+            finding => finding.Message.Contains("additional validation", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -547,6 +796,7 @@ public class PolicyEditorSessionViewModelTests
 
         Task firstSave = vm.SaveCommand.ExecuteAsync(null);
         vm.RawBuffer = "{";
+        await vm.WaitForRawSyntaxAnalysisAsync();
         writer.Gate.SetResult();
         await firstSave;
 
@@ -557,6 +807,7 @@ public class PolicyEditorSessionViewModelTests
 
         writer.Gate = null;
         vm.RawBuffer = PolicyEditorRawSyntax.ToCanonicalRaw(vm.Draft);
+        await vm.WaitForRawSyntaxAnalysisAsync();
         validation.NextOutcome = new PolicyEditorValidationOutcome(
             ValidResultFor(vm, receipt: "receipt-next-save"));
         writer.NextOutcome = PolicyWriteOutcome.Success(
@@ -568,6 +819,63 @@ public class PolicyEditorSessionViewModelTests
 
         Assert.Equal(PolicyReplacementOperation.Update, writer.LastRequest!.Operation);
         Assert.Equal("token-after-first-save", writer.LastRequest.ExpectedStoreToken);
+        Assert.True(vm.LastSaveSucceeded);
+    }
+
+    [Fact]
+    public async Task SuccessfulInflightSave_RawEditBeforeDebounce_BlocksReuseOfPriorAnalyzedElement()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, FakeWriteClient writer) =
+            CreateForCreateSession();
+        vm.SwitchToRawCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+        writer.Gate = new TaskCompletionSource();
+        writer.NextOutcome = PolicyWriteOutcome.Success(
+            PolicyEditorTestFixtures.BuildReplacementResponse(
+                PolicyEditorTestFixtures.BuildDocument(id: "id-1"),
+                "token-after-first-save"));
+
+        Task firstSave = vm.SaveCommand.ExecuteAsync(null);
+        JsonNode edited = JsonNode.Parse(vm.RawBuffer)!;
+        edited["Metadata"]!["Description"] = "raw edit B";
+        string rawB = edited.ToJsonString();
+        vm.RawBuffer = rawB;
+        writer.Gate.SetResult();
+        await firstSave;
+
+        Assert.True(vm.IsRawSyntaxPending);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+
+        await vm.WaitForRawSyntaxAnalysisAsync();
+        Assert.False(vm.IsRawSyntaxPending);
+        Assert.True(PolicyEditorRawSyntax.TryParseStrict(
+            rawB,
+            out PolicyEditorDraftDocument? parsedB,
+            out _));
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-B",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(parsedB!),
+            Findings = [],
+        });
+        PolicyDocument committedB = PolicyEditorTestFixtures.BuildDocument(id: "id-1");
+        committedB.Metadata.Description = "raw edit B";
+        writer.Gate = null;
+        writer.NextOutcome = PolicyWriteOutcome.Success(
+            PolicyEditorTestFixtures.BuildReplacementResponse(
+                committedB,
+                "token-after-second-save"));
+
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, validation.CallCount);
+        Assert.Equal(
+            "raw edit B",
+            validation.LastDraft.GetProperty("Metadata").GetProperty("Description").GetString());
+        Assert.Equal(
+            "raw edit B",
+            writer.LastRequest!.Draft.GetProperty("Metadata").GetProperty("Description").GetString());
         Assert.True(vm.LastSaveSucceeded);
     }
 
@@ -588,7 +896,7 @@ public class PolicyEditorSessionViewModelTests
 
         Assert.False(vm.LastSaveSucceeded);
         Assert.NotNull(vm.Session.Conflict);
-        Assert.Equal("remote-token-2", vm.Session.Conflict!.Management.StoreToken);
+        Assert.Equal("remote-token-2", vm.Session.Conflict!.RetryDecision.Token);
         Assert.True(vm.HasConflict);
     }
 
@@ -670,5 +978,72 @@ public class PolicyEditorSessionViewModelTests
         Assert.False(result);
         Assert.Equal(1, prompt.CallCount);
         Assert.Equal(PolicyEditorConfirmationKind.DiscardChanges, prompt.LastRequest!.Kind);
+    }
+
+    private sealed class CommittedElevator(string committedStoreToken) : IPolicyWriteElevator
+    {
+        public Task<PolicyElevationResult> ReplacePolicyAsync(
+            PolicyElevationWriteRequest request,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(new PolicyElevationResult(
+                PolicyElevationOutcome.Replaced,
+                request,
+                CommittedStoreToken: committedStoreToken));
+        }
+    }
+
+    private sealed class GatedManagementService(BrokerPolicyManagementResult result)
+        : IBrokerPolicyManagementService
+    {
+        public TaskCompletionSource RefreshStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource RefreshGate { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<BrokerPolicyManagementResult> GetManagementAsync(
+            CancellationToken cancellationToken)
+        {
+            RefreshStarted.TrySetResult();
+            await RefreshGate.Task;
+            return result;
+        }
+
+        public Task<BrokerPolicyValidationOutcome> ValidateAsync(
+            System.Text.Json.JsonElement draft,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class GatedCancelledElevator : IPolicyWriteElevator
+    {
+        public TaskCompletionSource Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Release { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<PolicyElevationResult> ReplacePolicyAsync(
+            PolicyElevationWriteRequest request,
+            CancellationToken cancellationToken)
+        {
+            Started.TrySetResult();
+            await Release.Task;
+            return new PolicyElevationResult(PolicyElevationOutcome.Cancelled, request);
+        }
+    }
+
+    private sealed class FailIfCalledManagementService : IBrokerPolicyManagementService
+    {
+        public Task<BrokerPolicyManagementResult> GetManagementAsync(
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Cancellation must not trigger management refresh.");
+
+        public Task<BrokerPolicyValidationOutcome> ValidateAsync(
+            System.Text.Json.JsonElement draft,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 }

@@ -12,9 +12,13 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private readonly IPolicyValidationClient _validationClient;
     private readonly IPolicyEditorConfirmationPrompt _confirmationPrompt;
     private readonly IPolicyWriteClient _writeClient;
+    private readonly TimeSpan _rawSyntaxDebounce;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly Dictionary<object, string> _localInputErrors = [];
+    private CancellationTokenSource? _rawSyntaxCancellation;
+    private Task _rawSyntaxAnalysis = Task.CompletedTask;
     private long _validationGeneration;
+    private long _saveGeneration;
     private int _isDisposed;
 
     public PolicyEditorSession Session { get; }
@@ -29,6 +33,31 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     public bool HasFindings => Session.Findings.All.Count > 0;
     public bool HasConflict => Session.Conflict is not null;
     public IReadOnlyList<PolicyValidationFinding> Findings => Session.Findings.All;
+    public bool IsRawSyntaxPending => Session.IsRawAnalysisPending;
+    public string SyntaxErrorTitle => SyntaxError?.Kind switch
+    {
+        PolicyEditorSyntaxErrorKind.EmptyDocument or PolicyEditorSyntaxErrorKind.InvalidJson =>
+            CoreTools.Translate("The document is not valid JSON"),
+        _ => CoreTools.Translate("The document is not a valid policy draft"),
+    };
+    public string SyntaxErrorMessage => SyntaxError?.Kind switch
+    {
+        PolicyEditorSyntaxErrorKind.EmptyDocument =>
+            CoreTools.Translate("The document is empty."),
+        PolicyEditorSyntaxErrorKind.InvalidJson =>
+            CoreTools.Translate("The JSON syntax is invalid."),
+        PolicyEditorSyntaxErrorKind.UnsupportedSchema =>
+            CoreTools.Translate("The policy draft uses an unsupported schema."),
+        PolicyEditorSyntaxErrorKind.UnsupportedPolicyType =>
+            CoreTools.Translate("The policy draft uses an unsupported policy type."),
+        PolicyEditorSyntaxErrorKind.MissingEnforcement =>
+            CoreTools.Translate("The policy draft is missing the Enforcement object."),
+        PolicyEditorSyntaxErrorKind.UnsupportedRulePrecedence =>
+            CoreTools.Translate("The policy draft uses an unsupported rule precedence."),
+        PolicyEditorSyntaxErrorKind.MissingMetadata =>
+            CoreTools.Translate("The policy draft is missing the Metadata object."),
+        _ => CoreTools.Translate("The document does not match the policy draft format."),
+    };
     public bool HasLocalInputErrors => _localInputErrors.Count > 0;
     public string LocalInputErrorSummary => string.Join(Environment.NewLine, _localInputErrors.Values);
     public bool CanValidateOrSave => CanStartRemoteOperation();
@@ -44,8 +73,8 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                 return;
 
             Session.SetRawBuffer(value);
-            PolicyEditorRawSyntax.TryParseStrict(value, out _, out PolicyEditorSyntaxError? error);
-            SyntaxError = error;
+            SyntaxError = null;
+            ScheduleRawSyntaxAnalysis(value);
             OnEditorStateChanged();
         }
     }
@@ -55,6 +84,8 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private PolicyEditorSyntaxError? _syntaxError;
     [ObservableProperty] private bool _lastSaveSucceeded;
     [ObservableProperty] private bool _savedWithNewerChanges;
+    [ObservableProperty] private bool _savedThenSuperseded;
+    [ObservableProperty] private bool _requiresManagementRefresh;
     [ObservableProperty] private ErrorCode? _lastErrorCode;
     [ObservableProperty] private PolicyWriteFailureKind _lastWriteFailureKind;
 
@@ -62,18 +93,21 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         PolicyEditorSession session,
         IPolicyValidationClient validationClient,
         IPolicyEditorConfirmationPrompt confirmationPrompt,
-        IPolicyWriteClient writeClient)
+        IPolicyWriteClient writeClient,
+        TimeSpan? rawSyntaxDebounce = null)
     {
         Session = session;
         _validationClient = validationClient;
         _confirmationPrompt = confirmationPrompt;
         _writeClient = writeClient;
+        _rawSyntaxDebounce = rawSyntaxDebounce ?? TimeSpan.FromMilliseconds(300);
     }
 
     [RelayCommand(CanExecute = nameof(CanStartStructuredOperation))]
     private void SwitchToRaw()
     {
         Session.SwitchToRaw();
+        CancelRawSyntaxAnalysis();
         SyntaxError = null;
         OnEditorStateChanged();
     }
@@ -85,16 +119,19 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         cancellationToken = linked.Token;
         if (!CanStartRemoteOperation()) return;
 
-        if (!Session.TryParseRaw(out _, out PolicyEditorSyntaxError? syntaxError))
+        string submitted = Session.RawBuffer;
+        if (!TryGetDraftElement(
+                submitted,
+                out JsonElement draft,
+                out PolicyEditorSyntaxError? syntaxError))
         {
             SyntaxError = syntaxError;
             return;
         }
 
-        string submitted = Session.RawBuffer;
         long generation = Interlocked.Increment(ref _validationGeneration);
         PolicyEditorValidationOutcome outcome =
-            await ValidateCoreAsync(submitted, cancellationToken);
+            await ValidateCoreAsync(draft, cancellationToken);
         if (!CanApply(cancellationToken)
             || generation != Volatile.Read(ref _validationGeneration)
             || !string.Equals(Session.RawBuffer, submitted, StringComparison.Ordinal))
@@ -334,9 +371,11 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     {
         if (!CanStartRemoteOperation()) return;
 
+        long saveGeneration = Interlocked.Increment(ref _saveGeneration);
         IsBusy = true;
         LastSaveSucceeded = false;
         SavedWithNewerChanges = false;
+        SavedThenSuperseded = false;
         LastErrorCode = null;
         LastWriteFailureKind = PolicyWriteFailureKind.None;
         try
@@ -368,6 +407,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                 PolicyEditorValidationOutcome validationOutcome =
                     await _validationClient.ValidateAsync(submittedElement, cancellationToken);
                 if (!CanApply(cancellationToken)
+                    || saveGeneration != Volatile.Read(ref _saveGeneration)
                     || Session.MutationGeneration != attemptGeneration)
                     return;
                 if (validationOutcome.Validation is null)
@@ -409,10 +449,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                     Session.ClearConflict();
                     return;
                 }
-                PolicyEditorRetryDecision decision =
-                    PolicyEditorRetryResolver.Resolve(
-                        validation.CanonicalDraft.Metadata.Id,
-                        conflict.Management);
+                PolicyEditorRetryDecision decision = conflict.RetryDecision;
                 operation = decision.Operation;
                 token = decision.Token;
                 state = decision.State;
@@ -437,9 +474,12 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                         token,
                         state,
                         activePolicyId,
-                        validation.Findings.All),
+                        validation.Findings.All,
+                        validation.WarningCount),
                     cancellationToken);
-                if (!CanApply(cancellationToken)) return;
+                if (!CanApply(cancellationToken)
+                    || saveGeneration != Volatile.Read(ref _saveGeneration))
+                    return;
                 if (Session.MutationGeneration != attemptGeneration) return;
                 if (!acknowledged)
                     return;
@@ -471,7 +511,9 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                         validation.Findings.All),
                     cancellationToken))
                 return;
-            if (!CanApply(cancellationToken)) return;
+            if (!CanApply(cancellationToken)
+                || saveGeneration != Volatile.Read(ref _saveGeneration))
+                return;
             if (Session.MutationGeneration != attemptGeneration) return;
 
             using JsonDocument canonicalDocument = JsonDocument.Parse(canonicalRaw);
@@ -484,7 +526,15 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                 validation.HasWarnings && Session.HasCurrentWarningAcknowledgement);
             PolicyWriteOutcome write =
                 await _writeClient.WriteAsync(request, cancellationToken);
-            if (!CanApply(cancellationToken)) return;
+            if (!CanApplyDispatchedWrite(saveGeneration)) return;
+
+            if (write.FailureKind == PolicyWriteFailureKind.WriteResultUnknown)
+            {
+                LastWriteFailureKind = write.FailureKind;
+                LastErrorCode = write.Error?.Code;
+                RequiresManagementRefresh = true;
+                OnEditorStateChanged();
+            }
 
             if (Session.MutationGeneration != attemptGeneration)
             {
@@ -510,6 +560,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             {
                 Session.MarkSaved(write.Response);
                 SavedWithNewerChanges = false;
+                SavedThenSuperseded = write.SavedThenSuperseded;
                 LastSaveSucceeded = true;
                 StatusMessage = "";
                 OnEditorStateChanged();
@@ -518,7 +569,17 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
 
             LastWriteFailureKind = write.FailureKind;
             LastErrorCode = write.Error?.Code;
-            if (write.Error is
+            RequiresManagementRefresh =
+                write.FailureKind == PolicyWriteFailureKind.WriteResultUnknown;
+            if (write.ConflictDecision is { } conflictDecision)
+            {
+                Session.CaptureConflict(
+                    conflictDecision,
+                    validation.CanonicalDraft,
+                    validation.Receipt,
+                    validation.CanonicalDraft.Metadata.Id);
+            }
+            else if (write.Error is
                 {
                     Code: ErrorCode.StalePolicyStoreToken,
                     Management: not null,
@@ -534,25 +595,13 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         }
         finally
         {
-            StatusMessage = "";
-            IsBusy = false;
+            if (Volatile.Read(ref _isDisposed) != 0
+                || saveGeneration == Volatile.Read(ref _saveGeneration))
+            {
+                StatusMessage = "";
+                IsBusy = false;
+            }
         }
-    }
-
-    private async Task<PolicyEditorValidationOutcome> ValidateCoreAsync(
-        string rawJson,
-        CancellationToken cancellationToken)
-    {
-        if (!TryGetDraftElement(
-                rawJson,
-                out JsonElement draft,
-                out PolicyEditorSyntaxError? error))
-        {
-            SyntaxError = error;
-            return new PolicyEditorValidationOutcome(null);
-        }
-
-        return await ValidateCoreAsync(draft, cancellationToken);
     }
 
     private async Task<PolicyEditorValidationOutcome> ValidateCoreAsync(
@@ -575,6 +624,8 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         Volatile.Read(ref _isDisposed) == 0
         && !IsBusy
         && !HasLocalInputErrors
+        && !IsRawSyntaxPending
+        && !RequiresManagementRefresh
         && SyntaxError is null;
 
     private bool CanStartStructuredOperation() =>
@@ -585,12 +636,23 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private bool CanApply(CancellationToken cancellationToken) =>
         Volatile.Read(ref _isDisposed) == 0 && !cancellationToken.IsCancellationRequested;
 
+    private bool CanApplyDispatchedWrite(long saveGeneration) =>
+        Volatile.Read(ref _isDisposed) == 0
+        && saveGeneration == Volatile.Read(ref _saveGeneration);
+
     private CancellationTokenSource CreateLinkedCancellation(CancellationToken cancellationToken) =>
         CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetimeCancellation.Token);
 
     partial void OnIsBusyChanged(bool value) => NotifyCommandStates();
 
-    partial void OnSyntaxErrorChanged(PolicyEditorSyntaxError? value) => NotifyCommandStates();
+    partial void OnSyntaxErrorChanged(PolicyEditorSyntaxError? value)
+    {
+        OnPropertyChanged(nameof(SyntaxErrorTitle));
+        OnPropertyChanged(nameof(SyntaxErrorMessage));
+        NotifyCommandStates();
+    }
+
+    partial void OnRequiresManagementRefreshChanged(bool value) => NotifyCommandStates();
 
     private void NotifyCommandStates()
     {
@@ -603,18 +665,25 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         ConfirmOverwriteCommand.NotifyCanExecuteChanged();
     }
 
-    private static bool TryGetDraftElement(
+    private bool TryGetDraftElement(
         string raw,
         out JsonElement element,
         out PolicyEditorSyntaxError? error)
     {
         element = default;
-        if (!PolicyEditorRawSyntax.TryParseStrict(raw, out _, out error))
-            return false;
+        if (Session.Mode == PolicyEditorMode.Raw
+            && string.Equals(raw, Session.RawBuffer, StringComparison.Ordinal)
+            && Session.TryGetAnalyzedRawElement(out element))
+        {
+            error = null;
+            return true;
+        }
 
-        using JsonDocument document = JsonDocument.Parse(raw);
-        element = document.RootElement.Clone();
-        return true;
+        return PolicyEditorRawSyntax.TryParseStrictWithElement(
+            raw,
+            out _,
+            out element,
+            out error);
     }
 
     private PolicyReplacementOperation GetInitialOperation() =>
@@ -643,14 +712,109 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasFindings));
         OnPropertyChanged(nameof(HasConflict));
         OnPropertyChanged(nameof(Findings));
+        OnPropertyChanged(nameof(IsRawSyntaxPending));
+        NotifyCommandStates();
     }
 
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _isDisposed, 1) != 0) return;
         Interlocked.Increment(ref _validationGeneration);
+        Interlocked.Increment(ref _saveGeneration);
+        CancelRawSyntaxAnalysis();
         _lifetimeCancellation.Cancel();
         _lifetimeCancellation.Dispose();
         NotifyCommandStates();
+    }
+
+    internal Task WaitForRawSyntaxAnalysisAsync() => _rawSyntaxAnalysis;
+
+    private void ScheduleRawSyntaxAnalysis(string raw)
+    {
+        long mutationGeneration = Session.MutationGeneration;
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            _lifetimeCancellation.Token);
+        CancellationTokenSource? previous =
+            Interlocked.Exchange(ref _rawSyntaxCancellation, cancellation);
+        previous?.Cancel();
+        previous?.Dispose();
+        _rawSyntaxAnalysis = AnalyzeRawSyntaxAsync(
+            raw,
+            mutationGeneration,
+            cancellation);
+    }
+
+    private async Task AnalyzeRawSyntaxAsync(
+        string raw,
+        long mutationGeneration,
+        CancellationTokenSource cancellation)
+    {
+        try
+        {
+            await Task.Delay(_rawSyntaxDebounce, cancellation.Token);
+            (
+                PolicyEditorSyntaxError? Error,
+                string? CanonicalRaw,
+                string? DraftId,
+                JsonElement? RawElement) result =
+                await Task.Run<(
+                    PolicyEditorSyntaxError? Error,
+                    string? CanonicalRaw,
+                    string? DraftId,
+                    JsonElement? RawElement)>(
+                    () =>
+                    {
+                        bool parsed = PolicyEditorRawSyntax.TryParseStrictWithElement(
+                            raw,
+                            out PolicyEditorDraftDocument? draft,
+                            out JsonElement element,
+                            out PolicyEditorSyntaxError? error);
+                        return (
+                            error,
+                            parsed && draft is not null
+                                ? PolicyEditorRawSyntax.ToCanonicalRaw(draft)
+                                : null,
+                            parsed ? draft?.Metadata.Id : null,
+                            parsed ? (JsonElement?)element : null);
+                    },
+                    cancellation.Token);
+            if (cancellation.IsCancellationRequested
+                || Volatile.Read(ref _isDisposed) != 0
+                || !Session.CompleteRawAnalysis(
+                    raw,
+                    mutationGeneration,
+                    result.CanonicalRaw,
+                    result.DraftId,
+                    result.RawElement))
+            {
+                return;
+            }
+
+            SyntaxError = result.Error;
+            OnEditorStateChanged();
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(
+                    Interlocked.CompareExchange(
+                        ref _rawSyntaxCancellation,
+                        null,
+                        cancellation),
+                    cancellation))
+            {
+                cancellation.Dispose();
+            }
+        }
+    }
+
+    private void CancelRawSyntaxAnalysis()
+    {
+        CancellationTokenSource? cancellation =
+            Interlocked.Exchange(ref _rawSyntaxCancellation, null);
+        cancellation?.Cancel();
+        cancellation?.Dispose();
     }
 }

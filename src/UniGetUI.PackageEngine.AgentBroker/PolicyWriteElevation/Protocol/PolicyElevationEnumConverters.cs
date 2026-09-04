@@ -63,36 +63,62 @@ public sealed class PolicyElevationConflictHandlingJsonConverter
         });
 }
 
-public sealed class PolicyElevationResponseStatusJsonConverter
-    : JsonConverter<PolicyElevationResponseStatus>
+public sealed class PolicyElevationDispositionJsonConverter
+    : JsonConverter<PolicyElevationDisposition>
 {
-    public override PolicyElevationResponseStatus Read(
+    public override PolicyElevationDisposition Read(
         ref Utf8JsonReader reader,
         Type typeToConvert,
         JsonSerializerOptions options) =>
         reader.TokenType == JsonTokenType.String && reader.GetString() is { } value
             ? value switch
             {
-                "Replaced" => PolicyElevationResponseStatus.Replaced,
-                "BrokerRejected" => PolicyElevationResponseStatus.BrokerRejected,
-                "BrokerUnavailable" => PolicyElevationResponseStatus.BrokerUnavailable,
-                "BrokerInvalidResponse" => PolicyElevationResponseStatus.BrokerInvalidResponse,
-                "HelperRejected" => PolicyElevationResponseStatus.HelperRejected,
-                _ => throw new JsonException("Unknown policy elevation response status."),
+                "Committed" => PolicyElevationDisposition.Committed,
+                "Rejected" => PolicyElevationDisposition.Rejected,
+                "Unknown" => PolicyElevationDisposition.Unknown,
+                _ => throw new JsonException("Unknown policy elevation disposition."),
             }
-            : throw new JsonException("Policy elevation response status must be a string.");
+            : throw new JsonException("Policy elevation disposition must be a string.");
 
     public override void Write(
         Utf8JsonWriter writer,
-        PolicyElevationResponseStatus value,
+        PolicyElevationDisposition value,
         JsonSerializerOptions options) =>
         writer.WriteStringValue(value switch
         {
-            PolicyElevationResponseStatus.Replaced => "Replaced",
-            PolicyElevationResponseStatus.BrokerRejected => "BrokerRejected",
-            PolicyElevationResponseStatus.BrokerUnavailable => "BrokerUnavailable",
-            PolicyElevationResponseStatus.BrokerInvalidResponse => "BrokerInvalidResponse",
-            PolicyElevationResponseStatus.HelperRejected => "HelperRejected",
-            _ => throw new JsonException("Unknown policy elevation response status."),
+            PolicyElevationDisposition.Committed => "Committed",
+            PolicyElevationDisposition.Rejected => "Rejected",
+            PolicyElevationDisposition.Unknown => "Unknown",
+            _ => throw new JsonException("Unknown policy elevation disposition."),
+        });
+}
+
+public sealed class PolicyElevationManagementStateJsonConverter
+    : JsonConverter<PolicyElevationManagementState>
+{
+    public override PolicyElevationManagementState Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options) =>
+        reader.TokenType == JsonTokenType.String && reader.GetString() is { } value
+            ? value switch
+            {
+                "Active" => PolicyElevationManagementState.Active,
+                "Missing" => PolicyElevationManagementState.Missing,
+                "Invalid" => PolicyElevationManagementState.Invalid,
+                _ => throw new JsonException("Unknown policy management state."),
+            }
+            : throw new JsonException("Policy management state must be a string.");
+
+    public override void Write(
+        Utf8JsonWriter writer,
+        PolicyElevationManagementState value,
+        JsonSerializerOptions options) =>
+        writer.WriteStringValue(value switch
+        {
+            PolicyElevationManagementState.Active => "Active",
+            PolicyElevationManagementState.Missing => "Missing",
+            PolicyElevationManagementState.Invalid => "Invalid",
+            _ => throw new JsonException("Unknown policy management state."),
         });
 }

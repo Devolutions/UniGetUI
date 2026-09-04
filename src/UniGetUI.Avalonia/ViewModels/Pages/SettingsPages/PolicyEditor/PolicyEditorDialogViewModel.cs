@@ -166,6 +166,15 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
             return;
         }
 
+        if (Session.SavedThenSuperseded)
+        {
+            SetStatus(
+                CoreTools.Translate("Policy saved, then replaced again"),
+                CoreTools.Translate("The policy was saved, but another writer replaced it before management state was refreshed."),
+                InfoBarSeverity.Warning);
+            return;
+        }
+
         if (Session.LastSaveSucceeded)
         {
             SetStatus(
@@ -178,8 +187,8 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         if (Session.SyntaxError is { } syntaxError)
         {
             SetStatus(
-                CoreTools.Translate("The document is not valid JSON"),
-                syntaxError.Message,
+                Session.SyntaxErrorTitle,
+                Session.SyntaxErrorMessage,
                 InfoBarSeverity.Error);
             return;
         }
@@ -241,6 +250,8 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
                 CoreTools.Translate("The elevated helper stopped unexpectedly."),
             PolicyWriteFailureKind.BrokerRejected =>
                 CoreTools.Translate("Devolutions Agent rejected the policy replacement."),
+            PolicyWriteFailureKind.WriteResultUnknown =>
+                CoreTools.Translate("The policy write result is unknown. Refresh policy management state before retrying."),
             _ => null,
         };
 

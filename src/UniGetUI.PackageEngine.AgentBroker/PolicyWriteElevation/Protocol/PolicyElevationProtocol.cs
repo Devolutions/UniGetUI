@@ -10,7 +10,7 @@ namespace UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 public static class PolicyElevationProtocol
 {
     /// <summary>Protocol revision. Both peers reject a mismatching value before any payload is exchanged.</summary>
-    public const string Version = "1.0";
+    public const string Version = "2.0";
 
     /// <summary>File name of the elevated helper as staged inside the packaged install tree.</summary>
     public const string HelperFileName = "UniGetUI.PolicyElevator.exe";
@@ -63,8 +63,8 @@ public static class PolicyElevationProtocol
     public const int MaxProtocolVersionCharacters = 16;
     public const int MaxStoreTokenCharacters = 512;
     public const int MaxValidationReceiptCharacters = 2048;
-    public const int MaxMessageCharacters = 2048;
     public const int MaxBrokerErrorCodeCharacters = 64;
+    public const int MaxConflictPolicyIdCharacters = 2048;
 
     // Exact JSON byte accounting.
     //
@@ -81,7 +81,7 @@ public static class PolicyElevationProtocol
     private const int MaxBooleanBytes = 5;
     private const int MaxOperationBytes = QuoteBytes + 15;
     private const int MaxConflictHandlingBytes = QuoteBytes + 16;
-    private const int MaxResponseStatusBytes = QuoteBytes + 21;
+    private const int ActiveManagementStateBytes = QuoteBytes + 6;
     private const int ObjectBraceBytes = 2;
     private const int PropertyNameOverheadBytes = 3;
 
@@ -97,11 +97,17 @@ public static class PolicyElevationProtocol
     private const int ValidationReceiptValueBytes =
         QuoteBytes + (MaxValidationReceiptCharacters * MaxEscapedBytesPerCharacter);
 
-    private const int MessageValueBytes =
-        QuoteBytes + (MaxMessageCharacters * MaxEscapedBytesPerCharacter);
-
-    private const int BrokerErrorCodeValueBytes =
-        QuoteBytes + (MaxBrokerErrorCodeCharacters * MaxEscapedBytesPerCharacter);
+    // System.Text.Json's default encoder emits HTML-sensitive safe-ASCII characters such as
+    // quotation marks as six-byte \uXXXX escapes.
+    private const int MaxSafeAsciiJsonBytesPerCharacter = 6;
+    private const int MaxSafeAsciiStoreTokenValueBytes =
+        QuoteBytes + 1
+        + ((MaxStoreTokenCharacters - 1) * MaxSafeAsciiJsonBytesPerCharacter);
+    private const int MaxSafeAsciiConflictPolicyIdValueBytes =
+        QuoteBytes + 1
+        + ((MaxConflictPolicyIdCharacters - 1) * MaxSafeAsciiJsonBytesPerCharacter);
+    private const int StaleErrorCodeValueBytes = QuoteBytes + 21;
+    private const int RejectedDispositionBytes = QuoteBytes + 8;
 
     // {"protocolVersion":…,"requestId":…,"operation":…,"conflictHandling":…,
     //  "expectedStoreToken":…,"validationReceipt":…,"warningsAcknowledged":…,"draft":…}
@@ -130,32 +136,32 @@ public static class PolicyElevationProtocol
         + ValidationReceiptValueBytes
         + MaxBooleanBytes; // warningsAcknowledged
 
-    // {"protocolVersion":…,"requestId":…,"outcome":…,"win32ErrorCode":…,"brokerStatusCode":…,
-    //  "brokerErrorCode":…,"message":…,"payload":…}
-    private const int ResponsePropertyCount = 8;
+    // {"protocolVersion":…,"requestId":…,"disposition":…,"brokerStatusCode":…,
+    //  "brokerErrorCode":…,"committedStoreToken":…,"conflictStoreToken":…,
+    //  "conflictState":…,"conflictPolicyId":…}
+    private const int ResponsePropertyCount = 9;
 
-    // protocolVersion(15) requestId(9) outcome(7) win32ErrorCode(14) brokerStatusCode(16)
-    // brokerErrorCode(15) message(7) payload(7) = 90 name characters, plus three bytes of quoting
-    // and colon per property. Asserted against the real contract by PolicyElevationProtocolTests.
-    public const int ResponsePropertyNameCharacters = 90;
+    public const int ResponsePropertyNameCharacters = 132;
 
     private const int ResponsePropertyNameBytes =
         ResponsePropertyNameCharacters + (ResponsePropertyCount * PropertyNameOverheadBytes);
 
     /// <summary>
-    /// Every response byte that is not the relayed broker payload itself.
+    /// Exact upper bound of the stale-conflict acknowledgement, the largest valid response shape.
     /// </summary>
     public const int ResponseEnvelopeOverheadBytes =
         ObjectBraceBytes
         + (ResponsePropertyCount - 1)
         + ResponsePropertyNameBytes
-        + ProtocolVersionValueBytes
-        + RequestIdValueBytes
-        + MaxResponseStatusBytes
-        + MaxInt32Bytes // win32ErrorCode
+        + (QuoteBytes + 3) // "2.0"
+        + (QuoteBytes + RequestIdCharacters)
+        + RejectedDispositionBytes
         + MaxInt32Bytes // brokerStatusCode
-        + BrokerErrorCodeValueBytes
-        + MessageValueBytes;
+        + StaleErrorCodeValueBytes
+        + 4 // committedStoreToken is null in a stale response
+        + MaxSafeAsciiStoreTokenValueBytes
+        + ActiveManagementStateBytes
+        + MaxSafeAsciiConflictPolicyIdValueBytes;
 
     /// <summary>
     /// Maximum accepted request frame body: the full shared policy-management budget plus the
@@ -166,16 +172,10 @@ public static class PolicyElevationProtocol
         MaxPolicyManagementBodyBytes + RequestEnvelopeOverheadBytes;
 
     /// <summary>
-    /// Maximum accepted response frame body. A successful response may carry the committed policy,
-    /// validation canonical draft, and management policy; reserve three full policy bodies plus a
-    /// bounded diagnostics allowance.
+    /// Maximum accepted response frame body. The helper response is a compact acknowledgement and
+    /// never carries a policy document, validation result, findings list, or broker error payload.
     /// </summary>
-    public const int MaxResponsePolicyCopies = 3;
-    public const int MaxResponseDiagnosticsBytes = 256 * 1024;
-    public const int MaxResponseFrameBytes =
-        (MaxPolicyManagementBodyBytes * MaxResponsePolicyCopies)
-        + MaxResponseDiagnosticsBytes
-        + ResponseEnvelopeOverheadBytes;
+    public const int MaxResponseFrameBytes = ResponseEnvelopeOverheadBytes;
 
     // ---- Timeouts --------------------------------------------------------------------------
 
@@ -184,6 +184,9 @@ public static class PolicyElevationProtocol
 
     /// <summary>How long each peer waits for the single request/response exchange to complete.</summary>
     public static readonly TimeSpan ExchangeTimeout = TimeSpan.FromMinutes(2);
+
+    /// <summary>Fresh post-broker deadline used only to deliver the compact acknowledgement.</summary>
+    public static readonly TimeSpan ResponseWriteTimeout = TimeSpan.FromSeconds(10);
 
     /// <summary>How long the host waits for the helper to exit after the response was received.</summary>
     public static readonly TimeSpan ExitTimeout = TimeSpan.FromSeconds(30);

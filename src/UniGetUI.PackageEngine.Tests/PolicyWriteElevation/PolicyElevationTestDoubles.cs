@@ -155,6 +155,9 @@ internal sealed class FakeHelperProcess : IElevatedHelperProcess
 {
     private readonly TaskCompletionSource<int> _exited =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource _secondExitWaitStarted =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _exitWaitCount;
 
     public uint ProcessId => 4242;
 
@@ -168,10 +171,15 @@ internal sealed class FakeHelperProcess : IElevatedHelperProcess
 
     public bool Disposed { get; private set; }
 
+    public Task SecondExitWaitStarted => _secondExitWaitStarted.Task;
+
     public void Exit(int exitCode) => _exited.TrySetResult(exitCode);
 
     public async Task<int?> WaitForExitAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
+        if (Interlocked.Increment(ref _exitWaitCount) == 2)
+            _secondExitWaitStarted.TrySetResult();
+
         using var delayCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         Task delay = Task.Delay(timeout, delayCancellation.Token);
 
@@ -212,6 +220,8 @@ internal sealed class FakeHelperLauncher : IElevatedHelperLauncher
 
     public Task Completion { get; private set; } = Task.CompletedTask;
 
+    public FakeHelperProcess? LastProcess { get; private set; }
+
     public static FakeHelperLauncher Running(Func<PolicyElevationLaunchArguments, FakeHelperProcess, Task> script)
         => new(script, null);
 
@@ -241,18 +251,21 @@ internal sealed class FakeHelperLauncher : IElevatedHelperLauncher
         }
 
         var process = new FakeHelperProcess();
+        LastProcess = process;
 
-        Completion = Task.Run(async () =>
-        {
-            try
+        Completion = Task.Run(
+            async () =>
             {
-                await _script!(parsed, process).ConfigureAwait(false);
-            }
-            finally
-            {
-                process.Exit(0);
-            }
-        });
+                try
+                {
+                    await _script!(parsed, process).ConfigureAwait(false);
+                }
+                finally
+                {
+                    process.Exit(0);
+                }
+            },
+            CancellationToken.None);
 
         return Task.FromResult(new ElevatedHelperLaunchResult(process));
     }

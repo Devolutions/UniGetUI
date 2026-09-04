@@ -36,53 +36,56 @@ internal static class PolicyReplacementExecutor
                 },
                 cancellationToken).ConfigureAwait(false);
 
-            response.Outcome = PolicyElevationResponseStatus.Replaced;
-            response.Payload = SerializePayload(replacement);
+            response.Disposition = PolicyElevationDisposition.Committed;
+            response.CommittedStoreToken = replacement.Management.StoreToken;
+            PolicyElevationFrame.ValidateResponse(response);
             return response;
         }
         catch (BrokerClientException ex)
         {
-            response.Outcome = ex.Kind switch
-            {
-                BrokerClientErrorKind.BrokerUnavailable => PolicyElevationResponseStatus.BrokerUnavailable,
-                BrokerClientErrorKind.Timeout => PolicyElevationResponseStatus.BrokerUnavailable,
-                BrokerClientErrorKind.EmptyResponse => PolicyElevationResponseStatus.BrokerInvalidResponse,
-                BrokerClientErrorKind.InvalidResponse => PolicyElevationResponseStatus.BrokerInvalidResponse,
-                _ => PolicyElevationResponseStatus.BrokerRejected,
-            };
-
+            response.Disposition = ex.Kind is
+                BrokerClientErrorKind.BrokerUnavailable
+                or BrokerClientErrorKind.Timeout
+                or BrokerClientErrorKind.EmptyResponse
+                or BrokerClientErrorKind.InvalidResponse
+                    ? PolicyElevationDisposition.Unknown
+                    : PolicyElevationDisposition.Rejected;
             response.BrokerStatusCode = ex.StatusCode;
             response.BrokerErrorCode = Truncate(
                 ex.BrokerError?.Code.ToString() ?? ex.Kind.ToString(),
                 PolicyElevationProtocol.MaxBrokerErrorCodeCharacters);
-            response.Message = "The Agent rejected the policy write.";
-            response.Payload = ex.BrokerError is null
-                ? null
-                : SerializePayload(ex.BrokerError);
+            if (response.Disposition == PolicyElevationDisposition.Rejected
+                && ex.BrokerError is
+                {
+                    Code: ErrorCode.StalePolicyStoreToken,
+                    Management: not null,
+                } stale)
+            {
+                response.ConflictStoreToken = stale.Management.StoreToken;
+                response.ConflictState = stale.Management.State switch
+                {
+                    PolicyManagementState.Active => PolicyElevationManagementState.Active,
+                    PolicyManagementState.Missing => PolicyElevationManagementState.Missing,
+                    PolicyManagementState.Invalid => PolicyElevationManagementState.Invalid,
+                    _ => throw new InvalidDataException("The stale response carried an invalid management state."),
+                };
+                response.ConflictPolicyId = stale.Management.Policy?.Metadata.Id;
+            }
             return response;
         }
         catch (OperationCanceledException)
         {
-            response.Outcome = PolicyElevationResponseStatus.BrokerUnavailable;
-            response.Message = "The broker did not answer before the elevated helper timed out.";
+            response.Disposition = PolicyElevationDisposition.Unknown;
+            response.BrokerErrorCode = BrokerClientErrorKind.Timeout.ToString();
             return response;
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException or JsonException)
         {
-            response.Outcome = PolicyElevationResponseStatus.BrokerInvalidResponse;
-            response.Message = "The Agent returned an invalid policy response.";
+            response.Disposition = PolicyElevationDisposition.Unknown;
+            response.BrokerErrorCode = BrokerClientErrorKind.InvalidResponse.ToString();
             return response;
         }
     }
-
-    public static PolicyElevationResponseMessage Rejected(string requestId, string reason)
-        => new()
-        {
-            ProtocolVersion = PolicyElevationProtocol.Version,
-            RequestId = requestId,
-            Outcome = PolicyElevationResponseStatus.HelperRejected,
-            Message = Truncate(reason, PolicyElevationProtocol.MaxMessageCharacters),
-        };
 
     private static BrokerClient CreateClient()
         => new(new BrokerClientOptions
@@ -97,12 +100,6 @@ internal static class PolicyReplacementExecutor
         => string.IsNullOrWhiteSpace(Environment.UserDomainName)
             ? Environment.UserName
             : $"{Environment.UserDomainName}\\{Environment.UserName}";
-
-    private static JsonElement SerializePayload<T>(T payload)
-    {
-        using JsonDocument document = JsonDocument.Parse(BrokerSerializer.Serialize(payload));
-        return document.RootElement.Clone();
-    }
 
     private static string? Truncate(string? value, int maxCharacters)
     {

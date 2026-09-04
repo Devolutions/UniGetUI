@@ -47,22 +47,28 @@ public enum PolicyWriteFailureKind
     ProtocolFailed,
     HelperFailed,
     BrokerRejected,
+    WriteResultUnknown,
 }
 
 public sealed record PolicyWriteOutcome(
     PolicyReplacementResponse? Response,
     ErrorResponse? Error,
-    PolicyWriteFailureKind FailureKind = PolicyWriteFailureKind.None)
+    PolicyWriteFailureKind FailureKind = PolicyWriteFailureKind.None,
+    PolicyEditorRetryDecision? ConflictDecision = null,
+    bool SavedThenSuperseded = false)
 {
     public bool Succeeded => Response is not null;
 
-    public static PolicyWriteOutcome Success(PolicyReplacementResponse response) =>
-        new(response, null);
+    public static PolicyWriteOutcome Success(
+        PolicyReplacementResponse response,
+        bool savedThenSuperseded = false) =>
+        new(response, null, SavedThenSuperseded: savedThenSuperseded);
 
     public static PolicyWriteOutcome Failure(
         PolicyWriteFailureKind kind,
-        ErrorResponse? error = null) =>
-        new(null, error, kind);
+        ErrorResponse? error = null,
+        PolicyEditorRetryDecision? conflictDecision = null) =>
+        new(null, error, kind, conflictDecision);
 }
 
 public interface IPolicyWriteClient
@@ -79,7 +85,8 @@ public sealed record PolicyEditorConfirmationRequest(
     string ExpectedStoreToken,
     PolicyManagementState State,
     string? ActivePolicyId,
-    IReadOnlyList<PolicyValidationFinding> Findings);
+    IReadOnlyList<PolicyValidationFinding> Findings,
+    int WarningCount = 0);
 
 public interface IPolicyEditorConfirmationPrompt
 {

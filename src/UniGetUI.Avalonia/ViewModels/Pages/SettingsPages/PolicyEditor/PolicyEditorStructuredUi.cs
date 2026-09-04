@@ -381,7 +381,8 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             if (string.Equals(_priorityText, value, StringComparison.Ordinal)) return;
             _priorityText = value;
             OnPropertyChanged();
-            if (uint.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out uint parsed))
+            if (uint.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out uint parsed)
+                && parsed <= int.MaxValue)
             {
                 Rule.Priority = parsed;
                 SetPriorityError(null);
@@ -389,7 +390,7 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             }
             else
             {
-                SetPriorityError(CoreTools.Translate("Enter a whole number from 0 through 4294967295."));
+                SetPriorityError(CoreTools.Translate("Enter a whole number from 0 through 2147483647."));
                 _sessionViewModel.NotifyLocalInputChanged();
             }
         }

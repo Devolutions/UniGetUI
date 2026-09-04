@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text.Json;
+using Devolutions.Now.Policy.Api;
 
 namespace UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 
@@ -177,9 +178,9 @@ public static class PolicyElevationFrame
             PolicyElevationProtocol.MaxValidationReceiptCharacters,
             "validationReceipt");
 
-        if (request.Draft.ValueKind is JsonValueKind.Undefined)
+        if (request.Draft.ValueKind is not JsonValueKind.Object)
         {
-            throw Malformed("Policy elevation request carried no draft.");
+            throw Malformed("Policy elevation request did not carry a draft object.");
         }
     }
 
@@ -190,24 +191,51 @@ public static class PolicyElevationFrame
         RequireProtocolVersion(response.ProtocolVersion);
         RequireRequestId(response.RequestId);
 
-        if (!Enum.IsDefined(response.Outcome))
+        if (response.Disposition is PolicyElevationDisposition.Invalid
+            || !Enum.IsDefined(response.Disposition))
         {
             throw Malformed("Policy elevation response carried an undefined outcome.");
         }
 
-        RequireOptionalLength(
+        RequireOptionalSafeAscii(
             response.BrokerErrorCode,
             PolicyElevationProtocol.MaxBrokerErrorCodeCharacters,
             "brokerErrorCode");
 
-        RequireOptionalLength(
-            response.Message,
-            PolicyElevationProtocol.MaxMessageCharacters,
-            "message");
-
-        if (response.Payload is { ValueKind: JsonValueKind.Undefined })
+        switch (response.Disposition)
         {
-            throw Malformed("Policy elevation response carried an undefined payload.");
+            case PolicyElevationDisposition.Committed:
+                RequireRequiredSafeAscii(
+                    response.CommittedStoreToken,
+                    PolicyElevationProtocol.MaxStoreTokenCharacters,
+                    "committedStoreToken");
+                if (response.BrokerStatusCode is not null
+                    || response.BrokerErrorCode is not null
+                    || HasConflictContext(response))
+                {
+                    throw Malformed("A committed response carried rejection fields.");
+                }
+                break;
+            case PolicyElevationDisposition.Rejected:
+                if (response.CommittedStoreToken is not null
+                    || string.IsNullOrEmpty(response.BrokerErrorCode))
+                {
+                    throw Malformed("A rejected response did not carry a broker error code.");
+                }
+                ValidateConflictContext(response);
+                break;
+            case PolicyElevationDisposition.Unknown:
+                RequireRequiredSafeAscii(
+                    response.BrokerErrorCode,
+                    PolicyElevationProtocol.MaxBrokerErrorCodeCharacters,
+                    "brokerErrorCode");
+                if (response.CommittedStoreToken is not null || HasConflictContext(response))
+                {
+                    throw Malformed("An unknown response carried commit or conflict state.");
+                }
+                break;
+            default:
+                throw Malformed("Policy elevation response carried an undefined disposition.");
         }
     }
 
@@ -261,11 +289,50 @@ public static class PolicyElevationFrame
         }
     }
 
-    private static void RequireOptionalLength(string? value, int maxCharacters, string field)
+    private static void RequireOptionalSafeAscii(string? value, int maxCharacters, string field)
     {
-        if (value is not null && value.Length > maxCharacters)
+        if (value is null)
         {
-            throw Malformed($"Policy elevation frame field '{field}' exceeded {maxCharacters} characters.");
+            return;
+        }
+
+        RequireRequiredSafeAscii(value, maxCharacters, field);
+    }
+
+    private static bool HasConflictContext(PolicyElevationResponseMessage response) =>
+        response.ConflictStoreToken is not null
+        || response.ConflictState is not null
+        || response.ConflictPolicyId is not null;
+
+    private static void ValidateConflictContext(PolicyElevationResponseMessage response)
+    {
+        bool isStale = string.Equals(
+            response.BrokerErrorCode,
+            ErrorCode.StalePolicyStoreToken.ToString(),
+            StringComparison.Ordinal);
+        if (!isStale)
+        {
+            if (HasConflictContext(response))
+                throw Malformed("A non-stale rejection carried conflict state.");
+            return;
+        }
+
+        RequireRequiredSafeAscii(
+            response.ConflictStoreToken,
+            PolicyElevationProtocol.MaxStoreTokenCharacters,
+            "conflictStoreToken");
+        if (response.ConflictState is null || !Enum.IsDefined(response.ConflictState.Value))
+            throw Malformed("A stale rejection did not carry a valid conflict state.");
+        if (response.ConflictState == PolicyElevationManagementState.Active)
+        {
+            RequireRequiredSafeAscii(
+                response.ConflictPolicyId,
+                PolicyElevationProtocol.MaxConflictPolicyIdCharacters,
+                "conflictPolicyId");
+        }
+        else if (response.ConflictPolicyId is not null)
+        {
+            throw Malformed("A non-active conflict state carried a policy identity.");
         }
     }
 

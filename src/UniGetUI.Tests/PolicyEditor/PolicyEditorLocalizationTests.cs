@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Devolutions.Now.Policy.Api;
+using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 
 namespace UniGetUI.Tests.PolicyEditor;
 
@@ -81,6 +83,22 @@ public partial class PolicyEditorLocalizationTests
             "Create a new policy",
             "Repair the stored policy",
             "Replace the active policy identity",
+        ]);
+        keys.UnionWith(Enum.GetNames<Devolutions.Now.Policy.Model.Operation>());
+        keys.UnionWith(Enum.GetNames<Devolutions.Now.Policy.Model.ManagerName>());
+        keys.UnionWith(Enum.GetNames<Devolutions.Now.Policy.Model.Scope>());
+        keys.UnionWith(Enum.GetNames<Devolutions.Now.Policy.Model.Architecture>());
+        keys.UnionWith(Enum.GetNames<Devolutions.Now.Policy.Model.Elevation>());
+        keys.UnionWith(Enum.GetNames<Devolutions.Now.Policy.Model.Decision>());
+        keys.UnionWith(Enum.GetNames<Devolutions.Now.Policy.Model.RulePrecedence>());
+        keys.UnionWith(Enum.GetNames<ErrorCode>());
+        keys.UnionWith(Enum.GetNames<PolicyValidationSeverity>());
+        keys.UnionWith(
+        [
+            "Allowed custom parameters",
+            "Allowed custom locations",
+            "Allowed pre/post commands",
+            "Allowed hash-check skipping",
         ]);
 
         string[] missing = keys

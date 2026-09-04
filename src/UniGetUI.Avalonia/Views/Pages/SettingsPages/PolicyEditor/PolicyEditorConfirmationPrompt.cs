@@ -110,7 +110,7 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
     {
         PolicyEditorConfirmationKind.Warnings => CoreTools.Translate(
             "Validation reported {0} warning(s) for policy '{1}'. Do you want to save it anyway?",
-            request.Findings.Count(f => f.Severity == PolicyValidationSeverity.Warning),
+            request.WarningCount,
             request.DraftId),
         PolicyEditorConfirmationKind.ReplaceIdentity => CoreTools.Translate(
             "This will replace the active policy '{0}' with a new policy '{1}'. This cannot be undone.",

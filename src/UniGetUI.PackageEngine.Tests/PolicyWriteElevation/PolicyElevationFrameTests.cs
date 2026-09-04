@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 
 namespace UniGetUI.PackageEngine.Tests.PolicyWriteElevation;
@@ -11,6 +12,18 @@ namespace UniGetUI.PackageEngine.Tests.PolicyWriteElevation;
 /// </summary>
 public class PolicyElevationFrameTests
 {
+    private const string RequestJson =
+        """{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":"Update","conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","warningsAcknowledged":false,"draft":{"policy":1}}""";
+
+    private const string CommittedResponseJson =
+        """{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","disposition":"Committed","brokerStatusCode":null,"brokerErrorCode":null,"committedStoreToken":"token","conflictStoreToken":null,"conflictState":null,"conflictPolicyId":null}""";
+
+    private const string RejectedResponseJson =
+        """{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","disposition":"Rejected","brokerStatusCode":400,"brokerErrorCode":"InvalidPolicy","committedStoreToken":null,"conflictStoreToken":null,"conflictState":null,"conflictPolicyId":null}""";
+
+    private const string StaleResponseJson =
+        """{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","disposition":"Rejected","brokerStatusCode":409,"brokerErrorCode":"StalePolicyStoreToken","committedStoreToken":null,"conflictStoreToken":"current-token","conflictState":"Active","conflictPolicyId":"current-policy"}""";
+
     private static PolicyElevationRequestMessage ValidRequest(string draftJson = """{"policy":1}""")
         => new()
         {
@@ -29,10 +42,8 @@ public class PolicyElevationFrameTests
         {
             ProtocolVersion = PolicyElevationProtocol.Version,
             RequestId = new string('a', PolicyElevationProtocol.RequestIdCharacters),
-            Outcome = PolicyElevationResponseStatus.Replaced,
-            BrokerStatusCode = 200,
-            Message = "ok",
-            Payload = JsonDocument.Parse("""{"storeToken":"abc"}""").RootElement.Clone(),
+            Disposition = PolicyElevationDisposition.Committed,
+            CommittedStoreToken = "abc",
         };
 
     [Fact]
@@ -68,10 +79,8 @@ public class PolicyElevationFrameTests
         PolicyElevationResponseMessage received =
             await PolicyElevationFrame.ReadResponseAsync(stream, CancellationToken.None);
 
-        Assert.Equal(PolicyElevationResponseStatus.Replaced, received.Outcome);
-        Assert.Equal(200, received.BrokerStatusCode);
-        Assert.Equal("ok", received.Message);
-        Assert.Equal(sent.Payload!.Value.GetRawText(), received.Payload!.Value.GetRawText());
+        Assert.Equal(PolicyElevationDisposition.Committed, received.Disposition);
+        Assert.Equal("abc", received.CommittedStoreToken);
     }
 
     [Fact]
@@ -163,7 +172,7 @@ public class PolicyElevationFrameTests
     {
         PolicyElevationFrameException error = await Assert.ThrowsAsync<PolicyElevationFrameException>(
             () => ReadResponseFromBodyAsync(
-                """{"protocolVersion":"9.9","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","outcome":0}"""));
+                """{"protocolVersion":"9.9","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","disposition":"Unknown","brokerStatusCode":null,"brokerErrorCode":null,"committedStoreToken":null,"conflictStoreToken":null,"conflictState":null,"conflictPolicyId":null}"""));
 
         Assert.Equal(PolicyElevationFrameError.Malformed, error.Error);
     }
@@ -172,19 +181,160 @@ public class PolicyElevationFrameTests
     public async Task ShortRequestId_IsReportedAsMalformed()
     {
         PolicyElevationFrameException error = await Assert.ThrowsAsync<PolicyElevationFrameException>(
-            () => ReadResponseFromBodyAsync("""{"protocolVersion":"1.0","requestId":"abc","outcome":0}"""));
+            () => ReadResponseFromBodyAsync("""{"protocolVersion":"2.0","requestId":"abc","disposition":"Unknown","brokerStatusCode":null,"brokerErrorCode":null,"committedStoreToken":null,"conflictStoreToken":null,"conflictState":null,"conflictPolicyId":null}"""));
 
         Assert.Equal(PolicyElevationFrameError.Malformed, error.Error);
     }
 
     [Fact]
-    public async Task UndefinedOutcome_IsReportedAsMalformed()
+    public async Task UndefinedDisposition_IsReportedAsMalformed()
     {
         PolicyElevationFrameException error = await Assert.ThrowsAsync<PolicyElevationFrameException>(
             () => ReadResponseFromBodyAsync(
-                """{"protocolVersion":"1.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","outcome":99}"""));
+                """{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","disposition":99,"brokerStatusCode":null,"brokerErrorCode":null,"committedStoreToken":null,"conflictStoreToken":null,"conflictState":null,"conflictPolicyId":null}"""));
 
         Assert.Equal(PolicyElevationFrameError.Malformed, error.Error);
+    }
+
+    [Theory]
+    [InlineData("protocolVersion")]
+    [InlineData("requestId")]
+    [InlineData("operation")]
+    [InlineData("conflictHandling")]
+    [InlineData("expectedStoreToken")]
+    [InlineData("validationReceipt")]
+    [InlineData("warningsAcknowledged")]
+    [InlineData("draft")]
+    public async Task HelperRequestDeserialization_RejectsEveryOmittedMandatoryField(
+        string propertyName)
+    {
+        PolicyElevationFrameException error = await Assert.ThrowsAsync<PolicyElevationFrameException>(
+            () => ReadRequestFromBodyAsync(RemoveProperty(RequestJson, propertyName)));
+
+        Assert.Equal(PolicyElevationFrameError.Malformed, error.Error);
+        Assert.IsType<JsonException>(error.InnerException);
+    }
+
+    [Theory]
+    [InlineData("protocolVersion")]
+    [InlineData("requestId")]
+    [InlineData("disposition")]
+    [InlineData("brokerStatusCode")]
+    [InlineData("brokerErrorCode")]
+    [InlineData("committedStoreToken")]
+    [InlineData("conflictStoreToken")]
+    [InlineData("conflictState")]
+    [InlineData("conflictPolicyId")]
+    public async Task HostResponseDeserialization_RejectsEveryOmittedFixedWireField(
+        string propertyName)
+    {
+        PolicyElevationFrameException error = await Assert.ThrowsAsync<PolicyElevationFrameException>(
+            () => ReadResponseFromBodyAsync(RemoveProperty(StaleResponseJson, propertyName)));
+
+        Assert.Equal(PolicyElevationFrameError.Malformed, error.Error);
+        Assert.IsType<JsonException>(error.InnerException);
+    }
+
+    [Fact]
+    public async Task HostResponseDeserialization_RejectsCommittedResponseWithoutStoreToken()
+    {
+        PolicyElevationFrameException error = await Assert.ThrowsAsync<PolicyElevationFrameException>(
+            () => ReadResponseFromBodyAsync(
+                RemoveProperty(CommittedResponseJson, "committedStoreToken")));
+
+        Assert.Equal(PolicyElevationFrameError.Malformed, error.Error);
+    }
+
+    [Fact]
+    public async Task HostResponseDeserialization_RejectsRejectedResponseWithoutErrorCode()
+    {
+        PolicyElevationFrameException error = await Assert.ThrowsAsync<PolicyElevationFrameException>(
+            () => ReadResponseFromBodyAsync(
+                RemoveProperty(RejectedResponseJson, "brokerErrorCode")));
+
+        Assert.Equal(PolicyElevationFrameError.Malformed, error.Error);
+    }
+
+    [Theory]
+    [InlineData("conflictStoreToken")]
+    [InlineData("conflictState")]
+    [InlineData("conflictPolicyId")]
+    public async Task HostResponseDeserialization_RejectsStaleResponseWithoutAtomicConflictField(
+        string propertyName)
+    {
+        PolicyElevationFrameException error = await Assert.ThrowsAsync<PolicyElevationFrameException>(
+            () => ReadResponseFromBodyAsync(
+                RemoveProperty(StaleResponseJson, propertyName)));
+
+        Assert.Equal(PolicyElevationFrameError.Malformed, error.Error);
+    }
+
+    [Fact]
+    public void ValidateResponse_RejectsDefaultInvalidDisposition()
+    {
+        var response = new PolicyElevationResponseMessage
+        {
+            RequestId = new string('a', PolicyElevationProtocol.RequestIdCharacters),
+        };
+
+        Assert.Equal(PolicyElevationDisposition.Invalid, response.Disposition);
+        Assert.Throws<PolicyElevationFrameException>(
+            () => PolicyElevationFrame.ValidateResponse(response));
+    }
+
+    [Fact]
+    public void ValidateResponse_RequiresAnErrorCodeForUnknownDisposition()
+    {
+        var response = new PolicyElevationResponseMessage
+        {
+            RequestId = new string('a', PolicyElevationProtocol.RequestIdCharacters),
+            Disposition = PolicyElevationDisposition.Unknown,
+        };
+
+        Assert.Throws<PolicyElevationFrameException>(
+            () => PolicyElevationFrame.ValidateResponse(response));
+    }
+
+    [Fact]
+    public void ValidateResponse_RejectsFieldsOutsideTheDispositionShape()
+    {
+        string requestId = new('a', PolicyElevationProtocol.RequestIdCharacters);
+        PolicyElevationResponseMessage[] invalidResponses =
+        [
+            new()
+            {
+                RequestId = requestId,
+                Disposition = PolicyElevationDisposition.Committed,
+                CommittedStoreToken = "token",
+                BrokerStatusCode = 200,
+            },
+            new()
+            {
+                RequestId = requestId,
+                Disposition = PolicyElevationDisposition.Rejected,
+                BrokerErrorCode = "InvalidPolicy",
+                CommittedStoreToken = "token",
+            },
+            new()
+            {
+                RequestId = requestId,
+                Disposition = PolicyElevationDisposition.Rejected,
+                BrokerErrorCode = "InvalidPolicy",
+                ConflictStoreToken = "token",
+            },
+            new()
+            {
+                RequestId = requestId,
+                Disposition = PolicyElevationDisposition.Unknown,
+                BrokerErrorCode = "Timeout",
+                ConflictState = PolicyElevationManagementState.Invalid,
+            },
+        ];
+
+        Assert.All(
+            invalidResponses,
+            response => Assert.Throws<PolicyElevationFrameException>(
+                () => PolicyElevationFrame.ValidateResponse(response)));
     }
 
     [Fact]
@@ -192,12 +342,38 @@ public class PolicyElevationFrameTests
     {
         using var stream = new MemoryStream();
         PolicyElevationResponseMessage response = ValidResponse();
-        response.Message = new string('x', PolicyElevationProtocol.MaxMessageCharacters + 1);
+        response.CommittedStoreToken =
+            new string('x', PolicyElevationProtocol.MaxStoreTokenCharacters + 1);
 
         PolicyElevationFrameException error = await Assert.ThrowsAsync<PolicyElevationFrameException>(
             () => PolicyElevationFrame.WriteResponseAsync(stream, response, CancellationToken.None));
 
         Assert.Equal(PolicyElevationFrameError.Malformed, error.Error);
+    }
+
+    [Fact]
+    public async Task StaleConflictContext_RoundTripsAtomicallyWithoutPolicyPayload()
+    {
+        using var stream = new MemoryStream();
+        var sent = new PolicyElevationResponseMessage
+        {
+            RequestId = new string('a', PolicyElevationProtocol.RequestIdCharacters),
+            Disposition = PolicyElevationDisposition.Rejected,
+            BrokerStatusCode = 409,
+            BrokerErrorCode = "StalePolicyStoreToken",
+            ConflictStoreToken = "current-token",
+            ConflictState = PolicyElevationManagementState.Active,
+            ConflictPolicyId = "current-policy",
+        };
+
+        await PolicyElevationFrame.WriteResponseAsync(stream, sent, CancellationToken.None);
+        stream.Position = 0;
+        PolicyElevationResponseMessage received =
+            await PolicyElevationFrame.ReadResponseAsync(stream, CancellationToken.None);
+
+        Assert.Equal("current-token", received.ConflictStoreToken);
+        Assert.Equal(PolicyElevationManagementState.Active, received.ConflictState);
+        Assert.Equal("current-policy", received.ConflictPolicyId);
     }
 
     [Fact]
@@ -224,5 +400,24 @@ public class PolicyElevationFrameTests
 
         using var stream = new MemoryStream(frame);
         await PolicyElevationFrame.ReadResponseAsync(stream, CancellationToken.None);
+    }
+
+    private static async Task ReadRequestFromBodyAsync(string body)
+    {
+        byte[] payload = Encoding.UTF8.GetBytes(body);
+        byte[] frame = new byte[PolicyElevationProtocol.FrameLengthPrefixBytes + payload.Length];
+        BinaryPrimitives.WriteUInt32BigEndian(frame, (uint)payload.Length);
+        payload.CopyTo(frame, PolicyElevationProtocol.FrameLengthPrefixBytes);
+
+        using var stream = new MemoryStream(frame);
+        await PolicyElevationFrame.ReadRequestAsync(stream, CancellationToken.None);
+    }
+
+    private static string RemoveProperty(string json, string propertyName)
+    {
+        JsonObject root = JsonNode.Parse(json)?.AsObject()
+            ?? throw new InvalidOperationException("The test JSON was not an object.");
+        Assert.True(root.Remove(propertyName), $"The test JSON did not contain '{propertyName}'.");
+        return root.ToJsonString();
     }
 }

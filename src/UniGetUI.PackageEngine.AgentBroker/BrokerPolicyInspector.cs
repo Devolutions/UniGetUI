@@ -199,8 +199,7 @@ public sealed partial class BrokerPolicyInspector : IBrokerPolicyInspector
     private static bool IsValidBooleanList(IReadOnlyCollection<bool>? values)
     {
         return values is not null
-            && values.Count <= 2
-            && values.Distinct().Count() == values.Count;
+            && values.Count <= 1;
     }
 
     private static bool IsValidStringList(

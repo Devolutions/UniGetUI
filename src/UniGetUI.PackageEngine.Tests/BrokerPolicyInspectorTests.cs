@@ -390,6 +390,8 @@ public class BrokerPolicyInspectorTests
         yield return [WithSemanticMutation(
             root => FirstRule(root)["Match"]!["Operations"] = new JsonArray("Install", "Install"))];
         yield return [WithSemanticMutation(
+            root => FirstRule(root)["Match"]!["Interactive"] = new JsonArray(false, true))];
+        yield return [WithSemanticMutation(
             root => FirstRule(root)["Constraints"]!["AllowedCustomParameters"] = new JsonArray(""))];
     }
 

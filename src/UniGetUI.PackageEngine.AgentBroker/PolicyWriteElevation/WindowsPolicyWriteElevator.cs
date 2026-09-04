@@ -321,9 +321,17 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
             }
 
             PolicyElevationResult result = MapResponse(request, response);
-            int? helperExit = await helper
-                .WaitForExitAsync(_timeouts.Exit, CancellationToken.None)
-                .ConfigureAwait(false);
+            int? helperExit;
+            try
+            {
+                helperExit = await helper
+                    .WaitForExitAsync(_timeouts.Exit, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return result;
+            }
 
             if (helperExit is not PolicyElevationProtocol.ExitSuccess)
             {

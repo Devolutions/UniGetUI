@@ -221,6 +221,33 @@ public class AgentPolicyInspectorViewModelTests
     }
 
     [Fact]
+    public async Task ReplaceIdentity_IsUnavailableWhenTheActiveIdentifierIsInvalid()
+    {
+        PolicyDocument policy = BuildFullResponse().Policy;
+        policy.Metadata.Id = "invalid id";
+        var snapshot = new PolicyManagementSnapshot
+        {
+            State = PolicyManagementState.Active,
+            WriteCapability = PolicyWriteCapability.Writable,
+            Policy = policy,
+        };
+        using var viewModel = new AgentPolicyInspectorViewModel(
+            new StubInspector(new(BrokerPolicyInspectionStatus.Unsupported)),
+            new StubManagementService(
+                new BrokerPolicyManagementResult(
+                    BrokerPolicyManagementStatus.Retrieved,
+                    snapshot)));
+        PolicyEditorLaunchRequest? launch = null;
+        viewModel.OpenPolicyEditorRequested += (_, request) => launch = request;
+
+        await viewModel.LoadManagementAsync();
+
+        Assert.False(viewModel.CanReplaceIdentity);
+        viewModel.ReplaceIdentityCommand.Execute(null);
+        Assert.Null(launch);
+    }
+
+    [Fact]
     public async Task Refresh_CancelsStaleRequestAndKeepsNewestResult()
     {
         var inspector = new RefreshInspector(BuildFullResponse());

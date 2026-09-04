@@ -602,7 +602,9 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         CanEdit = writable && snapshot.State == PolicyManagementState.Active;
         CanCreate = writable && snapshot.State == PolicyManagementState.Missing;
         CanRepair = writable && snapshot.State == PolicyManagementState.Invalid;
-        CanReplaceIdentity = writable && snapshot.State == PolicyManagementState.Active;
+        CanReplaceIdentity = writable
+            && snapshot.State == PolicyManagementState.Active
+            && PolicyEditorTemplates.IsValidResourceId(snapshot.Policy?.Metadata.Id);
 
         if (diagnostics is not null)
         {

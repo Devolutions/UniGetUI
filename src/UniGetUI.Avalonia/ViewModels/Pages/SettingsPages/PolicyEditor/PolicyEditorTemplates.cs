@@ -65,7 +65,7 @@ public static class PolicyEditorTemplates
         return activeId[..^1] + replacement;
     }
 
-    private static bool IsValidResourceId(string? value)
+    public static bool IsValidResourceId(string? value)
     {
         if (string.IsNullOrEmpty(value)
             || value.Length > ResourceIdMaxLength

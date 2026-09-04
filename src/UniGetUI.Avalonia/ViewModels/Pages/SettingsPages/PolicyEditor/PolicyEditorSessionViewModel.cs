@@ -94,6 +94,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _requiresManagementRefresh;
     [ObservableProperty] private ErrorCode? _lastErrorCode;
     [ObservableProperty] private PolicyWriteFailureKind _lastWriteFailureKind;
+    internal PolicyEditorWriteCompletion? LastWriteCompletion { get; private set; }
 
     public PolicyEditorSessionViewModel(
         PolicyEditorSession session,
@@ -602,6 +603,10 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             PolicyWriteOutcome write =
                 await _writeClient.WriteAsync(request, cancellationToken);
             if (!CanApplyDispatchedWrite(saveGeneration)) return;
+            PublishWriteCompletion(
+                saveGeneration,
+                write,
+                Session.MutationGeneration != attemptGeneration);
 
             if (write.FailureKind == PolicyWriteFailureKind.WriteResultUnknown)
             {
@@ -715,6 +720,43 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private bool CanApplyDispatchedWrite(long saveGeneration) =>
         Volatile.Read(ref _isDisposed) == 0
         && saveGeneration == Volatile.Read(ref _saveGeneration);
+
+    private void PublishWriteCompletion(
+        long generation,
+        PolicyWriteOutcome write,
+        bool hasNewerChanges)
+    {
+        PolicyEditorWriteCompletionKind kind;
+        if (write.Response is not null)
+        {
+            kind = hasNewerChanges
+                ? PolicyEditorWriteCompletionKind.SavedWithNewerChanges
+                : write.SavedThenSuperseded
+                    ? PolicyEditorWriteCompletionKind.SavedThenSuperseded
+                    : PolicyEditorWriteCompletionKind.Saved;
+        }
+        else if (write.FailureKind != PolicyWriteFailureKind.WriteResultUnknown
+                 && (write.ConflictDecision is not null
+                     || write.Error is
+                     {
+                         Code: ErrorCode.StalePolicyStoreToken,
+                         Management: not null,
+                     }))
+        {
+            kind = PolicyEditorWriteCompletionKind.Conflict;
+        }
+        else
+        {
+            kind = PolicyEditorWriteCompletionKind.Failed;
+        }
+
+        LastWriteCompletion = new(
+            generation,
+            kind,
+            write.FailureKind,
+            write.Error?.Code);
+        OnPropertyChanged(nameof(LastWriteCompletion));
+    }
 
     private CancellationTokenSource CreateLinkedCancellation(CancellationToken cancellationToken) =>
         CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetimeCancellation.Token);
@@ -914,6 +956,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                 cancellation.Dispose();
             }
         }
+
     }
 
     private void CancelStructuredDirtyAnalysis()
@@ -1024,3 +1067,18 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         cancellation?.Dispose();
     }
 }
+
+internal enum PolicyEditorWriteCompletionKind
+{
+    Saved,
+    SavedWithNewerChanges,
+    SavedThenSuperseded,
+    Conflict,
+    Failed,
+}
+
+internal sealed record PolicyEditorWriteCompletion(
+    long Generation,
+    PolicyEditorWriteCompletionKind Kind,
+    PolicyWriteFailureKind FailureKind,
+    ErrorCode? ErrorCode);

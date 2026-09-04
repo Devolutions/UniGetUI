@@ -1,3 +1,4 @@
+using Avalonia.Automation;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Model;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
@@ -288,7 +289,10 @@ public class PolicyEditorStructuredInputGuardTests
             validation,
             new FakeConfirmationPrompt(),
             writer);
-        using var dialog = new PolicyEditorDialogViewModel(sessionViewModel);
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using var dialog = new PolicyEditorDialogViewModel(
+            sessionViewModel,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
         validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
         {
             IsValid = true,
@@ -313,6 +317,142 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.Equal(PolicyEditorOperationKind.Update, sessionViewModel.Operation);
         Assert.Equal(dialog.Document.ValidFromError, dialog.Status.Message);
         Assert.NotEqual("The package broker policy was saved successfully.", dialog.Status.Message);
+        Assert.Collection(
+            announcements,
+            announcement =>
+            {
+                Assert.Contains("Working", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            },
+            announcement =>
+            {
+                Assert.Contains("Policy saved; newer changes remain", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            });
+    }
+
+    [Theory]
+    [InlineData(PolicyWriteFailureKind.BrokerRejected, ErrorCode.Forbidden, false)]
+    [InlineData(PolicyWriteFailureKind.WriteResultUnknown, null, false)]
+    [InlineData(PolicyWriteFailureKind.BrokerRejected, ErrorCode.StalePolicyStoreToken, true)]
+    public async Task InflightWriteOutcome_IsAnnouncedWhenNewerLocalErrorControlsVisualStatus(
+        PolicyWriteFailureKind failureKind,
+        ErrorCode? errorCode,
+        bool isConflict)
+    {
+        var validation = new FakeValidationClient();
+        var writer = new FakeWriteClient { Gate = new TaskCompletionSource() };
+        PolicyDocument active = PolicyEditorTestFixtures.BuildDocument(id: "test-policy");
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement(active, "token-1"));
+        var sessionViewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using var dialog = new PolicyEditorDialogViewModel(
+            sessionViewModel,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-write",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(sessionViewModel.Draft),
+        });
+        writer.NextOutcome = PolicyWriteOutcome.Failure(
+            failureKind,
+            errorCode is { } code
+                ? new ErrorResponse
+                {
+                    Code = code,
+                    Management = isConflict
+                        ? PolicyEditorTestFixtures.BuildActiveManagement(active, "token-2")
+                        : null,
+                }
+                : null);
+
+        Task pending = sessionViewModel.SaveCommand.ExecuteAsync(null);
+        Assert.Equal(1, writer.CallCount);
+        dialog.Document.ValidFromText = "not-a-date";
+        writer.Gate.SetResult();
+        await pending;
+
+        Assert.True(sessionViewModel.HasLocalInputErrors);
+        Assert.Equal("Correct the highlighted fields", dialog.Status.Title);
+        Assert.Collection(
+            announcements,
+            announcement =>
+            {
+                Assert.Contains("Working", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            },
+            announcement =>
+            {
+                Assert.Contains(
+                    isConflict
+                        ? "The policy changed since you started editing"
+                        : "The policy could not be saved",
+                    announcement.Message);
+                Assert.Equal(
+                    isConflict
+                        ? AutomationLiveSetting.Polite
+                        : AutomationLiveSetting.Assertive,
+                    announcement.LiveSetting);
+            });
+    }
+
+    [Fact]
+    public async Task InflightCommittedWrite_IsAnnouncedWhenNewerRawSyntaxErrorControlsVisualStatus()
+    {
+        var validation = new FakeValidationClient();
+        var writer = new FakeWriteClient { Gate = new TaskCompletionSource() };
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement(
+                PolicyEditorTestFixtures.BuildDocument(id: "test-policy"),
+                "token-1"));
+        var sessionViewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        sessionViewModel.SwitchToRawCommand.Execute(null);
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using var dialog = new PolicyEditorDialogViewModel(
+            sessionViewModel,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-write",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(sessionViewModel.Draft),
+        });
+        writer.NextOutcome = PolicyWriteOutcome.Success(
+            PolicyEditorTestFixtures.BuildReplacementResponse(
+                PolicyEditorTestFixtures.BuildDocument(id: "test-policy"),
+                "token-2"));
+
+        Task pending = sessionViewModel.SaveCommand.ExecuteAsync(null);
+        Assert.Equal(1, writer.CallCount);
+        sessionViewModel.RawBuffer = "{";
+        await sessionViewModel.WaitForRawSyntaxAnalysisAsync();
+        writer.Gate.SetResult();
+        await pending;
+
+        Assert.NotNull(sessionViewModel.SyntaxError);
+        Assert.Equal("The document is not valid JSON", dialog.Status.Title);
+        Assert.Collection(
+            announcements,
+            announcement =>
+            {
+                Assert.Contains("Working", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            },
+            announcement =>
+            {
+                Assert.Contains("Policy saved; newer changes remain", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            });
     }
 
     [Fact]
@@ -559,7 +699,10 @@ public class PolicyEditorStructuredInputGuardTests
             validation,
             new FakeConfirmationPrompt(),
             writer);
-        using var dialog = new PolicyEditorDialogViewModel(viewModel);
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using var dialog = new PolicyEditorDialogViewModel(
+            viewModel,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
         validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
         {
             IsValid = true,
@@ -582,6 +725,18 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.Equal(
             "Review your changes, then choose Overwrite to save anyway.",
             dialog.Status.Message);
+        Assert.Collection(
+            announcements,
+            announcement =>
+            {
+                Assert.Contains("Working", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            },
+            announcement =>
+            {
+                Assert.Contains("The policy changed since you started editing", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            });
     }
 
     [Fact]
@@ -615,6 +770,260 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.NotEqual(
             "Review your changes, then choose Overwrite to save anyway.",
             dialog.Status.Message);
+    }
+
+    [Theory]
+    [InlineData(PolicyWriteFailureKind.BrokerRejected, ErrorCode.Forbidden)]
+    [InlineData(PolicyWriteFailureKind.WriteResultUnknown, null)]
+    public async Task CompletedWriteErrors_AreAnnouncedAssertively(
+        PolicyWriteFailureKind failureKind,
+        ErrorCode? errorCode)
+    {
+        PolicyDocument active = PolicyEditorTestFixtures.BuildDocument(id: "test-policy");
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement(active, "token-1"));
+        var validation = new FakeValidationClient();
+        var writer = new FakeWriteClient();
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using var dialog = new PolicyEditorDialogViewModel(
+            viewModel,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-rejected",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(viewModel.Draft),
+        });
+        writer.NextOutcome = PolicyWriteOutcome.Failure(
+            failureKind,
+            errorCode is { } code ? new ErrorResponse { Code = code } : null);
+
+        await viewModel.SaveCommand.ExecuteAsync(null);
+
+        Assert.Collection(
+            announcements,
+            announcement =>
+            {
+                Assert.Contains("Working", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            },
+            announcement =>
+            {
+                Assert.Contains("The policy could not be saved", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Assertive, announcement.LiveSetting);
+            });
+    }
+
+    [Fact]
+    public async Task CompletedSaveSuccess_IsAnnouncedPolitely()
+    {
+        PolicyDocument active = PolicyEditorTestFixtures.BuildDocument(id: "test-policy");
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement(active, "token-1"));
+        var validation = new FakeValidationClient();
+        var writer = new FakeWriteClient();
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using var dialog = new PolicyEditorDialogViewModel(
+            viewModel,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-saved",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(viewModel.Draft),
+        });
+        writer.NextOutcome = PolicyWriteOutcome.Success(
+            PolicyEditorTestFixtures.BuildReplacementResponse(
+                PolicyEditorTestFixtures.BuildDocument(id: "test-policy"),
+                "saved-token"));
+
+        await viewModel.SaveCommand.ExecuteAsync(null);
+
+        Assert.Collection(
+            announcements,
+            announcement =>
+            {
+                Assert.Contains("Working", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            },
+            announcement =>
+            {
+                Assert.Contains("Policy saved", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            });
+    }
+
+    [Fact]
+    public async Task ValidationError_IsAnnouncedAssertivelyWithoutDuplicateSummary()
+    {
+        var validation = new FakeValidationClient();
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel(validation);
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using var dialog = new PolicyEditorDialogViewModel(
+            viewModel,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = false,
+            Findings =
+            [
+                new PolicyFinding
+                {
+                    Severity = PolicyFindingSeverity.Error,
+                    Code = PolicyFindingCode.InvalidFieldValue,
+                    Path = "/Metadata/SupportUrl",
+                    Message = "invalid URL",
+                },
+            ],
+        });
+
+        await viewModel.ValidateCommand.ExecuteAsync(null);
+
+        Assert.Collection(
+            announcements,
+            announcement =>
+            {
+                Assert.Contains("Working", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            },
+            announcement =>
+            {
+                Assert.Contains("A policy field has an invalid value", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Assertive, announcement.LiveSetting);
+            });
+        Assert.Equal("Validation found errors", dialog.Status.Title);
+    }
+
+    [Fact]
+    public async Task OrdinaryBusyStatus_IsAnnouncedOncePolitely()
+    {
+        var validation = new FakeValidationClient
+        {
+            Gate = new TaskCompletionSource(),
+        };
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel(validation);
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using var dialog = new PolicyEditorDialogViewModel(
+            viewModel,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
+
+        Task pending = viewModel.ValidateCommand.ExecuteAsync(null);
+
+        (string? message, AutomationLiveSetting liveSetting) = Assert.Single(announcements);
+        Assert.Contains("Working", message);
+        Assert.Equal(AutomationLiveSetting.Polite, liveSetting);
+
+        validation.Gate.TrySetResult();
+        await pending;
+
+        Assert.Single(announcements);
+    }
+
+    [Theory]
+    [InlineData(WriteAnnouncementScenario.Saved)]
+    [InlineData(WriteAnnouncementScenario.Rejected)]
+    [InlineData(WriteAnnouncementScenario.Conflict)]
+    public async Task CompletedWriteOutcome_IsNotReannouncedByLaterValidation(
+        WriteAnnouncementScenario scenario)
+    {
+        var validation = new FakeValidationClient();
+        var writer = new FakeWriteClient();
+        PolicyDocument active = PolicyEditorTestFixtures.BuildDocument(id: "test-policy");
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement(active, "token-1"));
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using var dialog = new PolicyEditorDialogViewModel(
+            viewModel,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
+        validation.NextOutcome = ValidOutcome(viewModel, "receipt-write");
+        writer.NextOutcome = CreateWriteOutcome(scenario, active);
+
+        await viewModel.SaveCommand.ExecuteAsync(null);
+        Assert.Equal(2, announcements.Count);
+        announcements.Clear();
+        validation.NextOutcome = ValidOutcome(viewModel, "receipt-validation");
+
+        await viewModel.ValidateCommand.ExecuteAsync(null);
+
+        (string? message, AutomationLiveSetting liveSetting) = Assert.Single(announcements);
+        Assert.Contains("Working", message);
+        Assert.Equal(AutomationLiveSetting.Polite, liveSetting);
+    }
+
+    [Fact]
+    public async Task ExistingWriteCompletion_IsSilentOnConstruction_AndNewCompletionAnnouncesOnce()
+    {
+        var validation = new FakeValidationClient();
+        var writer = new FakeWriteClient();
+        PolicyDocument active = PolicyEditorTestFixtures.BuildDocument(id: "test-policy");
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement(active, "token-1"));
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        validation.NextOutcome = ValidOutcome(viewModel, "receipt-first");
+        writer.NextOutcome = PolicyWriteOutcome.Success(
+            PolicyEditorTestFixtures.BuildReplacementResponse(active, "token-2"));
+        await viewModel.SaveCommand.ExecuteAsync(null);
+
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using var dialog = new PolicyEditorDialogViewModel(
+            viewModel,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
+        Assert.Empty(announcements);
+
+        validation.NextOutcome = ValidOutcome(viewModel, "receipt-second");
+        writer.NextOutcome = PolicyWriteOutcome.Success(
+            PolicyEditorTestFixtures.BuildReplacementResponse(active, "token-3"));
+        await viewModel.SaveCommand.ExecuteAsync(null);
+
+        Assert.Collection(
+            announcements,
+            announcement =>
+            {
+                Assert.Contains("Working", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            },
+            announcement =>
+            {
+                Assert.Contains("Policy saved", announcement.Message);
+                Assert.Equal(AutomationLiveSetting.Polite, announcement.LiveSetting);
+            });
+    }
+
+    [Fact]
+    public async Task RawSyntaxError_DoesNotDuplicateDetailedLiveRegionAnnouncement()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using var dialog = new PolicyEditorDialogViewModel(
+            viewModel,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
+        viewModel.SwitchToRawCommand.Execute(null);
+
+        viewModel.RawBuffer = "{";
+        await viewModel.WaitForRawSyntaxAnalysisAsync();
+
+        Assert.NotNull(viewModel.SyntaxError);
+        Assert.Equal("The document is not valid JSON", dialog.Status.Title);
+        Assert.Empty(announcements);
     }
 
     [Fact]
@@ -715,6 +1124,38 @@ public class PolicyEditorStructuredInputGuardTests
     private static void AssertSaveGuardAgrees(PolicyEditorSessionViewModel viewModel) =>
         Assert.Equal(viewModel.CanValidateOrSave, viewModel.SaveCommand.CanExecute(null));
 
+    private static PolicyEditorValidationOutcome ValidOutcome(
+        PolicyEditorSessionViewModel viewModel,
+        string receipt) =>
+        new(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = receipt,
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(viewModel.Draft),
+        });
+
+    private static PolicyWriteOutcome CreateWriteOutcome(
+        WriteAnnouncementScenario scenario,
+        PolicyDocument active) =>
+        scenario switch
+        {
+            WriteAnnouncementScenario.Saved => PolicyWriteOutcome.Success(
+                PolicyEditorTestFixtures.BuildReplacementResponse(active, "token-2")),
+            WriteAnnouncementScenario.Rejected => PolicyWriteOutcome.Failure(
+                PolicyWriteFailureKind.BrokerRejected,
+                new ErrorResponse { Code = ErrorCode.Forbidden }),
+            WriteAnnouncementScenario.Conflict => PolicyWriteOutcome.Failure(
+                PolicyWriteFailureKind.BrokerRejected,
+                new ErrorResponse
+                {
+                    Code = ErrorCode.StalePolicyStoreToken,
+                    Management = PolicyEditorTestFixtures.BuildActiveManagement(
+                        active,
+                        "token-conflict"),
+                }),
+            _ => throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null),
+        };
+
     private static PolicyEditorSessionViewModel CreateViewModel(FakeValidationClient? validation = null)
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("test-policy", "Contoso");
@@ -726,5 +1167,12 @@ public class PolicyEditorStructuredInputGuardTests
             validation ?? new FakeValidationClient(),
             new FakeConfirmationPrompt(),
             new FakeWriteClient());
+    }
+
+    public enum WriteAnnouncementScenario
+    {
+        Saved,
+        Rejected,
+        Conflict,
     }
 }

@@ -20,6 +20,9 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 /// </summary>
 public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
 {
+    private readonly Action<string?, AutomationLiveSetting> _announce;
+    private long _announcedWriteCompletionGeneration;
+
     public PolicyEditorSessionViewModel Session { get; }
 
     public PolicyEditorDocumentUi Document { get; }
@@ -29,8 +32,17 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
     public InfoBarViewModel Status { get; } = new() { IsClosable = false, IsOpen = false };
 
     public PolicyEditorDialogViewModel(PolicyEditorSessionViewModel session)
+        : this(session, AccessibilityAnnouncementService.Announce)
+    {
+    }
+
+    internal PolicyEditorDialogViewModel(
+        PolicyEditorSessionViewModel session,
+        Action<string?, AutomationLiveSetting> announce)
     {
         Session = session;
+        _announce = announce;
+        _announcedWriteCompletionGeneration = session.LastWriteCompletion?.Generation ?? 0;
         Document = new PolicyEditorDocumentUi(session);
         Session.PropertyChanged += OnSessionPropertyChanged;
         RebuildRules();
@@ -78,6 +90,14 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
 
     private void OnSessionPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(PolicyEditorSessionViewModel.LastWriteCompletion)
+            && Session.LastWriteCompletion is { } completion
+            && completion.Generation > _announcedWriteCompletionGeneration)
+        {
+            _announcedWriteCompletionGeneration = completion.Generation;
+            AnnounceWriteCompletion(completion);
+        }
+
         if (e.PropertyName == nameof(PolicyEditorSessionViewModel.Findings))
         {
             foreach (PolicyEditorRuleUi rule in Rules)
@@ -89,13 +109,13 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
                 finding => finding.Severity == PolicyValidationSeverity.Error);
             if (firstError is not null)
             {
-                AccessibilityAnnouncementService.Announce(
+                _announce(
                     firstError.AutomationName,
                     AutomationLiveSetting.Assertive);
             }
             else if (Session.Findings.FirstOrDefault() is { } firstWarning)
             {
-                AccessibilityAnnouncementService.Announce(
+                _announce(
                     firstWarning.AutomationName,
                     AutomationLiveSetting.Polite);
             }
@@ -153,34 +173,8 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
             SetStatus(
                 CoreTools.Translate("Correct the highlighted fields"),
                 Session.LocalInputErrorSummary,
-                InfoBarSeverity.Error);
-            return;
-        }
-
-        if (Session.SavedWithNewerChanges)
-        {
-            SetStatus(
-                CoreTools.Translate("Policy saved; newer changes remain"),
-                CoreTools.Translate("The policy was saved, but newer draft changes remain unsaved."),
-                InfoBarSeverity.Warning);
-            return;
-        }
-
-        if (Session.SavedThenSuperseded)
-        {
-            SetStatus(
-                CoreTools.Translate("Policy saved, then replaced again"),
-                CoreTools.Translate("The policy was saved, but another writer replaced it before management state was refreshed."),
-                InfoBarSeverity.Warning);
-            return;
-        }
-
-        if (Session.LastSaveSucceeded)
-        {
-            SetStatus(
-                CoreTools.Translate("Policy saved"),
-                CoreTools.Translate("The package broker policy was saved successfully."),
-                InfoBarSeverity.Success);
+                InfoBarSeverity.Error,
+                announce: false);
             return;
         }
 
@@ -189,7 +183,38 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
             SetStatus(
                 Session.SyntaxErrorTitle,
                 Session.SyntaxErrorMessage,
-                InfoBarSeverity.Error);
+                InfoBarSeverity.Error,
+                announce: false);
+            return;
+        }
+
+        if (Session.SavedWithNewerChanges)
+        {
+            SetStatus(
+                CoreTools.Translate("Policy saved; newer changes remain"),
+                CoreTools.Translate("The policy was saved, but newer draft changes remain unsaved."),
+                InfoBarSeverity.Warning,
+                announce: !HasAnnouncedWriteCompletion);
+            return;
+        }
+
+        if (Session.SavedThenSuperseded)
+        {
+            SetStatus(
+                CoreTools.Translate("Policy saved, then replaced again"),
+                CoreTools.Translate("The policy was saved, but another writer replaced it before management state was refreshed."),
+                InfoBarSeverity.Warning,
+                announce: !HasAnnouncedWriteCompletion);
+            return;
+        }
+
+        if (Session.LastSaveSucceeded)
+        {
+            SetStatus(
+                CoreTools.Translate("Policy saved"),
+                CoreTools.Translate("The package broker policy was saved successfully."),
+                InfoBarSeverity.Success,
+                announce: !HasAnnouncedWriteCompletion);
             return;
         }
 
@@ -198,7 +223,8 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
             SetStatus(
                 CoreTools.Translate("The policy changed since you started editing"),
                 CoreTools.Translate("Review your changes, then choose Overwrite to save anyway."),
-                InfoBarSeverity.Warning);
+                InfoBarSeverity.Warning,
+                announce: !HasAnnouncedWriteCompletion);
             return;
         }
 
@@ -207,7 +233,9 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
             SetStatus(
                 CoreTools.Translate("The policy could not be saved"),
                 WriteFailureMessage,
-                InfoBarSeverity.Error);
+                InfoBarSeverity.Error,
+                announce: Session.LastWriteFailureKind == PolicyWriteFailureKind.None
+                    || !HasAnnouncedWriteCompletion);
             return;
         }
 
@@ -219,19 +247,81 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
                     ? CoreTools.Translate("Validation found errors")
                     : CoreTools.Translate("Validation found warnings"),
                 CoreTools.Translate("Review the findings below before saving."),
-                errorCount > 0 ? InfoBarSeverity.Error : InfoBarSeverity.Warning);
+                errorCount > 0 ? InfoBarSeverity.Error : InfoBarSeverity.Warning,
+                announce: false);
             return;
         }
 
         Status.IsOpen = false;
     }
 
-    private void SetStatus(string title, string message, InfoBarSeverity severity)
+    private void SetStatus(
+        string title,
+        string message,
+        InfoBarSeverity severity,
+        bool announce = true)
     {
+        bool changed = !Status.IsOpen
+            || Status.Title != title
+            || Status.Message != message
+            || Status.Severity != severity;
         Status.Title = title;
         Status.Message = message;
         Status.Severity = severity;
         Status.IsOpen = true;
+        if (changed && announce)
+        {
+            AnnounceStatus();
+        }
+    }
+
+    private void AnnounceStatus()
+    {
+        string message = string.IsNullOrEmpty(Status.Message)
+            ? Status.Title
+            : $"{Status.Title}. {Status.Message}";
+        _announce(
+            message,
+            Status.Severity == InfoBarSeverity.Error
+                ? AutomationLiveSetting.Assertive
+                : AutomationLiveSetting.Polite);
+    }
+
+    private bool HasAnnouncedWriteCompletion =>
+        Session.LastWriteCompletion is { } completion
+        && completion.Generation <= _announcedWriteCompletionGeneration;
+
+    private void AnnounceWriteCompletion(PolicyEditorWriteCompletion completion)
+    {
+        (string title, string message, InfoBarSeverity severity) = completion.Kind switch
+        {
+            PolicyEditorWriteCompletionKind.SavedWithNewerChanges => (
+                CoreTools.Translate("Policy saved; newer changes remain"),
+                CoreTools.Translate("The policy was saved, but newer draft changes remain unsaved."),
+                InfoBarSeverity.Warning),
+            PolicyEditorWriteCompletionKind.SavedThenSuperseded => (
+                CoreTools.Translate("Policy saved, then replaced again"),
+                CoreTools.Translate("The policy was saved, but another writer replaced it before management state was refreshed."),
+                InfoBarSeverity.Warning),
+            PolicyEditorWriteCompletionKind.Saved => (
+                CoreTools.Translate("Policy saved"),
+                CoreTools.Translate("The package broker policy was saved successfully."),
+                InfoBarSeverity.Success),
+            PolicyEditorWriteCompletionKind.Conflict => (
+                CoreTools.Translate("The policy changed since you started editing"),
+                CoreTools.Translate("Review your changes, then choose Overwrite to save anyway."),
+                InfoBarSeverity.Warning),
+            _ => (
+                CoreTools.Translate("The policy could not be saved"),
+                DescribeWriteFailure(completion.FailureKind, completion.ErrorCode),
+                InfoBarSeverity.Error),
+        };
+
+        _announce(
+            $"{title}. {message}",
+            severity == InfoBarSeverity.Error
+                ? AutomationLiveSetting.Assertive
+                : AutomationLiveSetting.Polite);
     }
 
     private static string DescribeWriteFailure(PolicyWriteFailureKind kind, ErrorCode? errorCode)

@@ -348,5 +348,39 @@ public sealed class PowerShellOperationLauncherTests
 
         Assert.Contains("AdminPrivilegesAreRequired", result.StdOut + result.StdErr);
     }
+
+    // Array splatting is sometimes said to bind positionally only. It does not: the elements go
+    // through the ordinary parameter binder, which reads a leading-dash token as a parameter name.
+    // Pinned with the cmdlets the launcher actually runs, because getting this wrong would mean
+    // installing a package literally named "-Name".
+    [Fact]
+    public void NamedParametersBindForTheGalleryCmdlets()
+    {
+        var result = Run(
+            "tls12",
+            "Install-Module",
+            "-Name",
+            "powershell-yaml",
+            "-RequiredVersion",
+            "0.4.12",
+            "-Scope",
+            "CurrentUser",
+            "-WhatIf"
+        );
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("powershell-yaml", result.StdOut);
+        Assert.Contains("0.4.12", result.StdOut);
+        Assert.DoesNotContain("-Name", result.StdOut);
+    }
+
+    [Fact]
+    public void NamedParametersBindForTheSourceCmdlets()
+    {
+        var result = Run("plain", "Get-PSRepository", "-Name", "PSGallery");
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("PSGallery", result.StdOut);
+    }
 }
 #endif

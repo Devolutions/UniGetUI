@@ -66,13 +66,17 @@ internal sealed class BunPkgOperationHelper : BasePkgOperationHelper
         : package.HasConcreteVersion ? package.VersionString
         : "";
 
-    // A version is appended only when there is one to append; bun installs the latest version
-    // when no specifier is given. An unpinned imported package reports the localized "Latest" as
-    // its version, which is display text rather than a tag, and is more than one word in several
-    // languages, so it must not be substituted here.
+    // A version is appended only when there is one; bun installs the latest when none is given.
+    // A version that is present but unusable is refused rather than dropped, so a request for a
+    // specific version never quietly turns into a request for the latest.
     private static string BuildSpec(string id, string version)
     {
-        string spec = CoreTools.IsValidPackageVersion(version) ? $"{id}@{version}" : id;
+        if (version.Length > 0 && !CoreTools.IsValidPackageVersion(version))
+            throw new InvalidOperationException(
+                $"Refusing to build a Bun command line for package version \"{version}\": it is not a valid package version."
+            );
+
+        string spec = version.Length > 0 ? $"{id}@{version}" : id;
 
         if (!CoreTools.IsCommandLineInertValue(spec))
             throw new InvalidOperationException(

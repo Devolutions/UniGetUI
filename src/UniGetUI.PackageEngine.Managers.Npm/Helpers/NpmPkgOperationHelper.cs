@@ -99,14 +99,19 @@ internal sealed class NpmPkgOperationHelper : BasePkgOperationHelper
         : package.HasConcreteVersion ? package.VersionString
         : "";
 
-    // A version is appended only when there is one to append; npm installs the latest version
-    // when no specifier is given. Validity is the only test, so a dist-tag such as "next" or
-    // "beta" is still passed through: the localized "Latest" placeholder an unpinned imported
-    // package reports never reaches here, because install uses the requested version alone.
-    private static string ResolveInstallSpec(string id, string version)
+    // A version is appended only when there is one; npm installs the latest when none is given.
+    // A version that is present but unusable is refused rather than dropped, so a request for a
+    // specific version never quietly turns into a request for the latest. A dist-tag such as
+    // "next" or "beta" is a usable version and is passed through.
+    private string ResolveInstallSpec(string id, string version)
     {
+        if (version.Length > 0 && !CoreTools.IsValidPackageVersion(version))
+            throw new InvalidOperationException(
+                $"Refusing to build an {Manager.Name} command line for package version \"{version}\": it is not a valid package version."
+            );
+
         bool aliased = TryParseAlias(id, out string localName, out string targetName);
-        string suffix = CoreTools.IsValidPackageVersion(version) ? $"@{version}" : "";
+        string suffix = version.Length > 0 ? $"@{version}" : "";
 
         return aliased ? $"{localName}@npm:{targetName}{suffix}" : $"{id}{suffix}";
     }

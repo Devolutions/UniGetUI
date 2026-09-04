@@ -3,6 +3,7 @@ using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PowerShellManager;
+using UniGetUI.PackageEngine.Managers.ScoopManager;
 using UniGetUI.PackageEngine.Classes.Serializable;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
@@ -350,6 +351,72 @@ public sealed class ShellManagerLaunchModeTests
             manager.OperationHelper.GetParameters(package, options, OperationType.Install),
             manager.OperationHelper.GetStandaloneParameters(package, options, OperationType.Install)
         );
+    }
+
+    // A requested version that cannot be used is refused, not dropped: silently installing the
+    // latest instead of the version the bundle asked for would be worse than failing.
+    [Theory]
+    [InlineData("1.0; calc")]
+    [InlineData("1.0 --index-url http://evil.example")]
+    [InlineData("1.0$(calc)")]
+    public void Npm_RefusesARequestedVersionItCannotUse(string version)
+    {
+        var manager = new Npm();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("express")
+            .WithVersion("5.0.0")
+            .Build();
+
+        Assert.Throws<InvalidOperationException>(
+            () =>
+                manager.OperationHelper.GetParameters(
+                    package,
+                    new InstallOptions { Version = version },
+                    OperationType.Install
+                )
+        );
+    }
+
+    [Fact]
+    public void Scoop_RefusesASpecifierBuiltFromAMalformedBucketName()
+    {
+        var manager = new Scoop();
+        var source = new SourceBuilder().WithManager(manager).WithName("main;calc").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("git")
+            .WithSource(source)
+            .Build();
+
+        Assert.Throws<InvalidOperationException>(
+            () =>
+                manager.OperationHelper.GetParameters(
+                    package,
+                    new InstallOptions(),
+                    OperationType.Install
+                )
+        );
+    }
+
+    [Fact]
+    public void Scoop_KeepsAnOrdinaryBucketSpecifier()
+    {
+        var manager = new Scoop();
+        var source = new SourceBuilder().WithManager(manager).WithName("main").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("git")
+            .WithSource(source)
+            .Build();
+
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Install
+        );
+
+        Assert.Contains("main/git", parameters);
     }
 }
 #endif

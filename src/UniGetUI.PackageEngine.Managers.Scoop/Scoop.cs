@@ -23,6 +23,21 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
     {
         public override bool CommandLineIsShellInterpreted => true;
 
+        /// <summary>
+        /// Scoop is addressed as "bucket/app", so the source name becomes part of the specifier
+        /// that reaches the command line. The base helpers validate the package identifier; the
+        /// bucket name comes from whatever is already installed and is checked here.
+        /// </summary>
+        internal static string RequireSafePackageSpec(string spec)
+        {
+            if (!CoreTools.IsValidPackageIdentifier(spec))
+                throw new InvalidOperationException(
+                    $"Refusing to build a Scoop command line for \"{spec}\": it is not a valid package specifier."
+                );
+
+            return spec;
+        }
+
         public static string[] FALSE_PACKAGE_IDS = ["No", "WARN"];
         public static string[] FALSE_PACKAGE_VERSIONS =
         [

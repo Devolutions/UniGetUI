@@ -31,9 +31,9 @@ internal sealed class ScoopPkgOperationHelper : BasePkgOperationHelper
 
         // If source is ellipsed, a local path, or a URL manifest, omit source argument
         if (package.Source.Name.Contains("...") || package.Source.Name.Contains(":\\") || package.Source.Name.StartsWith("http"))
-            parameters.Add($"{package.Id}");
+            parameters.Add(Scoop.RequireSafePackageSpec(package.Id));
         else
-            parameters.Add($"{package.Source.Name}/{package.Id}");
+            parameters.Add(Scoop.RequireSafePackageSpec($"{package.Source.Name}/{package.Id}"));
 
         if (
             package.OverridenOptions.Scope == PackageScope.Global

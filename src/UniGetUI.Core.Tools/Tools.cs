@@ -1344,6 +1344,28 @@ namespace UniGetUI.Core.Tools
             return true;
         }
 
+        /// <summary>
+        /// Starts a process and closes its standard input straight away, for callers that have
+        /// nothing to write to it.
+        /// <para>
+        /// The PowerShell shims that ship with npm and Scoop pipe $input to the real program
+        /// whenever $MyInvocation.ExpectingInput is set, which it is whenever standard input is
+        /// not a console - a redirected pipe, or one inherited from a parent that has none of its
+        /// own, as in the headless daemon. Enumerating $input does not return until that pipe is
+        /// closed, so a shim invoked with the pipe left open never runs at all. Closing it makes
+        /// the pipeline enumerate empty and the shim run immediately.
+        /// </para>
+        /// </summary>
+        public static void StartAndCloseStandardInput(Process process)
+        {
+            process.Start();
+
+            if (process.StartInfo.RedirectStandardInput)
+            {
+                process.StandardInput.Close();
+            }
+        }
+
         public static bool IsValidPackageVersion(string version)
         {
             if (version.Length is 0 or > MaxPackageVersionLength)

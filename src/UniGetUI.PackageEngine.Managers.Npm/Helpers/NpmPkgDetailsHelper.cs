@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using UniGetUI.Core.IconEngine;
 using UniGetUI.Core.Logging;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -53,7 +54,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                     LoggableTaskType.LoadPackageDetails,
                     p
                 );
-                p.Start();
+                CoreTools.StartAndCloseStandardInput(p);
 
                 string strContents = p.StandardOutput.ReadToEnd();
                 logger.AddToStdOut(strContents);
@@ -219,7 +220,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                 LoggableTaskType.LoadPackageVersions,
                 p
             );
-            p.Start();
+            CoreTools.StartAndCloseStandardInput(p);
 
             string strContents = p.StandardOutput.ReadToEnd();
             logger.AddToStdOut(strContents);

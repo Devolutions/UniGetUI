@@ -82,7 +82,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
             using Process p = new() { StartInfo = startInfo };
 
             IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages, p);
-            p.Start();
+            CoreTools.StartAndCloseStandardInput(p);
 
             string strContents = p.StandardOutput.ReadToEnd();
             logger.AddToStdOut(strContents);
@@ -126,7 +126,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                 };
 
                 IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates, p);
-                p.Start();
+                CoreTools.StartAndCloseStandardInput(p);
 
                 string strContents = p.StandardOutput.ReadToEnd();
                 logger.AddToStdOut(strContents);
@@ -175,7 +175,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                     LoggableTaskType.ListInstalledPackages,
                     p
                 );
-                p.Start();
+                CoreTools.StartAndCloseStandardInput(p);
 
                 string strContents = p.StandardOutput.ReadToEnd();
                 logger.AddToStdOut(strContents);
@@ -299,7 +299,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                     StandardOutputEncoding = System.Text.Encoding.UTF8,
                 },
             };
-            process.Start();
+            CoreTools.StartAndCloseStandardInput(process);
             version = process.StandardOutput.ReadToEnd().Trim();
             process.WaitForExit();
         }

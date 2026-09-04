@@ -48,13 +48,16 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 || details.Package.Source.Name.Contains(":\\")
                 || details.Package.Source.Name.StartsWith("http")
             )
-                packageId = $"{details.Package.Id}";
+                packageId = Scoop.RequireSafePackageSpec(details.Package.Id);
             else
-                packageId = $"{details.Package.Source.Name}/{details.Package.Id}";
+                packageId = Scoop.RequireSafePackageSpec(
+                    $"{details.Package.Source.Name}/{details.Package.Id}"
+                );
 
             var startInfo = new ProcessStartInfo
             {
                 FileName = Manager.Status.ExecutablePath,
+                RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -70,7 +73,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 p
             );
 
-            p.Start();
+            CoreTools.StartAndCloseStandardInput(p);
             Task<string> stdErr = ScoopProcess.ReadStdErrAsync(p);
             string JsonString = p.StandardOutput.ReadToEnd();
             logger.AddToStdOut(JsonString);

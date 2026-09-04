@@ -753,9 +753,10 @@ namespace UniGetUI.Core.Tools
 
         /// <summary>
         /// Windows: hand our foreground rights to the imminent UAC consent prompt so it surfaces
-        /// in front instead of only flashing the taskbar (#5146). Succeeds only while UniGetUI
-        /// already owns the foreground; it deliberately never activates the window, which would
-        /// interrupt a user who had minimized it (#5102). No-op elsewhere.
+        /// in front instead of only flashing the taskbar (#5146). Windows decides whether we
+        /// still hold that privilege and grants nothing once another app owns the foreground.
+        /// Either way this only ever lets the consent UI come forward; it never activates our
+        /// own window, so a minimized UniGetUI stays minimized (#5102). No-op elsewhere.
         /// Must be called immediately before launching the elevator.
         /// </summary>
         public static void PrepareForegroundForElevation()

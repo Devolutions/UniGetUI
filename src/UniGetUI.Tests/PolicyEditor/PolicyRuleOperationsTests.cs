@@ -21,11 +21,11 @@ public class PolicyRuleOperationsTests
     }
 
     [Fact]
-    public void CreateBlank_ProducesEnabledDenyRuleMatchingNothing()
+    public void CreateBlank_ProducesDisabledWildcardDenyRule()
     {
         PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank();
 
-        Assert.True(rule.Enabled);
+        Assert.False(rule.Enabled);
         Assert.Equal(Devolutions.Now.Policy.Model.Decision.Deny, rule.Decision);
         Assert.Equal(0u, rule.Priority);
         Assert.Null(rule.Constraints);
@@ -124,10 +124,10 @@ public class PolicyRuleOperationsTests
     {
         List<PolicyEditorDraftRule> rules = [PolicyRuleFactory.CreateBlank("a"), PolicyRuleFactory.CreateBlank("b")];
 
-        PolicyRuleListOperations.SetEnabled(rules, "a", false);
+        PolicyRuleListOperations.SetEnabled(rules, "a", true);
 
-        Assert.False(rules[0].Enabled);
-        Assert.True(rules[1].Enabled);
+        Assert.True(rules[0].Enabled);
+        Assert.False(rules[1].Enabled);
     }
 
     [Fact]
@@ -223,5 +223,37 @@ public class PolicyRuleOperationsTests
 
         Assert.NotEqual("rule-a", newId);
         Assert.Equal(2, session.Draft.Rules.Count);
+    }
+
+    [Fact]
+    public void ViewModelRuleCommands_TargetSelectedInstanceWhenIdsCollide()
+    {
+        PolicyEditorSession session = StartCreateSession();
+        PolicyEditorDraftRule first = session.AddRule(PolicyRuleFactory.CreateBlank("same-id"));
+        PolicyEditorDraftRule second = session.AddRule(PolicyRuleFactory.CreateBlank("second-id"));
+        second.Id = first.Id;
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+
+        viewModel.ToggleRuleCommand.Execute(second);
+        Assert.False(first.Enabled);
+        Assert.True(second.Enabled);
+
+        viewModel.MoveRuleUpCommand.Execute(second);
+        Assert.Same(second, session.Draft.Rules[0]);
+        Assert.Same(first, session.Draft.Rules[1]);
+
+        viewModel.DuplicateRuleCommand.Execute(second);
+        Assert.Equal(3, session.Draft.Rules.Count);
+        Assert.Same(second, session.Draft.Rules[0]);
+        Assert.NotEqual(second.Id, session.Draft.Rules[1].Id);
+        Assert.Same(first, session.Draft.Rules[2]);
+
+        viewModel.DeleteRuleCommand.Execute(second);
+        Assert.DoesNotContain(session.Draft.Rules, rule => ReferenceEquals(rule, second));
+        Assert.Contains(session.Draft.Rules, rule => ReferenceEquals(rule, first));
     }
 }

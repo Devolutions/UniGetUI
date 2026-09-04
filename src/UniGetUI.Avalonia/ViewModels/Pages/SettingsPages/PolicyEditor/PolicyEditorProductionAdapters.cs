@@ -82,8 +82,11 @@ public sealed class BrokerPolicyEditorValidationClient : IPolicyValidationClient
 /// </summary>
 public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
 {
+    private static readonly TimeSpan DefaultCommittedRefreshTimeout = TimeSpan.FromSeconds(3);
+
     private readonly IPolicyWriteElevator _elevator;
     private readonly IBrokerPolicyManagementService _managementService;
+    private readonly TimeSpan _committedRefreshTimeout;
 
     public WindowsPolicyEditorWriteClient()
         : this(CreateDefaultElevator(), new BrokerPolicyManagementService())
@@ -92,10 +95,12 @@ public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
 
     public WindowsPolicyEditorWriteClient(
         IPolicyWriteElevator elevator,
-        IBrokerPolicyManagementService? managementService = null)
+        IBrokerPolicyManagementService? managementService = null,
+        TimeSpan? committedRefreshTimeout = null)
     {
         _elevator = elevator;
         _managementService = managementService ?? new BrokerPolicyManagementService();
+        _committedRefreshTimeout = committedRefreshTimeout ?? DefaultCommittedRefreshTimeout;
     }
 
     private static IPolicyWriteElevator CreateDefaultElevator()
@@ -140,8 +145,25 @@ public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
 
         if (result.Succeeded && result.CommittedStoreToken is not null)
         {
-            BrokerPolicyManagementResult refreshed =
-                await _managementService.GetManagementAsync(CancellationToken.None).ConfigureAwait(false);
+            BrokerPolicyManagementResult refreshed;
+            using (var refreshCancellation = new CancellationTokenSource())
+            {
+                try
+                {
+                    refreshed = await _managementService
+                        .GetManagementAsync(refreshCancellation.Token)
+                        .WaitAsync(_committedRefreshTimeout, CancellationToken.None)
+                        .ConfigureAwait(false);
+                }
+                catch (TimeoutException)
+                {
+                    refreshCancellation.Cancel();
+                    Logger.Warn(
+                        "[PolicyEditor] The Agent committed the policy, but the authoritative management refresh timed out.");
+                    return PolicyWriteOutcome.Failure(PolicyWriteFailureKind.WriteResultUnknown);
+                }
+            }
+
             if (refreshed is
                 {
                     Status: BrokerPolicyManagementStatus.Retrieved,

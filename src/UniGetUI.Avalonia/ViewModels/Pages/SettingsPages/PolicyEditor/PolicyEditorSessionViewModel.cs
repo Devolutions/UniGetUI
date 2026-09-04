@@ -206,7 +206,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private void DuplicateRule(PolicyEditorDraftRule? rule)
     {
         if (rule is null) return;
-        Session.DuplicateRule(rule.Id);
+        Session.DuplicateRule(rule);
         OnEditorStateChanged();
     }
 
@@ -214,7 +214,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private void ToggleRule(PolicyEditorDraftRule? rule)
     {
         if (rule is null) return;
-        Session.SetRuleEnabled(rule.Id, !rule.Enabled);
+        Session.SetRuleEnabled(rule, !rule.Enabled);
         OnEditorStateChanged();
     }
 
@@ -222,7 +222,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private void DeleteRule(PolicyEditorDraftRule? rule)
     {
         if (rule is null) return;
-        Session.DeleteRule(rule.Id);
+        Session.DeleteRule(rule);
         OnEditorStateChanged();
     }
 
@@ -231,7 +231,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     {
         if (rule is null) return;
         int index = Session.Draft.Rules.IndexOf(rule);
-        Session.MoveRule(rule.Id, index - 1);
+        Session.MoveRule(rule, index - 1);
         OnEditorStateChanged();
     }
 
@@ -240,7 +240,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     {
         if (rule is null) return;
         int index = Session.Draft.Rules.IndexOf(rule);
-        Session.MoveRule(rule.Id, index + 1);
+        Session.MoveRule(rule, index + 1);
         OnEditorStateChanged();
     }
 

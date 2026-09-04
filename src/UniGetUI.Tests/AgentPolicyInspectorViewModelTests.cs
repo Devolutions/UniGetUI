@@ -4,6 +4,7 @@ using Devolutions.Now.Policy.Model;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.PackageEngine.AgentBroker;
+using UniGetUI.PackageEngine.AgentBroker.PolicyManagement;
 using ApiTransport = Devolutions.Now.Policy.Api.Transport;
 using PolicyDecision = Devolutions.Now.Policy.Model.Decision;
 using PolicyManagerName = Devolutions.Now.Policy.Model.ManagerName;
@@ -224,6 +225,33 @@ public class AgentPolicyInspectorViewModelTests
         Assert.Contains(expectedTitle, announcement?.Message);
     }
 
+    [Theory]
+    [InlineData(
+        BrokerPolicyManagementStatus.AccessDenied,
+        "Access to policy management was denied",
+        AutomationLiveSetting.Assertive)]
+    [InlineData(
+        BrokerPolicyManagementStatus.Unsupported,
+        "Policy management is unsupported",
+        AutomationLiveSetting.Polite)]
+    public async Task LoadManagementAsync_AnnouncesFinalStatus(
+        BrokerPolicyManagementStatus status,
+        string expectedTitle,
+        AutomationLiveSetting expectedLiveSetting)
+    {
+        (string? Message, AutomationLiveSetting LiveSetting)? announcement = null;
+        using var viewModel = new AgentPolicyInspectorViewModel(
+            new StubInspector(new(BrokerPolicyInspectionStatus.Unsupported)),
+            new StubManagementService(new(status)),
+            (message, liveSetting) => announcement = (message, liveSetting));
+
+        await viewModel.LoadManagementAsync();
+
+        Assert.Equal(expectedTitle, viewModel.ManagementStatus.Title);
+        Assert.Equal(expectedLiveSetting, announcement?.LiveSetting);
+        Assert.Contains(expectedTitle, announcement?.Message);
+    }
+
     [Fact]
     public async Task Refresh_CancelsStaleRequestAndKeepsNewestResult()
     {
@@ -390,6 +418,18 @@ public class AgentPolicyInspectorViewModelTests
     {
         public Task<BrokerPolicyInspectionResult> InspectAsync(CancellationToken cancellationToken) =>
             Task.FromResult(result);
+    }
+
+    private sealed class StubManagementService(BrokerPolicyManagementResult result)
+        : IBrokerPolicyManagementService
+    {
+        public Task<BrokerPolicyManagementResult> GetManagementAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(result);
+
+        public Task<BrokerPolicyValidationOutcome> ValidateAsync(
+            System.Text.Json.JsonElement draft,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed class RefreshInspector(PolicyResponse response) : IBrokerPolicyInspector

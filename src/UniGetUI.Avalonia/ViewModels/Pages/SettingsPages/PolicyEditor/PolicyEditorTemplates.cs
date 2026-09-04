@@ -21,7 +21,7 @@ public static class PolicyEditorTemplates
             throw new ArgumentException("A new policy requires a non-empty identifier.", nameof(id));
         }
 
-        if (string.IsNullOrWhiteSpace(publisher))
+        if (string.IsNullOrEmpty(publisher))
         {
             throw new ArgumentException("A new policy requires a non-empty publisher.", nameof(publisher));
         }

@@ -58,10 +58,17 @@ public class PolicyEditorTemplatesTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData("   ")]
     public void CreateNew_RejectsEmptyPublisher(string? publisher)
     {
         Assert.Throws<ArgumentException>(() => PolicyEditorTemplates.CreateNew("id-1", publisher!));
+    }
+
+    [Fact]
+    public void CreateNew_PreservesWhitespaceOnlyPublisher()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", " ");
+
+        Assert.Equal(" ", draft.Metadata.Publisher);
     }
 
     [Fact]

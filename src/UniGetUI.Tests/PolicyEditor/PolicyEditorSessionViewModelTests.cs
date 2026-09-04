@@ -1035,6 +1035,130 @@ public class PolicyEditorSessionViewModelTests
         Assert.Equal(PolicyEditorConfirmationKind.DiscardChanges, prompt.LastRequest!.Kind);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ConfirmDiscardAsync_CallerAtCompletionBoundarySharesOneDecision(bool decision)
+    {
+        (PolicyEditorSessionViewModel vm, _, FakeConfirmationPrompt prompt, _) = CreateForCreateSession();
+        vm.Session.Draft.Metadata.Description = "unsaved edit";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        prompt.NextResult = decision;
+        prompt.Started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        prompt.Gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var completionMayContinue = new ManualResetEventSlim();
+        var completionBoundary = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        prompt.BeforeReturn = () =>
+        {
+            completionBoundary.TrySetResult();
+            completionMayContinue.Wait(TimeSpan.FromSeconds(2));
+        };
+
+        Task<bool> windowClose = vm.ConfirmDiscardAsync();
+        await prompt.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Task<bool> pageLeave = vm.ConfirmDiscardAsync();
+        prompt.Gate.TrySetResult();
+        await completionBoundary.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Task<bool> shutdown = vm.ConfirmDiscardAsync();
+
+        Assert.Equal(1, prompt.CallCount);
+        completionMayContinue.Set();
+        Assert.Equal(decision, await windowClose);
+        Assert.Equal(decision, await pageLeave);
+        Assert.Equal(decision, await shutdown);
+        Assert.Equal(1, prompt.CallCount);
+
+        prompt.Gate = null;
+        prompt.NextResult = !decision;
+        Assert.Equal(!decision, await vm.ConfirmDiscardAsync());
+        Assert.Equal(2, prompt.CallCount);
+    }
+
+    [Fact]
+    public async Task ConfirmDiscardAsync_CallerCancellationDoesNotCancelSharedDecision()
+    {
+        (PolicyEditorSessionViewModel vm, _, FakeConfirmationPrompt prompt, _) = CreateForCreateSession();
+        vm.Session.Draft.Metadata.Description = "unsaved edit";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        prompt.NextResult = true;
+        prompt.Started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        prompt.Gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cancellation = new CancellationTokenSource();
+
+        Task<bool> windowClose = vm.ConfirmDiscardAsync();
+        await prompt.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Task<bool> canceledPageLeave = vm.ConfirmDiscardAsync(cancellation.Token);
+        Task<bool> shutdown = vm.ConfirmDiscardAsync();
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => canceledPageLeave);
+        Assert.Equal(1, prompt.CallCount);
+        Assert.False(windowClose.IsCompleted);
+        Assert.False(shutdown.IsCompleted);
+
+        prompt.Gate.TrySetResult();
+        Assert.True(await windowClose);
+        Assert.True(await shutdown);
+        Assert.Equal(1, prompt.CallCount);
+    }
+
+    [Fact]
+    public async Task ConfirmDiscardAsync_SharedPromptCancellationClearsForLaterPrompt()
+    {
+        (PolicyEditorSessionViewModel vm, _, FakeConfirmationPrompt prompt, _) = CreateForCreateSession();
+        vm.Session.Draft.Metadata.Description = "unsaved edit";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        prompt.NextException = new OperationCanceledException(new CancellationToken(canceled: true));
+        prompt.Started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        prompt.Gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        Task<bool> windowClose = vm.ConfirmDiscardAsync();
+        await prompt.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Task<bool> shutdown = vm.ConfirmDiscardAsync();
+        prompt.Gate.TrySetResult();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => windowClose);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => shutdown);
+        Assert.Equal(1, prompt.CallCount);
+
+        prompt.Gate = null;
+        prompt.NextException = null;
+        prompt.NextResult = false;
+        Assert.False(await vm.ConfirmDiscardAsync());
+        Assert.Equal(2, prompt.CallCount);
+    }
+
+    [Fact]
+    public async Task ConfirmDiscardAsync_SharedPromptExceptionClearsForLaterPrompt()
+    {
+        (PolicyEditorSessionViewModel vm, _, FakeConfirmationPrompt prompt, _) = CreateForCreateSession();
+        vm.Session.Draft.Metadata.Description = "unsaved edit";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        prompt.NextException = new InvalidOperationException("prompt failed");
+        prompt.Started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        prompt.Gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        Task<bool> pageLeave = vm.ConfirmDiscardAsync();
+        await prompt.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Task<bool> shutdown = vm.ConfirmDiscardAsync();
+        prompt.Gate.TrySetResult();
+
+        InvalidOperationException pageError =
+            await Assert.ThrowsAsync<InvalidOperationException>(() => pageLeave);
+        InvalidOperationException shutdownError =
+            await Assert.ThrowsAsync<InvalidOperationException>(() => shutdown);
+        Assert.Equal("prompt failed", pageError.Message);
+        Assert.Equal("prompt failed", shutdownError.Message);
+        Assert.Equal(1, prompt.CallCount);
+
+        prompt.Gate = null;
+        prompt.NextException = null;
+        prompt.NextResult = true;
+        Assert.True(await vm.ConfirmDiscardAsync());
+        Assert.Equal(2, prompt.CallCount);
+    }
+
     [Fact]
     public async Task ConfirmDiscardAsync_ExactRevertBeforeDebounce_DoesNotPrompt()
     {

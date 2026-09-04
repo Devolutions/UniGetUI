@@ -2,6 +2,7 @@ using System.Text.Json;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Client;
 using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
+using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation.Interop;
 
 namespace UniGetUI.AgentPolicy.ElevatedHelper;
 
@@ -12,6 +13,7 @@ internal static class PolicyReplacementExecutor
 {
     public static async Task<PolicyElevationResponseMessage> ExecuteAsync(
         PolicyElevationRequestMessage request,
+        string effectiveUser,
         CancellationToken cancellationToken)
     {
         var response = new PolicyElevationResponseMessage
@@ -22,7 +24,7 @@ internal static class PolicyReplacementExecutor
 
         try
         {
-            using var client = CreateClient();
+            using var client = new BrokerClient(CreateClientOptions(effectiveUser));
 
             PolicyReplacementResponse replacement =
                 await PolicyElevationReplacementDispatcher.DispatchAsync(
@@ -81,19 +83,22 @@ internal static class PolicyReplacementExecutor
         }
     }
 
-    private static BrokerClient CreateClient()
-        => new(new BrokerClientOptions
+    internal static BrokerClientOptions CreateClientOptions(string effectiveUser)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(effectiveUser);
+        if (!WindowsProcessInspector.IsValidEffectiveUser(effectiveUser))
+        {
+            throw new ArgumentException("The effective user is not a bounded Windows account name.", nameof(effectiveUser));
+        }
+
+        return new BrokerClientOptions
         {
             RequestedElevation = Elevation.Elevated,
-            EffectiveUser = GetEffectiveUser(),
+            EffectiveUser = effectiveUser,
             ClientExecutablePath = Environment.ProcessPath,
             ClientVersion = typeof(PolicyReplacementExecutor).Assembly.GetName().Version?.ToString(),
-        });
-
-    private static string GetEffectiveUser()
-        => string.IsNullOrWhiteSpace(Environment.UserDomainName)
-            ? Environment.UserName
-            : $"{Environment.UserDomainName}\\{Environment.UserName}";
+        };
+    }
 
     private static string? Truncate(string? value, int maxCharacters)
     {

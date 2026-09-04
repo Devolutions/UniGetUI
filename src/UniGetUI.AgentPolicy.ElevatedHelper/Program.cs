@@ -150,6 +150,14 @@ internal static class Program
             return PolicyElevationProtocol.ExitPeerAuthenticationFailed;
         }
 
+        int identityResolution = PolicyElevationInitiatingUserResolver.Resolve(
+            host.DangerousGetHandle(),
+            out string? effectiveUser);
+        if (identityResolution != PolicyElevationProtocol.ExitSuccess || effectiveUser is null)
+        {
+            return identityResolution;
+        }
+
         PolicyElevationRequestMessage request =
             await PolicyElevationFrame.ReadRequestAsync(pipe, cancellationToken).ConfigureAwait(false);
 
@@ -165,7 +173,7 @@ internal static class Program
         try
         {
             response = await PolicyReplacementExecutor
-                .ExecuteAsync(request, brokerCancellation.Token)
+                .ExecuteAsync(request, effectiveUser, brokerCancellation.Token)
                 .ConfigureAwait(false);
         }
         finally

@@ -42,13 +42,25 @@ internal sealed class FakeConfirmationPrompt : IPolicyEditorConfirmationPrompt
     public int CallCount { get; private set; }
     public PolicyEditorConfirmationRequest? LastRequest { get; private set; }
     public List<PolicyEditorConfirmationRequest> AllRequests { get; } = [];
+    public TaskCompletionSource? Started { get; set; }
+    public TaskCompletionSource? Gate { get; set; }
+    public Action? BeforeReturn { get; set; }
+    public Exception? NextException { get; set; }
 
-    public Task<bool> ConfirmAsync(PolicyEditorConfirmationRequest request, CancellationToken cancellationToken)
+    public async Task<bool> ConfirmAsync(
+        PolicyEditorConfirmationRequest request,
+        CancellationToken cancellationToken)
     {
         CallCount++;
         LastRequest = request;
         AllRequests.Add(request);
-        return Task.FromResult(NextResult);
+        Started?.TrySetResult();
+        if (Gate is not null)
+            await Gate.Task.WaitAsync(cancellationToken);
+        BeforeReturn?.Invoke();
+        if (NextException is not null)
+            throw NextException;
+        return NextResult;
     }
 }
 

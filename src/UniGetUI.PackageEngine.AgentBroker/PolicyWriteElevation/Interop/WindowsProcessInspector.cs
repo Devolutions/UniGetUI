@@ -1,6 +1,8 @@
 #if WINDOWS
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Security;
+using System.Security.Principal;
 using Microsoft.Win32.SafeHandles;
 
 namespace UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation.Interop;
@@ -22,6 +24,7 @@ public readonly record struct ProcessIdentitySnapshot(
 public static class WindowsProcessInspector
 {
     private const int MaxPathCharacters = 32768;
+    public const int MaxEffectiveUserCharacters = 512;
 
     public static bool TryGetProcessId(nint processHandle, out uint processId)
     {
@@ -137,6 +140,64 @@ public static class WindowsProcessInspector
         return true;
     }
 
+    /// <summary>
+    /// Resolves the Windows account carried by a retained process handle. This intentionally reads
+    /// the process token rather than the current process environment, so over-the-shoulder elevation
+    /// cannot substitute the administrator who approved the prompt for the initiating user.
+    /// </summary>
+    public static bool TryGetEffectiveUser(nint processHandle, out string? effectiveUser)
+    {
+        effectiveUser = null;
+        if (processHandle is 0 or -1)
+            return false;
+
+        if (!PolicyElevationNative.OpenProcessToken(
+                processHandle,
+                PolicyElevationNative.TokenQuery,
+                out SafeAccessTokenHandle token))
+        {
+            return false;
+        }
+
+        using (token)
+        {
+            try
+            {
+                using var identity = new WindowsIdentity(token.DangerousGetHandle());
+                string? name = identity.Name;
+                if (!IsValidEffectiveUser(name))
+                {
+                    return false;
+                }
+
+                effectiveUser = name;
+                return true;
+            }
+            catch (Exception ex) when (ex is ArgumentException
+                                           or SecurityException
+                                           or UnauthorizedAccessException
+                                           or IdentityNotMappedException)
+            {
+                return false;
+            }
+        }
+    }
+
+    public static bool IsValidEffectiveUser(string? effectiveUser)
+    {
+        if (string.IsNullOrWhiteSpace(effectiveUser)
+            || effectiveUser.Length > MaxEffectiveUserCharacters
+            || effectiveUser.Any(char.IsControl))
+        {
+            return false;
+        }
+
+        int separator = effectiveUser.IndexOf('\\');
+        return separator > 0
+               && separator < effectiveUser.Length - 1
+               && effectiveUser.IndexOf('\\', separator + 1) < 0;
+    }
+
     public static bool TryGetExitCode(nint processHandle, out uint exitCode)
         => PolicyElevationNative.GetExitCodeProcess(processHandle, out exitCode);
 
@@ -238,5 +299,15 @@ public static class WindowsProcessInspector
             ? path[dosPrefix.Length..]
             : path;
     }
+}
+
+public static class PolicyElevationInitiatingUserResolver
+{
+    public static int Resolve(nint authenticatedHostProcessHandle, out string? effectiveUser)
+        => WindowsProcessInspector.TryGetEffectiveUser(
+            authenticatedHostProcessHandle,
+            out effectiveUser)
+            ? PolicyElevationProtocol.ExitSuccess
+            : PolicyElevationProtocol.ExitPeerAuthenticationFailed;
 }
 #endif

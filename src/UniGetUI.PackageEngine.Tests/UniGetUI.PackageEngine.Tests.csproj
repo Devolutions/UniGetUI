@@ -56,6 +56,9 @@
 
     <ItemGroup>
         <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
+        <Compile Include="..\UniGetUI.AgentPolicy.ElevatedHelper\PolicyReplacementExecutor.cs"
+                 Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'"
+                 Link="PolicyWriteElevation\PolicyReplacementExecutor.cs" />
         <None Include="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>

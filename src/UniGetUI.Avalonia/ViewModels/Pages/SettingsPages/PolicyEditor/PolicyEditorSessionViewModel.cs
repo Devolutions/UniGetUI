@@ -16,11 +16,13 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private readonly TimeSpan _structuredDirtyDebounce;
     private readonly Func<PolicyEditorDraftDocument, string> _structuredDraftSerializer;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly object _discardConfirmationLock = new();
     private readonly Dictionary<object, string> _localInputErrors = [];
     private CancellationTokenSource? _rawSyntaxCancellation;
     private Task _rawSyntaxAnalysis = Task.CompletedTask;
     private CancellationTokenSource? _structuredDirtyCancellation;
     private Task _structuredDirtyAnalysis = Task.CompletedTask;
+    private Task<bool>? _discardConfirmationTask;
     private long _validationGeneration;
     private long _saveGeneration;
     private int _isDisposed;
@@ -351,6 +353,65 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
 
     public async Task<bool> ConfirmDiscardAsync(
         CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        Task<bool> confirmation;
+        lock (_discardConfirmationLock)
+        {
+            if (_discardConfirmationTask is null)
+            {
+                var completion = new TaskCompletionSource<bool>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                confirmation = completion.Task;
+                _discardConfirmationTask = confirmation;
+                _ = CompleteDiscardConfirmationAsync(completion);
+            }
+            else
+            {
+                confirmation = _discardConfirmationTask;
+            }
+        }
+
+        return await confirmation.WaitAsync(cancellationToken);
+    }
+
+    private async Task CompleteDiscardConfirmationAsync(TaskCompletionSource<bool> completion)
+    {
+        try
+        {
+            bool result = await ConfirmDiscardCoreAsync(_lifetimeCancellation.Token);
+            lock (_discardConfirmationLock)
+            {
+                completion.TrySetResult(result);
+                ClearDiscardConfirmation(completion.Task);
+            }
+        }
+        catch (OperationCanceledException ex)
+        {
+            lock (_discardConfirmationLock)
+            {
+                completion.TrySetCanceled(ex.CancellationToken);
+                ClearDiscardConfirmation(completion.Task);
+            }
+        }
+        catch (Exception ex)
+        {
+            lock (_discardConfirmationLock)
+            {
+                completion.TrySetException(ex);
+                ClearDiscardConfirmation(completion.Task);
+            }
+        }
+    }
+
+    private void ClearDiscardConfirmation(Task<bool> confirmation)
+    {
+        if (ReferenceEquals(_discardConfirmationTask, confirmation))
+            _discardConfirmationTask = null;
+    }
+
+    private async Task<bool> ConfirmDiscardCoreAsync(CancellationToken cancellationToken)
     {
         if (IsBusy)
         {

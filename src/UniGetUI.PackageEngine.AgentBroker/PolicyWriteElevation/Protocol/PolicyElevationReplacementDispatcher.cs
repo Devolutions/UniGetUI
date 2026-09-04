@@ -6,13 +6,19 @@ namespace UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 
 public static class PolicyElevationReplacementDispatcher
 {
-    public static int GetBrokerRequestBodyByteCount(PolicyElevationWriteRequest request)
+    public static int GetBrokerRequestBodyByteCount(PolicyElevationRequestMessage request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return GetBrokerRequestBodyByteCount(CreateReplacementRequest(request));
+        return GetBrokerRequestBodyByteCount(CreateReplacementRequest(
+            request.Draft,
+            request.Operation,
+            request.ConflictHandling,
+            request.ExpectedStoreToken,
+            request.ValidationReceipt,
+            request.WarningsAcknowledged));
     }
 
-    public static bool IsBrokerRequestWithinLimit(PolicyElevationWriteRequest request) =>
+    public static bool IsBrokerRequestWithinLimit(PolicyElevationRequestMessage request) =>
         GetBrokerRequestBodyByteCount(request) <= BrokerApi.MaxPolicyManagementBodyBytes;
 
     public static Task<PolicyReplacementResponse> DispatchAsync(
@@ -39,16 +45,6 @@ public static class PolicyElevationReplacementDispatcher
 
         return replacePolicy(replacementRequest, cancellationToken);
     }
-
-    private static PolicyReplacementRequest CreateReplacementRequest(
-        PolicyElevationWriteRequest request) =>
-        CreateReplacementRequest(
-            request.Draft,
-            request.Operation,
-            request.ConflictHandling,
-            request.ExpectedStoreToken,
-            request.ValidationReceipt,
-            request.WarningsAcknowledged);
 
     private static PolicyReplacementRequest CreateReplacementRequest(
         JsonElement draft,

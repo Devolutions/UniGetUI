@@ -93,13 +93,13 @@ public class PolicyElevationReplacementDispatcherTests
     [Fact]
     public void BrokerRequestBodyLimit_CountsTheCompleteReplacementEnvelope()
     {
-        PolicyElevationWriteRequest empty = WriteRequest("""{"padding":""}""");
+        PolicyElevationRequestMessage empty = Request("""{"padding":""}""");
         int emptySize = PolicyElevationReplacementDispatcher.GetBrokerRequestBodyByteCount(empty);
         int paddingLength = BrokerApi.MaxPolicyManagementBodyBytes - emptySize;
 
-        PolicyElevationWriteRequest atLimit = WriteRequest(
+        PolicyElevationRequestMessage atLimit = Request(
             $$"""{"padding":"{{new string('a', paddingLength)}}"}""");
-        PolicyElevationWriteRequest overLimit = WriteRequest(
+        PolicyElevationRequestMessage overLimit = Request(
             $$"""{"padding":"{{new string('a', paddingLength + 1)}}"}""");
 
         Assert.Equal(
@@ -113,15 +113,13 @@ public class PolicyElevationReplacementDispatcherTests
     public async Task DispatchAsync_OversizedBrokerRequestFailsBeforeBrokerCall()
     {
         int calls = 0;
-        PolicyElevationWriteRequest empty = WriteRequest("""{"padding":""}""");
+        PolicyElevationRequestMessage empty = Request("""{"padding":""}""");
         int paddingLength =
             BrokerApi.MaxPolicyManagementBodyBytes
             - PolicyElevationReplacementDispatcher.GetBrokerRequestBodyByteCount(empty)
             + 1;
-        PolicyElevationWriteRequest overLimit = WriteRequest(
+        PolicyElevationRequestMessage request = Request(
             $$"""{"padding":"{{new string('a', paddingLength)}}"}""");
-        PolicyElevationRequestMessage request = Request();
-        request.Draft = overLimit.Draft;
 
         await Assert.ThrowsAsync<InvalidDataException>(
             () => PolicyElevationReplacementDispatcher.DispatchAsync(
@@ -137,11 +135,12 @@ public class PolicyElevationReplacementDispatcherTests
     }
 
     private static PolicyElevationRequestMessage Request(
+        string draftJson = "{}",
         PolicyElevationOperation operation = PolicyElevationOperation.Update,
         PolicyElevationConflictHandling conflictHandling =
             PolicyElevationConflictHandling.Reject)
     {
-        using JsonDocument draft = JsonDocument.Parse("{}");
+        using JsonDocument draft = JsonDocument.Parse(draftJson);
         return new PolicyElevationRequestMessage
         {
             RequestId = new string('a', PolicyElevationProtocol.RequestIdCharacters),
@@ -163,13 +162,4 @@ public class PolicyElevationReplacementDispatcherTests
             },
         };
 
-    private static PolicyElevationWriteRequest WriteRequest(string draftJson)
-    {
-        using JsonDocument draft = JsonDocument.Parse(draftJson);
-        return new PolicyElevationWriteRequest(draft.RootElement)
-        {
-            ExpectedStoreToken = "token",
-            ValidationReceipt = "receipt",
-        };
-    }
 }

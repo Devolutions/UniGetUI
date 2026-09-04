@@ -112,8 +112,9 @@ public partial class PolicyEditorLocalizationTests
     [Fact]
     public void CSharpTranslationScanner_ExtractsMultilineLiteralCalls()
     {
-        const string source = """
-            CoreTools.Translate(
+        const string methodName = "CoreTools." + "Translate";
+        string source = $$"""
+            {{methodName}}(
                 "Multiline policy key")
             """;
 

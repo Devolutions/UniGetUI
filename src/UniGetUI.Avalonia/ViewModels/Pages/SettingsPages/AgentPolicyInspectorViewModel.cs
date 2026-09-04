@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using Avalonia.Automation;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Model;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.AgentBroker;
@@ -36,6 +38,7 @@ public sealed class PolicyRuleViewModel
 public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
 {
     private readonly IBrokerPolicyInspector _inspector;
+    private readonly Action<string?, AutomationLiveSetting> _announce;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private CancellationTokenSource? _refreshCancellation;
     private long _refreshGeneration;
@@ -64,8 +67,16 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     }
 
     public AgentPolicyInspectorViewModel(IBrokerPolicyInspector inspector)
+        : this(inspector, AccessibilityAnnouncementService.Announce)
+    {
+    }
+
+    internal AgentPolicyInspectorViewModel(
+        IBrokerPolicyInspector inspector,
+        Action<string?, AutomationLiveSetting> announce)
     {
         _inspector = inspector;
+        _announce = announce;
         SetStatus(
             CoreTools.Translate("Loading active package broker policy"),
             CoreTools.Translate("Contacting the Devolutions Agent service."),
@@ -99,6 +110,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
             if (!CanApply(generation, cancellation)) return;
 
             ApplyResult(result);
+            AnnounceStatus();
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -331,6 +343,18 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         Status.Message = message;
         Status.Severity = severity;
         Status.IsOpen = true;
+    }
+
+    private void AnnounceStatus()
+    {
+        string message = string.IsNullOrEmpty(Status.Message)
+            ? Status.Title
+            : $"{Status.Title}. {Status.Message}";
+        _announce(
+            message,
+            Status.Severity == InfoBarSeverity.Error
+                ? AutomationLiveSetting.Assertive
+                : AutomationLiveSetting.Polite);
     }
 
     public void Dispose()

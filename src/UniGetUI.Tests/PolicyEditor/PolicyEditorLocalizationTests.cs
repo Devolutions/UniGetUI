@@ -123,6 +123,38 @@ public partial class PolicyEditorLocalizationTests
         Assert.Equal("Multiline policy key", match.Groups["key"].Value);
     }
 
+    [Fact]
+    public void FindingSeverityPresentation_UsesThemeAwareClasses()
+    {
+        string root = FindRepositoryRoot();
+        string dialog = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorDialog.axaml"));
+        string structuredUi = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "ViewModels",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorStructuredUi.cs"));
+
+        Assert.Contains("Classes.finding-error=\"{Binding IsError}\"", dialog);
+        Assert.Contains("Classes.finding-warning=\"{Binding IsWarning}\"", dialog);
+        Assert.Contains("DynamicResource SystemFillColorCriticalBrush", dialog);
+        Assert.Contains("DynamicResource SystemFillColorCautionBrush", dialog);
+        Assert.DoesNotContain("Firebrick", dialog);
+        Assert.DoesNotContain("DarkOrange", dialog);
+        Assert.DoesNotContain("PolicyEditorSeverityConverters", structuredUi);
+    }
+
     private static string FindRepositoryRoot()
     {
         for (DirectoryInfo? directory = new(AppContext.BaseDirectory);

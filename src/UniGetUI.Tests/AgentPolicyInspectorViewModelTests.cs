@@ -189,6 +189,8 @@ public class AgentPolicyInspectorViewModelTests
     {
         PolicyDocument policy = BuildFullResponse().Policy;
         policy.Metadata.Publisher = " ";
+        policy.Metadata.Id =
+            $"{new string('a', PolicyEditorTemplates.ResourceIdMaxLength - 4)}-new";
         var snapshot = new PolicyManagementSnapshot
         {
             State = PolicyManagementState.Active,
@@ -211,6 +213,11 @@ public class AgentPolicyInspectorViewModelTests
         Assert.NotNull(launch);
         Assert.Equal(PolicyEditorOperationKind.ReplaceIdentity, launch.Operation);
         Assert.Equal(" ", launch.SeedDraft!.Metadata.Publisher);
+        Assert.NotEqual(policy.Metadata.Id, launch.SeedDraft.Metadata.Id);
+        Assert.InRange(
+            launch.SeedDraft.Metadata.Id.Length,
+            1,
+            PolicyEditorTemplates.ResourceIdMaxLength);
     }
 
     [Fact]

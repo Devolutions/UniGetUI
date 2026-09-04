@@ -59,6 +59,10 @@ public sealed record PolicyValidationFinding(
 
     public string SeverityText => CoreTools.Translate(Severity.ToString());
 
+    public bool IsError => Severity == PolicyValidationSeverity.Error;
+
+    public bool IsWarning => Severity == PolicyValidationSeverity.Warning;
+
     public string AutomationName => string.IsNullOrWhiteSpace(Pointer)
         ? Message
         : CoreTools.Translate("{0}. Location: {1}", Message, Pointer);

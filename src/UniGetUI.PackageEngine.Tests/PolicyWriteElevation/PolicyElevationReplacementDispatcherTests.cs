@@ -90,6 +90,52 @@ public class PolicyElevationReplacementDispatcherTests
         Assert.Equal(0, calls);
     }
 
+    [Fact]
+    public void BrokerRequestBodyLimit_CountsTheCompleteReplacementEnvelope()
+    {
+        PolicyElevationWriteRequest empty = WriteRequest("""{"padding":""}""");
+        int emptySize = PolicyElevationReplacementDispatcher.GetBrokerRequestBodyByteCount(empty);
+        int paddingLength = BrokerApi.MaxPolicyManagementBodyBytes - emptySize;
+
+        PolicyElevationWriteRequest atLimit = WriteRequest(
+            $$"""{"padding":"{{new string('a', paddingLength)}}"}""");
+        PolicyElevationWriteRequest overLimit = WriteRequest(
+            $$"""{"padding":"{{new string('a', paddingLength + 1)}}"}""");
+
+        Assert.Equal(
+            BrokerApi.MaxPolicyManagementBodyBytes,
+            PolicyElevationReplacementDispatcher.GetBrokerRequestBodyByteCount(atLimit));
+        Assert.True(PolicyElevationReplacementDispatcher.IsBrokerRequestWithinLimit(atLimit));
+        Assert.False(PolicyElevationReplacementDispatcher.IsBrokerRequestWithinLimit(overLimit));
+    }
+
+    [Fact]
+    public async Task DispatchAsync_OversizedBrokerRequestFailsBeforeBrokerCall()
+    {
+        int calls = 0;
+        PolicyElevationWriteRequest empty = WriteRequest("""{"padding":""}""");
+        int paddingLength =
+            BrokerApi.MaxPolicyManagementBodyBytes
+            - PolicyElevationReplacementDispatcher.GetBrokerRequestBodyByteCount(empty)
+            + 1;
+        PolicyElevationWriteRequest overLimit = WriteRequest(
+            $$"""{"padding":"{{new string('a', paddingLength)}}"}""");
+        PolicyElevationRequestMessage request = Request();
+        request.Draft = overLimit.Draft;
+
+        await Assert.ThrowsAsync<InvalidDataException>(
+            () => PolicyElevationReplacementDispatcher.DispatchAsync(
+                request,
+                (_, _) =>
+                {
+                    calls++;
+                    return Task.FromResult(Response());
+                },
+                CancellationToken.None));
+
+        Assert.Equal(0, calls);
+    }
+
     private static PolicyElevationRequestMessage Request(
         PolicyElevationOperation operation = PolicyElevationOperation.Update,
         PolicyElevationConflictHandling conflictHandling =
@@ -116,4 +162,14 @@ public class PolicyElevationReplacementDispatcherTests
                 StoreToken = "new-token",
             },
         };
+
+    private static PolicyElevationWriteRequest WriteRequest(string draftJson)
+    {
+        using JsonDocument draft = JsonDocument.Parse(draftJson);
+        return new PolicyElevationWriteRequest(draft.RootElement)
+        {
+            ExpectedStoreToken = "token",
+            ValidationReceipt = "receipt",
+        };
+    }
 }

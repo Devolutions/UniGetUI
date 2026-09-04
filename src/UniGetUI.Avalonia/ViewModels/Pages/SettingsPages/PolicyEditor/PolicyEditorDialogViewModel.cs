@@ -3,8 +3,8 @@ using System.ComponentModel;
 using Avalonia.Automation;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Devolutions.Now.Policy.Api;
-using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;

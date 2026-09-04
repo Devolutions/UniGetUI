@@ -287,7 +287,7 @@ public sealed partial class BrokerPolicyInspector : IBrokerPolicyInspector
 
     private static BrokerPolicyInspectionStatus MapFailure(BrokerClientException ex)
     {
-        if (ex.StatusCode == 404 || ex.BrokerError?.Code == ErrorCode.NotFound)
+        if (ex.StatusCode == 404 && ex.BrokerError is null)
         {
             return BrokerPolicyInspectionStatus.Unsupported;
         }

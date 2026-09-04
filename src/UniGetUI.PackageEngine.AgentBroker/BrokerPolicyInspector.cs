@@ -74,7 +74,7 @@ public sealed partial class BrokerPolicyInspector : IBrokerPolicyInspector
             return new(
                 BrokerPolicyInspectionStatus.Connected,
                 response,
-                PolicyJson.Serialize(response.Policy));
+                PolicySerializer.Serialize(response.Policy));
         }
         catch (BrokerClientException ex)
         {

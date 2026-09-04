@@ -19,7 +19,7 @@ public class BrokerPolicyInspectorTests
         var transport = new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = 200,
-            Body = BrokerJson.Serialize(response),
+            Body = BrokerSerializer.Serialize(response),
         });
         var inspector = CreateInspector(transport);
 
@@ -27,7 +27,7 @@ public class BrokerPolicyInspectorTests
 
         Assert.Equal(BrokerPolicyInspectionStatus.Connected, result.Status);
         Assert.Same(response.Policy.GetType(), result.Response!.Policy.GetType());
-        Assert.Equal(PolicyJson.Serialize(result.Response.Policy), result.CanonicalJson);
+        Assert.Equal(PolicySerializer.Serialize(result.Response.Policy), result.CanonicalJson);
         BrokerTransportRequest request = Assert.Single(transport.Requests);
         Assert.Equal("GET", request.Method);
         Assert.Equal("/v1/policy", request.Path);
@@ -71,7 +71,7 @@ public class BrokerPolicyInspectorTests
         var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = statusCode,
-            Body = BrokerJson.Serialize(error),
+            Body = BrokerSerializer.Serialize(error),
         }));
 
         BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
@@ -126,7 +126,7 @@ public class BrokerPolicyInspectorTests
     [Fact]
     public async Task InspectAsync_ClassifiesMissingPolicyAsInvalidResponse()
     {
-        JsonObject body = JsonNode.Parse(BrokerJson.Serialize(BuildResponse()))!.AsObject();
+        JsonObject body = JsonNode.Parse(BrokerSerializer.Serialize(BuildResponse()))!.AsObject();
         Assert.True(body.Remove("Policy"));
         var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
         {
@@ -223,7 +223,7 @@ public class BrokerPolicyInspectorTests
         var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = 200,
-            Body = BrokerJson.Serialize(response),
+            Body = BrokerSerializer.Serialize(response),
         }));
 
         BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
@@ -324,7 +324,7 @@ public class BrokerPolicyInspectorTests
     private static string WithExplicitNull(Action<JsonObject> mutation)
     {
         PolicyResponse response = BuildResponse();
-        JsonObject root = JsonNode.Parse(BrokerJson.Serialize(response))!.AsObject();
+        JsonObject root = JsonNode.Parse(BrokerSerializer.Serialize(response))!.AsObject();
         mutation(root);
         return root.ToJsonString();
     }
@@ -361,42 +361,43 @@ public class BrokerPolicyInspectorTests
 
     private static string WithoutRequiredProperty(Action<JsonObject> removal)
     {
-        JsonObject root = JsonNode.Parse(BrokerJson.Serialize(BuildResponse()))!.AsObject();
+        JsonObject root = JsonNode.Parse(BrokerSerializer.Serialize(BuildResponse()))!.AsObject();
         removal(root);
         return root.ToJsonString();
     }
 
     public static IEnumerable<object[]> InvalidSemanticPayloads()
     {
-        yield return [WithMutation(response => response.ResponseVersion = "")];
-        yield return [WithMutation(response => response.ResponseVersion = "1.0.0")];
-        yield return [WithMutation(response => response.ResponseVersion = "1.0\n")];
-        yield return [WithMutation(response => response.Server.ServerVersion = "")];
-        yield return [WithMutation(response => response.Server.ServerVersion = new string('x', 129))];
-        yield return [WithMutation(response => response.Policy.Schema = "https://example.invalid/schema")];
-        yield return [WithMutation(response => response.Policy.PolicyVersion = "1.0")];
-        yield return [WithMutation(response => response.Policy.PolicyVersion = "1.0.0\n")];
-        yield return [WithMutation(response => response.Policy.PolicyVersion = "1.0.1١")];
-        yield return [WithMutation(response => response.Policy.PolicyType = "OtherPolicy")];
-        yield return [WithMutation(response => response.Policy.Metadata.Id = "")];
-        yield return [WithMutation(response => response.Policy.Metadata.Id = "invalid id")];
-        yield return [WithMutation(response => response.Policy.Metadata.Publisher = "")];
-        yield return [WithMutation(response => response.Policy.Metadata.Revision = 0)];
-        yield return [WithMutation(response => response.Policy.Rules[0].Id = "")];
-        yield return [WithMutation(response => response.Policy.Rules[0].Priority = int.MaxValue + 1u)];
-        yield return [WithMutation(response => response.Policy.Rules[0].Match = new PolicyMatch())];
-        yield return [WithMutation(
-            response => response.Policy.Rules[0].Match.Operations =
-                [PolicyOperation.Install, PolicyOperation.Install])];
-        yield return [WithMutation(
-            response => response.Policy.Rules[0].Constraints!.AllowedCustomParameters = [""])];
+        yield return [WithSemanticMutation(root => root["ResponseVersion"] = "")];
+        yield return [WithSemanticMutation(root => root["ResponseVersion"] = "1.0.0")];
+        yield return [WithSemanticMutation(root => root["ResponseVersion"] = "1.0\n")];
+        yield return [WithSemanticMutation(root => root["Server"]!["ServerVersion"] = "")];
+        yield return [WithSemanticMutation(
+            root => root["Server"]!["ServerVersion"] = new string('x', 129))];
+        yield return [WithSemanticMutation(
+            root => root["Policy"]!["$schema"] = "https://example.invalid/schema")];
+        yield return [WithSemanticMutation(root => root["Policy"]!["PolicyVersion"] = "1.0")];
+        yield return [WithSemanticMutation(root => root["Policy"]!["PolicyVersion"] = "1.0.0\n")];
+        yield return [WithSemanticMutation(root => root["Policy"]!["PolicyVersion"] = "1.0.1١")];
+        yield return [WithSemanticMutation(root => root["Policy"]!["PolicyType"] = "OtherPolicy")];
+        yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Id"] = "")];
+        yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Id"] = "invalid id")];
+        yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Publisher"] = "")];
+        yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Revision"] = 0)];
+        yield return [WithSemanticMutation(root => FirstRule(root)["Id"] = "")];
+        yield return [WithSemanticMutation(root => FirstRule(root)["Priority"] = int.MaxValue + 1u)];
+        yield return [WithSemanticMutation(root => FirstRule(root)["Match"] = new JsonObject())];
+        yield return [WithSemanticMutation(
+            root => FirstRule(root)["Match"]!["Operations"] = new JsonArray("Install", "Install"))];
+        yield return [WithSemanticMutation(
+            root => FirstRule(root)["Constraints"]!["AllowedCustomParameters"] = new JsonArray(""))];
     }
 
-    private static string WithMutation(Action<PolicyResponse> mutation)
+    private static string WithSemanticMutation(Action<JsonObject> mutation)
     {
-        PolicyResponse response = BuildResponse();
-        mutation(response);
-        return BrokerJson.Serialize(response);
+        JsonObject root = JsonNode.Parse(BrokerSerializer.Serialize(BuildResponse()))!.AsObject();
+        mutation(root);
+        return root.ToJsonString();
     }
 
     public static IEnumerable<object[]> InvalidWirePayloads()
@@ -415,7 +416,7 @@ public class BrokerPolicyInspectorTests
 
     private static string WithWireMutation(Action<JsonObject> mutation)
     {
-        JsonObject root = JsonNode.Parse(BrokerJson.Serialize(BuildResponse()))!.AsObject();
+        JsonObject root = JsonNode.Parse(BrokerSerializer.Serialize(BuildResponse()))!.AsObject();
         mutation(root);
         return root.ToJsonString();
     }

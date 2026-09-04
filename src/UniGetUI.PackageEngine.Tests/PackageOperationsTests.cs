@@ -38,7 +38,7 @@ using BrokerApiServerContext = Devolutions.Now.Policy.Api.ServerContext;
 using BrokerApiStatusResponse = Devolutions.Now.Policy.Api.StatusResponse;
 using BrokerClientErrorKind = Devolutions.Now.Policy.Client.BrokerClientErrorKind;
 using BrokerClientException = Devolutions.Now.Policy.Client.BrokerClientException;
-using BrokerJson = Devolutions.Now.Policy.Api.BrokerJson;
+using BrokerSerializer = Devolutions.Now.Policy.Api.BrokerSerializer;
 using BrokerTransportKind = Devolutions.Now.Policy.Api.Transport;
 using BrokerTransportRequest = Devolutions.Now.Policy.Client.BrokerTransportRequest;
 using BrokerTransportResponse = Devolutions.Now.Policy.Client.BrokerTransportResponse;
@@ -846,7 +846,7 @@ public sealed class PackageOperationsTests
     private static BrokerApiPackageRequest DeserializeExecuteRequest(ScriptedBrokerTransport transport)
     {
         Assert.NotNull(transport.LastExecuteRequestBody);
-        var request = BrokerJson.Deserialize<BrokerApiPackageRequest>(transport.LastExecuteRequestBody);
+        var request = BrokerSerializer.Deserialize<BrokerApiPackageRequest>(transport.LastExecuteRequestBody);
         Assert.NotNull(request);
         return request;
     }
@@ -1108,7 +1108,7 @@ public sealed class PackageOperationsTests
     /// <summary>
     /// A scriptable broker transport implementing the full happy-path endpoint surface
     /// (health, capabilities, execute, get-status, cancel) with responses built from the
-    /// real Api types via <see cref="BrokerJson"/>. Status responses are drained from
+    /// real Api types via <see cref="BrokerSerializer"/>. Status responses are drained from
     /// <see cref="StatusScript"/>; once a cancel request has been received (or the script
     /// is empty), <see cref="StatusAfterCancel"/> is reported instead.
     /// </summary>
@@ -1155,9 +1155,9 @@ public sealed class PackageOperationsTests
 
             return request.Path switch
             {
-                "/v1/health" => Json(BrokerJson.Serialize(BuildHealthResponse())),
-                "/v1/capabilities" => Json(BrokerJson.Serialize(BuildCapabilities())),
-                "/v1/package-operations/execute" => Json(BrokerJson.Serialize(BuildExecutionResponse())),
+                "/v1/health" => Json(BrokerSerializer.Serialize(BuildHealthResponse())),
+                "/v1/capabilities" => Json(BrokerSerializer.Serialize(BuildCapabilities())),
+                "/v1/package-operations/execute" => Json(BrokerSerializer.Serialize(BuildExecutionResponse())),
                 "/v1/package-operations/get-status" => HandleStatusQuery(),
                 "/v1/package-operations/cancel" => HandleCancelRequest(),
                 _ => throw new BrokerClientException(
@@ -1181,7 +1181,7 @@ public sealed class PackageOperationsTests
                     ? StatusAfterCancel
                     : StatusScript.Dequeue();
 
-            return Json(BrokerJson.Serialize(new BrokerApiStatusResponse
+            return Json(BrokerSerializer.Serialize(new BrokerApiStatusResponse
             {
                 ResponseKind = BrokerApiConstants.StatusResponseKind,
                 ResponseVersion = BrokerApiConstants.Version,
@@ -1204,7 +1204,7 @@ public sealed class PackageOperationsTests
 
             cancelReceived = true;
             OnCancelRequested?.Invoke();
-            return Json(BrokerJson.Serialize(new BrokerApiCancelResponse
+            return Json(BrokerSerializer.Serialize(new BrokerApiCancelResponse
             {
                 ResponseKind = BrokerApiConstants.CancelResponseKind,
                 ResponseVersion = BrokerApiConstants.Version,

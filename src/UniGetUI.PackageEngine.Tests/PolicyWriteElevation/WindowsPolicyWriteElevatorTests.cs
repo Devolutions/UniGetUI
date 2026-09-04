@@ -101,6 +101,35 @@ public class WindowsPolicyWriteElevatorTests
     }
 
     [Fact]
+    public async Task OversizedBrokerRequest_IsRejectedBeforeHelperLaunch()
+    {
+        PolicyElevationWriteRequest empty = new(JsonDocument.Parse("""{"padding":""}""").RootElement)
+        {
+            ExpectedStoreToken = "token",
+            ValidationReceipt = "receipt",
+        };
+        int paddingLength =
+            BrokerApi.MaxPolicyManagementBodyBytes
+            - PolicyElevationReplacementDispatcher.GetBrokerRequestBodyByteCount(empty)
+            + 1;
+        PolicyElevationWriteRequest overLimit = new(
+            JsonDocument.Parse(
+                $$"""{"padding":"{{new string('a', paddingLength)}}"}""").RootElement)
+        {
+            ExpectedStoreToken = "token",
+            ValidationReceipt = "receipt",
+        };
+        FakeHelperLauncher launcher = FakeHelperLauncher.Running((_, _) => Task.CompletedTask);
+
+        PolicyElevationResult result = await Build(launcher)
+            .ReplacePolicyAsync(overLimit, CancellationToken.None);
+
+        Assert.Equal(PolicyElevationOutcome.PayloadTooLarge, result.Outcome);
+        Assert.Null(launcher.LaunchedPath);
+        Assert.Equal(overLimit.Draft.GetRawText(), result.Draft.GetRawText());
+    }
+
+    [Fact]
     public async Task BrokerRejection_IsSurfacedDistinctly()
     {
         FakeHelperLauncher launcher = FakeHelperLauncher.Running(async (arguments, _) =>

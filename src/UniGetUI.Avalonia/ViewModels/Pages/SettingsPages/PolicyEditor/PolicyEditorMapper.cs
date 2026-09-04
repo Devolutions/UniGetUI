@@ -1,5 +1,5 @@
-using Devolutions.Now.Policy.Model;
 using Devolutions.Now.Policy.Api;
+using Devolutions.Now.Policy.Model;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 

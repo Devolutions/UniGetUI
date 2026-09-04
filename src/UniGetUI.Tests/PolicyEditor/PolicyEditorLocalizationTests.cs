@@ -109,6 +109,19 @@ public partial class PolicyEditorLocalizationTests
         Assert.True(missing.Length == 0, $"Missing English policy translation keys: {string.Join(", ", missing)}");
     }
 
+    [Fact]
+    public void CSharpTranslationScanner_ExtractsMultilineLiteralCalls()
+    {
+        const string source = """
+            CoreTools.Translate(
+                "Multiline policy key")
+            """;
+
+        Match match = Assert.Single(CSharpTranslateRegex().Matches(source).Cast<Match>());
+
+        Assert.Equal("Multiline policy key", match.Groups["key"].Value);
+    }
+
     private static string FindRepositoryRoot()
     {
         for (DirectoryInfo? directory = new(AppContext.BaseDirectory);
@@ -122,7 +135,7 @@ public partial class PolicyEditorLocalizationTests
         throw new DirectoryNotFoundException("Could not locate the repository root.");
     }
 
-    [GeneratedRegex("CoreTools\\.Translate\\(\"(?<key>(?:\\\\.|[^\"\\\\])*)")]
+    [GeneratedRegex("CoreTools\\.Translate\\(\\s*\"(?<key>(?:\\\\.|[^\"\\\\])*)")]
     private static partial Regex CSharpTranslateRegex();
 
     [GeneratedRegex("\\{t:Translate\\s+(?<key>[^}\\r\\n]+)\\}")]

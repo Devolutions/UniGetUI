@@ -164,9 +164,9 @@ public static class PolicyElevationProtocol
         + MaxSafeAsciiConflictPolicyIdValueBytes;
 
     /// <summary>
-    /// Maximum accepted request frame body: the full shared policy-management budget plus the
-    /// exact envelope overhead. Deliberately not a smaller round number — a maximum-size draft
-    /// must survive the hop.
+    /// Maximum accepted IPC request frame body. The complete broker replacement request is
+    /// separately preflighted against <see cref="MaxPolicyManagementBodyBytes"/>; this allowance
+    /// adds only the exact authenticated IPC envelope needed to relay an accepted request.
     /// </summary>
     public const int MaxRequestFrameBytes =
         MaxPolicyManagementBodyBytes + RequestEnvelopeOverheadBytes;

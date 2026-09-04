@@ -165,6 +165,14 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (!PolicyElevationReplacementDispatcher.IsBrokerRequestWithinLimit(request))
+        {
+            return Fail(
+                request,
+                PolicyElevationOutcome.PayloadTooLarge,
+                "The serialized policy replacement request exceeds the broker request limit.");
+        }
+
         if (!OperatingSystem.IsWindows())
         {
             return Fail(request, PolicyElevationOutcome.UnsupportedPlatform,

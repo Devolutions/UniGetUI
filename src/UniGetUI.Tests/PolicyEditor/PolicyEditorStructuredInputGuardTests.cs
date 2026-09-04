@@ -1,4 +1,5 @@
 using Devolutions.Now.Policy.Api;
+using Devolutions.Now.Policy.Model;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 
 namespace UniGetUI.Tests.PolicyEditor;
@@ -179,6 +180,7 @@ public class PolicyEditorStructuredInputGuardTests
             nameof(PolicyEditorDocumentUi.Publisher),
             nameof(PolicyEditorDocumentUi.PolicyVersion),
             nameof(PolicyEditorDocumentUi.Description),
+            nameof(PolicyEditorDocumentUi.HasDescription),
             nameof(PolicyEditorDocumentUi.SupportUrl),
             nameof(PolicyEditorDocumentUi.ValidFromText),
             nameof(PolicyEditorDocumentUi.ValidUntilText),
@@ -371,6 +373,174 @@ public class PolicyEditorStructuredInputGuardTests
 
         Assert.Equal([" leading", " ", "trailing "], draftRule.Match.Sources);
         Assert.Equal(" leading\r\n \r\ntrailing ", rule.Sources);
+    }
+
+    [Fact]
+    public void OptionalDescriptionAndReason_PreserveNullEmptyWhitespaceAndExplicitOmission()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        Assert.False(document.HasDescription);
+        Assert.Null(document.Description);
+        Assert.False(viewModel.IsDirty);
+        document.Description = "";
+        Assert.Null(document.Description);
+        Assert.False(viewModel.IsDirty);
+
+        PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+
+        document.HasDescription = true;
+        Assert.True(document.HasDescription);
+        Assert.Equal("", document.Description);
+        document.Description = " ";
+        Assert.Equal(" ", document.Description);
+        document.Description = "";
+        Assert.Equal("", document.Description);
+        document.HasDescription = false;
+        Assert.Null(document.Description);
+
+        Assert.False(rule.HasReason);
+        Assert.Null(rule.Reason);
+        rule.Reason = "";
+        Assert.Null(rule.Reason);
+        rule.HasReason = true;
+        Assert.True(rule.HasReason);
+        Assert.Equal("", rule.Reason);
+        rule.Reason = " ";
+        Assert.Equal(" ", rule.Reason);
+        rule.Reason = "";
+        Assert.Equal("", rule.Reason);
+        rule.HasReason = false;
+        Assert.Null(rule.Reason);
+    }
+
+    [Fact]
+    public async Task StructuredRawRoundTrip_PreservesExactOptionalAuthoredText()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("test-policy", "Contoso"));
+        PolicyEditorDraftRule draftRule = session.AddRule();
+        var validation = new FakeValidationClient();
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient(),
+            rawSyntaxDebounce: TimeSpan.Zero);
+        var document = new PolicyEditorDocumentUi(viewModel);
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+
+        document.HasDescription = true;
+        document.Description = "";
+        rule.HasReason = true;
+        rule.Reason = " ";
+        rule.HasVersionRange = true;
+        rule.MinVersion = " ";
+        rule.MaxVersion = "2.0";
+        rule.MinVersion = "";
+        rule.MaxVersion = "";
+        Assert.Null(draftRule.Match.VersionRange!.MinVersion);
+        Assert.Null(draftRule.Match.VersionRange.MaxVersion);
+        rule.MinVersion = " ";
+        rule.MaxVersion = "2.0";
+
+        viewModel.SwitchToRawCommand.Execute(null);
+        Assert.True(session.TryParseRaw(
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error));
+        Assert.Null(error);
+        Assert.Equal("", parsed!.Metadata.Description);
+        Assert.Equal(" ", parsed.Rules[0].Reason);
+        Assert.Equal(" ", parsed.Rules[0].Match.VersionRange!.MinVersion);
+        Assert.Equal("2.0", parsed.Rules[0].Match.VersionRange!.MaxVersion);
+
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-text-round-trip",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(parsed),
+        });
+        await viewModel.SwitchToStructuredCommand.ExecuteAsync(null);
+
+        Assert.Equal(PolicyEditorMode.Structured, session.Mode);
+        Assert.Equal("", session.Draft.Metadata.Description);
+        Assert.Equal(" ", session.Draft.Rules[0].Reason);
+        Assert.Equal(" ", session.Draft.Rules[0].Match.VersionRange!.MinVersion);
+        Assert.Equal("2.0", session.Draft.Rules[0].Match.VersionRange!.MaxVersion);
+    }
+
+    [Fact]
+    public async Task ConflictStatus_PrecedesGenericWriteFailureAndShowsOverwriteGuidance()
+    {
+        PolicyDocument active = PolicyEditorTestFixtures.BuildDocument(id: "test-policy");
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement(active, "token-1"));
+        var validation = new FakeValidationClient();
+        var writer = new FakeWriteClient();
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        using var dialog = new PolicyEditorDialogViewModel(viewModel);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-stale",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(viewModel.Draft),
+        });
+        writer.NextOutcome = PolicyWriteOutcome.Failure(
+            PolicyWriteFailureKind.BrokerRejected,
+            new ErrorResponse
+            {
+                Code = ErrorCode.StalePolicyStoreToken,
+                Management = PolicyEditorTestFixtures.BuildActiveManagement(active, "token-2"),
+            });
+
+        await viewModel.SaveCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.HasConflict);
+        Assert.Equal(PolicyWriteFailureKind.BrokerRejected, viewModel.LastWriteFailureKind);
+        Assert.Equal("The policy changed since you started editing", dialog.Status.Title);
+        Assert.Equal(
+            "Review your changes, then choose Overwrite to save anyway.",
+            dialog.Status.Message);
+    }
+
+    [Fact]
+    public async Task GenericWriteFailureWithoutConflictRetainsFailureStatus()
+    {
+        PolicyDocument active = PolicyEditorTestFixtures.BuildDocument(id: "test-policy");
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement(active, "token-1"));
+        var validation = new FakeValidationClient();
+        var writer = new FakeWriteClient();
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-rejected",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(viewModel.Draft),
+        });
+        writer.NextOutcome = PolicyWriteOutcome.Failure(
+            PolicyWriteFailureKind.BrokerRejected,
+            new ErrorResponse { Code = ErrorCode.InvalidPolicy });
+
+        await viewModel.SaveCommand.ExecuteAsync(null);
+        using var dialog = new PolicyEditorDialogViewModel(viewModel);
+
+        Assert.False(viewModel.HasConflict);
+        Assert.Equal("The policy could not be saved", dialog.Status.Title);
+        Assert.NotEqual(
+            "Review your changes, then choose Overwrite to save anyway.",
+            dialog.Status.Message);
     }
 
     [Fact]

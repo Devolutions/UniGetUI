@@ -193,21 +193,21 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (HasWriteFailure)
-        {
-            SetStatus(
-                CoreTools.Translate("The policy could not be saved"),
-                WriteFailureMessage,
-                InfoBarSeverity.Error);
-            return;
-        }
-
         if (Session.HasConflict)
         {
             SetStatus(
                 CoreTools.Translate("The policy changed since you started editing"),
                 CoreTools.Translate("Review your changes, then choose Overwrite to save anyway."),
                 InfoBarSeverity.Warning);
+            return;
+        }
+
+        if (HasWriteFailure)
+        {
+            SetStatus(
+                CoreTools.Translate("The policy could not be saved"),
+                WriteFailureMessage,
+                InfoBarSeverity.Error);
             return;
         }
 

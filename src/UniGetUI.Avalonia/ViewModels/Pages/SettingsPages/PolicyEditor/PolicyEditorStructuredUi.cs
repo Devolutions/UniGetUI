@@ -172,7 +172,29 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
     public string? Description
     {
         get => Draft.Metadata.Description;
-        set { Draft.Metadata.Description = string.IsNullOrWhiteSpace(value) ? null : value; MarkDirty(); }
+        set
+        {
+            if (!HasDescription && string.IsNullOrEmpty(value)) return;
+            if (string.Equals(Draft.Metadata.Description, value, StringComparison.Ordinal)) return;
+            bool hadDescription = HasDescription;
+            Draft.Metadata.Description = value;
+            if (hadDescription != HasDescription)
+                OnPropertyChanged(nameof(HasDescription));
+            MarkDirty();
+        }
+    }
+
+    public bool HasDescription
+    {
+        get => Draft.Metadata.Description is not null;
+        set
+        {
+            if (value == HasDescription) return;
+            Draft.Metadata.Description = value ? "" : null;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(Description));
+            MarkDirty();
+        }
     }
 
     public string? SupportUrl
@@ -268,6 +290,7 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         OnPropertyChanged(nameof(Id));
         OnPropertyChanged(nameof(Publisher));
         OnPropertyChanged(nameof(Description));
+        OnPropertyChanged(nameof(HasDescription));
         OnPropertyChanged(nameof(SupportUrl));
         OnPropertyChanged(nameof(ValidFromText));
         OnPropertyChanged(nameof(ValidUntilText));
@@ -422,7 +445,29 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
     public string? Reason
     {
         get => Rule.Reason;
-        set { Rule.Reason = string.IsNullOrWhiteSpace(value) ? null : value; MarkDirty(); }
+        set
+        {
+            if (!HasReason && string.IsNullOrEmpty(value)) return;
+            if (string.Equals(Rule.Reason, value, StringComparison.Ordinal)) return;
+            bool hadReason = HasReason;
+            Rule.Reason = value;
+            if (hadReason != HasReason)
+                OnPropertyChanged(nameof(HasReason));
+            MarkDirty();
+        }
+    }
+
+    public bool HasReason
+    {
+        get => Rule.Reason is not null;
+        set
+        {
+            if (value == HasReason) return;
+            Rule.Reason = value ? "" : null;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(Reason));
+            MarkDirty();
+        }
     }
 
     public string AutomationName => CoreTools.Translate(
@@ -474,13 +519,13 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
     public string? MinVersion
     {
         get => Rule.Match.VersionRange?.MinVersion;
-        set { EnsureVersionRange().MinVersion = string.IsNullOrWhiteSpace(value) ? null : value; MarkDirty(); }
+        set { EnsureVersionRange().MinVersion = string.IsNullOrEmpty(value) ? null : value; MarkDirty(); }
     }
 
     public string? MaxVersion
     {
         get => Rule.Match.VersionRange?.MaxVersion;
-        set { EnsureVersionRange().MaxVersion = string.IsNullOrWhiteSpace(value) ? null : value; MarkDirty(); }
+        set { EnsureVersionRange().MaxVersion = string.IsNullOrEmpty(value) ? null : value; MarkDirty(); }
     }
 
     public bool IncludePrerelease

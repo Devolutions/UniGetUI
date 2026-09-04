@@ -136,8 +136,11 @@
                                          automation:AutomationProperties.Name="{t:Translate Policy version}"/>
                             </Grid>
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Description}"/>
+                                <CheckBox Content="{t:Translate Description}"
+                                         IsChecked="{Binding Document.HasDescription}"
+                                         automation:AutomationProperties.Name="{t:Translate Description}"/>
                                 <TextBox Classes="list-field" Grid.Column="1" Text="{Binding Document.Description}"
+                                         IsEnabled="{Binding Document.HasDescription}"
                                          automation:AutomationProperties.Name="{t:Translate Description}"/>
                             </Grid>
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
@@ -273,8 +276,11 @@
                                                       automation:AutomationProperties.Name="{t:Translate Decision}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Reason}"/>
+                                            <CheckBox Content="{t:Translate Reason}"
+                                                     IsChecked="{Binding HasReason}"
+                                                     automation:AutomationProperties.Name="{t:Translate Reason}"/>
                                             <TextBox Classes="list-field" Grid.Column="1" Text="{Binding Reason}"
+                                                     IsEnabled="{Binding HasReason}"
                                                      automation:AutomationProperties.Name="{t:Translate Reason}"/>
                                         </Grid>
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json.Nodes;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Model;
@@ -782,6 +783,60 @@ public class PolicyEditorSessionViewModelTests
     }
 
     [Fact]
+    public async Task SuccessfulInflightSave_ExactStructuredRevertClearsNewerChangesStatus()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, FakeWriteClient writer) =
+            CreateForUpdateSession();
+        string? originalDescription = vm.Draft.Metadata.Description;
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+        writer.Gate = new TaskCompletionSource();
+        writer.NextOutcome = PolicyWriteOutcome.Success(
+            PolicyEditorTestFixtures.BuildReplacementResponse(
+                PolicyEditorTestFixtures.BuildDocument(id: "id-1"),
+                "token-after-save"));
+
+        Task save = vm.SaveCommand.ExecuteAsync(null);
+        vm.Draft.Metadata.Description = "temporary newer edit";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        vm.Draft.Metadata.Description = originalDescription;
+        vm.NotifyDraftChangedCommand.Execute(null);
+        writer.Gate.SetResult();
+        await save;
+        await vm.WaitForStructuredDirtyAnalysisAsync();
+
+        Assert.True(vm.LastSaveSucceeded);
+        Assert.False(vm.SavedWithNewerChanges);
+        Assert.False(vm.IsDirty);
+    }
+
+    [Fact]
+    public async Task SuccessfulInflightSave_ExactRawRevertUsesNewAuthoritativeBaseline()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, FakeWriteClient writer) =
+            CreateForUpdateSession();
+        vm.SwitchToRawCommand.Execute(null);
+        string submitted = vm.RawBuffer;
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+        writer.Gate = new TaskCompletionSource();
+        writer.NextOutcome = PolicyWriteOutcome.Success(
+            PolicyEditorTestFixtures.BuildReplacementResponse(
+                PolicyEditorTestFixtures.BuildDocument(id: "id-1"),
+                "token-after-save"));
+
+        Task save = vm.SaveCommand.ExecuteAsync(null);
+        vm.RawBuffer = "{";
+        vm.RawBuffer = submitted;
+        writer.Gate.SetResult();
+        await save;
+        await vm.WaitForRawSyntaxAnalysisAsync();
+
+        Assert.True(vm.LastSaveSucceeded);
+        Assert.False(vm.SavedWithNewerChanges);
+        Assert.False(vm.IsDirty);
+        Assert.Null(vm.SyntaxError);
+    }
+
+    [Fact]
     public async Task SuccessfulInflightSave_WithInvalidRawEdit_NextSameIdentitySaveUsesUpdate()
     {
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, FakeWriteClient writer) =
@@ -978,6 +1033,131 @@ public class PolicyEditorSessionViewModelTests
         Assert.False(result);
         Assert.Equal(1, prompt.CallCount);
         Assert.Equal(PolicyEditorConfirmationKind.DiscardChanges, prompt.LastRequest!.Kind);
+    }
+
+    [Fact]
+    public async Task ConfirmDiscardAsync_ExactRevertBeforeDebounce_DoesNotPrompt()
+    {
+        (PolicyEditorSessionViewModel vm, _, FakeConfirmationPrompt prompt, _) =
+            CreateForCreateSession();
+        vm.Session.Draft.Metadata.Description = "temporary";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        vm.Session.Draft.Metadata.Description = null;
+        vm.NotifyDraftChangedCommand.Execute(null);
+        Assert.True(vm.IsDirty);
+
+        bool result = await vm.ConfirmDiscardAsync();
+
+        Assert.True(result);
+        Assert.False(vm.IsDirty);
+        Assert.Equal(0, prompt.CallCount);
+    }
+
+    [Fact]
+    public async Task StructuredDirtyAnalysis_ExactRevertReturnsToClean()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("id-1", "Contoso"));
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient(),
+            structuredDirtyDebounce: TimeSpan.Zero);
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        document.Description = "changed";
+        Assert.True(viewModel.IsDirty);
+        await viewModel.WaitForStructuredDirtyAnalysisAsync();
+        Assert.True(viewModel.IsDirty);
+
+        document.Description = null;
+        Assert.True(viewModel.IsDirty);
+        await viewModel.WaitForStructuredDirtyAnalysisAsync();
+
+        Assert.False(viewModel.IsDirty);
+    }
+
+    [Fact]
+    public async Task StructuredDirtyAnalysis_SuppressesCancelledStaleComparison()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("id-1", "Contoso"));
+        string baseline = session.GetEffectiveRawJson();
+        var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseFirst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var firstFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        PolicyEditorDraftDocument? firstSerializedDraft = null;
+        int calls = 0;
+        string Serialize(PolicyEditorDraftDocument draft)
+        {
+            if (Interlocked.Increment(ref calls) == 1)
+            {
+                firstSerializedDraft = draft;
+                firstStarted.TrySetResult();
+                releaseFirst.Task.GetAwaiter().GetResult();
+                firstFinished.TrySetResult();
+                return baseline;
+            }
+
+            return PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        }
+
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient(),
+            structuredDirtyDebounce: TimeSpan.Zero,
+            structuredDraftSerializer: Serialize);
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        document.Description = "first";
+        await firstStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.NotSame(session.Draft, firstSerializedDraft);
+        Assert.Equal("first", firstSerializedDraft!.Metadata.Description);
+        document.Description = "second";
+        Assert.Equal("first", firstSerializedDraft.Metadata.Description);
+        await viewModel.WaitForStructuredDirtyAnalysisAsync().WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.True(viewModel.IsDirty);
+
+        releaseFirst.TrySetResult();
+        await firstFinished.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        await Task.Delay(20);
+
+        Assert.True(viewModel.IsDirty);
+        Assert.Equal("second", viewModel.Draft.Metadata.Description);
+    }
+
+    [Fact]
+    public void StructuredDirtyGetter_DoesNotSerializeLargeDraftSynchronously()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
+        draft.Metadata.Description = new string('x', 4 * 1024 * 1024);
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            draft);
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient(),
+            structuredDirtyDebounce: TimeSpan.FromMinutes(1));
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        var stopwatch = Stopwatch.StartNew();
+        document.Publisher = "Fabrikam";
+        for (int index = 0; index < 10_000; index++)
+        {
+            Assert.True(viewModel.IsDirty);
+        }
+        stopwatch.Stop();
+
+        Assert.True(
+            stopwatch.Elapsed < TimeSpan.FromSeconds(1),
+            $"Constant-time dirty reads took {stopwatch.Elapsed}.");
     }
 
     private sealed class CommittedElevator(string committedStoreToken) : IPolicyWriteElevator

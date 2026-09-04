@@ -158,7 +158,7 @@ public class PolicyEditorSessionTests
     // ---- Dirty tracking -------------------------------------------------------------------
 
     [Fact]
-    public void IsDirty_BecomesTrueAfterAnyEdit_AndFalseWhenRevertedToIdenticalContent()
+    public void IsDirty_UsesCachedResultUntilExactContentComparisonIsApplied()
     {
         PolicyEditorSession session = PolicyEditorSession.StartCreate(
             PolicyEditorTestFixtures.BuildMissingManagement(), NewDraft());
@@ -169,6 +169,17 @@ public class PolicyEditorSessionTests
 
         session.Draft.Metadata.Description = null;
         session.NotifyDraftChanged();
+
+        Assert.True(session.IsDirty);
+        PolicyEditorDirtyComparisonSnapshot snapshot = session.CaptureDirtyComparison();
+        string effectiveRaw = session.GetEffectiveRawJson();
+        session.TryApplyDirtyComparison(
+            snapshot,
+            !string.Equals(
+                effectiveRaw,
+                snapshot.BaselineRawJson,
+                StringComparison.Ordinal));
+
         Assert.False(session.IsDirty);
     }
 
@@ -183,6 +194,17 @@ public class PolicyEditorSessionTests
         Assert.True(session.IsDirty);
 
         session.DeleteRule(added.Id);
+
+        Assert.True(session.IsDirty);
+        PolicyEditorDirtyComparisonSnapshot snapshot = session.CaptureDirtyComparison();
+        string effectiveRaw = session.GetEffectiveRawJson();
+        session.TryApplyDirtyComparison(
+            snapshot,
+            !string.Equals(
+                effectiveRaw,
+                snapshot.BaselineRawJson,
+                StringComparison.Ordinal));
+
         Assert.False(session.IsDirty);
     }
 

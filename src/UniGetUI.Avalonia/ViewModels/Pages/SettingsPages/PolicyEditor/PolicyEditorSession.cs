@@ -28,6 +28,11 @@ public sealed record PolicyEditorConflictSnapshot(
     PolicyEditorRetryDecision RetryDecision,
     DateTimeOffset DetectedAt);
 
+internal readonly record struct PolicyEditorDirtyComparisonSnapshot(
+    long MutationGeneration,
+    long BaselineVersion,
+    string BaselineRawJson);
+
 public sealed class PolicyEditorSession
 {
     private string _baselineRawJson;
@@ -38,6 +43,9 @@ public sealed class PolicyEditorSession
     private bool _hasLastAnalyzedRawElement;
     private long _lastAnalyzedMutationGeneration;
     private long _mutationGeneration;
+    private long _cleanMutationGeneration;
+    private long _baselineVersion;
+    private bool _isDirty;
 
     public PolicyEditorOperationKind Operation { get; private set; }
 
@@ -64,8 +72,7 @@ public sealed class PolicyEditorSession
 
     public bool IsIdentityLocked => Operation == PolicyEditorOperationKind.Update;
 
-    public bool IsDirty =>
-        !string.Equals(GetEffectiveRawJson(), _baselineRawJson, StringComparison.Ordinal);
+    public bool IsDirty => _isDirty;
 
     public bool IsValidationCurrent =>
         Validation is not null
@@ -114,6 +121,7 @@ public sealed class PolicyEditorSession
         _lastAnalyzedCanonicalRawJson = RawBuffer;
         _lastAnalyzedDraftId = Draft.Metadata.Id;
         _lastAnalyzedMutationGeneration = _mutationGeneration;
+        _cleanMutationGeneration = _mutationGeneration;
     }
 
     public static PolicyEditorSession StartUpdate(PolicyManagementSnapshot management)
@@ -167,7 +175,10 @@ public sealed class PolicyEditorSession
         _lastAnalyzedCanonicalRawJson = RawBuffer;
         _lastAnalyzedDraftId = Draft.Metadata.Id;
         IsRawAnalysisPending = false;
-        InvalidateContentState();
+        InvalidateContentState(markDirty: false);
+        _isDirty = !string.Equals(RawBuffer, _baselineRawJson, StringComparison.Ordinal);
+        if (!_isDirty)
+            _cleanMutationGeneration = _mutationGeneration;
         _lastAnalyzedMutationGeneration = _mutationGeneration;
     }
 
@@ -178,6 +189,7 @@ public sealed class PolicyEditorSession
 
         RawBuffer = rawText ?? "";
         _mutationGeneration++;
+        _isDirty = true;
         IsRawAnalysisPending = true;
     }
 
@@ -272,6 +284,9 @@ public sealed class PolicyEditorSession
         _lastAnalyzedMutationGeneration = _mutationGeneration;
         _hasLastAnalyzedRawElement = false;
         IsRawAnalysisPending = false;
+        _isDirty = !string.Equals(RawBuffer, _baselineRawJson, StringComparison.Ordinal);
+        if (!_isDirty)
+            _cleanMutationGeneration = _mutationGeneration;
     }
 
     public string GetEffectiveRawJson() =>
@@ -498,7 +513,7 @@ public sealed class PolicyEditorSession
         Draft = PolicyEditorMapper.ToDraft(authoritative);
         RawBuffer = PolicyEditorRawSyntax.ToCanonicalRaw(Draft);
         Mode = PolicyEditorMode.Structured;
-        _baselineRawJson = RawBuffer;
+        SetCleanBaseline(RawBuffer, _mutationGeneration);
         _lastAnalyzedRawJson = RawBuffer;
         _lastAnalyzedCanonicalRawJson = RawBuffer;
         _lastAnalyzedDraftId = Draft.Metadata.Id;
@@ -511,7 +526,9 @@ public sealed class PolicyEditorSession
         Conflict = null;
     }
 
-    public void MarkSavedPreservingCurrentDraft(PolicyReplacementResponse response)
+    public void MarkSavedPreservingCurrentDraft(
+        PolicyReplacementResponse response,
+        long savedMutationGeneration)
     {
         ArgumentNullException.ThrowIfNull(response);
         if (response.Management.State != PolicyManagementState.Active
@@ -526,8 +543,10 @@ public sealed class PolicyEditorSession
         Operation = TryGetCanonicalEffectiveRaw(out _, out string? currentDraftId)
             ? ResolveOperationForDraftId(currentDraftId!)
             : PolicyEditorOperationKind.Update;
-        _baselineRawJson = PolicyEditorRawSyntax.ToCanonicalRaw(
-            PolicyEditorMapper.ToDraft(response.Policy));
+        SetBaseline(
+            PolicyEditorRawSyntax.ToCanonicalRaw(PolicyEditorMapper.ToDraft(response.Policy)),
+            savedMutationGeneration);
+        _isDirty = _mutationGeneration != _cleanMutationGeneration;
         Validation = null;
         Findings = PolicyEditorFindingIndex.Build([]);
         WarningAcknowledgement = null;
@@ -552,10 +571,44 @@ public sealed class PolicyEditorSession
         };
     }
 
-    private void InvalidateContentState()
+    internal PolicyEditorDirtyComparisonSnapshot CaptureDirtyComparison() =>
+        new(_mutationGeneration, _baselineVersion, _baselineRawJson);
+
+    internal bool TryApplyDirtyComparison(
+        PolicyEditorDirtyComparisonSnapshot snapshot,
+        bool isDirty)
+    {
+        if (snapshot.MutationGeneration != _mutationGeneration
+            || snapshot.BaselineVersion != _baselineVersion)
+        {
+            return false;
+        }
+
+        _isDirty = isDirty;
+        if (!isDirty)
+            _cleanMutationGeneration = _mutationGeneration;
+        return true;
+    }
+
+    private void InvalidateContentState(bool markDirty = true)
     {
         _mutationGeneration++;
+        if (markDirty)
+            _isDirty = true;
         ClearContentState();
+    }
+
+    private void SetCleanBaseline(string baselineRawJson, long mutationGeneration)
+    {
+        SetBaseline(baselineRawJson, mutationGeneration);
+        _isDirty = false;
+    }
+
+    private void SetBaseline(string baselineRawJson, long mutationGeneration)
+    {
+        _baselineRawJson = baselineRawJson;
+        _cleanMutationGeneration = mutationGeneration;
+        _baselineVersion++;
     }
 
     private void ClearContentState()

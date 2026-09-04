@@ -177,6 +177,21 @@ public class PolicyEditorFindingIndexTests
         Assert.Throws<InvalidOperationException>(session.AcknowledgeWarnings);
     }
 
+    [Theory]
+    [InlineData(PolicyValidationSeverity.Error, true, false)]
+    [InlineData(PolicyValidationSeverity.Warning, false, true)]
+    [InlineData(PolicyValidationSeverity.Info, false, false)]
+    public void FindingSeverity_ExposesThemeClassSelectors(
+        PolicyValidationSeverity severity,
+        bool isError,
+        bool isWarning)
+    {
+        var finding = new PolicyValidationFinding("", null, severity, "message");
+
+        Assert.Equal(isError, finding.IsError);
+        Assert.Equal(isWarning, finding.IsWarning);
+    }
+
     [Fact]
     public void SensitiveFinding_UsesStructuredOptionAndRestrictionArguments()
     {

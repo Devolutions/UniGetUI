@@ -1,23 +1,9 @@
 using System.Globalization;
-using Avalonia.Data.Converters;
-using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Devolutions.Now.Policy.Model;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
-
-/// <summary>Bindable brush lookup for <see cref="PolicyValidationSeverity"/>, used by the findings-list template.</summary>
-internal static class PolicyEditorSeverityConverters
-{
-    public static readonly IValueConverter ToBrush = new FuncValueConverter<PolicyValidationSeverity, IBrush?>(
-        severity => severity switch
-        {
-            PolicyValidationSeverity.Error => Brushes.Firebrick,
-            PolicyValidationSeverity.Warning => Brushes.DarkOrange,
-            _ => null,
-        });
-}
 
 /// <summary>
 /// A single checkbox-style option for a multi-select enum match field (e.g. Operations, Managers,

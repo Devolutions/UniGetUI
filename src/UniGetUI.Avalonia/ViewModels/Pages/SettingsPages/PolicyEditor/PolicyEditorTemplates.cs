@@ -8,6 +8,8 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 /// </summary>
 public static class PolicyEditorTemplates
 {
+    public const int ResourceIdMaxLength = 128;
+
     /// <summary>
     /// Creates a brand-new draft document: fixed schema/type/version, <c>PriorityThenDeny</c>
     /// precedence, a default decision of <c>Deny</c> (fail closed), and no rules. The caller must
@@ -41,4 +43,43 @@ public static class PolicyEditorTemplates
             Rules = [],
         };
     }
+
+    public static string CreateReplacementId(string activeId)
+    {
+        if (!IsValidResourceId(activeId))
+        {
+            throw new ArgumentException(
+                "The active policy identifier is not a valid resource identifier.",
+                nameof(activeId));
+        }
+
+        const string suffix = "-new";
+        int prefixLength = Math.Min(activeId.Length, ResourceIdMaxLength - suffix.Length);
+        string candidate = activeId[..prefixLength] + suffix;
+        if (!string.Equals(candidate, activeId, StringComparison.Ordinal))
+        {
+            return candidate;
+        }
+
+        char replacement = activeId[^1] == '0' ? '1' : '0';
+        return activeId[..^1] + replacement;
+    }
+
+    private static bool IsValidResourceId(string? value)
+    {
+        if (string.IsNullOrEmpty(value)
+            || value.Length > ResourceIdMaxLength
+            || !IsAsciiLetterOrDigit(value[0]))
+        {
+            return false;
+        }
+
+        return value.AsSpan(1).IndexOfAnyExcept(
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._:-") < 0;
+    }
+
+    private static bool IsAsciiLetterOrDigit(char value) =>
+        value is >= 'A' and <= 'Z'
+        or >= 'a' and <= 'z'
+        or >= '0' and <= '9';
 }

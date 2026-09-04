@@ -406,6 +406,13 @@ public class WindowsProtectedLocationVerifierTests : IDisposable
     {
         string file = Path.Combine(_sandbox, "writable.exe");
         File.WriteAllText(file, "payload");
+        var fileInfo = new FileInfo(file);
+        FileSecurity security = fileInfo.GetAccessControl();
+        security.AddAccessRule(new FileSystemAccessRule(
+            new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null),
+            FileSystemRights.WriteData,
+            AccessControlType.Allow));
+        fileInfo.SetAccessControl(security);
 
         using PolicyElevationLocationVerification verification = WindowsProtectedLocationVerifier.InspectObject(
             file,

@@ -277,7 +277,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         }
 
         PolicyEditorDraftDocument seed = PolicyEditorTemplates.CreateNew(
-            $"{snapshot.Policy.Metadata.Id}-new",
+            PolicyEditorTemplates.CreateReplacementId(snapshot.Policy.Metadata.Id),
             snapshot.Policy.Metadata.Publisher);
         OpenPolicyEditorRequested?.Invoke(
             this,

@@ -82,4 +82,51 @@ public class PolicyEditorTemplatesTests
         Assert.DoesNotContain(props, p => p.Name == "Revision");
         Assert.DoesNotContain(props, p => p.Name == "PublishedAt");
     }
+
+    [Fact]
+    public void CreateReplacementId_AppendsReadableSuffixWhenItFits()
+    {
+        Assert.Equal("active-policy-new", PolicyEditorTemplates.CreateReplacementId("active-policy"));
+    }
+
+    [Fact]
+    public void CreateReplacementId_UsesTheFullLimitWithoutChangingTheValidPrefix()
+    {
+        string activeId = new('a', PolicyEditorTemplates.ResourceIdMaxLength - 4);
+
+        string replacementId = PolicyEditorTemplates.CreateReplacementId(activeId);
+
+        Assert.Equal(PolicyEditorTemplates.ResourceIdMaxLength, replacementId.Length);
+        Assert.Equal($"{activeId}-new", replacementId);
+        AssertValidReplacement(activeId, replacementId);
+    }
+
+    [Fact]
+    public void CreateReplacementId_TruncatesAMaximumLengthIdentifier()
+    {
+        string activeId = new('a', PolicyEditorTemplates.ResourceIdMaxLength);
+
+        string replacementId = PolicyEditorTemplates.CreateReplacementId(activeId);
+
+        Assert.Equal($"{new string('a', PolicyEditorTemplates.ResourceIdMaxLength - 4)}-new", replacementId);
+        AssertValidReplacement(activeId, replacementId);
+    }
+
+    [Fact]
+    public void CreateReplacementId_MaximumLengthAlreadyEndingInSuffixStillChangesIdentity()
+    {
+        string activeId = $"{new string('a', PolicyEditorTemplates.ResourceIdMaxLength - 4)}-new";
+
+        string replacementId = PolicyEditorTemplates.CreateReplacementId(activeId);
+
+        Assert.Equal($"{activeId[..^1]}0", replacementId);
+        AssertValidReplacement(activeId, replacementId);
+    }
+
+    private static void AssertValidReplacement(string activeId, string replacementId)
+    {
+        Assert.NotEqual(activeId, replacementId);
+        Assert.InRange(replacementId.Length, 1, PolicyEditorTemplates.ResourceIdMaxLength);
+        Assert.Matches("^[A-Za-z0-9][A-Za-z0-9._:\\-]{0,127}$", replacementId);
+    }
 }

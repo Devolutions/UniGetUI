@@ -71,7 +71,8 @@
                 <StackPanel Spacing="2">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <TextBlock Text="{Binding SeverityText}"
-                                   Foreground="{Binding Severity, Converter={x:Static pvm:PolicyEditorSeverityConverters.ToBrush}}"
+                                   Classes.finding-error="{Binding IsError}"
+                                   Classes.finding-warning="{Binding IsWarning}"
                                    FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Pointer}" Opacity="0.6" FontFamily="Consolas,Cascadia Mono,Menlo,monospace" FontSize="12"/>
                         <TextBlock Text="{Binding RuleId}" Opacity="0.6"

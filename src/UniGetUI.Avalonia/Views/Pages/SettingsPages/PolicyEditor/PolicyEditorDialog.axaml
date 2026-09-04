@@ -1,0 +1,501 @@
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
+        xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        xmlns:pvm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor"
+        xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor.PolicyEditorDialog"
+        x:DataType="pvm:PolicyEditorDialogViewModel"
+        Title="{Binding Title}"
+        MaxWidth="920"
+        MinWidth="620"
+        MaxHeight="900"
+        MinHeight="480"
+        Background="{DynamicResource AppDialogBackground}"
+        HorizontalContentAlignment="Stretch"
+        VerticalContentAlignment="Stretch">
+
+    <dialogs:ImmersiveDialog.KeyBindings>
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding Session.SaveCommand}"/>
+        <KeyBinding Gesture="Meta+S" Command="{Binding Session.SaveCommand}"/>
+    </dialogs:ImmersiveDialog.KeyBindings>
+
+    <dialogs:ImmersiveDialog.Styles>
+        <Style Selector="Border.policy-section">
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+        </Style>
+        <Style Selector="TextBlock.field-label">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBlock.section-heading">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Margin" Value="4,12,4,4"/>
+        </Style>
+        <Style Selector="TextBox.list-field">
+            <Setter Property="AcceptsReturn" Value="True"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="MaxHeight" Value="90"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        </Style>
+        <Style Selector="CheckBox.enum-option">
+            <Setter Property="Margin" Value="0,0,16,6"/>
+        </Style>
+        <Style Selector="TextBlock.finding-error">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.finding-warning">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}"/>
+        </Style>
+    </dialogs:ImmersiveDialog.Styles>
+
+    <dialogs:ImmersiveDialog.DataTemplates>
+        <DataTemplate DataType="pvm:PolicyEditorEnumOption" x:DataType="pvm:PolicyEditorEnumOption">
+            <CheckBox Classes="enum-option" Content="{Binding Display}" IsChecked="{Binding IsSelected}"/>
+        </DataTemplate>
+        <DataTemplate DataType="pvm:PolicyValidationFinding" x:DataType="pvm:PolicyValidationFinding">
+            <Border Classes="settings-card"
+                    Padding="10,6"
+                    Margin="0,0,0,4"
+                    Focusable="True"
+                    automation:AutomationProperties.Name="{Binding AutomationName}">
+                <StackPanel Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{Binding SeverityText}"
+                                   Classes.finding-error="{Binding IsError}"
+                                   Classes.finding-warning="{Binding IsWarning}"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Pointer}" Opacity="0.6" FontFamily="Consolas,Cascadia Mono,Menlo,monospace" FontSize="12"/>
+                        <TextBlock Text="{Binding RuleId}" Opacity="0.6"
+                                   IsVisible="{Binding RuleId, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Message}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </dialogs:ImmersiveDialog.DataTemplates>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20,12,20,16" RowSpacing="10">
+
+        <controls:InfoBar Grid.Row="0"
+                          DataContext="{Binding Status}"/>
+
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+            <Button x:Name="StructuredModeButton" Grid.Column="0"
+                    Content="{t:Translate Structured}"
+                    Classes.accent="{Binding Session.IsStructuredMode}"
+                    Classes="secondary-action"
+                    IsEnabled="{Binding Session.CanValidateOrSave}"
+                    Click="StructuredModeButton_Click"
+                    automation:AutomationProperties.Name="{t:Translate Switch to the structured editor}"/>
+            <Button x:Name="RawModeButton" Grid.Column="1"
+                    Content="{t:Translate Raw JSON}"
+                    Classes.accent="{Binding Session.IsRawMode}"
+                    Classes="secondary-action"
+                    IsEnabled="{Binding Session.CanSwitchToRaw}"
+                    Click="RawModeButton_Click"
+                    automation:AutomationProperties.Name="{t:Translate Switch to the raw JSON editor}"/>
+            <TextBlock Grid.Column="3" Text="{t:Translate Unsaved changes}"
+                       IsVisible="{Binding Session.IsDirty}"
+                       VerticalAlignment="Center" Opacity="0.7"/>
+        </Grid>
+
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="16" Margin="2,0,2,8">
+
+                <!-- ── Structured mode ── -->
+                <StackPanel IsVisible="{Binding Session.IsStructuredMode}" Spacing="16">
+
+                    <TextBlock Classes="section-heading" Text="{t:Translate Policy metadata}"
+                               automation:AutomationProperties.HeadingLevel="2"/>
+                    <Border Classes="settings-card policy-section">
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                <TextBlock Classes="field-label" Text="{t:Translate Policy ID}"/>
+                                <TextBox Grid.Column="1" Text="{Binding Document.Id}"
+                                         IsEnabled="{Binding !Document.IsIdentityLocked}"
+                                         automation:AutomationProperties.Name="{t:Translate Policy ID}"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                <TextBlock Classes="field-label" Text="{t:Translate Publisher}"/>
+                                <TextBox Grid.Column="1" Text="{Binding Document.Publisher}"
+                                         automation:AutomationProperties.Name="{t:Translate Publisher}"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                <TextBlock Classes="field-label" Text="{t:Translate Policy version}"/>
+                                <TextBox Grid.Column="1" Text="{Binding Document.PolicyVersion}"
+                                         automation:AutomationProperties.Name="{t:Translate Policy version}"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                <CheckBox Content="{t:Translate Description}"
+                                         IsChecked="{Binding Document.HasDescription}"
+                                         automation:AutomationProperties.Name="{t:Translate Description}"/>
+                                <TextBox Classes="list-field" Grid.Column="1" Text="{Binding Document.Description}"
+                                         IsEnabled="{Binding Document.HasDescription}"
+                                         automation:AutomationProperties.Name="{t:Translate Description}"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                <TextBlock Classes="field-label" Text="{t:Translate Support URL}"/>
+                                <TextBox Grid.Column="1" Text="{Binding Document.SupportUrl}"
+                                         automation:AutomationProperties.Name="{t:Translate Support URL}"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                <TextBlock Classes="field-label" Text="{t:Translate Valid from (optional ISO-8601)}"/>
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBox Text="{Binding Document.ValidFromText}"
+                                             PlaceholderText="2025-01-01T00:00:00Z"
+                                             automation:AutomationProperties.Name="{t:Translate Valid from}"/>
+                                    <TextBlock Text="{Binding Document.ValidFromError}"
+                                               IsVisible="{Binding Document.ValidFromError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                               Classes="finding-error"
+                                               TextWrapping="Wrap"
+                                               automation:AutomationProperties.LiveSetting="Assertive"/>
+                                </StackPanel>
+                            </Grid>
+                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                <TextBlock Classes="field-label" Text="{t:Translate Valid until (optional ISO-8601)}"/>
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBox Text="{Binding Document.ValidUntilText}"
+                                             PlaceholderText="2025-01-01T00:00:00Z"
+                                             automation:AutomationProperties.Name="{t:Translate Valid until}"/>
+                                    <TextBlock Text="{Binding Document.ValidUntilError}"
+                                               IsVisible="{Binding Document.ValidUntilError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                               Classes="finding-error"
+                                               TextWrapping="Wrap"
+                                               automation:AutomationProperties.LiveSetting="Assertive"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Classes="section-heading" Text="{t:Translate Enforcement}"
+                               automation:AutomationProperties.HeadingLevel="2"/>
+                    <Border Classes="settings-card policy-section">
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                <TextBlock Classes="field-label" Text="{t:Translate Default decision}"/>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.DecisionDisplayItems}"
+                                          SelectedIndex="{Binding Document.DecisionIndex}"
+                                          automation:AutomationProperties.Name="{t:Translate Default decision}"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                <TextBlock Classes="field-label" Text="{t:Translate Rule precedence}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Document.RulePrecedenceDisplay}"
+                                           VerticalAlignment="Center" Opacity="0.75"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                <TextBlock Classes="field-label" Text="{t:Translate Audit mode}"/>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.NullableBooleanDisplayItems}"
+                                          SelectedIndex="{Binding Document.AuditModeIndex}"
+                                          automation:AutomationProperties.Name="{t:Translate Audit mode}"/>
+                            </Grid>
+                            <TextBlock Text="{t:Translate Rules are always evaluated by priority; ties are broken toward Deny. This precedence is fixed and cannot be changed.}"
+                                       TextWrapping="Wrap" Opacity="0.65" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="section-heading" Text="{t:Translate Rules}"
+                                   automation:AutomationProperties.HeadingLevel="2"/>
+                        <Button Grid.Column="1" Content="{t:Translate Add rule}"
+                                Click="AddRuleButton_Click"
+                                automation:AutomationProperties.Name="{t:Translate Add rule}"/>
+                    </Grid>
+
+                    <TextBlock Text="{t:Translate This policy has no rules yet.}"
+                               IsVisible="{Binding !Rules.Count}"
+                               Opacity="0.7" Margin="4,0"/>
+
+                    <ItemsControl ItemsSource="{Binding Rules}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="pvm:PolicyEditorRuleUi">
+                                <Expander Margin="0,0,0,10"
+                                          HorizontalAlignment="Stretch"
+                                          HorizontalContentAlignment="Stretch"
+                                          automation:AutomationProperties.Name="{Binding AutomationName}">
+                                    <Expander.Header>
+                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
+                                            <CheckBox Grid.Column="0" IsChecked="{Binding Enabled}"
+                                                      VerticalAlignment="Center"
+                                                      automation:AutomationProperties.Name="{t:Translate Rule enabled}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding AutomationName}"
+                                                       FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <Button Grid.Column="2" Classes="secondary-action" Content="{t:Translate Duplicate}"
+                                                    Click="DuplicateRuleButton_Click"
+                                                    automation:AutomationProperties.Name="{t:Translate Duplicate rule}"/>
+                                            <Button Grid.Column="3" Classes="secondary-action" Content="{t:Translate Move up}"
+                                                    Click="MoveRuleUpButton_Click"
+                                                    automation:AutomationProperties.Name="{t:Translate Move rule up}"/>
+                                            <Button Grid.Column="4" Classes="secondary-action" Content="{t:Translate Move down}"
+                                                    Click="MoveRuleDownButton_Click"
+                                                    automation:AutomationProperties.Name="{t:Translate Move rule down}"/>
+                                            <Button Grid.Column="5" Classes="secondary-action" Content="{t:Translate Delete}"
+                                                    Click="DeleteRuleButton_Click"
+                                                    automation:AutomationProperties.Name="{t:Translate Delete rule}"/>
+                                        </Grid>
+                                    </Expander.Header>
+
+                                    <StackPanel Margin="12,8,4,12" Spacing="8">
+
+                                        <ItemsControl ItemsSource="{Binding Findings}" IsVisible="{Binding HasFindings}"/>
+
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Rule ID}"/>
+                                            <TextBox Grid.Column="1" Text="{Binding Id}"
+                                                     automation:AutomationProperties.Name="{t:Translate Rule ID}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Priority}"/>
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBox Text="{Binding PriorityText}"
+                                                         automation:AutomationProperties.Name="{t:Translate Priority}"/>
+                                                <TextBlock Text="{Binding PriorityError}"
+                                                           IsVisible="{Binding PriorityError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                           Classes="finding-error"
+                                                           TextWrapping="Wrap"
+                                                           automation:AutomationProperties.LiveSetting="Assertive"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Decision}"/>
+                                            <ComboBox Grid.Column="1"
+                                                      ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.DecisionDisplayItems}"
+                                                      SelectedIndex="{Binding DecisionIndex}"
+                                                      automation:AutomationProperties.Name="{t:Translate Decision}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <CheckBox Content="{t:Translate Reason}"
+                                                     IsChecked="{Binding HasReason}"
+                                                     automation:AutomationProperties.Name="{t:Translate Reason}"/>
+                                            <TextBox Classes="list-field" Grid.Column="1" Text="{Binding Reason}"
+                                                     IsEnabled="{Binding HasReason}"
+                                                     automation:AutomationProperties.Name="{t:Translate Reason}"/>
+                                        </Grid>
+
+                                        <TextBlock Classes="section-heading" Text="{t:Translate Match criteria}"
+                                                   automation:AutomationProperties.HeadingLevel="3"/>
+
+                                        <TextBlock Classes="field-label" Text="{t:Translate Operations (optional)}"/>
+                                        <ItemsControl ItemsSource="{Binding OperationOptions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+
+                                        <TextBlock Classes="field-label" Text="{t:Translate Package managers (optional)}"/>
+                                        <ItemsControl ItemsSource="{Binding ManagerOptions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+
+                                        <TextBlock Classes="field-label" Text="{t:Translate Scopes (optional)}"/>
+                                        <ItemsControl ItemsSource="{Binding ScopeOptions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+
+                                        <TextBlock Classes="field-label" Text="{t:Translate Architectures (optional)}"/>
+                                        <ItemsControl ItemsSource="{Binding ArchitectureOptions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+
+                                        <TextBlock Classes="field-label" Text="{t:Translate Elevation (optional)}"/>
+                                        <ItemsControl ItemsSource="{Binding ElevationOptions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Sources (one per line; optional)}"/>
+                                            <TextBox Classes="list-field" Grid.Column="1" Text="{Binding Sources}"
+                                                     automation:AutomationProperties.Name="{t:Translate Sources}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Package identifiers (one per line; optional)}"/>
+                                            <TextBox Classes="list-field" Grid.Column="1" Text="{Binding PackageIdentifiers}"
+                                                     automation:AutomationProperties.Name="{t:Translate Package identifiers}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Package names (one per line; optional)}"/>
+                                            <TextBox Classes="list-field" Grid.Column="1" Text="{Binding PackageNames}"
+                                                     automation:AutomationProperties.Name="{t:Translate Package names}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Versions (one per line; optional)}"/>
+                                            <TextBox Classes="list-field" Grid.Column="1" Text="{Binding Versions}"
+                                                     automation:AutomationProperties.Name="{t:Translate Versions}"/>
+                                        </Grid>
+
+                                        <CheckBox Content="{t:Translate Restrict to a version range}" IsChecked="{Binding HasVersionRange}"/>
+                                        <StackPanel IsVisible="{Binding HasVersionRange}" Spacing="8" Margin="24,0,0,0">
+                                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                                <TextBlock Classes="field-label" Text="{t:Translate Minimum version}"/>
+                                                <TextBox Grid.Column="1" Text="{Binding MinVersion}"
+                                                         automation:AutomationProperties.Name="{t:Translate Minimum version}"/>
+                                            </Grid>
+                                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                                <TextBlock Classes="field-label" Text="{t:Translate Maximum version}"/>
+                                                <TextBox Grid.Column="1" Text="{Binding MaxVersion}"
+                                                         automation:AutomationProperties.Name="{t:Translate Maximum version}"/>
+                                            </Grid>
+                                            <CheckBox Content="{t:Translate Include prerelease versions}" IsChecked="{Binding IncludePrerelease}"/>
+                                        </StackPanel>
+
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Interactive}"/>
+                                            <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
+                                                      SelectedIndex="{Binding InteractiveIndex}"
+                                                      automation:AutomationProperties.Name="{t:Translate Interactive}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Skip hash check}"/>
+                                            <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
+                                                      SelectedIndex="{Binding SkipHashCheckIndex}"
+                                                      automation:AutomationProperties.Name="{t:Translate Skip hash check}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Prerelease}"/>
+                                            <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
+                                                      SelectedIndex="{Binding PreReleaseIndex}"
+                                                      automation:AutomationProperties.Name="{t:Translate Prerelease}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Has custom parameters}"/>
+                                            <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
+                                                      SelectedIndex="{Binding HasCustomParametersIndex}"
+                                                      automation:AutomationProperties.Name="{t:Translate Has custom parameters}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Has custom install location}"/>
+                                            <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
+                                                      SelectedIndex="{Binding HasCustomInstallLocationIndex}"
+                                                      automation:AutomationProperties.Name="{t:Translate Has custom install location}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Has pre/post commands}"/>
+                                            <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
+                                                      SelectedIndex="{Binding HasPrePostCommandsIndex}"
+                                                      automation:AutomationProperties.Name="{t:Translate Has pre/post commands}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Has kill-before-operation}"/>
+                                            <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
+                                                      SelectedIndex="{Binding HasKillBeforeOperationIndex}"
+                                                      automation:AutomationProperties.Name="{t:Translate Has kill-before-operation}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                            <TextBlock Classes="field-label" Text="{t:Translate Has uninstall previous}"/>
+                                            <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
+                                                      SelectedIndex="{Binding HasUninstallPreviousIndex}"
+                                                      automation:AutomationProperties.Name="{t:Translate Has uninstall previous}"/>
+                                        </Grid>
+
+                                        <TextBlock Classes="section-heading" Text="{t:Translate Constraints}"
+                                                   automation:AutomationProperties.HeadingLevel="3"/>
+                                        <CheckBox Content="{t:Translate This rule defines constraints}" IsChecked="{Binding HasConstraints}"/>
+                                        <StackPanel IsVisible="{Binding HasConstraints}" Spacing="6" Margin="24,0,0,0">
+                                            <CheckBox Content="{t:Translate Allow interactive installs}" IsChecked="{Binding AllowInteractive}"/>
+                                            <CheckBox Content="{t:Translate Allow skipping the hash check}" IsChecked="{Binding AllowSkipHashCheck}"/>
+                                            <CheckBox Content="{t:Translate Allow prerelease packages}" IsChecked="{Binding AllowPreRelease}"/>
+                                            <CheckBox Content="{t:Translate Allow a custom install location}" IsChecked="{Binding AllowCustomInstallLocation}"/>
+                                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                                <TextBlock Classes="field-label" Text="{t:Translate Allowed install location patterns}"/>
+                                                <TextBox Classes="list-field" Grid.Column="1" Text="{Binding AllowedInstallLocationPatterns}"
+                                                         automation:AutomationProperties.Name="{t:Translate Allowed install location patterns}"/>
+                                            </Grid>
+                                            <CheckBox Content="{t:Translate Allow custom parameters}" IsChecked="{Binding AllowCustomParameters}"/>
+                                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                                <TextBlock Classes="field-label" Text="{t:Translate Allowed custom parameters}"/>
+                                                <TextBox Classes="list-field" Grid.Column="1" Text="{Binding AllowedCustomParameters}"
+                                                         automation:AutomationProperties.Name="{t:Translate Allowed custom parameters}"/>
+                                            </Grid>
+                                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                                <TextBlock Classes="field-label" Text="{t:Translate Allowed custom parameter patterns}"/>
+                                                <TextBox Classes="list-field" Grid.Column="1" Text="{Binding AllowedCustomParameterPatterns}"
+                                                         automation:AutomationProperties.Name="{t:Translate Allowed custom parameter patterns}"/>
+                                            </Grid>
+                                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                                <TextBlock Classes="field-label" Text="{t:Translate Denied custom parameters}"/>
+                                                <TextBox Classes="list-field" Grid.Column="1" Text="{Binding DeniedCustomParameters}"
+                                                         automation:AutomationProperties.Name="{t:Translate Denied custom parameters}"/>
+                                            </Grid>
+                                            <CheckBox Content="{t:Translate Allow pre/post commands}" IsChecked="{Binding AllowPrePostCommands}"/>
+                                            <CheckBox Content="{t:Translate Allow kill-before-operation}" IsChecked="{Binding AllowKillBeforeOperation}"/>
+                                            <CheckBox Content="{t:Translate Allow uninstalling a previous version}" IsChecked="{Binding AllowUninstallPrevious}"/>
+                                            <CheckBox Content="{t:Translate Allow upgrades}" IsChecked="{Binding AllowUpgrade}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Expander>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- ── Raw JSON mode ── -->
+                <StackPanel IsVisible="{Binding Session.IsRawMode}" Spacing="8">
+                    <TextBlock Text="{t:Translate Edit the canonical policy document as JSON. Switching back to the structured editor requires the document to parse and pass validation.}"
+                               TextWrapping="Wrap" Opacity="0.75"/>
+                    <Border Classes="settings-card policy-section" Padding="0">
+                        <controls:PolicyJsonEditor x:Name="RawEditor" MinHeight="360" MaxHeight="640"
+                                                    TextChanged="RawEditor_TextChanged"
+                                                    automation:AutomationProperties.Name="{t:Translate Raw policy JSON}"/>
+                    </Border>
+                    <TextBlock Text="{Binding Session.SyntaxErrorMessage}"
+                               IsVisible="{Binding Session.SyntaxError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                               Classes="finding-error"
+                               TextWrapping="Wrap"
+                               automation:AutomationProperties.Name="{t:Translate Raw JSON syntax error}"
+                               automation:AutomationProperties.HelpText="{Binding Session.SyntaxError.Pointer}"
+                               automation:AutomationProperties.LiveSetting="Assertive"/>
+                </StackPanel>
+
+                <!-- ── Findings summary (both modes) ── -->
+                <StackPanel IsVisible="{Binding Session.HasFindings}" Spacing="4">
+                    <TextBlock Classes="section-heading" Text="{t:Translate Validation findings}"
+                               automation:AutomationProperties.HeadingLevel="2"/>
+                    <ItemsControl ItemsSource="{Binding Session.Findings}"
+                                  automation:AutomationProperties.LiveSetting="Polite"/>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Grid.Column="0" Text="{Binding WriteFailureMessage}" IsVisible="{Binding HasWriteFailure}"
+                       Classes="finding-error" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            <Button Grid.Column="1" Content="{t:Translate Validate}"
+                    Command="{Binding Session.ValidateCommand}"
+                    IsEnabled="{Binding Session.CanValidateOrSave}"
+                    automation:AutomationProperties.Name="{t:Translate Validate policy}"/>
+            <Button Grid.Column="2" Content="{t:Translate Overwrite}"
+                    Command="{Binding Session.ConfirmOverwriteCommand}"
+                    IsVisible="{Binding Session.HasConflict}"
+                    IsEnabled="{Binding Session.CanValidateOrSave}"
+                    automation:AutomationProperties.Name="{t:Translate Overwrite the policy that changed elsewhere}"/>
+            <Button Grid.Column="3" Classes="accent" Content="{t:Translate Save}"
+                    Command="{Binding Session.SaveCommand}"
+                    IsEnabled="{Binding Session.CanValidateOrSave}"
+                    automation:AutomationProperties.Name="{t:Translate Save policy}"/>
+            <Button Grid.Column="4" Content="{t:Translate Close}"
+                    Click="CloseButton_Click"
+                    automation:AutomationProperties.Name="{t:Translate Close policy editor}"/>
+        </Grid>
+    </Grid>
+</dialogs:ImmersiveDialog>

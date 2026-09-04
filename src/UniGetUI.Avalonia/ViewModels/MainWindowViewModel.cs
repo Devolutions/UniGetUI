@@ -47,6 +47,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private PageType _currentPage = PageType.Null;
     public PageType CurrentPage_t => _currentPage;
     private readonly List<PageType> NavigationHistory = new();
+    private readonly SemaphoreSlim _navigationSemaphore = new(1, 1);
 
     [ObservableProperty]
     private object? _currentPageContent;
@@ -632,66 +633,91 @@ public partial class MainWindowViewModel : ViewModelBase
             _ => PageType.Discover,
         };
 
-    public void NavigateTo(PageType newPage_t, bool toHistory = true)
+    public void NavigateTo(PageType newPage_t, bool toHistory = true) =>
+        _ = NavigateToAsync(newPage_t, toHistory);
+
+    public async Task<bool> NavigateToAsync(
+        PageType newPage_t,
+        bool toHistory = true,
+        CancellationToken cancellationToken = default)
     {
-        if (newPage_t is PageType.About) { _ = ShowAboutDialog(); return; }
-        if (newPage_t is PageType.Quit) { MainWindow.Instance?.QuitApplication(); return; }
+        if (newPage_t is PageType.About) { _ = ShowAboutDialog(); return true; }
+        if (newPage_t is PageType.Quit) { MainWindow.Instance?.QuitApplication(); return true; }
 
         if (_currentPage == newPage_t)
         {
             // Re-focus the primary control even when we're already on the page
             (CurrentPageContent as AbstractPackagesPage)?.FocusPackageList();
-            return;
+            return true;
         }
 
-        Sidebar.SelectNavButtonForPage(newPage_t);
-
-        var newPage = GetPageForType(newPage_t);
-        var oldPage = CurrentPageContent as Control;
-
-        if (oldPage is ISearchBoxPage oldSPage)
-            oldSPage.QueryBackup = GlobalSearchText;
-        (oldPage as IEnterLeaveListener)?.OnLeave();
-
-        CurrentPageContent = newPage;
-        _oldPage = _currentPage;
-        _currentPage = newPage_t;
-
-        // #5129: Help/ReleaseNotes each host a WebView2 that the control never releases on
-        // detach. Drop the page when leaving so its WebView2 process cluster gets freed.
-        ReleaseWebViewPage(oldPage);
-
-        if (toHistory && _oldPage is not PageType.Null)
+        await _navigationSemaphore.WaitAsync(cancellationToken);
+        try
         {
-            NavigationHistory.Add(_oldPage);
-            CanGoBackChanged?.Invoke(this, true);
+            if (_currentPage == newPage_t)
+                return true;
+
+            if (CurrentPageContent is IAsyncLeaveGuard guard
+                && !await guard.CanLeaveAsync(PageLeaveReason.TopLevelNavigation, cancellationToken))
+            {
+                Sidebar.SelectNavButtonForPage(_currentPage);
+                return false;
+            }
+
+            Sidebar.SelectNavButtonForPage(newPage_t);
+
+            var newPage = GetPageForType(newPage_t);
+            var oldPage = CurrentPageContent as Control;
+
+            if (oldPage is ISearchBoxPage oldSPage)
+                oldSPage.QueryBackup = GlobalSearchText;
+            (oldPage as IEnterLeaveListener)?.OnLeave();
+
+            CurrentPageContent = newPage;
+            _oldPage = _currentPage;
+            _currentPage = newPage_t;
+
+            // #5129: Help/ReleaseNotes each host a WebView2 that the control never releases on
+            // detach. Drop the page when leaving so its WebView2 process cluster gets freed.
+            ReleaseWebViewPage(oldPage);
+
+            if (toHistory && _oldPage is not PageType.Null)
+            {
+                NavigationHistory.Add(_oldPage);
+                CanGoBackChanged?.Invoke(this, true);
+            }
+
+            (newPage as AbstractPackagesPage)?.FilterPackages();
+            (newPage as IEnterLeaveListener)?.OnEnter();
+
+            CloseSuggestions();
+
+            if (newPage is ISearchBoxPage newSPage)
+            {
+                SubscribeToPageViewModel(newPage as AbstractPackagesPage);
+                GlobalSearchText = newSPage.QueryBackup;
+                GlobalSearchPlaceholder = newSPage.SearchBoxPlaceholder;
+                GlobalSearchEnabled = true;
+            }
+            else
+            {
+                SubscribeToPageViewModel(null);
+                GlobalSearchText = "";
+                GlobalSearchPlaceholder = "";
+                GlobalSearchEnabled = false;
+            }
+
+            // Focus after search state is restored so MegaQueryVisible is already correct
+            (newPage as AbstractPackagesPage)?.FocusPackageList();
+
+            AccessibilityAnnouncementService.Announce(GetPageAnnouncement(newPage_t));
+            CurrentPageChanged?.Invoke(this, newPage_t);
+            return true;
         }
-
-        (newPage as AbstractPackagesPage)?.FilterPackages();
-        (newPage as IEnterLeaveListener)?.OnEnter();
-
-        CloseSuggestions();
-
-        if (newPage is ISearchBoxPage newSPage)
+        finally
         {
-            SubscribeToPageViewModel(newPage as AbstractPackagesPage);
-            GlobalSearchText = newSPage.QueryBackup;
-            GlobalSearchPlaceholder = newSPage.SearchBoxPlaceholder;
-            GlobalSearchEnabled = true;
+            _navigationSemaphore.Release();
         }
-        else
-        {
-            SubscribeToPageViewModel(null);
-            GlobalSearchText = "";
-            GlobalSearchPlaceholder = "";
-            GlobalSearchEnabled = false;
-        }
-
-        // Focus after search state is restored so MegaQueryVisible is already correct
-        (newPage as AbstractPackagesPage)?.FocusPackageList();
-
-        AccessibilityAnnouncementService.Announce(GetPageAnnouncement(newPage_t));
-        CurrentPageChanged?.Invoke(this, newPage_t);
     }
 
     private static string GetPageAnnouncement(PageType pageType) => pageType switch
@@ -710,50 +736,94 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => CoreTools.Translate("UniGetUI"),
     };
 
-    public void NavigateBack()
+    public void NavigateBack() => _ = NavigateBackAsync();
+
+    public async Task<bool> NavigateBackAsync(CancellationToken cancellationToken = default)
     {
         if (CurrentPageContent is IInnerNavigationPage navPage && navPage.CanGoBack())
         {
-            navPage.GoBack();
+            return await navPage.GoBackAsync(cancellationToken);
         }
         else if (NavigationHistory.Count > 0)
         {
-            NavigateTo(NavigationHistory.Last(), toHistory: false);
+            if (!await NavigateToAsync(
+                    NavigationHistory.Last(),
+                    toHistory: false,
+                    cancellationToken))
+                return false;
+
             NavigationHistory.RemoveAt(NavigationHistory.Count - 1);
             CanGoBackChanged?.Invoke(this,
                 NavigationHistory.Count > 0
                 || ((CurrentPageContent as IInnerNavigationPage)?.CanGoBack() ?? false));
+            return true;
         }
+
+        return false;
     }
 
     public void OpenManagerLogs(IPackageManager? manager = null)
+        => _ = OpenManagerLogsAsync(manager);
+
+    private async Task OpenManagerLogsAsync(IPackageManager? manager)
     {
-        NavigateTo(PageType.ManagerLog);
-        if (manager is not null) ManagerLogPage?.LoadForManager(manager);
+        if (!await NavigateToAsync(PageType.ManagerLog))
+            return;
+        if (manager is not null)
+            ManagerLogPage?.LoadForManager(manager);
     }
 
     public void OpenManagerSettings(IPackageManager? manager = null)
+        => _ = OpenManagerSettingsAsync(manager);
+
+    private async Task OpenManagerSettingsAsync(IPackageManager? manager)
     {
-        NavigateTo(PageType.Managers);
-        if (manager is not null) ManagersPage?.NavigateTo(manager);
+        if (!await NavigateToAsync(PageType.Managers))
+            return;
+        if (manager is not null && ManagersPage is not null)
+            await ManagersPage.NavigateToAsync(manager);
     }
 
     public void OpenSettingsPage(Type page, string? anchor = null)
+        => _ = OpenSettingsPageAsync(page, anchor);
+
+    private async Task OpenSettingsPageAsync(Type page, string? anchor)
     {
-        NavigateTo(PageType.Settings);
-        SettingsPage?.NavigateTo(page, anchor);
+        if (!await NavigateToAsync(PageType.Settings))
+            return;
+        if (SettingsPage is not null)
+            await SettingsPage.NavigateToAsync(page, anchor);
     }
 
     public void ShowHelp(string uriAttachment = "")
+        => _ = ShowHelpAsync(uriAttachment);
+
+    private async Task ShowHelpAsync(string uriAttachment)
     {
-        NavigateTo(PageType.Help);
+        if (!await NavigateToAsync(PageType.Help))
+            return;
         HelpPage?.NavigateTo(uriAttachment);
     }
 
     public async Task LoadCloudBundleAsync(string content)
     {
-        NavigateTo(PageType.Bundles);
+        if (!await NavigateToAsync(PageType.Bundles))
+            return;
         await BundlesPage.OpenFromString(content, BundleFormatType.UBUNDLE, "GitHub Gist");
+    }
+
+    public async Task<bool> CanShutdownAsync(CancellationToken cancellationToken = default)
+    {
+        await _navigationSemaphore.WaitAsync(cancellationToken);
+        try
+        {
+            return CurrentPageContent is not IAsyncLeaveGuard guard
+                || await guard.CanLeaveAsync(PageLeaveReason.Shutdown, cancellationToken);
+        }
+        finally
+        {
+            _navigationSemaphore.Release();
+        }
     }
 
     private async Task ShowAboutDialog()
@@ -766,7 +836,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     // ─── Notification activation ─────────────────────────────────────────────
-    private void HandleNotificationActivation(string action)
+    private async void HandleNotificationActivation(string action)
     {
         if (action == NotificationArguments.UpdateAllPackages)
         {
@@ -774,8 +844,8 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         else if (action == NotificationArguments.ShowOnUpdatesTab)
         {
-            NavigateTo(PageType.Updates);
-            MainWindow.Instance?.ShowFromTray();
+            if (await NavigateToAsync(PageType.Updates))
+                MainWindow.Instance?.ShowFromTray();
         }
         else if (action == NotificationArguments.Show)
         {

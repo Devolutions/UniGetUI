@@ -11,7 +11,8 @@ namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
 /// Avalonia MVVM equivalent of the old code-behind-only SettingsBasePage.
 /// Hosts a manual navigation stack of ISettingsPage UserControls.
 /// </summary>
-public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnterLeaveListener, ISearchBoxPage
+public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnterLeaveListener,
+    ISearchBoxPage, IAsyncLeaveGuard
 {
     private SettingsBasePageViewModel VM => (SettingsBasePageViewModel)DataContext!;
 
@@ -21,6 +22,7 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
     private readonly Stack<UserControl> _history = new();
     private UserControl? _currentContent;
     private readonly DirectionalSlideTransition _slide = new();
+    private readonly SemaphoreSlim _transitionSemaphore = new(1, 1);
 
     // ── Lazy-created homepages ────────────────────────────────────────────
     private SettingsHomepage? _settingsHomepage;
@@ -34,7 +36,7 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
         InitializeComponent();
         Frame.PageTransition = _slide;
 
-        VM.BackRequested += (_, _) => OnBackClicked();
+        VM.BackRequested += (_, _) => _ = OnBackClickedAsync();
 
         // Navigate to the appropriate homepage on first load
         NavigateToPage(isManagers ? GetManagersHomepage() : GetSettingsHomepage());
@@ -42,12 +44,12 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
 
     // ── Button handlers ───────────────────────────────────────────────────
 
-    private void OnBackClicked()
+    private async Task OnBackClickedAsync()
     {
         if (_currentContent is SettingsHomepage or ManagersHomepage)
             GetMainWindowViewModel()?.NavigateBack();
         else if (_history.Count > 0)
-            NavigateBack();
+            await NavigateBackAsync();
         else
             NavigateToPage(_isManagers ? GetManagersHomepage() : GetSettingsHomepage());
     }
@@ -81,17 +83,30 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
             mh.RefreshToggles();
     }
 
-    private void NavigateBack()
+    private async Task<bool> NavigateBackAsync(CancellationToken cancellationToken = default)
     {
-        if (_history.Count == 0) return;
+        await _transitionSemaphore.WaitAsync(cancellationToken);
+        try
+        {
+            if (_history.Count == 0) return false;
+            if (!await CanCurrentPageLeaveCoreAsync(
+                    PageLeaveReason.NestedNavigation,
+                    cancellationToken))
+                return false;
 
-        var discardedPage = _currentContent;
-        var previousPage = _history.Pop();
-        NavigateToPage(previousPage, forward: false);
-        DisposePage(discardedPage);
+            var discardedPage = _currentContent;
+            var previousPage = _history.Pop();
+            NavigateToPage(previousPage, forward: false);
+            DisposePage(discardedPage);
+            return true;
+        }
+        finally
+        {
+            _transitionSemaphore.Release();
+        }
     }
 
-    private void Page_NavigationRequested(object? sender, Type e)
+    private async void Page_NavigationRequested(object? sender, Type e)
     {
         if (e == typeof(ManagersHomepage))
         {
@@ -99,13 +114,7 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
             return;
         }
 
-        // Push the current page onto history before navigating forward
-        if (_currentContent is not null)
-            _history.Push(_currentContent);
-
-        var target = CreatePageForType(e);
-        if (target is not null)
-            NavigateToPage(target);
+        await NavigateToAsync(e);
     }
 
     private void Page_RestartRequired(object? sender, EventArgs e)
@@ -140,7 +149,7 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
         if (_managersHomepage is null)
         {
             _managersHomepage = new ManagersHomepage();
-            _managersHomepage.ManagerNavigationRequested += (_, manager) => NavigateTo(manager);
+            _managersHomepage.ManagerNavigationRequested += (_, manager) => _ = NavigateToAsync(manager);
         }
         return _managersHomepage;
     }
@@ -152,12 +161,15 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
         && _currentContent is not SettingsHomepage
         && _currentContent is not ManagersHomepage;
 
-    public void GoBack()
+    public async Task<bool> GoBackAsync(CancellationToken cancellationToken = default)
     {
         if (CanGoBack())
-            NavigateBack();
+            return await NavigateBackAsync(cancellationToken);
         else
+        {
             GetMainWindowViewModel()?.NavigateBack();
+            return true;
+        }
     }
 
     // ── IEnterLeaveListener ───────────────────────────────────────────────
@@ -183,32 +195,65 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
 
     // ── IInnerNavigationPage extra overloads ──────────────────────────────
 
-    public void NavigateTo(IPackageManager manager)
+    public async Task<bool> NavigateToAsync(
+        IPackageManager manager,
+        CancellationToken cancellationToken = default)
     {
-        if (_currentContent is not null)
-            _history.Push(_currentContent);
+        await _transitionSemaphore.WaitAsync(cancellationToken);
+        try
+        {
+            if (!await CanCurrentPageLeaveCoreAsync(
+                    PageLeaveReason.NestedNavigation,
+                    cancellationToken))
+                return false;
 
-        NavigateToPage(new PackageManagerPage(manager));
+            if (_currentContent is not null)
+                _history.Push(_currentContent);
+
+            NavigateToPage(new PackageManagerPage(manager));
+            return true;
+        }
+        finally
+        {
+            _transitionSemaphore.Release();
+        }
     }
 
-    public void NavigateTo(Type page, string? anchor = null)
+    public async Task<bool> NavigateToAsync(
+        Type page,
+        string? anchor = null,
+        CancellationToken cancellationToken = default)
     {
-        // Already on the requested page (e.g. searching within it) — just scroll, don't recreate.
-        if (_currentContent?.GetType() == page)
+        await _transitionSemaphore.WaitAsync(cancellationToken);
+        try
         {
-            if (anchor is not null && _currentContent is ISettingsPage current)
-                current.ScrollToAnchor(anchor);
-            return;
-        }
+            // Already on the requested page (e.g. searching within it) — just scroll, don't recreate.
+            if (_currentContent?.GetType() == page)
+            {
+                if (anchor is not null && _currentContent is ISettingsPage current)
+                    current.ScrollToAnchor(anchor);
+                return true;
+            }
 
-        if (_currentContent is not null)
-            _history.Push(_currentContent);
-        var target = CreatePageForType(page);
-        if (target is not null)
+            if (!await CanCurrentPageLeaveCoreAsync(
+                    PageLeaveReason.NestedNavigation,
+                    cancellationToken))
+                return false;
+
+            if (_currentContent is not null)
+                _history.Push(_currentContent);
+            var target = CreatePageForType(page);
+            if (target is not null)
+            {
+                NavigateToPage(target);
+                if (anchor is not null && target is ISettingsPage sp)
+                    sp.ScrollToAnchor(anchor);
+            }
+            return target is not null;
+        }
+        finally
         {
-            NavigateToPage(target);
-            if (anchor is not null && target is ISettingsPage sp)
-                sp.ScrollToAnchor(anchor);
+            _transitionSemaphore.Release();
         }
     }
 
@@ -237,4 +282,26 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
 
     private MainWindowViewModel? GetMainWindowViewModel() =>
         (TopLevel.GetTopLevel(this) is Window { DataContext: MainWindowViewModel vm }) ? vm : null;
+
+    public async Task<bool> CanLeaveAsync(
+        PageLeaveReason reason,
+        CancellationToken cancellationToken = default)
+    {
+        await _transitionSemaphore.WaitAsync(cancellationToken);
+        try
+        {
+            return await CanCurrentPageLeaveCoreAsync(reason, cancellationToken);
+        }
+        finally
+        {
+            _transitionSemaphore.Release();
+        }
+    }
+
+    private Task<bool> CanCurrentPageLeaveCoreAsync(
+        PageLeaveReason reason,
+        CancellationToken cancellationToken = default) =>
+        _currentContent is IAsyncLeaveGuard guard
+            ? guard.CanLeaveAsync(reason, cancellationToken)
+            : Task.FromResult(true);
 }

@@ -3,6 +3,8 @@
     <PropertyGroup>
         <TargetFrameworks>$(SharedTargetFrameworks)</TargetFrameworks>
         <RootNamespace>UniGetUI.PackageEngine.AgentBroker</RootNamespace>
+        <!-- Required by the source-generated LibraryImport P/Invokes in PolicyWriteElevation\Interop. -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>

@@ -121,7 +121,7 @@ public partial class MainWindow : Window
     private bool _maxButtonPressed;
     private TrayService? _trayService;
     private bool _allowClose;
-    private int _isQuitting;
+    private readonly ApplicationShutdownCoordinator _shutdownCoordinator = new();
 
     // Saved outer size (DIPs) awaiting a native, exact restore in OnOpened on Windows.
     private double _pendingRestoreWidth;
@@ -1857,23 +1857,28 @@ public partial class MainWindow : Window
         AvaloniaOperationRegistry.PromptPendingShortcutsIfAny();
     }
 
-    public bool IsQuitting => Interlocked.CompareExchange(ref _isQuitting, 0, 0) == 1;
+    public bool IsQuitting => _shutdownCoordinator.IsQuitting;
 
-    public void QuitApplication()
+    public void QuitApplication() => _ = RequestQuitApplicationAsync();
+
+    internal Task<bool> RequestQuitApplicationAsync(Action? onAuthorized = null) =>
+        _shutdownCoordinator.RequestAsync(
+            () => ViewModel.CanShutdownAsync(),
+            ShutdownApplicationAsync,
+            onAuthorized);
+
+    private async Task ShutdownApplicationAsync()
     {
-        if (Interlocked.Exchange(ref _isQuitting, 1) == 1)
-            return;
-
         _allowClose = true;
         ReleaseWindowResources();
 
         if (IsVisible)
             Hide();
 
-        _ = QuitApplicationAsync();
+        await StopAndExitApplicationAsync();
     }
 
-    private static async Task QuitApplicationAsync()
+    private static async Task StopAndExitApplicationAsync()
     {
         Logger.Warn("Quitting UniGetUI");
         try

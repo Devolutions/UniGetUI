@@ -165,7 +165,8 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!PolicyElevationReplacementDispatcher.IsBrokerRequestWithinLimit(request))
+        PolicyElevationRequestMessage preflightRequest = CreateRequestMessage(request, string.Empty);
+        if (!PolicyElevationReplacementDispatcher.IsBrokerRequestWithinLimit(preflightRequest))
         {
             return Fail(
                 request,
@@ -336,17 +337,7 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
             string requestId = Convert.ToHexStringLower(
                 RandomNumberGenerator.GetBytes(PolicyElevationProtocol.RequestIdCharacters / 2));
 
-            var message = new PolicyElevationRequestMessage
-            {
-                ProtocolVersion = PolicyElevationProtocol.Version,
-                RequestId = requestId,
-                Operation = request.Operation,
-                ConflictHandling = request.ConflictHandling,
-                ExpectedStoreToken = request.ExpectedStoreToken,
-                ValidationReceipt = request.ValidationReceipt,
-                WarningsAcknowledged = request.WarningsAcknowledged,
-                Draft = request.Draft,
-            };
+            PolicyElevationRequestMessage message = CreateRequestMessage(request, requestId);
 
             requestDispatched = true;
             await PolicyElevationFrame.WriteRequestAsync(pipe, message, timeout.Token).ConfigureAwait(false);
@@ -413,6 +404,21 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
             return Fail(request, PolicyElevationOutcome.ConnectionClosed, "The elevation channel was interrupted.");
         }
     }
+
+    private static PolicyElevationRequestMessage CreateRequestMessage(
+        PolicyElevationWriteRequest request,
+        string requestId) =>
+        new()
+        {
+            ProtocolVersion = PolicyElevationProtocol.Version,
+            RequestId = requestId,
+            Operation = request.Operation,
+            ConflictHandling = request.ConflictHandling,
+            ExpectedStoreToken = request.ExpectedStoreToken,
+            ValidationReceipt = request.ValidationReceipt,
+            WarningsAcknowledged = request.WarningsAcknowledged,
+            Draft = request.Draft,
+        };
 
     private static PolicyElevationResult MapPrematureExit(PolicyElevationWriteRequest request, int? exitCode)
     {

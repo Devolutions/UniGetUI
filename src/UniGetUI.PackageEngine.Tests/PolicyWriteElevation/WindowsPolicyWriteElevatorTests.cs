@@ -103,8 +103,9 @@ public class WindowsPolicyWriteElevatorTests
     [Fact]
     public async Task OversizedBrokerRequest_IsRejectedBeforeHelperLaunch()
     {
-        PolicyElevationWriteRequest empty = new(JsonDocument.Parse("""{"padding":""}""").RootElement)
+        PolicyElevationRequestMessage empty = new()
         {
+            Draft = JsonDocument.Parse("""{"padding":""}""").RootElement.Clone(),
             ExpectedStoreToken = "token",
             ValidationReceipt = "receipt",
         };

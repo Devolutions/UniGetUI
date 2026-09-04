@@ -31,6 +31,47 @@ public class AgentPolicyInspectorViewModelTests
     }
 
     [Fact]
+    public async Task LoadAsync_PreservesWhitespaceOnlyPolicyValues()
+    {
+        PolicyResponse response = BuildFullResponse();
+        response.Policy.Metadata.Publisher = " ";
+        response.Policy.Metadata.Description = " ";
+        response.Policy.Rules[0].Match.Sources = [" "];
+        response.Policy.Rules[0].Constraints!.AllowedCustomParameters = [" "];
+        string json = PolicySerializer.Serialize(response.Policy);
+        using var viewModel = new AgentPolicyInspectorViewModel(
+            new StubInspector(new(
+                BrokerPolicyInspectionStatus.Connected,
+                response,
+                json)));
+        string? copied = null;
+        viewModel.CopyTextRequested += (_, text) => copied = text;
+
+        await viewModel.LoadAsync();
+
+        PolicyDetailRow publisher = viewModel.MetadataRows.Single(row => row.Label == "Publisher");
+        PolicyDetailRow description = viewModel.MetadataRows.Single(row => row.Label == "Description");
+        PolicyDetailRow sources = viewModel.Rules[0].MatchRows.Single(row => row.Label == "Sources");
+        PolicyDetailRow customParameters = viewModel.Rules[0].ConstraintRows.Single(
+            row => row.Label == "Allowed custom parameters");
+        Assert.Equal(" ", publisher.Value);
+        Assert.Equal("Publisher:  ", publisher.AutomationName);
+        Assert.Equal(" ", description.Value);
+        Assert.Equal("Description:  ", description.AutomationName);
+        Assert.Equal(" ", sources.Value);
+        Assert.NotEqual("Any", sources.Value);
+        Assert.Equal(" ", customParameters.Value);
+        Assert.NotEqual("None", customParameters.Value);
+        Assert.Equal(json, viewModel.RawJson);
+        Assert.Contains("\"Publisher\": \" \"", viewModel.RawJson);
+        Assert.Contains("\"Description\": \" \"", viewModel.RawJson);
+
+        viewModel.CopyRawJsonCommand.Execute(null);
+
+        Assert.Equal(json, copied);
+    }
+
+    [Fact]
     public async Task LoadAsync_PresentsEmptyOptionalPolicy()
     {
         var response = new PolicyResponse

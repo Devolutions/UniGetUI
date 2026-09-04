@@ -6,11 +6,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Devolutions.Now.Policy.Api" Version="2026.8.13" />
-        <PackageReference Include="Devolutions.Now.Policy.Client" Version="2026.8.13" />
+        <PackageReference Include="Devolutions.Now.Policy.Api" Version="2026.9.3" />
+        <PackageReference Include="Devolutions.Now.Policy.Client" Version="2026.9.3" />
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\UniGetUI.Core.Data\UniGetUI.Core.Data.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Logger\UniGetUI.Core.Logging.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Settings\UniGetUI.Core.Settings.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Enums\UniGetUI.PackageEngine.Structs.csproj" />

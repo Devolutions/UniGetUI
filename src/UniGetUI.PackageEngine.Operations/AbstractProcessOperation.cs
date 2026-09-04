@@ -156,8 +156,9 @@ public abstract class AbstractProcessOperation : AbstractOperation
         if (!Settings.Get(Settings.K.DisableNewProcessLineHandler))
         {
             await process.StandardInput.WriteLineAsync("\r\n\r\n\r\n\r\n".AsMemory(), CancellationToken);
-            process.StandardInput.Close();
         }
+
+        process.StandardInput.Close();
         try
         {
             process.BeginErrorReadLine();

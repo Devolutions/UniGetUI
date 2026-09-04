@@ -1,5 +1,8 @@
 #if WINDOWS
 using System.Diagnostics;
+using UniGetUI.Core.SettingsEngine;
+using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageOperations;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.PackageEngine.Tests;
@@ -124,6 +127,79 @@ public sealed class ShimStandardInputTests : IDisposable
 
         Assert.True(process.WaitForExit(30000));
         Assert.Equal(0, process.ExitCode);
+    }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AProcessOperationClosesStandardInputWhicheverWayTheLineHandlerIsSet(
+        bool disableLineHandler
+    )
+    {
+        bool original = Settings.Get(Settings.K.DisableNewProcessLineHandler);
+        Settings.Set(Settings.K.DisableNewProcessLineHandler, disableLineHandler);
+        try
+        {
+            using var operation = new ShimOperation(PowerShellPath(), _shimPath);
+
+            Task run = operation.MainThread();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            await run.WaitAsync(timeout.Token);
+
+            Assert.Equal(OperationStatus.Succeeded, operation.Status);
+        }
+        finally
+        {
+            Settings.Set(Settings.K.DisableNewProcessLineHandler, original);
+        }
+    }
+
+    private sealed class ShimOperation : AbstractProcessOperation
+    {
+        private readonly string _powerShell;
+        private readonly string _shim;
+
+        public ShimOperation(string powerShell, string shim)
+            : base(queue_enabled: false)
+        {
+            _powerShell = powerShell;
+            _shim = shim;
+            Metadata.Title = "Shim standard input";
+            Metadata.Status = "Running the shim";
+            Metadata.OperationInformation = "Shim standard input";
+            Metadata.SuccessTitle = "Succeeded";
+            Metadata.SuccessMessage = "Succeeded";
+            Metadata.FailureTitle = "Failed";
+            Metadata.FailureMessage = "Failed";
+        }
+
+        protected override void ApplyRetryAction(string retryMode) { }
+
+        public override Task<Uri> GetOperationIcon() =>
+            Task.FromResult(new Uri("about:blank"));
+
+        protected override void PrepareProcessStartInfo()
+        {
+            process.StartInfo.FileName = _powerShell;
+            SetArgumentVector(
+                [
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    _shim,
+                    "search",
+                    "cowsay",
+                ]
+            );
+        }
+
+        protected override Task<OperationVeredict> GetProcessVeredict(
+            int ReturnCode,
+            List<string> Output
+        ) =>
+            Task.FromResult(
+                ReturnCode == 0 ? OperationVeredict.Success : OperationVeredict.Failure
+            );
     }
 }
 #endif

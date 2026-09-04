@@ -14,7 +14,7 @@ public class AgentPolicyInspectorViewModelTests
     public async Task LoadAsync_PresentsFullPolicyInDocumentOrder()
     {
         PolicyResponse response = BuildFullResponse();
-        string json = PolicyJson.Serialize(response.Policy);
+        string json = PolicySerializer.Serialize(response.Policy);
         using var viewModel = new AgentPolicyInspectorViewModel(
             new StubInspector(new(BrokerPolicyInspectionStatus.Connected, response, json)));
 
@@ -42,6 +42,7 @@ public class AgentPolicyInspectorViewModelTests
                 {
                     Id = "empty",
                     Publisher = "Contoso",
+                    Revision = 1,
                     PublishedAt = DateTimeOffset.Parse("2026-08-18T00:00:00Z"),
                 },
                 Enforcement = new PolicyEnforcement
@@ -55,7 +56,7 @@ public class AgentPolicyInspectorViewModelTests
             new StubInspector(new(
                 BrokerPolicyInspectionStatus.Connected,
                 response,
-                PolicyJson.Serialize(response.Policy))));
+                PolicySerializer.Serialize(response.Policy))));
 
         await viewModel.LoadAsync();
 
@@ -136,7 +137,7 @@ public class AgentPolicyInspectorViewModelTests
     public async Task CopyRawJson_RaisesDisplayedCanonicalJson()
     {
         PolicyResponse response = BuildFullResponse();
-        string json = PolicyJson.Serialize(response.Policy);
+        string json = PolicySerializer.Serialize(response.Policy);
         using var viewModel = new AgentPolicyInspectorViewModel(
             new StubInspector(new(BrokerPolicyInspectionStatus.Connected, response, json)));
         string? copied = null;
@@ -237,7 +238,7 @@ public class AgentPolicyInspectorViewModelTests
             return new(
                 BrokerPolicyInspectionStatus.Connected,
                 response,
-                PolicyJson.Serialize(response.Policy));
+                PolicySerializer.Serialize(response.Policy));
         }
     }
 
@@ -289,7 +290,7 @@ public class AgentPolicyInspectorViewModelTests
             return new(
                 BrokerPolicyInspectionStatus.Connected,
                 requestResponse,
-                PolicyJson.Serialize(requestResponse.Policy));
+                PolicySerializer.Serialize(requestResponse.Policy));
         }
 
         private static PolicyResponse WithPolicyId(PolicyResponse source, string policyId) =>
@@ -303,6 +304,7 @@ public class AgentPolicyInspectorViewModelTests
                     {
                         Id = policyId,
                         Publisher = source.Policy.Metadata.Publisher,
+                        Revision = source.Policy.Metadata.Revision,
                         PublishedAt = source.Policy.Metadata.PublishedAt,
                     },
                     Enforcement = source.Policy.Enforcement,

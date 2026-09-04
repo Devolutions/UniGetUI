@@ -84,8 +84,8 @@ public sealed class PolicyElevationLocationVerification : IDisposable
     /// <summary>
     /// Releases the handles that pinned the verified objects. The caller must keep this alive for
     /// the whole exchange: while the handles are open the verified directories and files cannot be
-    /// deleted or renamed out from under the elevation, which is what closes the window between
-    /// "the path was checked" and "the binary was launched".
+    /// deleted, renamed or modified out from under the elevation, which is what closes the window
+    /// between "the path was checked" and "the binary was launched".
     /// </summary>
     public void Dispose()
     {
@@ -122,7 +122,7 @@ public interface IPolicyElevationLocationVerifier
 /// the kernel actually opened, and that must equal the exact expected path. A path swapped between
 /// the lookup and the open therefore fails, and because every handle stays open for the lifetime of
 /// the returned <see cref="PolicyElevationLocationVerification"/>, none of the verified objects can
-/// be deleted or renamed during the exchange.
+/// be deleted, renamed or modified during the exchange.
 /// </para>
 /// <para>
 /// Finally the security descriptor of every object is read from its handle and evaluated by
@@ -333,18 +333,7 @@ public sealed class WindowsProtectedLocationVerifier : IPolicyElevationLocationV
         canonicalPath = null;
         failure = null;
 
-        uint flags = PolicyElevationNative.FileFlagOpenReparsePoint
-            | (isDirectory ? PolicyElevationNative.FileFlagBackupSemantics : 0);
-
-        SafeFileHandle handle = PolicyElevationNative.CreateFile(
-            path,
-            PolicyElevationNative.FileReadAttributes | PolicyElevationNative.ReadControl,
-            PolicyElevationNative.FileShareRead
-            | PolicyElevationNative.FileShareWrite,
-            nint.Zero,
-            PolicyElevationNative.OpenExisting,
-            flags,
-            nint.Zero);
+        SafeFileHandle handle = OpenVerificationLease(path, isDirectory);
 
         if (handle.IsInvalid)
         {
@@ -417,6 +406,27 @@ public sealed class WindowsProtectedLocationVerifier : IPolicyElevationLocationV
         }
 
         return true;
+    }
+
+    internal static SafeFileHandle OpenVerificationLease(string path, bool isDirectory)
+    {
+        uint flags = PolicyElevationNative.FileFlagOpenReparsePoint
+            | (isDirectory ? PolicyElevationNative.FileFlagBackupSemantics : 0);
+        uint desiredAccess = PolicyElevationNative.ReadControl
+            | (isDirectory
+                ? PolicyElevationNative.FileReadAttributes
+                : PolicyElevationNative.GenericRead);
+        uint shareMode = PolicyElevationNative.FileShareRead
+            | (isDirectory ? PolicyElevationNative.FileShareWrite : 0);
+
+        return PolicyElevationNative.CreateFile(
+            path,
+            desiredAccess,
+            shareMode,
+            nint.Zero,
+            PolicyElevationNative.OpenExisting,
+            flags,
+            nint.Zero);
     }
 
     private static bool TryReadSecurityDescriptor(

@@ -1366,6 +1366,38 @@ namespace UniGetUI.Core.Tools
             }
         }
 
+        private static readonly SearchValues<char> _processNameSensitiveCharacters =
+            SearchValues.Create("\"%!&|<>^");
+
+        /// <summary>
+        /// Whether a process image name can be placed inside a quoted argument of a command string
+        /// that cmd.exe will parse, as the exported installation script does.
+        /// <para>
+        /// A double quote ends the quoting, and cmd expands %NAME% before it parses the command,
+        /// inside double quotes included, so an expansion whose value carries a quote and a
+        /// separator injects further commands. Delayed expansion of !NAME! is off by default but a
+        /// user can enable it. The remaining separators are inert inside intact quoting and are
+        /// refused as insurance; none of them, nor a leading option marker, is usable in a real
+        /// image name anyway.
+        /// </para>
+        /// </summary>
+        public static bool IsSafeProcessImageName(string name)
+        {
+            if (name.Length is 0)
+                return false;
+
+            if (name[0] is '-' or '/')
+                return false;
+
+            foreach (char character in name)
+            {
+                if (char.IsControl(character))
+                    return false;
+            }
+
+            return !name.AsSpan().ContainsAny(_processNameSensitiveCharacters);
+        }
+
         public static bool IsValidPackageVersion(string version)
         {
             if (version.Length is 0 or > MaxPackageVersionLength)

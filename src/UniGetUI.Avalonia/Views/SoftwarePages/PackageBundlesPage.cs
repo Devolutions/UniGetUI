@@ -540,12 +540,15 @@ public class PackageBundlesPage : AbstractPackagesPage
 
                 foreach (var process in pkg.installation_options.KillBeforeOperation)
                 {
-                    string safeProcess = new string(
-                        process.Where(c => c is not '"' && !char.IsControl(c)).ToArray()
-                    );
-                    if (safeProcess.Length is 0)
+                    // Refused rather than stripped: dropping a character would silently retarget
+                    // the kill at whatever process the shortened name happens to match.
+                    if (!CoreTools.IsSafeProcessImageName(process))
+                    {
+                        Logger.Warn(
+                            $"Skipping the process \"{process}\" of {pkg.Id} in the exported script: it is not a usable process name.");
                         continue;
-                    commands.Add($"taskkill /im \"{safeProcess}\"" + (forceKill ? " /f" : ""));
+                    }
+                    commands.Add($"taskkill /im \"{process}\"" + (forceKill ? " /f" : ""));
                 }
 
                 if (pkg.installation_options.PreInstallCommand != "")

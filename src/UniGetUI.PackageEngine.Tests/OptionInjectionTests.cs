@@ -223,6 +223,38 @@ public sealed class OptionInjectionTests
         Assert.Equal(expected, CoreTools.IsOptionSafeIdentifier(identifier));
     }
 
+    // The exported installation script hands its command strings to cmd.exe, which expands
+    // %NAME% before it parses them, inside double quotes included.
+    [Theory]
+    [InlineData("chrome.exe", true)]
+    [InlineData("My App.exe", true)]
+    [InlineData("Café.exe", true)]
+    [InlineData("foo-bar (1).exe", true)]
+    [InlineData("%FOO%.exe", false)]
+    [InlineData("!FOO!.exe", false)]
+    [InlineData("a\"b.exe", false)]
+    [InlineData("a&b.exe", false)]
+    [InlineData("a|b.exe", false)]
+    [InlineData("a>b.exe", false)]
+    [InlineData("a<b.exe", false)]
+    [InlineData("a^b.exe", false)]
+    [InlineData("-x.exe", false)]
+    [InlineData("/x.exe", false)]
+    [InlineData("ab.exe", false)]
+    [InlineData("", false)]
+    public void IsSafeProcessImageName_RefusesWhatCmdWouldReinterpret(string name, bool expected)
+    {
+        Assert.Equal(expected, CoreTools.IsSafeProcessImageName(name));
+    }
+
+    [Fact]
+    public void IsSafeProcessImageName_RefusesTheQuoteAndSeparatorBreakout()
+    {
+        Assert.False(
+            CoreTools.IsSafeProcessImageName("nonexistent.exe\" /f & echo INJECTED & rem ")
+        );
+    }
+
     [Theory]
     [InlineData("1.2.3", true)]
     [InlineData("2021 Update", true)]

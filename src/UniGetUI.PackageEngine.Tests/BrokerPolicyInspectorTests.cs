@@ -52,7 +52,7 @@ public class BrokerPolicyInspectorTests
     }
 
     [Theory]
-    [InlineData(404, ErrorCode.NotFound, BrokerPolicyInspectionStatus.Unsupported)]
+    [InlineData(404, ErrorCode.NotFound, BrokerPolicyInspectionStatus.PolicyUnavailable)]
     [InlineData(401, ErrorCode.Unauthorized, BrokerPolicyInspectionStatus.AccessDenied)]
     [InlineData(403, ErrorCode.Forbidden, BrokerPolicyInspectionStatus.AccessDenied)]
     [InlineData(409, ErrorCode.Conflict, BrokerPolicyInspectionStatus.PolicyUnavailable)]

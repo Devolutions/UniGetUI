@@ -13,10 +13,14 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private readonly IPolicyEditorConfirmationPrompt _confirmationPrompt;
     private readonly IPolicyWriteClient _writeClient;
     private readonly TimeSpan _rawSyntaxDebounce;
+    private readonly TimeSpan _structuredDirtyDebounce;
+    private readonly Func<PolicyEditorDraftDocument, string> _structuredDraftSerializer;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly Dictionary<object, string> _localInputErrors = [];
     private CancellationTokenSource? _rawSyntaxCancellation;
     private Task _rawSyntaxAnalysis = Task.CompletedTask;
+    private CancellationTokenSource? _structuredDirtyCancellation;
+    private Task _structuredDirtyAnalysis = Task.CompletedTask;
     private long _validationGeneration;
     private long _saveGeneration;
     private int _isDisposed;
@@ -94,19 +98,25 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         IPolicyValidationClient validationClient,
         IPolicyEditorConfirmationPrompt confirmationPrompt,
         IPolicyWriteClient writeClient,
-        TimeSpan? rawSyntaxDebounce = null)
+        TimeSpan? rawSyntaxDebounce = null,
+        TimeSpan? structuredDirtyDebounce = null,
+        Func<PolicyEditorDraftDocument, string>? structuredDraftSerializer = null)
     {
         Session = session;
         _validationClient = validationClient;
         _confirmationPrompt = confirmationPrompt;
         _writeClient = writeClient;
         _rawSyntaxDebounce = rawSyntaxDebounce ?? TimeSpan.FromMilliseconds(300);
+        _structuredDirtyDebounce = structuredDirtyDebounce ?? TimeSpan.FromMilliseconds(300);
+        _structuredDraftSerializer =
+            structuredDraftSerializer ?? PolicyEditorRawSyntax.ToCanonicalRaw;
     }
 
     [RelayCommand(CanExecute = nameof(CanStartStructuredOperation))]
     private void SwitchToRaw()
     {
         Session.SwitchToRaw();
+        CancelStructuredDirtyAnalysis();
         CancelRawSyntaxAnalysis();
         SyntaxError = null;
         OnEditorStateChanged();
@@ -170,13 +180,13 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         }
 
         Session.NotifyDraftChanged();
-        OnEditorStateChanged();
+        OnStructuredDraftChanged();
     }
 
     public void NotifyLocalInputChanged()
     {
         Session.NotifyDraftChanged();
-        OnEditorStateChanged();
+        OnStructuredDraftChanged();
     }
 
     public void SetLocalInputError(object key, string? message)
@@ -199,7 +209,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private void AddRule()
     {
         Session.AddRule();
-        OnEditorStateChanged();
+        OnStructuredDraftChanged();
     }
 
     [RelayCommand]
@@ -207,7 +217,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     {
         if (rule is null) return;
         Session.DuplicateRule(rule);
-        OnEditorStateChanged();
+        OnStructuredDraftChanged();
     }
 
     [RelayCommand]
@@ -215,7 +225,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     {
         if (rule is null) return;
         Session.SetRuleEnabled(rule, !rule.Enabled);
-        OnEditorStateChanged();
+        OnStructuredDraftChanged();
     }
 
     [RelayCommand]
@@ -223,7 +233,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     {
         if (rule is null) return;
         Session.DeleteRule(rule);
-        OnEditorStateChanged();
+        OnStructuredDraftChanged();
     }
 
     [RelayCommand]
@@ -232,7 +242,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         if (rule is null) return;
         int index = Session.Draft.Rules.IndexOf(rule);
         Session.MoveRule(rule, index - 1);
-        OnEditorStateChanged();
+        OnStructuredDraftChanged();
     }
 
     [RelayCommand]
@@ -241,7 +251,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         if (rule is null) return;
         int index = Session.Draft.Rules.IndexOf(rule);
         Session.MoveRule(rule, index + 1);
-        OnEditorStateChanged();
+        OnStructuredDraftChanged();
     }
 
     [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanStartRemoteOperation))]
@@ -252,6 +262,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         if (!CanStartRemoteOperation()) return;
 
         string raw = Session.GetEffectiveRawJson();
+        ReconcileDirtyAtBoundary(raw);
         if (!TryGetDraftElement(raw, out JsonElement draft, out PolicyEditorSyntaxError? error))
         {
             SyntaxError = error;
@@ -348,6 +359,8 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             return false;
         }
 
+        if (Session.IsDirty)
+            ReconcileDirtyAtBoundary(Session.GetEffectiveRawJson());
         if (!IsDirty)
             return true;
 
@@ -382,6 +395,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         {
             string submitted = Session.GetEffectiveRawJson();
             long attemptGeneration = Session.MutationGeneration;
+            ReconcileDirtyAtBoundary(submitted);
 
             // Correction #14: reuse the exact current validation (same receipt/CanonicalDraft) when
             // it still matches the unchanged draft/raw, instead of re-validating on every Save. A
@@ -540,9 +554,10 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             {
                 if (write.Response is not null)
                 {
-                    Session.MarkSavedPreservingCurrentDraft(write.Response);
+                    Session.MarkSavedPreservingCurrentDraft(write.Response, attemptGeneration);
                     SavedWithNewerChanges = true;
                     LastSaveSucceeded = true;
+                    ScheduleCurrentModeDirtyAnalysis();
                     OnEditorStateChanged();
                 }
 
@@ -722,6 +737,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         Interlocked.Increment(ref _validationGeneration);
         Interlocked.Increment(ref _saveGeneration);
         CancelRawSyntaxAnalysis();
+        CancelStructuredDirtyAnalysis();
         _lifetimeCancellation.Cancel();
         _lifetimeCancellation.Dispose();
         NotifyCommandStates();
@@ -729,9 +745,129 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
 
     internal Task WaitForRawSyntaxAnalysisAsync() => _rawSyntaxAnalysis;
 
+    internal Task WaitForStructuredDirtyAnalysisAsync() => _structuredDirtyAnalysis;
+
+    private void OnStructuredDraftChanged()
+    {
+        ScheduleStructuredDirtyAnalysis();
+        OnEditorStateChanged();
+    }
+
+    private void ReconcileDirtyAtBoundary(string effectiveRawJson)
+    {
+        PolicyEditorDirtyComparisonSnapshot snapshot = Session.CaptureDirtyComparison();
+        ApplyDirtyComparison(
+            snapshot,
+            !string.Equals(
+                effectiveRawJson,
+                snapshot.BaselineRawJson,
+                StringComparison.Ordinal));
+    }
+
+    private void ScheduleStructuredDirtyAnalysis()
+    {
+        if (Session.Mode != PolicyEditorMode.Structured)
+            return;
+
+        PolicyEditorDirtyComparisonSnapshot snapshot = Session.CaptureDirtyComparison();
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            _lifetimeCancellation.Token);
+        CancellationTokenSource? previous =
+            Interlocked.Exchange(ref _structuredDirtyCancellation, cancellation);
+        previous?.Cancel();
+        previous?.Dispose();
+        _structuredDirtyAnalysis = AnalyzeStructuredDirtyAsync(snapshot, cancellation);
+    }
+
+    private void ScheduleCurrentModeDirtyAnalysis()
+    {
+        if (Session.Mode == PolicyEditorMode.Raw)
+            ScheduleRawSyntaxAnalysis(Session.RawBuffer);
+        else
+            ScheduleStructuredDirtyAnalysis();
+    }
+
+    private bool ApplyDirtyComparison(
+        PolicyEditorDirtyComparisonSnapshot snapshot,
+        bool isDirty)
+    {
+        if (!Session.TryApplyDirtyComparison(snapshot, isDirty))
+            return false;
+
+        if (!isDirty && !HasLocalInputErrors)
+            SavedWithNewerChanges = false;
+        return true;
+    }
+
+    private async Task AnalyzeStructuredDirtyAsync(
+        PolicyEditorDirtyComparisonSnapshot snapshot,
+        CancellationTokenSource cancellation)
+    {
+        try
+        {
+            await Task.Delay(_structuredDirtyDebounce, cancellation.Token);
+            if (cancellation.IsCancellationRequested
+                || Volatile.Read(ref _isDisposed) != 0)
+            {
+                return;
+            }
+
+            PolicyEditorDraftDocument draftSnapshot = Session.Draft.Clone();
+            bool isDirty = await Task.Run(
+                () => !string.Equals(
+                    _structuredDraftSerializer(draftSnapshot),
+                    snapshot.BaselineRawJson,
+                    StringComparison.Ordinal),
+                cancellation.Token);
+            if (cancellation.IsCancellationRequested
+                || Volatile.Read(ref _isDisposed) != 0)
+            {
+                return;
+            }
+
+            if (!ApplyDirtyComparison(snapshot, isDirty))
+            {
+                return;
+            }
+
+            // This continuation intentionally resumes on the UI context captured by the edit.
+            OnPropertyChanged(nameof(IsDirty));
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (InvalidOperationException) when (
+            cancellation.IsCancellationRequested
+            || snapshot.MutationGeneration != Session.MutationGeneration)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(
+                    Interlocked.CompareExchange(
+                        ref _structuredDirtyCancellation,
+                        null,
+                        cancellation),
+                    cancellation))
+            {
+                cancellation.Dispose();
+            }
+        }
+    }
+
+    private void CancelStructuredDirtyAnalysis()
+    {
+        CancellationTokenSource? cancellation =
+            Interlocked.Exchange(ref _structuredDirtyCancellation, null);
+        cancellation?.Cancel();
+        cancellation?.Dispose();
+        _structuredDirtyAnalysis = Task.CompletedTask;
+    }
+
     private void ScheduleRawSyntaxAnalysis(string raw)
     {
         long mutationGeneration = Session.MutationGeneration;
+        PolicyEditorDirtyComparisonSnapshot dirtySnapshot = Session.CaptureDirtyComparison();
         var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
             _lifetimeCancellation.Token);
         CancellationTokenSource? previous =
@@ -741,12 +877,14 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         _rawSyntaxAnalysis = AnalyzeRawSyntaxAsync(
             raw,
             mutationGeneration,
+            dirtySnapshot,
             cancellation);
     }
 
     private async Task AnalyzeRawSyntaxAsync(
         string raw,
         long mutationGeneration,
+        PolicyEditorDirtyComparisonSnapshot dirtySnapshot,
         CancellationTokenSource cancellation)
     {
         try
@@ -756,14 +894,16 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                 PolicyEditorSyntaxError? Error,
                 string? CanonicalRaw,
                 string? DraftId,
-                JsonElement? RawElement) result =
+                JsonElement? RawElement,
+                bool IsDirty) result =
                 await Task.Run<(
-                    PolicyEditorSyntaxError? Error,
-                    string? CanonicalRaw,
-                    string? DraftId,
-                    JsonElement? RawElement)>(
-                    () =>
-                    {
+                   PolicyEditorSyntaxError? Error,
+                   string? CanonicalRaw,
+                   string? DraftId,
+                   JsonElement? RawElement,
+                   bool IsDirty)>(
+                   () =>
+                   {
                         bool parsed = PolicyEditorRawSyntax.TryParseStrictWithElement(
                             raw,
                             out PolicyEditorDraftDocument? draft,
@@ -775,7 +915,11 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                                 ? PolicyEditorRawSyntax.ToCanonicalRaw(draft)
                                 : null,
                             parsed ? draft?.Metadata.Id : null,
-                            parsed ? (JsonElement?)element : null);
+                            parsed ? (JsonElement?)element : null,
+                            !string.Equals(
+                                raw,
+                                dirtySnapshot.BaselineRawJson,
+                                StringComparison.Ordinal));
                     },
                     cancellation.Token);
             if (cancellation.IsCancellationRequested
@@ -790,6 +934,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                 return;
             }
 
+            ApplyDirtyComparison(dirtySnapshot, result.IsDirty);
             SyntaxError = result.Error;
             OnEditorStateChanged();
         }

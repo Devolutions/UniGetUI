@@ -344,6 +344,36 @@ public class PolicyEditorStructuredInputGuardTests
     }
 
     [Fact]
+    public void RuleIdChange_NotifiesAutomationName()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        PolicyEditorDraftRule draftRule = viewModel.Session.AddRule(
+            PolicyRuleFactory.CreateBlank("old-id"));
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+        var changed = new List<string?>();
+        rule.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        rule.Id = "new-id";
+
+        Assert.Contains(nameof(PolicyEditorRuleUi.Id), changed);
+        Assert.Contains(nameof(PolicyEditorRuleUi.AutomationName), changed);
+        Assert.Contains("new-id", rule.AutomationName);
+    }
+
+    [Fact]
+    public void MultilineListEditing_PreservesWhitespaceAndTrimsOnlyEmptyLines()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+
+        rule.Sources = " leading\r\n \r\n\r\ntrailing \n";
+
+        Assert.Equal([" leading", " ", "trailing "], draftRule.Match.Sources);
+        Assert.Equal(" leading\r\n \r\ntrailing ", rule.Sources);
+    }
+
+    [Fact]
     public async Task SaveCommand_IsDisabledWhileBusy_IndependentlyOfTypedInputErrors()
     {
         var validation = new FakeValidationClient { Gate = new TaskCompletionSource() };

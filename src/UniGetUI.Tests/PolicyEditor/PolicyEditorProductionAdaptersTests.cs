@@ -72,6 +72,26 @@ public class PolicyEditorProductionAdaptersTests
         Assert.Equal(PolicyWriteFailureKind.WriteResultUnknown, outcome.FailureKind);
     }
 
+    [Fact]
+    public async Task WriteAsync_CommittedButRefreshHangs_TimesOutAsUnknown()
+    {
+        var service = new NonCancellableBlockingManagementService();
+        var client = new WindowsPolicyEditorWriteClient(
+            new FakeElevator(request => new(
+                PolicyElevationOutcome.Replaced,
+                request,
+                CommittedStoreToken: "committed-token")),
+            service,
+            TimeSpan.FromMilliseconds(10));
+
+        PolicyWriteOutcome outcome = await client
+            .WriteAsync(BuildRequest(), CancellationToken.None)
+            .WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.False(outcome.Succeeded);
+        Assert.Equal(PolicyWriteFailureKind.WriteResultUnknown, outcome.FailureKind);
+        Assert.Equal(PolicyWriteFailureKind.WriteResultUnknown, outcome.FailureKind);
+    }
+
     [Theory]
     [InlineData(PolicyElevationManagementState.Active, "policy-id", PolicyReplacementOperation.Update)]
     [InlineData(PolicyElevationManagementState.Active, "different-id", PolicyReplacementOperation.ReplaceIdentity)]
@@ -176,6 +196,21 @@ public class PolicyEditorProductionAdaptersTests
             ManagementCallCount++;
             return Task.FromResult(managementResult);
         }
+
+        public Task<BrokerPolicyValidationOutcome> ValidateAsync(
+            JsonElement draft,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class NonCancellableBlockingManagementService : IBrokerPolicyManagementService
+    {
+        private readonly TaskCompletionSource<BrokerPolicyManagementResult> _never =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<BrokerPolicyManagementResult> GetManagementAsync(
+            CancellationToken cancellationToken)
+            => _never.Task;
 
         public Task<BrokerPolicyValidationOutcome> ValidateAsync(
             JsonElement draft,

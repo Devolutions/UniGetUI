@@ -305,10 +305,25 @@ public sealed class PolicyEditorSession
         return result;
     }
 
+    public string DuplicateRule(PolicyEditorDraftRule rule, string? newId = null)
+    {
+        EnsureStructuredMode();
+        string result = PolicyRuleListOperations.Duplicate(Draft.Rules, rule, newId);
+        InvalidateContentState();
+        return result;
+    }
+
     public void SetRuleEnabled(string id, bool enabled)
     {
         EnsureStructuredMode();
         PolicyRuleListOperations.SetEnabled(Draft.Rules, id, enabled);
+        InvalidateContentState();
+    }
+
+    public void SetRuleEnabled(PolicyEditorDraftRule rule, bool enabled)
+    {
+        EnsureStructuredMode();
+        PolicyRuleListOperations.SetEnabled(Draft.Rules, rule, enabled);
         InvalidateContentState();
     }
 
@@ -319,10 +334,24 @@ public sealed class PolicyEditorSession
         InvalidateContentState();
     }
 
+    public void DeleteRule(PolicyEditorDraftRule rule)
+    {
+        EnsureStructuredMode();
+        PolicyRuleListOperations.Delete(Draft.Rules, rule);
+        InvalidateContentState();
+    }
+
     public void MoveRule(string id, int newIndex)
     {
         EnsureStructuredMode();
         PolicyRuleListOperations.Move(Draft.Rules, id, newIndex);
+        InvalidateContentState();
+    }
+
+    public void MoveRule(PolicyEditorDraftRule rule, int newIndex)
+    {
+        EnsureStructuredMode();
+        PolicyRuleListOperations.Move(Draft.Rules, rule, newIndex);
         InvalidateContentState();
     }
 

@@ -363,7 +363,15 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
     public string Id
     {
         get => Rule.Id;
-        set { Rule.Id = value ?? ""; MarkDirty(); }
+        set
+        {
+            value ??= "";
+            if (string.Equals(Rule.Id, value, StringComparison.Ordinal)) return;
+            Rule.Id = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(AutomationName));
+            MarkDirty();
+        }
     }
 
     public bool Enabled
@@ -669,8 +677,8 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         if (!string.IsNullOrEmpty(value))
         {
             backing.AddRange(value.Split(
-                ['\r', '\n'],
-                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                ["\r\n", "\n", "\r"],
+                StringSplitOptions.RemoveEmptyEntries));
         }
 
         MarkDirty();

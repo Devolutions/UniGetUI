@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Devolutions.Now.Policy.Api;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
+using UniGetUI.PackageEngine.AgentBroker.PolicyManagement;
 
 namespace UniGetUI.Tests.PolicyEditor;
 
@@ -87,6 +88,93 @@ public class PolicyEditorFindingIndexTests
             "The default decision is Allow; requests matching no rule are permitted.",
             finding.Message);
         Assert.DoesNotContain("server-controlled", finding.Message);
+    }
+
+    [Theory]
+    [InlineData(PolicyFindingSeverity.Error, PolicyValidationSeverity.Error)]
+    [InlineData(PolicyFindingSeverity.Warning, PolicyValidationSeverity.Warning)]
+    public void SharedAndSanitizedFindings_MapContractSeverityExplicitly(
+        PolicyFindingSeverity sharedSeverity,
+        PolicyValidationSeverity expectedSeverity)
+    {
+        var shared = new PolicyFinding
+        {
+            Severity = sharedSeverity,
+            Code = PolicyFindingCode.InvalidFieldValue,
+            Path = "/Metadata/Description",
+            Message = "finding",
+        };
+        var sanitized = new BrokerPolicySanitizedFinding(
+            sharedSeverity,
+            PolicyFindingCode.InvalidFieldValue,
+            "/Metadata/Description",
+            null,
+            "finding",
+            new Dictionary<string, string>(),
+            false,
+            false,
+            false,
+            false);
+
+        Assert.Equal(expectedSeverity, PolicyValidationFinding.FromShared(shared).Severity);
+        Assert.Equal(expectedSeverity, PolicyValidationFinding.FromSanitized(sanitized).Severity);
+    }
+
+    [Fact]
+    public void UndefinedContractSeverity_FailsClosedInsteadOfBecomingWarning()
+    {
+        const PolicyFindingSeverity undefined = (PolicyFindingSeverity)int.MaxValue;
+        var shared = new PolicyFinding
+        {
+            Severity = undefined,
+            Code = PolicyFindingCode.InvalidFieldValue,
+            Message = "finding",
+        };
+        var sanitized = new BrokerPolicySanitizedFinding(
+            undefined,
+            PolicyFindingCode.InvalidFieldValue,
+            null,
+            null,
+            "finding",
+            new Dictionary<string, string>(),
+            false,
+            false,
+            false,
+            false);
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => PolicyValidationFinding.FromShared(shared));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => PolicyValidationFinding.FromSanitized(sanitized));
+    }
+
+    [Fact]
+    public void LocalInfoFinding_DoesNotRequireWarningAcknowledgement()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement());
+        string raw = session.GetEffectiveRawJson();
+        var info = new PolicyValidationFinding(
+            "/Metadata/Description",
+            null,
+            PolicyValidationSeverity.Info,
+            "information");
+        var validation = new PolicyValidationResult
+        {
+            IsValid = true,
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(session.Draft),
+            ValidationReceipt = "receipt-info",
+            Findings = [],
+        };
+
+        session.ApplyValidationResult(raw, validation, [info]);
+
+        Assert.NotNull(session.Validation);
+        Assert.False(session.Validation.HasWarnings);
+        Assert.Equal(
+            PolicyValidationSeverity.Info,
+            Assert.Single(session.Findings.All).Severity);
+        Assert.Throws<InvalidOperationException>(session.AcknowledgeWarnings);
     }
 
     [Fact]

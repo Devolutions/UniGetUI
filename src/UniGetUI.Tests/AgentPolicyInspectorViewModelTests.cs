@@ -2,6 +2,7 @@ using Avalonia.Automation;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Model;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
+using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.AgentBroker.PolicyManagement;
 using ApiTransport = Devolutions.Now.Policy.Api.Transport;
@@ -181,6 +182,35 @@ public class AgentPolicyInspectorViewModelTests
         Assert.Equal(expectedTitle, viewModel.ManagementStatus.Title);
         Assert.Equal(expectedLiveSetting, announcement?.LiveSetting);
         Assert.Contains(expectedTitle, announcement?.Message);
+    }
+
+    [Fact]
+    public async Task ReplaceIdentity_PreservesWhitespaceOnlyActivePublisher()
+    {
+        PolicyDocument policy = BuildFullResponse().Policy;
+        policy.Metadata.Publisher = " ";
+        var snapshot = new PolicyManagementSnapshot
+        {
+            State = PolicyManagementState.Active,
+            StoreToken = "token-1",
+            Policy = policy,
+            WriteCapability = PolicyWriteCapability.Writable,
+        };
+        using var viewModel = new AgentPolicyInspectorViewModel(
+            new StubInspector(new(BrokerPolicyInspectionStatus.Unsupported)),
+            new StubManagementService(
+                new BrokerPolicyManagementResult(
+                    BrokerPolicyManagementStatus.Retrieved,
+                    snapshot)));
+        PolicyEditorLaunchRequest? launch = null;
+        viewModel.OpenPolicyEditorRequested += (_, request) => launch = request;
+        await viewModel.LoadManagementAsync();
+
+        viewModel.ReplaceIdentityCommand.Execute(null);
+
+        Assert.NotNull(launch);
+        Assert.Equal(PolicyEditorOperationKind.ReplaceIdentity, launch.Operation);
+        Assert.Equal(" ", launch.SeedDraft!.Metadata.Publisher);
     }
 
     [Fact]

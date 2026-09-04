@@ -25,9 +25,7 @@ public sealed record PolicyValidationFinding(
         CreateBounded(new(
             finding.Path ?? "",
             finding.RuleId,
-            finding.Severity == PolicyFindingSeverity.Error
-                ? PolicyValidationSeverity.Error
-                : PolicyValidationSeverity.Warning,
+            MapSeverity(finding.Severity),
             PolicyFindingPresentation.Describe(finding.Code, finding.Arguments, finding.Message),
             finding.Code,
             PolicyFindingPresentation.CopyArguments(finding.Arguments)));
@@ -36,9 +34,7 @@ public sealed record PolicyValidationFinding(
         CreateBounded(new(
             finding.Path ?? "",
             finding.RuleId,
-            finding.Severity == PolicyFindingSeverity.Error
-                ? PolicyValidationSeverity.Error
-                : PolicyValidationSeverity.Warning,
+            MapSeverity(finding.Severity),
             PolicyFindingPresentation.Describe(finding.Code, finding.Arguments, finding.Message),
             finding.Code,
             PolicyFindingPresentation.CopyArguments(finding.Arguments)));
@@ -66,6 +62,14 @@ public sealed record PolicyValidationFinding(
     public string AutomationName => string.IsNullOrWhiteSpace(Pointer)
         ? Message
         : CoreTools.Translate("{0}. Location: {1}", Message, Pointer);
+
+    private static PolicyValidationSeverity MapSeverity(PolicyFindingSeverity severity) =>
+        severity switch
+        {
+            PolicyFindingSeverity.Warning => PolicyValidationSeverity.Warning,
+            PolicyFindingSeverity.Error => PolicyValidationSeverity.Error,
+            _ => throw new ArgumentOutOfRangeException(nameof(severity), severity, null),
+        };
 }
 
 /// <summary>

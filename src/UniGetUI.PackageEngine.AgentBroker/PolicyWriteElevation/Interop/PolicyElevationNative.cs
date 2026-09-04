@@ -250,12 +250,19 @@ internal static partial class PolicyElevationNative
     internal const uint DaclSecurityInformation = 0x00000004;
 
     [StructLayout(LayoutKind.Sequential)]
+    internal struct FileTime
+    {
+        public uint dwLowDateTime;
+        public uint dwHighDateTime;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     internal struct ByHandleFileInformation
     {
         public uint dwFileAttributes;
-        public long ftCreationTime;
-        public long ftLastAccessTime;
-        public long ftLastWriteTime;
+        public FileTime ftCreationTime;
+        public FileTime ftLastAccessTime;
+        public FileTime ftLastWriteTime;
         public uint dwVolumeSerialNumber;
         public uint nFileSizeHigh;
         public uint nFileSizeLow;

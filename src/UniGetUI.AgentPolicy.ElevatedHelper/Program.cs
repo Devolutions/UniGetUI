@@ -40,11 +40,13 @@ internal static class Program
             return PolicyElevationProtocol.ExitInvalidArguments;
         }
 
-        using var lifetime = new CancellationTokenSource(PolicyElevationProtocol.ExchangeTimeout);
+        using var stageTimeouts = new PolicyElevationHelperStageTimeouts(
+            PolicyElevationProtocol.ConnectTimeout,
+            PolicyElevationProtocol.ExchangeTimeout);
 
         try
         {
-            return await RunAsync(launch, lifetime.Token).ConfigureAwait(false);
+            return await RunAsync(launch, stageTimeouts).ConfigureAwait(false);
         }
         catch (PolicyElevationFrameException)
         {
@@ -66,10 +68,140 @@ internal static class Program
 
     private static async Task<int> RunAsync(
         PolicyElevationLaunchArguments launch,
-        CancellationToken cancellationToken)
+        PolicyElevationHelperStageTimeouts stageTimeouts)
+    {
+        AuthenticatedHostContext? authenticatedHost = null;
+        NamedPipeClientStream? pipe = null;
+        try
+        {
+            PolicyElevationHelperSynchronousStageResult<AuthenticatedHostContext?> preparation =
+                await PolicyElevationHelperSynchronousStageRunner.RunAsync(
+                    () => TryPrepareAuthenticatedHost(launch),
+                    stageTimeouts.Token,
+                    static abandoned => abandoned?.Dispose()).ConfigureAwait(false);
+            if (!preparation.Completed)
+                return PolicyElevationProtocol.ExitConnectFailed;
+
+            authenticatedHost = preparation.Value;
+            if (authenticatedHost is null)
+                return PolicyElevationProtocol.ExitPeerAuthenticationFailed;
+
+            pipe = new NamedPipeClientStream(
+                ".",
+                launch.PipeName,
+                PipeDirection.InOut,
+                PipeOptions.Asynchronous | PipeOptions.WriteThrough,
+                TokenImpersonationLevel.Anonymous);
+
+            await pipe.ConnectAsync(
+                    (int)PolicyElevationProtocol.ConnectTimeout.TotalMilliseconds,
+                    stageTimeouts.Token)
+                .ConfigureAwait(false);
+
+            AuthenticatedHostContext pipeAuthenticationHost = authenticatedHost;
+            NamedPipeClientStream authenticatedPipe = pipe;
+            PolicyElevationHelperSynchronousStageResult<int> pipeAuthentication =
+                await PolicyElevationHelperSynchronousStageRunner.RunAsync(
+                    () => AuthenticateConnectedPipe(pipeAuthenticationHost, authenticatedPipe),
+                    stageTimeouts.Token,
+                    cleanupAfterAbandonedWork: () =>
+                    {
+                        authenticatedPipe.Dispose();
+                        pipeAuthenticationHost.Dispose();
+                    }).ConfigureAwait(false);
+            if (!pipeAuthentication.Completed)
+            {
+                pipe = null;
+                authenticatedHost = null;
+                return PolicyElevationProtocol.ExitConnectFailed;
+            }
+
+            if (pipeAuthentication.Value != PolicyElevationProtocol.ExitSuccess)
+                return pipeAuthentication.Value;
+
+            AuthenticatedHostContext identityHost = authenticatedHost;
+            NamedPipeClientStream identityPipe = pipe;
+            PolicyElevationHelperSynchronousStageResult<InitiatingUserResult> identityResolution =
+                await PolicyElevationHelperSynchronousStageRunner.RunAsync(
+                    () => ResolveInitiatingUser(identityHost),
+                    stageTimeouts.Token,
+                    cleanupAfterAbandonedWork: () =>
+                    {
+                        identityPipe.Dispose();
+                        identityHost.Dispose();
+                    }).ConfigureAwait(false);
+            if (!identityResolution.Completed)
+            {
+                pipe = null;
+                authenticatedHost = null;
+                return PolicyElevationProtocol.ExitConnectFailed;
+            }
+
+            InitiatingUserResult identity = identityResolution.Value;
+            if (identity.ExitCode != PolicyElevationProtocol.ExitSuccess
+                || identity.EffectiveUser is null)
+            {
+                return identity.ExitCode;
+            }
+
+            PolicyElevationRequestMessage request =
+                await PolicyElevationFrame.ReadRequestAsync(pipe, stageTimeouts.Token).ConfigureAwait(false);
+            stageTimeouts.Token.ThrowIfCancellationRequested();
+            stageTimeouts.BeginExchange();
+
+            using var brokerCancellation =
+                CancellationTokenSource.CreateLinkedTokenSource(stageTimeouts.Token);
+            using var disconnectMonitorCancellation =
+                CancellationTokenSource.CreateLinkedTokenSource(stageTimeouts.Token);
+            Task disconnectMonitor = MonitorHostDisconnectAsync(
+                pipe,
+                brokerCancellation,
+                disconnectMonitorCancellation.Token);
+
+            PolicyElevationResponseMessage response;
+            try
+            {
+                response = await PolicyReplacementExecutor
+                    .ExecuteAsync(request, identity.EffectiveUser, brokerCancellation.Token)
+                    .ConfigureAwait(false);
+            }
+            finally
+            {
+                await disconnectMonitorCancellation.CancelAsync().ConfigureAwait(false);
+                try
+                {
+                    await disconnectMonitor.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (disconnectMonitorCancellation.IsCancellationRequested)
+                {
+                }
+            }
+
+            // WriteResponseAsync completes only once the whole frame has been handed to the pipe and
+            // flushed, under the same bounded, cancellable token as every other stage. Closing the
+            // handle afterwards is enough: a synchronous drain would block on the reader with no
+            // timeout and no cancellation, which is exactly the unbounded hang this design forbids.
+            using var responseWrite =
+                new CancellationTokenSource(PolicyElevationProtocol.ResponseWriteTimeout);
+            await PolicyElevationFrame.WriteResponseAsync(pipe, response, responseWrite.Token).ConfigureAwait(false);
+
+            return PolicyElevationProtocol.ExitSuccess;
+        }
+        catch (Exception ex) when (ex is TimeoutException or IOException or UnauthorizedAccessException)
+        {
+            return PolicyElevationProtocol.ExitConnectFailed;
+        }
+        finally
+        {
+            pipe?.Dispose();
+            authenticatedHost?.Dispose();
+        }
+    }
+
+    private static AuthenticatedHostContext? TryPrepareAuthenticatedHost(
+        PolicyElevationLaunchArguments launch)
     {
         IPolicyElevationTrustVerifier trustVerifier = new WindowsAuthenticodeTrustVerifier();
-
         if (!TryDescribePackagedLayout(
                 out string? installRoot,
                 out string? hostPath,
@@ -78,21 +210,18 @@ internal static class Program
             || installRoot is null || hostPath is null || selfPath is null || verification is null)
         {
             verification?.Dispose();
-            return PolicyElevationProtocol.ExitPeerAuthenticationFailed;
+            return null;
         }
 
-        // Held for the whole exchange: while these handles are open neither the install tree nor
-        // either packaged binary can be deleted, renamed or redirected.
-        using PolicyElevationLocationVerification layout = verification;
-
-        using SafeProcessHandle host = PolicyElevationNative.OpenProcess(
+        SafeProcessHandle host = PolicyElevationNative.OpenProcess(
             PolicyElevationNative.ProcessQueryLimitedInformation | PolicyElevationNative.Synchronize,
             false,
             unchecked((uint)launch.ParentProcessId));
-
         if (host.IsInvalid)
         {
-            return PolicyElevationProtocol.ExitPeerAuthenticationFailed;
+            host.Dispose();
+            verification.Dispose();
+            return null;
         }
 
         var expectation = new PolicyElevationPeerExpectation(
@@ -102,12 +231,10 @@ internal static class Program
             launch.ParentCreationTimeUtcTicks,
             launch.SessionId)
         {
-            // The caller is deliberately the non-elevated side of the channel.
             RequireElevatedAdministrator = false,
-            Verification = layout,
+            Verification = verification,
         };
 
-        // Verified once from the launch arguments, before the pipe is touched at all.
         if (!WindowsPeerAuthenticator
                 .Authenticate(
                     host.DangerousGetHandle(),
@@ -117,86 +244,45 @@ internal static class Program
                     selfPath)
                 .IsAuthenticated)
         {
-            return PolicyElevationProtocol.ExitPeerAuthenticationFailed;
+            host.Dispose();
+            verification.Dispose();
+            return null;
         }
 
-        using var pipe = new NamedPipeClientStream(
-            ".",
-            launch.PipeName,
-            PipeDirection.InOut,
-            PipeOptions.Asynchronous | PipeOptions.WriteThrough,
-            TokenImpersonationLevel.Anonymous);
+        return new AuthenticatedHostContext(
+            verification,
+            host,
+            expectation,
+            trustVerifier,
+            selfPath);
+    }
 
-        try
-        {
-            await pipe.ConnectAsync((int)PolicyElevationProtocol.ConnectTimeout.TotalMilliseconds, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is TimeoutException or IOException or UnauthorizedAccessException)
-        {
-            return PolicyElevationProtocol.ExitConnectFailed;
-        }
-
-        // Verified again from the kernel's view of the connected pipe, before any payload moves.
+    private static int AuthenticateConnectedPipe(
+        AuthenticatedHostContext authenticatedHost,
+        NamedPipeClientStream pipe)
+    {
         if (!PolicyElevationNative.GetNamedPipeServerProcessId(pipe.SafePipeHandle, out uint serverProcessId))
-        {
             return PolicyElevationProtocol.ExitPeerAuthenticationFailed;
-        }
 
-        if (!WindowsPeerAuthenticator
-                .Authenticate(host.DangerousGetHandle(), serverProcessId, expectation, trustVerifier, selfPath)
-                .IsAuthenticated)
-        {
-            return PolicyElevationProtocol.ExitPeerAuthenticationFailed;
-        }
+        return WindowsPeerAuthenticator
+            .Authenticate(
+                authenticatedHost.Host.DangerousGetHandle(),
+                serverProcessId,
+                authenticatedHost.Expectation,
+                authenticatedHost.TrustVerifier,
+                authenticatedHost.SelfPath)
+            .IsAuthenticated
+                ? PolicyElevationProtocol.ExitSuccess
+                : PolicyElevationProtocol.ExitPeerAuthenticationFailed;
+    }
 
-        int identityResolution = PolicyElevationInitiatingUserResolver.Resolve(
-            host.DangerousGetHandle(),
+    private static InitiatingUserResult ResolveInitiatingUser(
+        AuthenticatedHostContext authenticatedHost)
+    {
+        int exitCode = PolicyElevationInitiatingUserResolver.Resolve(
+            authenticatedHost.Host.DangerousGetHandle(),
             out string? effectiveUser);
-        if (identityResolution != PolicyElevationProtocol.ExitSuccess || effectiveUser is null)
-        {
-            return identityResolution;
-        }
-
-        PolicyElevationRequestMessage request =
-            await PolicyElevationFrame.ReadRequestAsync(pipe, cancellationToken).ConfigureAwait(false);
-
-        using var brokerCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        using var disconnectMonitorCancellation =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        Task disconnectMonitor = MonitorHostDisconnectAsync(
-            pipe,
-            brokerCancellation,
-            disconnectMonitorCancellation.Token);
-
-        PolicyElevationResponseMessage response;
-        try
-        {
-            response = await PolicyReplacementExecutor
-                .ExecuteAsync(request, effectiveUser, brokerCancellation.Token)
-                .ConfigureAwait(false);
-        }
-        finally
-        {
-            await disconnectMonitorCancellation.CancelAsync().ConfigureAwait(false);
-            try
-            {
-                await disconnectMonitor.ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (disconnectMonitorCancellation.IsCancellationRequested)
-            {
-            }
-        }
-
-        // WriteResponseAsync completes only once the whole frame has been handed to the pipe and
-        // flushed, under the same bounded, cancellable token as every other stage. Closing the
-        // handle afterwards is enough: a synchronous drain would block on the reader with no
-        // timeout and no cancellation, which is exactly the unbounded hang this design forbids.
-        using var responseWrite =
-            new CancellationTokenSource(PolicyElevationProtocol.ResponseWriteTimeout);
-        await PolicyElevationFrame.WriteResponseAsync(pipe, response, responseWrite.Token).ConfigureAwait(false);
-
-        return PolicyElevationProtocol.ExitSuccess;
+        return new InitiatingUserResult(exitCode, effectiveUser);
     }
 
     private static async Task MonitorHostDisconnectAsync(
@@ -274,5 +360,36 @@ internal static class Program
         hostPath = canonicalHostPath;
         selfImagePath = selfPath;
         return true;
+    }
+
+    private readonly record struct InitiatingUserResult(int ExitCode, string? EffectiveUser);
+
+    private sealed class AuthenticatedHostContext : IDisposable
+    {
+        public AuthenticatedHostContext(
+            PolicyElevationLocationVerification layout,
+            SafeProcessHandle host,
+            PolicyElevationPeerExpectation expectation,
+            IPolicyElevationTrustVerifier trustVerifier,
+            string selfPath)
+        {
+            Layout = layout;
+            Host = host;
+            Expectation = expectation;
+            TrustVerifier = trustVerifier;
+            SelfPath = selfPath;
+        }
+
+        public PolicyElevationLocationVerification Layout { get; }
+        public SafeProcessHandle Host { get; }
+        public PolicyElevationPeerExpectation Expectation { get; }
+        public IPolicyElevationTrustVerifier TrustVerifier { get; }
+        public string SelfPath { get; }
+
+        public void Dispose()
+        {
+            Host.Dispose();
+            Layout.Dispose();
+        }
     }
 }

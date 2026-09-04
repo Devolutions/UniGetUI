@@ -185,6 +185,33 @@ public partial class PolicyEditorLocalizationTests
                 automation + "AutomationProperties.LiveSetting"));
     }
 
+    [Fact]
+    public void InspectorStatuses_RelyOnCentralizedSeverityAwareAnnouncements()
+    {
+        string root = FindRepositoryRoot();
+        XDocument inspector = XDocument.Load(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "AgentPolicyInspector.axaml"));
+        XNamespace automation =
+            "clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls";
+        XElement[] statuses = inspector.Descendants()
+            .Where(element => element.Name.LocalName == "InfoBar"
+                && ((string?)element.Attribute("DataContext") == "{Binding ManagementStatus}"
+                    || (string?)element.Attribute("DataContext") == "{Binding Status}"))
+            .ToArray();
+
+        Assert.Equal(2, statuses.Length);
+        Assert.All(
+            statuses,
+            status => Assert.Null(
+                status.Attribute(automation + "AutomationProperties.LiveSetting")));
+    }
+
     private static string FindRepositoryRoot()
     {
         for (DirectoryInfo? directory = new(AppContext.BaseDirectory);

@@ -43,11 +43,11 @@ public sealed class PackagedPolicyWriteElevationEligibility : IPolicyWriteElevat
         CancellationToken cancellationToken)
     {
 #if WINDOWS
-        cancellationToken.ThrowIfCancellationRequested();
-        Task<PolicyWriteElevationEligibility> worker = Task.Run(
-            () => EvaluateCore(cancellationToken),
-            CancellationToken.None);
-        return await worker.WaitAsync(cancellationToken).ConfigureAwait(false);
+        using PolicyElevationPreflightResult preflight =
+            await PolicyElevationPreflightRunner
+                .VerifyAsync(_preflight, cancellationToken)
+                .ConfigureAwait(false);
+        return Evaluate(preflight);
 #else
         await Task.CompletedTask;
         cancellationToken.ThrowIfCancellationRequested();
@@ -56,9 +56,9 @@ public sealed class PackagedPolicyWriteElevationEligibility : IPolicyWriteElevat
     }
 
 #if WINDOWS
-    private PolicyWriteElevationEligibility EvaluateCore(CancellationToken cancellationToken)
+    private static PolicyWriteElevationEligibility Evaluate(
+        PolicyElevationPreflightResult preflight)
     {
-        using PolicyElevationPreflightResult preflight = _preflight.Verify(cancellationToken);
         if (preflight.Succeeded)
             return PolicyWriteElevationEligibility.Eligible;
 

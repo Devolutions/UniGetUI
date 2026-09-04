@@ -59,6 +59,12 @@
         <Compile Include="..\UniGetUI.AgentPolicy.ElevatedHelper\PolicyReplacementExecutor.cs"
                  Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'"
                  Link="PolicyWriteElevation\PolicyReplacementExecutor.cs" />
+        <Compile Include="..\UniGetUI.AgentPolicy.ElevatedHelper\PolicyElevationHelperStageTimeouts.cs"
+                 Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'"
+                 Link="PolicyWriteElevation\PolicyElevationHelperStageTimeouts.cs" />
+        <Compile Include="..\UniGetUI.AgentPolicy.ElevatedHelper\PolicyElevationHelperSynchronousStageRunner.cs"
+                 Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'"
+                 Link="PolicyWriteElevation\PolicyElevationHelperSynchronousStageRunner.cs" />
         <None Include="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>

@@ -146,15 +146,30 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
         Func<string, NamedPipeServerStream> pipeFactory,
         PolicyElevationTimeouts? timeouts = null,
         Func<string?>? selfImagePathProvider = null)
+        : this(
+            launcher,
+            peerAuthenticator,
+            pipeFactory,
+            new WindowsPolicyElevationPreflight(
+                locator,
+                trustVerifier,
+                selfImagePathProvider),
+            timeouts)
+    {
+    }
+
+    internal WindowsPolicyWriteElevator(
+        IElevatedHelperLauncher launcher,
+        IPolicyElevationPipePeerAuthenticator peerAuthenticator,
+        Func<string, NamedPipeServerStream> pipeFactory,
+        IPolicyElevationPreflight preflight,
+        PolicyElevationTimeouts? timeouts = null)
     {
         _launcher = launcher;
         _peerAuthenticator = peerAuthenticator;
         _pipeFactory = pipeFactory;
         _timeouts = timeouts ?? PolicyElevationTimeouts.Default;
-        _preflight = new WindowsPolicyElevationPreflight(
-            locator,
-            trustVerifier,
-            selfImagePathProvider);
+        _preflight = preflight;
     }
 
     public async Task<PolicyElevationResult> ReplacePolicyAsync(
@@ -178,7 +193,10 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
                 "Elevated policy writes are only supported on Windows.");
         }
 
-        using PolicyElevationPreflightResult preflight = _preflight.Verify(cancellationToken);
+        using PolicyElevationPreflightResult preflight =
+            await PolicyElevationPreflightRunner
+                .VerifyAsync(_preflight, cancellationToken)
+                .ConfigureAwait(false);
         if (!preflight.Succeeded)
         {
             if (preflight.Detail is not null)
@@ -200,6 +218,13 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
         // The handle lease pins every verified packaged object for the whole exchange, so nothing
         // on the path to the helper can be deleted, renamed or redirected after it was verified.
         PolicyElevationHelperLocation location = preflight.Location;
+        if (location.CanonicalHelperPath is not { } canonicalHelperPath)
+        {
+            return Fail(
+                request,
+                PolicyElevationOutcome.HelperUntrusted,
+                "The packaged policy write helper could not be verified.");
+        }
 
         if (!TryDescribeCurrentProcess(out uint hostProcessId, out long hostCreationTicks, out uint hostSessionId))
         {
@@ -232,7 +257,7 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
         {
             ElevatedHelperLaunchResult launch = await _launcher
                 .LaunchAsync(
-                    location.CanonicalHelperPath,
+                    canonicalHelperPath,
                     arguments.Format(),
                     _timeouts.Connect,
                     cancellationToken)

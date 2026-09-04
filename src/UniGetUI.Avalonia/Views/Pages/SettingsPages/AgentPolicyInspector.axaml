@@ -58,8 +58,7 @@
                          automation:AutomationProperties.Name="{t:Translate Loading policy management state}"/>
 
             <controls:InfoBar DataContext="{Binding ManagementStatus}"
-                              Margin="40,0"
-                              automation:AutomationProperties.LiveSetting="Polite"/>
+                              Margin="40,0"/>
 
             <StackPanel IsVisible="{Binding HasManagementSnapshot}">
                 <Border Classes="settings-card policy-section">
@@ -169,8 +168,7 @@
                          automation:AutomationProperties.Name="{t:Translate Loading active package broker policy}"/>
 
             <controls:InfoBar DataContext="{Binding Status}"
-                              Margin="40,0"
-                              automation:AutomationProperties.LiveSetting="Polite"/>
+                              Margin="40,0"/>
 
             <StackPanel IsVisible="{Binding HasPolicy}">
                 <TextBlock Text="{t:Translate Policy metadata}"

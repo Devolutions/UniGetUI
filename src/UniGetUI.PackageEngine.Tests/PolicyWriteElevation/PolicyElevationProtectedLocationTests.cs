@@ -1,6 +1,7 @@
 #if WINDOWS
 using System.Security.AccessControl;
 using System.Security.Principal;
+using Microsoft.Win32.SafeHandles;
 using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation.Interop;
 
@@ -421,6 +422,71 @@ public class WindowsProtectedLocationVerifierTests : IDisposable
 
         Assert.False(verification.IsProtected);
         Assert.Contains("not administrator-protected", verification.Detail);
+    }
+
+    [Fact]
+    public void ExecutableVerification_RejectsAnExistingWriter()
+    {
+        string file = Path.Combine(_sandbox, "existing-writer.exe");
+        File.WriteAllText(file, "payload");
+        using FileStream writer = File.Open(
+            file,
+            FileMode.Open,
+            FileAccess.ReadWrite,
+            FileShare.ReadWrite);
+
+        using PolicyElevationLocationVerification verification =
+            WindowsProtectedLocationVerifier.InspectObject(
+                file,
+                isDirectory: false,
+                PolicyElevationAccessPolicy.FileControlMask);
+
+        Assert.False(verification.IsProtected);
+        Assert.Equal(32, verification.Win32ErrorCode);
+        Assert.Contains("could not be opened for verification", verification.Detail);
+    }
+
+    [Fact]
+    public void VerificationLease_BlocksNewWritersUntilDisposed()
+    {
+        string file = Path.Combine(_sandbox, "blocked-writer.exe");
+        File.WriteAllText(file, "payload");
+        using SafeFileHandle lease =
+            WindowsProtectedLocationVerifier.OpenVerificationLease(file, isDirectory: false);
+        Assert.False(lease.IsInvalid);
+
+        using (FileStream reader = File.OpenRead(file))
+        {
+            Assert.Equal("payload", new StreamReader(reader).ReadToEnd());
+        }
+
+        Assert.Throws<IOException>(() =>
+            File.Open(
+                file,
+                FileMode.Open,
+                FileAccess.Write,
+                FileShare.ReadWrite).Dispose());
+
+        lease.Dispose();
+        using FileStream writer = File.Open(
+            file,
+            FileMode.Open,
+            FileAccess.Write,
+            FileShare.ReadWrite);
+        Assert.True(writer.CanWrite);
+    }
+
+    [Fact]
+    public void DirectoryVerificationLease_AllowsHarmlessSiblingWrites()
+    {
+        using SafeFileHandle lease =
+            WindowsProtectedLocationVerifier.OpenVerificationLease(_sandbox, isDirectory: true);
+        Assert.False(lease.IsInvalid);
+        string sibling = Path.Combine(_sandbox, "sibling.txt");
+
+        File.WriteAllText(sibling, "allowed");
+
+        Assert.Equal("allowed", File.ReadAllText(sibling));
     }
 
     [Fact]

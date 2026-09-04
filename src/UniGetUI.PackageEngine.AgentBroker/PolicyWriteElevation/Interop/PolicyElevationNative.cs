@@ -233,6 +233,7 @@ internal static partial class PolicyElevationNative
 
     // ---- Handle-based location verification -------------------------------------------------
 
+    internal const uint GenericRead = 0x80000000;
     internal const uint FileReadAttributes = 0x0080;
     internal const uint ReadControl = 0x00020000;
     internal const uint FileShareRead = 0x00000001;

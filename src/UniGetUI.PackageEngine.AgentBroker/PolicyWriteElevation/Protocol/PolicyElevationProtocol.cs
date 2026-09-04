@@ -52,9 +52,9 @@ public static class PolicyElevationProtocol
     public const int FrameLengthPrefixBytes = 4;
 
     /// <summary>
-    /// The single authoritative policy-management body budget, taken verbatim from the shared
-    /// broker contract. Both the request draft and the relayed broker response payload are
-    /// bounded by this value.
+    /// The single authoritative broker replacement-request body budget, taken verbatim from the
+    /// shared broker contract. The separately framed protocol-v2 acknowledgement is bounded by
+    /// <see cref="MaxResponseFrameBytes"/>.
     /// </summary>
     public const int MaxPolicyManagementBodyBytes = BrokerApi.MaxPolicyManagementBodyBytes;
 

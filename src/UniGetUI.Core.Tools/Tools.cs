@@ -752,19 +752,17 @@ namespace UniGetUI.Core.Tools
         private static extern bool AllowSetForegroundWindow(int dwProcessId);
 
         /// <summary>
-        /// Windows: bring UniGetUI to the foreground and grant foreground rights so an imminent
-        /// UAC consent prompt surfaces in front instead of only flashing the taskbar (#5146).
-        /// No-op elsewhere, and when the app owns no visible foreground window to delegate.
+        /// Windows: hand our foreground rights to the imminent UAC consent prompt so it surfaces
+        /// in front instead of only flashing the taskbar (#5146). Succeeds only while UniGetUI
+        /// already owns the foreground; it deliberately never activates the window, which would
+        /// interrupt a user who had minimized it (#5102). No-op elsewhere.
         /// Must be called immediately before launching the elevator.
         /// </summary>
-        public static async Task PrepareForegroundForElevationAsync()
+        public static void PrepareForegroundForElevation()
         {
             if (!OperatingSystem.IsWindows())
                 return;
 
-            var bringToFront = CoreData.BringMainWindowToForegroundAsync;
-            if (bringToFront is not null)
-                await bringToFront();
             AllowSetForegroundWindow(ASFW_ANY);
         }
 
@@ -824,7 +822,7 @@ namespace UniGetUI.Core.Tools
 
                 // When admin-rights caching is enabled, the UAC consent prompt is raised here.
                 // Surface it in front instead of letting it flash unnoticed in the taskbar (#5146).
-                await PrepareForegroundForElevationAsync();
+                PrepareForegroundForElevation();
 
                 p.Start();
                 await p.WaitForExitAsync();

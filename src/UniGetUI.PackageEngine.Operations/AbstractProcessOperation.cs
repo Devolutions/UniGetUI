@@ -140,10 +140,10 @@ public abstract class AbstractProcessOperation : AbstractOperation
         CancellationToken.ThrowIfCancellationRequested();
 
         // When admin-rights caching is disabled (or a cache miss), the elevator is launched
-        // directly here and the UAC prompt is raised at this Start() — bring it to the
-        // foreground too, not just on the cached path (#5146).
+        // directly here and the UAC prompt is raised at this Start() — delegate foreground
+        // rights here too, not just on the cached path (#5146).
         if (process.StartInfo.FileName == CoreData.ElevatorPath)
-            await CoreTools.PrepareForegroundForElevationAsync();
+            CoreTools.PrepareForegroundForElevation();
 
         process.Start();
         if (CancellationToken.IsCancellationRequested)

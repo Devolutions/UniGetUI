@@ -145,6 +145,80 @@ public class PolicyEditorStructuredInputGuardTests
     }
 
     [Fact]
+    public void SupportUrl_InitialEmptyBindingPreservesNullAndCleanState()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var document = new PolicyEditorDocumentUi(viewModel);
+        Assert.Null(document.SupportUrl);
+        Assert.False(viewModel.IsDirty);
+
+        document.SupportUrl = "";
+
+        Assert.Null(document.SupportUrl);
+        Assert.False(viewModel.IsDirty);
+    }
+
+    [Theory]
+    [InlineData("", null)]
+    [InlineData(" ", " ")]
+    [InlineData("https://example.test/support", "https://example.test/support")]
+    public void SupportUrl_PreservesAuthoredTextAndClearsOnlyEmpty(
+        string authored,
+        string? expected)
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        document.SupportUrl = authored;
+
+        Assert.Equal(expected, document.SupportUrl);
+        Assert.Equal(expected, viewModel.Draft.Metadata.SupportUrl);
+    }
+
+    [Fact]
+    public async Task SupportUrl_WhitespaceReachesAuthoritativeValidationUnchanged()
+    {
+        var validation = new FakeValidationClient
+        {
+            NextOutcome = new PolicyEditorValidationOutcome(
+                new PolicyValidationResult
+                {
+                    IsValid = false,
+                    Findings =
+                    [
+                        new PolicyFinding
+                        {
+                            Severity = PolicyFindingSeverity.Error,
+                            Code = PolicyFindingCode.InvalidFieldValue,
+                            Path = "/Metadata/SupportUrl",
+                            Message = "invalid URL",
+                        },
+                    ],
+                }),
+        };
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("test-policy", "Contoso"));
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+        var document = new PolicyEditorDocumentUi(viewModel);
+        document.SupportUrl = " ";
+
+        await viewModel.ValidateCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            " ",
+            validation.LastDraft.GetProperty("Metadata").GetProperty("SupportUrl").GetString());
+        Assert.Null(viewModel.Session.Validation);
+        Assert.Equal(
+            PolicyValidationSeverity.Error,
+            Assert.Single(viewModel.Session.Findings.All).Severity);
+    }
+
+    [Fact]
     public void RefreshFromDraft_NotifiesEveryDocumentBoundProperty()
     {
         using PolicyEditorSessionViewModel viewModel = CreateViewModel();

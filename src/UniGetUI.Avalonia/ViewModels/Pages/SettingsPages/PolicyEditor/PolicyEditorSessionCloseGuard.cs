@@ -60,7 +60,10 @@ public static class PolicyEditorSessionCloseGuard
         Task delay = Task.Delay(timeout, cancellationToken);
         Task completed = await Task.WhenAny(executionTask, delay).ConfigureAwait(false);
         if (completed != executionTask)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             return false;
+        }
 
         // Accessing Exception observes a fault without turning close handling into an error sink.
         _ = executionTask.Exception;

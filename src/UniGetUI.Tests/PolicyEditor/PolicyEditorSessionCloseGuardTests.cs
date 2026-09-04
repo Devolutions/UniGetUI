@@ -55,6 +55,27 @@ public class PolicyEditorSessionCloseGuardTests
     }
 
     [Fact]
+    public async Task CallerCancellationWhileOperationRemainsBusy_IsPropagated()
+    {
+        var validation = new FakeValidationClient { Gate = new TaskCompletionSource() };
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel(validation);
+        using var cancellation = new CancellationTokenSource();
+        Task validateTask = viewModel.ValidateCommand.ExecuteAsync(null);
+
+        Task<bool> close = PolicyEditorSessionCloseGuard.TryCancelActiveOperationAsync(
+            viewModel,
+            TimeSpan.FromSeconds(5),
+            cancellation.Token);
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => close);
+        Assert.True(viewModel.IsBusy);
+
+        validation.Gate.TrySetResult();
+        await validateTask;
+    }
+
+    [Fact]
     public async Task CloseDuringWrite_WhenHelperExchangeHonorsCancellation_SettlesWithinBound()
     {
         var validation = new FakeValidationClient();

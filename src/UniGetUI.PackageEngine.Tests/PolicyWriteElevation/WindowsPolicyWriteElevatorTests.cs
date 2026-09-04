@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json;
 using Devolutions.Now.Policy.Api;
+using Microsoft.Win32.SafeHandles;
 using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation.Interop;
 
@@ -36,15 +37,27 @@ public class WindowsPolicyWriteElevatorTests
         IPolicyElevationTrustVerifier? trustVerifier = null,
         IPolicyElevationPipePeerAuthenticator? authenticator = null,
         PolicyElevationTimeouts? timeouts = null,
-        Func<string?>? selfImagePathProvider = null)
-        => new(
-            locator ?? FakeHelperLocator.Found(),
-            launcher,
-            trustVerifier ?? FakeTrustVerifier.SameSigner(),
-            authenticator ?? new FakePeerAuthenticator(),
-            PolicyElevationPipeServer.Create,
-            timeouts ?? FastTimeouts,
-            selfImagePathProvider ?? (() => FakeHelperLocator.PackagedHostPath));
+        Func<string?>? selfImagePathProvider = null,
+        IPolicyElevationPreflight? preflight = null)
+    {
+        IPolicyElevationPipePeerAuthenticator effectiveAuthenticator =
+            authenticator ?? new FakePeerAuthenticator();
+        return preflight is null
+            ? new(
+                locator ?? FakeHelperLocator.Found(),
+                launcher,
+                trustVerifier ?? FakeTrustVerifier.SameSigner(),
+                effectiveAuthenticator,
+                PolicyElevationPipeServer.Create,
+                timeouts ?? FastTimeouts,
+                selfImagePathProvider ?? (() => FakeHelperLocator.PackagedHostPath))
+            : new(
+                launcher,
+                effectiveAuthenticator,
+                PolicyElevationPipeServer.Create,
+                preflight,
+                timeouts ?? FastTimeouts);
+    }
 
     private static void AssertDraftPreserved(PolicyElevationResult result)
     {
@@ -206,6 +219,123 @@ public class WindowsPolicyWriteElevatorTests
         Assert.Equal(PolicyElevationOutcome.HelperUnavailable, result.Outcome);
         Assert.Null(launcher.LaunchedPath);
         AssertDraftPreserved(result);
+    }
+
+    [Fact]
+    public async Task PreflightTrustWork_DoesNotBlockTheCallingThread()
+    {
+        using var preflight = new BlockingPreflight();
+        FakeHelperLauncher launcher =
+            FakeHelperLauncher.Running((_, _) => Task.CompletedTask);
+        WindowsPolicyWriteElevator elevator = Build(
+            launcher,
+            preflight: preflight);
+        var invocationReturned = new TaskCompletionSource<Task<PolicyElevationResult>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var caller = new Thread(() =>
+            invocationReturned.TrySetResult(
+                elevator.ReplacePolicyAsync(BuildRequest(), CancellationToken.None)));
+
+        caller.Start();
+        await preflight.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Task<PolicyElevationResult> operation;
+        try
+        {
+            operation = await invocationReturned.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.False(operation.IsCompleted);
+            Assert.Null(launcher.LaunchedPath);
+        }
+        finally
+        {
+            preflight.Release();
+            caller.Join(TimeSpan.FromSeconds(2));
+        }
+
+        PolicyElevationResult result = await operation;
+        Assert.Equal(PolicyElevationOutcome.HelperUnavailable, result.Outcome);
+    }
+
+    [Fact]
+    public async Task CancelledPreflightWait_DisposesLeaseWhenWorkerFinishes()
+    {
+        string leasePath = Path.GetTempFileName();
+        SafeFileHandle leaseHandle = File.OpenHandle(
+            leasePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite);
+        PolicyElevationLocationVerification verification =
+            PolicyElevationLocationVerification.Protected(
+                [leaseHandle],
+                FakeHelperLocator.PackagedRoot,
+                FakeHelperLocator.PackagedHelperPath,
+                FakeHelperLocator.PackagedHostPath);
+        var location = new PolicyElevationHelperLocation(
+            true,
+            FakeHelperLocator.PackagedHelperPath,
+            FakeHelperLocator.PackagedHostPath,
+            FakeHelperLocator.PackagedRoot,
+            Verification: verification);
+        using var preflight = new BlockingPreflight(
+            () => PolicyElevationPreflightResult.Success(location),
+            honorCancellation: false);
+        using var cancellation = new CancellationTokenSource();
+        FakeHelperLauncher launcher =
+            FakeHelperLauncher.Running((_, _) => Task.CompletedTask);
+        WindowsPolicyWriteElevator elevator = Build(launcher, preflight: preflight);
+
+        Task<PolicyElevationResult> pending =
+            elevator.ReplacePolicyAsync(BuildRequest(), cancellation.Token);
+        await preflight.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+        Assert.False(leaseHandle.IsClosed);
+        Assert.Null(launcher.LaunchedPath);
+        preflight.Release();
+        await preflight.Completed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.True(SpinWait.SpinUntil(() => leaseHandle.IsClosed, TimeSpan.FromSeconds(2)));
+
+        File.Delete(leasePath);
+    }
+
+    [Fact]
+    public async Task PreflightException_IsPropagatedWithoutLaunchingHelper()
+    {
+        using var preflight = new BlockingPreflight(
+            () => throw new InvalidOperationException("preflight failed"));
+        FakeHelperLauncher launcher =
+            FakeHelperLauncher.Running((_, _) => Task.CompletedTask);
+        WindowsPolicyWriteElevator elevator = Build(launcher, preflight: preflight);
+        Task<PolicyElevationResult> pending =
+            elevator.ReplacePolicyAsync(BuildRequest(), CancellationToken.None);
+        await preflight.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        preflight.Release();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => pending);
+        Assert.Null(launcher.LaunchedPath);
+    }
+
+    [Fact]
+    public async Task SavePerformsFreshPreflightAfterEligibilityCheck()
+    {
+        var preflight = new CountingPreflight();
+        var eligibility = new PackagedPolicyWriteElevationEligibility(preflight);
+        PolicyWriteElevationEligibility eligibilityResult =
+            await eligibility.EvaluateAsync(CancellationToken.None);
+        FakeHelperLauncher launcher =
+            FakeHelperLauncher.Running((_, _) => Task.CompletedTask);
+        WindowsPolicyWriteElevator elevator = Build(launcher, preflight: preflight);
+
+        PolicyElevationResult write =
+            await elevator.ReplacePolicyAsync(BuildRequest(), CancellationToken.None);
+
+        Assert.False(eligibilityResult.IsEligible);
+        Assert.Equal(PolicyElevationOutcome.HelperUnavailable, write.Outcome);
+        Assert.Equal(2, preflight.InvocationCount);
+        Assert.Null(launcher.LaunchedPath);
     }
 
     [Fact]
@@ -615,6 +745,7 @@ public class WindowsPolicyWriteElevatorTests
             {
                 await using var intruder = await FakeHelperClient.ConnectAsync(arguments.PipeName, 2_000);
             }
+
             catch (Exception ex)
             {
                 secondConnectionError = ex;
@@ -666,6 +797,74 @@ public class WindowsPolicyWriteElevatorTests
         Assert.Equal(8, names.Count);
         Assert.Equal(8, names.Distinct().Count());
         Assert.All(names, name => Assert.True(PolicyElevationLaunchArguments.IsValidPipeName(name)));
+    }
+
+    private sealed class BlockingPreflight : IPolicyElevationPreflight, IDisposable
+    {
+        private readonly ManualResetEventSlim _release = new();
+        private readonly Func<PolicyElevationPreflightResult> _resultFactory;
+        private readonly bool _honorCancellation;
+
+        public TaskCompletionSource Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Completed { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public BlockingPreflight(
+            Func<PolicyElevationPreflightResult>? resultFactory = null,
+            bool honorCancellation = true)
+        {
+            _resultFactory = resultFactory ?? CreateRejectedResult;
+            _honorCancellation = honorCancellation;
+        }
+
+        public PolicyElevationPreflightResult Verify(CancellationToken cancellationToken)
+        {
+            Started.TrySetResult();
+            if (_honorCancellation)
+                _release.Wait(cancellationToken);
+            else
+                _release.Wait(CancellationToken.None);
+
+            try
+            {
+                return _resultFactory();
+            }
+            finally
+            {
+                Completed.TrySetResult();
+            }
+        }
+
+        private static PolicyElevationPreflightResult CreateRejectedResult()
+        {
+            PolicyElevationHelperLocation location = FakeHelperLocator.Found().Locate();
+            return PolicyElevationPreflightResult.Rejected(
+                location,
+                PolicyElevationPreflightFailureKind.HelperUnavailable,
+                "blocked test preflight");
+        }
+
+        public void Release() => _release.Set();
+
+        public void Dispose() => _release.Dispose();
+    }
+
+    private sealed class CountingPreflight : IPolicyElevationPreflight
+    {
+        private int _invocationCount;
+
+        public int InvocationCount => Volatile.Read(ref _invocationCount);
+
+        public PolicyElevationPreflightResult Verify(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _invocationCount);
+            return PolicyElevationPreflightResult.Rejected(
+                FakeHelperLocator.Found().Locate(),
+                PolicyElevationPreflightFailureKind.HelperUnavailable,
+                "fresh test preflight");
+        }
     }
 }
 #endif

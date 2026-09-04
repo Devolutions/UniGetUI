@@ -327,6 +327,43 @@ public class PolicyElevationHelperLocatorTests
     }
 
     [Fact]
+    public async Task CancelledQueuedPreflights_DoNotAccumulateWorkers()
+    {
+        using var preflight = new NonCooperativeBlockingPreflight();
+        var eligibility = new PackagedPolicyWriteElevationEligibility(preflight);
+        using var firstCancellation = new CancellationTokenSource();
+        Task<PolicyWriteElevationEligibility> first =
+            eligibility.EvaluateAsync(firstCancellation.Token);
+        await preflight.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        firstCancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
+
+        var queuedCancellations = Enumerable.Range(0, 16)
+            .Select(_ => new CancellationTokenSource())
+            .ToArray();
+        Task<PolicyWriteElevationEligibility>[] queued = queuedCancellations
+            .Select(cancellation => eligibility.EvaluateAsync(cancellation.Token))
+            .ToArray();
+        foreach (CancellationTokenSource cancellation in queuedCancellations)
+            cancellation.Cancel();
+
+        foreach (Task<PolicyWriteElevationEligibility> pending in queued)
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+
+        Assert.Equal(1, preflight.InvocationCount);
+        preflight.Release();
+        await preflight.Completed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        PolicyWriteElevationEligibility recovered =
+            await eligibility.EvaluateAsync(CancellationToken.None);
+
+        Assert.True(recovered.IsEligible);
+        Assert.Equal(2, preflight.InvocationCount);
+        foreach (CancellationTokenSource cancellation in queuedCancellations)
+            cancellation.Dispose();
+    }
+
+    [Fact]
     public void EmptyInstallRoot_FailsClosed()
     {
         PolicyElevationHelperLocation location = Build("   ").Locate();
@@ -365,6 +402,36 @@ public class PolicyElevationHelperLocatorTests
         }
 
         public void Release() => _release.Set();
+    }
+
+    private sealed class NonCooperativeBlockingPreflight : IPolicyElevationPreflight, IDisposable
+    {
+        private readonly ManualResetEventSlim _release = new();
+        private int _invocationCount;
+
+        public int InvocationCount => Volatile.Read(ref _invocationCount);
+
+        public TaskCompletionSource Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Completed { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public PolicyElevationPreflightResult Verify(CancellationToken cancellationToken)
+        {
+            if (Interlocked.Increment(ref _invocationCount) == 1)
+            {
+                Started.TrySetResult();
+                _release.Wait(CancellationToken.None);
+                Completed.TrySetResult();
+            }
+
+            return PolicyElevationPreflightResult.Success(FakeHelperLocator.Found().Locate());
+        }
+
+        public void Release() => _release.Set();
+
+        public void Dispose() => _release.Dispose();
     }
 }
 #endif

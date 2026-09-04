@@ -91,6 +91,43 @@ public class PolicyEditorSessionCloseGuardTests
     }
 
     [Fact]
+    public async Task CloseDuringDispatchedWrite_UnknownResultAndDeclinedDiscard_BlockRetryUntilRefresh()
+    {
+        var validation = new FakeValidationClient();
+        var writer = new UnknownOnCancellationWriteClient();
+        var prompt = new FakeConfirmationPrompt { NextResult = true };
+        using PolicyEditorSessionViewModel viewModel =
+            CreateViewModelForSave(validation, writer, prompt);
+        viewModel.Draft.Metadata.Description = "keep this draft";
+        viewModel.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = true,
+            ValidationReceipt = "receipt-unknown",
+            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(viewModel.Draft),
+            Findings = [],
+        });
+
+        Task saveTask = viewModel.SaveCommand.ExecuteAsync(null);
+        await writer.Started.Task.WaitAsync(ShortBound);
+        bool settled = await PolicyEditorSessionCloseGuard.TryCancelActiveOperationAsync(
+            viewModel,
+            ShortBound);
+        await saveTask;
+
+        Assert.True(settled);
+        Assert.True(viewModel.RequiresManagementRefresh);
+        Assert.Equal(PolicyWriteFailureKind.WriteResultUnknown, viewModel.LastWriteFailureKind);
+        Assert.Equal("keep this draft", viewModel.Draft.Metadata.Description);
+        prompt.NextResult = false;
+        Assert.False(await viewModel.ConfirmDiscardAsync());
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
+
+        using PolicyEditorSessionViewModel refreshed = CreateViewModel();
+        Assert.True(refreshed.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task NoOperationInFlight_SettlesImmediatelyWithoutTouchingTheSession()
     {
         using PolicyEditorSessionViewModel viewModel = CreateViewModel();
@@ -106,7 +143,8 @@ public class PolicyEditorSessionCloseGuardTests
 
     private static PolicyEditorSessionViewModel CreateViewModelForSave(
         IPolicyValidationClient validation,
-        IPolicyWriteClient writer)
+        IPolicyWriteClient writer,
+        IPolicyEditorConfirmationPrompt? prompt = null)
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("test-policy", "Contoso");
         PolicyEditorSession session = PolicyEditorSession.StartCreate(
@@ -115,7 +153,7 @@ public class PolicyEditorSessionCloseGuardTests
         var viewModel = new PolicyEditorSessionViewModel(
             session,
             validation,
-            new FakeConfirmationPrompt(),
+            prompt ?? new FakeConfirmationPrompt(),
             writer);
 
         // A SaveCommand execution always validates first when there is no current validation result;
@@ -178,6 +216,28 @@ public class PolicyEditorSessionCloseGuardTests
             }
 
             return PolicyWriteOutcome.Failure(PolicyWriteFailureKind.None);
+        }
+    }
+
+    private sealed class UnknownOnCancellationWriteClient : IPolicyWriteClient
+    {
+        public TaskCompletionSource Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<PolicyWriteOutcome> WriteAsync(
+            PolicyEditorWriteRequest request,
+            CancellationToken cancellationToken)
+        {
+            Started.TrySetResult();
+            try
+            {
+                await Task.Delay(Timeout.Infinite, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+
+            return PolicyWriteOutcome.Failure(PolicyWriteFailureKind.WriteResultUnknown);
         }
     }
 }

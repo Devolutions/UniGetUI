@@ -32,11 +32,11 @@ public class PolicyEditorRawSyntaxTests
 
         Assert.False(ok);
         Assert.Null(parsed);
-        Assert.NotNull(error);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.EmptyDocument, error!.Kind);
     }
 
     [Fact]
-    public void TryParseStrict_MalformedJson_FailsWithPointerFromException()
+    public void TryParseStrict_MalformedJson_UsesStableKindWithoutExceptionText()
     {
         string malformed = "{ this is not valid json ";
 
@@ -44,8 +44,8 @@ public class PolicyEditorRawSyntaxTests
 
         Assert.False(ok);
         Assert.Null(parsed);
-        Assert.NotNull(error);
-        Assert.False(string.IsNullOrEmpty(error!.Message));
+        Assert.Equal(PolicyEditorSyntaxErrorKind.InvalidJson, error!.Kind);
+        Assert.Equal("", error.Pointer);
     }
 
     private static PolicyDraftDocument BuildValidPackageDraft(string id = "contoso-policy")
@@ -76,6 +76,7 @@ public class PolicyEditorRawSyntaxTests
 
         Assert.False(ok);
         Assert.Null(parsed);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.UnsupportedSchema, error!.Kind);
         Assert.Equal("/$schema", error!.Pointer);
     }
 
@@ -93,6 +94,7 @@ public class PolicyEditorRawSyntaxTests
 
         Assert.False(ok);
         Assert.Null(parsed);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.UnsupportedSchema, error!.Kind);
         Assert.Equal("/$schema", error!.Pointer);
     }
 
@@ -107,7 +109,27 @@ public class PolicyEditorRawSyntaxTests
 
         Assert.False(ok);
         Assert.Null(parsed);
-        Assert.Equal("/policyType", error!.Pointer);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.UnsupportedPolicyType, error!.Kind);
+        Assert.Equal("/PolicyType", error.Pointer);
+    }
+
+    [Fact]
+    public void TryParseStrict_MissingEnforcement_UsesCanonicalPointer()
+    {
+        JsonNode root = JsonNode.Parse(
+            PolicyEditorRawSyntax.ToCanonicalRaw(
+                PolicyEditorTemplates.CreateNew("id-1", "Contoso")))!;
+        root.AsObject().Remove("Enforcement");
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(
+            root.ToJsonString(),
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.MissingEnforcement, error!.Kind);
+        Assert.Equal("/Enforcement", error.Pointer);
     }
 
     [Fact]
@@ -119,10 +141,34 @@ public class PolicyEditorRawSyntaxTests
         root["Enforcement"]!["RulePrecedence"] = "DenyOnly";
         string tampered = root.ToJsonString();
 
-        bool ok = PolicyEditorRawSyntax.TryParseStrict(tampered, out PolicyEditorDraftDocument? parsed, out _);
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(
+            tampered,
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error);
 
         Assert.False(ok);
         Assert.Null(parsed);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.UnsupportedRulePrecedence, error!.Kind);
+        Assert.Equal("/Enforcement/RulePrecedence", error.Pointer);
+    }
+
+    [Fact]
+    public void TryParseStrict_MissingMetadata_UsesCanonicalPointer()
+    {
+        JsonNode root = JsonNode.Parse(
+            PolicyEditorRawSyntax.ToCanonicalRaw(
+                PolicyEditorTemplates.CreateNew("id-1", "Contoso")))!;
+        root.AsObject().Remove("Metadata");
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(
+            root.ToJsonString(),
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.MissingMetadata, error!.Kind);
+        Assert.Equal("/Metadata", error.Pointer);
     }
 
     [Fact]
@@ -143,7 +189,7 @@ public class PolicyEditorRawSyntaxTests
     public void TryParseStrict_NeverMutatesInputBuffer_OnFailure()
     {
         // This documents the "retains invalid text" contract at the seam level: the strict parser
-        // never returns a partially-built draft, and the error always carries a message so the
+        // never returns a partially-built draft, and the error always carries a stable kind so the
         // caller (PolicyEditorSession.SetRawBuffer/TryParseRaw) can safely leave the raw buffer as-is.
         string invalid = "{ \"schema\": 1, }";
 
@@ -152,6 +198,24 @@ public class PolicyEditorRawSyntaxTests
         Assert.False(ok);
         Assert.Null(parsed);
         Assert.NotNull(error);
+    }
+
+    [Fact]
+    public void TryParseStrictWithElement_ReturnsTheSameParsedRootForAuthoritativeValidation()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrictWithElement(
+            raw,
+            out PolicyEditorDraftDocument? parsed,
+            out System.Text.Json.JsonElement element,
+            out PolicyEditorSyntaxError? error);
+
+        Assert.True(ok);
+        Assert.NotNull(parsed);
+        Assert.Null(error);
+        Assert.Equal("id-1", element.GetProperty("Metadata").GetProperty("Id").GetString());
     }
 
     // ---- Correction #1: raw mode is PolicyDraftDocument-shaped; Revision/PublishedAt are absent from
@@ -234,7 +298,13 @@ public class PolicyEditorRawSyntaxTests
     {
         // Reflection-level contract check for correction #1: PolicyEditorRawSyntax parses/serializes
         // PolicyDraftDocument, never PolicyDocument.
-        System.Reflection.MethodInfo tryParse = typeof(PolicyEditorRawSyntax).GetMethod(nameof(PolicyEditorRawSyntax.TryParseStrict))!;
+        System.Reflection.MethodInfo tryParse = typeof(PolicyEditorRawSyntax).GetMethod(
+            nameof(PolicyEditorRawSyntax.TryParseStrict),
+            [
+                typeof(string),
+                typeof(PolicyEditorDraftDocument).MakeByRefType(),
+                typeof(PolicyEditorSyntaxError).MakeByRefType(),
+            ])!;
         Assert.Equal(typeof(PolicyEditorDraftDocument).MakeByRefType(), tryParse.GetParameters()[1].ParameterType);
     }
 }

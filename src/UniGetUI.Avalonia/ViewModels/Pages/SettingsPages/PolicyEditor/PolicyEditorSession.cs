@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Model;
 
@@ -7,15 +8,16 @@ public sealed record PolicyEditorValidationState(
     string SubmittedRawJson,
     PolicyDraftDocument CanonicalDraft,
     string Receipt,
-    PolicyEditorFindingIndex Findings)
+    PolicyEditorFindingIndex Findings,
+    int WarningCount)
 {
-    public bool HasWarnings =>
-        Findings.All.Any(finding => finding.Severity == PolicyValidationSeverity.Warning);
+    public bool HasWarnings => WarningCount > 0;
 }
 
 public sealed record PolicyEditorWarningAcknowledgement(
     string CanonicalRawJson,
     string Receipt,
+    int WarningCount,
     IReadOnlyList<string> WarningKeys);
 
 public sealed record PolicyEditorConflictSnapshot(
@@ -23,13 +25,18 @@ public sealed record PolicyEditorConflictSnapshot(
     string ValidationReceipt,
     string DraftId,
     long MutationGeneration,
-    PolicyManagementSnapshot Management,
     PolicyEditorRetryDecision RetryDecision,
     DateTimeOffset DetectedAt);
 
 public sealed class PolicyEditorSession
 {
     private string _baselineRawJson;
+    private string _lastAnalyzedRawJson;
+    private string _lastAnalyzedCanonicalRawJson;
+    private string _lastAnalyzedDraftId;
+    private JsonElement _lastAnalyzedRawElement;
+    private bool _hasLastAnalyzedRawElement;
+    private long _lastAnalyzedMutationGeneration;
     private long _mutationGeneration;
 
     public PolicyEditorOperationKind Operation { get; private set; }
@@ -53,6 +60,8 @@ public sealed class PolicyEditorSession
 
     public long MutationGeneration => _mutationGeneration;
 
+    public bool IsRawAnalysisPending { get; private set; }
+
     public bool IsIdentityLocked => Operation == PolicyEditorOperationKind.Update;
 
     public bool IsDirty =>
@@ -60,6 +69,7 @@ public sealed class PolicyEditorSession
 
     public bool IsValidationCurrent =>
         Validation is not null
+        && !IsRawAnalysisPending
         && string.Equals(
             Validation.SubmittedRawJson,
             GetEffectiveRawJson(),
@@ -81,6 +91,7 @@ public sealed class PolicyEditorSession
                     WarningAcknowledgement.Receipt,
                     Validation.Receipt,
                     StringComparison.Ordinal)
+                && WarningAcknowledgement.WarningCount == Validation.WarningCount
                 && WarningAcknowledgement.WarningKeys.SequenceEqual(
                     GetWarningKeys(Validation.Findings),
                     StringComparer.Ordinal);
@@ -99,6 +110,10 @@ public sealed class PolicyEditorSession
         Mode = PolicyEditorMode.Structured;
         RawBuffer = PolicyEditorRawSyntax.ToCanonicalRaw(Draft);
         _baselineRawJson = RawBuffer;
+        _lastAnalyzedRawJson = RawBuffer;
+        _lastAnalyzedCanonicalRawJson = RawBuffer;
+        _lastAnalyzedDraftId = Draft.Metadata.Id;
+        _lastAnalyzedMutationGeneration = _mutationGeneration;
     }
 
     public static PolicyEditorSession StartUpdate(PolicyManagementSnapshot management)
@@ -148,7 +163,12 @@ public sealed class PolicyEditorSession
     {
         RawBuffer = PolicyEditorRawSyntax.ToCanonicalRaw(Draft);
         Mode = PolicyEditorMode.Raw;
+        _lastAnalyzedRawJson = RawBuffer;
+        _lastAnalyzedCanonicalRawJson = RawBuffer;
+        _lastAnalyzedDraftId = Draft.Metadata.Id;
+        IsRawAnalysisPending = false;
         InvalidateContentState();
+        _lastAnalyzedMutationGeneration = _mutationGeneration;
     }
 
     public void SetRawBuffer(string rawText)
@@ -156,26 +176,77 @@ public sealed class PolicyEditorSession
         if (Mode != PolicyEditorMode.Raw)
             throw new InvalidOperationException("The session is not in raw mode.");
 
-        string previousRaw = RawBuffer;
-        bool formattingOnly =
-            TryCanonicalizeRaw(previousRaw, out string? previousCanonical, out _)
-            && TryCanonicalizeRaw(rawText ?? "", out string? nextCanonical, out _)
-            && string.Equals(previousCanonical, nextCanonical, StringComparison.Ordinal);
         RawBuffer = rawText ?? "";
+        _mutationGeneration++;
+        IsRawAnalysisPending = true;
+    }
+
+    public bool CompleteRawAnalysis(
+        string analyzedRawJson,
+        long analyzedMutationGeneration,
+        string? canonicalRawJson,
+        string? draftId,
+        JsonElement? rawElement)
+    {
+        if (Mode != PolicyEditorMode.Raw
+            || analyzedMutationGeneration != _mutationGeneration
+            || !string.Equals(RawBuffer, analyzedRawJson, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        IsRawAnalysisPending = false;
+        _hasLastAnalyzedRawElement = rawElement.HasValue;
+        _lastAnalyzedRawElement = rawElement?.Clone() ?? default;
+        _lastAnalyzedMutationGeneration = analyzedMutationGeneration;
+        bool formattingOnly =
+            canonicalRawJson is not null
+            && string.Equals(
+                _lastAnalyzedCanonicalRawJson,
+                canonicalRawJson,
+                StringComparison.Ordinal);
         if (formattingOnly)
         {
             if (Validation is not null
                 && string.Equals(
                     Validation.SubmittedRawJson,
-                    previousRaw,
+                    _lastAnalyzedRawJson,
                     StringComparison.Ordinal))
             {
                 Validation = Validation with { SubmittedRawJson = RawBuffer };
             }
-            return;
+            if (Conflict is not null)
+            {
+                Conflict = Conflict with { MutationGeneration = _mutationGeneration };
+            }
+            _lastAnalyzedRawJson = RawBuffer;
+            return true;
         }
 
-        InvalidateContentState();
+        _lastAnalyzedRawJson = RawBuffer;
+        _lastAnalyzedCanonicalRawJson = canonicalRawJson ?? "";
+        _lastAnalyzedDraftId = draftId ?? "";
+        ClearContentState();
+        return true;
+    }
+
+    public bool TryGetAnalyzedRawElement(out JsonElement element)
+    {
+        if (Mode == PolicyEditorMode.Raw
+            && !IsRawAnalysisPending
+            && _hasLastAnalyzedRawElement
+            && _lastAnalyzedMutationGeneration == _mutationGeneration
+            && string.Equals(
+                _lastAnalyzedRawJson,
+                RawBuffer,
+                StringComparison.Ordinal))
+        {
+            element = _lastAnalyzedRawElement.Clone();
+            return true;
+        }
+
+        element = default;
+        return false;
     }
 
     public bool TryParseRaw(
@@ -195,6 +266,12 @@ public sealed class PolicyEditorSession
         Draft = PolicyEditorMapper.ToDraft(Validation.CanonicalDraft);
         RawBuffer = PolicySerializer.Serialize(Validation.CanonicalDraft);
         Mode = PolicyEditorMode.Structured;
+        _lastAnalyzedRawJson = RawBuffer;
+        _lastAnalyzedCanonicalRawJson = RawBuffer;
+        _lastAnalyzedDraftId = Draft.Metadata.Id;
+        _lastAnalyzedMutationGeneration = _mutationGeneration;
+        _hasLastAnalyzedRawElement = false;
+        IsRawAnalysisPending = false;
     }
 
     public string GetEffectiveRawJson() =>
@@ -298,7 +375,9 @@ public sealed class PolicyEditorSession
             submittedRawJson,
             PolicyEditorMapper.CloneDraftDocument(validation.CanonicalDraft),
             validation.ValidationReceipt,
-            Findings);
+            Findings,
+            validation.Findings.Count(
+                finding => finding.Severity == PolicyFindingSeverity.Warning));
         Operation = ResolveOperationForDraftId(validation.CanonicalDraft.Metadata.Id);
     }
 
@@ -310,6 +389,7 @@ public sealed class PolicyEditorSession
         WarningAcknowledgement = new PolicyEditorWarningAcknowledgement(
             PolicySerializer.Serialize(Validation.CanonicalDraft),
             Validation.Receipt,
+            Validation.WarningCount,
             GetWarningKeys(Validation.Findings));
     }
 
@@ -330,7 +410,25 @@ public sealed class PolicyEditorSession
             validationReceipt,
             draftId,
             _mutationGeneration,
-            PolicyEditorMapper.CloneManagementSnapshot(management),
+            decision,
+            DateTimeOffset.UtcNow);
+    }
+
+    public void CaptureConflict(
+        PolicyEditorRetryDecision decision,
+        PolicyDraftDocument submittedCanonicalDraft,
+        string validationReceipt,
+        string draftId)
+    {
+        ArgumentNullException.ThrowIfNull(decision);
+        ArgumentNullException.ThrowIfNull(submittedCanonicalDraft);
+        ArgumentException.ThrowIfNullOrWhiteSpace(validationReceipt);
+        ArgumentException.ThrowIfNullOrWhiteSpace(draftId);
+        Conflict = new PolicyEditorConflictSnapshot(
+            PolicySerializer.Serialize(submittedCanonicalDraft),
+            validationReceipt,
+            draftId,
+            _mutationGeneration,
             decision,
             DateTimeOffset.UtcNow);
     }
@@ -372,6 +470,12 @@ public sealed class PolicyEditorSession
         RawBuffer = PolicyEditorRawSyntax.ToCanonicalRaw(Draft);
         Mode = PolicyEditorMode.Structured;
         _baselineRawJson = RawBuffer;
+        _lastAnalyzedRawJson = RawBuffer;
+        _lastAnalyzedCanonicalRawJson = RawBuffer;
+        _lastAnalyzedDraftId = Draft.Metadata.Id;
+        _lastAnalyzedMutationGeneration = _mutationGeneration;
+        _hasLastAnalyzedRawElement = false;
+        IsRawAnalysisPending = false;
         Validation = null;
         Findings = PolicyEditorFindingIndex.Build([]);
         WarningAcknowledgement = null;
@@ -422,6 +526,11 @@ public sealed class PolicyEditorSession
     private void InvalidateContentState()
     {
         _mutationGeneration++;
+        ClearContentState();
+    }
+
+    private void ClearContentState()
+    {
         Validation = null;
         Findings = PolicyEditorFindingIndex.Build([]);
         WarningAcknowledgement = null;
@@ -432,6 +541,26 @@ public sealed class PolicyEditorSession
         out string? canonicalRawJson,
         out string? draftId)
     {
+        if (Mode == PolicyEditorMode.Raw)
+        {
+            if (IsRawAnalysisPending
+                || _lastAnalyzedMutationGeneration != _mutationGeneration
+                || !string.Equals(
+                    _lastAnalyzedRawJson,
+                    RawBuffer,
+                    StringComparison.Ordinal)
+                || string.IsNullOrEmpty(_lastAnalyzedCanonicalRawJson))
+            {
+                canonicalRawJson = null;
+                draftId = null;
+                return false;
+            }
+
+            canonicalRawJson = _lastAnalyzedCanonicalRawJson;
+            draftId = _lastAnalyzedDraftId;
+            return true;
+        }
+
         string effectiveRawJson = GetEffectiveRawJson();
         if (Validation is not null
             && string.Equals(

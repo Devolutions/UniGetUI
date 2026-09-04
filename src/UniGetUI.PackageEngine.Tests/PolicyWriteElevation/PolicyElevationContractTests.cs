@@ -79,65 +79,6 @@ public class PolicyElevationContractTests
         },
     };
 
-    private static PolicyManagementSnapshot Snapshot(PolicyManagementState state) => state switch
-    {
-        PolicyManagementState.Active => new PolicyManagementSnapshot
-        {
-            State = PolicyManagementState.Active,
-            ConfiguredPath = @"C:\ProgramData\Devolutions\PackageBroker\package-broker-policy.json",
-            StoreToken = "current-token",
-            Source = PolicyConfigurationSource.DefaultPath,
-            WriteCapability = PolicyWriteCapability.Writable,
-            ElevationRequired = true,
-            Policy = Policy(),
-        },
-        PolicyManagementState.Missing => new PolicyManagementSnapshot
-        {
-            State = PolicyManagementState.Missing,
-            ConfiguredPath = @"C:\ProgramData\Devolutions\PackageBroker\package-broker-policy.json",
-            StoreToken = "missing-token",
-            Source = PolicyConfigurationSource.DefaultPath,
-            WriteCapability = PolicyWriteCapability.Writable,
-            ElevationRequired = true,
-        },
-        _ => new PolicyManagementSnapshot
-        {
-            State = PolicyManagementState.Invalid,
-            ConfiguredPath = @"C:\ProgramData\Devolutions\PackageBroker\package-broker-policy.json",
-            StoreToken = "invalid-token",
-            Source = PolicyConfigurationSource.DefaultPath,
-            WriteCapability = PolicyWriteCapability.Writable,
-            ElevationRequired = true,
-            InvalidDiagnostics = new InvalidPolicyDiagnostics
-            {
-                Findings =
-                [
-                    new PolicyFinding
-                    {
-                        Severity = PolicyFindingSeverity.Error,
-                        Code = PolicyFindingCode.SchemaViolation,
-                        Path = "$.metadata.id",
-                        Message = "The policy store could not be parsed.",
-                    },
-                ],
-            },
-        },
-    };
-
-    private static ErrorResponse StaleTokenError(PolicyManagementState state) => new()
-    {
-        Server = Server(),
-        Code = ErrorCode.StalePolicyStoreToken,
-        Message = "The policy store token is stale.",
-        Management = Snapshot(state),
-    };
-
-    private static JsonElement AsPayload<T>(T document)
-    {
-        using JsonDocument parsed = JsonDocument.Parse(BrokerSerializer.Serialize(document));
-        return parsed.RootElement.Clone();
-    }
-
     // ---- Harness -----------------------------------------------------------------------------
 
     private static PolicyElevationWriteRequest Request(
@@ -209,9 +150,8 @@ public class PolicyElevationContractTests
             request => new PolicyElevationResponseMessage
             {
                 RequestId = request.RequestId,
-                Outcome = PolicyElevationResponseStatus.Replaced,
-                BrokerStatusCode = 200,
-                Payload = AsPayload(Replacement()),
+                Disposition = PolicyElevationDisposition.Committed,
+                CommittedStoreToken = "new-token",
             },
             request => observed = request);
 
@@ -361,51 +301,37 @@ public class PolicyElevationContractTests
         Assert.Throws<PolicyElevationFrameException>(() => Validate("token", credential));
     }
 
-    // ---- Correction 8: the response budget holds the whole success document ------------------
+    // ---- Protocol v2: bounded post-commit acknowledgement ------------------------------------
 
     [Fact]
-    public void ResponseBudget_HoldsEveryPolicyCopyASuccessCanCarry()
+    public async Task AMaximumStaleAcknowledgementExactlyFitsTheResponseBudget()
     {
-        // A success carries Policy, Validation.CanonicalDraft and Management.Policy — three
-        // independent documents, each of which the broker allows to reach the shared body limit —
-        // plus bounded findings and diagnostics.
-        Assert.Equal(3, PolicyElevationProtocol.MaxResponsePolicyCopies);
+        static string WorstCaseSafeAscii(int length) =>
+            "a" + new string('"', length - 1);
 
-        long expected = ((long)PolicyElevationProtocol.MaxPolicyManagementBodyBytes
-                * PolicyElevationProtocol.MaxResponsePolicyCopies)
-            + PolicyElevationProtocol.MaxResponseDiagnosticsBytes
-            + PolicyElevationProtocol.ResponseEnvelopeOverheadBytes;
-
-        Assert.Equal(PolicyElevationProtocol.MaxResponseFrameBytes, checked((int)expected));
-
-        // The arithmetic must not have overflowed into a smaller-than-shared limit.
-        Assert.True(expected <= int.MaxValue);
-        Assert.True(
-            PolicyElevationProtocol.MaxResponseFrameBytes
-            > PolicyElevationProtocol.MaxPolicyManagementBodyBytes);
-        Assert.True(
-            PolicyElevationProtocol.MaxResponseFrameBytes
-            > PolicyElevationProtocol.MaxRequestFrameBytes);
-    }
-
-    [Fact]
-    public async Task AFrameOfExactlyTheResponseBudget_IsAccepted()
-    {
-        byte[] body = BuildPaddedResponseBody(PolicyElevationProtocol.MaxResponseFrameBytes);
-        Assert.Equal(PolicyElevationProtocol.MaxResponseFrameBytes, body.Length);
+        var response = new PolicyElevationResponseMessage
+        {
+            RequestId = new string('a', PolicyElevationProtocol.RequestIdCharacters),
+            Disposition = PolicyElevationDisposition.Rejected,
+            BrokerStatusCode = int.MinValue,
+            BrokerErrorCode = ErrorCode.StalePolicyStoreToken.ToString(),
+            ConflictStoreToken = WorstCaseSafeAscii(
+                PolicyElevationProtocol.MaxStoreTokenCharacters),
+            ConflictState = PolicyElevationManagementState.Active,
+            ConflictPolicyId = WorstCaseSafeAscii(
+                PolicyElevationProtocol.MaxConflictPolicyIdCharacters),
+        };
 
         await using var stream = new MemoryStream();
-        await PolicyElevationFrame.WriteAsync(
+        await PolicyElevationFrame.WriteResponseAsync(
             stream,
-            body,
-            PolicyElevationProtocol.MaxResponseFrameBytes,
+            response,
             CancellationToken.None);
 
-        stream.Position = 0;
-        PolicyElevationResponseMessage response =
-            await PolicyElevationFrame.ReadResponseAsync(stream, CancellationToken.None);
-
-        Assert.Equal(PolicyElevationResponseStatus.BrokerRejected, response.Outcome);
+        Assert.Equal(
+            PolicyElevationProtocol.FrameLengthPrefixBytes
+            + PolicyElevationProtocol.MaxResponseFrameBytes,
+            stream.Length);
     }
 
     [Fact]
@@ -424,184 +350,55 @@ public class PolicyElevationContractTests
         Assert.Equal(PolicyElevationFrameError.Oversized, failure.Error);
     }
 
-    private static byte[] BuildPaddedResponseBody(int totalBytes)
-    {
-        // The padding goes in the relayed payload, because that is where a real maximum-size
-        // response puts its bulk: the message and error-code fields are separately bounded.
-        static byte[] Serialize(int payloadCharacters)
-        {
-            using JsonDocument payload = JsonDocument.Parse(
-                $$"""{"p":"{{new string('x', payloadCharacters)}}"}""");
-
-            return JsonSerializer.SerializeToUtf8Bytes(
-                new PolicyElevationResponseMessage
-                {
-                    RequestId = new string('a', PolicyElevationProtocol.RequestIdCharacters),
-                    Outcome = PolicyElevationResponseStatus.BrokerRejected,
-                    BrokerErrorCode = "StalePolicyStoreToken",
-                    Payload = payload.RootElement.Clone(),
-                },
-                PolicyElevationJsonContext.Default.PolicyElevationResponseMessage);
-        }
-
-        // Every padding character is one ASCII byte, so one measurement fixes the length exactly.
-        int padding = totalBytes - Serialize(0).Length;
-        byte[] body = Serialize(padding);
-
-        Assert.Equal(totalBytes, body.Length);
-        return body;
-    }
-
-    // ---- Corrections 10 and 11: lossless relay, generic host-authored text -------------------
-
-    [Fact]
-    public async Task ASuccess_RelaysTheWholeSharedResponseDocument()
-    {
-        PolicyReplacementResponse expected = Replacement();
-
-        FakeHelperLauncher launcher = Answering(request => new PolicyElevationResponseMessage
-        {
-            RequestId = request.RequestId,
-            Outcome = PolicyElevationResponseStatus.Replaced,
-            BrokerStatusCode = 200,
-            Message = "helper said: C:\\Program Files\\UniGetUI raw broker text",
-            Payload = AsPayload(expected),
-        });
-
-        PolicyElevationResult result = await Build(launcher)
-            .ReplacePolicyAsync(Request(), CancellationToken.None);
-
-        await launcher.Completion;
-
-        Assert.Equal(PolicyElevationOutcome.Replaced, result.Outcome);
-        Assert.NotNull(result.Response);
-
-        // Nothing was summarised away: the relayed document is byte-identical to the broker's.
-        Assert.Equal(BrokerSerializer.Serialize(expected), BrokerSerializer.Serialize(result.Response!));
-
-        Assert.Equal("policy-id", result.Response!.Policy.Metadata.Id);
-        Assert.NotNull(result.Response.Validation.CanonicalDraft);
-        Assert.Equal("new-receipt", result.Response.Validation.ValidationReceipt);
-        Assert.Equal(PolicyManagementState.Active, result.Response.Management.State);
-        Assert.NotNull(result.Response.Management.Policy);
-
-        // Correction 11: the helper's own text never reaches the caller.
-        Assert.DoesNotContain("helper said", result.ErrorMessage ?? string.Empty, StringComparison.Ordinal);
-        Assert.DoesNotContain(@"C:\", result.ErrorMessage ?? string.Empty, StringComparison.Ordinal);
-    }
-
     [Theory]
-    [InlineData(PolicyManagementState.Active)]
-    [InlineData(PolicyManagementState.Missing)]
-    [InlineData(PolicyManagementState.Invalid)]
-    public async Task AStaleStoreTokenError_RelaysTheWholeSharedErrorDocument(PolicyManagementState state)
+    [InlineData(PolicyElevationManagementState.Active, "current-policy")]
+    [InlineData(PolicyElevationManagementState.Missing, null)]
+    [InlineData(PolicyElevationManagementState.Invalid, null)]
+    public async Task AStaleStoreTokenError_RelaysOnlyAtomicBoundedConflictContext(
+        PolicyElevationManagementState state,
+        string? policyId)
     {
-        ErrorResponse expected = StaleTokenError(state);
-
         FakeHelperLauncher launcher = Answering(request => new PolicyElevationResponseMessage
         {
             RequestId = request.RequestId,
-            Outcome = PolicyElevationResponseStatus.BrokerRejected,
+            Disposition = PolicyElevationDisposition.Rejected,
             BrokerStatusCode = 409,
-            BrokerErrorCode = "StalePolicyStoreToken",
-            Message = "System.InvalidOperationException: raw exception text",
-            Payload = AsPayload(expected),
+            BrokerErrorCode = ErrorCode.StalePolicyStoreToken.ToString(),
+            ConflictStoreToken = "current-token",
+            ConflictState = state,
+            ConflictPolicyId = policyId,
         });
 
         PolicyElevationResult result = await Build(launcher)
             .ReplacePolicyAsync(Request(), CancellationToken.None);
-
         await launcher.Completion;
 
         Assert.Equal(PolicyElevationOutcome.BrokerRejected, result.Outcome);
-        Assert.NotNull(result.Error);
-        Assert.Equal(BrokerSerializer.Serialize(expected), BrokerSerializer.Serialize(result.Error!));
-
-        Assert.Equal(ErrorCode.StalePolicyStoreToken, result.Error!.Code);
-        Assert.NotNull(result.Error.Management);
-        Assert.Equal(state, result.Error.Management!.State);
-
-        // The broker's error code is relayed structurally for localisation, but the raw exception
-        // text the helper reported is never surfaced.
-        Assert.Equal("StalePolicyStoreToken", result.BrokerErrorCode);
-        Assert.DoesNotContain("Exception", result.ErrorMessage ?? string.Empty, StringComparison.Ordinal);
-        Assert.DoesNotContain("raw exception text", result.ErrorMessage ?? string.Empty, StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData("""{"ResponseKind":"PolicyReplacementResponse"}""")]
-    [InlineData("""{"responseKind":"PolicyReplacementResponse","ResponseVersion":"1.0"}""")]
-    [InlineData("""{"ResponseKind":"ErrorResponse","ResponseVersion":"1.0","Server":{"ServerVersion":"x","Transport":"HttpNamedPipe"},"Code":"StalePolicyStoreToken","Message":"m"}""")]
-    public async Task AMalformedOrIncompleteSuccessPayload_IsRejected(string payloadJson)
-    {
-        using JsonDocument payload = JsonDocument.Parse(payloadJson);
-        JsonElement element = payload.RootElement.Clone();
-
-        FakeHelperLauncher launcher = Answering(request => new PolicyElevationResponseMessage
-        {
-            RequestId = request.RequestId,
-            Outcome = PolicyElevationResponseStatus.Replaced,
-            BrokerStatusCode = 200,
-            Payload = element,
-        });
-
-        PolicyElevationResult result = await Build(launcher)
-            .ReplacePolicyAsync(Request(), CancellationToken.None);
-
-        await launcher.Completion;
-
-        Assert.Equal(PolicyElevationOutcome.MalformedResponse, result.Outcome);
-        Assert.Null(result.Response);
-    }
-
-    [Fact]
-    public async Task ASuccessWithNoPayload_IsRejected()
-    {
-        FakeHelperLauncher launcher = Answering(request => new PolicyElevationResponseMessage
-        {
-            RequestId = request.RequestId,
-            Outcome = PolicyElevationResponseStatus.Replaced,
-            BrokerStatusCode = 200,
-        });
-
-        PolicyElevationResult result = await Build(launcher)
-            .ReplacePolicyAsync(Request(), CancellationToken.None);
-
-        await launcher.Completion;
-
-        Assert.Equal(PolicyElevationOutcome.MalformedResponse, result.Outcome);
-        Assert.Null(result.Response);
-    }
-
-    [Fact]
-    public async Task AStaleTokenErrorWithNoManagementSnapshot_IsRejected()
-    {
-        // The broker never reports a stale token without the snapshot the caller must reconcile
-        // against, so a document missing it did not come from the broker.
-        using JsonDocument payload = JsonDocument.Parse(
-            """
-            {"ResponseKind":"ErrorResponse","ResponseVersion":"1.0",
-             "Server":{"ServerVersion":"2026.8.29","Transport":"HttpNamedPipe"},
-             "Code":"StalePolicyStoreToken","Message":"stale"}
-            """);
-
-        JsonElement element = payload.RootElement.Clone();
-
-        FakeHelperLauncher launcher = Answering(request => new PolicyElevationResponseMessage
-        {
-            RequestId = request.RequestId,
-            Outcome = PolicyElevationResponseStatus.BrokerRejected,
-            BrokerStatusCode = 409,
-            Payload = element,
-        });
-
-        PolicyElevationResult result = await Build(launcher)
-            .ReplacePolicyAsync(Request(), CancellationToken.None);
-
-        await launcher.Completion;
-
-        Assert.Equal(PolicyElevationOutcome.MalformedResponse, result.Outcome);
+        Assert.Equal("current-token", result.ConflictStoreToken);
+        Assert.Equal(state, result.ConflictState);
+        Assert.Equal(policyId, result.ConflictPolicyId);
+        Assert.Null(result.Payload);
         Assert.Null(result.Error);
+    }
+
+    [Fact]
+    public async Task ACommittedAcknowledgement_CarriesOnlyTheBoundedStoreToken()
+    {
+        FakeHelperLauncher launcher = Answering(request => new PolicyElevationResponseMessage
+        {
+            RequestId = request.RequestId,
+            Disposition = PolicyElevationDisposition.Committed,
+            CommittedStoreToken = "committed-token",
+        });
+
+        PolicyElevationResult result = await Build(launcher)
+            .ReplacePolicyAsync(Request(), CancellationToken.None);
+        await launcher.Completion;
+
+        Assert.Equal(PolicyElevationOutcome.Replaced, result.Outcome);
+        Assert.Equal("committed-token", result.CommittedStoreToken);
+        Assert.Null(result.Payload);
+        Assert.Null(result.Response);
     }
 
     [Fact]
@@ -613,6 +410,12 @@ public class PolicyElevationContractTests
         Assert.NotNull(PolicyElevationJsonContext.Default.PolicyElevationResponseMessage);
         Assert.NotNull(PolicyElevationJsonContext.Default.PolicyElevationRequestMessage);
         Assert.False(PolicyElevationJsonContext.Default.Options.PropertyNameCaseInsensitive);
+        Assert.All(
+            PolicyElevationJsonContext.Default.PolicyElevationRequestMessage.Properties,
+            property => Assert.True(property.IsRequired, $"{property.Name} must be required."));
+        Assert.All(
+            PolicyElevationJsonContext.Default.PolicyElevationResponseMessage.Properties,
+            property => Assert.True(property.IsRequired, $"{property.Name} must be required."));
 
         Assert.NotNull(BrokerSerializer.Options.TypeInfoResolver);
         Assert.NotNull(BrokerSerializer.Options.TypeInfoResolver!.GetTypeInfo(
@@ -632,35 +435,22 @@ public class PolicyElevationContractTests
     }
 
     [Fact]
-    public async Task EveryUserFacingMessage_IsHostAuthored()
+    public async Task UnknownResult_UsesOnlyHostAuthoredText()
     {
-        const string HelperText = @"broker said C:\Program Files\UniGetUI\Assets is unwritable";
-
-        foreach (PolicyElevationResponseStatus status in new[]
-                 {
-                     PolicyElevationResponseStatus.BrokerRejected,
-                     PolicyElevationResponseStatus.BrokerUnavailable,
-                     PolicyElevationResponseStatus.BrokerInvalidResponse,
-                     PolicyElevationResponseStatus.HelperRejected,
-                 })
+        FakeHelperLauncher launcher = Answering(request => new PolicyElevationResponseMessage
         {
-            FakeHelperLauncher launcher = Answering(request => new PolicyElevationResponseMessage
-            {
-                RequestId = request.RequestId,
-                Outcome = status,
-                Message = HelperText,
-            });
+            RequestId = request.RequestId,
+            Disposition = PolicyElevationDisposition.Unknown,
+            BrokerErrorCode = "Timeout",
+        });
 
-            PolicyElevationResult result = await Build(launcher)
-                .ReplacePolicyAsync(Request(), CancellationToken.None);
+        PolicyElevationResult result = await Build(launcher)
+            .ReplacePolicyAsync(Request(), CancellationToken.None);
+        await launcher.Completion;
 
-            await launcher.Completion;
-
-            Assert.NotNull(result.ErrorMessage);
-            Assert.DoesNotContain(HelperText, result.ErrorMessage, StringComparison.Ordinal);
-            Assert.DoesNotContain(@"C:\", result.ErrorMessage, StringComparison.Ordinal);
-            Assert.DoesNotContain("broker said", result.ErrorMessage, StringComparison.Ordinal);
-        }
+        Assert.Equal(PolicyElevationOutcome.WriteResultUnknown, result.Outcome);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.DoesNotContain(@"C:\", result.ErrorMessage, StringComparison.Ordinal);
     }
 }
 #endif

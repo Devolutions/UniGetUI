@@ -56,6 +56,9 @@ public enum PolicyElevationOutcome
 
     /// <summary>The caller cancelled the operation.</summary>
     Cancelled,
+
+    /// <summary>The request was dispatched, but its commit result could not be authenticated.</summary>
+    WriteResultUnknown,
 }
 
 /// <summary>What the caller asks the elevated helper to persist.</summary>
@@ -96,7 +99,11 @@ public sealed record PolicyElevationResult(
     string? BrokerErrorCode = null,
     JsonElement? Payload = null,
     PolicyReplacementResponse? Response = null,
-    ErrorResponse? Error = null)
+    ErrorResponse? Error = null,
+    string? CommittedStoreToken = null,
+    string? ConflictStoreToken = null,
+    PolicyElevationManagementState? ConflictState = null,
+    string? ConflictPolicyId = null)
 {
     public bool Succeeded => Outcome is PolicyElevationOutcome.Replaced;
 

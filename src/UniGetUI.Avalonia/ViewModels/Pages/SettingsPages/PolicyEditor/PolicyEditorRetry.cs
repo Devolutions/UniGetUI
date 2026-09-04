@@ -27,39 +27,51 @@ public static class PolicyEditorRetryResolver
         string draftId,
         PolicyManagementSnapshot management)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(draftId);
         ArgumentNullException.ThrowIfNull(management);
-        ArgumentException.ThrowIfNullOrWhiteSpace(management.StoreToken);
+        return Resolve(
+            draftId,
+            management.State,
+            management.StoreToken,
+            management.Policy?.Metadata.Id);
+    }
 
-        return management.State switch
+    public static PolicyEditorRetryDecision Resolve(
+        string draftId,
+        PolicyManagementState state,
+        string token,
+        string? activePolicyId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(draftId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+        return state switch
         {
-            PolicyManagementState.Active when management.Policy is not null
+            PolicyManagementState.Active when activePolicyId is not null
                 && string.Equals(
-                    management.Policy.Metadata.Id,
+                    activePolicyId,
                     draftId,
                     StringComparison.Ordinal) =>
                 new(
                     PolicyReplacementOperation.Update,
-                    management.StoreToken,
-                    management.State,
-                    management.Policy.Metadata.Id),
-            PolicyManagementState.Active when management.Policy is not null =>
+                    token,
+                    state,
+                    activePolicyId),
+            PolicyManagementState.Active when activePolicyId is not null =>
                 new(
                     PolicyReplacementOperation.ReplaceIdentity,
-                    management.StoreToken,
-                    management.State,
-                    management.Policy.Metadata.Id),
+                    token,
+                    state,
+                    activePolicyId),
             PolicyManagementState.Missing =>
                 new(
                     PolicyReplacementOperation.Create,
-                    management.StoreToken,
-                    management.State,
+                    token,
+                    state,
                     null),
             PolicyManagementState.Invalid =>
                 new(
                     PolicyReplacementOperation.Repair,
-                    management.StoreToken,
-                    management.State,
+                    token,
+                    state,
                     null),
             _ => throw new InvalidDataException(
                 "The management snapshot is inconsistent with its policy state."),

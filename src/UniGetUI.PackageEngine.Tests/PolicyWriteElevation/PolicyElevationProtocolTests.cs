@@ -7,9 +7,7 @@ using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 namespace UniGetUI.PackageEngine.Tests.PolicyWriteElevation;
 
 /// <summary>
-/// Guards the frame budget arithmetic. The budgets must stay derived from the shared 16 MiB
-/// policy-management body constant plus the exact envelope overhead, so a maximum-size draft can
-/// always survive the elevation hop.
+/// Guards the request budget and the independently bounded acknowledgement budget.
 /// </summary>
 public class PolicyElevationProtocolTests
 {
@@ -23,17 +21,14 @@ public class PolicyElevationProtocolTests
     }
 
     [Fact]
-    public void FrameBudgets_AreTheSharedBodyPlusExactEnvelopeOverhead()
+    public void FrameBudgets_AreDerivedFromTheirActualContracts()
     {
         Assert.Equal(
             PolicyElevationProtocol.MaxPolicyManagementBodyBytes + PolicyElevationProtocol.RequestEnvelopeOverheadBytes,
             PolicyElevationProtocol.MaxRequestFrameBytes);
 
         Assert.Equal(
-            (PolicyElevationProtocol.MaxPolicyManagementBodyBytes
-                * PolicyElevationProtocol.MaxResponsePolicyCopies)
-            + PolicyElevationProtocol.MaxResponseDiagnosticsBytes
-            + PolicyElevationProtocol.ResponseEnvelopeOverheadBytes,
+            PolicyElevationProtocol.ResponseEnvelopeOverheadBytes,
             PolicyElevationProtocol.MaxResponseFrameBytes);
     }
 
@@ -41,13 +36,11 @@ public class PolicyElevationProtocolTests
     public void FrameBudgets_AreNeverAnArbitrarySmallerLimit()
     {
         Assert.True(PolicyElevationProtocol.MaxRequestFrameBytes > SharedPolicyBodyBytes);
-        Assert.True(PolicyElevationProtocol.MaxResponseFrameBytes > SharedPolicyBodyBytes);
+        Assert.True(PolicyElevationProtocol.MaxResponseFrameBytes < 32 * 1024);
 
         // The obvious wrong answers.
         Assert.NotEqual(256 * 1024, PolicyElevationProtocol.MaxRequestFrameBytes);
-        Assert.NotEqual(256 * 1024, PolicyElevationProtocol.MaxResponseFrameBytes);
         Assert.NotEqual(SharedPolicyBodyBytes, PolicyElevationProtocol.MaxRequestFrameBytes);
-        Assert.NotEqual(SharedPolicyBodyBytes, PolicyElevationProtocol.MaxResponseFrameBytes);
     }
 
     [Fact]
@@ -96,21 +89,22 @@ public class PolicyElevationProtocolTests
         {
             ProtocolVersion = PolicyElevationProtocol.Version,
             RequestId = new string('f', PolicyElevationProtocol.RequestIdCharacters),
-            Outcome = PolicyElevationResponseStatus.HelperRejected,
-            Win32ErrorCode = int.MinValue,
+            Disposition = PolicyElevationDisposition.Rejected,
             BrokerStatusCode = int.MinValue,
-            BrokerErrorCode = new string('\u0001', PolicyElevationProtocol.MaxBrokerErrorCodeCharacters),
-            Message = new string('\u0001', PolicyElevationProtocol.MaxMessageCharacters),
-            Payload = JsonDocument.Parse("{}").RootElement.Clone(),
+            BrokerErrorCode = ErrorCode.StalePolicyStoreToken.ToString(),
+            CommittedStoreToken = null,
+            ConflictStoreToken = WorstCaseSafeAscii(
+                PolicyElevationProtocol.MaxStoreTokenCharacters),
+            ConflictState = PolicyElevationManagementState.Active,
+            ConflictPolicyId = WorstCaseSafeAscii(
+                PolicyElevationProtocol.MaxConflictPolicyIdCharacters),
         };
 
         byte[] serialized = JsonSerializer.SerializeToUtf8Bytes(
             response,
             PolicyElevationJsonContext.Default.PolicyElevationResponseMessage);
 
-        Assert.True(
-            serialized.Length - 2 <= PolicyElevationProtocol.ResponseEnvelopeOverheadBytes,
-            $"Envelope needed {serialized.Length - 2} bytes but only {PolicyElevationProtocol.ResponseEnvelopeOverheadBytes} are budgeted.");
+        Assert.Equal(PolicyElevationProtocol.ResponseEnvelopeOverheadBytes, serialized.Length);
     }
 
     [Fact]
@@ -127,9 +121,9 @@ public class PolicyElevationProtocolTests
         => Assert.Equal(1223, PolicyElevationProtocol.ErrorCancelled);
 
     [Theory]
-    [InlineData("""{"protocolVersion":"1.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":0,"conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","warningsAcknowledged":false,"draft":{}}""")]
-    [InlineData("""{"protocolVersion":"1.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":"update","conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","warningsAcknowledged":false,"draft":{}}""")]
-    [InlineData("""{"protocolVersion":"1.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":"Update","conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","warningsAcknowledged":false,"draft":{},"extra":true}""")]
+    [InlineData("""{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":0,"conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","warningsAcknowledged":false,"draft":{}}""")]
+    [InlineData("""{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":"update","conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","warningsAcknowledged":false,"draft":{}}""")]
+    [InlineData("""{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":"Update","conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","warningsAcknowledged":false,"draft":{},"extra":true}""")]
     public async Task RequestJson_RejectsNumericWrongCaseAndUnknownMembers(string json)
     {
         await using var stream = new MemoryStream();
@@ -165,6 +159,20 @@ public class PolicyElevationProtocolTests
             () => PolicyElevationFrame.ValidateRequest(request));
     }
 
+    [Fact]
+    public void ResponseContract_HasNoUnboundedBrokerPayloadOrMessage()
+    {
+        string[] propertyNames = typeof(PolicyElevationResponseMessage)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(property => property.Name)
+            .ToArray();
+
+        Assert.DoesNotContain("Payload", propertyNames);
+        Assert.DoesNotContain("Message", propertyNames);
+        Assert.DoesNotContain("Policy", propertyNames);
+        Assert.DoesNotContain("Validation", propertyNames);
+    }
+
     private static int SumPropertyNameLengths<T>()
     {
         int total = 0;
@@ -178,4 +186,7 @@ public class PolicyElevationProtocolTests
 
         return total;
     }
+
+    private static string WorstCaseSafeAscii(int length) =>
+        "a" + new string('"', length - 1);
 }

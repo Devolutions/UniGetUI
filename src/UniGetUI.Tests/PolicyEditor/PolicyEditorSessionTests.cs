@@ -453,12 +453,12 @@ public class PolicyEditorSessionTests
             "id-1");
 
         Assert.NotNull(session.Conflict);
-        Assert.Equal("remote-token", session.Conflict!.Management.StoreToken);
+        Assert.Equal("remote-token", session.Conflict!.RetryDecision.Token);
         Assert.Equal(PolicyReplacementOperation.Create, session.Conflict.RetryDecision.Operation);
 
         // Independence: mutating the caller's snapshot after capture must not affect the stored one.
         remote.StoreToken = "mutated-after-capture";
-        Assert.Equal("remote-token", session.Conflict.Management.StoreToken);
+        Assert.Equal("remote-token", session.Conflict.RetryDecision.Token);
     }
 
     [Fact]
@@ -523,10 +523,18 @@ public class PolicyEditorSessionTests
             "id-1");
         PolicyEditorConflictSnapshot conflict = session.Conflict!;
 
-        session.SetRawBuffer($" \r\n{session.RawBuffer}\r\n");
+        string formatted = $" \r\n{session.RawBuffer}\r\n";
+        session.SetRawBuffer(formatted);
+        Assert.False(session.IsConflictCurrent(conflict));
+        Assert.True(session.CompleteRawAnalysis(
+            formatted,
+            session.MutationGeneration,
+            PolicyEditorRawSyntax.ToCanonicalRaw(session.Draft),
+            session.Draft.Metadata.Id,
+            null));
 
-        Assert.Same(conflict, session.Conflict);
-        Assert.True(session.IsConflictCurrent(conflict));
+        Assert.NotNull(session.Conflict);
+        Assert.True(session.IsConflictCurrent(session.Conflict));
     }
 
     [Fact]
@@ -541,8 +549,17 @@ public class PolicyEditorSessionTests
             "receipt-1",
             "id-1");
 
-        session.SetRawBuffer(
-            session.RawBuffer.Replace("Contoso", "Other publisher", StringComparison.Ordinal));
+        string changed =
+            session.RawBuffer.Replace("Contoso", "Other publisher", StringComparison.Ordinal);
+        session.SetRawBuffer(changed);
+        PolicyEditorDraftDocument parsed = NewDraft();
+        parsed.Metadata.Publisher = "Other publisher";
+        session.CompleteRawAnalysis(
+            changed,
+            session.MutationGeneration,
+            PolicyEditorRawSyntax.ToCanonicalRaw(parsed),
+            parsed.Metadata.Id,
+            null);
 
         Assert.Null(session.Conflict);
     }

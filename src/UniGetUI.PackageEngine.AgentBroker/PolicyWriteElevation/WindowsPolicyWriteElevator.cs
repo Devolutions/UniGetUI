@@ -276,6 +276,7 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
         CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        bool requestDispatched = false;
 
         try
         {
@@ -322,7 +323,7 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
                     authentication.Win32ErrorCode);
             }
 
-            timeout.CancelAfter(_timeouts.Exchange);
+            timeout.CancelAfter(_timeouts.Exchange + PolicyElevationProtocol.ResponseWriteTimeout);
 
             string requestId = Convert.ToHexStringLower(
                 RandomNumberGenerator.GetBytes(PolicyElevationProtocol.RequestIdCharacters / 2));
@@ -339,6 +340,7 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
                 Draft = request.Draft,
             };
 
+            requestDispatched = true;
             await PolicyElevationFrame.WriteRequestAsync(pipe, message, timeout.Token).ConfigureAwait(false);
 
             PolicyElevationResponseMessage response =
@@ -346,33 +348,28 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
 
             if (!string.Equals(response.RequestId, requestId, StringComparison.Ordinal))
             {
-                return Fail(
-                    request,
-                    PolicyElevationOutcome.MalformedResponse,
-                    "The elevated helper answered a different request.");
+                return Unknown(request);
             }
 
+            PolicyElevationResult result = MapResponse(request, response);
             int? helperExit = await helper
-                .WaitForExitAsync(_timeouts.Exit, cancellationToken)
+                .WaitForExitAsync(_timeouts.Exit, CancellationToken.None)
                 .ConfigureAwait(false);
 
             if (helperExit is not PolicyElevationProtocol.ExitSuccess)
             {
-                return new PolicyElevationResult(
-                    PolicyElevationOutcome.HelperCrashed,
-                    request,
-                    "The elevated helper terminated abnormally after answering.",
-                    HelperExitCode: helperExit,
-                    BrokerStatusCode: response.BrokerStatusCode,
-                    BrokerErrorCode: response.BrokerErrorCode,
-                    Payload: response.Payload);
+                Logger.Warn(
+                    $"[PolicyElevation] Helper exited with {helperExit} after a valid "
+                    + $"{response.Disposition} acknowledgement.");
             }
 
-            return MapResponse(request, response);
+            return result with { HelperExitCode = helperExit };
         }
         catch (PolicyElevationFrameException ex)
         {
             Logger.Warn($"[PolicyElevation] Framing failure: {ex}");
+            if (requestDispatched)
+                return Unknown(request);
             return Fail(request, ex.Error switch
             {
                 PolicyElevationFrameError.Oversized => PolicyElevationOutcome.PayloadTooLarge,
@@ -387,6 +384,8 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            if (requestDispatched)
+                return Unknown(request);
             return Fail(
                 request,
                 PolicyElevationOutcome.Cancelled,
@@ -394,11 +393,15 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
         }
         catch (OperationCanceledException)
         {
+            if (requestDispatched)
+                return Unknown(request);
             return Fail(request, PolicyElevationOutcome.TimedOut, "The elevated policy write timed out.");
         }
         catch (IOException ex)
         {
             Logger.Warn($"[PolicyElevation] The elevation channel failed: {ex}");
+            if (requestDispatched)
+                return Unknown(request);
             return Fail(request, PolicyElevationOutcome.ConnectionClosed, "The elevation channel was interrupted.");
         }
     }
@@ -442,99 +445,32 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
         PolicyElevationWriteRequest request,
         PolicyElevationResponseMessage response)
     {
-        PolicyElevationOutcome outcome = response.Outcome switch
+        PolicyElevationOutcome outcome = response.Disposition switch
         {
-            PolicyElevationResponseStatus.Replaced => PolicyElevationOutcome.Replaced,
-            PolicyElevationResponseStatus.BrokerRejected => PolicyElevationOutcome.BrokerRejected,
-            PolicyElevationResponseStatus.BrokerUnavailable => PolicyElevationOutcome.BrokerUnavailable,
-            PolicyElevationResponseStatus.BrokerInvalidResponse => PolicyElevationOutcome.BrokerInvalidResponse,
-            PolicyElevationResponseStatus.HelperRejected => PolicyElevationOutcome.PeerAuthenticationFailed,
+            PolicyElevationDisposition.Committed => PolicyElevationOutcome.Replaced,
+            PolicyElevationDisposition.Rejected => PolicyElevationOutcome.BrokerRejected,
+            PolicyElevationDisposition.Unknown => PolicyElevationOutcome.WriteResultUnknown,
             _ => PolicyElevationOutcome.MalformedResponse,
         };
 
-        if (response.Message is { Length: > 0 } helperMessage)
-        {
-            Logger.Debug($"[PolicyElevation] Helper reported: {helperMessage}");
-        }
-
-        try
-        {
-            PolicyReplacementResponse? replacement = null;
-            ErrorResponse? error = null;
-
-            if (response.Outcome == PolicyElevationResponseStatus.Replaced)
-            {
-                if (response.Payload is not { } payload)
-                    throw new InvalidDataException("A successful helper response had no payload.");
-
-                replacement = BrokerSerializer.DeserializeStrict<PolicyReplacementResponse>(payload.GetRawText());
-                ValidateReplacement(replacement);
-            }
-            else if (response.Payload is { ValueKind: not JsonValueKind.Undefined } errorPayload)
-            {
-                // Any non-success status may carry the broker's own error document. Relaying it
-                // whole and unmodified is what lets the UI localise a recognised error code.
-                error = BrokerSerializer.DeserializeStrict<ErrorResponse>(errorPayload.GetRawText());
-                ValidateError(error);
-            }
-
-            return new PolicyElevationResult(
-                outcome,
-                request,
-                DescribeOutcome(outcome),
-                response.Win32ErrorCode,
-                PolicyElevationProtocol.ExitSuccess,
-                response.BrokerStatusCode,
-                response.BrokerErrorCode,
-                response.Payload,
-                replacement,
-                error);
-        }
-        catch (Exception ex) when (ex is JsonException or InvalidDataException)
-        {
-            Logger.Warn($"[PolicyElevation] Invalid shared response payload: {ex}");
-            return Fail(
-                request,
-                PolicyElevationOutcome.MalformedResponse,
-                DescribeOutcome(PolicyElevationOutcome.MalformedResponse));
-        }
+        return new PolicyElevationResult(
+            outcome,
+            request,
+            DescribeOutcome(outcome),
+            HelperExitCode: PolicyElevationProtocol.ExitSuccess,
+            BrokerStatusCode: response.BrokerStatusCode,
+            BrokerErrorCode: response.BrokerErrorCode,
+            CommittedStoreToken: response.CommittedStoreToken,
+            ConflictStoreToken: response.ConflictStoreToken,
+            ConflictState: response.ConflictState,
+            ConflictPolicyId: response.ConflictPolicyId);
     }
 
-    private static void ValidateReplacement(PolicyReplacementResponse? replacement)
-    {
-        if (replacement is null
-            || !string.Equals(replacement.ResponseKind, BrokerApi.PolicyReplacementResponseKind, StringComparison.Ordinal)
-            || !string.Equals(replacement.ResponseVersion, BrokerApi.Version, StringComparison.Ordinal)
-            || replacement.Policy is null
-            || replacement.Validation is null
-            || !replacement.Validation.IsValid
-            || replacement.Validation.CanonicalDraft is null
-            || string.IsNullOrWhiteSpace(replacement.Validation.ValidationReceipt)
-            || replacement.Management is null
-            || replacement.Management.Policy is null
-            || replacement.Management.State != PolicyManagementState.Active
-            || string.IsNullOrWhiteSpace(replacement.Management.StoreToken))
-        {
-            throw new InvalidDataException("The helper returned an inconsistent replacement response.");
-        }
-    }
-
-    private static void ValidateError(ErrorResponse? error)
-    {
-        if (error is null
-            || !string.Equals(error.ResponseKind, BrokerApi.ErrorResponseKind, StringComparison.Ordinal)
-            || !string.Equals(error.ResponseVersion, BrokerApi.Version, StringComparison.Ordinal))
-        {
-            throw new InvalidDataException("The helper returned an inconsistent error response.");
-        }
-
-        // The broker only reports a stale store token together with the management snapshot the
-        // caller has to reconcile against, so a document without it is not the broker's.
-        if (error.Code is ErrorCode.StalePolicyStoreToken && error.Management is null)
-        {
-            throw new InvalidDataException("A stale store token error arrived without a management snapshot.");
-        }
-    }
+    private static PolicyElevationResult Unknown(PolicyElevationWriteRequest request) =>
+        new(
+            PolicyElevationOutcome.WriteResultUnknown,
+            request,
+            "The elevated write result is unknown. Refresh policy management state before retrying.");
 
     private static bool TryDescribeCurrentProcess(out uint processId, out long creationTicks, out uint sessionId)
     {

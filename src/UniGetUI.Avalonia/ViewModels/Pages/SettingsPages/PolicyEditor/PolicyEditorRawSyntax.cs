@@ -5,8 +5,21 @@ using Devolutions.Now.Policy.Model;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 
+/// <summary>Stable, localizable classification of a raw policy-draft parsing failure.</summary>
+public enum PolicyEditorSyntaxErrorKind
+{
+    EmptyDocument,
+    InvalidJson,
+    InvalidPolicyDraft,
+    UnsupportedSchema,
+    UnsupportedPolicyType,
+    MissingEnforcement,
+    UnsupportedRulePrecedence,
+    MissingMetadata,
+}
+
 /// <summary>A structural failure that prevented raw JSON text from becoming a structured draft.</summary>
-public sealed record PolicyEditorSyntaxError(string Message, string Pointer);
+public sealed record PolicyEditorSyntaxError(PolicyEditorSyntaxErrorKind Kind, string Pointer);
 
 /// <summary>
 /// The two seams between the editor's raw-text surface and its structured surface:
@@ -26,34 +39,56 @@ public static partial class PolicyEditorRawSyntax
         out PolicyEditorDraftDocument? draft,
         out PolicyEditorSyntaxError? error)
     {
+        return TryParseStrictWithElement(rawJson, out draft, out _, out error);
+    }
+
+    public static bool TryParseStrictWithElement(
+        string? rawJson,
+        out PolicyEditorDraftDocument? draft,
+        out JsonElement element,
+        out PolicyEditorSyntaxError? error)
+    {
         draft = null;
+        element = default;
         error = null;
 
         if (string.IsNullOrWhiteSpace(rawJson))
         {
-            error = new PolicyEditorSyntaxError("The document is empty.", "");
+            error = new PolicyEditorSyntaxError(PolicyEditorSyntaxErrorKind.EmptyDocument, "");
+            return false;
+        }
+
+        try
+        {
+            using JsonDocument json = JsonDocument.Parse(rawJson);
+            element = json.RootElement.Clone();
+            if (!TryCheckDraftSchema(json.RootElement, out error))
+            {
+                return false;
+            }
+        }
+        catch (JsonException)
+        {
+            error = new PolicyEditorSyntaxError(PolicyEditorSyntaxErrorKind.InvalidJson, "");
             return false;
         }
 
         PolicyDraftDocument? document;
         try
         {
-            if (!TryCheckDraftSchema(rawJson, out error))
-            {
-                return false;
-            }
-
             document = PolicySerializer.DeserializePolicyDraftDocumentStrict(rawJson);
         }
         catch (Exception ex) when (ex is JsonException or FormatException or ArgumentException or NotSupportedException)
         {
-            error = new PolicyEditorSyntaxError(ex.Message, PointerFromException(ex));
+            error = new PolicyEditorSyntaxError(
+                PolicyEditorSyntaxErrorKind.InvalidPolicyDraft,
+                PointerFromException(ex));
             return false;
         }
 
         if (document is null)
         {
-            error = new PolicyEditorSyntaxError("The document could not be parsed.", "");
+            error = new PolicyEditorSyntaxError(PolicyEditorSyntaxErrorKind.InvalidPolicyDraft, "");
             return false;
         }
 
@@ -66,17 +101,66 @@ public static partial class PolicyEditorRawSyntax
         return true;
     }
 
-    private static bool TryCheckDraftSchema(string rawJson, out PolicyEditorSyntaxError? error)
+    private static bool TryCheckDraftSchema(
+        JsonElement root,
+        out PolicyEditorSyntaxError? error)
     {
-        using JsonDocument json = JsonDocument.Parse(rawJson);
-        if (json.RootElement.ValueKind == JsonValueKind.Object
-            && json.RootElement.TryGetProperty("$schema", out JsonElement schema)
+        if (root.ValueKind == JsonValueKind.Object
+            && root.TryGetProperty("$schema", out JsonElement schema)
             && schema.ValueKind == JsonValueKind.String
             && !string.Equals(schema.GetString(), PolicyEditorPolicyContract.DraftSchema, StringComparison.Ordinal))
         {
             error = new PolicyEditorSyntaxError(
-                $"Unsupported schema '{schema.GetString()}'. Expected '{PolicyEditorPolicyContract.DraftSchema}'.",
+                PolicyEditorSyntaxErrorKind.UnsupportedSchema,
                 "/$schema");
+            return false;
+        }
+
+        if (root.ValueKind == JsonValueKind.Object
+            && root.TryGetProperty("PolicyType", out JsonElement policyType)
+            && policyType.ValueKind == JsonValueKind.String
+            && !string.Equals(
+                policyType.GetString(),
+                PolicyEditorPolicyContract.PolicyType,
+                StringComparison.Ordinal))
+        {
+            error = new PolicyEditorSyntaxError(
+                PolicyEditorSyntaxErrorKind.UnsupportedPolicyType,
+                "/PolicyType");
+            return false;
+        }
+
+        if (root.ValueKind == JsonValueKind.Object
+            && !root.TryGetProperty("Enforcement", out _))
+        {
+            error = new PolicyEditorSyntaxError(
+                PolicyEditorSyntaxErrorKind.MissingEnforcement,
+                "/Enforcement");
+            return false;
+        }
+
+        if (root.ValueKind == JsonValueKind.Object
+            && root.TryGetProperty("Enforcement", out JsonElement enforcement)
+            && enforcement.ValueKind == JsonValueKind.Object
+            && enforcement.TryGetProperty("RulePrecedence", out JsonElement precedence)
+            && precedence.ValueKind == JsonValueKind.String
+            && !string.Equals(
+                precedence.GetString(),
+                PolicyEditorPolicyContract.FixedRulePrecedence.ToString(),
+                StringComparison.Ordinal))
+        {
+            error = new PolicyEditorSyntaxError(
+                PolicyEditorSyntaxErrorKind.UnsupportedRulePrecedence,
+                "/Enforcement/RulePrecedence");
+            return false;
+        }
+
+        if (root.ValueKind == JsonValueKind.Object
+            && !root.TryGetProperty("Metadata", out _))
+        {
+            error = new PolicyEditorSyntaxError(
+                PolicyEditorSyntaxErrorKind.MissingMetadata,
+                "/Metadata");
             return false;
         }
 
@@ -95,7 +179,7 @@ public static partial class PolicyEditorRawSyntax
         if (!string.Equals(document.Schema, PolicyEditorPolicyContract.DraftSchema, StringComparison.Ordinal))
         {
             error = new PolicyEditorSyntaxError(
-                $"Unsupported schema '{document.Schema}'. Expected '{PolicyEditorPolicyContract.DraftSchema}'.",
+                PolicyEditorSyntaxErrorKind.UnsupportedSchema,
                 "/$schema");
             return false;
         }
@@ -103,28 +187,32 @@ public static partial class PolicyEditorRawSyntax
         if (!string.Equals(document.PolicyType, PolicyEditorPolicyContract.PolicyType, StringComparison.Ordinal))
         {
             error = new PolicyEditorSyntaxError(
-                $"Unsupported policyType '{document.PolicyType}'. Expected '{PolicyEditorPolicyContract.PolicyType}'.",
-                "/policyType");
+                PolicyEditorSyntaxErrorKind.UnsupportedPolicyType,
+                "/PolicyType");
             return false;
         }
 
         if (document.Enforcement is null)
         {
-            error = new PolicyEditorSyntaxError("Missing enforcement block.", "/enforcement");
+            error = new PolicyEditorSyntaxError(
+                PolicyEditorSyntaxErrorKind.MissingEnforcement,
+                "/Enforcement");
             return false;
         }
 
         if (document.Enforcement.RulePrecedence != PolicyEditorPolicyContract.FixedRulePrecedence)
         {
             error = new PolicyEditorSyntaxError(
-                $"Unsupported rulePrecedence '{document.Enforcement.RulePrecedence}'. Expected '{PolicyEditorPolicyContract.FixedRulePrecedence}'.",
-                "/enforcement/rulePrecedence");
+                PolicyEditorSyntaxErrorKind.UnsupportedRulePrecedence,
+                "/Enforcement/RulePrecedence");
             return false;
         }
 
         if (document.Metadata is null)
         {
-            error = new PolicyEditorSyntaxError("Missing metadata block.", "/metadata");
+            error = new PolicyEditorSyntaxError(
+                PolicyEditorSyntaxErrorKind.MissingMetadata,
+                "/Metadata");
             return false;
         }
 

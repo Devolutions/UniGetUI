@@ -451,7 +451,7 @@
                                                     TextChanged="RawEditor_TextChanged"
                                                     automation:AutomationProperties.Name="{t:Translate Raw policy JSON}"/>
                     </Border>
-                    <TextBlock Text="{Binding Session.SyntaxError.Message}"
+                    <TextBlock Text="{Binding Session.SyntaxErrorMessage}"
                                IsVisible="{Binding Session.SyntaxError, Converter={x:Static ObjectConverters.IsNotNull}}"
                                Classes="finding-error"
                                TextWrapping="Wrap"

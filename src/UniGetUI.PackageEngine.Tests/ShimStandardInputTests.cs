@@ -1,5 +1,7 @@
 #if WINDOWS
 using System.Diagnostics;
+using UniGetUI.Core.Data;
+using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageOperations;
@@ -19,13 +21,27 @@ namespace UniGetUI.PackageEngine.Tests;
 /// </summary>
 public sealed class ShimStandardInputTests : IDisposable
 {
-    private readonly string _shimPath = Path.Combine(
-        Path.GetTempPath(),
-        $"unigetui_shim_{Guid.NewGuid():N}.ps1"
-    );
+    private readonly string _testRoot;
+    private readonly string _shimPath;
 
     public ShimStandardInputTests()
     {
+        _testRoot = Path.Combine(
+            Path.GetTempPath(),
+            nameof(ShimStandardInputTests),
+            Guid.NewGuid().ToString("N")
+        );
+        string secureSettingsRoot = Path.Combine(_testRoot, "SecureSettings");
+
+        CoreData.TEST_DataDirectoryOverride = Path.Combine(_testRoot, "Data");
+        SecureSettings.TEST_SecureSettingsRootOverride = secureSettingsRoot;
+
+        Directory.CreateDirectory(_testRoot);
+        Directory.CreateDirectory(CoreData.UniGetUIUserConfigurationDirectory);
+        Directory.CreateDirectory(secureSettingsRoot);
+        Settings.ResetSettings();
+
+        _shimPath = Path.Combine(_testRoot, "shim.ps1");
         File.WriteAllText(
             _shimPath,
             """
@@ -35,7 +51,18 @@ public sealed class ShimStandardInputTests : IDisposable
         );
     }
 
-    public void Dispose() => File.Delete(_shimPath);
+    public void Dispose()
+    {
+        CoreData.TEST_DataDirectoryOverride = null;
+        SecureSettings.TEST_SecureSettingsRootOverride = null;
+        Settings.ResetSettings();
+        try
+        {
+            if (Directory.Exists(_testRoot))
+                Directory.Delete(_testRoot, recursive: true);
+        }
+        catch (IOException) { }
+    }
 
     private static string PowerShellPath() =>
         Path.Combine(
@@ -135,22 +162,15 @@ public sealed class ShimStandardInputTests : IDisposable
         bool disableLineHandler
     )
     {
-        bool original = Settings.Get(Settings.K.DisableNewProcessLineHandler);
         Settings.Set(Settings.K.DisableNewProcessLineHandler, disableLineHandler);
-        try
-        {
-            using var operation = new ShimOperation(PowerShellPath(), _shimPath);
 
-            Task run = operation.MainThread();
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-            await run.WaitAsync(timeout.Token);
+        using var operation = new ShimOperation(PowerShellPath(), _shimPath);
 
-            Assert.Equal(OperationStatus.Succeeded, operation.Status);
-        }
-        finally
-        {
-            Settings.Set(Settings.K.DisableNewProcessLineHandler, original);
-        }
+        Task run = operation.MainThread();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        await run.WaitAsync(timeout.Token);
+
+        Assert.Equal(OperationStatus.Succeeded, operation.Status);
     }
 
     private sealed class ShimOperation : AbstractProcessOperation

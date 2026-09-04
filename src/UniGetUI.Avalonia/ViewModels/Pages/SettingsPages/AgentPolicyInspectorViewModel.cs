@@ -292,7 +292,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
 
     private static string FormatList(IEnumerable<string> values, bool anyWhenEmpty = false)
     {
-        string[] items = values.Where(value => !string.IsNullOrWhiteSpace(value)).ToArray();
+        string[] items = values.Where(value => !string.IsNullOrEmpty(value)).ToArray();
         return items.Length == 0
             ? CoreTools.Translate(anyWhenEmpty ? "Any" : "None")
             : string.Join(", ", items);
@@ -313,7 +313,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         CoreTools.Translate(value.ToString());
 
     private static string Value(string? value, string fallback = "Not set") =>
-        string.IsNullOrWhiteSpace(value) ? CoreTools.Translate(fallback) : value;
+        string.IsNullOrEmpty(value) ? CoreTools.Translate(fallback) : value;
 
     private void ClearPolicy()
     {

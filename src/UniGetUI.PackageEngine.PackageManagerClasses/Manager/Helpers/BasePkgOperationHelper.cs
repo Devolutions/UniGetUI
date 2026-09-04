@@ -79,6 +79,20 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
                 throw new InvalidOperationException(
                     $"Refusing to build a {Manager.Name} command line for package {package.Id}: the requested version \"{options.Version}\" is not a valid package version."
                 );
+
+            // Custom arguments are data only while they stay separate arguments. The exported
+            // script always joins them into one command string, and so does an operation whose
+            // manager has no argument vector, and a shell reinterprets them there.
+            if (standalone || Manager.Status.OperationCallArgs.Count is 0)
+            {
+                foreach (string argument in CustomArgumentsFor(options, operation))
+                {
+                    if (!CoreTools.IsCommandLineInertValue(argument))
+                        throw new InvalidOperationException(
+                            $"Refusing to build a {Manager.Name} command line for package {package.Id}: the custom argument \"{argument}\" contains characters a shell would reinterpret."
+                        );
+                }
+            }
         }
 
         var parameters = _getOperationParameters(package, options, operation, standalone);
@@ -88,6 +102,17 @@ public abstract class BasePkgOperationHelper : IPackageOperationHelper
         );
         return parameters.Where(x => x.Any()).ToArray();
     }
+
+    private static IReadOnlyList<string> CustomArgumentsFor(
+        InstallOptions options,
+        OperationType operation
+    ) =>
+        operation switch
+        {
+            OperationType.Update => options.CustomParameters_Update,
+            OperationType.Uninstall => options.CustomParameters_Uninstall,
+            _ => options.CustomParameters_Install,
+        };
 
     public OperationVeredict GetResult(
         IPackage package,

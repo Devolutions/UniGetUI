@@ -251,6 +251,86 @@ public sealed class CommandInjectionSurfaceTests
     }
 
     [Theory]
+    [InlineData("$(Start-Process calc)")]
+    [InlineData("(Start-Process calc)")]
+    [InlineData("`nStart-Process calc")]
+    [InlineData("--flag;calc")]
+    [InlineData("--flag&calc")]
+    public void OperationHelper_RejectsACustomArgumentOnTheConcatenatedShellPath(string argument)
+    {
+        var manager = ShellManager();
+        var package = PackageOn(manager);
+        var options = new InstallOptions { CustomParameters_Install = [argument] };
+
+        Assert.Throws<InvalidOperationException>(
+            () => manager.OperationHelper.GetParameters(package, options, OperationType.Install)
+        );
+    }
+
+    [Fact]
+    public void OperationHelper_RejectsACustomUninstallArgumentOnTheConcatenatedShellPath()
+    {
+        var manager = ShellManager();
+        var package = PackageOn(manager);
+        var options = new InstallOptions
+        {
+            CustomParameters_Uninstall = ["$(Start-Process calc)"],
+        };
+
+        Assert.Throws<InvalidOperationException>(
+            () => manager.OperationHelper.GetParameters(package, options, OperationType.Uninstall)
+        );
+    }
+
+    [Fact]
+    public void OperationHelper_KeepsAnOrdinaryCustomArgumentOnTheConcatenatedShellPath()
+    {
+        var manager = ShellManager();
+        var package = PackageOn(manager);
+        var options = new InstallOptions
+        {
+            CustomParameters_Install = ["-Force", "--registry=https://registry.example/"],
+        };
+
+        Assert.NotEmpty(
+            manager.OperationHelper.GetParameters(package, options, OperationType.Install)
+        );
+    }
+
+    // With an argument vector the custom arguments stay separate arguments, so they are data and
+    // need no restriction; the exported script joins them whatever the manager does.
+    [Fact]
+    public void OperationHelper_AllowsACustomArgumentWhenTheManagerUsesAnArgumentVector()
+    {
+        var manager = ShellManager();
+        manager.SetOperationCallArgs("-NoProfile", "-File", "launcher.ps1");
+        var package = PackageOn(manager);
+        var options = new InstallOptions { CustomParameters_Install = ["$(Get-Date)"] };
+
+        Assert.NotEmpty(
+            manager.OperationHelper.GetParameters(package, options, OperationType.Install)
+        );
+    }
+
+    [Fact]
+    public void OperationHelper_RejectsACustomArgumentForTheExportedScriptDespiteTheVector()
+    {
+        var manager = ShellManager();
+        manager.SetOperationCallArgs("-NoProfile", "-File", "launcher.ps1");
+        var package = PackageOn(manager);
+        var options = new InstallOptions { CustomParameters_Install = ["$(Start-Process calc)"] };
+
+        Assert.Throws<InvalidOperationException>(
+            () =>
+                manager.OperationHelper.GetStandaloneParameters(
+                    package,
+                    options,
+                    OperationType.Install
+                )
+        );
+    }
+
+    [Theory]
     [MemberData(nameof(ShellMetacharacterPayloads))]
     public void DetailsHelper_NeverReachesTheUnsafeVersionLookupForAPayloadIdentifier(
         string payload

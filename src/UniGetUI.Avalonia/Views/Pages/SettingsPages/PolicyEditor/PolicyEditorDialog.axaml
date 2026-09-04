@@ -87,8 +87,7 @@
     <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20,12,20,16" RowSpacing="10">
 
         <controls:InfoBar Grid.Row="0"
-                          DataContext="{Binding Status}"
-                          automation:AutomationProperties.LiveSetting="Polite"/>
+                          DataContext="{Binding Status}"/>
 
         <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
             <Button x:Name="StructuredModeButton" Grid.Column="0"

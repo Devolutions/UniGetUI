@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Devolutions.Now.Policy.Api;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 
@@ -153,6 +154,35 @@ public partial class PolicyEditorLocalizationTests
         Assert.DoesNotContain("Firebrick", dialog);
         Assert.DoesNotContain("DarkOrange", dialog);
         Assert.DoesNotContain("PolicyEditorSeverityConverters", structuredUi);
+    }
+
+    [Fact]
+    public void RawSyntaxError_HasOneAssertiveLiveRegionAndStatusHasNoFixedLiveSetting()
+    {
+        string root = FindRepositoryRoot();
+        XDocument dialog = XDocument.Load(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorDialog.axaml"));
+        XNamespace automation =
+            "clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls";
+        XElement status = Assert.Single(dialog.Descendants(),
+            element => element.Name.LocalName == "InfoBar"
+                && (string?)element.Attribute("DataContext") == "{Binding Status}");
+        XElement rawSyntaxError = Assert.Single(dialog.Descendants(),
+            element => (string?)element.Attribute("Text")
+                == "{Binding Session.SyntaxErrorMessage}");
+
+        Assert.Null(status.Attribute(automation + "AutomationProperties.LiveSetting"));
+        Assert.Equal(
+            "Assertive",
+            (string?)rawSyntaxError.Attribute(
+                automation + "AutomationProperties.LiveSetting"));
     }
 
     private static string FindRepositoryRoot()

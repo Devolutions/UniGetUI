@@ -200,7 +200,14 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
     public string? SupportUrl
     {
         get => Draft.Metadata.SupportUrl;
-        set { Draft.Metadata.SupportUrl = string.IsNullOrWhiteSpace(value) ? null : value; MarkDirty(); }
+        set
+        {
+            string? normalized = string.IsNullOrEmpty(value) ? null : value;
+            if (string.Equals(Draft.Metadata.SupportUrl, normalized, StringComparison.Ordinal))
+                return;
+            Draft.Metadata.SupportUrl = normalized;
+            MarkDirty();
+        }
     }
 
     /// <summary>Round-trip ISO-8601 text. Invalid input is retained and blocks validation/save.</summary>

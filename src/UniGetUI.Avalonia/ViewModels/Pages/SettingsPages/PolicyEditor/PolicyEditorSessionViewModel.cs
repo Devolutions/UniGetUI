@@ -595,10 +595,10 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                     validation.CanonicalDraft.Metadata.Id);
             }
             else if (write.Error is
-                {
-                    Code: ErrorCode.StalePolicyStoreToken,
-                    Management: not null,
-                })
+            {
+                Code: ErrorCode.StalePolicyStoreToken,
+                Management: not null,
+            })
             {
                 Session.CaptureConflict(
                     write.Error.Management,
@@ -706,13 +706,13 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
 
     private static PolicyReplacementOperation ToReplacementOperation(
         PolicyEditorOperationKind operation) => operation switch
-    {
-        PolicyEditorOperationKind.Update => PolicyReplacementOperation.Update,
-        PolicyEditorOperationKind.ReplaceIdentity => PolicyReplacementOperation.ReplaceIdentity,
-        PolicyEditorOperationKind.Create => PolicyReplacementOperation.Create,
-        PolicyEditorOperationKind.Repair => PolicyReplacementOperation.Repair,
-        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
-    };
+        {
+            PolicyEditorOperationKind.Update => PolicyReplacementOperation.Update,
+            PolicyEditorOperationKind.ReplaceIdentity => PolicyReplacementOperation.ReplaceIdentity,
+            PolicyEditorOperationKind.Create => PolicyReplacementOperation.Create,
+            PolicyEditorOperationKind.Repair => PolicyReplacementOperation.Repair,
+            _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
+        };
 
     private void OnEditorStateChanged()
     {
@@ -904,23 +904,23 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                    bool IsDirty)>(
                    () =>
                    {
-                        bool parsed = PolicyEditorRawSyntax.TryParseStrictWithElement(
-                            raw,
-                            out PolicyEditorDraftDocument? draft,
-                            out JsonElement element,
-                            out PolicyEditorSyntaxError? error);
-                        return (
-                            error,
-                            parsed && draft is not null
-                                ? PolicyEditorRawSyntax.ToCanonicalRaw(draft)
-                                : null,
-                            parsed ? draft?.Metadata.Id : null,
-                            parsed ? (JsonElement?)element : null,
-                            !string.Equals(
-                                raw,
-                                dirtySnapshot.BaselineRawJson,
-                                StringComparison.Ordinal));
-                    },
+                       bool parsed = PolicyEditorRawSyntax.TryParseStrictWithElement(
+                           raw,
+                           out PolicyEditorDraftDocument? draft,
+                           out JsonElement element,
+                           out PolicyEditorSyntaxError? error);
+                       return (
+                           error,
+                           parsed && draft is not null
+                               ? PolicyEditorRawSyntax.ToCanonicalRaw(draft)
+                               : null,
+                           parsed ? draft?.Metadata.Id : null,
+                           parsed ? (JsonElement?)element : null,
+                           !string.Equals(
+                               raw,
+                               dirtySnapshot.BaselineRawJson,
+                               StringComparison.Ordinal));
+                   },
                     cancellation.Token);
             if (cancellation.IsCancellationRequested
                 || Volatile.Read(ref _isDisposed) != 0

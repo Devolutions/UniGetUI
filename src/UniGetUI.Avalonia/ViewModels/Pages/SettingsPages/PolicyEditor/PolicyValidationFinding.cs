@@ -98,45 +98,45 @@ public static class PolicyFindingPresentation
         PolicyFindingCode code,
         IReadOnlyDictionary<string, string>? arguments,
         string? fallbackMessage) => code switch
-    {
-        PolicyFindingCode.SchemaViolation =>
-            CoreTools.Translate("The policy draft does not match the required JSON schema."),
-        PolicyFindingCode.UnknownField =>
-            CoreTools.Translate("The policy draft contains an unknown field."),
-        PolicyFindingCode.MissingRequiredField =>
-            CoreTools.Translate("The policy draft is missing a required field."),
-        PolicyFindingCode.InvalidFieldType =>
-            CoreTools.Translate("A policy field has the wrong value type."),
-        PolicyFindingCode.InvalidFieldValue =>
-            CoreTools.Translate("A policy field has an invalid value."),
-        PolicyFindingCode.DuplicateRuleId =>
-            CoreTools.Translate("Rule IDs must be unique."),
-        PolicyFindingCode.IneffectiveBooleanMatch =>
-            CoreTools.Translate("A boolean match must be omitted, true, or false; mixed arrays are invalid."),
-        PolicyFindingCode.InvalidVersionRange =>
-            CoreTools.Translate("The version range is invalid."),
-        PolicyFindingCode.EmptyVersionRange =>
-            CoreTools.Translate("The version range does not restrict any versions."),
-        PolicyFindingCode.InvalidWildcardPattern =>
-            CoreTools.Translate("A wildcard pattern is invalid."),
-        PolicyFindingCode.ContradictoryConstraints =>
-            CoreTools.Translate("The rule contains contradictory constraints."),
-        PolicyFindingCode.InvalidValidityInterval =>
-            CoreTools.Translate("The policy validity interval is invalid."),
-        PolicyFindingCode.UnsupportedSchema =>
-            CoreTools.Translate("The policy schema is unsupported."),
-        PolicyFindingCode.UnsupportedPolicyType =>
-            CoreTools.Translate("The policy type is unsupported."),
-        PolicyFindingCode.UnsupportedPolicyVersion =>
-            CoreTools.Translate("The policy version is unsupported."),
-        PolicyFindingCode.AuditModeEnabled =>
-            CoreTools.Translate("Audit mode is enabled; decisions are logged but not enforced."),
-        PolicyFindingCode.DefaultAllow =>
-            CoreTools.Translate("The default decision is Allow; requests matching no rule are permitted."),
-        PolicyFindingCode.SensitiveOptionAllowed =>
-            DescribeSensitiveOption(arguments),
-        _ => SanitizeFallback(fallbackMessage),
-    };
+        {
+            PolicyFindingCode.SchemaViolation =>
+                CoreTools.Translate("The policy draft does not match the required JSON schema."),
+            PolicyFindingCode.UnknownField =>
+                CoreTools.Translate("The policy draft contains an unknown field."),
+            PolicyFindingCode.MissingRequiredField =>
+                CoreTools.Translate("The policy draft is missing a required field."),
+            PolicyFindingCode.InvalidFieldType =>
+                CoreTools.Translate("A policy field has the wrong value type."),
+            PolicyFindingCode.InvalidFieldValue =>
+                CoreTools.Translate("A policy field has an invalid value."),
+            PolicyFindingCode.DuplicateRuleId =>
+                CoreTools.Translate("Rule IDs must be unique."),
+            PolicyFindingCode.IneffectiveBooleanMatch =>
+                CoreTools.Translate("A boolean match must be omitted, true, or false; mixed arrays are invalid."),
+            PolicyFindingCode.InvalidVersionRange =>
+                CoreTools.Translate("The version range is invalid."),
+            PolicyFindingCode.EmptyVersionRange =>
+                CoreTools.Translate("The version range does not restrict any versions."),
+            PolicyFindingCode.InvalidWildcardPattern =>
+                CoreTools.Translate("A wildcard pattern is invalid."),
+            PolicyFindingCode.ContradictoryConstraints =>
+                CoreTools.Translate("The rule contains contradictory constraints."),
+            PolicyFindingCode.InvalidValidityInterval =>
+                CoreTools.Translate("The policy validity interval is invalid."),
+            PolicyFindingCode.UnsupportedSchema =>
+                CoreTools.Translate("The policy schema is unsupported."),
+            PolicyFindingCode.UnsupportedPolicyType =>
+                CoreTools.Translate("The policy type is unsupported."),
+            PolicyFindingCode.UnsupportedPolicyVersion =>
+                CoreTools.Translate("The policy version is unsupported."),
+            PolicyFindingCode.AuditModeEnabled =>
+                CoreTools.Translate("Audit mode is enabled; decisions are logged but not enforced."),
+            PolicyFindingCode.DefaultAllow =>
+                CoreTools.Translate("The default decision is Allow; requests matching no rule are permitted."),
+            PolicyFindingCode.SensitiveOptionAllowed =>
+                DescribeSensitiveOption(arguments),
+            _ => SanitizeFallback(fallbackMessage),
+        };
 
     public static IReadOnlyDictionary<string, string> CopyArguments(
         IReadOnlyDictionary<string, JsonElement>? arguments)

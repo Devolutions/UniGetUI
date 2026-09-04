@@ -24,17 +24,11 @@ internal static class PolicyReplacementExecutor
         {
             using var client = CreateClient();
 
-            PolicyReplacementResponse replacement = await client.ReplacePolicy(
-                new PolicyReplacementRequest
-                {
-                    Draft = request.Draft,
-                    Operation = (PolicyReplacementOperation)request.Operation,
-                    ConflictHandling = (PolicyConflictHandling)request.ConflictHandling,
-                    ExpectedStoreToken = request.ExpectedStoreToken,
-                    ValidationReceipt = request.ValidationReceipt,
-                    WarningsAcknowledged = request.WarningsAcknowledged,
-                },
-                cancellationToken).ConfigureAwait(false);
+            PolicyReplacementResponse replacement =
+                await PolicyElevationReplacementDispatcher.DispatchAsync(
+                    request,
+                    client.ReplacePolicy,
+                    cancellationToken).ConfigureAwait(false);
 
             response.Disposition = PolicyElevationDisposition.Committed;
             response.CommittedStoreToken = replacement.Management.StoreToken;

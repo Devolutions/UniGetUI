@@ -170,22 +170,18 @@ internal sealed class WinGetTableLayout
 
         for (int column = 1; column < _columnStarts.Length; column++)
         {
-            int straddled = 0;
-            int startsACell = 0;
+            bool startsACell = false;
 
             foreach (string row in rows)
             {
-                if (Straddles(row, _columnStarts[column]))
+                if (StartsACell(row, _columnStarts[column]))
                 {
-                    straddled++;
-                }
-                else if (StartsACell(row, _columnStarts[column]))
-                {
-                    startsACell++;
+                    startsACell = true;
+                    break;
                 }
             }
 
-            if (straddled > startsACell && remaining - 1 >= MinimumColumns)
+            if (!startsACell && remaining - 1 >= MinimumColumns)
             {
                 remaining--;
             }

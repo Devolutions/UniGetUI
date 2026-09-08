@@ -708,6 +708,29 @@ public sealed class WinGetCliParsingTests : IDisposable
     }
 
     [Fact]
+    public void ParseInstalledPackagesMergesKoreanIdHeaderWhenEveryIdIsShort()
+    {
+        var manager = new WinGet();
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseInstalledPackages(
+            manager,
+            Lines(
+                """
+                이름       장치 ID 버전
+                ------------------------
+                Vim Editor Vim     9.1.0
+                cURL       cURL    8.5.0
+                """
+            )
+        );
+
+        Assert.Equal(2, packages.Count);
+        PackageAssert.Matches(packages[0], "Vim Editor", "Vim", "9.1.0");
+        PackageAssert.Matches(packages[1], "cURL", "cURL", "8.5.0");
+        Assert.Same(manager.LocalPcSource, packages[0].Source);
+    }
+
+    [Fact]
     public void ParseInstalledPackagesIgnoresOutputWithoutATable()
     {
         var manager = new WinGet();

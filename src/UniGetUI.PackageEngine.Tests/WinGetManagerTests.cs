@@ -423,6 +423,8 @@ public sealed class WinGetManagerTests : IDisposable
     [InlineData("Microsoft.DesktopAppInstallerExtra_1.0.0.0_x64__8wekyb3d8bbwe", false)]
     [InlineData("Contoso.DesktopAppInstaller_1.0.0.0_x64__8wekyb3d8bbwe", false)]
     [InlineData("Microsoft.WindowsTerminal_1.0.0.0_x64__8wekyb3d8bbwe", false)]
+    [InlineData("Microsoft.DesktopAppInstaller_8wekyb3d8bbwe", false)]
+    [InlineData("Microsoft.DesktopAppInstaller", false)]
     public void IsAppInstallerPackageFullNameRequiresTheMicrosoftPublisherId(
         string packageFullName,
         bool expected

@@ -731,6 +731,35 @@ public sealed class WinGetCliParsingTests : IDisposable
     }
 
     [Fact]
+    public void ParseInstalledPackagesMergesKoreanIdHeaderWhenAnIdAlignsWithTheContinuation()
+    {
+        var manager = new WinGet();
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseInstalledPackages(
+            manager,
+            Lines(
+                """
+                이름               장치 ID                    버전
+                -----------------------------------------------------
+                Dell SupportAssist Dell App                   3.14.1
+                Visual Studio Code Microsoft.VisualStudioCode 1.136.1
+                Git                Git.Git                    2.51.0
+                """
+            )
+        );
+
+        Assert.Equal(3, packages.Count);
+        PackageAssert.Matches(packages[0], "Dell SupportAssist", "Dell App", "3.14.1");
+        PackageAssert.Matches(
+            packages[1],
+            "Visual Studio Code",
+            "Microsoft.VisualStudioCode",
+            "1.136.1"
+        );
+        PackageAssert.Matches(packages[2], "Git", "Git.Git", "2.51.0");
+    }
+
+    [Fact]
     public void ParseInstalledPackagesIgnoresOutputWithoutATable()
     {
         var manager = new WinGet();

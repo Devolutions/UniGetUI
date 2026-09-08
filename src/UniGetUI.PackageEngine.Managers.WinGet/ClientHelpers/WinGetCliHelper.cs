@@ -101,40 +101,33 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
     )
     {
         List<Package> packages = [];
-        string previousLine = "";
-        WinGetTableLayout? layout = null;
 
-        foreach (string line in outputLines)
+        foreach (
+            WinGetTable table in WinGetTableLayout.ReadTables(
+                outputLines.Where(line => !line.Contains("have pins"))
+            )
+        )
         {
-            if (line.Contains("have pins"))
+            WinGetTableLayout layout = table.Layout;
+            if (layout.ColumnCount < 4)
             {
                 continue;
             }
 
-            if (WinGetTableLayout.IsSeparatorLine(line))
+            foreach (string line in table.Rows)
             {
-                layout = WinGetTableLayout.Parse(previousLine, line);
-            }
-            else if (string.IsNullOrWhiteSpace(line))
-            {
-                layout = null;
-            }
-            else if (
-                layout is not null
-                && layout.ColumnCount >= 4
-                && layout.IsRowReaching(line, WinGetTableLayout.AvailableColumn)
-            )
-            {
+                if (!layout.IsRowReaching(line, WinGetTableLayout.AvailableColumn))
+                {
+                    continue;
+                }
+
                 string name = layout.GetCell(line, WinGetTableLayout.NameColumn);
                 string id = layout.GetCell(line, WinGetTableLayout.IdColumn);
                 string version = layout.GetCell(line, WinGetTableLayout.VersionColumn);
 
                 string newVersion;
                 IManagerSource source;
-                if (
-                    layout.ColumnCount >= 5
-                    && layout.StartsSeparateCell(line, layout.LastColumn)
-                )
+                if (layout.HasSourceColumn)
                 {
                     newVersion = layout.GetCell(
                         line,
@@ -178,8 +171,6 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
                     );
                 }
             }
-
-            previousLine = line;
         }
 
         return packages;
@@ -238,33 +229,20 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
     )
     {
         List<Package> packages = [];
-        string previousLine = "";
-        WinGetTableLayout? layout = null;
 
-        foreach (string line in outputLines)
+        foreach (WinGetTable table in WinGetTableLayout.ReadTables(outputLines))
         {
-            try
+            WinGetTableLayout layout = table.Layout;
+            foreach (string line in table.Rows)
             {
-                if (WinGetTableLayout.IsSeparatorLine(line))
-                {
-                    layout = WinGetTableLayout.Parse(previousLine, line);
-                }
-                else if (string.IsNullOrWhiteSpace(line))
-                {
-                    layout = null;
-                }
-                else if (
-                    layout is not null
-                    && layout.IsRowReaching(line, WinGetTableLayout.VersionColumn)
-                )
+                try
                 {
                     string name = layout.GetCell(line, WinGetTableLayout.NameColumn);
                     string id = layout.GetCell(line, WinGetTableLayout.IdColumn);
                     string version = layout.GetCell(line, WinGetTableLayout.VersionColumn);
 
                     string sourceName =
-                        layout.ColumnCount >= 4
-                        && layout.StartsSeparateCell(line, layout.LastColumn)
+                        layout.HasSourceColumn
                             ? layout.GetCell(line, layout.LastColumn)
                             : "";
 
@@ -276,12 +254,10 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
                     version = WinGetPkgOperationHelper.ResolveReportedInstalledVersion(id, version);
                     packages.Add(new Package(name, id, version, source, manager));
                 }
-
-                previousLine = line;
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
+                catch (Exception e)
+                {
+                    Logger.Error(e);
+                }
             }
         }
 
@@ -342,33 +318,20 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
     )
     {
         List<Package> packages = [];
-        string previousLine = "";
-        WinGetTableLayout? layout = null;
 
-        foreach (string line in outputLines)
+        foreach (WinGetTable table in WinGetTableLayout.ReadTables(outputLines))
         {
-            if (WinGetTableLayout.IsSeparatorLine(line))
-            {
-                layout = WinGetTableLayout.Parse(previousLine, line);
-            }
-            else if (string.IsNullOrWhiteSpace(line))
-            {
-                layout = null;
-            }
-            else if (
-                layout is not null
-                && layout.IsRowReaching(line, WinGetTableLayout.VersionColumn)
-            )
+            WinGetTableLayout layout = table.Layout;
+            foreach (string line in table.Rows)
             {
                 string name = layout.GetCell(line, WinGetTableLayout.NameColumn);
                 string id = layout.GetCell(line, WinGetTableLayout.IdColumn);
                 string version = layout.GetCell(line, WinGetTableLayout.VersionColumn);
 
                 string sourceName =
-                    layout.ColumnCount >= 4
-                        && layout.StartsSeparateCell(line, layout.LastColumn)
-                            ? layout.GetCell(line, layout.LastColumn)
-                            : "";
+                    layout.HasSourceColumn
+                        ? layout.GetCell(line, layout.LastColumn)
+                        : "";
 
                 IManagerSource source =
                     sourceName.Length == 0
@@ -377,8 +340,6 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
                 packages.Add(new Package(name, id, version, source, manager));
             }
-
-            previousLine = line;
         }
 
         return packages;

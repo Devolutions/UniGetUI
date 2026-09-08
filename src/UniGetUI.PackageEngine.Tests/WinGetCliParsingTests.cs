@@ -170,7 +170,7 @@ public sealed class WinGetCliParsingTests : IDisposable
             manager,
             Lines(
                 """
-                이름              ID                  버전  사용 가능 소스
+                이름              장치 ID             버전  사용 가능 원본
                 ------------------------------------------------------------
                 7-Zip 24.09 (x64) 7zip.7zip           24.09 25.00     winget
                 메모장            Notepad++.Notepad++ 8.9.7 8.9.8     winget
@@ -534,7 +534,7 @@ public sealed class WinGetCliParsingTests : IDisposable
             manager,
             Lines(
                 """
-                이름              ID        버전  사용 가능
+                이름              장치 ID   버전  사용 가능
                 ---------------------------------------------
                 7-Zip 24.09 (x64) 7zip.7zip 24.09 2026.2.16.0
                 """
@@ -560,7 +560,7 @@ public sealed class WinGetCliParsingTests : IDisposable
             manager,
             Lines(
                 """
-                이름              ID        버전  사용 가능
+                이름              장치 ID   버전  사용 가능
                 ---------------------------------------------
                 7-Zip 24.09 (x64) 7zip.7zip 24.09 2026.2.16.0
                 """
@@ -569,6 +569,142 @@ public sealed class WinGetCliParsingTests : IDisposable
 
         PackageAssert.Matches(Assert.Single(packages), "7-Zip 24.09 (x64)", "7zip.7zip", "24.09");
         Assert.Same(manager.LocalPcSource, packages[0].Source);
+    }
+
+    [Fact]
+    public void ParseInstalledPackagesReadsRealKoreanHeaders()
+    {
+        var manager = new WinGet();
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseInstalledPackages(
+            manager,
+            Lines(
+                """
+                이름              장치 ID             버전  사용 가능 원본
+                ------------------------------------------------------------
+                7-Zip 24.09 (x64) 7zip.7zip           24.09 25.00     winget
+                메모장            Notepad++.Notepad++ 8.9.7 8.9.8     winget
+                """
+            )
+        );
+
+        Assert.Equal(2, packages.Count);
+        PackageAssert.Matches(packages[0], "7-Zip 24.09 (x64)", "7zip.7zip", "24.09");
+        PackageAssert.Matches(packages[1], "메모장", "Notepad++.Notepad++", "8.9.7");
+        Assert.Equal("winget", packages[1].Source.Name);
+    }
+
+    [Fact]
+    public void ParseInstalledPackagesReadsAnAvailableColumnWithoutASourceColumn()
+    {
+        var manager = new WinGet();
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseInstalledPackages(
+            manager,
+            Lines(
+                """
+                Name              Id               Version Available
+                ----------------------------------------------------
+                7-Zip 24.09 (x64) 7zip.7zip        24.09   25.00
+                Contoso Tool      Programs\Contoso 1.0.0
+                """
+            )
+        );
+
+        Assert.Equal(2, packages.Count);
+        PackageAssert.Matches(packages[0], "7-Zip 24.09 (x64)", "7zip.7zip", "24.09");
+        PackageAssert.Matches(packages[1], "Contoso Tool", @"Programs\Contoso", "1.0.0");
+        Assert.Same(manager.LocalPcSource, packages[0].Source);
+        Assert.Same(manager.LocalPcSource, packages[1].Source);
+    }
+
+    [Fact]
+    public void ParseInstalledPackagesTreatsAmbiguousWidthCharactersAsNarrow()
+    {
+        var manager = new WinGet();
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseInstalledPackages(
+            manager,
+            Lines(
+                """
+                Name       Id             Version
+                ---------------------------------
+                ㉈㉈㉈ Widget Contoso.Widget 1.0.0
+                """
+            )
+        );
+
+        PackageAssert.Matches(
+            Assert.Single(packages),
+            "㉈㉈㉈ Widget",
+            "Contoso.Widget",
+            "1.0.0"
+        );
+    }
+
+    [Fact]
+    public void ParseInstalledPackagesTreatsRepeatedWideEmojiAsTwoColumnsEach()
+    {
+        var manager = new WinGet();
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseInstalledPackages(
+            manager,
+            Lines(
+                """
+                Name        Id           Version
+                --------------------------------
+                🎮🎮🎮 Game Contoso.Game 2.0.0
+                """
+            )
+        );
+
+        PackageAssert.Matches(Assert.Single(packages), "🎮🎮🎮 Game", "Contoso.Game", "2.0.0");
+    }
+
+    [Fact]
+    public void ParseAvailableUpdatesMergesKoreanIdHeaderForASingleRowTable()
+    {
+        var manager = new WinGet();
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseAvailableUpdates(
+            manager,
+            Lines(
+                """
+                이름              장치 ID   버전  사용 가능 원본
+                --------------------------------------------------
+                7-Zip 24.09 (x64) 7zip.7zip 24.09 25.00     winget
+                사용 가능한 업그레이드 1개
+                """
+            )
+        );
+
+        PackageAssert.Matches(
+            Assert.Single(packages),
+            "7-Zip 24.09 (x64)",
+            "7zip.7zip",
+            "24.09",
+            "25.00"
+        );
+    }
+
+    [Fact]
+    public void ParseInstalledPackagesIgnoresProseAlignedToTheIdColumn()
+    {
+        var manager = new WinGet();
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseInstalledPackages(
+            manager,
+            Lines(
+                """
+                Name              Id        Version Source
+                ------------------------------------------
+                7-Zip 24.09 (x64) 7zip.7zip 24.09   winget
+                A pinned package: use the 'winget pin' command to view and edit pins
+                """
+            )
+        );
+
+        PackageAssert.Matches(Assert.Single(packages), "7-Zip 24.09 (x64)", "7zip.7zip", "24.09");
     }
 
     [Fact]

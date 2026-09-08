@@ -417,6 +417,24 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Theory]
+    [InlineData("Microsoft.DesktopAppInstaller_1.29.290.0_x64__8wekyb3d8bbwe", true)]
+    [InlineData("Microsoft.DesktopAppInstaller_1.29.290.0_neutral_split.scale-100_8wekyb3d8bbwe", true)]
+    [InlineData("Microsoft.DesktopAppInstaller_9.9.9.0_x64__1abcdefghijkl", false)]
+    [InlineData("Microsoft.DesktopAppInstallerExtra_1.0.0.0_x64__8wekyb3d8bbwe", false)]
+    [InlineData("Contoso.DesktopAppInstaller_1.0.0.0_x64__8wekyb3d8bbwe", false)]
+    [InlineData("Microsoft.WindowsTerminal_1.0.0.0_x64__8wekyb3d8bbwe", false)]
+    public void IsAppInstallerPackageFullNameRequiresTheMicrosoftPublisherId(
+        string packageFullName,
+        bool expected
+    )
+    {
+        Assert.Equal(
+            expected,
+            SystemWinGetLocator.IsAppInstallerPackageFullName(packageFullName)
+        );
+    }
+
+    [Theory]
     [InlineData("Microsoft.DesktopAppInstaller_1.29.290.0_x64__8wekyb3d8bbwe", "1.29.290.0")]
     [InlineData("Microsoft.DesktopAppInstaller_1.2_neutral__8wekyb3d8bbwe", "1.2")]
     [InlineData("Microsoft.DesktopAppInstaller", "0.0")]

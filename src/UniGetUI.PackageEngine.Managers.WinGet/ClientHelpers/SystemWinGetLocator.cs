@@ -7,6 +7,7 @@ internal static class SystemWinGetLocator
 {
     private const string WinGetExecutableName = "winget.exe";
     private const string AppInstallerPackageNamePrefix = "Microsoft.DesktopAppInstaller_";
+    private const string AppInstallerPublisherIdSuffix = "_8wekyb3d8bbwe";
 
     private const string AppxRepositoryKey =
         @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages";
@@ -77,12 +78,7 @@ internal static class SystemWinGetLocator
 
             foreach (string packageFullName in root.GetSubKeyNames())
             {
-                if (
-                    !packageFullName.StartsWith(
-                        AppInstallerPackageNamePrefix,
-                        StringComparison.OrdinalIgnoreCase
-                    )
-                )
+                if (!IsAppInstallerPackageFullName(packageFullName))
                 {
                     continue;
                 }
@@ -118,6 +114,18 @@ internal static class SystemWinGetLocator
             .OrderByDescending(match => match.Version)
             .Select(match => match.Directory)
             .ToArray();
+    }
+
+    internal static bool IsAppInstallerPackageFullName(string packageFullName)
+    {
+        return packageFullName.StartsWith(
+                AppInstallerPackageNamePrefix,
+                StringComparison.OrdinalIgnoreCase
+            )
+            && packageFullName.EndsWith(
+                AppInstallerPublisherIdSuffix,
+                StringComparison.OrdinalIgnoreCase
+            );
     }
 
     internal static Version ParsePackageVersion(string packageFullName)

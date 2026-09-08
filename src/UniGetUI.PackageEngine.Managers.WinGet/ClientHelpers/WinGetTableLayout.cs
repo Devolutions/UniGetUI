@@ -3,6 +3,16 @@ using System.Text;
 
 namespace UniGetUI.PackageEngine.Managers.WingetManager;
 
+internal enum HeaderKind
+{
+    Name,
+    Id,
+    Version,
+    Available,
+    Match,
+    Source,
+}
+
 internal sealed record WinGetTable(WinGetTableLayout Layout, IReadOnlyList<string> Rows);
 
 internal sealed class WinGetTableLayout
@@ -14,32 +24,72 @@ internal sealed class WinGetTableLayout
 
     private const int MinimumColumns = 3;
 
-    private static readonly HashSet<string> AvailableOrMatchHeaders = new(
+    private static readonly Dictionary<string, HeaderKind> HeaderNames = new(
         StringComparer.OrdinalIgnoreCase
     )
     {
-        "Available",
-        "AvailableHeader",
-        "Coincidencia",
-        "Correspondance",
-        "Correspondência",
-        "Corrispondenza",
-        "Disponibile",
-        "Disponible",
-        "Disponível",
-        "Match",
-        "SearchMatch",
-        "Verfügbar",
-        "Übereinstimmung",
-        "Доступно",
-        "Совпадение",
-        "一致",
-        "利用可能",
-        "匹配",
-        "可用",
-        "相符",
-        "사용 가능",
-        "일치",
+        { "Name", HeaderKind.Name },
+        { "Nom", HeaderKind.Name },
+        { "Nombre", HeaderKind.Name },
+        { "Nome", HeaderKind.Name },
+        { "SearchName", HeaderKind.Name },
+        { "Имя", HeaderKind.Name },
+        { "名前", HeaderKind.Name },
+        { "名称", HeaderKind.Name },
+        { "名稱", HeaderKind.Name },
+        { "이름", HeaderKind.Name },
+
+        { "ID", HeaderKind.Id },
+        { "SearchId", HeaderKind.Id },
+        { "ИД", HeaderKind.Id },
+        { "識別碼", HeaderKind.Id },
+        { "장치 ID", HeaderKind.Id },
+
+        { "SearchVersion", HeaderKind.Version },
+        { "Version", HeaderKind.Version },
+        { "Versione", HeaderKind.Version },
+        { "Versión", HeaderKind.Version },
+        { "Versão", HeaderKind.Version },
+        { "Версия", HeaderKind.Version },
+        { "バージョン", HeaderKind.Version },
+        { "版本", HeaderKind.Version },
+        { "버전", HeaderKind.Version },
+
+        { "Available", HeaderKind.Available },
+        { "AvailableHeader", HeaderKind.Available },
+        { "Disponibile", HeaderKind.Available },
+        { "Disponible", HeaderKind.Available },
+        { "Disponível", HeaderKind.Available },
+        { "Verfügbar", HeaderKind.Available },
+        { "Доступно", HeaderKind.Available },
+        { "利用可能", HeaderKind.Available },
+        { "可用", HeaderKind.Available },
+        { "사용 가능", HeaderKind.Available },
+
+        { "Coincidencia", HeaderKind.Match },
+        { "Correspondance", HeaderKind.Match },
+        { "Correspondência", HeaderKind.Match },
+        { "Corrispondenza", HeaderKind.Match },
+        { "Match", HeaderKind.Match },
+        { "SearchMatch", HeaderKind.Match },
+        { "Übereinstimmung", HeaderKind.Match },
+        { "Совпадение", HeaderKind.Match },
+        { "一致", HeaderKind.Match },
+        { "匹配", HeaderKind.Match },
+        { "相符", HeaderKind.Match },
+        { "일치", HeaderKind.Match },
+
+        { "Origem", HeaderKind.Source },
+        { "Origen", HeaderKind.Source },
+        { "Origine", HeaderKind.Source },
+        { "Quelle", HeaderKind.Source },
+        { "SearchSource", HeaderKind.Source },
+        { "Source", HeaderKind.Source },
+        { "Источник", HeaderKind.Source },
+        { "ソース", HeaderKind.Source },
+        { "來源", HeaderKind.Source },
+        { "源", HeaderKind.Source },
+        { "원본", HeaderKind.Source },
     };
 
     private readonly string _headerLine;
@@ -58,11 +108,7 @@ internal sealed class WinGetTableLayout
     public int LastColumn => _columnStarts.Length - 1;
 
     public bool HasSourceColumn =>
-        ColumnCount >= 5
-        || (
-            ColumnCount == 4
-            && !AvailableOrMatchHeaders.Contains(GetCell(_headerLine, LastColumn))
-        );
+        ColumnCount >= 5 || (ColumnCount == 4 && !LastHeaderIsAvailableOrMatch());
 
     public static bool IsSeparatorLine(string line)
     {
@@ -160,7 +206,7 @@ internal sealed class WinGetTableLayout
 
     public WinGetTableLayout MergeContinuationColumns(IReadOnlyList<string> rows)
     {
-        if (rows.Count == 0 || _columnStarts.Length <= MinimumColumns)
+        if (_columnStarts.Length <= MinimumColumns)
         {
             return this;
         }
@@ -170,6 +216,12 @@ internal sealed class WinGetTableLayout
 
         for (int column = 1; column < _columnStarts.Length; column++)
         {
+            if (remaining - 1 >= MinimumColumns && CompletesAHeaderName(kept[^1], column))
+            {
+                remaining--;
+                continue;
+            }
+
             int straddled = 0;
             int startsACell = 0;
 
@@ -185,7 +237,11 @@ internal sealed class WinGetTableLayout
                 }
             }
 
-            if ((startsACell == 0 || straddled > startsACell) && remaining - 1 >= MinimumColumns)
+            if (
+                rows.Count > 0
+                && (startsACell == 0 || straddled > startsACell)
+                && remaining - 1 >= MinimumColumns
+            )
             {
                 remaining--;
             }
@@ -198,6 +254,42 @@ internal sealed class WinGetTableLayout
         return kept.Count == _columnStarts.Length
             ? this
             : new WinGetTableLayout(_headerLine, [.. kept], _tableWidth);
+    }
+
+    private bool CompletesAHeaderName(int previousStart, int column)
+    {
+        int endColumn =
+            column + 1 < _columnStarts.Length ? _columnStarts[column + 1] : int.MaxValue;
+
+        return HeaderNames.ContainsKey(HeaderTextBetween(previousStart, endColumn));
+    }
+
+    private bool LastHeaderIsAvailableOrMatch()
+    {
+        string text = GetCell(_headerLine, LastColumn);
+        return HeaderNames.TryGetValue(text, out HeaderKind kind)
+            && kind is HeaderKind.Available or HeaderKind.Match;
+    }
+
+    private string HeaderTextBetween(int startDisplayColumn, int endDisplayColumn)
+    {
+        int start = CharIndexOfColumn(_headerLine, startDisplayColumn);
+        if (start >= _headerLine.Length)
+        {
+            return "";
+        }
+
+        int end =
+            endDisplayColumn == int.MaxValue
+                ? _headerLine.Length
+                : CharIndexOfColumn(_headerLine, endDisplayColumn);
+
+        if (end > _headerLine.Length)
+        {
+            end = _headerLine.Length;
+        }
+
+        return end <= start ? "" : _headerLine[start..end].Trim();
     }
 
     public bool IsRowReaching(string line, int column)

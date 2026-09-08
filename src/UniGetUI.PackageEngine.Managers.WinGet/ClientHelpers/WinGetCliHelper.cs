@@ -131,7 +131,10 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
 
                 string newVersion;
                 IManagerSource source;
-                if (layout.ColumnCount >= 5)
+                if (
+                    layout.ColumnCount >= 5
+                    && layout.StartsSeparateCell(line, layout.LastColumn)
+                )
                 {
                     newVersion = layout.GetCell(
                         line,
@@ -260,7 +263,10 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
                     string version = layout.GetCell(line, WinGetTableLayout.VersionColumn);
 
                     string sourceName =
-                        layout.ColumnCount >= 4 ? layout.GetCell(line, layout.LastColumn) : "";
+                        layout.ColumnCount >= 4
+                        && layout.StartsSeparateCell(line, layout.LastColumn)
+                            ? layout.GetCell(line, layout.LastColumn)
+                            : "";
 
                     IManagerSource source =
                         sourceName.Length == 0
@@ -359,7 +365,10 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
                 string version = layout.GetCell(line, WinGetTableLayout.VersionColumn);
 
                 string sourceName =
-                    layout.ColumnCount >= 4 ? layout.GetCell(line, layout.LastColumn) : "";
+                    layout.ColumnCount >= 4
+                        && layout.StartsSeparateCell(line, layout.LastColumn)
+                            ? layout.GetCell(line, layout.LastColumn)
+                            : "";
 
                 IManagerSource source =
                     sourceName.Length == 0

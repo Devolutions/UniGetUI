@@ -49,11 +49,7 @@ internal sealed class WinGetTableLayout
 
         while (index < headerLine.Length)
         {
-            int length = CodePointLength(headerLine, index);
-            int codePoint =
-                length == 2
-                    ? char.ConvertToUtf32(headerLine[index], headerLine[index + 1])
-                    : headerLine[index];
+            int codePoint = FirstCodePoint(headerLine, index);
             bool isSpace = codePoint == ' ';
 
             if (!isSpace && previousWasSpace)
@@ -63,7 +59,7 @@ internal sealed class WinGetTableLayout
 
             previousWasSpace = isSpace;
             displayColumn += GetDisplayWidth(codePoint);
-            index += length;
+            index += TextElementLength(headerLine, index);
         }
 
         return columnStarts.Count >= 3
@@ -84,6 +80,17 @@ internal sealed class WinGetTableLayout
         }
 
         return CharIndexOfColumn(line, _columnStarts[column]) < line.Length;
+    }
+
+    public bool StartsSeparateCell(string line, int column)
+    {
+        if (column <= 0 || column >= _columnStarts.Length)
+        {
+            return false;
+        }
+
+        return CharIndexOfColumn(line, _columnStarts[column])
+            > CharIndexOfColumn(line, _columnStarts[column - 1]);
     }
 
     public string GetCell(string line, int column) => GetCell(line, column, column + 1);
@@ -121,11 +128,8 @@ internal sealed class WinGetTableLayout
 
         while (index < line.Length)
         {
-            int length = CodePointLength(line, index);
-            int codePoint =
-                length == 2 ? char.ConvertToUtf32(line[index], line[index + 1]) : line[index];
-            width += GetDisplayWidth(codePoint);
-            index += length;
+            width += GetDisplayWidth(FirstCodePoint(line, index));
+            index += TextElementLength(line, index);
         }
 
         return width;
@@ -138,11 +142,8 @@ internal sealed class WinGetTableLayout
 
         while (index < line.Length && width < displayColumn)
         {
-            int length = CodePointLength(line, index);
-            int codePoint =
-                length == 2 ? char.ConvertToUtf32(line[index], line[index + 1]) : line[index];
-            width += GetDisplayWidth(codePoint);
-            index += length;
+            width += GetDisplayWidth(FirstCodePoint(line, index));
+            index += TextElementLength(line, index);
         }
 
         while (index > 0 && index < line.Length && line[index] != ' ' && line[index - 1] != ' ')
@@ -153,29 +154,17 @@ internal sealed class WinGetTableLayout
         return index;
     }
 
-    private static int CodePointLength(string text, int index) =>
+    private static int TextElementLength(string text, int index) =>
+        Math.Max(1, StringInfo.GetNextTextElementLength(text.AsSpan(index)));
+
+    private static int FirstCodePoint(string text, int index) =>
         char.IsHighSurrogate(text[index])
         && index + 1 < text.Length
         && char.IsLowSurrogate(text[index + 1])
-            ? 2
-            : 1;
+            ? char.ConvertToUtf32(text[index], text[index + 1])
+            : text[index];
 
-    private static int GetDisplayWidth(int codePoint)
-    {
-        UnicodeCategory category = CharUnicodeInfo.GetUnicodeCategory(codePoint);
-        if (
-            category
-            is UnicodeCategory.NonSpacingMark
-                or UnicodeCategory.EnclosingMark
-                or UnicodeCategory.Format
-                or UnicodeCategory.Control
-        )
-        {
-            return 0;
-        }
-
-        return IsFullWidth(codePoint) ? 2 : 1;
-    }
+    private static int GetDisplayWidth(int codePoint) => IsFullWidth(codePoint) ? 2 : 1;
 
     private static bool IsFullWidth(int codePoint) =>
         codePoint

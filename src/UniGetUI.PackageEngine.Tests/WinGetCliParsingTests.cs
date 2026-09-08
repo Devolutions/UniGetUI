@@ -502,6 +502,76 @@ public sealed class WinGetCliParsingTests : IDisposable
     }
 
     [Fact]
+    public void ParseInstalledPackagesMeasuresGraphemeClustersAsOneCell()
+    {
+        var manager = new WinGet();
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseInstalledPackages(
+            manager,
+            Lines(
+                """
+                Name      Id             Version
+                --------------------------------
+                👨‍👩‍👧‍👦 Family Contoso.Family 1.0.0
+                """
+            )
+        );
+
+        PackageAssert.Matches(
+            Assert.Single(packages),
+            "👨‍👩‍👧‍👦 Family",
+            "Contoso.Family",
+            "1.0.0"
+        );
+    }
+
+    [Fact]
+    public void ParseAvailableUpdatesHandlesAMultiwordHeaderWithoutASourceColumn()
+    {
+        var manager = new WinGet();
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseAvailableUpdates(
+            manager,
+            Lines(
+                """
+                이름              ID        버전  사용 가능
+                ---------------------------------------------
+                7-Zip 24.09 (x64) 7zip.7zip 24.09 2026.2.16.0
+                """
+            )
+        );
+
+        PackageAssert.Matches(
+            Assert.Single(packages),
+            "7-Zip 24.09 (x64)",
+            "7zip.7zip",
+            "24.09",
+            "2026.2.16.0"
+        );
+        Assert.Same(manager.DefaultSource, packages[0].Source);
+    }
+
+    [Fact]
+    public void ParseInstalledPackagesHandlesAMultiwordHeaderWithoutASourceColumn()
+    {
+        var manager = new WinGet();
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseInstalledPackages(
+            manager,
+            Lines(
+                """
+                이름              ID        버전  사용 가능
+                ---------------------------------------------
+                7-Zip 24.09 (x64) 7zip.7zip 24.09 2026.2.16.0
+                """
+            )
+        );
+
+        PackageAssert.Matches(Assert.Single(packages), "7-Zip 24.09 (x64)", "7zip.7zip", "24.09");
+        Assert.Same(manager.LocalPcSource, packages[0].Source);
+    }
+
+    [Fact]
     public void ParseInstalledPackagesIgnoresOutputWithoutATable()
     {
         var manager = new WinGet();

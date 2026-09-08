@@ -312,6 +312,127 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void FindCandidateExecutableFilesPrefersOffPathSystemWinGetOverBundledPinget()
+    {
+        const string bundledPinget = @"C:\Program Files\UniGetUI\pinget.exe";
+        const string packagedWinGet =
+            @"C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_1.29.290.0_x64__8wekyb3d8bbwe\winget.exe";
+
+        var candidates = WinGet.FindCandidateExecutableFiles(
+            static _ => [],
+            path => path == bundledPinget,
+            bundledPinget,
+            WinGetCliToolPreference.Default,
+            static () => [packagedWinGet]
+        );
+
+        Assert.Equal([packagedWinGet, bundledPinget], candidates);
+    }
+
+    [Fact]
+    public void FindCandidateExecutableFilesDeduplicatesOffPathSystemWinGetAlreadyFoundOnPath()
+    {
+        const string systemWinGet = @"C:\WindowsApps\winget.exe";
+        const string bundledPinget = @"C:\Program Files\UniGetUI\pinget.exe";
+
+        var candidates = WinGet.FindCandidateExecutableFiles(
+            static executableName => executableName == "winget.exe" ? [systemWinGet] : [],
+            path => path == bundledPinget,
+            bundledPinget,
+            WinGetCliToolPreference.Default,
+            static () => [systemWinGet]
+        );
+
+        Assert.Equal([systemWinGet, bundledPinget], candidates);
+    }
+
+    [Fact]
+    public void FindCandidateExecutableFilesIgnoresOffPathSystemWinGetInPingetMode()
+    {
+        const string bundledPinget = @"C:\Program Files\UniGetUI\pinget.exe";
+
+        var candidates = WinGet.FindCandidateExecutableFiles(
+            static _ => [],
+            path => path == bundledPinget,
+            bundledPinget,
+            WinGetCliToolPreference.BundledPinget,
+            static () =>
+                throw new InvalidOperationException(
+                    "System WinGet should not be queried in Pinget mode."
+                )
+        );
+
+        Assert.Equal([bundledPinget], candidates);
+    }
+
+    [Fact]
+    public void EnumerateOffPathExecutablesReturnsExecutionAliasAndAppInstallerLocations()
+    {
+        const string localAppData = @"C:\Users\test\AppData\Local";
+        string alias = Path.Join(localAppData, "Microsoft", "WindowsApps", "winget.exe");
+        const string packageRoot =
+            @"C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_1.29.290.0_x64__8wekyb3d8bbwe";
+        string packagedWinGet = Path.Join(packageRoot, "winget.exe");
+
+        var executables = SystemWinGetLocator
+            .EnumerateOffPathExecutables(
+                path => path == alias || path == packagedWinGet,
+                localAppData,
+                () => [packageRoot]
+            )
+            .ToArray();
+
+        Assert.Equal([alias, packagedWinGet], executables);
+    }
+
+    [Fact]
+    public void EnumerateOffPathExecutablesSkipsDirectoriesWithoutWinGet()
+    {
+        const string packageRoot =
+            @"C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_1.29.290.0_x64__8wekyb3d8bbwe";
+        string packagedWinGet = Path.Join(packageRoot, "winget.exe");
+
+        var executables = SystemWinGetLocator
+            .EnumerateOffPathExecutables(
+                path => path == packagedWinGet,
+                @"C:\Users\test\AppData\Local",
+                () => [@"C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_0.0.0.0_x64__8wekyb3d8bbwe", packageRoot]
+            )
+            .ToArray();
+
+        Assert.Equal([packagedWinGet], executables);
+    }
+
+    [Fact]
+    public void EnumerateOffPathExecutablesIgnoresTheExecutionAliasWhenAppInstallerIsNotRegistered()
+    {
+        const string localAppData = @"C:\Users\test\AppData\Local";
+        string alias = Path.Join(localAppData, "Microsoft", "WindowsApps", "winget.exe");
+
+        var executables = SystemWinGetLocator
+            .EnumerateOffPathExecutables(path => path == alias, localAppData, static () => [])
+            .ToArray();
+
+        Assert.Empty(executables);
+    }
+
+    [Theory]
+    [InlineData("Microsoft.DesktopAppInstaller_1.29.290.0_x64__8wekyb3d8bbwe", "1.29.290.0")]
+    [InlineData("Microsoft.DesktopAppInstaller_1.2_neutral__8wekyb3d8bbwe", "1.2")]
+    [InlineData("Microsoft.DesktopAppInstaller", "0.0")]
+    [InlineData("Microsoft.DesktopAppInstaller_notaversion_x64__8wekyb3d8bbwe", "0.0")]
+    public void ParsePackageVersionReadsTheVersionPieceOfThePackageFullName(
+        string packageFullName,
+        string expected
+    )
+    {
+        Assert.Equal(
+            Version.Parse(expected),
+            SystemWinGetLocator.ParsePackageVersion(packageFullName)
+        );
+    }
+
+    [Fact]
     public void PingetCliHelperDeserializesListResponsesWithGeneratedContext()
     {
         // Pinget emits PascalCase keys.
@@ -424,6 +545,10 @@ public sealed class WinGetManagerTests : IDisposable
     [InlineData(@"C:\Program Files\UniGetUI\pinget.exe", 1)]
     [InlineData(@"C:\Tools\pinget.exe", 1)]
     [InlineData(@"C:\WindowsApps\winget.exe", 0)]
+    [InlineData(
+        @"C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_1.29.290.0_x64__8wekyb3d8bbwe\winget.exe",
+        0
+    )]
     public void GetCliToolKindRecognizesPingetExecutableName(
         string executablePath,
         int expectedKind

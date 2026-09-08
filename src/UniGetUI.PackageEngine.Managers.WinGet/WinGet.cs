@@ -332,7 +332,8 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 executableName => CoreTools.WhichMultiple(executableName),
                 File.Exists,
                 GetBundledPingetExecutablePath(),
-                GetCliToolPreference()
+                GetCliToolPreference(),
+                () => SystemWinGetLocator.EnumerateOffPathExecutables(File.Exists)
             );
         }
 
@@ -340,7 +341,8 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             Func<string, IReadOnlyList<string>> findExecutables,
             Func<string, bool> fileExists,
             string bundledPingetPath,
-            WinGetCliToolPreference cliToolPreference = WinGetCliToolPreference.Default
+            WinGetCliToolPreference cliToolPreference = WinGetCliToolPreference.Default,
+            Func<IEnumerable<string>>? findOffPathSystemWinGetFiles = null
         )
         {
             List<string> candidates = [];
@@ -348,6 +350,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             if (cliToolPreference is not WinGetCliToolPreference.BundledPinget)
             {
                 candidates.AddRange(findExecutables(SystemWinGetExecutableName));
+                candidates.AddRange(findOffPathSystemWinGetFiles?.Invoke() ?? []);
             }
 
             if (cliToolPreference is not WinGetCliToolPreference.SystemWinGet)

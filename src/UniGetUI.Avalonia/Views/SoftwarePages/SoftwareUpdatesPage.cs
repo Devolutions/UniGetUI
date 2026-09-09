@@ -109,11 +109,6 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         ViewModel.AddToolbarButton("clipboard_list", CoreTools.Translate("Manage ignored updates"),
             () => vm.RequestManageIgnoredCommand.Execute(null));
         ViewModel.AddToolbarSeparator();
-        ViewModel.AddToolbarButton("sandclock", CoreTools.Translate("Automatically update selected packages"),
-            () => MarkForAutoUpdates(vm.FilteredPackages.GetCheckedPackages()));
-        ViewModel.AddToolbarButton("clipboard_list", CoreTools.Translate("Manage automatic updates"),
-            () => vm.RequestManageAutoUpdatesCommand.Execute(null));
-        ViewModel.AddToolbarSeparator();
         ViewModel.AddToolbarButton("save_as", CoreTools.Translate("Export to CSV"),
             () => _ = ExportPackagesToCsvAsync());
     }

@@ -27,6 +27,8 @@ using UniGetUI.PackageEngine.PackageLoader;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages;
 
+public sealed record ToolbarEntry(Control Control, string IconName, string Label, Action? Invoke);
+
 public enum SearchMode { Both, Name, Id, Exact, Similar }
 
 public enum PackageViewMode { List = 0, Grid = 1, Icons = 2 }
@@ -195,7 +197,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     // ─── Collections ──────────────────────────────────────────────────────────
     public ObservablePackageCollection FilteredPackages { get; } = new();
     public AvaloniaList<SourceTreeNode> SourceNodes { get; } = new();
-    public AvaloniaList<object> ToolBarItems { get; } = new();
+    public List<ToolbarEntry> ToolbarEntries { get; } = new();
 
     // Labels of toolbar buttons that can be hidden to collapse the menu bar to icon-only
     // on narrow windows (buttons created with showLabel: false are never tracked here).
@@ -345,7 +347,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         ToolTip.SetTip(btn, label);
         AutomationProperties.SetName(btn, label);
         btn.Click += (_, _) => onClick();
-        ToolBarItems.Add(btn);
+        ToolbarEntries.Add(new ToolbarEntry(btn, svgName, label, onClick));
         return btn;
     }
 
@@ -379,7 +381,7 @@ public partial class PackagesPageViewModel : ViewModelBase
                          ?? new SolidColorBrush(Color.FromArgb(80, 128, 128, 128)),
         };
         AutomationProperties.SetAccessibilityView(sep, AccessibilityView.Raw);
-        ToolBarItems.Add(sep);
+        ToolbarEntries.Add(new ToolbarEntry(sep, "", "", null));
     }
 
     public async Task ShowInfoDialog(Window owner, string title, string message)

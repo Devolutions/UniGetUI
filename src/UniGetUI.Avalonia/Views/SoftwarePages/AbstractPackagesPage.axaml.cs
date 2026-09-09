@@ -41,6 +41,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
     private double? _overlayRestingOffsetX;
     private static readonly SplineEasing FluentEntranceEasing = new(0.1, 0.9, 0.2, 1.0);
     private static readonly TimeSpan FilterAnimationDuration = TimeSpan.FromMilliseconds(300);
+    private readonly MenuFlyout _toolbarOverflowFlyout = new();
 
     protected AbstractPackagesPage(PackagesPageData data)
     {
@@ -96,6 +97,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
         // Build the toolbar now that both AXAML controls and the ViewModel are ready
         GenerateToolBar(ViewModel);
+        InitializeToolbarOverflow();
 
         // Double-click a list row → show details
         PackageList.DoubleTapped += (_, e) =>
@@ -161,14 +163,6 @@ public abstract partial class AbstractPackagesPage : UserControl,
         // Responsive: switch between inline and overlay modes based on content width.
         FilteringPanel.GetObservable(BoundsProperty)
             .SubscribeValue(bounds => OnFilteringPanelWidthChanged(bounds.Width));
-
-        // Responsive: collapse the menu bar to icon-only on narrow windows so the
-        // toolbar buttons stay reachable instead of overflowing (mirrors WinUI).
-        this.GetObservable(BoundsProperty)
-            .SubscribeValue(bounds => UpdateToolbarLayout(bounds.Width));
-        Loaded += (_, _) => Dispatcher.UIThread.Post(
-            () => UpdateToolbarLayout(Bounds.Width),
-            DispatcherPriority.Loaded);
 
         // Grid/icons views: stretch cards to fill each row then reflow (mirrors WinUI's
         // UniformGridLayout) instead of leaving wasted space to the right.
@@ -238,10 +232,43 @@ public abstract partial class AbstractPackagesPage : UserControl,
         ViewModel.IconCardWidth = Math.Floor(availableWidth / columns);
     }
 
-    private void UpdateToolbarLayout(double availableWidth)
+    private void InitializeToolbarOverflow()
     {
-        if (availableWidth <= 0) return;
-        ViewModel.SetToolbarLabelsCollapsed(availableWidth < 900);
+        ToolBar.OverflowControl = ToolbarOverflowButton;
+        ToolBar.LabelCollapseRequested = ViewModel.SetToolbarLabelsCollapsed;
+
+        ToolBar.Children.Remove(ToolbarOverflowButton);
+        foreach (var entry in ViewModel.ToolbarEntries)
+            ToolBar.Children.Add(entry.Control);
+        ToolBar.Children.Add(ToolbarOverflowButton);
+
+        _toolbarOverflowFlyout.Opening += (_, _) => PopulateToolbarOverflowFlyout();
+        ToolbarOverflowButton.Flyout = _toolbarOverflowFlyout;
+    }
+
+    private void PopulateToolbarOverflowFlyout()
+    {
+        var items = new List<object>();
+        foreach (var control in ToolBar.OverflowedItems)
+        {
+            var entry = ViewModel.ToolbarEntries.FirstOrDefault(e => ReferenceEquals(e.Control, control));
+            if (entry is null) continue;
+
+            if (entry.Invoke is not { } invoke)
+            {
+                if (items.Count > 0 && items[^1] is not Separator) items.Add(new Separator());
+                continue;
+            }
+
+            var item = new MenuItem { Header = entry.Label, Icon = LoadMenuIcon(entry.IconName) };
+            item.Click += (_, _) => invoke();
+            items.Add(item);
+        }
+
+        while (items.Count > 0 && items[^1] is Separator) items.RemoveAt(items.Count - 1);
+
+        _toolbarOverflowFlyout.Items.Clear();
+        foreach (var item in items) _toolbarOverflowFlyout.Items.Add(item);
     }
 
     // ─── UI-only: focus the package list ─────────────────────────────────────

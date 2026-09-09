@@ -209,16 +209,20 @@
             </StackPanel>
 
             <!-- Toolbar (AppBarButtons added by subclass) -->
-            <ItemsControl x:Name="ToolBar"
-                          Grid.Column="2"
-                          HorizontalAlignment="Left"
-                          ItemsSource="{Binding ToolBarItems}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" Spacing="4"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-            </ItemsControl>
+            <controls:ToolbarOverflowPanel x:Name="ToolBar"
+                                           Grid.Column="2"
+                                           Spacing="4"
+                                           ClipToBounds="True">
+                <Button x:Name="ToolbarOverflowButton"
+                        Width="40" Height="40"
+                        Padding="0"
+                        CornerRadius="4"
+                        automation:AutomationProperties.Name="{t:Translate More options}">
+                    <TextBlock Text="···" FontSize="20"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Margin="0,-4,0,0"/>
+                </Button>
+            </controls:ToolbarOverflowPanel>
 
         </Grid>
 

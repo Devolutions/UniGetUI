@@ -329,7 +329,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 }
         }
 
-        private bool RefreshPackageIndexesSafely()
+        private void RefreshPackageIndexesSafely()
         {
             try
             {
@@ -342,7 +342,6 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     "RefreshPackageIndexes",
                     allowDisablingTimeout: false
                 );
-                return true;
             }
             catch (Exception e)
             {
@@ -354,7 +353,6 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                         + $"({e.GetType().Name}: {e.Message}). The available updates will be listed "
                         + "with the indexes as they are, which may result in an incomplete list."
                 );
-                return false;
             }
         }
 
@@ -453,25 +451,21 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public IReadOnlyList<IPackage> GetAvailableUpdates()
         {
             LastUpdatesListingFailed = false;
-            return _getAvailableUpdates(false, indexesAlreadyRefreshed: false);
+            return _getAvailableUpdates(false);
         }
 
-        private IReadOnlyList<IPackage> _getAvailableUpdates(
-            bool SecondAttempt,
-            bool indexesAlreadyRefreshed
-        )
+        private IReadOnlyList<IPackage> _getAvailableUpdates(bool SecondAttempt)
         {
             if (!IsReady())
             {
                 Logger.Warn($"Manager {Name} is disabled but yet GetAvailableUpdates was called");
                 return [];
             }
-            bool indexesRefreshed = indexesAlreadyRefreshed;
             try
             {
-                if (!indexesAlreadyRefreshed)
+                if (!SecondAttempt)
                 {
-                    indexesRefreshed = RefreshPackageIndexesSafely();
+                    RefreshPackageIndexesSafely();
                 }
 
                 var packages = RunListingTaskWithTimeout(
@@ -495,7 +489,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                         $"Since this was the first attempt, {Name}.AttemptFastRepair() will be called and the procedure will be restarted"
                     );
                     AttemptFastRepair();
-                    return _getAvailableUpdates(true, indexesRefreshed);
+                    return _getAvailableUpdates(true);
                 }
 
                 Logger.Error("Error finding updates on manager " + Name);

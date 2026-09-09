@@ -92,6 +92,13 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             }
         }
 
+        private static long _sourceIndexGeneration;
+
+        internal static long SourceIndexGeneration => Volatile.Read(ref _sourceIndexGeneration);
+
+        internal static void MarkSourceIndexRefreshed() =>
+            Interlocked.Increment(ref _sourceIndexGeneration);
+
         public WinGet()
         {
             Capabilities = new ManagerCapabilities
@@ -811,12 +818,19 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 p.StartInfo.Environment["TMP"] = WinGetTemp;
             }
 
-            p.Start();
-            logger.AddToStdOut(p.StandardOutput.ReadToEnd());
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
-            logger.Close(p.ExitCode);
-            p.WaitForExit();
-            p.Close();
+            try
+            {
+                p.Start();
+                logger.AddToStdOut(p.StandardOutput.ReadToEnd());
+                logger.AddToStdErr(p.StandardError.ReadToEnd());
+                logger.Close(p.ExitCode);
+                p.WaitForExit();
+                p.Close();
+            }
+            finally
+            {
+                MarkSourceIndexRefreshed();
+            }
         }
 
         private string GetCliToolProxyArgument()

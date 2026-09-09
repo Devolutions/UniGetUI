@@ -736,6 +736,64 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void NativeWinGetHelperTakesANewCatalogSnapshotAfterTheSourceIndexIsRefreshed()
+    {
+        WinGet.MarkSourceIndexRefreshed();
+        int snapshots = 0;
+        var helper = new NativeWinGetHelper(
+            new TestableWinGet(),
+            systemCliHelperFactory: null,
+            skipInitialization: true,
+            localPackagesProvider: () =>
+            {
+                snapshots++;
+                return [];
+            }
+        );
+
+        helper.GetInstalledPackages_UnSafe();
+        Assert.Equal(1, snapshots);
+
+        WinGet.MarkSourceIndexRefreshed();
+        helper.GetAvailableUpdates_UnSafe();
+
+        Assert.Equal(2, snapshots);
+    }
+
+    [Fact]
+    public void NativeWinGetHelperReusesTheCatalogSnapshotWhileTheSourceIndexIsUnchanged()
+    {
+        WinGet.MarkSourceIndexRefreshed();
+        int snapshots = 0;
+        var helper = new NativeWinGetHelper(
+            new TestableWinGet(),
+            systemCliHelperFactory: null,
+            skipInitialization: true,
+            localPackagesProvider: () =>
+            {
+                snapshots++;
+                return [];
+            }
+        );
+
+        helper.GetInstalledPackages_UnSafe();
+        helper.GetAvailableUpdates_UnSafe();
+
+        Assert.Equal(1, snapshots);
+    }
+
+    [Fact]
+    public void RefreshPackageIndexesAdvancesTheSourceIndexGenerationWhenTheCliCallFails()
+    {
+        var manager = new TestableWinGet();
+        long generationBefore = WinGet.SourceIndexGeneration;
+
+        Assert.ThrowsAny<Exception>(manager.RefreshPackageIndexes);
+
+        Assert.NotEqual(generationBefore, WinGet.SourceIndexGeneration);
+    }
+
+    [Fact]
     public void NativeWinGetHelperSelectReachableCatalogsSkipsUnavailableSources()
     {
         var reachableCatalogs = NativeWinGetHelper.SelectReachableCatalogs(

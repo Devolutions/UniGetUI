@@ -1010,7 +1010,6 @@
   "Manage the list": "Manage the list",
   "Automatically update selected packages": "Automatically update selected packages",
   "Manage automatic updates": "Manage automatic updates",
-  "Update this package automatically": "Update this package automatically",
   "{0} package(s) marked for automatic updates": "{0} package(s) marked for automatic updates",
   "Turn on \"Install available updates\" in the scheduled maintenance settings for this to take effect.": "Turn on \"Install available updates\" in the scheduled maintenance settings for this to take effect.",
   "Every upgradable package is already installed automatically, so this changes nothing until the scheduled task is limited to marked packages.": "Every upgradable package is already installed automatically, so this changes nothing until the scheduled task is limited to marked packages.",

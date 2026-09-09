@@ -28,7 +28,6 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     private MenuItem? _menuSkipHash;
     private MenuItem? _menuDownloadInstaller;
     private MenuItem? _menuOpenInstallLocation;
-    private MenuItem? _menuAutoUpdate;
 
     public SoftwareUpdatesPage() : base(new PackagesPageData
     {
@@ -198,23 +197,6 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
             UpgradablePackagesLoader.Instance.IgnoredPackages[pkg.Id] = pkg;
         };
 
-        _menuAutoUpdate = new MenuItem
-        {
-            Header = CoreTools.Translate("Update this package automatically"),
-            Icon = LoadMenuIcon("sandclock"),
-            ToggleType = MenuItemToggleType.CheckBox,
-        };
-        _menuAutoUpdate.Click += (_, _) =>
-        {
-            var pkg = SelectedItem;
-            if (pkg is null) return;
-            string id = AutoUpdatesDatabase.GetIdForPackage(pkg);
-            if (AutoUpdatesDatabase.IsAutoUpdated(id))
-                AutoUpdatesDatabase.Remove(id);
-            else
-                MarkForAutoUpdates([pkg]);
-        };
-
         var menuSkipVersion = new MenuItem
         {
             Header = CoreTools.Translate("Skip this version"),
@@ -282,8 +264,6 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         menu.Items.Add(menuUninstallThenUpdate);
         menu.Items.Add(menuUninstall);
         menu.Items.Add(new Separator());
-        menu.Items.Add(_menuAutoUpdate);
-        menu.Items.Add(new Separator());
         menu.Items.Add(menuIgnore);
         menu.Items.Add(menuSkipVersion);
         menu.Items.Add(menuPause);
@@ -296,8 +276,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     protected override void WhenShowingContextMenu(IPackage package)
     {
         if (_menuAsAdmin is null || _menuInteractive is null || _menuSkipHash is null
-            || _menuDownloadInstaller is null || _menuOpenInstallLocation is null
-            || _menuAutoUpdate is null)
+            || _menuDownloadInstaller is null || _menuOpenInstallLocation is null)
         {
             Logger.Warn("Context menu items are null on SoftwareUpdatesPage");
             return;
@@ -310,7 +289,6 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         _menuDownloadInstaller.IsEnabled = caps.CanDownloadInstaller;
         _menuOpenInstallLocation.IsEnabled =
             package.Manager.DetailsHelper.GetInstallLocation(package) is not null;
-        _menuAutoUpdate.IsChecked = AutoUpdatesDatabase.IsAutoUpdated(package);
     }
 
     // ─── Abstract action overrides ────────────────────────────────────────────
@@ -459,32 +437,6 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         {
             Logger.Error(ex);
         }
-    }
-
-    private static void MarkForAutoUpdates(IEnumerable<IPackage> packages)
-    {
-        int marked = 0;
-        foreach (var pkg in packages)
-        {
-            string id = AutoUpdatesDatabase.GetIdForPackage(pkg);
-            if (AutoUpdatesDatabase.IsAutoUpdated(id)) continue;
-            AutoUpdatesDatabase.Add(id);
-            marked++;
-        }
-
-        if (marked is 0) return;
-
-        var schedule = MaintenanceScheduleStore.Get(MaintenanceTaskKind.InstallUpdates);
-        string message = !schedule.Enabled
-            ? CoreTools.Translate("Turn on \"Install available updates\" in the scheduled maintenance settings for this to take effect.")
-            : schedule.InstallTargets is ScheduleInstallTargets.AllPackages
-                ? CoreTools.Translate("Every upgradable package is already installed automatically, so this changes nothing until the scheduled task is limited to marked packages.")
-                : CoreTools.Translate("They will be updated when the scheduled maintenance task runs.");
-
-        GetMainWindow()?.ShowBanner(
-            CoreTools.Translate("{0} package(s) marked for automatic updates", marked),
-            message,
-            MainWindow.RuntimeNotificationLevel.Success);
     }
 
     private static async Task LaunchScheduledUpdate(IReadOnlyList<IPackage> upgradable)

@@ -34,6 +34,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
     private MenuItem? _menuOpenInstallLocation;
     private MenuItem? _menuDownloadInstaller;
     private MenuItem? _menuManual;
+    private MenuItem? _menuUpdate;
+    private MenuItem? _menuUpdateAsAdmin;
 
     private static bool _hasBackedUp;
 
@@ -183,6 +185,21 @@ public class InstalledPackagesPage : AbstractPackagesPage
         };
         _menuRemoveData.Click += (_, _) => _ = LaunchUninstall([SelectedItem!], remove_data: true);
 
+        _menuUpdate = new MenuItem
+        {
+            Header = CoreTools.Translate("Update"),
+            Icon = LoadMenuIcon("update"),
+        };
+        _menuUpdate.Click += (_, _) => _ = LaunchUpdate(SelectedItem);
+
+        _menuUpdateAsAdmin = new MenuItem
+        {
+            Header = CoreTools.Translate("Update as administrator"),
+            Icon = LoadMenuIcon("uac"),
+            IsVisible = OperatingSystem.IsWindows(),
+        };
+        _menuUpdateAsAdmin.Click += (_, _) => _ = LaunchUpdate(SelectedItem, elevated: true);
+
         _menuDownloadInstaller = new MenuItem
         {
             Header = CoreTools.Translate("Download installer"),
@@ -230,6 +247,9 @@ public class InstalledPackagesPage : AbstractPackagesPage
         menu.Items.Add(_menuInteractive);
         menu.Items.Add(_menuRemoveData);
         menu.Items.Add(new Separator());
+        menu.Items.Add(_menuUpdate);
+        menu.Items.Add(_menuUpdateAsAdmin);
+        menu.Items.Add(new Separator());
         menu.Items.Add(_menuDownloadInstaller);
         menu.Items.Add(new Separator());
         menu.Items.Add(_menuReinstall);
@@ -244,7 +264,8 @@ public class InstalledPackagesPage : AbstractPackagesPage
 
     protected override void WhenShowingContextMenu(IPackage package)
     {
-        if (_menuAsAdmin is null || _menuInteractive is null || _menuRemoveData is null
+        if (_menuUpdate is null || _menuUpdateAsAdmin is null
+            || _menuAsAdmin is null || _menuInteractive is null || _menuRemoveData is null
             || _menuInstallationOptions is null || _menuReinstall is null
             || _menuUninstallThenReinstall is null || _menuIgnoreUpdates is null
             || _menuDetails is null
@@ -262,6 +283,17 @@ public class InstalledPackagesPage : AbstractPackagesPage
         _menuAsAdmin.IsEnabled = caps.CanRunAsAdmin;
         _menuInteractive.IsEnabled = caps.CanRunInteractively;
         _menuRemoveData.IsEnabled = caps.CanRemoveDataOnUninstall;
+
+        // The installed entry knows no target version; its upgradable counterpart does,
+        // and is null whenever no update is pending for the package.
+        var upgradable = package.GetUpgradablePackage();
+        bool canUpdate = upgradable is not null;
+        _menuUpdate.IsEnabled = canUpdate;
+        _menuUpdate.Header = upgradable is null
+            ? CoreTools.Translate("Update")
+            : CoreTools.Translate("Update to version {0}", upgradable.NewVersionString);
+        _menuUpdateAsAdmin.IsEnabled = canUpdate && caps.CanRunAsAdmin;
+
         _menuDownloadInstaller.IsEnabled = !isLocal && caps.CanDownloadInstaller;
         _menuInstallationOptions.IsEnabled = !isLocal;
         _menuReinstall.IsEnabled = !isLocal;
@@ -371,6 +403,20 @@ public class InstalledPackagesPage : AbstractPackagesPage
             AvaloniaOperationRegistry.Add(op);
             _ = op.MainThread();
         }
+    }
+
+    private static async Task LaunchUpdate(IPackage? package, bool? elevated = null)
+    {
+        // Updates must run on the upgradable instance: the installed one reports
+        // NewVersionString == VersionString, which managers read as "nothing to do".
+        if (package?.GetUpgradablePackage() is not { } upgradable) return;
+        var opts = await InstallOptionsFactory.LoadApplicableAsync(upgradable, elevated: elevated);
+        if (PackageOperation.HasPendingOperation(upgradable, OperationType.Update)) return;
+        var op = new UpdatePackageOperation(upgradable, opts);
+        op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(upgradable, TEL_OP_RESULT.SUCCESS);
+        op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(upgradable, TEL_OP_RESULT.FAILED);
+        AvaloniaOperationRegistry.Add(op);
+        _ = op.MainThread();
     }
 
     private static async Task LaunchReinstall(IPackage? package)

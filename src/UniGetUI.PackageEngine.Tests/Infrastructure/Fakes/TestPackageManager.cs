@@ -14,6 +14,7 @@ public sealed class TestPackageManager : PackageManager
     private Func<string, IReadOnlyList<Package>> _findPackages = _ => [];
     private Func<IReadOnlyList<Package>> _getAvailableUpdates = static () => [];
     private Func<IReadOnlyList<Package>> _getInstalledPackages = static () => [];
+    private Action? _refreshPackageIndexes;
     private IReadOnlyList<string> _candidateExecutableFiles;
 
     public TestPackageManager(string name = "TestManager", string? displayName = null)
@@ -102,6 +103,11 @@ public sealed class TestPackageManager : PackageManager
     public void SetAvailableUpdates(Func<IReadOnlyList<Package>> getAvailableUpdates)
     {
         _getAvailableUpdates = getAvailableUpdates;
+    }
+
+    public void SetRefreshPackageIndexes(Action refreshPackageIndexes)
+    {
+        _refreshPackageIndexes = refreshPackageIndexes;
     }
 
     public void SetInstalledPackages(Func<IReadOnlyList<Package>> getInstalledPackages)
@@ -199,5 +205,6 @@ public sealed class TestPackageManager : PackageManager
     public override void RefreshPackageIndexes()
     {
         RefreshPackageIndexesCalls++;
+        _refreshPackageIndexes?.Invoke();
     }
 }

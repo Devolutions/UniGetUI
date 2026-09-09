@@ -329,7 +329,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 }
         }
 
-        private void RefreshPackageIndexesSafely()
+        private bool RefreshPackageIndexesSafely()
         {
             try
             {
@@ -342,6 +342,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                     "RefreshPackageIndexes",
                     allowDisablingTimeout: false
                 );
+                return true;
             }
             catch (Exception e)
             {
@@ -353,6 +354,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                         + $"({e.GetType().Name}: {e.Message}). The available updates will be listed "
                         + "with the indexes as they are, which may result in an incomplete list."
                 );
+                return false;
             }
         }
 
@@ -451,19 +453,26 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public IReadOnlyList<IPackage> GetAvailableUpdates()
         {
             LastUpdatesListingFailed = false;
-            return _getAvailableUpdates(false);
+            return _getAvailableUpdates(false, indexesAlreadyRefreshed: false);
         }
 
-        private IReadOnlyList<IPackage> _getAvailableUpdates(bool SecondAttempt)
+        private IReadOnlyList<IPackage> _getAvailableUpdates(
+            bool SecondAttempt,
+            bool indexesAlreadyRefreshed
+        )
         {
             if (!IsReady())
             {
                 Logger.Warn($"Manager {Name} is disabled but yet GetAvailableUpdates was called");
                 return [];
             }
+            bool indexesRefreshed = indexesAlreadyRefreshed;
             try
             {
-                RefreshPackageIndexesSafely();
+                if (!indexesAlreadyRefreshed)
+                {
+                    indexesRefreshed = RefreshPackageIndexesSafely();
+                }
 
                 var packages = RunListingTaskWithTimeout(
                     GetAvailableUpdates_UnSafe,
@@ -486,7 +495,7 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                         $"Since this was the first attempt, {Name}.AttemptFastRepair() will be called and the procedure will be restarted"
                     );
                     AttemptFastRepair();
-                    return _getAvailableUpdates(true);
+                    return _getAvailableUpdates(true, indexesRefreshed);
                 }
 
                 Logger.Error("Error finding updates on manager " + Name);

@@ -778,6 +778,7 @@ public sealed class WinGetManagerTests : IDisposable
 
         helper.GetInstalledPackages_UnSafe();
         helper.GetAvailableUpdates_UnSafe();
+        helper.GetAvailableUpdates_UnSafe();
 
         Assert.Equal(1, snapshots);
     }

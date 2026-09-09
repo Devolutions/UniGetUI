@@ -266,7 +266,7 @@ public sealed class PackageManagerTests : IDisposable
     }
 
     [Fact]
-    public void GetAvailableUpdatesRetriesOnceAndRefreshesIndexesPerAttempt()
+    public void GetAvailableUpdatesRetriesOnceAndKeepsTheIndexesItAlreadyRefreshed()
     {
         var manager = CreateReadyManager();
         var attempts = 0;
@@ -283,6 +283,28 @@ public sealed class PackageManagerTests : IDisposable
         var package = Assert.Single(packages);
         Assert.Equal("Contoso.Update", package.Id);
         Assert.Equal(1, manager.AttemptFastRepairCalls);
+        Assert.Equal(1, manager.RefreshPackageIndexesCalls);
+    }
+
+    [Fact]
+    public void GetAvailableUpdatesRefreshesIndexesAgainWhenTheFirstRefreshFailed()
+    {
+        var manager = CreateReadyManager();
+        manager.SetRefreshPackageIndexes(
+            () => throw new InvalidOperationException("refresh failed")
+        );
+        var attempts = 0;
+        manager.SetAvailableUpdates(() =>
+        {
+            attempts++;
+            return attempts == 1
+                ? throw new InvalidOperationException("updates failed")
+                : [CreatePackage(manager, "Contoso.Update", "Contoso Update", "1.0.0", "2.0.0")];
+        });
+
+        var packages = manager.GetAvailableUpdates();
+
+        Assert.Single(packages);
         Assert.Equal(2, manager.RefreshPackageIndexesCalls);
     }
 

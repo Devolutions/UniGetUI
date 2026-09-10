@@ -222,7 +222,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
         Package = package;
         _page = page;
         VersionComboString = package.VersionString;
-        InstalledVersionTooltip = BuildInstalledVersionTooltip(package);
+        InstalledVersionTooltip = InstalledVersionNotice.BuildTooltip(package);
 
         Package.PropertyChanged += Package_PropertyChanged;
         UpdateDisplayState();
@@ -231,29 +231,6 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
         // as a fallback while results are still arriving.
         MaybeStartInstallerHostCheck();
     }
-
-    private static string? BuildInstalledVersionTooltip(IPackage package)
-    {
-        if (!package.InstalledVersionIsUnverified)
-            return null;
-
-        return CoreTools.Translate(
-            "{0} could not read the version of this package that is currently installed.",
-            package.Manager.DisplayName
-        )
-        + Environment.NewLine
-        + (
-            HasNoKnownInstalledVersion(package)
-                ? CoreTools.Translate("No installed version is known for it.")
-                : CoreTools.Translate(
-                    "The version shown is the one UniGetUI last installed ({0}); if the package has been updated by anything else since, that is out of date.",
-                    package.VersionString
-                )
-        );
-    }
-
-    private static bool HasNoKnownInstalledVersion(IPackage package)
-        => package.VersionString is "" or "Unknown";
 
     private readonly object _iconLoadLock = new();
     private Task? _iconLoadTask;

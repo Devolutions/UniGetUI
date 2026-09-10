@@ -10,6 +10,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.PackageClasses;
 
 namespace UniGetUI.Avalonia.ViewModels;
 
@@ -52,6 +53,9 @@ public partial class PackageDetailsViewModel : ObservableObject
     // ── Basic info (raw values exposed; the view builds the inline rich text) ──
     [ObservableProperty]
     private string _versionDisplay = "";
+
+    [ObservableProperty]
+    private string? _installedVersionTooltip;
 
     [ObservableProperty]
     private Uri? _homepageUrl;
@@ -189,9 +193,13 @@ public partial class PackageDetailsViewModel : ObservableObject
             MainActionLabel = CoreTools.Translate(
                 "Update to version {0}", upgradable?.NewVersionString ?? package.NewVersionString);
             LabelVersion = CoreTools.Translate("Installed Version");
-            VersionDisplay = (upgradable?.VersionString ?? package.VersionString)
+            var updateSource = upgradable ?? package;
+            VersionDisplay = updateSource.VersionString
                              + " ➤ "
                              + (upgradable?.NewVersionString ?? package.NewVersionString);
+            InstalledVersionTooltip = InstalledVersionNotice.BuildTooltip(
+                updateSource
+            );
             AsAdminLabel = CoreTools.Translate("Update as administrator");
             InteractiveLabel = CoreTools.Translate("Interactive update");
             SkipHashOrRemoveDataLabel = CoreTools.Translate("Skip hash check");
@@ -201,7 +209,11 @@ public partial class PackageDetailsViewModel : ObservableObject
         {
             MainActionLabel = CoreTools.Translate("Uninstall");
             LabelVersion = CoreTools.Translate("Installed Version");
-            VersionDisplay = installed?.VersionString ?? package.VersionString;
+            var uninstallSource = installed ?? package;
+            VersionDisplay = uninstallSource.VersionString;
+            InstalledVersionTooltip = InstalledVersionNotice.BuildTooltip(
+                uninstallSource
+            );
             AsAdminLabel = CoreTools.Translate("Uninstall as administrator");
             InteractiveLabel = CoreTools.Translate("Interactive uninstall");
             SkipHashOrRemoveDataLabel = CoreTools.Translate("Uninstall and remove data");

@@ -11,6 +11,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
+using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
@@ -219,7 +220,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
 
         AddInlineRow(DetailsPanel, _vm.LabelPackageId, _vm.PackageId);
         AddInlineRow(DetailsPanel, _vm.LabelManifest, _vm.ManifestUrl);
-        AddInlineRow(DetailsPanel, _vm.LabelVersion, _vm.VersionDisplay);
+        AddInlineRow(DetailsPanel, _vm.LabelVersion, _vm.VersionDisplay, _vm.InstalledVersionTooltip);
 
         AddSpacer(DetailsPanel);
 
@@ -280,6 +281,9 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     private static readonly IBrush NotAvailableBrush =
         new SolidColorBrush(Color.FromArgb(255, 127, 127, 127));
 
+    private static readonly IBrush WarningBrush =
+        new SolidColorBrush(Color.FromArgb(255, 245, 158, 11));
+
     private static void AddSpacer(StackPanel host) =>
         host.Children.Add(new Border { Height = 10 });
 
@@ -287,7 +291,12 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     /// Builds a single wrap-able row with "<bold>Label:</bold> value" all on one line,
     /// matching the WinUI RichTextBlock paragraph layout.
     /// </summary>
-    private void AddInlineRow(StackPanel host, string label, string value)
+    private void AddInlineRow(
+        StackPanel host,
+        string label,
+        string value,
+        string? warningTooltip = null
+    )
     {
         var tb = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
         var inlines = tb.Inlines ??= new InlineCollection();
@@ -300,7 +309,43 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
             });
         else
             inlines.Add(new Run(value));
-        host.Children.Add(tb);
+
+        if (warningTooltip is null)
+        {
+            host.Children.Add(tb);
+            return;
+        }
+
+        host.Children.Add(BuildWarningRow(tb, warningTooltip));
+    }
+
+    private static Grid BuildWarningRow(Control content, string tooltip)
+    {
+        ToolTip.SetTip(content, tooltip);
+        var icon = new SvgIcon
+        {
+            Path = "avares://UniGetUI/Assets/Symbols/warning_filled.svg",
+            Width = 16,
+            Height = 16,
+            Foreground = WarningBrush,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(6, 2, 0, 0),
+        };
+        ToolTip.SetTip(icon, tooltip);
+
+        var grid = new Grid
+        {
+            ColumnDefinitions =
+            [
+                new ColumnDefinition(new GridLength(1, GridUnitType.Star)),
+                new ColumnDefinition(GridLength.Auto),
+            ],
+        };
+        Grid.SetColumn(content, 0);
+        Grid.SetColumn(icon, 1);
+        grid.Children.Add(content);
+        grid.Children.Add(icon);
+        return grid;
     }
 
     private void AddInlineRow(StackPanel host, string label, Uri? url)

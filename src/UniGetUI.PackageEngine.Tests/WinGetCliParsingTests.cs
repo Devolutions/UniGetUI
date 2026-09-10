@@ -80,6 +80,28 @@ public sealed class WinGetCliParsingTests : IDisposable
     }
 
     [Fact]
+    public void ParseInstalledPackagesFlagsRowsWhoseVersionWinGetCouldNotRead()
+    {
+        var manager = new WinGet();
+
+        IReadOnlyList<Package> packages = WinGetCliHelper.ParseInstalledPackages(
+            manager,
+            Lines(
+                """
+                Name     Id                Version Available Source
+                ----------------------------------------------------
+                NoVer    Fabrikam.NoVer    Unknown           winget
+                Readable Fabrikam.Readable 1.0.0             winget
+                """
+            )
+        );
+
+        Assert.Equal(2, packages.Count);
+        Assert.True(packages[0].InstalledVersionIsUnverified);
+        Assert.False(packages[1].InstalledVersionIsUnverified);
+    }
+
+    [Fact]
     public void ParseInstalledPackagesReadsEnglishTable()
     {
         var manager = new WinGet();

@@ -349,9 +349,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     nativePackage.DefaultInstallVersion.PackageCatalog.Info.Name
                 );
 
+                string? reportedVersion = nativePackage.InstalledVersion.Version;
                 string version = WinGetPkgOperationHelper.ResolveReportedInstalledVersion(
                     nativePackage.Id,
-                    nativePackage.InstalledVersion.Version
+                    reportedVersion
                 );
 
                 var UniGetUIPackage = new Package(
@@ -361,7 +362,12 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     nativePackage.DefaultInstallVersion.Version,
                     source,
                     Manager
-                );
+                )
+                {
+                    InstalledVersionIsUnverified = WinGetPkgOperationHelper.IsUnknownVersion(
+                        reportedVersion
+                    ),
+                };
 
                 // Suppress an update that repeatedly fails to stick (#5158); the COM path still avoids
                 // the one-shot "already upgraded" cache (#5042).
@@ -419,9 +425,10 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     source = Manager.GetLocalSource(nativePackage.Id);
                 }
 
+                string? reportedVersion = nativePackage.InstalledVersion.Version;
                 string version = WinGetPkgOperationHelper.ResolveReportedInstalledVersion(
                     nativePackage.Id,
-                    nativePackage.InstalledVersion.Version
+                    reportedVersion
                 );
 
                 logger.Log(
@@ -433,7 +440,12 @@ internal sealed class NativeWinGetHelper : IWinGetManagerHelper
                     version,
                     source,
                     Manager
-                );
+                )
+                {
+                    InstalledVersionIsUnverified = WinGetPkgOperationHelper.IsUnknownVersion(
+                        reportedVersion
+                    ),
+                };
                 NativePackageHandler.AddPackage(UniGetUIPackage, nativePackage);
                 packages.Add(UniGetUIPackage);
             }

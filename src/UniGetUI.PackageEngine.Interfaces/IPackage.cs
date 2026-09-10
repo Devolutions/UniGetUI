@@ -23,6 +23,7 @@ namespace UniGetUI.PackageEngine.Interfaces
         /// languages, so it must never be substituted into a command line.
         /// </summary>
         public bool HasConcreteVersion { get; }
+        public bool InstalledVersionIsUnverified { get; }
         public CoreTools.Version NormalizedVersion { get; }
         public CoreTools.Version NormalizedNewVersion { get; }
         public IManagerSource Source { get; }

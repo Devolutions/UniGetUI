@@ -155,7 +155,10 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
                 if (versionUnknown)
                     version = WinGetPkgOperationHelper.GetLastInstalledVersion(id);
 
-                var package = new Package(name, id, version, newVersion, source, manager);
+                var package = new Package(name, id, version, newVersion, source, manager)
+                {
+                    InstalledVersionIsUnverified = versionUnknown,
+                };
                 // Skip one-shot suppression for unknown versions so the restored mark isn't cleared.
                 if (
                     versionUnknown
@@ -251,8 +254,14 @@ internal sealed class WinGetCliHelper : IWinGetManagerHelper
                             ? manager.GetLocalSource(id) // Load Winget Local Sources
                             : manager.SourcesHelper.Factory.GetSourceOrDefault(sourceName);
 
+                    bool versionUnknown = WinGetPkgOperationHelper.IsUnknownVersion(version);
                     version = WinGetPkgOperationHelper.ResolveReportedInstalledVersion(id, version);
-                    packages.Add(new Package(name, id, version, source, manager));
+                    packages.Add(
+                        new Package(name, id, version, source, manager)
+                        {
+                            InstalledVersionIsUnverified = versionUnknown,
+                        }
+                    );
                 }
                 catch (Exception e)
                 {

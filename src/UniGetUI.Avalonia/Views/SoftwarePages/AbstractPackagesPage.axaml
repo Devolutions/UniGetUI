@@ -617,9 +617,16 @@
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0">
                                                 <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/version.svg"
-                                                                  Width="24" Height="24" VerticalAlignment="Center"/>
+                                                                  Width="24" Height="24" VerticalAlignment="Center"
+                                                                  IsVisible="{Binding !InstalledVersionIsUnverified}"/>
+                                                <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/warning_filled.svg"
+                                                                  Width="22" Height="22" VerticalAlignment="Center"
+                                                                  Foreground="#F59E0B"
+                                                                  IsVisible="{Binding InstalledVersionIsUnverified}"
+                                                                  ToolTip.Tip="{Binding InstalledVersionTooltip}"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding VersionComboString}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis"/>
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip.Tip="{Binding InstalledVersionTooltip}"/>
                                             </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -758,7 +765,8 @@
                                                                TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Text="{Binding VersionComboString}"
                                                                FontSize="11" Opacity="0.5"
-                                                               TextTrimming="CharacterEllipsis"/>
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip.Tip="{Binding InstalledVersionTooltip}"/>
                                                 </StackPanel>
                                                 <!-- Col 2: checkbox (top) + overflow button (bottom). The taller card leaves
                                                      room to stack them without overlap. -->
@@ -870,7 +878,8 @@
                                                            Text="{Binding VersionComboString}"
                                                            FontSize="11" Opacity="0.5"
                                                            HorizontalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis"/>
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip.Tip="{Binding InstalledVersionTooltip}"/>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>

@@ -1830,6 +1830,49 @@ public sealed class WinGetManagerTests : IDisposable
         // No recorded upgrade => the update is genuinely available and must still be shown.
         Assert.Equal("Unknown", package.VersionString);
         Assert.Equal("2.0.0", package.NewVersionString);
+        Assert.True(package.InstalledVersionIsUnverified);
+    }
+
+    [Fact]
+    public void BuildUpdatePackages_FlagsARestoredVersionAsUnverified()
+    {
+        var manager = new WinGet();
+        var helper = new PingetCliHelper(manager, @"C:\Program Files\UniGetUI\pinget.exe");
+
+        Settings.SetDictionaryItem<string, string>(
+            Settings.K.WinGetAlreadyUpgradedPackages,
+            "Contoso.Restored",
+            "1.0.0"
+        );
+
+        var package = Assert.Single(
+            helper.BuildUpdatePackages(
+                PingetCliHelper.DeserializeJson<ListResponse>(
+                    UnknownVersionUpdateJson("Contoso.Restored", "2.0.0")
+                )
+            )
+        );
+
+        Assert.Equal("1.0.0", package.VersionString);
+        Assert.True(package.InstalledVersionIsUnverified);
+    }
+
+    [Fact]
+    public void BuildUpdatePackages_DoesNotFlagAVersionWinGetCouldRead()
+    {
+        var manager = new WinGet();
+        var helper = new PingetCliHelper(manager, @"C:\Program Files\UniGetUI\pinget.exe");
+
+        var package = Assert.Single(
+            helper.BuildUpdatePackages(
+                PingetCliHelper.DeserializeJson<ListResponse>(
+                    UpdateJson("Contoso.Readable", "1.0.0", "2.0.0")
+                )
+            )
+        );
+
+        Assert.Equal("1.0.0", package.VersionString);
+        Assert.False(package.InstalledVersionIsUnverified);
     }
 
     [Fact]

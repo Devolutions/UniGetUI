@@ -40,9 +40,9 @@ public sealed class OperationCallArgsWiringTests : IDisposable
 
     public void Dispose()
     {
+        Settings.ResetSettings();
         CoreData.TEST_DataDirectoryOverride = null;
         SecureSettings.TEST_SecureSettingsRootOverride = null;
-        Settings.ResetSettings();
         try
         {
             if (Directory.Exists(_testRoot))

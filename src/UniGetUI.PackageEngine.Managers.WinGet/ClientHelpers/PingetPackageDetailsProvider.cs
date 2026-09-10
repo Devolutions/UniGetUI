@@ -475,12 +475,25 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
         Func<PackageQuery, ShowResult>? showPackage = null
     )
     {
+        string? trimmedVersion = TrimTrailingZeroSegments(version);
         IReadOnlyList<string>? urls = TryGetInstallerUrlsCore(
             package,
             version,
             requireExactVersion: true,
-            showPackage
+            showPackage,
+            logFailures: trimmedVersion is null
         );
+
+        if (urls is null && trimmedVersion is not null)
+        {
+            urls = TryGetInstallerUrlsCore(
+                package,
+                trimmedVersion,
+                requireExactVersion: true,
+                showPackage
+            );
+        }
+
         if (urls is null)
             return null;
 
@@ -512,11 +525,34 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
         return TryGetInstallerUrlsCore(package, null, requireExactVersion: false, showPackage);
     }
 
+    internal static string? TrimTrailingZeroSegments(string version)
+    {
+        if (string.IsNullOrWhiteSpace(version))
+            return null;
+
+        string[] segments = version.Split('.');
+        if (segments.Length < 2)
+            return null;
+
+        foreach (string segment in segments)
+        {
+            if (segment.Length == 0 || !segment.All(char.IsAsciiDigit))
+                return null;
+        }
+
+        int last = segments.Length - 1;
+        while (last > 0 && segments[last].All(character => character == '0'))
+            last--;
+
+        return last == segments.Length - 1 ? null : string.Join('.', segments[..(last + 1)]);
+    }
+
     private static IReadOnlyList<string>? TryGetInstallerUrlsCore(
         IPackage package,
         string? version,
         bool requireExactVersion,
-        Func<PackageQuery, ShowResult>? showPackage
+        Func<PackageQuery, ShowResult>? showPackage,
+        bool logFailures = true
     )
     {
         try
@@ -533,10 +569,13 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
                 string returnedVersion = result.Manifest.Version ?? "";
                 if (!string.Equals(returnedVersion, version, StringComparison.OrdinalIgnoreCase))
                 {
-                    Logger.Info(
-                        $"Pinget returned manifest version '{returnedVersion}' when '{version}' "
-                        + $"was requested for {package.Id}; treating as not found"
-                    );
+                    if (logFailures)
+                    {
+                        Logger.Info(
+                            $"Pinget returned manifest version '{returnedVersion}' when '{version}' "
+                            + $"was requested for {package.Id}; treating as not found"
+                        );
+                    }
                     return null;
                 }
             }
@@ -555,9 +594,12 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
         }
         catch (Exception ex)
         {
-            Logger.Warn(
-                $"Could not resolve installer URLs for {package.Id} version {version}: {ex.Message}"
-            );
+            if (logFailures)
+            {
+                Logger.Warn(
+                    $"Could not resolve installer URLs for {package.Id} version {version}: {ex.Message}"
+                );
+            }
             return null;
         }
     }

@@ -1072,5 +1072,8 @@
   "UniGetUI is running in portable mode and started with empty settings. Settings from a previous installation were found at {0}.": "UniGetUI is running in portable mode and started with empty settings. Settings from a previous installation were found at {0}.",
   "Settings imported": "Settings imported",
   "{0} file(s) were copied. Restart UniGetUI to apply them.": "{0} file(s) were copied. Restart UniGetUI to apply them.",
-  "Could not import settings": "Could not import settings"
+  "Could not import settings": "Could not import settings",
+  "The installer for {package} does not match the hash published in its manifest, and WinGet refuses to skip that check while running as administrator": "The installer for {package} does not match the hash published in its manifest, and WinGet refuses to skip that check while running as administrator",
+  "The installer for {package} does not match the hash published in its manifest; WinGet only skips that check once its InstallerHashOverride administrator setting is enabled": "The installer for {package} does not match the hash published in its manifest; WinGet only skips that check once its InstallerHashOverride administrator setting is enabled",
+  "The installer for {package} does not match the hash published in its manifest, so it was not run": "The installer for {package} does not match the hash published in its manifest, so it was not run"
 }

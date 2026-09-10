@@ -292,8 +292,8 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             return OperationVeredict.AutoRetry;
         }
 
-        if (uintCode is 0x8A150011)
-        { // TODO: Integrity failed
+        if (ReportedInstallerHashMismatch(returnCode))
+        {
             return OperationVeredict.Failure;
         }
 
@@ -429,6 +429,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             $"{count}{AttemptSeparator}{version}"
         );
     }
+
+    internal static bool ReportedInstallerHashMismatch(int returnCode) =>
+        (uint)returnCode is 0x8A150011;
 
     internal bool ReportedUpdateNotApplicable(
         IReadOnlyList<string> processOutput,

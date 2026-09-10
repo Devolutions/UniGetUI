@@ -55,8 +55,9 @@ internal static class OperationHistoryActionService
         var options = LoadOptions(record);
         bool asAdmin = manager.Capabilities.CanRunAsAdmin && !options.RunAsAdministrator;
         bool interactive = manager.Capabilities.CanRunInteractively && !options.InteractiveInstallation;
-        bool skipHash = manager.Capabilities.CanSkipIntegrityChecks && !options.SkipHashCheck
-                        && record.Role != (int)OperationType.Uninstall;
+        bool skipHash = PackageOperation.CanRetrySkippingIntegrityChecks(
+            manager, options, (OperationType)record.Role,
+            CoreTools.IsAdministrator() || options.RunAsAdministrator);
         return (asAdmin, interactive, skipHash);
     }
 

@@ -404,8 +404,12 @@ public static class IpcOperationApi
                 }
 
                 if (
-                    !packageOperation.Options.SkipHashCheck
-                    && packageOperation.Package.Manager.Capabilities.CanSkipIntegrityChecks
+                    PackageOperation.CanRetrySkippingIntegrityChecks(
+                        packageOperation.Package.Manager,
+                        packageOperation.Options,
+                        packageOperation.Role,
+                        packageOperation.WillRunElevated
+                    )
                 )
                 {
                     retryModes.Add("retry-no-hash-check");

@@ -148,6 +148,34 @@ namespace UniGetUI.PackageEngine.Operations
             !Settings.Get(Settings.K.ProhibitElevation)
             && (Package.OverridenOptions.RunAsAdministrator is true || Options.RunAsAdministrator);
 
+        public virtual bool WillRunElevated =>
+            CoreTools.IsAdministrator() || RequiresAdminRights();
+
+        public static bool CanRetrySkippingIntegrityChecks(
+            IPackageManager manager,
+            InstallOptions options,
+            OperationType role,
+            bool willRunElevated
+        )
+        {
+            if (!manager.Capabilities.CanSkipIntegrityChecks || options.SkipHashCheck)
+                return false;
+
+            if (role is OperationType.Uninstall)
+                return false;
+
+            return !willRunElevated || IntegrityCheckSkipSurvivesElevation(manager);
+        }
+
+        private static bool IntegrityCheckSkipSurvivesElevation(IPackageManager manager)
+        {
+#if WINDOWS
+            if (manager is WinGet winget)
+                return winget.HonorsIntegrityCheckSkipWhenElevated;
+#endif
+            return true;
+        }
+
         protected override void ApplyRetryAction(string retryMode)
         {
             switch (retryMode)
@@ -900,8 +928,12 @@ namespace UniGetUI.PackageEngine.Operations
                 ReturnCode
             );
 
-            if (veredict is OperationVeredict.Failure && Role is OperationType.Update)
-                ExplainNotApplicableUpdate(Output, ReturnCode);
+            if (veredict is OperationVeredict.Failure)
+            {
+                if (Role is OperationType.Update)
+                    ExplainNotApplicableUpdate(Output, ReturnCode);
+                ExplainInstallerHashMismatch(ReturnCode);
+            }
 
             return Task.FromResult(veredict);
         }
@@ -919,6 +951,41 @@ namespace UniGetUI.PackageEngine.Operations
                 "{package} may already be up to date, or no installer matches this system",
                 new Dictionary<string, object?> { { "package", Package.Name } }
             );
+#endif
+        }
+
+        private void ExplainInstallerHashMismatch(int returnCode)
+        {
+#if WINDOWS
+            if (Package.Manager is not WinGet winget)
+                return;
+
+            if (!winget.ReportedInstallerHashMismatch(returnCode))
+                return;
+
+            var placeholders = new Dictionary<string, object?> { { "package", Package.Name } };
+
+            if (WillRunElevated && !winget.HonorsIntegrityCheckSkipWhenElevated)
+            {
+                Metadata.FailureMessage = CoreTools.Translate(
+                    "The installer for {package} does not match the hash published in its manifest, and WinGet refuses to skip that check while running as administrator",
+                    placeholders
+                );
+            }
+            else if (Options.SkipHashCheck)
+            {
+                Metadata.FailureMessage = CoreTools.Translate(
+                    "The installer for {package} does not match the hash published in its manifest; WinGet only skips that check once its InstallerHashOverride administrator setting is enabled",
+                    placeholders
+                );
+            }
+            else
+            {
+                Metadata.FailureMessage = CoreTools.Translate(
+                    "The installer for {package} does not match the hash published in its manifest, so it was not run",
+                    placeholders
+                );
+            }
 #endif
         }
 

@@ -253,6 +253,12 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 && helper.ReportedUpdateNotApplicable(processOutput, returnCode);
         }
 
+        public bool ReportedInstallerHashMismatch(int returnCode) =>
+            WinGetPkgOperationHelper.ReportedInstallerHashMismatch(returnCode);
+
+        public bool HonorsIntegrityCheckSkipWhenElevated =>
+            SelectedCliToolKind is WinGetCliToolKind.BundledPinget;
+
         protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
         {
             return WinGetHelper.Instance.FindPackages_UnSafe(query);

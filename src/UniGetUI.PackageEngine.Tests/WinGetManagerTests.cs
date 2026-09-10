@@ -2007,10 +2007,176 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.DoesNotContain("may already be up to date", operation.Metadata.FailureMessage);
     }
 
+    [Fact]
+    public async Task WinGetInstallerHashMismatchExplainsTheAdminBlock()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("XiaoweiCloud.CalendarTask")
+            .WithVersion("3.30.298.9128")
+            .WithNewVersion("3.30.299.9142")
+            .Build();
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions())
+        {
+            ElevationOverride = true,
+        };
+        string defaultMessage = operation.Metadata.FailureMessage;
+
+        var veredict = await operation.ProbeProcessVeredict(unchecked((int)0x8A150011), []);
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.NotEqual(defaultMessage, operation.Metadata.FailureMessage);
+        Assert.Contains("does not match the hash", operation.Metadata.FailureMessage);
+        Assert.Contains("running as administrator", operation.Metadata.FailureMessage);
+        Assert.False(operation.Metadata.FailureMessage.EndsWith('.'));
+    }
+
+    [Fact]
+    public async Task WinGetInstallerHashMismatchPointsAtTheOverrideSettingWhenSkippingWasRequested()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("XiaoweiCloud.CalendarTask")
+            .WithVersion("3.30.298.9128")
+            .WithNewVersion("3.30.299.9142")
+            .Build();
+        using var operation = new VeredictProbingUpdateOperation(
+            package,
+            new InstallOptions { SkipHashCheck = true }
+        )
+        {
+            ElevationOverride = false,
+        };
+
+        var veredict = await operation.ProbeProcessVeredict(unchecked((int)0x8A150011), []);
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.Contains("InstallerHashOverride", operation.Metadata.FailureMessage);
+    }
+
+    [Fact]
+    public async Task WinGetInstallerHashMismatchExplainsTheFailureWithoutElevation()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("XiaoweiCloud.CalendarTask")
+            .WithVersion("3.30.298.9128")
+            .WithNewVersion("3.30.299.9142")
+            .Build();
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions())
+        {
+            ElevationOverride = false,
+        };
+        string defaultMessage = operation.Metadata.FailureMessage;
+
+        var veredict = await operation.ProbeProcessVeredict(unchecked((int)0x8A150011), []);
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.NotEqual(defaultMessage, operation.Metadata.FailureMessage);
+        Assert.Contains("does not match the hash", operation.Metadata.FailureMessage);
+        Assert.DoesNotContain("running as administrator", operation.Metadata.FailureMessage);
+    }
+
+    [Fact]
+    public async Task WinGetFailureUnrelatedToTheInstallerHashKeepsTheDefaultMessage()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("XiaoweiCloud.CalendarTask")
+            .WithVersion("3.30.298.9128")
+            .WithNewVersion("3.30.299.9142")
+            .Build();
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions())
+        {
+            ElevationOverride = true,
+        };
+        string defaultMessage = operation.Metadata.FailureMessage;
+
+        var veredict = await operation.ProbeProcessVeredict(unchecked((int)0x8A150012), []);
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.Equal(defaultMessage, operation.Metadata.FailureMessage);
+    }
+
+    [Fact]
+    public void WinGetDoesNotOfferTheIntegritySkipRetryWhenTheOperationRunsElevated()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+
+        Assert.False(
+            PackageOperation.CanRetrySkippingIntegrityChecks(
+                manager,
+                new InstallOptions(),
+                OperationType.Update,
+                willRunElevated: true
+            )
+        );
+        Assert.True(
+            PackageOperation.CanRetrySkippingIntegrityChecks(
+                manager,
+                new InstallOptions(),
+                OperationType.Update,
+                willRunElevated: false
+            )
+        );
+    }
+
+    [Fact]
+    public void WinGetOffersTheIntegritySkipRetryWhenElevatedOnPinget()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
+
+        Assert.True(
+            PackageOperation.CanRetrySkippingIntegrityChecks(
+                manager,
+                new InstallOptions(),
+                OperationType.Update,
+                willRunElevated: true
+            )
+        );
+    }
+
+    [Fact]
+    public void WinGetNeverOffersTheIntegritySkipRetryTwiceOrOnUninstall()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
+
+        Assert.False(
+            PackageOperation.CanRetrySkippingIntegrityChecks(
+                manager,
+                new InstallOptions { SkipHashCheck = true },
+                OperationType.Update,
+                willRunElevated: false
+            )
+        );
+        Assert.False(
+            PackageOperation.CanRetrySkippingIntegrityChecks(
+                manager,
+                new InstallOptions(),
+                OperationType.Uninstall,
+                willRunElevated: false
+            )
+        );
+    }
+
     private sealed class VeredictProbingUpdateOperation : UpdatePackageOperation
     {
         public VeredictProbingUpdateOperation(IPackage package, InstallOptions options)
             : base(package, options) { }
+
+        public bool? ElevationOverride { get; set; }
+
+        public override bool WillRunElevated => ElevationOverride ?? base.WillRunElevated;
 
         public Task<OperationVeredict> ProbeProcessVeredict(int returnCode, List<string> output)
             => GetProcessVeredict(returnCode, output);

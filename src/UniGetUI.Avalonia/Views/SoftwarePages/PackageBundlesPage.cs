@@ -527,8 +527,11 @@ public class PackageBundlesPage : AbstractPackagesPage
                 IReadOnlyList<string> param;
                 try
                 {
+                    var exported = pkg.installation_options.Copy();
+                    exported.CustomInstallLocation = InstallOptionsFactory.ExpandPackagePlaceholders(
+                        exported.CustomInstallLocation, pkg);
                     param = pkg.Manager.OperationHelper.GetStandaloneParameters(
-                        pkg, pkg.installation_options, OperationType.Install);
+                        pkg, exported, OperationType.Install);
                 }
                 catch (InvalidOperationException ex)
                 {

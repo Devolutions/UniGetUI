@@ -18,6 +18,9 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
 {
     private readonly IPackageManager _manager;
     private readonly string _defaultLocationLabel;
+    private readonly string _subfolderIdLabel = CoreTools.Translate("Package ID");
+    private readonly string _subfolderNameLabel = CoreTools.Translate("Package name");
+    private readonly string _subfolderNoneLabel = CoreTools.Translate("No subfolder");
 
     public event EventHandler? NavigateToAdministratorRequested;
 
@@ -55,6 +58,8 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
     [ObservableProperty] private bool _locationSelectEnabled;
     [ObservableProperty] private bool _locationResetEnabled;
     [ObservableProperty] private string _locationText = "";
+    [ObservableProperty] private ObservableCollection<string> _subfolderItems = [];
+    [ObservableProperty] private string? _selectedSubfolder;
 
     // ── CLI args ──────────────────────────────────────────────────────────────
     [ObservableProperty] private bool _cliSectionEnabled;
@@ -74,6 +79,8 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
     public string LocationLabel { get; } = CoreTools.Translate("Install location:");
     public string SelectDirLabel { get; } = CoreTools.Translate("Select");
     public string ResetDirLabel { get; } = CoreTools.Translate("Reset");
+    public string SubfolderLabel { get; } = CoreTools.Translate("Subfolder for each package:");
+    public string LocationPlaceholderHintLabel { get; } = CoreTools.Translate("%PACKAGE% is replaced with the package ID, and %NAME% with the package name.");
     public string InstallArgsLabel { get; } = CoreTools.Translate("Custom install arguments:");
     public string UpdateArgsLabel { get; } = CoreTools.Translate("Custom update arguments:");
     public string UninstallArgsLabel { get; } = CoreTools.Translate("Custom uninstall arguments:");
@@ -92,11 +99,18 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
     public double ArchOpacity => ArchitectureEnabled ? 1.0 : 0.5;
     public double ScopeOpacity => ScopeEnabled ? 1.0 : 0.5;
     public double LocationOpacity => LocationSelectEnabled ? 1.0 : 0.5;
+    public bool SubfolderEnabled => LocationSelectEnabled && LocationResetEnabled;
 
     partial void OnCliSectionEnabledChanged(bool value) => OnPropertyChanged(nameof(CliOpacity));
     partial void OnArchitectureEnabledChanged(bool value) => OnPropertyChanged(nameof(ArchOpacity));
     partial void OnScopeEnabledChanged(bool value) => OnPropertyChanged(nameof(ScopeOpacity));
-    partial void OnLocationSelectEnabledChanged(bool value) => OnPropertyChanged(nameof(LocationOpacity));
+    partial void OnLocationResetEnabledChanged(bool value) => OnPropertyChanged(nameof(SubfolderEnabled));
+
+    partial void OnLocationSelectEnabledChanged(bool value)
+    {
+        OnPropertyChanged(nameof(LocationOpacity));
+        OnPropertyChanged(nameof(SubfolderEnabled));
+    }
 
     // Mark HasChanges when user edits options (guards against firing during load)
     partial void OnAdminCheckedChanged(bool value) => HasChanges = !IsLoading;
@@ -106,6 +120,13 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
     partial void OnUninstallPreviousCheckedChanged(bool value) => HasChanges = !IsLoading;
     partial void OnSelectedArchitectureChanged(string? value) => HasChanges = !IsLoading;
     partial void OnSelectedScopeChanged(string? value) => HasChanges = !IsLoading;
+
+    partial void OnSelectedSubfolderChanged(string? value)
+    {
+        if (IsLoading || value is null || !LocationResetEnabled) return;
+        LocationText = _withSubfolder(LocationText, value);
+        HasChanges = true;
+    }
 
     public InstallOptionsPanelViewModel(IPackageManager manager)
     {
@@ -121,6 +142,11 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
         _scopeItems.Add(CoreTools.Translate("Default"));
         _scopeItems.Add(CoreTools.Translate(CommonTranslations.ScopeNames[PackageScope.Local]));
         _scopeItems.Add(CoreTools.Translate(CommonTranslations.ScopeNames[PackageScope.Global]));
+
+        _subfolderItems.Add(_subfolderIdLabel);
+        _subfolderItems.Add(_subfolderNameLabel);
+        _subfolderItems.Add(_subfolderNoneLabel);
+        _selectedSubfolder = _subfolderIdLabel;
 
         _ = DoLoadOptions();
     }
@@ -236,6 +262,7 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
         {
             LocationText = options.CustomInstallLocation;
             LocationResetEnabled = true;
+            SelectedSubfolder = _subfolderLabelFor(LocationText);
         }
         else
         {
@@ -243,6 +270,7 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
                 ? _defaultLocationLabel
                 : CoreTools.Translate("Install location can't be changed for {0} packages", _manager.DisplayName);
             LocationResetEnabled = false;
+            SelectedSubfolder = _subfolderIdLabel;
         }
 
         // CLI
@@ -267,7 +295,7 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
         if (folders is not [{ } folder]) return;
         var path = folder.TryGetLocalPath();
         if (string.IsNullOrEmpty(path)) return;
-        LocationText = path.TrimEnd('/').TrimEnd('\\') + "/%PACKAGE%";
+        LocationText = _withSubfolder(path, SelectedSubfolder);
         LocationResetEnabled = true;
         HasChanges = true;
     }
@@ -275,9 +303,72 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
     [RelayCommand]
     private void ResetLocation()
     {
-        LocationText = _defaultLocationLabel;
         LocationResetEnabled = false;
+        LocationText = _defaultLocationLabel;
+        SelectedSubfolder = _subfolderIdLabel;
         HasChanges = true;
+    }
+
+    private string _subfolderLabelFor(string location)
+    {
+        string trimmed = location.TrimEnd('/', '\\');
+
+        if (trimmed.EndsWith(InstallOptionsFactory.PackageNamePlaceholder, StringComparison.OrdinalIgnoreCase))
+            return _subfolderNameLabel;
+
+        if (trimmed.EndsWith(InstallOptionsFactory.PackageIdPlaceholder, StringComparison.OrdinalIgnoreCase))
+            return _subfolderIdLabel;
+
+        return _subfolderNoneLabel;
+    }
+
+    private string _withSubfolder(string location, string? subfolderLabel)
+    {
+        string[] placeholders =
+        [
+            InstallOptionsFactory.PackageIdPlaceholder,
+            InstallOptionsFactory.PackageNamePlaceholder,
+        ];
+
+        string basePath = location.TrimEnd('/', '\\');
+
+        foreach (var placeholder in placeholders)
+        {
+            if (basePath.EndsWith(placeholder, StringComparison.OrdinalIgnoreCase))
+            {
+                basePath = basePath[..^placeholder.Length];
+                break;
+            }
+        }
+
+        basePath = _asDirectoryPath(basePath);
+
+        string subfolder =
+            subfolderLabel == _subfolderNameLabel ? InstallOptionsFactory.PackageNamePlaceholder
+            : subfolderLabel == _subfolderIdLabel ? InstallOptionsFactory.PackageIdPlaceholder
+            : "";
+
+        if (basePath.Length is 0)
+            return subfolder;
+
+        if (subfolder.Length is 0)
+            return basePath;
+
+        return basePath[^1] is '/' or '\\'
+            ? basePath + subfolder
+            : basePath + Path.DirectorySeparatorChar + subfolder;
+    }
+
+    private static string _asDirectoryPath(string path)
+    {
+        string trimmed = path.TrimEnd('/', '\\');
+
+        if (trimmed.Length is 0)
+            return path.Length is 0 ? path : path[..1];
+
+        return trimmed.Length is 2 && trimmed[1] is ':'
+            ? trimmed + Path.DirectorySeparatorChar
+            : trimmed;
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────

@@ -343,6 +343,12 @@
                                  FontSize="14"
                                  HorizontalAlignment="Stretch"/>
 
+                        <TextBlock Text="{Binding LocationPlaceholderHintLabel}"
+                                   IsVisible="{Binding LocationEnabled}"
+                                   TextWrapping="Wrap"
+                                   Opacity="0.7"
+                                   FontSize="12"/>
+
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"
                               IsVisible="{Binding LocationEnabled}">
                             <TextBlock Text="{Binding EnvVarSyntaxHintLabel}"

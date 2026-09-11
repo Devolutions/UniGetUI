@@ -48,6 +48,7 @@ public partial class InstallOptionsViewModel : ObservableObject
     public string ParamsUpdateLabel { get; } = CoreTools.Translate("Custom update arguments:");
     public string ParamsUninstallLabel { get; } = CoreTools.Translate("Custom uninstall arguments:");
     public string CliArgsHintLabel { get; } = CoreTools.Translate("These fields are independent: an argument set for Install won't apply to Update or Uninstall, and vice versa.");
+    public string LocationPlaceholderHintLabel { get; } = CoreTools.Translate("%PACKAGE% is replaced with the package ID, and %NAME% with the package name.");
     public string EnvVarSyntaxHintLabel { get; } = Settings.Get(Settings.K.ExpandEnvVarsWithPercentSyntax)
         ? CoreTools.Translate("Environment variables use %VARIABLE% syntax.")
         : CoreTools.Translate("Environment variables use <VARIABLE> syntax.");

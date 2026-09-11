@@ -407,6 +407,7 @@ public static class IpcOperationApi
                     PackageOperation.CanRetrySkippingIntegrityChecks(
                         packageOperation.Package.Manager,
                         packageOperation.Options,
+                        packageOperation.Role,
                         packageOperation.WillRunElevated
                     )
                 )

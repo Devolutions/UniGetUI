@@ -161,20 +161,26 @@ namespace UniGetUI.PackageEngine.Operations
         public static bool CanRetrySkippingIntegrityChecks(
             IPackageManager manager,
             InstallOptions options,
+            OperationType role,
             bool willRunElevated
         )
         {
             if (!manager.Capabilities.CanSkipIntegrityChecks || options.SkipHashCheck)
                 return false;
 
-            return !willRunElevated || IntegrityCheckSkipSurvivesElevation(manager);
+            return IntegrityCheckSkipIsHonored(manager, role, willRunElevated);
         }
 
-        private static bool IntegrityCheckSkipSurvivesElevation(IPackageManager manager)
+        private static bool IntegrityCheckSkipIsHonored(
+            IPackageManager manager,
+            OperationType role,
+            bool willRunElevated
+        )
         {
 #if WINDOWS
             if (manager is WinGet winget)
-                return winget.HonorsIntegrityCheckSkipWhenElevated;
+                return role is not OperationType.Uninstall
+                    && (!willRunElevated || winget.HonorsIntegrityCheckSkipWhenElevated);
 #endif
             return true;
         }

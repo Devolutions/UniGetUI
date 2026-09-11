@@ -267,7 +267,7 @@ public sealed partial class OperationViewModel : ViewModelBase
                         () => Operation.Retry(AbstractOperation.RetryMode.Retry_Interactive)));
 
                 if (PackageOperation.CanRetrySkippingIntegrityChecks(
-                        pkgOp.Package.Manager, pkgOp.Options, pkgOp.WillRunElevated))
+                        pkgOp.Package.Manager, pkgOp.Options, pkgOp.Role, pkgOp.WillRunElevated))
                     OpMenu.Items.Add(Item("Retry skipping integrity checks", "checksum.svg", true,
                         () => Operation.Retry(AbstractOperation.RetryMode.Retry_SkipIntegrity)));
             }

@@ -2124,6 +2124,7 @@ public sealed class WinGetManagerTests : IDisposable
             PackageOperation.CanRetrySkippingIntegrityChecks(
                 manager,
                 new InstallOptions(),
+                OperationType.Update,
                 willRunElevated: true
             )
         );
@@ -2131,6 +2132,7 @@ public sealed class WinGetManagerTests : IDisposable
             PackageOperation.CanRetrySkippingIntegrityChecks(
                 manager,
                 new InstallOptions(),
+                OperationType.Update,
                 willRunElevated: false
             )
         );
@@ -2146,6 +2148,46 @@ public sealed class WinGetManagerTests : IDisposable
             PackageOperation.CanRetrySkippingIntegrityChecks(
                 manager,
                 new InstallOptions(),
+                OperationType.Update,
+                willRunElevated: true
+            )
+        );
+    }
+
+    [Fact]
+    public void WinGetDoesNotOfferTheIntegritySkipRetryOnUninstall()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+
+        Assert.False(
+            PackageOperation.CanRetrySkippingIntegrityChecks(
+                manager,
+                new InstallOptions(),
+                OperationType.Uninstall,
+                willRunElevated: false
+            )
+        );
+        Assert.DoesNotContain(
+            "--ignore-security-hash",
+            manager.OperationHelper.GetParameters(
+                new PackageBuilder().WithManager(manager).WithId("Contoso.Tool").Build(),
+                new InstallOptions { SkipHashCheck = true },
+                OperationType.Uninstall
+            )
+        );
+    }
+
+    [Fact]
+    public void OtherManagersKeepTheIntegritySkipRetryOnUninstall()
+    {
+        var manager = new Infrastructure.Fakes.TestPackageManager();
+
+        Assert.True(
+            PackageOperation.CanRetrySkippingIntegrityChecks(
+                manager,
+                new InstallOptions(),
+                OperationType.Uninstall,
                 willRunElevated: true
             )
         );
@@ -2161,6 +2203,7 @@ public sealed class WinGetManagerTests : IDisposable
             PackageOperation.CanRetrySkippingIntegrityChecks(
                 manager,
                 new InstallOptions { SkipHashCheck = true },
+                OperationType.Update,
                 willRunElevated: false
             )
         );

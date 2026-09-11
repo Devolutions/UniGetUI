@@ -308,7 +308,7 @@ public sealed partial class OperationViewModel : ViewModelBase
     private static async Task ShowInstallOptionsAsync(PackageOperation packageOp)
     {
         if (GetMainWindow() is not { } mainWindow) return;
-        var opts = await InstallOptionsFactory.LoadApplicableAsync(packageOp.Package);
+        var opts = await InstallOptionsFactory.LoadForPackageAsync(packageOp.Package);
         var win = new InstallOptionsWindow(packageOp.Package, OperationType.None, opts);
         await win.ShowDialog(mainWindow);
         await InstallOptionsFactory.SaveForPackageAsync(opts, packageOp.Package);

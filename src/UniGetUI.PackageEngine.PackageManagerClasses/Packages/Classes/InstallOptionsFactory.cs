@@ -18,6 +18,9 @@ namespace UniGetUI.PackageEngine.PackageClasses
     /// </summary>
     public static class InstallOptionsFactory
     {
+        public const string PackageIdPlaceholder = "%PACKAGE%";
+        public const string PackageNamePlaceholder = "%NAME%";
+
         public static bool IsIdentityScopedOptionsFile(string fileName) =>
             StoragePath.IsIdentityScoped(fileName);
 
@@ -162,14 +165,12 @@ namespace UniGetUI.PackageEngine.PackageClasses
                     $"Package {package.Id} does not override options, will use package manager's default..."
                 );
                 instance = LoadForManager(package.Manager);
-
-                var legalizedId = CoreTools.MakeValidFileName(package.Id);
-                instance.CustomInstallLocation = instance.CustomInstallLocation.Replace(
-                    "%PACKAGE%",
-                    legalizedId
-                );
             }
 
+            instance.CustomInstallLocation = _expandPackagePlaceholders(
+                instance.CustomInstallLocation,
+                package
+            );
             instance.CustomInstallLocationIsExplicit = locationIsExplicit;
 
             if (elevated is not null)
@@ -397,6 +398,22 @@ namespace UniGetUI.PackageEngine.PackageClasses
                     .Replace(">", "")
                     .Replace("\n", "");
             }
+        }
+
+        private static string _expandPackagePlaceholders(string location, IPackage package)
+        {
+            if (!location.Contains('%'))
+                return location;
+
+            string legalizedId = CoreTools.MakeValidFileName(package.Id);
+            string legalizedName = CoreTools.MakeValidFileName(package.Name);
+
+            if (legalizedName.Length is 0)
+                legalizedName = legalizedId;
+
+            return location
+                .Replace(PackageIdPlaceholder, legalizedId, StringComparison.OrdinalIgnoreCase)
+                .Replace(PackageNamePlaceholder, legalizedName, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string _expandEnvironmentVariables(string value)

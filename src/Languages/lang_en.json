@@ -1075,5 +1075,9 @@
   "Could not import settings": "Could not import settings",
   "The installer for {package} does not match the hash in its manifest": "The installer for {package} does not match the hash in its manifest",
   "The package manifest is likely out of date. WinGet cannot skip this check while running as administrator.": "The package manifest is likely out of date. WinGet cannot skip this check while running as administrator.",
-  "The package manifest is likely out of date. Skipping this check requires WinGet's InstallerHashOverride administrator setting.": "The package manifest is likely out of date. Skipping this check requires WinGet's InstallerHashOverride administrator setting."
+  "The package manifest is likely out of date. Skipping this check requires WinGet's InstallerHashOverride administrator setting.": "The package manifest is likely out of date. Skipping this check requires WinGet's InstallerHashOverride administrator setting.",
+  "Subfolder for each package:": "Subfolder for each package:",
+  "%PACKAGE% is replaced with the package ID, and %NAME% with the package name.": "%PACKAGE% is replaced with the package ID, and %NAME% with the package name.",
+  "Package name": "Package name",
+  "No subfolder": "No subfolder"
 }

@@ -260,6 +260,125 @@ public sealed class InstallOptionsFactoryTests : IDisposable
     }
 
     [Fact]
+    public void LoadApplicable_ExpandsNameTokenFromManagerDefaults()
+    {
+        var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Notepad++.Notepad++")
+            .WithName("Notepad++")
+            .Build();
+
+        InstallOptionsFactory.SaveForManager(
+            new InstallOptions { CustomInstallLocation = @"D:\Programs\%NAME%" },
+            manager
+        );
+        InstallOptionsFactory.SaveForPackage(new InstallOptions(), package);
+
+        var resolved = InstallOptionsFactory.LoadApplicable(package);
+
+        Assert.Equal(@"D:\Programs\Notepad++", resolved.CustomInstallLocation);
+        Assert.False(resolved.CustomInstallLocationIsExplicit);
+    }
+
+    [Fact]
+    public void LoadApplicable_ExpandsTokensInExplicitPackageLocation()
+    {
+        var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithName("Contoso Tool")
+            .Build();
+
+        InstallOptionsFactory.SaveForPackage(
+            new InstallOptions
+            {
+                OverridesNextLevelOpts = true,
+                CustomInstallLocation = @"D:\Programs\%name%\%package%",
+            },
+            package
+        );
+
+        var resolved = InstallOptionsFactory.LoadApplicable(package);
+
+        Assert.Equal(@"D:\Programs\Contoso Tool\Contoso.Tool", resolved.CustomInstallLocation);
+        Assert.True(resolved.CustomInstallLocationIsExplicit);
+    }
+
+    [Fact]
+    public void LoadApplicable_SanitizesNameTokenForUseAsAFolderName()
+    {
+        var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId($"Pkg{Guid.NewGuid():N}")
+            .WithName("Contoso: Tool*")
+            .Build();
+
+        InstallOptionsFactory.SaveForManager(
+            new InstallOptions { CustomInstallLocation = @"D:\Programs\%NAME%" },
+            manager
+        );
+        InstallOptionsFactory.SaveForPackage(new InstallOptions(), package);
+
+        var resolved = InstallOptionsFactory.LoadApplicable(package);
+
+        Assert.Equal(@"D:\Programs\Contoso Tool", resolved.CustomInstallLocation);
+    }
+
+    [Theory]
+    [InlineData("..")]
+    [InlineData(@"..\..\Windows\System32")]
+    [InlineData("../../etc")]
+    [InlineData("   ")]
+    [InlineData("CON")]
+    public void LoadApplicable_KeepsTheNameTokenInsideTheConfiguredDirectory(string name)
+    {
+        var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId($"Pkg{Guid.NewGuid():N}")
+            .WithName(name)
+            .Build();
+
+        InstallOptionsFactory.SaveForManager(
+            new InstallOptions { CustomInstallLocation = @"D:\Programs\%NAME%" },
+            manager
+        );
+        InstallOptionsFactory.SaveForPackage(new InstallOptions(), package);
+
+        var resolved = InstallOptionsFactory.LoadApplicable(package);
+
+        Assert.StartsWith(@"D:\Programs\", resolved.CustomInstallLocation, StringComparison.Ordinal);
+        Assert.Equal(
+            @"D:\Programs",
+            Path.GetDirectoryName(Path.GetFullPath(resolved.CustomInstallLocation))
+        );
+    }
+
+    [Fact]
+    public void LoadApplicable_FallsBackToPackageIdWhenNameCannotBeAFolderName()
+    {
+        var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithName("?*|")
+            .Build();
+
+        InstallOptionsFactory.SaveForManager(
+            new InstallOptions { CustomInstallLocation = @"D:\Programs\%NAME%" },
+            manager
+        );
+        InstallOptionsFactory.SaveForPackage(new InstallOptions(), package);
+
+        var resolved = InstallOptionsFactory.LoadApplicable(package);
+
+        Assert.Equal(@"D:\Programs\Contoso.Tool", resolved.CustomInstallLocation);
+    }
+
+    [Fact]
     public void LoadApplicable_MarksLocationExplicitOnlyForPerPackageOverrides()
     {
         var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();

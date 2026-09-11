@@ -143,6 +143,27 @@
                              FontSize="14"
                              Opacity="0.6"/>
 
+                    <Grid ColumnDefinitions="*,*">
+                        <TextBlock x:Name="SubfolderLabelBlock"
+                                   Grid.Column="0"
+                                   Text="{Binding SubfolderLabel}"
+                                   VerticalAlignment="Center"
+                                   FontSize="14"
+                                   Opacity="{Binding LocationOpacity}"/>
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding SubfolderItems}"
+                                  SelectedItem="{Binding SelectedSubfolder}"
+                                  IsEnabled="{Binding SubfolderEnabled}"
+                                  HorizontalAlignment="Stretch"
+                                  MaxWidth="200"
+                                  automation:AutomationProperties.LabeledBy="{Binding #SubfolderLabelBlock}"/>
+                    </Grid>
+                    <TextBlock Text="{Binding LocationPlaceholderHintLabel}"
+                               IsVisible="{Binding LocationSelectEnabled}"
+                               TextWrapping="Wrap"
+                               Opacity="0.7"
+                               FontSize="12"/>
+
                     <!-- CLI disabled warning -->
                     <TextBlock Text="{Binding CliDisabledLabel}"
                                IsVisible="{Binding CliDisabledWarningVisible}"

@@ -171,8 +171,13 @@ public sealed class ShortcutFileRemoverTests : IDisposable
 
         string outside = CreateFile(_outsideRoot, "Payload.lnk");
         string junction = Path.Combine(_root, "Vendor");
-        if (!TryCreateJunction(junction, _outsideRoot))
-            return;
+        string mklinkOutput = CreateJunction(junction, _outsideRoot);
+
+        Assert.True(
+            Directory.Exists(junction),
+            "The junction that redirects the shortcut out of its root could not be created, so "
+                + $"the reparse point protection was left unverified: {mklinkOutput}"
+        );
 
         try
         {
@@ -188,6 +193,30 @@ public sealed class ShortcutFileRemoverTests : IDisposable
         {
             Directory.Delete(junction);
         }
+    }
+
+    [Fact]
+    public void AnOpenShortcutPinsEveryDirectoryAboveIt()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string vendor = Path.Combine(_root, "Vendor");
+        string shortcut = CreateFile(vendor, "App.lnk");
+
+        using var handle = new FileStream(
+            shortcut,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read | FileShare.Write
+        );
+
+        Assert.ThrowsAny<SystemException>(() => File.Delete(shortcut));
+        Assert.ThrowsAny<SystemException>(() => Directory.Move(vendor, vendor + "-swapped"));
+        Assert.ThrowsAny<SystemException>(() => Directory.Move(_root, _root + "-swapped"));
+
+        Assert.True(File.Exists(shortcut));
+        Assert.True(Directory.Exists(vendor));
     }
 
     [Fact]
@@ -233,7 +262,7 @@ public sealed class ShortcutFileRemoverTests : IDisposable
         Assert.False(File.Exists(shortcut));
     }
 
-    private static bool TryCreateJunction(string link, string target)
+    private static string CreateJunction(string link, string target)
     {
         using var process = System.Diagnostics.Process.Start(
             new System.Diagnostics.ProcessStartInfo
@@ -247,8 +276,9 @@ public sealed class ShortcutFileRemoverTests : IDisposable
             }
         );
 
-        process!.WaitForExit();
-        return process.ExitCode is 0 && Directory.Exists(link);
+        string output = process!.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        return $"mklink exited with {process.ExitCode}: {output.Trim()}";
     }
 
     [Fact]

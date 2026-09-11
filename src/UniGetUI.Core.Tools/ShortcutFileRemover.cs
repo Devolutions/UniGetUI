@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
@@ -18,6 +20,21 @@ public static class ShortcutFileRemover
 
     private const string ElevatorCancelledByUser = "The operation was canceled by the user";
 
+    private const uint DeleteAccess = 0x00010000;
+    private const uint FileReadAttributes = 0x00000080;
+    private const uint ShareReadWrite = 0x00000001 | 0x00000002;
+    private const uint OpenExisting = 3;
+    private const uint OpenReparsePoint = 0x00200000;
+    private const uint FileNameNormalized = 0x00000000;
+    private const int FileDispositionInfo = 4;
+    private const int FileDispositionInfoEx = 21;
+    private const uint DispositionDelete = 0x00000001;
+    private const uint DispositionIgnoreReadOnly = 0x00000010;
+    private const int ErrorFileNotFound = 2;
+    private const int ErrorPathNotFound = 3;
+    private const string ExtendedPathPrefix = @"\\?\";
+    private const string ExtendedUncPathPrefix = @"\\?\UNC\";
+
     private const int ElevationWaitMilliseconds = 60_000;
 
     private static readonly Lock ElevationLock = new();
@@ -25,6 +42,8 @@ public static class ShortcutFileRemover
     private static Task<bool>? _runningElevation;
 
     private static bool _elevationLeftUnanswered;
+
+    private static volatile bool _elevatorUnusable;
 
     private static readonly string[] ShortcutExtensions = [".lnk", ".url"];
 
@@ -77,7 +96,11 @@ public static class ShortcutFileRemover
             }
             catch (UnauthorizedAccessException e)
             {
-                if (attempt is 0 && TryClearReadOnlyAttribute(shortcutPath))
+                if (
+                    attempt is 0
+                    && IsRemovableShortcutPath(shortcutPath)
+                    && TryClearReadOnlyAttribute(shortcutPath)
+                )
                     continue;
 
                 accessDenied = true;
@@ -206,26 +229,28 @@ public static class ShortcutFileRemover
     {
         Succeeded,
         Cancelled,
+        Failed,
         ElevatorUnusable,
     }
 
     private static bool RunElevatedDeletion(IReadOnlyList<string> targets)
     {
-        if (CoreData.ElevatorPath.Length is 0)
+        if (CoreData.ElevatorPath.Length is 0 || _elevatorUnusable)
         {
             Logger.Warn(
-                "No elevator is available, the deletion of protected shortcuts will be elevated "
-                    + "through Windows instead, which cannot reuse cached administrator rights"
+                "No usable elevator is available, the deletion of protected shortcuts will be "
+                    + "elevated through Windows instead, which cannot reuse cached administrator "
+                    + "rights"
             );
             return RunThroughWindows(targets);
         }
 
-        return RunThroughElevator(targets) switch
-        {
-            ElevationResult.Succeeded => true,
-            ElevationResult.Cancelled => false,
-            _ => RunThroughWindows(targets),
-        };
+        ElevationResult result = RunThroughElevator(targets);
+        if (result is not ElevationResult.ElevatorUnusable)
+            return result is ElevationResult.Succeeded;
+
+        _elevatorUnusable = true;
+        return RunThroughWindows(targets);
     }
 
     private static ElevationResult RunThroughElevator(IReadOnlyList<string> targets)
@@ -289,6 +314,15 @@ public static class ShortcutFileRemover
                 cancelledByUser = output.Any(line =>
                     line.Contains(ElevatorCancelledByUser, StringComparison.OrdinalIgnoreCase)
                 );
+            }
+
+            if (process.ExitCode <= 0)
+            {
+                Logger.Error(
+                    $"The elevated instance could not delete every protected shortcut (code "
+                        + $"{process.ExitCode}: {details})"
+                );
+                return ElevationResult.Failed;
             }
 
             if (process.ExitCode is ElevatorCancelled && cancelledByUser)
@@ -370,11 +404,110 @@ public static class ShortcutFileRemover
                 continue;
             }
 
-            if (!TryDelete(shortcutPath, out _))
+            if (!DeleteVerifiedShortcut(shortcutPath))
                 everythingDeleted = false;
         }
 
         return everythingDeleted ? 0 : 1;
+    }
+
+    private static bool DeleteVerifiedShortcut(string shortcutPath)
+    {
+        if (!OperatingSystem.IsWindows())
+            return TryDelete(shortcutPath, out _);
+
+        try
+        {
+            using SafeFileHandle handle = CreateFileW(
+                shortcutPath,
+                DeleteAccess | FileReadAttributes,
+                ShareReadWrite,
+                IntPtr.Zero,
+                OpenExisting,
+                OpenReparsePoint,
+                IntPtr.Zero
+            );
+
+            if (handle.IsInvalid)
+            {
+                int error = Marshal.GetLastWin32Error();
+                if (error is ErrorFileNotFound or ErrorPathNotFound)
+                    return true;
+
+                Logger.Error(
+                    $"Could not open the shortcut {{shortcutPath={shortcutPath}}} for deletion, "
+                        + $"Windows returned error {error}"
+                );
+                return false;
+            }
+
+            string? resolvedPath = GetResolvedPath(handle);
+            if (resolvedPath is null || !IsRemovableShortcutPath(resolvedPath))
+            {
+                Logger.Error(
+                    $"Refused to delete {{shortcutPath={shortcutPath}}}, it resolves to "
+                        + $"{resolvedPath ?? "an unknown path"}, which is not a shortcut under a "
+                        + "known desktop or Start Menu folder"
+                );
+                return false;
+            }
+
+            uint disposition = DispositionDelete | DispositionIgnoreReadOnly;
+            if (
+                SetFileInformationByHandle(
+                    handle,
+                    FileDispositionInfoEx,
+                    ref disposition,
+                    sizeof(uint)
+                )
+            )
+                return true;
+
+            byte deleteFile = 1;
+            if (
+                SetFileInformationByHandle(
+                    handle,
+                    FileDispositionInfo,
+                    ref deleteFile,
+                    sizeof(byte)
+                )
+            )
+                return true;
+
+            Logger.Error(
+                $"Could not delete the shortcut {{shortcutPath={shortcutPath}}}, Windows returned "
+                    + $"error {Marshal.GetLastWin32Error()}"
+            );
+            return false;
+        }
+        catch (Exception e)
+        {
+            Logger.Error($"Failed to delete the shortcut {{shortcutPath={shortcutPath}}}");
+            Logger.Error(e);
+            return false;
+        }
+    }
+
+    private static string? GetResolvedPath(SafeFileHandle handle)
+    {
+        char[] buffer = new char[1024];
+        uint length = GetFinalPathNameByHandleW(
+            handle,
+            buffer,
+            (uint)buffer.Length,
+            FileNameNormalized
+        );
+
+        if (length is 0 || length >= buffer.Length)
+            return null;
+
+        string path = new(buffer, 0, (int)length);
+        if (path.StartsWith(ExtendedUncPathPrefix, StringComparison.Ordinal))
+            return @"\\" + path[ExtendedUncPathPrefix.Length..];
+
+        return path.StartsWith(ExtendedPathPrefix, StringComparison.Ordinal)
+            ? path[ExtendedPathPrefix.Length..]
+            : path;
     }
 
     public static IReadOnlyList<string> GetShortcutRoots()
@@ -386,11 +519,29 @@ public static class ShortcutFileRemover
         foreach (Environment.SpecialFolder folder in ShortcutFolders)
         {
             string root = Environment.GetFolderPath(folder);
-            if (root.Length > 0)
-                roots.Add(root);
+            if (root.Length is 0)
+                continue;
+
+            AddRoot(roots, root);
+
+            try
+            {
+                if (
+                    Directory.ResolveLinkTarget(root, returnFinalTarget: true) is { } target
+                    && Path.GetDirectoryName(target.FullName) is not null
+                )
+                    AddRoot(roots, target.FullName);
+            }
+            catch (Exception) { }
         }
 
         return roots;
+    }
+
+    private static void AddRoot(List<string> roots, string root)
+    {
+        if (!roots.Contains(root, StringComparer.OrdinalIgnoreCase))
+            roots.Add(root);
     }
 
     public static bool IsRemovableShortcutPath(string shortcutPath)
@@ -443,7 +594,8 @@ public static class ShortcutFileRemover
             )
                 continue;
 
-            return !CrossesReparsePoint(fullRoot, fullPath);
+            if (!CrossesReparsePoint(fullRoot, fullPath))
+                return true;
         }
 
         return false;
@@ -477,4 +629,41 @@ public static class ShortcutFileRemover
             return true;
         }
     }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeFileHandle CreateFileW(
+        string lpFileName,
+        uint dwDesiredAccess,
+        uint dwShareMode,
+        IntPtr lpSecurityAttributes,
+        uint dwCreationDisposition,
+        uint dwFlagsAndAttributes,
+        IntPtr hTemplateFile
+    );
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint GetFinalPathNameByHandleW(
+        SafeFileHandle hFile,
+        [Out] char[] lpszFilePath,
+        uint cchFilePath,
+        uint dwFlags
+    );
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetFileInformationByHandle(
+        SafeFileHandle hFile,
+        int FileInformationClass,
+        ref uint lpFileInformation,
+        uint dwBufferSize
+    );
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetFileInformationByHandle(
+        SafeFileHandle hFile,
+        int FileInformationClass,
+        ref byte lpFileInformation,
+        uint dwBufferSize
+    );
 }

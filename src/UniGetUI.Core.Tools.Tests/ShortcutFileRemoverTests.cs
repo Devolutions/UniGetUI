@@ -164,6 +164,94 @@ public sealed class ShortcutFileRemoverTests : IDisposable
     }
 
     [Fact]
+    public void TheElevatedInstanceRefusesAShortcutReachedThroughAJunction()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string outside = CreateFile(_outsideRoot, "Payload.lnk");
+        string junction = Path.Combine(_root, "Vendor");
+        if (!TryCreateJunction(junction, _outsideRoot))
+            return;
+
+        try
+        {
+            Assert.Equal(
+                1,
+                ShortcutFileRemover.DeleteAsElevatedInstance(
+                    [Path.Combine(junction, "Payload.lnk")]
+                )
+            );
+            Assert.True(File.Exists(outside));
+        }
+        finally
+        {
+            Directory.Delete(junction);
+        }
+    }
+
+    [Fact]
+    public void TheElevatedInstanceRemovesAShortcutInsideARealSubfolder()
+    {
+        string shortcut = CreateFile(Path.Combine(_root, "Vendor"), "Writer.lnk");
+
+        Assert.Equal(0, ShortcutFileRemover.DeleteAsElevatedInstance([shortcut]));
+        Assert.False(File.Exists(shortcut));
+    }
+
+    [Fact]
+    public void TheElevatedInstanceTreatsAMissingShortcutAsDeleted()
+    {
+        Assert.Equal(
+            0,
+            ShortcutFileRemover.DeleteAsElevatedInstance([Path.Combine(_root, "Missing.lnk")])
+        );
+    }
+
+    [Fact]
+    public void TheElevatedInstanceReportsAShortcutHeldOpenWithoutDeleteSharing()
+    {
+        string shortcut = CreateFile(_root, "Locked.lnk");
+        using var handle = new FileStream(
+            shortcut,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read
+        );
+
+        Assert.Equal(1, ShortcutFileRemover.DeleteAsElevatedInstance([shortcut]));
+        Assert.True(File.Exists(shortcut));
+    }
+
+    [Fact]
+    public void TheElevatedInstanceRemovesAReadOnlyShortcut()
+    {
+        string shortcut = CreateFile(_root, "ReadOnlyElevated.lnk");
+        File.SetAttributes(shortcut, File.GetAttributes(shortcut) | FileAttributes.ReadOnly);
+
+        Assert.Equal(0, ShortcutFileRemover.DeleteAsElevatedInstance([shortcut]));
+        Assert.False(File.Exists(shortcut));
+    }
+
+    private static bool TryCreateJunction(string link, string target)
+    {
+        using var process = System.Diagnostics.Process.Start(
+            new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                ArgumentList = { "/c", "mklink", "/J", link, target },
+            }
+        );
+
+        process!.WaitForExit();
+        return process.ExitCode is 0 && Directory.Exists(link);
+    }
+
+    [Fact]
     public void TheElevatedInstanceRefusesPathsItDoesNotManage()
     {
         string outside = CreateFile(_outsideRoot, "Payload.lnk");

@@ -258,6 +258,7 @@ These parameters are accepted by the app executables in addition to the automati
 | `--no-corrupt-dialog` | Shows the verbose crash report instead of the simplified dialog. | Troubleshooting flag. |
 | `--enable-secure-setting <key>` / `--disable-secure-setting <key>` | Toggles one secure setting for the current user. | May require elevation. |
 | `--enable-secure-setting-for-user <user> <key>` / `--disable-secure-setting-for-user <user> <key>` | Toggles one secure setting for a specified user. | May require elevation. |
+| `--delete-shortcuts <path> [<path>...]` | Deletes desktop or Start Menu shortcuts, then quits. | Used by UniGetUI to remove shortcuts the current user is not allowed to delete; refuses any path that is not a `.lnk` or `.url` under a desktop or Start Menu folder. |
 | `<bundle-file>` | Loads a valid bundle file into the Package Bundles page. | Supported extensions include `.ubundle`, `.json`, `.yaml`, and `.xml`. |
 
 ## Other environment variables

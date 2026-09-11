@@ -2,6 +2,7 @@ using System.Text.Json;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
+using UniGetUI.Core.Tools;
 using UniGetUI.Shared;
 
 namespace UniGetUI.Tests;
@@ -284,6 +285,70 @@ public sealed class CLIHandlerTests : IDisposable
                     user,
                     setting
                 )
+            )
+        );
+    }
+
+    [Fact]
+    public void DeleteShortcuts_RemovesShortcutsUnderAKnownRootWithoutManglingTheirNames()
+    {
+        string root = Path.Combine(_testRoot, "Desktop");
+        Directory.CreateDirectory(root);
+        ShortcutFileRemover.TEST_ShortcutRootsOverride = [root];
+
+        try
+        {
+            string shortcut = Path.Combine(root, "'LibreOffice' 26.8.lnk");
+            File.WriteAllText(shortcut, "shortcut");
+
+            int? result = SharedPreUiCommandDispatcher.TryHandle(
+                ["unigetui", ShortcutFileRemover.CliArgument, shortcut],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            );
+
+            Assert.Equal(SharedPreUiCommandDispatcher.WindowsCliExitCodes.Success, result);
+            Assert.False(File.Exists(shortcut));
+        }
+        finally
+        {
+            ShortcutFileRemover.TEST_ShortcutRootsOverride = null;
+        }
+    }
+
+    [Fact]
+    public void DeleteShortcuts_RefusesPathsOutsideEveryKnownRoot()
+    {
+        string root = Path.Combine(_testRoot, "Desktop");
+        Directory.CreateDirectory(root);
+        ShortcutFileRemover.TEST_ShortcutRootsOverride = [root];
+
+        try
+        {
+            string outside = Path.Combine(_testRoot, "Payload.lnk");
+            File.WriteAllText(outside, "payload");
+
+            int? result = SharedPreUiCommandDispatcher.TryHandle(
+                ["unigetui", ShortcutFileRemover.CliArgument, outside],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            );
+
+            Assert.Equal(SharedPreUiCommandDispatcher.WindowsCliExitCodes.Failed, result);
+            Assert.True(File.Exists(outside));
+        }
+        finally
+        {
+            ShortcutFileRemover.TEST_ShortcutRootsOverride = null;
+        }
+    }
+
+    [Fact]
+    public void DeleteShortcuts_ReportsAnInvalidParameterWhenNoPathIsGiven()
+    {
+        Assert.Equal(
+            SharedPreUiCommandDispatcher.WindowsCliExitCodes.InvalidParameter,
+            SharedPreUiCommandDispatcher.TryHandle(
+                ["unigetui", ShortcutFileRemover.CliArgument],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
             )
         );
     }

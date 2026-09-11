@@ -274,6 +274,9 @@ public partial class ManageShortcutsViewModel : ObservableObject
 
     public void SaveChanges()
     {
+        List<string> desktopShortcutsToDelete = [];
+        List<string> startMenuShortcutsToDelete = [];
+
         if (ShowDesktopTab)
             CoreSettings.Set(CoreSettings.K.RemoveAllDesktopShortcuts, AutoDelete);
 
@@ -293,7 +296,7 @@ public partial class ManageShortcutsViewModel : ObservableObject
             DesktopShortcutsDatabase.RemoveFromUnknownShortcuts(entry.Path);
 
             if (entry.IsDeletable && File.Exists(entry.Path))
-                DesktopShortcutsDatabase.DeleteFromDisk(entry.Path);
+                desktopShortcutsToDelete.Add(entry.Path);
         }
 
         CaptureUnsavedStartMenuVerdicts();
@@ -311,7 +314,7 @@ public partial class ManageShortcutsViewModel : ObservableObject
                 continue;
 
             if (File.Exists(path))
-                StartMenuShortcutsDatabase.DeleteFromDisk(path);
+                startMenuShortcutsToDelete.Add(path);
         }
 
         _unsavedStartMenuVerdicts.Clear();
@@ -329,8 +332,20 @@ public partial class ManageShortcutsViewModel : ObservableObject
                 );
 
                 if (File.Exists(shortcut))
-                    StartMenuShortcutsDatabase.DeleteFromDisk(shortcut);
+                    startMenuShortcutsToDelete.Add(shortcut);
             }
+        }
+
+        if (desktopShortcutsToDelete.Count > 0)
+            DesktopShortcutsDatabase.DeleteFromDisk(desktopShortcutsToDelete);
+
+        if (startMenuShortcutsToDelete.Count > 0)
+            StartMenuShortcutsDatabase.DeleteFromDisk(startMenuShortcutsToDelete);
+
+        foreach (var rule in StartMenuRules)
+        {
+            if (rule.FolderIsInvalid)
+                continue;
 
             StartMenuShortcutsDatabase.SetRule(rule.PackageId, rule.Folder);
             StartMenuShortcutsDatabase.RebaseRelocations(rule.PackageId);

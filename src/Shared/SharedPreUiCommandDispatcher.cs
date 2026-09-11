@@ -39,6 +39,7 @@ internal static class SharedPreUiCommandDispatcher
     internal const string SetSettingValueArgument = "--set-setting-value";
     internal const string EnableSecureSettingArgument = "--enable-secure-setting";
     internal const string DisableSecureSettingArgument = "--disable-secure-setting";
+    internal const string DeleteShortcutsArgument = ShortcutFileRemover.CliArgument;
     internal const string MigrateWingetUIToUniGetUIArgument = "--migrate-wingetui-to-unigetui";
     internal const string UninstallWingetUIArgument = "--uninstall-wingetui";
     internal const string UninstallUniGetUIArgument = "--uninstall-unigetui";
@@ -118,6 +119,11 @@ internal static class SharedPreUiCommandDispatcher
         if (args.Contains(DisableSecureSettingForUserArgument))
         {
             return DisableSecureSettingForUser(args, exitCodes);
+        }
+
+        if (args.Contains(DeleteShortcutsArgument))
+        {
+            return DeleteShortcuts(args, exitCodes);
         }
 
         if (args.Contains(MigrateWingetUIToUniGetUIArgument))
@@ -319,6 +325,31 @@ internal static class SharedPreUiCommandDispatcher
         try
         {
             return SecureSettings.ApplyForUser(user, setting, false);
+        }
+        catch (Exception ex)
+        {
+            return ex.HResult;
+        }
+    }
+
+    public static int DeleteShortcuts(
+        IReadOnlyList<string> args,
+        SharedPreUiCommandExitCodes exitCodes
+    )
+    {
+        int basePos = FindArgumentIndex(args, DeleteShortcutsArgument);
+        if (basePos < 0 || basePos + 1 >= args.Count)
+        {
+            return exitCodes.InvalidParameter;
+        }
+
+        string[] shortcutPaths = [.. args.Skip(basePos + 1)];
+
+        try
+        {
+            return ShortcutFileRemover.DeleteAsElevatedInstance(shortcutPaths) is 0
+                ? exitCodes.Success
+                : exitCodes.Failed;
         }
         catch (Exception ex)
         {

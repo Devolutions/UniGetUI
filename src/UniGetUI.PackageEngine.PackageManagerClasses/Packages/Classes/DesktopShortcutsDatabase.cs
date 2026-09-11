@@ -1,5 +1,6 @@
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI.PackageEngine.Classes.Packages.Classes;
 
@@ -80,16 +81,15 @@ public static class DesktopShortcutsDatabase
     public static bool DeleteFromDisk(string shortcutPath)
     {
         Logger.Info("Deleting shortcut " + shortcutPath);
-        try
-        {
-            File.Delete(shortcutPath);
-            return true;
-        }
-        catch (Exception e)
-        {
-            Logger.Error($"Failed to delete shortcut {{shortcutPath={shortcutPath}}}: {e.Message}");
-            return false;
-        }
+        return ShortcutFileRemover.Delete(shortcutPath);
+    }
+
+    public static void DeleteFromDisk(IReadOnlyList<string> shortcutPaths)
+    {
+        foreach (string shortcutPath in shortcutPaths)
+            Logger.Info("Deleting shortcut " + shortcutPath);
+
+        ShortcutFileRemover.Delete(shortcutPaths);
     }
 
     /// <summary>
@@ -204,6 +204,7 @@ public static class DesktopShortcutsDatabase
         bool DeleteUnknownShortcuts = Settings.Get(Settings.K.RemoveAllDesktopShortcuts);
         HashSet<string> PreviousShortcuts = [.. PreviousShortCutList];
         List<string> CurrentShortcuts = GetShortcutsOnDisk();
+        List<string> ShortcutsToDelete = [];
 
         foreach (string shortcut in CurrentShortcuts)
         {
@@ -216,7 +217,7 @@ public static class DesktopShortcutsDatabase
             {
                 // If a shortcut is set to be deleted, delete it,
                 // even when it was not created during an UniGetUI operation
-                DeleteFromDisk(shortcut);
+                ShortcutsToDelete.Add(shortcut);
             }
             else if (status is Status.Unknown)
             {
@@ -233,7 +234,7 @@ public static class DesktopShortcutsDatabase
                         $"New shortcut {shortcut} will be set for deletion (this shortcut was never seen before)"
                     );
                     AddToDatabase(shortcut, Status.Delete);
-                    DeleteFromDisk(shortcut);
+                    ShortcutsToDelete.Add(shortcut);
                 }
                 else
                 {
@@ -246,5 +247,8 @@ public static class DesktopShortcutsDatabase
                 }
             }
         }
+
+        if (ShortcutsToDelete.Count > 0)
+            DeleteFromDisk(ShortcutsToDelete);
     }
 }

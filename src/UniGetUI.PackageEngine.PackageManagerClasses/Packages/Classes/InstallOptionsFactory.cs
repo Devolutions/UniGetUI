@@ -167,7 +167,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
                 instance = LoadForManager(package.Manager);
             }
 
-            instance.CustomInstallLocation = _expandPackagePlaceholders(
+            instance.CustomInstallLocation = ExpandPackagePlaceholders(
                 instance.CustomInstallLocation,
                 package
             );
@@ -400,13 +400,13 @@ namespace UniGetUI.PackageEngine.PackageClasses
             }
         }
 
-        private static string _expandPackagePlaceholders(string location, IPackage package)
+        public static string ExpandPackagePlaceholders(string location, IPackage package)
         {
             if (!location.Contains('%'))
                 return location;
 
-            string legalizedId = CoreTools.MakeValidFileName(package.Id);
-            string legalizedName = CoreTools.MakeValidFileName(package.Name);
+            string legalizedId = _legalizeFolderName(package.Id);
+            string legalizedName = _legalizeFolderName(package.Name);
 
             if (legalizedName.Length is 0)
                 legalizedName = legalizedId;
@@ -415,6 +415,9 @@ namespace UniGetUI.PackageEngine.PackageClasses
                 .Replace(PackageIdPlaceholder, legalizedId, StringComparison.OrdinalIgnoreCase)
                 .Replace(PackageNamePlaceholder, legalizedName, StringComparison.OrdinalIgnoreCase);
         }
+
+        private static string _legalizeFolderName(string value) =>
+            CoreTools.MakeValidFileName(value.Replace("%", ""));
 
         private static string _expandEnvironmentVariables(string value)
         {

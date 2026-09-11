@@ -311,10 +311,12 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
 
     private string _subfolderLabelFor(string location)
     {
-        if (location.EndsWith(InstallOptionsFactory.PackageNamePlaceholder, StringComparison.OrdinalIgnoreCase))
+        string trimmed = location.TrimEnd('/', '\\');
+
+        if (trimmed.EndsWith(InstallOptionsFactory.PackageNamePlaceholder, StringComparison.OrdinalIgnoreCase))
             return _subfolderNameLabel;
 
-        if (location.EndsWith(InstallOptionsFactory.PackageIdPlaceholder, StringComparison.OrdinalIgnoreCase))
+        if (trimmed.EndsWith(InstallOptionsFactory.PackageIdPlaceholder, StringComparison.OrdinalIgnoreCase))
             return _subfolderIdLabel;
 
         return _subfolderNoneLabel;
@@ -328,28 +330,45 @@ public partial class InstallOptionsPanelViewModel : ViewModelBase
             InstallOptionsFactory.PackageNamePlaceholder,
         ];
 
-        bool stripped = false;
+        string basePath = location.TrimEnd('/', '\\');
+
         foreach (var placeholder in placeholders)
         {
-            if (location.EndsWith(placeholder, StringComparison.OrdinalIgnoreCase))
+            if (basePath.EndsWith(placeholder, StringComparison.OrdinalIgnoreCase))
             {
-                location = location[..^placeholder.Length];
-                stripped = true;
+                basePath = basePath[..^placeholder.Length];
                 break;
             }
         }
 
-        if (subfolderLabel == _subfolderNameLabel)
-            return location.TrimEnd('/', '\\')
-                + Path.DirectorySeparatorChar
-                + InstallOptionsFactory.PackageNamePlaceholder;
+        basePath = _asDirectoryPath(basePath);
 
-        if (subfolderLabel == _subfolderIdLabel)
-            return location.TrimEnd('/', '\\')
-                + Path.DirectorySeparatorChar
-                + InstallOptionsFactory.PackageIdPlaceholder;
+        string subfolder =
+            subfolderLabel == _subfolderNameLabel ? InstallOptionsFactory.PackageNamePlaceholder
+            : subfolderLabel == _subfolderIdLabel ? InstallOptionsFactory.PackageIdPlaceholder
+            : "";
 
-        return stripped ? location.TrimEnd('/', '\\') : location;
+        if (basePath.Length is 0)
+            return subfolder;
+
+        if (subfolder.Length is 0)
+            return basePath;
+
+        return basePath[^1] is '/' or '\\'
+            ? basePath + subfolder
+            : basePath + Path.DirectorySeparatorChar + subfolder;
+    }
+
+    private static string _asDirectoryPath(string path)
+    {
+        string trimmed = path.TrimEnd('/', '\\');
+
+        if (trimmed.Length is 0)
+            return path.Length is 0 ? path : path[..1];
+
+        return trimmed.Length is 2 && trimmed[1] is ':'
+            ? trimmed + Path.DirectorySeparatorChar
+            : trimmed;
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────

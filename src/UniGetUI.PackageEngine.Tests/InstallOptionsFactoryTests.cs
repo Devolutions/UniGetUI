@@ -327,6 +327,46 @@ public sealed class InstallOptionsFactoryTests : IDisposable
         Assert.Equal(@"D:\Programs\Contoso Tool", resolved.CustomInstallLocation);
     }
 
+    [Fact]
+    public void LoadApplicable_DoesNotLetPackageMetadataIntroduceEnvironmentVariables()
+    {
+        var varName = $"UNIGETUI_TEST_{Guid.NewGuid():N}";
+        Environment.SetEnvironmentVariable(varName, @"C:\Expanded");
+        try
+        {
+            Settings.Set(Settings.K.ExpandEnvVarsWithPercentSyntax, true);
+            var manager = new PackageManagerBuilder().WithName($"Manager{Guid.NewGuid():N}").Build();
+            var package = new PackageBuilder()
+                .WithManager(manager)
+                .WithId($"Contoso.%{varName}%")
+                .WithName($"Contoso %{varName}% Tool")
+                .Build();
+
+            InstallOptionsFactory.SaveForManager(
+                new InstallOptions { CustomInstallLocation = @"D:\Programs\%NAME%\%PACKAGE%" },
+                manager
+            );
+            InstallOptionsFactory.SaveForPackage(new InstallOptions(), package);
+
+            var resolved = InstallOptionsFactory.LoadApplicable(package);
+
+            Assert.Equal(
+                $@"D:\Programs\Contoso {varName} Tool\Contoso.{varName}",
+                resolved.CustomInstallLocation
+            );
+            Assert.DoesNotContain(
+                @"C:\Expanded",
+                resolved.CustomInstallLocation,
+                StringComparison.Ordinal
+            );
+        }
+        finally
+        {
+            Settings.Set(Settings.K.ExpandEnvVarsWithPercentSyntax, false);
+            Environment.SetEnvironmentVariable(varName, null);
+        }
+    }
+
     [Theory]
     [InlineData("..")]
     [InlineData(@"..\..\Windows\System32")]

@@ -101,7 +101,7 @@ public partial class OperationFailedDialog : UniGetUI.Avalonia.Views.DialogPages
                     () => { operation.Retry(AbstractOperation.RetryMode.Retry_Interactive); Close(); }));
 
             if (PackageOperation.CanRetrySkippingIntegrityChecks(
-                    pkgOp.Package.Manager, pkgOp.Options, pkgOp.Role, pkgOp.WillRunElevated))
+                    pkgOp.Package.Manager, pkgOp.Options, pkgOp.WillRunElevated))
                 retryOptions.Add(MenuItem(CoreTools.Translate("Retry skipping integrity checks"),
                     () => { operation.Retry(AbstractOperation.RetryMode.Retry_SkipIntegrity); Close(); }));
         }

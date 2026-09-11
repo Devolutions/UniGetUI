@@ -2029,8 +2029,11 @@ public sealed class WinGetManagerTests : IDisposable
         OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
         Assert.NotEqual(defaultMessage, operation.Metadata.FailureMessage);
         Assert.Contains("does not match the hash", operation.Metadata.FailureMessage);
-        Assert.Contains("running as administrator", operation.Metadata.FailureMessage);
         Assert.False(operation.Metadata.FailureMessage.EndsWith('.'));
+        Assert.Contains(
+            operation.GetOutput(),
+            line => line.Item1.Contains("cannot skip this check while running as administrator")
+        );
     }
 
     [Fact]
@@ -2055,7 +2058,10 @@ public sealed class WinGetManagerTests : IDisposable
         var veredict = await operation.ProbeProcessVeredict(unchecked((int)0x8A150011), []);
 
         OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
-        Assert.Contains("InstallerHashOverride", operation.Metadata.FailureMessage);
+        Assert.Contains(
+            operation.GetOutput(),
+            line => line.Item1.Contains("InstallerHashOverride")
+        );
     }
 
     [Fact]
@@ -2080,7 +2086,10 @@ public sealed class WinGetManagerTests : IDisposable
         OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
         Assert.NotEqual(defaultMessage, operation.Metadata.FailureMessage);
         Assert.Contains("does not match the hash", operation.Metadata.FailureMessage);
-        Assert.DoesNotContain("running as administrator", operation.Metadata.FailureMessage);
+        Assert.DoesNotContain(
+            operation.GetOutput(),
+            line => line.Item1.Contains("running as administrator")
+        );
     }
 
     [Fact]
@@ -2115,7 +2124,6 @@ public sealed class WinGetManagerTests : IDisposable
             PackageOperation.CanRetrySkippingIntegrityChecks(
                 manager,
                 new InstallOptions(),
-                OperationType.Update,
                 willRunElevated: true
             )
         );
@@ -2123,7 +2131,6 @@ public sealed class WinGetManagerTests : IDisposable
             PackageOperation.CanRetrySkippingIntegrityChecks(
                 manager,
                 new InstallOptions(),
-                OperationType.Update,
                 willRunElevated: false
             )
         );
@@ -2139,14 +2146,13 @@ public sealed class WinGetManagerTests : IDisposable
             PackageOperation.CanRetrySkippingIntegrityChecks(
                 manager,
                 new InstallOptions(),
-                OperationType.Update,
                 willRunElevated: true
             )
         );
     }
 
     [Fact]
-    public void WinGetNeverOffersTheIntegritySkipRetryTwiceOrOnUninstall()
+    public void WinGetNeverOffersTheIntegritySkipRetryWhenAlreadySkipping()
     {
         var manager = new WinGet();
         SetCliToolKind(manager, WinGetCliToolKind.BundledPinget);
@@ -2155,15 +2161,6 @@ public sealed class WinGetManagerTests : IDisposable
             PackageOperation.CanRetrySkippingIntegrityChecks(
                 manager,
                 new InstallOptions { SkipHashCheck = true },
-                OperationType.Update,
-                willRunElevated: false
-            )
-        );
-        Assert.False(
-            PackageOperation.CanRetrySkippingIntegrityChecks(
-                manager,
-                new InstallOptions(),
-                OperationType.Uninstall,
                 willRunElevated: false
             )
         );

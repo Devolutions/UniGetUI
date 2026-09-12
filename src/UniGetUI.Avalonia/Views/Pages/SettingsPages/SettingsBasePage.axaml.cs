@@ -129,6 +129,7 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
         if (t == typeof(Scheduler)) return new Scheduler();
         if (t == typeof(Operations)) return new Operations();
         if (t == typeof(Administrator)) return new Administrator();
+        if (t == typeof(AgentPolicyInspector)) return new AgentPolicyInspector();
         return null;
     }
 

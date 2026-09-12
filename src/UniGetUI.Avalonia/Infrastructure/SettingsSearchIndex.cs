@@ -27,7 +27,12 @@ public sealed class SettingsSearchResult
 /// </summary>
 public static class SettingsSearchIndex
 {
-    private sealed record Entry(string Title, string[] Keywords, Type PageType, string? Anchor);
+    private sealed record Entry(
+        string Title,
+        string[] Keywords,
+        Type PageType,
+        string? Anchor,
+        bool WindowsOnly = false);
 
     // Order matters only as a tie-break for equally-ranked matches.
     private static readonly Entry[] Entries =
@@ -121,6 +126,7 @@ public static class SettingsSearchIndex
         new("Ask for administrator privileges once for each batch of operations", ["administrator", "admin rights", "elevation", "uac", "batch"], typeof(Administrator), "AdminElevationCard"),
         new("Ask only once for administrator privileges", ["admin once", "cache admin rights"], typeof(Administrator), "CacheAdminOnceCard"),
         new("Prohibit any kind of Elevation via UniGetUI Elevator or GSudo", ["prohibit elevation", "no elevation"], typeof(Administrator), "ProhibitElevationCard"),
+        new("Inspect active package broker policy", ["policy", "package broker", "devolutions agent", "rules", "enforcement"], typeof(AgentPolicyInspector), null, WindowsOnly: true),
         new("Allow custom command-line arguments", ["command line arguments", "cli arguments"], typeof(Administrator), "AdminRestrictionsOpsCard"),
         new("Ignore custom pre-install and post-install commands when importing packages from a bundle", ["pre-install commands", "post-install commands"], typeof(Administrator), "PrePostCommandCard"),
         new("Allow changing the paths for package manager executables", ["manager paths", "executable path"], typeof(Administrator), "AdminManagerPathsCard"),
@@ -145,6 +151,11 @@ public static class SettingsSearchIndex
 
     public static IReadOnlyList<SettingsSearchResult> Search(string query, int limit = 8)
     {
+        return Search(query, limit, OperatingSystem.IsWindows());
+    }
+
+    internal static IReadOnlyList<SettingsSearchResult> Search(string query, int limit, bool isWindows)
+    {
         var queryWords = Tokenize(query);
         if (queryWords.Count == 0) return [];
 
@@ -152,6 +163,8 @@ public static class SettingsSearchIndex
 
         foreach (var e in Entries)
         {
+            if (e.WindowsOnly && !isWindows) continue;
+
             int score = Rank(queryWords, CoreTools.Translate(e.Title), e.Title, e.Keywords);
             if (score < NoMatch)
                 scored.Add((score, new SettingsSearchResult
@@ -276,6 +289,7 @@ public static class SettingsSearchIndex
         nameof(Internet) => "Internet connection settings",
         nameof(Backup) => "Package backup",
         nameof(Administrator) => "Administrator rights and other dangerous settings",
+        nameof(AgentPolicyInspector) => "Active package broker policy",
         nameof(Experimental) => "Experimental settings and developer options",
         _ => "UniGetUI Settings",
     });

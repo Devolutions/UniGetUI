@@ -98,8 +98,9 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _managementStateText = "";
     [ObservableProperty] private string _managementConfiguredPath = "";
     [ObservableProperty] private string _managementSourceText = "";
-    [ObservableProperty] private string _managementCapabilityText = "";
-    [ObservableProperty] private string _managementReadOnlyReasonText = "";
+    [ObservableProperty] private string _agentWriteCapabilityText = "";
+    [ObservableProperty] private string _policyChangesFromThisAppText = "";
+    [ObservableProperty] private string _policyChangesReasonText = "";
     [ObservableProperty] private bool _managementElevationRequired;
     [ObservableProperty] private string _managementElevationRequiredText = "";
     [ObservableProperty] private bool _canEdit;
@@ -684,21 +685,28 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
             snapshot.ConfiguredPath,
             BrokerPolicyManagementLimits.MaxSanitizedPathLength));
         ManagementSourceText = TranslateEnum(snapshot.Source);
-        ManagementCapabilityText = TranslateEnum(snapshot.WriteCapability);
-        ManagementReadOnlyReasonText = snapshot.ReadOnlyReason.HasValue
-            ? TranslateEnum(snapshot.ReadOnlyReason.Value)
-            : CoreTools.Translate("Not applicable");
+        AgentWriteCapabilityText = snapshot.WriteCapability switch
+        {
+            PolicyWriteCapability.Writable => CoreTools.Translate("Writable"),
+            PolicyWriteCapability.ReadOnly => CoreTools.Translate("Read-only"),
+            PolicyWriteCapability.Unsupported => CoreTools.Translate("Unsupported"),
+            _ => CoreTools.Translate("Unknown"),
+        };
         ManagementElevationRequired = snapshot.ElevationRequired;
         ManagementElevationRequiredText = FormatBoolean(snapshot.ElevationRequired);
 
         bool agentWritable = snapshot.WriteCapability == PolicyWriteCapability.Writable;
         bool writable = agentWritable && writeEligibility.IsEligible;
-        if (agentWritable && !writeEligibility.IsEligible)
-        {
-            ManagementCapabilityText = CoreTools.Translate("ReadOnly");
-            ManagementReadOnlyReasonText =
-                GetElevationEligibilityReason(writeEligibility.Status);
-        }
+        PolicyChangesFromThisAppText = writable
+            ? CoreTools.Translate("Available")
+            : CoreTools.Translate("Unavailable");
+        PolicyChangesReasonText = writable
+            ? CoreTools.Translate("Not applicable")
+            : agentWritable
+                ? GetElevationEligibilityReason(writeEligibility.Status)
+                : snapshot.ReadOnlyReason.HasValue
+                    ? GetAgentReadOnlyReason(snapshot.ReadOnlyReason.Value)
+                    : CoreTools.Translate("Devolutions Agent does not allow policy changes.");
 
         CanEdit = writable && snapshot.State == PolicyManagementState.Active;
         CanCreate = writable && snapshot.State == PolicyManagementState.Missing;
@@ -765,6 +773,24 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
                 "This UniGetUI installation cannot securely launch the policy write helper. Reinstall UniGetUI for all users in an administrator-protected location to enable policy changes."),
         };
 
+    private static string GetAgentReadOnlyReason(PolicyReadOnlyReason reason) =>
+        reason switch
+        {
+            PolicyReadOnlyReason.ManagementDisabled =>
+                CoreTools.Translate("Policy management is disabled in Devolutions Agent."),
+            PolicyReadOnlyReason.PathNotConfigured =>
+                CoreTools.Translate("No policy path is configured in Devolutions Agent."),
+            PolicyReadOnlyReason.UnsupportedFormat =>
+                CoreTools.Translate("Devolutions Agent does not support the configured policy format."),
+            PolicyReadOnlyReason.UnsafePath =>
+                CoreTools.Translate("Devolutions Agent considers the configured policy path unsafe."),
+            PolicyReadOnlyReason.InsufficientPermissions =>
+                CoreTools.Translate("Devolutions Agent does not have permission to change the policy file."),
+            PolicyReadOnlyReason.UnsupportedFileSystem =>
+                CoreTools.Translate("Devolutions Agent does not support the policy file system."),
+            _ => CoreTools.Translate("Devolutions Agent does not allow policy changes."),
+        };
+
     private static PolicyDetailRow BuildDiagnosticRow(BrokerPolicySanitizedFinding finding)
     {
         string label = CoreTools.Translate("{0} ({1})", TranslateEnum(finding.Severity), TranslateEnum(finding.Code));
@@ -827,8 +853,9 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         ManagementStateText = "";
         ManagementConfiguredPath = "";
         ManagementSourceText = "";
-        ManagementCapabilityText = "";
-        ManagementReadOnlyReasonText = "";
+        AgentWriteCapabilityText = "";
+        PolicyChangesFromThisAppText = "";
+        PolicyChangesReasonText = "";
         ManagementElevationRequired = false;
         ManagementElevationRequiredText = "";
         HasManagementDiagnostics = false;

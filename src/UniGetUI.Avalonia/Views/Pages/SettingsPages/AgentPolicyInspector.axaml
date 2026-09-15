@@ -89,19 +89,28 @@
                                        automation:AutomationProperties.LiveSetting="Polite"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                            <TextBlock Classes="field-label" Text="{t:Translate Write capability}"/>
+                            <TextBlock Classes="field-label" Text="{t:Translate Agent write capability}"/>
                             <TextBlock Grid.Column="1"
-                                       Text="{Binding ManagementCapabilityText}"
-                                       automation:AutomationProperties.Name="{t:Translate Policy write capability}"
-                                       automation:AutomationProperties.HelpText="{Binding ManagementCapabilityText}"
+                                       Text="{Binding AgentWriteCapabilityText}"
+                                       automation:AutomationProperties.Name="{t:Translate Agent write capability}"
+                                       automation:AutomationProperties.HelpText="{Binding AgentWriteCapabilityText}"
                                        automation:AutomationProperties.LiveSetting="Polite"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                            <TextBlock Classes="field-label" Text="{t:Translate Read-only reason}"/>
+                            <TextBlock Classes="field-label" Text="{t:Translate Policy changes from this app}"/>
                             <TextBlock Grid.Column="1"
-                                       Text="{Binding ManagementReadOnlyReasonText}"
-                                       automation:AutomationProperties.Name="{t:Translate Policy read-only reason}"
-                                       automation:AutomationProperties.HelpText="{Binding ManagementReadOnlyReasonText}"
+                                       Text="{Binding PolicyChangesFromThisAppText}"
+                                       automation:AutomationProperties.Name="{t:Translate Policy changes from this app}"
+                                       automation:AutomationProperties.HelpText="{Binding PolicyChangesFromThisAppText}"
+                                       automation:AutomationProperties.LiveSetting="Polite"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate Reason}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding PolicyChangesReasonText}"
+                                       TextWrapping="Wrap"
+                                       automation:AutomationProperties.Name="{t:Translate Policy change availability reason}"
+                                       automation:AutomationProperties.HelpText="{Binding PolicyChangesReasonText}"
                                        automation:AutomationProperties.LiveSetting="Polite"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">

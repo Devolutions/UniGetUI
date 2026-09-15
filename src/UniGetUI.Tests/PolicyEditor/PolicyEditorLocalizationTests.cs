@@ -157,6 +157,34 @@ public partial class PolicyEditorLocalizationTests
     }
 
     [Fact]
+    public void ManagementWritePresentation_SeparatesAgentAndAppCapabilities()
+    {
+        string root = FindRepositoryRoot();
+        string view = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "AgentPolicyInspector.axaml"));
+
+        Assert.Contains("Text=\"{t:Translate Agent write capability}\"", view);
+        Assert.Contains("Text=\"{Binding AgentWriteCapabilityText}\"", view);
+        Assert.Contains("Text=\"{t:Translate Policy changes from this app}\"", view);
+        Assert.Contains("Text=\"{Binding PolicyChangesFromThisAppText}\"", view);
+        Assert.Contains("Text=\"{t:Translate Reason}\"", view);
+        Assert.Contains("Text=\"{Binding PolicyChangesReasonText}\"", view);
+        Assert.Contains(
+            "automation:AutomationProperties.Name=\"{t:Translate Policy change availability reason}\"",
+            view);
+        Assert.Contains("Text=\"{t:Translate Elevation required}\"", view);
+        Assert.Contains("Text=\"{Binding ManagementElevationRequiredText}\"", view);
+        Assert.DoesNotContain("ManagementCapabilityText", view);
+        Assert.DoesNotContain("ManagementReadOnlyReasonText", view);
+    }
+
+    [Fact]
     public void RawSyntaxError_HasOneAssertiveLiveRegionAndStatusHasNoFixedLiveSetting()
     {
         string root = FindRepositoryRoot();

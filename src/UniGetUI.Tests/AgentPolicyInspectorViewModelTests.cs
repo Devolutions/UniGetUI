@@ -321,7 +321,9 @@ public class AgentPolicyInspectorViewModelTests
         AssertMissingPolicy(viewModel);
         Assert.Equal("No policy file exists", viewModel.ManagementStatus.Title);
         Assert.False(viewModel.CanCreate);
-        Assert.Contains("helper is missing", viewModel.ManagementReadOnlyReasonText);
+        Assert.Equal("Writable", viewModel.AgentWriteCapabilityText);
+        Assert.Equal("Unavailable", viewModel.PolicyChangesFromThisAppText);
+        Assert.Contains("helper is missing", viewModel.PolicyChangesReasonText);
     }
 
     [Theory]
@@ -432,11 +434,13 @@ public class AgentPolicyInspectorViewModelTests
 
     private static AgentPolicyInspectorViewModel CreateQueuedViewModel(
         Task<BrokerPolicyInspectionResult>[] inspections,
-        Task<BrokerPolicyManagementResult>[] management) =>
+        Task<BrokerPolicyManagementResult>[] management,
+        PolicyWriteElevationEligibilityStatus eligibilityStatus =
+            PolicyWriteElevationEligibilityStatus.HelperMissing) =>
         new(
             new QueuedInspector(inspections),
             new QueuedManagementService(management),
-            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.HelperMissing),
+            new StubWriteElevationEligibility(eligibilityStatus),
             (_, _) => { });
 
     private sealed class QueuedInspector(IEnumerable<Task<BrokerPolicyInspectionResult>> results)
@@ -532,7 +536,7 @@ public class AgentPolicyInspectorViewModelTests
     [InlineData(PolicyManagementState.Active, true, false, false, true)]
     [InlineData(PolicyManagementState.Missing, false, true, false, false)]
     [InlineData(PolicyManagementState.Invalid, false, false, true, false)]
-    public async Task ProtectedPackagedInstall_EnablesOnlyTheStateAppropriateWriteActions(
+    public async Task WritableAgentAndEligibleApp_EnableOnlyStateAppropriateWriteActions(
         PolicyManagementState state,
         bool canEdit,
         bool canCreate,
@@ -553,6 +557,9 @@ public class AgentPolicyInspectorViewModelTests
         Assert.Equal(canCreate, viewModel.CanCreate);
         Assert.Equal(canRepair, viewModel.CanRepair);
         Assert.Equal(canReplaceIdentity, viewModel.CanReplaceIdentity);
+        Assert.Equal("Writable", viewModel.AgentWriteCapabilityText);
+        Assert.Equal("Available", viewModel.PolicyChangesFromThisAppText);
+        Assert.Equal("Not applicable", viewModel.PolicyChangesReasonText);
     }
 
     [Theory]
@@ -613,9 +620,10 @@ public class AgentPolicyInspectorViewModelTests
 
         Assert.True(viewModel.HasManagementSnapshot);
         Assert.Equal(state != PolicyManagementState.Missing, viewModel.HasPolicy);
-        Assert.Equal("ReadOnly", viewModel.ManagementCapabilityText);
-        Assert.Contains(expectedReason, viewModel.ManagementReadOnlyReasonText);
-        Assert.Contains("all users", viewModel.ManagementReadOnlyReasonText);
+        Assert.Equal("Writable", viewModel.AgentWriteCapabilityText);
+        Assert.Equal("Unavailable", viewModel.PolicyChangesFromThisAppText);
+        Assert.Contains(expectedReason, viewModel.PolicyChangesReasonText);
+        Assert.Contains("all users", viewModel.PolicyChangesReasonText);
         Assert.False(viewModel.CanEdit);
         Assert.False(viewModel.CanCreate);
         Assert.False(viewModel.CanRepair);
@@ -623,10 +631,31 @@ public class AgentPolicyInspectorViewModelTests
         Assert.Equal(0, launchCount);
     }
 
-    [Fact]
-    public async Task AgentReadOnlyCapability_DoesNotProbeLocalWriteEligibility()
+    [Theory]
+    [InlineData(
+        PolicyReadOnlyReason.ManagementDisabled,
+        "Policy management is disabled in Devolutions Agent.")]
+    [InlineData(
+        PolicyReadOnlyReason.PathNotConfigured,
+        "No policy path is configured in Devolutions Agent.")]
+    [InlineData(
+        PolicyReadOnlyReason.UnsupportedFormat,
+        "Devolutions Agent does not support the configured policy format.")]
+    [InlineData(
+        PolicyReadOnlyReason.UnsafePath,
+        "Devolutions Agent considers the configured policy path unsafe.")]
+    [InlineData(
+        PolicyReadOnlyReason.InsufficientPermissions,
+        "Devolutions Agent does not have permission to change the policy file.")]
+    [InlineData(
+        PolicyReadOnlyReason.UnsupportedFileSystem,
+        "Devolutions Agent does not support the policy file system.")]
+    public async Task AgentReadOnlyReason_WinsOverUnavailableLocalHelper(
+        PolicyReadOnlyReason readOnlyReason,
+        string expectedReason)
     {
-        var eligibility = new CountingWriteElevationEligibility();
+        var eligibility = new CountingWriteElevationEligibility(
+            PolicyWriteElevationEligibilityStatus.HelperMissing);
         PolicyDocument policy = BuildFullResponse().Policy;
         using var viewModel = new AgentPolicyInspectorViewModel(
             new StubInspector(new(BrokerPolicyInspectionStatus.Unsupported)),
@@ -637,6 +666,7 @@ public class AgentPolicyInspectorViewModelTests
                     State = PolicyManagementState.Active,
                     Policy = policy,
                     WriteCapability = PolicyWriteCapability.ReadOnly,
+                    ReadOnlyReason = readOnlyReason,
                 })),
             eligibility,
             (_, _) => { });
@@ -646,6 +676,10 @@ public class AgentPolicyInspectorViewModelTests
         Assert.Equal(0, eligibility.Invocations);
         Assert.False(viewModel.CanEdit);
         Assert.True(viewModel.HasManagementSnapshot);
+        Assert.Equal("Read-only", viewModel.AgentWriteCapabilityText);
+        Assert.Equal("Unavailable", viewModel.PolicyChangesFromThisAppText);
+        Assert.Equal(expectedReason, viewModel.PolicyChangesReasonText);
+        Assert.DoesNotContain("helper", viewModel.PolicyChangesReasonText, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -664,6 +698,9 @@ public class AgentPolicyInspectorViewModelTests
 
         Assert.True(eligibility.FirstCanceled);
         Assert.True(viewModel.CanEdit);
+        Assert.Equal("Writable", viewModel.AgentWriteCapabilityText);
+        Assert.Equal("Available", viewModel.PolicyChangesFromThisAppText);
+        Assert.Equal("Not applicable", viewModel.PolicyChangesReasonText);
         Assert.False(viewModel.IsManagementLoading);
     }
 
@@ -685,7 +722,37 @@ public class AgentPolicyInspectorViewModelTests
         await first;
 
         Assert.False(viewModel.CanEdit);
-        Assert.Contains("not administrator-protected", viewModel.ManagementReadOnlyReasonText);
+        Assert.Equal("Writable", viewModel.AgentWriteCapabilityText);
+        Assert.Equal("Unavailable", viewModel.PolicyChangesFromThisAppText);
+        Assert.Contains("not administrator-protected", viewModel.PolicyChangesReasonText);
+    }
+
+    [Fact]
+    public async Task ManagementFailure_ClearsWritePresentationFromPreviousSnapshot()
+    {
+        using AgentPolicyInspectorViewModel viewModel = CreateQueuedViewModel(
+            [Task.FromResult(new BrokerPolicyInspectionResult(BrokerPolicyInspectionStatus.Unsupported))],
+            [
+                Task.FromResult(ManagementSnapshot(PolicyManagementState.Missing)),
+                Task.FromResult(new BrokerPolicyManagementResult(
+                    BrokerPolicyManagementStatus.AgentUnavailable)),
+            ],
+            PolicyWriteElevationEligibilityStatus.Eligible);
+
+        await viewModel.LoadManagementAsync();
+        Assert.Equal("Writable", viewModel.AgentWriteCapabilityText);
+        Assert.Equal("Available", viewModel.PolicyChangesFromThisAppText);
+
+        await viewModel.LoadManagementAsync();
+
+        Assert.False(viewModel.HasManagementSnapshot);
+        Assert.Empty(viewModel.AgentWriteCapabilityText);
+        Assert.Empty(viewModel.PolicyChangesFromThisAppText);
+        Assert.Empty(viewModel.PolicyChangesReasonText);
+        Assert.False(viewModel.CanCreate);
+        Assert.False(viewModel.CanEdit);
+        Assert.False(viewModel.CanRepair);
+        Assert.False(viewModel.CanReplaceIdentity);
     }
 
     [Fact]
@@ -895,7 +962,10 @@ public class AgentPolicyInspectorViewModelTests
             Task.FromResult(new PolicyWriteElevationEligibility(status));
     }
 
-    private sealed class CountingWriteElevationEligibility : IPolicyWriteElevationEligibility
+    private sealed class CountingWriteElevationEligibility(
+        PolicyWriteElevationEligibilityStatus status =
+            PolicyWriteElevationEligibilityStatus.Eligible)
+        : IPolicyWriteElevationEligibility
     {
         public int Invocations { get; private set; }
 
@@ -903,7 +973,7 @@ public class AgentPolicyInspectorViewModelTests
             CancellationToken cancellationToken)
         {
             Invocations++;
-            return Task.FromResult(PolicyWriteElevationEligibility.Eligible);
+            return Task.FromResult(new PolicyWriteElevationEligibility(status));
         }
     }
 

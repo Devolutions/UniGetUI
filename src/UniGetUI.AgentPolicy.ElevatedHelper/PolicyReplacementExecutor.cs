@@ -39,13 +39,7 @@ internal static class PolicyReplacementExecutor
         }
         catch (BrokerClientException ex)
         {
-            response.Disposition = ex.Kind is
-                BrokerClientErrorKind.BrokerUnavailable
-                or BrokerClientErrorKind.Timeout
-                or BrokerClientErrorKind.EmptyResponse
-                or BrokerClientErrorKind.InvalidResponse
-                    ? PolicyElevationDisposition.Unknown
-                    : PolicyElevationDisposition.Rejected;
+            response.Disposition = GetFailureDisposition(ex);
             response.BrokerStatusCode = ex.StatusCode;
             response.BrokerErrorCode = Truncate(
                 ex.BrokerError?.Code.ToString() ?? ex.Kind.ToString(),
@@ -81,6 +75,20 @@ internal static class PolicyReplacementExecutor
             response.BrokerErrorCode = BrokerClientErrorKind.InvalidResponse.ToString();
             return response;
         }
+    }
+
+    internal static PolicyElevationDisposition GetFailureDisposition(BrokerClientException exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        return exception.Kind is
+                BrokerClientErrorKind.BrokerUnavailable
+                or BrokerClientErrorKind.Timeout
+                or BrokerClientErrorKind.EmptyResponse
+                or BrokerClientErrorKind.InvalidResponse
+            || (exception.Kind == BrokerClientErrorKind.BrokerError
+                && exception.BrokerError is null)
+                    ? PolicyElevationDisposition.Unknown
+                    : PolicyElevationDisposition.Rejected;
     }
 
     internal static BrokerClientOptions CreateClientOptions(string effectiveUser)

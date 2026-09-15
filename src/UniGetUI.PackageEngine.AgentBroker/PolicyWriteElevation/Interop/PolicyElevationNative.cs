@@ -19,6 +19,7 @@ internal static partial class PolicyElevationNative
     internal const uint ProcessQueryLimitedInformation = 0x1000;
     internal const uint ProcessQueryInformation = 0x0400;
     internal const uint Synchronize = 0x00100000;
+    internal const uint DuplicateSameAccess = 0x00000002;
 
     internal const uint TokenQuery = 0x0008;
     internal const uint TokenDuplicate = 0x0002;
@@ -96,6 +97,20 @@ internal static partial class PolicyElevationNative
 
     [LibraryImport("kernel32.dll", SetLastError = true)]
     internal static partial uint GetProcessId(nint process);
+
+    [LibraryImport("kernel32.dll")]
+    internal static partial nint GetCurrentProcess();
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool DuplicateHandle(
+        nint sourceProcess,
+        nint sourceHandle,
+        nint targetProcess,
+        out SafeWaitHandle targetHandle,
+        uint desiredAccess,
+        [MarshalAs(UnmanagedType.Bool)] bool inheritHandle,
+        uint options);
 
     [LibraryImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

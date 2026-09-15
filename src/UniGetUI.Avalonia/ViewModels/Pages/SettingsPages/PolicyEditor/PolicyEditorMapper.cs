@@ -20,7 +20,7 @@ public static class PolicyEditorMapper
 
         return new PolicyEditorDraftDocument
         {
-            PolicyVersion = document.PolicyVersion,
+            PolicyFormatVersion = document.PolicyFormatVersion,
             Metadata = ToDraft(document.Metadata),
             Enforcement = ToDraft(document.Enforcement),
             Rules = document.Rules.Select(ToDraft).ToList(),
@@ -33,7 +33,7 @@ public static class PolicyEditorMapper
 
         return new PolicyEditorDraftDocument
         {
-            PolicyVersion = document.PolicyVersion,
+            PolicyFormatVersion = document.PolicyFormatVersion,
             Metadata = new PolicyEditorDraftMetadata
             {
                 Id = document.Metadata.Id,
@@ -54,8 +54,7 @@ public static class PolicyEditorMapper
 
         return new PolicyDraftDocument
         {
-            Schema = PolicyEditorPolicyContract.DraftSchema,
-            PolicyVersion = draft.PolicyVersion,
+            PolicyFormatVersion = draft.PolicyFormatVersion,
             PolicyType = PolicyEditorPolicyContract.PolicyType,
             Metadata = new PolicyDraftMetadata
             {
@@ -81,9 +80,8 @@ public static class PolicyEditorMapper
 
         return new PolicyDocument
         {
-            Schema = PolicyEditorPolicyContract.CommittedSchema,
             PolicyType = PolicyEditorPolicyContract.PolicyType,
-            PolicyVersion = draft.PolicyVersion,
+            PolicyFormatVersion = draft.PolicyFormatVersion,
             Metadata = ToDocument(draft.Metadata, revision, publishedAt),
             Enforcement = ToDocument(draft.Enforcement),
             Rules = draft.Rules.Select(ToDocument).ToList(),
@@ -99,9 +97,8 @@ public static class PolicyEditorMapper
 
         return new PolicyDocument
         {
-            Schema = document.Schema,
             PolicyType = document.PolicyType,
-            PolicyVersion = document.PolicyVersion,
+            PolicyFormatVersion = document.PolicyFormatVersion,
             Metadata = CloneMetadata(document.Metadata),
             Enforcement = CloneEnforcement(document.Enforcement),
             Rules = document.Rules.Select(CloneRule).ToList(),

@@ -170,6 +170,7 @@ internal sealed class FakeHelperProcess : IElevatedHelperProcess
     public bool HasExited => _exited.Task.IsCompleted;
 
     public bool Disposed { get; private set; }
+    public bool FirstExitWaitCanceled { get; private set; }
 
     public Task SecondExitWaitStarted => _secondExitWaitStarted.Task;
 
@@ -177,21 +178,31 @@ internal sealed class FakeHelperProcess : IElevatedHelperProcess
 
     public async Task<int?> WaitForExitAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
-        if (Interlocked.Increment(ref _exitWaitCount) == 2)
+        int waitNumber = Interlocked.Increment(ref _exitWaitCount);
+        if (waitNumber == 2)
             _secondExitWaitStarted.TrySetResult();
 
-        using var delayCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        Task delay = Task.Delay(timeout, delayCancellation.Token);
-
-        Task completed = await Task.WhenAny(_exited.Task, delay).ConfigureAwait(false);
-        if (completed == delay)
+        try
         {
-            await delay.ConfigureAwait(false);
-            return null;
-        }
+            using var delayCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            Task delay = Task.Delay(timeout, delayCancellation.Token);
 
-        await delayCancellation.CancelAsync().ConfigureAwait(false);
-        return await _exited.Task.ConfigureAwait(false);
+            Task completed = await Task.WhenAny(_exited.Task, delay).ConfigureAwait(false);
+            if (completed == delay)
+            {
+                await delay.ConfigureAwait(false);
+                return null;
+            }
+
+            await delayCancellation.CancelAsync().ConfigureAwait(false);
+            return await _exited.Task.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            if (waitNumber == 1)
+                FirstExitWaitCanceled = true;
+            throw;
+        }
     }
 
     public void Dispose()

@@ -5,18 +5,16 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 /// <summary>
 /// Editable projection of <see cref="PolicyDocument"/>. Deliberately excludes
 /// <see cref="PolicyMetadata.Revision"/> and <see cref="PolicyMetadata.PublishedAt"/> (server/write-path
-/// assigned bookkeeping, never user-edited) and exposes <see cref="Schema"/>/<see cref="PolicyType"/> as
-/// fixed, read-only values instead of editable fields: see <see cref="PolicyEditorPolicyContract"/>.
+/// assigned bookkeeping, never user-edited) and exposes <see cref="PolicyType"/> as a fixed,
+/// read-only value instead of an editable field: see <see cref="PolicyEditorPolicyContract"/>.
 /// Use <see cref="PolicyEditorMapper"/> to convert to/from the wire model, and <see cref="Clone"/> for a
 /// full, independent deep copy (used for snapshots, undo points, and conflict capture).
 /// </summary>
 public sealed class PolicyEditorDraftDocument
 {
-    public string Schema => PolicyEditorPolicyContract.DraftSchema;
-
     public string PolicyType => PolicyEditorPolicyContract.PolicyType;
 
-    public required string PolicyVersion { get; set; }
+    public required PolicyFormatVersion PolicyFormatVersion { get; set; }
 
     public required PolicyEditorDraftMetadata Metadata { get; set; }
 
@@ -26,7 +24,7 @@ public sealed class PolicyEditorDraftDocument
 
     public PolicyEditorDraftDocument Clone() => new()
     {
-        PolicyVersion = PolicyVersion,
+        PolicyFormatVersion = PolicyFormatVersion,
         Metadata = Metadata.Clone(),
         Enforcement = Enforcement.Clone(),
         Rules = Rules.Select(rule => rule.Clone()).ToList(),

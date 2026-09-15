@@ -177,7 +177,7 @@
                                 <TextBlock Classes="field-label" Text="{t:Translate Policy format version}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
                                     <TextBlock Text="{Binding Document.PolicyFormatVersion}"
-                                               Tag="/PolicyVersion"
+                                               Tag="/PolicyFormatVersion"
                                                Classes.finding-error="{Binding Document.HasPolicyFormatVersionErrors}"
                                                VerticalAlignment="Center"
                                                Focusable="True"

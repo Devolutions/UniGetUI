@@ -669,7 +669,7 @@ public class BrokerPolicyManagementServiceTests
 
     private static PolicyDocument BuildPolicyDocument() => new()
     {
-        PolicyVersion = "1.0.0",
+        PolicyFormatVersion = PolicyFormatVersion.Current,
         Metadata = new PolicyMetadata
         {
             Id = "contoso.policy",

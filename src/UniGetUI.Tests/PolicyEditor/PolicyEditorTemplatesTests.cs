@@ -6,13 +6,12 @@ namespace UniGetUI.Tests.PolicyEditor;
 public class PolicyEditorTemplatesTests
 {
     [Fact]
-    public void CreateNew_FixesSchemaTypeVersionAndPrecedence()
+    public void CreateNew_FixesTypeFormatVersionAndPrecedence()
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
 
-        Assert.Equal(PolicyEditorPolicyContract.DraftSchema, draft.Schema);
         Assert.Equal(PolicyEditorPolicyContract.PolicyType, draft.PolicyType);
-        Assert.Equal(PolicyEditorPolicyContract.CurrentPolicyFormatVersion, draft.PolicyVersion);
+        Assert.Equal(PolicyFormatVersion.Current, draft.PolicyFormatVersion);
         Assert.Equal(RulePrecedence.PriorityThenDeny, draft.Enforcement.RulePrecedence);
     }
 
@@ -97,8 +96,8 @@ public class PolicyEditorTemplatesTests
             new FakeWriteClient());
         var document = new PolicyEditorDocumentUi(viewModel);
 
-        Assert.Equal(PolicyEditorPolicyContract.CurrentPolicyFormatVersion, draft.PolicyVersion);
-        Assert.Equal(draft.PolicyVersion, document.PolicyFormatVersion);
+        Assert.Equal(PolicyFormatVersion.Current, draft.PolicyFormatVersion);
+        Assert.Equal(draft.PolicyFormatVersion.Value, document.PolicyFormatVersion);
         Assert.False(
             typeof(PolicyEditorDocumentUi)
                 .GetProperty(nameof(PolicyEditorDocumentUi.PolicyFormatVersion))!
@@ -110,7 +109,6 @@ public class PolicyEditorTemplatesTests
     {
         Devolutions.Now.Policy.Api.PolicyManagementSnapshot management =
             PolicyEditorTestFixtures.BuildActiveManagement();
-        management.Policy!.PolicyVersion = "1.2.3";
         PolicyEditorSession session = PolicyEditorSession.StartUpdate(management);
         using var viewModel = new PolicyEditorSessionViewModel(
             session,
@@ -119,7 +117,7 @@ public class PolicyEditorTemplatesTests
             new FakeWriteClient());
         var document = new PolicyEditorDocumentUi(viewModel);
 
-        Assert.Equal("1.2.3", viewModel.Draft.PolicyVersion);
+        Assert.Equal("1.2.3", viewModel.Draft.PolicyFormatVersion.Value);
         Assert.Equal("1.2.3", document.PolicyFormatVersion);
     }
 

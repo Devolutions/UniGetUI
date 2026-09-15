@@ -235,7 +235,7 @@ public partial class PolicyEditorLocalizationTests
             root, "src", "UniGetUI.Avalonia", "Views", "Pages", "SettingsPages",
             "PolicyEditor", "PolicyEditorDialog.axaml"));
         XElement format = Assert.Single(editor.Descendants(),
-            element => (string?)element.Attribute("Tag") == "/PolicyVersion");
+            element => (string?)element.Attribute("Tag") == "/PolicyFormatVersion");
         Assert.Equal("TextBlock", format.Name.LocalName);
         Assert.Equal(
             "{Binding Document.PolicyFormatVersion}",

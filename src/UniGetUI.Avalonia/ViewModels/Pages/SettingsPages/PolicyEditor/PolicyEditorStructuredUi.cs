@@ -137,9 +137,9 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
     public void NotifyIdentityLockChanged() =>
         OnPropertyChanged(nameof(IsIdentityLocked));
 
-    public string PolicyFormatVersion => Draft.PolicyVersion;
+    public string PolicyFormatVersion => Draft.PolicyFormatVersion.Value;
     public IReadOnlyList<PolicyValidationFinding> PolicyFormatVersionFindings =>
-        FindingsFor("/PolicyVersion");
+        FindingsFor("/PolicyFormatVersion");
     public bool HasPolicyFormatVersionErrors => HasErrors(PolicyFormatVersionFindings);
 
     public string Id
@@ -587,6 +587,7 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             Rule.Match.VersionRange = value ? new PolicyEditorDraftVersionRange() : null;
             MarkDirty();
             OnPropertyChanged();
+            NotifyVersionRangePropertiesChanged();
         }
     }
 
@@ -671,6 +672,7 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             Rule.Constraints = value ? new PolicyEditorDraftConstraints() : null;
             MarkDirty();
             OnPropertyChanged();
+            NotifyConstraintPropertiesChanged();
         }
     }
 
@@ -804,6 +806,30 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         if (index < 0 || index >= PolicyEditorEnumDisplay.TriStates.Length) return;
         assign(PolicyEditorEnumDisplay.TriStates[index]);
         MarkDirty();
+    }
+
+    private void NotifyVersionRangePropertiesChanged()
+    {
+        OnPropertyChanged(nameof(MinVersion));
+        OnPropertyChanged(nameof(MaxVersion));
+        OnPropertyChanged(nameof(IncludePrerelease));
+    }
+
+    private void NotifyConstraintPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(AllowInteractive));
+        OnPropertyChanged(nameof(AllowSkipHashCheck));
+        OnPropertyChanged(nameof(AllowPreRelease));
+        OnPropertyChanged(nameof(AllowCustomInstallLocation));
+        OnPropertyChanged(nameof(AllowedInstallLocationPatterns));
+        OnPropertyChanged(nameof(AllowCustomParameters));
+        OnPropertyChanged(nameof(AllowedCustomParameters));
+        OnPropertyChanged(nameof(AllowedCustomParameterPatterns));
+        OnPropertyChanged(nameof(DeniedCustomParameters));
+        OnPropertyChanged(nameof(AllowPrePostCommands));
+        OnPropertyChanged(nameof(AllowKillBeforeOperation));
+        OnPropertyChanged(nameof(AllowUninstallPrevious));
+        OnPropertyChanged(nameof(AllowUpgrade));
     }
 
     private PolicyEditorDraftVersionRange EnsureVersionRange() =>

@@ -447,6 +447,7 @@ public class WindowsPolicyWriteElevatorTests
 
         Assert.Equal(PolicyElevationOutcome.PeerAuthenticationFailed, result.Outcome);
         Assert.False(await wroteRequest.Task.WaitAsync(TimeSpan.FromSeconds(10)));
+        Assert.True(launcher.LastProcess!.FirstExitWaitCanceled);
         AssertDraftPreserved(result);
     }
 

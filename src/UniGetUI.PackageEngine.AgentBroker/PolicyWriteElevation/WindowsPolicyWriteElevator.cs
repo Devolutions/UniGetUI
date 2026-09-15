@@ -285,31 +285,21 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
         try
         {
             timeout.CancelAfter(_timeouts.Connect);
+            using var connectionStage = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token);
 
-            Task connect = pipe.WaitForConnectionAsync(timeout.Token);
-            Task<int?> exit = helper.WaitForExitAsync(_timeouts.Connect, timeout.Token);
-
-            // The losing wait is abandoned; make sure it can never surface as an unobserved fault.
-            _ = exit.ContinueWith(
-                static t => _ = t.Exception,
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
-
-            _ = connect.ContinueWith(
-                static t => _ = t.Exception,
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
+            Task connect = pipe.WaitForConnectionAsync(connectionStage.Token);
+            Task<int?> exit = helper.WaitForExitAsync(_timeouts.Connect, connectionStage.Token);
 
             Task completed = await Task.WhenAny(connect, exit).ConfigureAwait(false);
             if (completed == exit && !connect.IsCompletedSuccessfully)
             {
                 int? exitCode = await exit.ConfigureAwait(false);
+                await CancelAndObserveAsync(connectionStage, connect).ConfigureAwait(false);
                 return MapPrematureExit(request, exitCode);
             }
 
             await connect.ConfigureAwait(false);
+            await CancelAndObserveAsync(connectionStage, exit).ConfigureAwait(false);
 
             PolicyElevationPeerAuthenticationResult authentication =
                 _peerAuthenticator.Authenticate(pipe, helper, location);
@@ -405,6 +395,20 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
             if (requestDispatched)
                 return Unknown(request);
             return Fail(request, PolicyElevationOutcome.ConnectionClosed, "The elevation channel was interrupted.");
+        }
+    }
+
+    private static async Task CancelAndObserveAsync(
+        CancellationTokenSource stage,
+        Task losingTask)
+    {
+        await stage.CancelAsync().ConfigureAwait(false);
+        try
+        {
+            await losingTask.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (stage.IsCancellationRequested)
+        {
         }
     }
 

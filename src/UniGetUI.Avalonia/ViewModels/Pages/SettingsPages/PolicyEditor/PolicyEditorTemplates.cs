@@ -1,8 +1,10 @@
+using Devolutions.Now.Policy.Model;
+
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 
 /// <summary>
 /// Produces the fail-closed starting point for a brand-new policy document. Everything the template
-/// fixes (schema, policy type, policy version, rule precedence, default decision, empty rule set) is
+/// fixes (policy type, policy format version, rule precedence, default decision, empty rule set) is
 /// non-negotiable at creation time; only the caller-supplied identity (<paramref name="id"/> in
 /// <see cref="CreateNew"/>) and publisher are free-form, because the editor cannot know them in advance.
 /// </summary>
@@ -11,7 +13,7 @@ public static class PolicyEditorTemplates
     public const int ResourceIdMaxLength = 128;
 
     /// <summary>
-    /// Creates a brand-new draft document: fixed schema/type/version, <c>PriorityThenDeny</c>
+    /// Creates a brand-new draft document: fixed type/version, <c>PriorityThenDeny</c>
     /// precedence, a default decision of <c>Deny</c> (fail closed), and no rules. The caller must
     /// supply the new policy's <paramref name="id"/> and <paramref name="publisher"/>; both are
     /// validated to be non-empty since the write path (external to this domain) requires them.
@@ -30,7 +32,7 @@ public static class PolicyEditorTemplates
 
         return new PolicyEditorDraftDocument
         {
-            PolicyVersion = PolicyEditorPolicyContract.CurrentPolicyFormatVersion,
+            PolicyFormatVersion = PolicyFormatVersion.Current,
             Metadata = new PolicyEditorDraftMetadata
             {
                 Id = id,

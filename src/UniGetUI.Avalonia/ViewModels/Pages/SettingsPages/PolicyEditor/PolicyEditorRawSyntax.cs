@@ -11,7 +11,11 @@ public enum PolicyEditorSyntaxErrorKind
     EmptyDocument,
     InvalidJson,
     InvalidPolicyDraft,
-    UnsupportedSchema,
+    LegacySchemaField,
+    LegacyPolicyVersionField,
+    MissingPolicyFormatVersion,
+    InvalidPolicyFormatVersion,
+    UnsupportedPolicyFormatVersion,
     UnsupportedPolicyType,
     MissingEnforcement,
     UnsupportedRulePrecedence,
@@ -26,7 +30,7 @@ public sealed record PolicyEditorSyntaxError(PolicyEditorSyntaxErrorKind Kind, s
 /// <see cref="TryParseStrict"/> (raw -&gt; structured, only for syntactically and structurally valid
 /// text) and <see cref="ToCanonicalRaw"/> (structured -&gt; raw, always succeeds). Parsing is strict and
 /// fails closed: invalid JSON, JSON that doesn't match the wire shape, or JSON that disagrees with the
-/// fixed schema/policy-type/rule-precedence contract (see <see cref="PolicyEditorPolicyContract"/>) is
+/// fixed policy-type/rule-precedence contract (see <see cref="PolicyEditorPolicyContract"/>) is
 /// rejected outright with a <see cref="PolicyEditorSyntaxError"/> and the original raw text is left
 /// completely untouched by the caller (this class never mutates or truncates input). Agent-side
 /// semantic validation (e.g. whether specific values make operational sense) is intentionally out of
@@ -62,7 +66,7 @@ public static partial class PolicyEditorRawSyntax
         {
             using JsonDocument json = JsonDocument.Parse(rawJson);
             element = json.RootElement.Clone();
-            if (!TryCheckDraftSchema(json.RootElement, out error))
+            if (!TryCheckDraftContractFields(json.RootElement, out error))
             {
                 return false;
             }
@@ -101,18 +105,46 @@ public static partial class PolicyEditorRawSyntax
         return true;
     }
 
-    private static bool TryCheckDraftSchema(
+    private static bool TryCheckDraftContractFields(
         JsonElement root,
         out PolicyEditorSyntaxError? error)
     {
         if (root.ValueKind == JsonValueKind.Object
-            && root.TryGetProperty("$schema", out JsonElement schema)
-            && schema.ValueKind == JsonValueKind.String
-            && !string.Equals(schema.GetString(), PolicyEditorPolicyContract.DraftSchema, StringComparison.Ordinal))
+            && root.TryGetProperty("$schema", out _))
         {
             error = new PolicyEditorSyntaxError(
-                PolicyEditorSyntaxErrorKind.UnsupportedSchema,
+                PolicyEditorSyntaxErrorKind.LegacySchemaField,
                 "/$schema");
+            return false;
+        }
+
+        if (root.ValueKind == JsonValueKind.Object
+            && root.TryGetProperty("PolicyVersion", out _))
+        {
+            error = new PolicyEditorSyntaxError(
+                PolicyEditorSyntaxErrorKind.LegacyPolicyVersionField,
+                "/PolicyVersion");
+            return false;
+        }
+
+        JsonElement policyFormatVersion = default;
+        if (root.ValueKind == JsonValueKind.Object
+            && !root.TryGetProperty("PolicyFormatVersion", out policyFormatVersion))
+        {
+            error = new PolicyEditorSyntaxError(
+                PolicyEditorSyntaxErrorKind.MissingPolicyFormatVersion,
+                "/PolicyFormatVersion");
+            return false;
+        }
+
+        if (policyFormatVersion.ValueKind == JsonValueKind.String
+            && !TryParsePolicyFormatVersion(
+                policyFormatVersion.GetString(),
+                out PolicyEditorSyntaxErrorKind? formatError))
+        {
+            error = new PolicyEditorSyntaxError(
+                formatError!.Value,
+                "/PolicyFormatVersion");
             return false;
         }
 
@@ -176,14 +208,6 @@ public static partial class PolicyEditorRawSyntax
 
     private static bool TryCheckFixedContract(PolicyDraftDocument document, out PolicyEditorSyntaxError? error)
     {
-        if (!string.Equals(document.Schema, PolicyEditorPolicyContract.DraftSchema, StringComparison.Ordinal))
-        {
-            error = new PolicyEditorSyntaxError(
-                PolicyEditorSyntaxErrorKind.UnsupportedSchema,
-                "/$schema");
-            return false;
-        }
-
         if (!string.Equals(document.PolicyType, PolicyEditorPolicyContract.PolicyType, StringComparison.Ordinal))
         {
             error = new PolicyEditorSyntaxError(
@@ -218,6 +242,33 @@ public static partial class PolicyEditorRawSyntax
 
         error = null;
         return true;
+    }
+
+    private static bool TryParsePolicyFormatVersion(
+        string? value,
+        out PolicyEditorSyntaxErrorKind? error)
+    {
+        try
+        {
+            PolicyFormatVersion.Parse(value!);
+            error = null;
+            return true;
+        }
+        catch (FormatException)
+        {
+            error = PolicyEditorSyntaxErrorKind.InvalidPolicyFormatVersion;
+            return false;
+        }
+        catch (NotSupportedException)
+        {
+            error = PolicyEditorSyntaxErrorKind.UnsupportedPolicyFormatVersion;
+            return false;
+        }
+        catch (ArgumentNullException)
+        {
+            error = PolicyEditorSyntaxErrorKind.InvalidPolicyFormatVersion;
+            return false;
+        }
     }
 
     private static string PointerFromException(Exception ex) =>

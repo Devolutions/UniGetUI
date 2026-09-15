@@ -52,8 +52,16 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             CoreTools.Translate("The document is empty."),
         PolicyEditorSyntaxErrorKind.InvalidJson =>
             CoreTools.Translate("The JSON syntax is invalid."),
-        PolicyEditorSyntaxErrorKind.UnsupportedSchema =>
-            CoreTools.Translate("The policy draft uses an unsupported schema."),
+        PolicyEditorSyntaxErrorKind.LegacySchemaField =>
+            CoreTools.Translate("The $schema field is obsolete. Remove it."),
+        PolicyEditorSyntaxErrorKind.LegacyPolicyVersionField =>
+            CoreTools.Translate("PolicyVersion is obsolete. Rename it to PolicyFormatVersion."),
+        PolicyEditorSyntaxErrorKind.MissingPolicyFormatVersion =>
+            CoreTools.Translate("The policy draft is missing PolicyFormatVersion."),
+        PolicyEditorSyntaxErrorKind.InvalidPolicyFormatVersion =>
+            CoreTools.Translate("PolicyFormatVersion must be a canonical three-part numeric version such as 1.0.0."),
+        PolicyEditorSyntaxErrorKind.UnsupportedPolicyFormatVersion =>
+            CoreTools.Translate("The policy draft uses an unsupported policy format version. This version supports major version 1."),
         PolicyEditorSyntaxErrorKind.UnsupportedPolicyType =>
             CoreTools.Translate("The policy draft uses an unsupported policy type."),
         PolicyEditorSyntaxErrorKind.MissingEnforcement =>

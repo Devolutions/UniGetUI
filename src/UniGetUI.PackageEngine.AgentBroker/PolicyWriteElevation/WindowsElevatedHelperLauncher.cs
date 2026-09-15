@@ -1,4 +1,5 @@
 #if WINDOWS
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation.Interop;
@@ -251,9 +252,22 @@ internal static class ProcessExitWaiter
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
+        nint currentProcess = PolicyElevationNative.GetCurrentProcess();
+        if (!PolicyElevationNative.DuplicateHandle(
+                currentProcess,
+                processHandle.DangerousGetHandle(),
+                currentProcess,
+                out SafeWaitHandle duplicatedHandle,
+                desiredAccess: 0,
+                inheritHandle: false,
+                PolicyElevationNative.DuplicateSameAccess))
+        {
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+        }
+
         using var waitHandle = new ManualResetEvent(false);
         SafeWaitHandle previous = waitHandle.SafeWaitHandle;
-        waitHandle.SafeWaitHandle = new SafeWaitHandle(processHandle.DangerousGetHandle(), ownsHandle: false);
+        waitHandle.SafeWaitHandle = duplicatedHandle;
         previous.Dispose();
 
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -1,6 +1,7 @@
 #if WINDOWS
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
+using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation.Interop;
 
 namespace UniGetUI.PackageEngine.Tests.PolicyWriteElevation;
@@ -82,6 +83,26 @@ public class PolicyElevationNativeLayoutTests
         {
             File.Delete(path);
         }
+    }
+
+    [Fact]
+    public async Task ProcessExitWaiter_OwnsItsWaitHandleAfterOriginalIsDisposed()
+    {
+        using SafeProcessHandle process = PolicyElevationNative.OpenProcess(
+            PolicyElevationNative.Synchronize,
+            inheritHandle: false,
+            (uint)Environment.ProcessId);
+        Assert.False(process.IsInvalid);
+        using var cancellation = new CancellationTokenSource();
+
+        Task<bool> pending = ProcessExitWaiter.WaitAsync(
+            process,
+            TimeSpan.FromSeconds(30),
+            cancellation.Token);
+        process.Dispose();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
     }
 }
 #endif

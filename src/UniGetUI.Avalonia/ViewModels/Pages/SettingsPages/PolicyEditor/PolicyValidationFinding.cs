@@ -158,11 +158,9 @@ public static class PolicyFindingPresentation
                 DescribeWithSpecificDetail(
                     CoreTools.Translate("The policy validity interval is invalid."),
                     fallbackMessage),
-            PolicyFindingCode.UnsupportedSchema =>
-                CoreTools.Translate("The policy schema is unsupported."),
             PolicyFindingCode.UnsupportedPolicyType =>
                 CoreTools.Translate("The policy type is unsupported."),
-            PolicyFindingCode.UnsupportedPolicyVersion =>
+            PolicyFindingCode.UnsupportedPolicyFormatVersion =>
                 DescribeWithSpecificDetail(
                     CoreTools.Translate("The policy format version is unsupported."),
                     fallbackMessage),
@@ -317,7 +315,7 @@ public static class PolicyFindingPresentation
         {
             "$SCHEMA" => CoreTools.Translate("Schema"),
             "POLICYTYPE" => CoreTools.Translate("Policy type"),
-            "POLICYVERSION" => CoreTools.Translate("Policy format version"),
+            "POLICYFORMATVERSION" => CoreTools.Translate("Policy format version"),
             "METADATA" => CoreTools.Translate("Metadata"),
             "ID" => CoreTools.Translate("ID"),
             "PUBLISHER" => CoreTools.Translate("Publisher"),

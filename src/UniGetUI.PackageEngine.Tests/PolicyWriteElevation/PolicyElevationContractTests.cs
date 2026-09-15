@@ -39,7 +39,7 @@ public class PolicyElevationContractTests
 
     private static PolicyDraftDocument CanonicalDraft() => new()
     {
-        Schema = Devolutions.Now.Policy.Model.SchemaUris.PolicyDraft,
+        PolicyFormatVersion = PolicyFormatVersion.Current,
         Metadata = new PolicyDraftMetadata { Id = "policy-id", Publisher = "publisher" },
         Enforcement = new PolicyEnforcement
         {

@@ -229,7 +229,14 @@ public class PolicyEditorStructuredInputGuardTests
         viewModel.Session.SwitchToRaw();
         string submitted = viewModel.Session.RawBuffer;
         var canonical = PolicyEditorMapper.ToSharedDraft(viewModel.Draft);
-        canonical.PolicyVersion = "2.0";
+        canonical = new PolicyDraftDocument
+        {
+            PolicyFormatVersion = PolicyFormatVersion.Parse("1.2.3"),
+            PolicyType = canonical.PolicyType,
+            Metadata = canonical.Metadata,
+            Enforcement = canonical.Enforcement,
+            Rules = canonical.Rules,
+        };
         canonical.Metadata.Id = "replacement-id";
         canonical.Metadata.Publisher = "Fabrikam";
         canonical.Metadata.Description = "canonical description";
@@ -269,7 +276,7 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.All(expectedProperties, property => Assert.Contains(property, changed));
         Assert.Equal("replacement-id", document.Id);
         Assert.Equal("Fabrikam", document.Publisher);
-        Assert.Equal("2.0", document.PolicyFormatVersion);
+        Assert.Equal("1.2.3", document.PolicyFormatVersion);
         Assert.Equal("canonical description", document.Description);
         Assert.Equal("https://example.test/support", document.SupportUrl);
         Assert.Equal(0, document.DecisionIndex);
@@ -628,6 +635,76 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.Equal("", rule.Reason);
         rule.HasReason = false;
         Assert.Null(rule.Reason);
+    }
+
+    [Fact]
+    public void VersionRangeToggle_RefreshesDisplayedPropertiesToMatchDraft()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("test-policy", "Contoso"));
+        PolicyEditorDraftRule draftRule = session.AddRule();
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+        var changed = new HashSet<string?>();
+        rule.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+        rule.HasVersionRange = true;
+        rule.MinVersion = "1.2.3";
+        rule.MaxVersion = "2.0.0";
+        rule.IncludePrerelease = true;
+        changed.Clear();
+
+        rule.HasVersionRange = false;
+        rule.HasVersionRange = true;
+
+        Assert.Null(rule.MinVersion);
+        Assert.Null(rule.MaxVersion);
+        Assert.False(rule.IncludePrerelease);
+        Assert.Null(draftRule.Match.VersionRange!.MinVersion);
+        Assert.Null(draftRule.Match.VersionRange.MaxVersion);
+        Assert.False(draftRule.Match.VersionRange.IncludePrerelease);
+        Assert.Contains(nameof(PolicyEditorRuleUi.MinVersion), changed);
+        Assert.Contains(nameof(PolicyEditorRuleUi.MaxVersion), changed);
+        Assert.Contains(nameof(PolicyEditorRuleUi.IncludePrerelease), changed);
+    }
+
+    [Fact]
+    public void ConstraintsToggle_RefreshesDisplayedPropertiesToMatchDraft()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("test-policy", "Contoso"));
+        PolicyEditorDraftRule draftRule = session.AddRule();
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+        var changed = new HashSet<string?>();
+        rule.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+        rule.HasConstraints = true;
+        rule.AllowSkipHashCheck = true;
+        rule.AllowCustomParameters = true;
+        rule.AllowedCustomParameters = "--silent";
+        changed.Clear();
+
+        rule.HasConstraints = false;
+        rule.HasConstraints = true;
+
+        Assert.False(rule.AllowSkipHashCheck);
+        Assert.False(rule.AllowCustomParameters);
+        Assert.Empty(rule.AllowedCustomParameters);
+        Assert.False(draftRule.Constraints!.AllowSkipHashCheck);
+        Assert.False(draftRule.Constraints.AllowCustomParameters);
+        Assert.Empty(draftRule.Constraints.AllowedCustomParameters);
+        Assert.Contains(nameof(PolicyEditorRuleUi.AllowSkipHashCheck), changed);
+        Assert.Contains(nameof(PolicyEditorRuleUi.AllowCustomParameters), changed);
+        Assert.Contains(nameof(PolicyEditorRuleUi.AllowedCustomParameters), changed);
     }
 
     [Fact]

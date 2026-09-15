@@ -52,8 +52,7 @@ public class PolicyEditorRawSyntaxTests
     {
         return new PolicyDraftDocument
         {
-            Schema = PolicyEditorPolicyContract.DraftSchema,
-            PolicyVersion = "1.2.3",
+            PolicyFormatVersion = PolicyFormatVersion.Parse("1.2.3"),
             PolicyType = PolicyEditorPolicyContract.PolicyType,
             Metadata = new PolicyDraftMetadata { Id = id, Publisher = "Contoso" },
             Enforcement = new PolicyEnforcement
@@ -66,7 +65,7 @@ public class PolicyEditorRawSyntaxTests
     }
 
     [Fact]
-    public void TryParseStrict_WrongSchema_FailsClosedWithSchemaPointer()
+    public void TryParseStrict_LegacySchemaField_FailsClosedWithPrecisePointer()
     {
         JsonNode root = JsonNode.Parse(PolicySerializer.Serialize(BuildValidPackageDraft()))!;
         root["$schema"] = "https://example.com/wrong-schema.json";
@@ -76,15 +75,15 @@ public class PolicyEditorRawSyntaxTests
 
         Assert.False(ok);
         Assert.Null(parsed);
-        Assert.Equal(PolicyEditorSyntaxErrorKind.UnsupportedSchema, error!.Kind);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.LegacySchemaField, error!.Kind);
         Assert.Equal("/$schema", error!.Pointer);
     }
 
     [Fact]
-    public void TryParseStrict_CommittedSchemaForDraft_FailsClosedWithSchemaPointer()
+    public void TryParseStrict_LegacyPolicyVersionField_FailsClosedWithPrecisePointer()
     {
         JsonNode root = JsonNode.Parse(PolicySerializer.Serialize(BuildValidPackageDraft()))!;
-        root["$schema"] = SchemaUris.Policy;
+        root["PolicyVersion"] = "1.0.0";
         string raw = root.ToJsonString();
 
         bool ok = PolicyEditorRawSyntax.TryParseStrict(
@@ -94,8 +93,82 @@ public class PolicyEditorRawSyntaxTests
 
         Assert.False(ok);
         Assert.Null(parsed);
-        Assert.Equal(PolicyEditorSyntaxErrorKind.UnsupportedSchema, error!.Kind);
-        Assert.Equal("/$schema", error!.Pointer);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.LegacyPolicyVersionField, error!.Kind);
+        Assert.Equal("/PolicyVersion", error!.Pointer);
+    }
+
+    [Fact]
+    public void TryParseStrict_MissingPolicyFormatVersion_FailsClosedWithPrecisePointer()
+    {
+        JsonNode root = JsonNode.Parse(PolicySerializer.Serialize(BuildValidPackageDraft()))!;
+        Assert.True(root.AsObject().Remove("PolicyFormatVersion"));
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(
+            root.ToJsonString(),
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.MissingPolicyFormatVersion, error!.Kind);
+        Assert.Equal("/PolicyFormatVersion", error.Pointer);
+    }
+
+    [Theory]
+    [InlineData("1.0")]
+    [InlineData("01.0.0")]
+    [InlineData("1.0.0-beta")]
+    public void TryParseStrict_MalformedPolicyFormatVersion_FailsClosedWithPrecisePointer(string version)
+    {
+        JsonNode root = JsonNode.Parse(PolicySerializer.Serialize(BuildValidPackageDraft()))!;
+        root["PolicyFormatVersion"] = version;
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(
+            root.ToJsonString(),
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.InvalidPolicyFormatVersion, error!.Kind);
+        Assert.Equal("/PolicyFormatVersion", error.Pointer);
+    }
+
+    [Theory]
+    [InlineData("0.9.0")]
+    [InlineData("2.0.0")]
+    public void TryParseStrict_UnsupportedPolicyFormatVersion_FailsClosedWithPrecisePointer(string version)
+    {
+        JsonNode root = JsonNode.Parse(PolicySerializer.Serialize(BuildValidPackageDraft()))!;
+        root["PolicyFormatVersion"] = version;
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(
+            root.ToJsonString(),
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.UnsupportedPolicyFormatVersion, error!.Kind);
+        Assert.Equal("/PolicyFormatVersion", error.Pointer);
+    }
+
+    [Theory]
+    [InlineData("1.0.0")]
+    [InlineData("1.27.18446744073709551615")]
+    public void TryParseStrict_CompatibleMajorOneVersion_IsPreserved(string version)
+    {
+        JsonNode root = JsonNode.Parse(PolicySerializer.Serialize(BuildValidPackageDraft()))!;
+        root["PolicyFormatVersion"] = version;
+
+        bool ok = PolicyEditorRawSyntax.TryParseStrict(
+            root.ToJsonString(),
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error);
+
+        Assert.True(ok);
+        Assert.Null(error);
+        Assert.Equal(version, parsed!.PolicyFormatVersion.Value);
     }
 
     [Fact]

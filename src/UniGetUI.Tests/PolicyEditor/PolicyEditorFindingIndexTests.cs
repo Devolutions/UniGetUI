@@ -128,9 +128,9 @@ public class PolicyEditorFindingIndexTests
         "The policy validity interval is invalid.",
         "ValidUntil must be later than ValidFrom")]
     [InlineData(
-        PolicyFindingCode.UnsupportedPolicyVersion,
-        "/PolicyVersion",
-        "PolicyVersion 2.0.0 is not supported",
+        PolicyFindingCode.UnsupportedPolicyFormatVersion,
+        "/PolicyFormatVersion",
+        "PolicyFormatVersion 2.0.0 is not supported",
         "The policy format version is unsupported.",
         "2.0.0")]
     public void GenericFindings_PreserveLocalizedSummaryAndSanitizedSpecificDetail(
@@ -157,7 +157,7 @@ public class PolicyEditorFindingIndexTests
     }
 
     [Theory]
-    [InlineData("/PolicyVersion", null, "Policy format version")]
+    [InlineData("/PolicyFormatVersion", null, "Policy format version")]
     [InlineData("/Metadata/ValidUntil", null, "Metadata · Valid until")]
     [InlineData("/Rules/0/Priority", "install-tools", "Rule: 'install-tools' · Priority")]
     [InlineData("/Rules/1/Match/Versions/2", null, "Rule: 2 · Match criteria · Versions · Item 3")]
@@ -365,7 +365,7 @@ public class PolicyEditorFindingIndexTests
             IsValid = false,
             Findings =
             [
-                Error(PolicyFindingCode.UnsupportedPolicyVersion, "/PolicyVersion", "format 2 is unsupported"),
+                Error(PolicyFindingCode.UnsupportedPolicyFormatVersion, "/PolicyFormatVersion", "format 2 is unsupported"),
                 Error(PolicyFindingCode.InvalidValidityInterval, "/Metadata/ValidUntil", "must follow ValidFrom"),
                 Error(PolicyFindingCode.InvalidFieldValue, "/Rules/0/Priority", "exceeds 2147483647"),
                 Error(PolicyFindingCode.InvalidFieldValue, "/Rules/0/Match/PackageNames", "unsupported PackageNames"),

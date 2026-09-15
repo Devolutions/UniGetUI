@@ -63,7 +63,9 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     private CancellationTokenSource? _managementRefreshCancellation;
     private long _refreshGeneration;
     private long _managementRefreshGeneration;
+    private long _appliedManagementGeneration;
     private int _isDisposed;
+    private BrokerPolicyInspectionResult? _inspectionResult;
     private PolicyManagementSnapshot? _managementSnapshot;
 
     public InfoBarViewModel Status { get; } = new()
@@ -198,11 +200,8 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         previous?.Dispose();
 
         IsLoading = true;
-        HasPolicy = false;
-        SetStatus(
-            CoreTools.Translate("Loading active package broker policy"),
-            CoreTools.Translate("Contacting the Devolutions Agent service."),
-            InfoBarSeverity.Informational);
+        _inspectionResult = null;
+        UpdateInspectionPresentation();
 
         try
         {
@@ -261,6 +260,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
             CoreTools.Translate("Loading policy management state"),
             CoreTools.Translate("Contacting the Devolutions Agent service."),
             InfoBarSeverity.Informational);
+        UpdateInspectionPresentation();
 
         try
         {
@@ -281,7 +281,9 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
                 if (!CanApplyManagement(generation, cancellation)) return;
             }
 
+            _appliedManagementGeneration = generation;
             ApplyManagementResult(result, writeEligibility);
+            UpdateInspectionPresentation();
             AnnounceManagementStatus();
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -364,7 +366,34 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
 
     private void ApplyResult(BrokerPolicyInspectionResult result)
     {
+        _inspectionResult = result;
+        UpdateInspectionPresentation();
+    }
+
+    private void UpdateInspectionPresentation()
+    {
         ClearPolicy();
+
+        // A current management snapshot explains why the independent active-policy endpoint has no policy.
+        // Starting a new management refresh invalidates that explanation until its result is accepted.
+        if (_appliedManagementGeneration == _managementRefreshGeneration
+            && _managementSnapshot is { State: PolicyManagementState.Missing })
+        {
+            SetStatus(
+                CoreTools.Translate("No active package policy"),
+                CoreTools.Translate("Devolutions Agent reports that no policy file exists at the configured path."),
+                InfoBarSeverity.Informational);
+            return;
+        }
+
+        if (_inspectionResult is not { } result)
+        {
+            SetStatus(
+                CoreTools.Translate("Loading active package broker policy"),
+                CoreTools.Translate("Contacting the Devolutions Agent service."),
+                InfoBarSeverity.Informational);
+            return;
+        }
 
         switch (result.Status)
         {
@@ -374,7 +403,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
             case BrokerPolicyInspectionStatus.AgentUnavailable:
                 SetStatus(
                     CoreTools.Translate("Devolutions Agent is unavailable"),
-                    CoreTools.Translate("The package broker could not be reached. Verify that Devolutions Agent is installed and running, then refresh."),
+                    CoreTools.Translate("Communication with the package broker could not be completed. Verify that Devolutions Agent is installed and running. If the problem persists, check the Agent logs, then refresh."),
                     InfoBarSeverity.Error);
                 break;
             case BrokerPolicyInspectionStatus.Unsupported:
@@ -582,7 +611,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
             case BrokerPolicyManagementStatus.AgentUnavailable:
                 SetManagementStatus(
                     CoreTools.Translate("Devolutions Agent is unavailable"),
-                    CoreTools.Translate("The package broker could not be reached. Verify that Devolutions Agent is installed and running, then refresh."),
+                    CoreTools.Translate("Communication with the package broker could not be completed. Verify that Devolutions Agent is installed and running. If the problem persists, check the Agent logs, then refresh."),
                     InfoBarSeverity.Error);
                 break;
             case BrokerPolicyManagementStatus.Unsupported:
@@ -705,7 +734,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
                 break;
             case PolicyManagementState.Missing:
                 SetManagementStatus(
-                    CoreTools.Translate("No policy file is configured"),
+                    CoreTools.Translate("No policy file exists"),
                     CoreTools.Translate("Create a new policy file to start enforcing package broker rules."),
                     InfoBarSeverity.Informational);
                 break;

@@ -160,6 +160,32 @@ public class BrokerPolicyInspectorTests
     }
 
     [Theory]
+    [InlineData(BrokerClientErrorKind.BrokerUnavailable)]
+    [InlineData(BrokerClientErrorKind.Timeout)]
+    public async Task InspectAsync_ClassifiesTransportFailureAsUnavailable(BrokerClientErrorKind kind)
+    {
+        var inspector = CreateInspector(new FakeTransport(exception: new BrokerClientException(kind, "offline")));
+
+        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
+
+        Assert.Equal(BrokerPolicyInspectionStatus.AgentUnavailable, result.Status);
+    }
+
+    [Fact]
+    public async Task InspectAsync_ClassifiesNamedPipePermissionFailureAsUnavailable()
+    {
+        var exception = new BrokerClientException(
+            BrokerClientErrorKind.BrokerUnavailable,
+            "denied",
+            innerException: new UnauthorizedAccessException());
+        var inspector = CreateInspector(new FakeTransport(exception: exception));
+
+        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
+        Assert.Equal(BrokerPolicyInspectionStatus.AgentUnavailable, result.Status);
+    }
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData("{")]
     [InlineData("null")]

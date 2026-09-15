@@ -335,6 +335,27 @@ public class BrokerPolicyManagementServiceTests
         Assert.Equal(BrokerPolicyManagementStatus.AgentUnavailable, result.Status);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PolicyRequests_ClassifyPipeResetOrPermissionFailureAsUnavailable(bool permissionDenied)
+    {
+        Exception cause = permissionDenied
+            ? new UnauthorizedAccessException("pipe access denied")
+            : new IOException("connection reset",
+                new System.Net.Sockets.SocketException((int)System.Net.Sockets.SocketError.ConnectionReset));
+        var service = CreateService(new FakeTransport(exception: new BrokerClientException(
+            BrokerClientErrorKind.BrokerUnavailable,
+            "transport failed",
+            innerException: cause)));
+
+        BrokerPolicyManagementResult management = await service.GetManagementAsync(CancellationToken.None);
+        BrokerPolicyValidationOutcome validation = await service.ValidateAsync(EmptyDraft(), CancellationToken.None);
+
+        Assert.Equal(BrokerPolicyManagementStatus.AgentUnavailable, management.Status);
+        Assert.Equal(BrokerPolicyValidationStatus.AgentUnavailable, validation.Status);
+    }
+
     [Fact]
     public async Task GetManagementAsync_PropagatesCallerCancellation()
     {

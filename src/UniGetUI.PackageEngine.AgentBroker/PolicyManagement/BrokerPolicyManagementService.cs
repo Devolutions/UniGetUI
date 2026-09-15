@@ -167,7 +167,7 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
 
     // Keeps 404/NotFound/UnsupportedEndpoint mapped as "older unsupported Agent", and the three
     // policy-path/format/filesystem error codes distinct from each other and from every other outcome,
-    // per the Phase 2 contract. Mirrors (without modifying) the Phase 1 BrokerPolicyInspector.MapFailure
+    // per the Phase 2 contract. Mirrors the Phase 1 BrokerPolicyInspector.MapFailure
     // precedent: BrokerClientErrorKind.BrokerError collapses every structured broker error into one kind,
     // so disambiguation must happen via StatusCode/BrokerError.Code first.
     private static BrokerPolicyManagementStatus MapManagementFailure(BrokerClientException ex)
@@ -178,9 +178,7 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
             return BrokerPolicyManagementStatus.Unsupported;
         }
 
-        if (ex.StatusCode is 401 or 403
-            || ex.BrokerError?.Code is ErrorCode.Unauthorized or ErrorCode.Forbidden
-                or ErrorCode.Unauthenticated or ErrorCode.AdministratorRequired)
+        if (BrokerPolicyFailure.IsAccessDenied(ex))
         {
             return BrokerPolicyManagementStatus.AccessDenied;
         }
@@ -197,11 +195,11 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
 
         return ex.Kind switch
         {
-            BrokerClientErrorKind.BrokerUnavailable or BrokerClientErrorKind.Timeout =>
+            _ when BrokerPolicyFailure.IsTransportUnavailable(ex) =>
                 BrokerPolicyManagementStatus.AgentUnavailable,
             BrokerClientErrorKind.EmptyResponse or BrokerClientErrorKind.InvalidResponse =>
                 BrokerPolicyManagementStatus.InvalidResponse,
-            BrokerClientErrorKind.BrokerError =>
+            BrokerClientErrorKind.BrokerError when ex.BrokerError is not null =>
                 BrokerPolicyManagementStatus.PolicyUnavailable,
             _ => BrokerPolicyManagementStatus.InvalidResponse,
         };
@@ -215,9 +213,7 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
             return BrokerPolicyValidationStatus.Unsupported;
         }
 
-        if (ex.StatusCode is 401 or 403
-            || ex.BrokerError?.Code is ErrorCode.Unauthorized or ErrorCode.Forbidden
-                or ErrorCode.Unauthenticated or ErrorCode.AdministratorRequired)
+        if (BrokerPolicyFailure.IsAccessDenied(ex))
         {
             return BrokerPolicyValidationStatus.AccessDenied;
         }
@@ -235,11 +231,11 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
 
         return ex.Kind switch
         {
-            BrokerClientErrorKind.BrokerUnavailable or BrokerClientErrorKind.Timeout =>
+            _ when BrokerPolicyFailure.IsTransportUnavailable(ex) =>
                 BrokerPolicyValidationStatus.AgentUnavailable,
             BrokerClientErrorKind.EmptyResponse or BrokerClientErrorKind.InvalidResponse =>
                 BrokerPolicyValidationStatus.InvalidResponse,
-            BrokerClientErrorKind.BrokerError =>
+            BrokerClientErrorKind.BrokerError when ex.BrokerError is not null =>
                 BrokerPolicyValidationStatus.ValidationUnavailable,
             _ => BrokerPolicyValidationStatus.InvalidResponse,
         };

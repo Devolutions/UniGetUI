@@ -164,20 +164,18 @@ public sealed partial class BrokerPolicyInspector : IBrokerPolicyInspector
             return BrokerPolicyInspectionStatus.Unsupported;
         }
 
-        if (ex.StatusCode is 401 or 403
-            || ex.BrokerError?.Code is ErrorCode.Unauthorized or ErrorCode.Forbidden
-            || ex.InnerException is UnauthorizedAccessException)
+        if (BrokerPolicyFailure.IsAccessDenied(ex))
         {
             return BrokerPolicyInspectionStatus.AccessDenied;
         }
 
         return ex.Kind switch
         {
-            BrokerClientErrorKind.BrokerUnavailable or BrokerClientErrorKind.Timeout =>
+            _ when BrokerPolicyFailure.IsTransportUnavailable(ex) =>
                 BrokerPolicyInspectionStatus.AgentUnavailable,
             BrokerClientErrorKind.EmptyResponse or BrokerClientErrorKind.InvalidResponse =>
                 BrokerPolicyInspectionStatus.InvalidResponse,
-            BrokerClientErrorKind.BrokerError =>
+            BrokerClientErrorKind.BrokerError when ex.BrokerError is not null =>
                 BrokerPolicyInspectionStatus.PolicyUnavailable,
             _ => BrokerPolicyInspectionStatus.InvalidResponse,
         };

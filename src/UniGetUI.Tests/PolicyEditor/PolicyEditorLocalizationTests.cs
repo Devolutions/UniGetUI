@@ -185,6 +185,42 @@ public partial class PolicyEditorLocalizationTests
     }
 
     [Fact]
+    public void ActivePolicyInspectionSection_OwnsItsRefreshStatusAndDetails()
+    {
+        string root = FindRepositoryRoot();
+        XDocument view = XDocument.Load(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "AgentPolicyInspector.axaml"));
+        XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
+        XElement section = Assert.Single(view.Descendants(),
+            element => (string?)element.Attribute(x + "Name") == "ActivePolicyInspectionSection");
+
+        Assert.Equal(
+            "{Binding IsActivePolicyInspectionVisible}",
+            (string?)section.Attribute("IsVisible"));
+        Assert.DoesNotContain(section.Descendants(),
+            element => (string?)element.Attribute("Command") == "{Binding RefreshCommand}");
+        Assert.Contains(section.Descendants(),
+            element => (string?)element.Attribute("DataContext") == "{Binding Status}");
+        Assert.Contains(section.Descendants(),
+            element => (string?)element.Attribute("IsVisible") == "{Binding HasPolicy}");
+        Assert.Contains(section.Descendants(),
+            element => (string?)element.Attribute("Text") == "{Binding RawJson}");
+
+        XElement refresh = Assert.Single(view.Descendants(),
+            element => (string?)element.Attribute("Command") == "{Binding RefreshPageCommand}");
+        Assert.DoesNotContain(refresh.Ancestors(), element => element == section);
+        Assert.Null(refresh.Attribute("IsEnabled"));
+        Assert.Single(view.Descendants(),
+            element => (string?)element.Attribute("Content") == "{t:Translate Refresh}");
+    }
+
+    [Fact]
     public void RawSyntaxError_HasOneAssertiveLiveRegionAndStatusHasNoFixedLiveSetting()
     {
         string root = FindRepositoryRoot();

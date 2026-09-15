@@ -46,10 +46,9 @@
 
             <Grid ColumnDefinitions="*,Auto" Margin="40,0,40,8">
                 <Button Grid.Column="1"
-                        Command="{Binding RefreshManagementCommand}"
-                        IsEnabled="{Binding !IsManagementLoading}"
+                        Command="{Binding RefreshPageCommand}"
                         Content="{t:Translate Refresh}"
-                        automation:AutomationProperties.Name="{t:Translate Refresh policy management state}"/>
+                        automation:AutomationProperties.Name="{t:Translate Refresh policy information}"/>
             </Grid>
 
             <ProgressBar IsIndeterminate="{Binding IsManagementLoading}"
@@ -163,23 +162,17 @@
                 </Border>
             </StackPanel>
 
-            <Grid ColumnDefinitions="*,Auto" Margin="40,24,40,8">
-                <Button Grid.Column="1"
-                        Command="{Binding RefreshCommand}"
-                        IsEnabled="{Binding !IsLoading}"
-                        Content="{t:Translate Refresh}"
-                        automation:AutomationProperties.Name="{t:Translate Refresh active policy}"/>
-            </Grid>
+            <StackPanel x:Name="ActivePolicyInspectionSection"
+                        IsVisible="{Binding IsActivePolicyInspectionVisible}">
+                <ProgressBar IsIndeterminate="{Binding IsLoading}"
+                             IsVisible="{Binding IsLoading}"
+                             Margin="40,24,40,8"
+                             automation:AutomationProperties.Name="{t:Translate Loading active package broker policy}"/>
 
-            <ProgressBar IsIndeterminate="{Binding IsLoading}"
-                         IsVisible="{Binding IsLoading}"
-                         Margin="40,0,40,8"
-                         automation:AutomationProperties.Name="{t:Translate Loading active package broker policy}"/>
+                <controls:InfoBar DataContext="{Binding Status}"
+                                  Margin="40,0"/>
 
-            <controls:InfoBar DataContext="{Binding Status}"
-                              Margin="40,0"/>
-
-            <StackPanel IsVisible="{Binding HasPolicy}">
+                <StackPanel IsVisible="{Binding HasPolicy}">
                 <TextBlock Text="{t:Translate Policy metadata}"
                            FontSize="14"
                            FontWeight="SemiBold"
@@ -291,6 +284,7 @@
                              automation:AutomationProperties.Name="{t:Translate Canonical policy JSON}"/>
                 </Border>
             </StackPanel>
+        </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

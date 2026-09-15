@@ -89,6 +89,8 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     public ObservableCollection<PolicyDetailRow> ManagementDiagnosticsRows { get; } = [];
 
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isPageRefreshActive;
+    [ObservableProperty] private bool _isActivePolicyInspectionVisible = true;
     [ObservableProperty] private bool _hasPolicy;
     [ObservableProperty] private bool _hasNoRules;
     [ObservableProperty] private string _rawJson = "";
@@ -188,6 +190,38 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     /// only a stub <see cref="IBrokerPolicyInspector"/> - are unaffected by the Phase 2 management surface.
     /// </summary>
     public Task LoadManagementAsync() => RefreshManagementAsync();
+
+    [RelayCommand(CanExecute = nameof(CanRefreshPage))]
+    private async Task RefreshPageAsync()
+    {
+        if (!CanRefreshPage()) return;
+
+        IsPageRefreshActive = true;
+        RefreshPageCommand.NotifyCanExecuteChanged();
+        try
+        {
+            Task management = RefreshManagementAsync();
+            Task inspection = RefreshAsync();
+            await Task.WhenAll(management, inspection);
+        }
+        finally
+        {
+            IsPageRefreshActive = false;
+            RefreshPageCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private bool CanRefreshPage() =>
+        Volatile.Read(ref _isDisposed) == 0
+        && !IsPageRefreshActive
+        && !IsLoading
+        && !IsManagementLoading;
+
+    partial void OnIsLoadingChanged(bool value) =>
+        RefreshPageCommand.NotifyCanExecuteChanged();
+
+    partial void OnIsManagementLoadingChanged(bool value) =>
+        RefreshPageCommand.NotifyCanExecuteChanged();
 
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task RefreshAsync()
@@ -375,10 +409,11 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     {
         ClearPolicy();
 
-        // A current management snapshot explains why the independent active-policy endpoint has no policy.
-        // Starting a new management refresh invalidates that explanation until its result is accepted.
-        if (_appliedManagementGeneration == _managementRefreshGeneration
-            && _managementSnapshot is { State: PolicyManagementState.Missing })
+        bool hasCurrentMissingSnapshot =
+            _appliedManagementGeneration == _managementRefreshGeneration
+            && _managementSnapshot is { State: PolicyManagementState.Missing };
+        IsActivePolicyInspectionVisible = !hasCurrentMissingSnapshot;
+        if (hasCurrentMissingSnapshot)
         {
             SetStatus(
                 CoreTools.Translate("No active package policy"),

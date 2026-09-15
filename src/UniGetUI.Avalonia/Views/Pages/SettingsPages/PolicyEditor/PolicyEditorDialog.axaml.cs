@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 using UniGetUI.Avalonia.Views.DialogPages;
 
@@ -117,6 +119,94 @@ public partial class PolicyEditorDialog : ImmersiveDialog
             || GetRule(sender) is not { } rule) return;
         _viewModel.Session.MoveRuleDownCommand.Execute(rule.Rule);
         _viewModel.RebuildRules();
+    }
+
+    private void FindingNavigateButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null
+            || (sender as Control)?.DataContext is not PolicyValidationFinding finding)
+        {
+            return;
+        }
+
+        if (_viewModel.Session.IsRawMode)
+        {
+            RawEditor.BringIntoView();
+            RawEditor.Focus();
+            return;
+        }
+
+        Control searchRoot = this;
+        if (TryGetRuleIndex(finding.Pointer, out int ruleIndex)
+            && ruleIndex >= 0
+            && ruleIndex < _viewModel.Rules.Count)
+        {
+            PolicyEditorRuleUi rule = _viewModel.Rules[ruleIndex];
+            Expander? expander = this.GetVisualDescendants()
+                .OfType<Expander>()
+                .FirstOrDefault(control => ReferenceEquals(control.DataContext, rule));
+            if (expander is not null)
+            {
+                expander.IsExpanded = true;
+                searchRoot = expander;
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        string normalizedPointer = NormalizeRulePointer(finding.Pointer);
+        Dispatcher.UIThread.Post(
+            () => FocusBestMatchingControl(searchRoot, normalizedPointer),
+            DispatcherPriority.Loaded);
+    }
+
+    private void RawSyntaxNavigateButton_Click(object? sender, RoutedEventArgs e)
+    {
+        RawEditor.BringIntoView();
+        RawEditor.Focus();
+    }
+
+    private static void FocusBestMatchingControl(Control root, string pointer)
+    {
+        Control? target = root.GetVisualDescendants()
+            .OfType<Control>()
+            .Where(control => control.Tag is string tag && PointerTargetsTag(pointer, tag))
+            .OrderByDescending(control => ((string)control.Tag!).Length)
+            .FirstOrDefault();
+        target ??= root;
+        target.BringIntoView();
+        target.Focus();
+    }
+
+    internal static bool PointerTargetsTag(string pointer, string tag) =>
+        pointer.Equals(tag, StringComparison.OrdinalIgnoreCase)
+        || (pointer.StartsWith(tag, StringComparison.OrdinalIgnoreCase)
+            && pointer.Length > tag.Length
+            && pointer[tag.Length] == '/');
+
+    internal static bool TryGetRuleIndex(string pointer, out int index)
+    {
+        index = -1;
+        string[] segments = pointer.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length >= 2
+            && segments[0].Equals("Rules", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(segments[1], out index);
+    }
+
+    internal static string NormalizeRulePointer(string pointer)
+    {
+        string[] segments = pointer.Split('/');
+        if (segments.Length >= 3
+            && segments[1].Equals("Rules", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(segments[2], out _))
+        {
+            segments[1] = "Rules";
+            segments[2] = "*";
+        }
+
+        return string.Join('/', segments);
     }
 
     private void CloseButton_Click(object? sender, RoutedEventArgs e) => Close();

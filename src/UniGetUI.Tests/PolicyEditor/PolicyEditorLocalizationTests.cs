@@ -101,6 +101,10 @@ public partial class PolicyEditorLocalizationTests
             "Allowed pre/post commands",
             "Allowed hash-check skipping",
         ]);
+        keys.UnionWith(typeof(PolicyEditorHelp)
+            .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(property => property.PropertyType == typeof(string))
+            .Select(property => (string)property.GetValue(null)!));
 
         string[] missing = keys
             .Where(key => !language.TryGetValue(key, out string? value)
@@ -182,6 +186,82 @@ public partial class PolicyEditorLocalizationTests
         Assert.Contains("Text=\"{Binding ManagementElevationRequiredText}\"", view);
         Assert.DoesNotContain("ManagementCapabilityText", view);
         Assert.DoesNotContain("ManagementReadOnlyReasonText", view);
+    }
+
+    [Fact]
+    public void PolicyHelp_CoversAuthoredFixedAgentManagedAndDangerousSemantics()
+    {
+        Assert.Contains("authored identity", PolicyEditorHelp.PolicyId, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("software-managed", PolicyEditorHelp.PolicyFormatVersion, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Agent-managed", PolicyEditorHelp.ConfiguredPath, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("fail-closed", PolicyEditorHelp.DefaultDecision, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("integrity", PolicyEditorHelp.AllowSkipHashCheck, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("dangerous", PolicyEditorHelp.AllowPrePostCommands, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("dependencies", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("agreements", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("reboot", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("warnings require acknowledgement", PolicyEditorHelp.Save, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PolicyViews_UseSharedTooltipAndAccessibleHelpMetadata()
+    {
+        string root = FindRepositoryRoot();
+        string editor = File.ReadAllText(Path.Combine(
+            root, "src", "UniGetUI.Avalonia", "Views", "Pages", "SettingsPages",
+            "PolicyEditor", "PolicyEditorDialog.axaml"));
+        string inspector = File.ReadAllText(Path.Combine(
+            root, "src", "UniGetUI.Avalonia", "Views", "Pages", "SettingsPages",
+            "AgentPolicyInspector.axaml"));
+        string helpControl = File.ReadAllText(Path.Combine(
+            root, "src", "UniGetUI.Avalonia", "Views", "Controls", "PolicyHelp.cs"));
+
+        Assert.True(
+            Regex.Matches(editor, "controls:PolicyHelp\\.Text=").Count >= 45,
+            "Every policy field and non-obvious editor control should expose shared help.");
+        Assert.True(
+            Regex.Matches(inspector, "controls:PolicyHelp\\.Text=").Count >= 12,
+            "Inspector management controls should expose shared help.");
+        Assert.Contains("AutomationProperties.SetHelpText(control, text)", helpControl);
+        Assert.Contains("TextWrapping = TextWrapping.Wrap", helpControl);
+        Assert.Contains("MaxWidth = 420", helpControl);
+    }
+
+    [Fact]
+    public void PolicyFormatVersion_IsReadOnlyAndFindingNavigationTargetsStructuredFields()
+    {
+        string root = FindRepositoryRoot();
+        XDocument editor = XDocument.Load(Path.Combine(
+            root, "src", "UniGetUI.Avalonia", "Views", "Pages", "SettingsPages",
+            "PolicyEditor", "PolicyEditorDialog.axaml"));
+        XElement format = Assert.Single(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/PolicyVersion");
+        Assert.Equal("TextBlock", format.Name.LocalName);
+        Assert.Equal(
+            "{Binding Document.PolicyFormatVersion}",
+            (string?)format.Attribute("Text"));
+        Assert.Contains(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Rules/*/Priority");
+        Assert.Contains(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Rules/*/Match/PackageNames");
+        Assert.Contains(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Rules/*/Match/Versions");
+        Assert.Contains(editor.Descendants(),
+            element => (string?)element.Attribute("Click") == "FindingNavigateButton_Click");
+        Assert.Contains(editor.Descendants(),
+            element => (string?)element.Attribute("Click") == "RawSyntaxNavigateButton_Click");
+
+        Assert.True(
+            UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor.PolicyEditorDialog
+                .TryGetRuleIndex("/Rules/3/Match/Versions/1", out int ruleIndex));
+        Assert.Equal(3, ruleIndex);
+        string normalized =
+            UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor.PolicyEditorDialog
+                .NormalizeRulePointer("/Rules/3/Match/Versions/1");
+        Assert.Equal("/Rules/*/Match/Versions/1", normalized);
+        Assert.True(
+            UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor.PolicyEditorDialog
+                .PointerTargetsTag(normalized, "/Rules/*/Match/Versions"));
     }
 
     [Fact]

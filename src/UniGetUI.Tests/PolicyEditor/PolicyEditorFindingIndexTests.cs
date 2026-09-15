@@ -91,6 +91,97 @@ public class PolicyEditorFindingIndexTests
     }
 
     [Theory]
+    [InlineData(
+        PolicyFindingCode.InvalidFieldValue,
+        "/Rules/0/Priority",
+        "Priority exceeds 2147483647",
+        "A policy field has an invalid value.",
+        "Priority exceeds 2147483647")]
+    [InlineData(
+        PolicyFindingCode.InvalidFieldType,
+        "/Rules/0/Match/PackageNames",
+        "PackageNames must be an array of strings",
+        "A policy field has the wrong value type.",
+        "PackageNames must be an array of strings")]
+    [InlineData(
+        PolicyFindingCode.MissingRequiredField,
+        "/Metadata/Publisher",
+        "Publisher is required",
+        "The policy draft is missing a required field.",
+        "Publisher is required")]
+    [InlineData(
+        PolicyFindingCode.UnknownField,
+        "/Rules/0/Match/UnsupportedPackageNames",
+        "Unsupported field 'UnsupportedPackageNames'",
+        "The policy draft contains an unknown field.",
+        "Unsupported field 'UnsupportedPackageNames'")]
+    [InlineData(
+        PolicyFindingCode.InvalidFieldValue,
+        "/Rules/0/Match/Versions/0",
+        "'not-semver' is not a valid semantic version",
+        "A policy field has an invalid value.",
+        "not-semver")]
+    [InlineData(
+        PolicyFindingCode.InvalidValidityInterval,
+        "/Metadata/ValidUntil",
+        "ValidUntil must be later than ValidFrom",
+        "The policy validity interval is invalid.",
+        "ValidUntil must be later than ValidFrom")]
+    [InlineData(
+        PolicyFindingCode.UnsupportedPolicyVersion,
+        "/PolicyVersion",
+        "PolicyVersion 2.0.0 is not supported",
+        "The policy format version is unsupported.",
+        "2.0.0")]
+    public void GenericFindings_PreserveLocalizedSummaryAndSanitizedSpecificDetail(
+        PolicyFindingCode code,
+        string pointer,
+        string agentMessage,
+        string expectedSummary,
+        string expectedDetail)
+    {
+        var shared = new PolicyFinding
+        {
+            Severity = PolicyFindingSeverity.Error,
+            Code = code,
+            Path = pointer,
+            RuleId = pointer.StartsWith("/Rules/", StringComparison.Ordinal) ? "rule-a" : null,
+            Message = agentMessage,
+        };
+
+        PolicyValidationFinding finding = PolicyValidationFinding.FromShared(shared);
+
+        Assert.Contains(expectedSummary, finding.Message);
+        Assert.Contains(expectedDetail, finding.Message);
+        Assert.DoesNotContain(finding.Message, char.IsControl);
+    }
+
+    [Theory]
+    [InlineData("/PolicyVersion", null, "Policy format version")]
+    [InlineData("/Metadata/ValidUntil", null, "Metadata · Valid until")]
+    [InlineData("/Rules/0/Priority", "install-tools", "Rule: 'install-tools' · Priority")]
+    [InlineData("/Rules/1/Match/Versions/2", null, "Rule: 2 · Match criteria · Versions · Item 3")]
+    [InlineData("", null, "Policy document")]
+    public void FriendlyLocation_TranslatesJsonPointerWithoutDiscardingRawPointer(
+        string pointer,
+        string? ruleId,
+        string expectedLocation)
+    {
+        PolicyValidationFinding finding = Finding(pointer, ruleId);
+
+        Assert.Equal(expectedLocation, finding.FriendlyLocation);
+        if (pointer.Length > 0)
+        {
+            Assert.Contains(pointer, finding.AutomationName);
+            Assert.True(finding.HasRawPointer);
+        }
+        else
+        {
+            Assert.False(finding.HasRawPointer);
+        }
+    }
+
+    [Theory]
     [InlineData(PolicyFindingSeverity.Error, PolicyValidationSeverity.Error)]
     [InlineData(PolicyFindingSeverity.Warning, PolicyValidationSeverity.Warning)]
     public void SharedAndSanitizedFindings_MapContractSeverityExplicitly(
@@ -240,6 +331,102 @@ public class PolicyEditorFindingIndexTests
     }
 
     [Fact]
+    public void GenericFallbackDetail_IsControlFreeBoundedAndAnnounceable()
+    {
+        string malicious = "Priority\u0007 exceeds 2147483647\r\n"
+            + new string('x', 5000);
+        var shared = new PolicyFinding
+        {
+            Severity = PolicyFindingSeverity.Error,
+            Code = PolicyFindingCode.InvalidFieldValue,
+            Path = "/Rules/0/Priority\u0000hidden",
+            RuleId = "rule-a",
+            Message = malicious,
+        };
+
+        PolicyValidationFinding finding = PolicyValidationFinding.FromShared(shared);
+
+        Assert.True(finding.Message.EnumerateRunes().Count() <= 2048);
+        Assert.DoesNotContain(finding.Message, char.IsControl);
+        Assert.DoesNotContain(finding.AutomationName, char.IsControl);
+        Assert.Contains("Priority exceeds 2147483647", finding.Message);
+        Assert.Contains("JSON pointer", finding.AutomationName);
+    }
+
+    [Fact]
+    public void StructuredProjection_MapsDocumentAndRuleFindingsToExactFields()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement());
+        session.AddRule(PolicyRuleFactory.CreateBlank("first-rule"));
+        string raw = session.GetEffectiveRawJson();
+        var validation = new PolicyValidationResult
+        {
+            IsValid = false,
+            Findings =
+            [
+                Error(PolicyFindingCode.UnsupportedPolicyVersion, "/PolicyVersion", "format 2 is unsupported"),
+                Error(PolicyFindingCode.InvalidValidityInterval, "/Metadata/ValidUntil", "must follow ValidFrom"),
+                Error(PolicyFindingCode.InvalidFieldValue, "/Rules/0/Priority", "exceeds 2147483647"),
+                Error(PolicyFindingCode.InvalidFieldValue, "/Rules/0/Match/PackageNames", "unsupported PackageNames"),
+                Error(PolicyFindingCode.InvalidFieldValue, "/Rules/0/Match/Versions/0", "invalid semantic version"),
+            ],
+        };
+        session.ApplyValidationResult(raw, validation);
+        using var sessionViewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+        using var dialog = new PolicyEditorDialogViewModel(sessionViewModel, (_, _) => { });
+
+        Assert.True(dialog.Document.HasPolicyFormatVersionErrors);
+        Assert.Contains("format 2", Assert.Single(dialog.Document.PolicyFormatVersionFindings).Message);
+        Assert.True(dialog.Document.HasValidUntilErrors);
+        Assert.False(dialog.Document.HasValidFromErrors);
+        Assert.False(dialog.Document.HasPublisherErrors);
+        PolicyEditorRuleUi rule = Assert.Single(dialog.Rules);
+        Assert.True(rule.HasPriorityErrors);
+        Assert.True(rule.HasPackageNamesErrors);
+        Assert.True(rule.HasVersionsErrors);
+        Assert.Contains("2147483647", Assert.Single(rule.PriorityFindings).Message);
+        Assert.Contains("PackageNames", Assert.Single(rule.PackageNamesFindings).Message);
+        Assert.Contains("semantic version", Assert.Single(rule.VersionsFindings).Message);
+        Assert.False(rule.HasMinVersionErrors);
+        Assert.False(rule.HasMaxVersionErrors);
+    }
+
+    [Fact]
+    public void RuleFindingAtIndexTen_DoesNotLeakIntoRuleAtIndexOne()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement());
+        for (int index = 0; index <= 10; index++)
+        {
+            session.AddRule(PolicyRuleFactory.CreateBlank($"rule-{index}"));
+        }
+
+        string raw = session.GetEffectiveRawJson();
+        session.ApplyValidationResult(raw, new PolicyValidationResult
+        {
+            IsValid = false,
+            Findings =
+            [
+                Error(PolicyFindingCode.InvalidFieldValue, "/Rules/10/Priority", "out of range"),
+            ],
+        });
+        using var sessionViewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+        using var dialog = new PolicyEditorDialogViewModel(sessionViewModel, (_, _) => { });
+
+        Assert.False(dialog.Rules[1].HasPriorityErrors);
+        Assert.True(dialog.Rules[10].HasPriorityErrors);
+    }
+
+    [Fact]
     public void ScalarTruncation_DoesNotSplitSupplementaryPlaneCharacters()
     {
         string input = new string('a', 2047) + "\U0001F680" + "discarded";
@@ -299,4 +486,16 @@ public class PolicyEditorFindingIndexTests
         Assert.True(finding.RuleId!.EnumerateRunes().Count() <= 2048);
         Assert.True(finding.Message.EnumerateRunes().Count() <= 2048);
     }
+
+    private static PolicyFinding Error(
+        PolicyFindingCode code,
+        string pointer,
+        string message) =>
+        new()
+        {
+            Severity = PolicyFindingSeverity.Error,
+            Code = code,
+            Path = pointer,
+            Message = message,
+        };
 }

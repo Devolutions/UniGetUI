@@ -137,23 +137,26 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
     public void NotifyIdentityLockChanged() =>
         OnPropertyChanged(nameof(IsIdentityLocked));
 
-    public string PolicyVersion
-    {
-        get => Draft.PolicyVersion;
-        set { Draft.PolicyVersion = value ?? ""; MarkDirty(); }
-    }
+    public string PolicyFormatVersion => Draft.PolicyVersion;
+    public IReadOnlyList<PolicyValidationFinding> PolicyFormatVersionFindings =>
+        FindingsFor("/PolicyVersion");
+    public bool HasPolicyFormatVersionErrors => HasErrors(PolicyFormatVersionFindings);
 
     public string Id
     {
         get => Draft.Metadata.Id;
         set { Draft.Metadata.Id = value ?? ""; MarkDirty(); }
     }
+    public IReadOnlyList<PolicyValidationFinding> IdFindings => FindingsFor("/Metadata/Id");
+    public bool HasIdErrors => HasErrors(IdFindings);
 
     public string Publisher
     {
         get => Draft.Metadata.Publisher;
         set { Draft.Metadata.Publisher = value ?? ""; MarkDirty(); }
     }
+    public IReadOnlyList<PolicyValidationFinding> PublisherFindings => FindingsFor("/Metadata/Publisher");
+    public bool HasPublisherErrors => HasErrors(PublisherFindings);
 
     public string? Description
     {
@@ -169,6 +172,8 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
             MarkDirty();
         }
     }
+    public IReadOnlyList<PolicyValidationFinding> DescriptionFindings => FindingsFor("/Metadata/Description");
+    public bool HasDescriptionErrors => HasErrors(DescriptionFindings);
 
     public bool HasDescription
     {
@@ -195,6 +200,8 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
             MarkDirty();
         }
     }
+    public IReadOnlyList<PolicyValidationFinding> SupportUrlFindings => FindingsFor("/Metadata/SupportUrl");
+    public bool HasSupportUrlErrors => HasErrors(SupportUrlFindings);
 
     /// <summary>Round-trip ISO-8601 text. Invalid input is retained and blocks validation/save.</summary>
     public string ValidFromText
@@ -245,6 +252,12 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
 
     public string? ValidFromError => _validFromError;
     public string? ValidUntilError => _validUntilError;
+    public IReadOnlyList<PolicyValidationFinding> ValidFromFindings =>
+        [.. FindingsFor("/Metadata/ValidFrom"), .. FindingsForExact("/Metadata")];
+    public IReadOnlyList<PolicyValidationFinding> ValidUntilFindings =>
+        [.. FindingsFor("/Metadata/ValidUntil"), .. FindingsForExact("/Metadata")];
+    public bool HasValidFromErrors => HasErrors(ValidFromFindings);
+    public bool HasValidUntilErrors => HasErrors(ValidUntilFindings);
 
     public int DecisionIndex
     {
@@ -258,8 +271,14 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
             }
         }
     }
+    public IReadOnlyList<PolicyValidationFinding> DefaultDecisionFindings =>
+        FindingsFor("/Enforcement/DefaultDecision");
+    public bool HasDefaultDecisionErrors => HasErrors(DefaultDecisionFindings);
 
     public string RulePrecedenceDisplay => CoreTools.Translate(Draft.Enforcement.RulePrecedence.ToString());
+    public IReadOnlyList<PolicyValidationFinding> RulePrecedenceFindings =>
+        FindingsFor("/Enforcement/RulePrecedence");
+    public bool HasRulePrecedenceErrors => HasErrors(RulePrecedenceFindings);
 
     public int AuditModeIndex
     {
@@ -270,6 +289,9 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
             MarkDirty();
         }
     }
+    public IReadOnlyList<PolicyValidationFinding> AuditModeFindings =>
+        FindingsFor("/Enforcement/AuditMode");
+    public bool HasAuditModeErrors => HasErrors(AuditModeFindings);
 
     private void MarkDirty() => _sessionViewModel.NotifyDraftChangedCommand.Execute(null);
 
@@ -279,7 +301,7 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         _validUntilText = Format(Draft.Metadata.ValidUntil);
         SetValidFromError(null);
         SetValidUntilError(null);
-        OnPropertyChanged(nameof(PolicyVersion));
+        OnPropertyChanged(nameof(PolicyFormatVersion));
         OnPropertyChanged(nameof(Id));
         OnPropertyChanged(nameof(Publisher));
         OnPropertyChanged(nameof(Description));
@@ -293,7 +315,41 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         OnPropertyChanged(nameof(AuditModeIndex));
         OnPropertyChanged(nameof(RulePrecedenceDisplay));
         OnPropertyChanged(nameof(IsIdentityLocked));
+        RefreshFindings();
     }
+
+    public void RefreshFindings()
+    {
+        foreach (string property in new[]
+        {
+            nameof(PolicyFormatVersionFindings), nameof(HasPolicyFormatVersionErrors),
+            nameof(IdFindings), nameof(HasIdErrors),
+            nameof(PublisherFindings), nameof(HasPublisherErrors),
+            nameof(DescriptionFindings), nameof(HasDescriptionErrors),
+            nameof(SupportUrlFindings), nameof(HasSupportUrlErrors),
+            nameof(ValidFromFindings), nameof(HasValidFromErrors),
+            nameof(ValidUntilFindings), nameof(HasValidUntilErrors),
+            nameof(DefaultDecisionFindings), nameof(HasDefaultDecisionErrors),
+            nameof(RulePrecedenceFindings), nameof(HasRulePrecedenceErrors),
+            nameof(AuditModeFindings), nameof(HasAuditModeErrors),
+        })
+        {
+            OnPropertyChanged(property);
+        }
+    }
+
+    private IReadOnlyList<PolicyValidationFinding> FindingsFor(params string[] pointers) =>
+        _sessionViewModel.Session.Findings.All
+            .Where(finding => pointers.Any(finding.TargetsPointer))
+            .ToArray();
+
+    private IReadOnlyList<PolicyValidationFinding> FindingsForExact(string pointer) =>
+        _sessionViewModel.Session.Findings.All
+            .Where(finding => finding.Pointer.Equals(pointer, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+    private static bool HasErrors(IEnumerable<PolicyValidationFinding> findings) =>
+        findings.Any(finding => finding.IsError);
 
     private void SetValidFromError(string? error)
     {
@@ -357,15 +413,20 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
 public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
 {
     private readonly PolicyEditorSessionViewModel _sessionViewModel;
+    private readonly int _ruleIndex;
     private readonly object _priorityErrorKey = new();
     private string _priorityText;
     private string? _priorityError;
 
     public PolicyEditorDraftRule Rule { get; }
 
-    public PolicyEditorRuleUi(PolicyEditorDraftRule rule, PolicyEditorSessionViewModel sessionViewModel)
+    public PolicyEditorRuleUi(
+        PolicyEditorDraftRule rule,
+        int ruleIndex,
+        PolicyEditorSessionViewModel sessionViewModel)
     {
         Rule = rule;
+        _ruleIndex = ruleIndex;
         _sessionViewModel = sessionViewModel;
         _priorityText = Rule.Priority.ToString(CultureInfo.InvariantCulture);
 
@@ -374,6 +435,13 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         ScopeOptions = PolicyEditorEnumOptionFactory.Build(Rule.Match.Scopes, MarkDirty);
         ArchitectureOptions = PolicyEditorEnumOptionFactory.Build(Rule.Match.Architectures, MarkDirty);
         ElevationOptions = PolicyEditorEnumOptionFactory.Build(Rule.Match.Elevation, MarkDirty);
+    }
+
+    public PolicyEditorRuleUi(
+        PolicyEditorDraftRule rule,
+        PolicyEditorSessionViewModel sessionViewModel)
+        : this(rule, sessionViewModel.Draft.Rules.IndexOf(rule), sessionViewModel)
+    {
     }
 
     public string Id
@@ -389,6 +457,8 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             MarkDirty();
         }
     }
+    public IReadOnlyList<PolicyValidationFinding> IdFindings => FindingsFor("/Id");
+    public bool HasIdErrors => HasErrors(IdFindings);
 
     public bool Enabled
     {
@@ -419,6 +489,8 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             }
         }
     }
+    public IReadOnlyList<PolicyValidationFinding> PriorityFindings => FindingsFor("/Priority");
+    public bool HasPriorityErrors => HasErrors(PriorityFindings);
 
     public string? PriorityError => _priorityError;
 
@@ -434,6 +506,8 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             }
         }
     }
+    public IReadOnlyList<PolicyValidationFinding> DecisionFindings => FindingsFor("/Decision");
+    public bool HasDecisionErrors => HasErrors(DecisionFindings);
 
     public string? Reason
     {
@@ -449,6 +523,8 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             MarkDirty();
         }
     }
+    public IReadOnlyList<PolicyValidationFinding> ReasonFindings => FindingsFor("/Reason");
+    public bool HasReasonErrors => HasErrors(ReasonFindings);
 
     public bool HasReason
     {
@@ -490,12 +566,17 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         get => Join(Rule.Match.PackageNames);
         set => SetListField(Rule.Match.PackageNames, value);
     }
+    public IReadOnlyList<PolicyValidationFinding> PackageNamesFindings =>
+        FindingsFor("/Match/PackageNames");
+    public bool HasPackageNamesErrors => HasErrors(PackageNamesFindings);
 
     public string Versions
     {
         get => Join(Rule.Match.Versions);
         set => SetListField(Rule.Match.Versions, value);
     }
+    public IReadOnlyList<PolicyValidationFinding> VersionsFindings => FindingsFor("/Match/Versions");
+    public bool HasVersionsErrors => HasErrors(VersionsFindings);
 
     public bool HasVersionRange
     {
@@ -514,12 +595,18 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         get => Rule.Match.VersionRange?.MinVersion;
         set { EnsureVersionRange().MinVersion = string.IsNullOrEmpty(value) ? null : value; MarkDirty(); }
     }
+    public IReadOnlyList<PolicyValidationFinding> MinVersionFindings =>
+        [.. FindingsFor("/Match/VersionRange/MinVersion"), .. FindingsEndingAt("/Match/VersionRange")];
+    public bool HasMinVersionErrors => HasErrors(MinVersionFindings);
 
     public string? MaxVersion
     {
         get => Rule.Match.VersionRange?.MaxVersion;
         set { EnsureVersionRange().MaxVersion = string.IsNullOrEmpty(value) ? null : value; MarkDirty(); }
     }
+    public IReadOnlyList<PolicyValidationFinding> MaxVersionFindings =>
+        [.. FindingsFor("/Match/VersionRange/MaxVersion"), .. FindingsEndingAt("/Match/VersionRange")];
+    public bool HasMaxVersionErrors => HasErrors(MaxVersionFindings);
 
     public bool IncludePrerelease
     {
@@ -665,8 +752,11 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         set { EnsureConstraints().AllowUpgrade = value; MarkDirty(); }
     }
 
-    /// <summary>Findings attributed to this rule's identifier (see <see cref="PolicyEditorFindingIndex.ForRule"/>).</summary>
-    public IReadOnlyList<PolicyValidationFinding> Findings => _sessionViewModel.Session.Findings.ForRule(Rule.Id);
+    /// <summary>Findings attributed to this rule's identifier or document index.</summary>
+    public IReadOnlyList<PolicyValidationFinding> Findings =>
+        _sessionViewModel.Session.Findings.All.Where(finding =>
+            string.Equals(finding.RuleId, Rule.Id, StringComparison.Ordinal)
+            || finding.TargetsPointer($"/Rules/{_ruleIndex}")).ToArray();
 
     public bool HasFindings => Findings.Count > 0;
 
@@ -679,7 +769,35 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(Findings));
         OnPropertyChanged(nameof(HasFindings));
+        foreach (string property in new[]
+        {
+            nameof(IdFindings), nameof(HasIdErrors),
+            nameof(PriorityFindings), nameof(HasPriorityErrors),
+            nameof(DecisionFindings), nameof(HasDecisionErrors),
+            nameof(ReasonFindings), nameof(HasReasonErrors),
+            nameof(PackageNamesFindings), nameof(HasPackageNamesErrors),
+            nameof(VersionsFindings), nameof(HasVersionsErrors),
+            nameof(MinVersionFindings), nameof(HasMinVersionErrors),
+            nameof(MaxVersionFindings), nameof(HasMaxVersionErrors),
+        })
+        {
+            OnPropertyChanged(property);
+        }
     }
+
+    private IReadOnlyList<PolicyValidationFinding> FindingsFor(params string[] suffixes) =>
+        Findings.Where(finding => suffixes.Any(suffix =>
+            finding.Pointer.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)
+            || finding.Pointer.Contains(
+                suffix + "/",
+                StringComparison.OrdinalIgnoreCase))).ToArray();
+
+    private IReadOnlyList<PolicyValidationFinding> FindingsEndingAt(string suffix) =>
+        Findings.Where(finding =>
+            finding.Pointer.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+    private static bool HasErrors(IEnumerable<PolicyValidationFinding> findings) =>
+        findings.Any(finding => finding.IsError);
 
     private void SetTriState(Action<TriState> assign, int index)
     {

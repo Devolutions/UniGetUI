@@ -18,10 +18,10 @@ public static class PolicyEditorPolicyContract
     public const string PolicyType = "PackageBrokerPolicy";
 
     /// <summary>
-    /// The semantic version stamped onto a brand-new policy document created by the editor.
-    /// Existing documents keep whatever <see cref="PolicyDocument.PolicyVersion"/> their publisher chose.
+    /// The software-managed document-format version stamped onto a brand-new policy. Compatible
+    /// existing documents retain their version when edited; publishers do not author this value.
     /// </summary>
-    public const string InitialPolicyVersion = "1.0.0";
+    public const string CurrentPolicyFormatVersion = "1.0.0";
 
     /// <summary>
     /// The only <see cref="PolicyEnforcement.RulePrecedence"/> value the editor understands.

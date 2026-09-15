@@ -253,7 +253,7 @@ public class PolicyEditorStructuredInputGuardTests
         [
             nameof(PolicyEditorDocumentUi.Id),
             nameof(PolicyEditorDocumentUi.Publisher),
-            nameof(PolicyEditorDocumentUi.PolicyVersion),
+            nameof(PolicyEditorDocumentUi.PolicyFormatVersion),
             nameof(PolicyEditorDocumentUi.Description),
             nameof(PolicyEditorDocumentUi.HasDescription),
             nameof(PolicyEditorDocumentUi.SupportUrl),
@@ -269,7 +269,7 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.All(expectedProperties, property => Assert.Contains(property, changed));
         Assert.Equal("replacement-id", document.Id);
         Assert.Equal("Fabrikam", document.Publisher);
-        Assert.Equal("2.0", document.PolicyVersion);
+        Assert.Equal("2.0", document.PolicyFormatVersion);
         Assert.Equal("canonical description", document.Description);
         Assert.Equal("https://example.test/support", document.SupportUrl);
         Assert.Equal(0, document.DecisionIndex);
@@ -899,6 +899,10 @@ public class PolicyEditorStructuredInputGuardTests
             announcement =>
             {
                 Assert.Contains("A policy field has an invalid value", announcement.Message);
+                Assert.Contains("invalid URL", announcement.Message);
+                Assert.Contains("Metadata", announcement.Message);
+                Assert.Contains("Support URL", announcement.Message);
+                Assert.Contains("/Metadata/SupportUrl", announcement.Message);
                 Assert.Equal(AutomationLiveSetting.Assertive, announcement.LiveSetting);
             });
         Assert.Equal("Validation found errors", dialog.Status.Title);

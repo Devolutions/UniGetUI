@@ -63,9 +63,28 @@ public sealed record PolicyValidationFinding(
 
     public bool IsWarning => Severity == PolicyValidationSeverity.Warning;
 
-    public string AutomationName => string.IsNullOrWhiteSpace(Pointer)
-        ? Message
-        : CoreTools.Translate("{0}. Location: {1}", Message, Pointer);
+    public string FriendlyLocation => PolicyFindingPresentation.DescribeLocation(Pointer, RuleId);
+
+    public bool HasRawPointer => !string.IsNullOrWhiteSpace(Pointer);
+
+    public string AutomationName => HasRawPointer
+        ? CoreTools.Translate(
+            "{0}. Location: {1}. JSON pointer: {2}",
+            Message,
+            FriendlyLocation,
+            Pointer)
+        : CoreTools.Translate("{0}. Location: {1}", Message, FriendlyLocation);
+
+    public bool TargetsPointer(string pointer)
+    {
+        if (string.IsNullOrEmpty(pointer) || string.IsNullOrEmpty(Pointer))
+            return false;
+
+        return Pointer.Equals(pointer, StringComparison.OrdinalIgnoreCase)
+            || (Pointer.StartsWith(pointer, StringComparison.OrdinalIgnoreCase)
+                && Pointer.Length > pointer.Length
+                && Pointer[pointer.Length] == '/');
+    }
 
     private static PolicyValidationSeverity MapSeverity(PolicyFindingSeverity severity) =>
         severity switch
@@ -77,8 +96,8 @@ public sealed record PolicyValidationFinding(
 }
 
 /// <summary>
-/// Converts stable Agent finding codes and structured arguments into localized UI text.
-/// Recognized codes never render the Agent's English fallback message.
+/// Converts stable Agent finding codes and structured arguments into localized UI text. Generic codes
+/// retain a bounded, sanitized Agent detail because that is where value/constraint specifics live.
 /// </summary>
 public static class PolicyFindingPresentation
 {
@@ -106,19 +125,29 @@ public static class PolicyFindingPresentation
             PolicyFindingCode.SchemaViolation =>
                 CoreTools.Translate("The policy draft does not match the required JSON schema."),
             PolicyFindingCode.UnknownField =>
-                CoreTools.Translate("The policy draft contains an unknown field."),
+                DescribeWithSpecificDetail(
+                    CoreTools.Translate("The policy draft contains an unknown field."),
+                    fallbackMessage),
             PolicyFindingCode.MissingRequiredField =>
-                CoreTools.Translate("The policy draft is missing a required field."),
+                DescribeWithSpecificDetail(
+                    CoreTools.Translate("The policy draft is missing a required field."),
+                    fallbackMessage),
             PolicyFindingCode.InvalidFieldType =>
-                CoreTools.Translate("A policy field has the wrong value type."),
+                DescribeWithSpecificDetail(
+                    CoreTools.Translate("A policy field has the wrong value type."),
+                    fallbackMessage),
             PolicyFindingCode.InvalidFieldValue =>
-                CoreTools.Translate("A policy field has an invalid value."),
+                DescribeWithSpecificDetail(
+                    CoreTools.Translate("A policy field has an invalid value."),
+                    fallbackMessage),
             PolicyFindingCode.DuplicateRuleId =>
                 CoreTools.Translate("Rule IDs must be unique."),
             PolicyFindingCode.IneffectiveBooleanMatch =>
                 CoreTools.Translate("A boolean match must be omitted, true, or false; mixed arrays are invalid."),
             PolicyFindingCode.InvalidVersionRange =>
-                CoreTools.Translate("The version range is invalid."),
+                DescribeWithSpecificDetail(
+                    CoreTools.Translate("The version range is invalid."),
+                    fallbackMessage),
             PolicyFindingCode.EmptyVersionRange =>
                 CoreTools.Translate("The version range does not restrict any versions."),
             PolicyFindingCode.InvalidWildcardPattern =>
@@ -126,13 +155,17 @@ public static class PolicyFindingPresentation
             PolicyFindingCode.ContradictoryConstraints =>
                 CoreTools.Translate("The rule contains contradictory constraints."),
             PolicyFindingCode.InvalidValidityInterval =>
-                CoreTools.Translate("The policy validity interval is invalid."),
+                DescribeWithSpecificDetail(
+                    CoreTools.Translate("The policy validity interval is invalid."),
+                    fallbackMessage),
             PolicyFindingCode.UnsupportedSchema =>
                 CoreTools.Translate("The policy schema is unsupported."),
             PolicyFindingCode.UnsupportedPolicyType =>
                 CoreTools.Translate("The policy type is unsupported."),
             PolicyFindingCode.UnsupportedPolicyVersion =>
-                CoreTools.Translate("The policy version is unsupported."),
+                DescribeWithSpecificDetail(
+                    CoreTools.Translate("The policy format version is unsupported."),
+                    fallbackMessage),
             PolicyFindingCode.AuditModeEnabled =>
                 CoreTools.Translate("Audit mode is enabled; decisions are logged but not enforced."),
             PolicyFindingCode.DefaultAllow =>
@@ -141,6 +174,51 @@ public static class PolicyFindingPresentation
                 DescribeSensitiveOption(arguments),
             _ => SanitizeFallback(fallbackMessage),
         };
+
+    public static string DescribeLocation(string? pointer, string? ruleId)
+    {
+        string sanitizedPointer = Sanitize(pointer ?? "", MaxFallbackLength);
+        string sanitizedRuleId = Sanitize(ruleId ?? "", MaxArgumentLength);
+        if (string.IsNullOrWhiteSpace(sanitizedPointer))
+            return CoreTools.Translate("Policy document");
+
+        string[] segments = sanitizedPointer
+            .Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Select(DecodePointerSegment)
+            .ToArray();
+        var parts = new List<string>(3);
+        int index = 0;
+        if (segments.Length >= 2
+            && segments[0].Equals("Rules", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(segments[1], out int ruleIndex))
+        {
+            parts.Add(string.IsNullOrWhiteSpace(sanitizedRuleId)
+                ? CoreTools.Translate("Rule: {0}", ruleIndex + 1)
+                : CoreTools.Translate("Rule: {0}", $"'{sanitizedRuleId}'"));
+            index = 2;
+        }
+
+        for (; index < segments.Length; index++)
+        {
+            string segment = segments[index];
+            if (int.TryParse(segment, out int itemIndex))
+            {
+                parts.Add(CoreTools.Translate("Item {0}", itemIndex + 1));
+                continue;
+            }
+
+            string? label = FieldLabel(segment);
+            if (label is not null
+                && (parts.Count == 0 || !parts[^1].Equals(label, StringComparison.Ordinal)))
+            {
+                parts.Add(label);
+            }
+        }
+
+        return parts.Count == 0
+            ? CoreTools.Translate("Policy document")
+            : string.Join(" \u00b7 ", parts);
+    }
 
     public static IReadOnlyDictionary<string, string> CopyArguments(
         IReadOnlyDictionary<string, JsonElement>? arguments)
@@ -216,6 +294,87 @@ public static class PolicyFindingPresentation
         return restrictionText.Length == 0
             ? description
             : $"{description} {CoreTools.Translate("Restrictions: {0}", restrictionText)}";
+    }
+
+    private static string DescribeWithSpecificDetail(string summary, string? fallbackMessage)
+    {
+        string detail = Sanitize(fallbackMessage ?? "", MaxArgumentLength);
+        if (string.IsNullOrWhiteSpace(detail)
+            || detail.Equals(summary, StringComparison.OrdinalIgnoreCase))
+        {
+            return summary;
+        }
+
+        return CoreTools.Translate("{0} Detail: {1}", summary, detail);
+    }
+
+    private static string DecodePointerSegment(string segment) =>
+        segment.Replace("~1", "/", StringComparison.Ordinal)
+            .Replace("~0", "~", StringComparison.Ordinal);
+
+    private static string? FieldLabel(string segment) =>
+        segment.ToUpperInvariant() switch
+        {
+            "$SCHEMA" => CoreTools.Translate("Schema"),
+            "POLICYTYPE" => CoreTools.Translate("Policy type"),
+            "POLICYVERSION" => CoreTools.Translate("Policy format version"),
+            "METADATA" => CoreTools.Translate("Metadata"),
+            "ID" => CoreTools.Translate("ID"),
+            "PUBLISHER" => CoreTools.Translate("Publisher"),
+            "DESCRIPTION" => CoreTools.Translate("Description"),
+            "SUPPORTURL" => CoreTools.Translate("Support URL"),
+            "VALIDFROM" => CoreTools.Translate("Valid from"),
+            "VALIDUNTIL" => CoreTools.Translate("Valid until"),
+            "ENFORCEMENT" => CoreTools.Translate("Enforcement"),
+            "DEFAULTDECISION" => CoreTools.Translate("Default decision"),
+            "RULEPRECEDENCE" => CoreTools.Translate("Rule precedence"),
+            "AUDITMODE" => CoreTools.Translate("Audit mode"),
+            "RULES" => null,
+            "ENABLED" => CoreTools.Translate("Enabled"),
+            "PRIORITY" => CoreTools.Translate("Priority"),
+            "DECISION" => CoreTools.Translate("Decision"),
+            "REASON" => CoreTools.Translate("Reason"),
+            "MATCH" => CoreTools.Translate("Match criteria"),
+            "OPERATIONS" => CoreTools.Translate("Operations"),
+            "MANAGERS" => CoreTools.Translate("Package managers"),
+            "SOURCES" => CoreTools.Translate("Sources"),
+            "PACKAGEIDENTIFIERS" => CoreTools.Translate("Package identifiers"),
+            "PACKAGENAMES" => CoreTools.Translate("Package names"),
+            "VERSIONS" => CoreTools.Translate("Versions"),
+            "VERSIONRANGE" => CoreTools.Translate("Version range"),
+            "MINVERSION" => CoreTools.Translate("Minimum version"),
+            "MAXVERSION" => CoreTools.Translate("Maximum version"),
+            "INCLUDEPRERELEASE" => CoreTools.Translate("Include prerelease versions"),
+            "SCOPES" => CoreTools.Translate("Scopes"),
+            "ARCHITECTURES" => CoreTools.Translate("Architectures"),
+            "ELEVATION" => CoreTools.Translate("Elevation"),
+            "INTERACTIVE" => CoreTools.Translate("Interactive"),
+            "SKIPHASHCHECK" => CoreTools.Translate("Skip hash check"),
+            "PRERELEASE" => CoreTools.Translate("Prerelease"),
+            "HASCUSTOMPARAMETERS" => CoreTools.Translate("Has custom parameters"),
+            "HASCUSTOMINSTALLLOCATION" => CoreTools.Translate("Has custom install location"),
+            "HASPREPOSTCOMMANDS" => CoreTools.Translate("Has pre/post commands"),
+            "HASKILLBEFOREOPERATION" => CoreTools.Translate("Has kill-before-operation"),
+            "HASUNINSTALLPREVIOUS" => CoreTools.Translate("Has uninstall previous"),
+            "CONSTRAINTS" => CoreTools.Translate("Constraints"),
+            _ => Humanize(segment),
+        };
+
+    private static string Humanize(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "";
+
+        var result = new StringBuilder(value.Length + 4);
+        for (int index = 0; index < value.Length; index++)
+        {
+            char character = value[index];
+            if (index > 0 && char.IsUpper(character) && char.IsLower(value[index - 1]))
+                result.Append(' ');
+            result.Append(character);
+        }
+
+        return Sanitize(result.ToString(), MaxArgumentLength);
     }
 
     private static string FormatRestriction(

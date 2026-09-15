@@ -12,7 +12,7 @@ public class PolicyEditorTemplatesTests
 
         Assert.Equal(PolicyEditorPolicyContract.DraftSchema, draft.Schema);
         Assert.Equal(PolicyEditorPolicyContract.PolicyType, draft.PolicyType);
-        Assert.Equal(PolicyEditorPolicyContract.InitialPolicyVersion, draft.PolicyVersion);
+        Assert.Equal(PolicyEditorPolicyContract.CurrentPolicyFormatVersion, draft.PolicyVersion);
         Assert.Equal(RulePrecedence.PriorityThenDeny, draft.Enforcement.RulePrecedence);
     }
 
@@ -81,6 +81,46 @@ public class PolicyEditorTemplatesTests
         System.Reflection.PropertyInfo[] props = draft.Metadata.GetType().GetProperties();
         Assert.DoesNotContain(props, p => p.Name == "Revision");
         Assert.DoesNotContain(props, p => p.Name == "PublishedAt");
+    }
+
+    [Fact]
+    public void PolicyFormatVersion_IsStampedForNewDraftsAndReadOnlyInStructuredUi()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("policy", "Publisher");
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            draft);
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        Assert.Equal(PolicyEditorPolicyContract.CurrentPolicyFormatVersion, draft.PolicyVersion);
+        Assert.Equal(draft.PolicyVersion, document.PolicyFormatVersion);
+        Assert.False(
+            typeof(PolicyEditorDocumentUi)
+                .GetProperty(nameof(PolicyEditorDocumentUi.PolicyFormatVersion))!
+                .CanWrite);
+    }
+
+    [Fact]
+    public void StructuredUpdate_PreservesCompatibleExistingPolicyFormatVersion()
+    {
+        Devolutions.Now.Policy.Api.PolicyManagementSnapshot management =
+            PolicyEditorTestFixtures.BuildActiveManagement();
+        management.Policy!.PolicyVersion = "1.2.3";
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(management);
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        Assert.Equal("1.2.3", viewModel.Draft.PolicyVersion);
+        Assert.Equal("1.2.3", document.PolicyFormatVersion);
     }
 
     [Fact]

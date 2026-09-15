@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using Devolutions.Now.Policy.Api;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
+using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Core.Tools;
 
@@ -77,6 +78,11 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
             TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
         };
         AutomationProperties.SetName(description, description.Text);
+        PolicyHelp.SetText(
+            description,
+            request.Kind == PolicyEditorConfirmationKind.Warnings
+                ? CoreTools.Translate("Saving with warnings acknowledges the listed risks but does not ignore validation errors.")
+                : description.Text);
         panel.Children.Add(description);
 
         if (request.Kind == PolicyEditorConfirmationKind.Warnings && request.Findings.Count > 0)

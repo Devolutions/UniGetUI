@@ -4,6 +4,7 @@
              xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
              xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
              xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:pvm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor"
              xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -48,6 +49,7 @@
                 <Button Grid.Column="1"
                         Command="{Binding RefreshPageCommand}"
                         Content="{t:Translate Refresh}"
+                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RefreshPolicy}"
                         automation:AutomationProperties.Name="{t:Translate Refresh policy information}"/>
             </Grid>
 
@@ -67,7 +69,7 @@
                             <TextBlock Grid.Column="1"
                                        Text="{Binding ManagementStateText}"
                                        automation:AutomationProperties.Name="{t:Translate Policy management state}"
-                                       automation:AutomationProperties.HelpText="{Binding ManagementStateText}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ManagementState}"
                                        automation:AutomationProperties.LiveSetting="Polite"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
@@ -76,7 +78,7 @@
                                                  Text="{Binding ManagementConfiguredPath}"
                                                  TextWrapping="Wrap"
                                                  automation:AutomationProperties.Name="{t:Translate Configured policy path}"
-                                                 automation:AutomationProperties.HelpText="{Binding ManagementConfiguredPath}"
+                                                 controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ConfiguredPath}"
                                                  automation:AutomationProperties.LiveSetting="Polite"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
@@ -84,7 +86,7 @@
                             <TextBlock Grid.Column="1"
                                        Text="{Binding ManagementSourceText}"
                                        automation:AutomationProperties.Name="{t:Translate Policy path source}"
-                                       automation:AutomationProperties.HelpText="{Binding ManagementSourceText}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PathSource}"
                                        automation:AutomationProperties.LiveSetting="Polite"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
@@ -92,7 +94,7 @@
                             <TextBlock Grid.Column="1"
                                        Text="{Binding AgentWriteCapabilityText}"
                                        automation:AutomationProperties.Name="{t:Translate Agent write capability}"
-                                       automation:AutomationProperties.HelpText="{Binding AgentWriteCapabilityText}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AgentWriteCapability}"
                                        automation:AutomationProperties.LiveSetting="Polite"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
@@ -100,7 +102,7 @@
                             <TextBlock Grid.Column="1"
                                        Text="{Binding PolicyChangesFromThisAppText}"
                                        automation:AutomationProperties.Name="{t:Translate Policy changes from this app}"
-                                       automation:AutomationProperties.HelpText="{Binding PolicyChangesFromThisAppText}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteAvailability}"
                                        automation:AutomationProperties.LiveSetting="Polite"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
@@ -109,7 +111,7 @@
                                        Text="{Binding PolicyChangesReasonText}"
                                        TextWrapping="Wrap"
                                        automation:AutomationProperties.Name="{t:Translate Policy change availability reason}"
-                                       automation:AutomationProperties.HelpText="{Binding PolicyChangesReasonText}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteReason}"
                                        automation:AutomationProperties.LiveSetting="Polite"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
@@ -117,7 +119,7 @@
                             <TextBlock Grid.Column="1"
                                        Text="{Binding ManagementElevationRequiredText}"
                                        automation:AutomationProperties.Name="{t:Translate Policy write elevation requirement}"
-                                       automation:AutomationProperties.HelpText="{Binding ManagementElevationRequiredText}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ElevationRequired}"
                                        automation:AutomationProperties.LiveSetting="Polite"/>
                         </Grid>
                     </StackPanel>
@@ -128,18 +130,21 @@
                             Command="{Binding EditPolicyCommand}"
                             IsVisible="{Binding CanEdit}"
                             Content="{t:Translate Edit}"
+                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.EditPolicy}"
                             automation:AutomationProperties.Name="{t:Translate Edit the active policy}"/>
                     <Button Grid.Column="1"
                             x:Name="CreatePolicyButton"
                             Command="{Binding CreatePolicyCommand}"
                             IsVisible="{Binding CanCreate}"
                             Content="{t:Translate Create}"
+                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CreatePolicy}"
                             automation:AutomationProperties.Name="{t:Translate Create a new policy}"/>
                     <Button Grid.Column="2"
                             x:Name="RepairPolicyButton"
                             Command="{Binding RepairPolicyCommand}"
                             IsVisible="{Binding CanRepair}"
                             Content="{t:Translate Repair}"
+                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RepairPolicy}"
                             automation:AutomationProperties.Name="{t:Translate Repair the stored policy}"/>
                     <Button Grid.Column="3"
                             x:Name="ReplaceIdentityButton"
@@ -147,6 +152,7 @@
                             Command="{Binding ReplaceIdentityCommand}"
                             IsVisible="{Binding CanReplaceIdentity}"
                             Content="{t:Translate Replace identity}"
+                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ReplaceIdentity}"
                             automation:AutomationProperties.Name="{t:Translate Replace the active policy identity}"/>
                 </Grid>
 
@@ -269,6 +275,7 @@
                     <Button Grid.Column="1"
                             Command="{Binding CopyRawJsonCommand}"
                             Content="{t:Translate Copy to clipboard}"
+                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CopyCanonicalJson}"
                             automation:AutomationProperties.Name="{t:Translate Copy canonical policy JSON to clipboard}"/>
                 </Grid>
                 <Border Classes="settings-card policy-section">
@@ -281,6 +288,7 @@
                              FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CanonicalJson}"
                              automation:AutomationProperties.Name="{t:Translate Canonical policy JSON}"/>
                 </Border>
             </StackPanel>

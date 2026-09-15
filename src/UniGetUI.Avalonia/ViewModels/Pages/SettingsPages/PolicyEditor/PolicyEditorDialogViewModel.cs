@@ -76,9 +76,9 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
             rule.Dispose();
         }
         Rules.Clear();
-        foreach (PolicyEditorDraftRule rule in Session.Rules)
+        for (int index = 0; index < Session.Rules.Count; index++)
         {
-            Rules.Add(new PolicyEditorRuleUi(rule, Session));
+            Rules.Add(new PolicyEditorRuleUi(Session.Rules[index], index, Session));
         }
     }
 
@@ -100,6 +100,7 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
 
         if (e.PropertyName == nameof(PolicyEditorSessionViewModel.Findings))
         {
+            Document.RefreshFindings();
             foreach (PolicyEditorRuleUi rule in Rules)
             {
                 rule.RefreshFindings();

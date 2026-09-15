@@ -1,0 +1,88 @@
+using UniGetUI.Core.Tools;
+
+namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
+
+/// <summary>Shared localized help used by tooltips and accessibility descriptions.</summary>
+public static class PolicyEditorHelp
+{
+    public static string StructuredMode => T("Edit supported policy fields with guided controls. Fixed and Agent-managed values cannot be changed here.");
+    public static string RawMode => T("Edit the complete draft JSON. Returning to structured mode requires strict parsing and successful Agent validation.");
+    public static string PolicyId => T("Stable authored identity for this policy. Replacing an active identity is a separate operation because it changes which policy is recognized.");
+    public static string Publisher => T("Authored organization or person responsible for the policy.");
+    public static string PolicyFormatVersion => T("Software-managed policy document format. It is read-only here and is not the Agent-managed policy revision.");
+    public static string Description => T("Optional authored description. Clear the checkbox to omit this field from the policy.");
+    public static string SupportUrl => T("Optional authored HTTPS page where users can learn about this policy.");
+    public static string ValidFrom => T("Optional ISO 8601 date and time with an explicit offset. Before this instant, the policy is not yet valid.");
+    public static string ValidUntil => T("Optional ISO 8601 date and time with an explicit offset. It must be later than Valid from; after it, the policy is expired.");
+    public static string DefaultDecision => T("Decision used when no enabled rule matches. Deny is the safer fail-closed choice; Allow permits unmatched requests.");
+    public static string RulePrecedence => T("Fixed evaluation order: lower priority values run first, and Deny wins ties. This software-managed value cannot be changed.");
+    public static string AuditMode => T("When enabled, decisions are logged but not enforced. Use only for evaluation because denied operations may still proceed.");
+    public static string AddRule => T("Add a new authored rule after the existing rules.");
+    public static string RuleEnabled => T("Disabled rules remain in the policy but do not participate in decisions.");
+    public static string DuplicateRule => T("Copy this rule to create a similar rule. Give the copy a unique rule ID before validation.");
+    public static string MoveRule => T("Change this rule's document order. Priority determines evaluation; order mainly affects readability.");
+    public static string DeleteRule => T("Remove this rule from the draft. This cannot be undone after the policy is saved.");
+    public static string RuleId => T("Unique authored identifier for this rule. Use a stable name so findings and audits can identify it.");
+    public static string Priority => T("Whole number from 0 through 2147483647. Lower values are evaluated first; Deny wins when priorities tie.");
+    public static string Decision => T("Effect applied when this enabled rule matches: Allow permits the request and Deny blocks it.");
+    public static string RuleReason => T("Optional authored explanation for the rule's decision.");
+    public static string Operations => T("Optional package operations matched by this rule. Select none to match every supported operation.");
+    public static string Managers => T("Optional package managers matched by this rule. Select none to match every supported manager.");
+    public static string Sources => T("Optional source identifiers, one per line. Leave empty to match packages from any source.");
+    public static string PackageIdentifiers => T("Optional exact package identifiers, one per line. Leave empty to match any identifier.");
+    public static string PackageNames => T("Optional package display names, one per line. Agent support may be limited; validate before saving.");
+    public static string Versions => T("Optional exact package versions, one per line. Each value must use the version form accepted by the target package manager.");
+    public static string VersionRange => T("Optionally restrict matching to minimum and maximum versions. Empty bounds are open-ended.");
+    public static string MinimumVersion => T("Optional inclusive lower version bound. It must use a valid semantic version accepted by the Agent.");
+    public static string MaximumVersion => T("Optional inclusive upper version bound. It must not be lower than the minimum version.");
+    public static string IncludePrerelease => T("Include prerelease versions when evaluating this version range.");
+    public static string Scopes => T("Optional install scopes matched by this rule. Select none to match every scope.");
+    public static string Architectures => T("Optional package architectures matched by this rule. Select none to match every architecture.");
+    public static string Elevation => T("Optional requested elevation states matched by this rule. Select none to match elevated and non-elevated requests.");
+    public static string MatchOption => T("Select this value to include it in the rule's match criteria. No selected values means any value.");
+    public static string BooleanSelector => T("Choose Any to omit this match, or Yes/No to require that exact request property.");
+    public static string InteractiveMatch => T("Match whether the operation is interactive. Choose Any to omit this criterion.");
+    public static string SkipHashMatch => T("Match whether the request skips hash verification. This is security-sensitive; choose Any to omit this criterion.");
+    public static string PrereleaseMatch => T("Match whether prerelease packages are requested. Choose Any to omit this criterion.");
+    public static string CustomParametersMatch => T("Match whether custom command-line parameters are present. Choose Any to omit this criterion.");
+    public static string CustomLocationMatch => T("Match whether a custom install location is requested. Choose Any to omit this criterion.");
+    public static string PrePostCommandsMatch => T("Match whether pre-operation or post-operation commands are present. Choose Any to omit this criterion.");
+    public static string KillBeforeMatch => T("Match whether processes may be killed before the operation. Choose Any to omit this criterion.");
+    public static string UninstallPreviousMatch => T("Match whether uninstalling a previous version is requested. Choose Any to omit this criterion.");
+    public static string Constraints => T("Optional limits applied after a rule matches. Package dependencies, agreements, reboot behavior, and ordinary hash verification remain controlled by the package manager unless represented below.");
+    public static string AllowInteractive => T("Allow an interactive package-manager operation after this rule matches.");
+    public static string AllowSkipHashCheck => T("Allow bypassing package hash verification. This weakens integrity protection and should be narrowly scoped.");
+    public static string AllowPrerelease => T("Allow installing prerelease package versions after this rule matches.");
+    public static string AllowCustomLocation => T("Allow a caller-provided install location. Use allowed patterns to restrict where packages may be written.");
+    public static string LocationPatterns => T("Allowed custom install-location wildcard patterns, one per line. Empty means no pattern restriction when custom locations are allowed.");
+    public static string AllowCustomParameters => T("Allow caller-provided package-manager arguments. Restrict them with exact values, allowed patterns, or denied values.");
+    public static string AllowedParameters => T("Exact custom parameters allowed by this rule, one per line.");
+    public static string AllowedParameterPatterns => T("Wildcard patterns for custom parameters allowed by this rule, one per line.");
+    public static string DeniedParameters => T("Custom parameters explicitly denied by this rule, one per line. Denials take precedence over allowances.");
+    public static string AllowPrePostCommands => T("Allow caller-provided commands before or after package operations. This is dangerous and should be narrowly scoped.");
+    public static string AllowKillBefore => T("Allow terminating processes before the package operation.");
+    public static string AllowUninstallPrevious => T("Allow uninstalling an existing package version before installing another version.");
+    public static string AllowUpgrade => T("Allow the operation to upgrade an already installed package.");
+    public static string Validate => T("Send the current draft to Devolutions Agent for authoritative validation without saving it.");
+    public static string Save => T("Validate and save the draft. Warnings require acknowledgement, and policy changes may require elevation.");
+    public static string Overwrite => T("Replace a policy that changed after editing began. Review the conflict carefully because this discards the newer external version.");
+    public static string Findings => T("Agent validation findings are sanitized and bounded. Use Go to field to navigate to the affected structured control when available.");
+    public static string GoToFinding => T("Navigate to and focus the structured field associated with this validation finding.");
+    public static string GoToRawError => T("Focus the raw JSON editor at the document that could not be parsed or represented.");
+    public static string CanonicalJson => T("Read-only canonical JSON returned for the active policy. Copy it for diagnostics or review.");
+    public static string CopyCanonicalJson => T("Copy the complete canonical active-policy JSON to the clipboard.");
+    public static string RefreshPolicy => T("Refresh management state and active-policy inspection together.");
+    public static string AgentWriteCapability => T("Authoritative write capability reported by Devolutions Agent.");
+    public static string AppWriteAvailability => T("Whether this UniGetUI installation can perform policy changes, considering both Agent capability and trusted-helper availability.");
+    public static string AppWriteReason => T("Why policy changes from this app are unavailable. Agent restrictions take precedence over local helper status.");
+    public static string ElevationRequired => T("Whether Devolutions Agent reports that policy changes require administrator elevation.");
+    public static string EditPolicy => T("Open the active policy as a draft while preserving its identity and compatible policy format version.");
+    public static string CreatePolicy => T("Create a new policy draft using the current software-managed policy format version.");
+    public static string RepairPolicy => T("Replace an invalid stored policy with a new valid draft after review and validation.");
+    public static string ReplaceIdentity => T("Create a replacement policy with a new policy ID. This intentionally changes the active policy identity and requires confirmation.");
+    public static string ManagementState => T("Authoritative policy-file state reported by Devolutions Agent.");
+    public static string ConfiguredPath => T("Agent-managed policy file path. UniGetUI displays this path but does not author it here.");
+    public static string PathSource => T("How Devolutions Agent selected the policy path, such as its default or configured path.");
+
+    private static string T(string value) => CoreTools.Translate(value);
+}

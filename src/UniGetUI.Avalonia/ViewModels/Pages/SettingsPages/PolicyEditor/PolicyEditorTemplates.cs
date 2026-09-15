@@ -30,7 +30,7 @@ public static class PolicyEditorTemplates
 
         return new PolicyEditorDraftDocument
         {
-            PolicyVersion = PolicyEditorPolicyContract.InitialPolicyVersion,
+            PolicyVersion = PolicyEditorPolicyContract.CurrentPolicyFormatVersion,
             Metadata = new PolicyEditorDraftMetadata
             {
                 Id = id,

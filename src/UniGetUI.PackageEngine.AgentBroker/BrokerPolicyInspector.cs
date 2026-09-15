@@ -5,7 +5,6 @@ using Devolutions.Now.Policy.Client;
 using Devolutions.Now.Policy.Model;
 using UniGetUI.Core.Logging;
 using ApiElevation = Devolutions.Now.Policy.Api.Elevation;
-using PolicySchemaUris = Devolutions.Now.Policy.Model.SchemaUris;
 
 namespace UniGetUI.PackageEngine.AgentBroker;
 
@@ -92,8 +91,7 @@ public sealed partial class BrokerPolicyInspector : IBrokerPolicyInspector
             || !IsRequiredString(response.Server.ServerVersion, 128)
             || !Enum.IsDefined(response.Server.Transport)
             || policy is null
-            || policy.Schema != PolicySchemaUris.Policy
-            || !IsSemanticVersion(policy.PolicyVersion)
+            || policy.PolicyFormatVersion is null
             || policy.PolicyType != "PackageBrokerPolicy"
             || policy.Metadata is null
             || !IsResourceId(policy.Metadata.Id)
@@ -240,12 +238,6 @@ public sealed partial class BrokerPolicyInspector : IBrokerPolicyInspector
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._:-") is false;
     }
 
-    private static bool IsSemanticVersion(string? value)
-    {
-        return value is { Length: > 0 and <= 128 }
-            && SemanticVersionRegex().IsMatch(value);
-    }
-
     private static bool IsHttpUrl(string? value)
     {
         return value is null
@@ -272,11 +264,6 @@ public sealed partial class BrokerPolicyInspector : IBrokerPolicyInspector
         return value is null
             || value.EnumerateRunes().Take(maxLength + 1).Count() <= maxLength;
     }
-
-    [GeneratedRegex(
-        @"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?\z",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex SemanticVersionRegex();
 
     private static bool IsResponseVersion(string? value)
     {

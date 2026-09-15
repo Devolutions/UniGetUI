@@ -133,6 +133,17 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         }
     }
 
+    internal void ReportCopyFailure()
+    {
+        if (Volatile.Read(ref _isDisposed) != 0) return;
+
+        SetStatus(
+            CoreTools.Translate("Could not copy policy JSON"),
+            CoreTools.Translate("The canonical policy JSON could not be copied to the clipboard. Try again."),
+            InfoBarSeverity.Error);
+        AnnounceStatus();
+    }
+
     private bool CanApply(long generation, CancellationTokenSource cancellation)
     {
         return Volatile.Read(ref _isDisposed) == 0
@@ -203,7 +214,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         MetadataRows.Add(Row("Policy ID", Value(metadata.Id)));
         MetadataRows.Add(Row("Publisher", Value(metadata.Publisher)));
         MetadataRows.Add(Row("Revision", metadata.Revision.ToString(CultureInfo.CurrentCulture)));
-        MetadataRows.Add(Row("Policy version", Value(policy.PolicyVersion)));
+        MetadataRows.Add(Row("Policy format version", policy.PolicyFormatVersion.Value));
         MetadataRows.Add(Row("Published", FormatDate(metadata.PublishedAt)));
         MetadataRows.Add(Row("Valid from", FormatDate(metadata.ValidFrom)));
         MetadataRows.Add(Row("Valid until", FormatDate(metadata.ValidUntil)));

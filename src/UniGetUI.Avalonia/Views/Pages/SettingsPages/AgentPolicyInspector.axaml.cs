@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;
@@ -27,9 +28,23 @@ public sealed partial class AgentPolicyInspector : UserControl, ISettingsPage, I
 
     private async void OnCopyTextRequested(object? sender, string text)
     {
-        if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+        IClipboard? clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is null)
+        {
+            Logger.Error("[AgentBroker] The policy inspector clipboard is unavailable.");
+            _viewModel.ReportCopyFailure();
+            return;
+        }
+
+        try
         {
             await clipboard.SetTextAsync(text);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("[AgentBroker] Failed to copy the active policy JSON to the clipboard.");
+            Logger.Error(ex);
+            _viewModel.ReportCopyFailure();
         }
     }
 

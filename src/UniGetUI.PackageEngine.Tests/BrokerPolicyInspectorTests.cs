@@ -34,6 +34,65 @@ public class BrokerPolicyInspectorTests
     }
 
     [Fact]
+    public async Task InspectAsync_AcceptsAndPreservesCompatiblePolicyFormatVersion()
+    {
+        PolicyResponse response = BuildResponse("1.42.7");
+        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
+        {
+            StatusCode = 200,
+            Body = BrokerSerializer.Serialize(response),
+        }));
+
+        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
+
+        Assert.Equal(BrokerPolicyInspectionStatus.Connected, result.Status);
+        Assert.Equal("1.42.7", result.Response!.Policy.PolicyFormatVersion.Value);
+        Assert.Contains("\"PolicyFormatVersion\": \"1.42.7\"", result.CanonicalJson);
+        Assert.DoesNotContain("\"PolicyVersion\"", result.CanonicalJson);
+        Assert.DoesNotContain("\"$schema\"", result.CanonicalJson);
+    }
+
+    [Theory]
+    [InlineData("$schema")]
+    [InlineData("PolicyVersion")]
+    public async Task InspectAsync_ClassifiesLegacyPolicyFieldsAsInvalidResponse(string fieldName)
+    {
+        JsonObject body = JsonNode.Parse(BrokerSerializer.Serialize(BuildResponse()))!.AsObject();
+        body["Policy"]![fieldName] = "1.0.0";
+        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
+        {
+            StatusCode = 200,
+            Body = body.ToJsonString(),
+        }));
+
+        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
+
+        Assert.Equal(BrokerPolicyInspectionStatus.InvalidResponse, result.Status);
+    }
+
+    [Theory]
+    [InlineData("1.0")]
+    [InlineData("01.0.0")]
+    [InlineData("2.0.0")]
+    [InlineData("1.0.0\n")]
+    [InlineData("1.0.1١")]
+    public async Task InspectAsync_ClassifiesInvalidPolicyFormatVersionsAsInvalidResponse(
+        string policyFormatVersion)
+    {
+        JsonObject body = JsonNode.Parse(BrokerSerializer.Serialize(BuildResponse()))!.AsObject();
+        body["Policy"]!["PolicyFormatVersion"] = policyFormatVersion;
+        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
+        {
+            StatusCode = 200,
+            Body = body.ToJsonString(),
+        }));
+
+        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
+
+        Assert.Equal(BrokerPolicyInspectionStatus.InvalidResponse, result.Status);
+    }
+
+    [Fact]
     public async Task InspectAsync_DoesNotConstructClientOnNonWindows()
     {
         bool constructed = false;
@@ -214,7 +273,7 @@ public class BrokerPolicyInspectorTests
     }
 
     [Fact]
-    public async Task InspectAsync_AcceptsSchemaValidBoundaryValues()
+    public async Task InspectAsync_AcceptsContractBoundaryValues()
     {
         PolicyResponse response = BuildResponse();
         response.ResponseVersion = $"{new string('1', 64)}.0";
@@ -271,7 +330,7 @@ public class BrokerPolicyInspectorTests
             ClientVersion = "tests",
         });
 
-    private static PolicyResponse BuildResponse() =>
+    private static PolicyResponse BuildResponse(string policyFormatVersion = "1.0.0") =>
         new()
         {
             Server = new ServerContext
@@ -281,7 +340,8 @@ public class BrokerPolicyInspectorTests
             },
             Policy = new PolicyDocument
             {
-                PolicyVersion = "1.0.0",
+                PolicyFormatVersion =
+                    Devolutions.Now.Policy.Model.PolicyFormatVersion.Parse(policyFormatVersion),
                 Metadata = new PolicyMetadata
                 {
                     Id = "contoso.policy",
@@ -316,8 +376,7 @@ public class BrokerPolicyInspectorTests
         yield return [WithExplicitNull(root => root["ResponseVersion"] = null)];
         yield return [WithExplicitNull(root => root["Server"] = null)];
         yield return [WithExplicitNull(root => root["Server"]!["ServerVersion"] = null)];
-        yield return [WithExplicitNull(root => root["Policy"]!["$schema"] = null)];
-        yield return [WithExplicitNull(root => root["Policy"]!["PolicyVersion"] = null)];
+        yield return [WithExplicitNull(root => root["Policy"]!["PolicyFormatVersion"] = null)];
         yield return [WithExplicitNull(root => root["Policy"]!["PolicyType"] = null)];
         yield return [WithExplicitNull(root => root["Policy"]!["Metadata"] = null)];
         yield return [WithExplicitNull(root => root["Policy"]!["Metadata"]!["Id"] = null)];
@@ -349,8 +408,8 @@ public class BrokerPolicyInspectorTests
         yield return [WithoutRequiredProperty(root => root.Remove("Server"))];
         yield return [WithoutRequiredProperty(root => root["Server"]!.AsObject().Remove("ServerVersion"))];
         yield return [WithoutRequiredProperty(root => root["Server"]!.AsObject().Remove("Transport"))];
-        yield return [WithoutRequiredProperty(root => root["Policy"]!.AsObject().Remove("$schema"))];
-        yield return [WithoutRequiredProperty(root => root["Policy"]!.AsObject().Remove("PolicyVersion"))];
+        yield return [WithoutRequiredProperty(
+            root => root["Policy"]!.AsObject().Remove("PolicyFormatVersion"))];
         yield return [WithoutRequiredProperty(root => root["Policy"]!.AsObject().Remove("PolicyType"))];
         yield return [WithoutRequiredProperty(root => root["Policy"]!.AsObject().Remove("Metadata"))];
         yield return [WithoutRequiredProperty(root => root["Policy"]!.AsObject().Remove("Enforcement"))];
@@ -388,11 +447,6 @@ public class BrokerPolicyInspectorTests
         yield return [WithSemanticMutation(root => root["Server"]!["ServerVersion"] = "")];
         yield return [WithSemanticMutation(
             root => root["Server"]!["ServerVersion"] = new string('x', 129))];
-        yield return [WithSemanticMutation(
-            root => root["Policy"]!["$schema"] = "https://example.invalid/schema")];
-        yield return [WithSemanticMutation(root => root["Policy"]!["PolicyVersion"] = "1.0")];
-        yield return [WithSemanticMutation(root => root["Policy"]!["PolicyVersion"] = "1.0.0\n")];
-        yield return [WithSemanticMutation(root => root["Policy"]!["PolicyVersion"] = "1.0.1١")];
         yield return [WithSemanticMutation(root => root["Policy"]!["PolicyType"] = "OtherPolicy")];
         yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Id"] = "")];
         yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Id"] = "invalid id")];

@@ -1,6 +1,7 @@
 using Avalonia.Automation;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Model;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.PackageEngine.AgentBroker;
 using ApiTransport = Devolutions.Now.Policy.Api.Transport;
@@ -30,6 +31,9 @@ public class AgentPolicyInspectorViewModelTests
         Assert.Equal(18, viewModel.Rules[0].MatchRows.Count);
         Assert.Equal(13, viewModel.Rules[0].ConstraintRows.Count);
         Assert.Contains(viewModel.MetadataRows, row => row.Label == "Server version" && row.Value == "2026.8-tests");
+        Assert.Contains(
+            viewModel.MetadataRows,
+            row => row.Label == "Policy format version" && row.Value == "1.2.3");
         Assert.Contains(viewModel.EnforcementRows, row => row.Label == "Default decision" && row.Value == "Deny");
         Assert.Equal(AutomationLiveSetting.Polite, announcement?.LiveSetting);
         Assert.Contains("Connected to Devolutions Agent", announcement?.Message);
@@ -68,12 +72,39 @@ public class AgentPolicyInspectorViewModelTests
         Assert.Equal(" ", customParameters.Value);
         Assert.NotEqual("None", customParameters.Value);
         Assert.Equal(json, viewModel.RawJson);
+        Assert.Contains("\"PolicyFormatVersion\": \"1.2.3\"", viewModel.RawJson);
+        Assert.DoesNotContain("\"PolicyVersion\"", viewModel.RawJson);
+        Assert.DoesNotContain("\"$schema\"", viewModel.RawJson);
         Assert.Contains("\"Publisher\": \" \"", viewModel.RawJson);
         Assert.Contains("\"Description\": \" \"", viewModel.RawJson);
 
         viewModel.CopyRawJsonCommand.Execute(null);
 
         Assert.Equal(json, copied);
+        Assert.Contains("\"PolicyFormatVersion\": \"1.2.3\"", copied);
+        Assert.DoesNotContain("\"PolicyVersion\"", copied);
+        Assert.DoesNotContain("\"$schema\"", copied);
+    }
+
+    [Fact]
+    public async Task ReportCopyFailure_PreservesPolicyAndAnnouncesError()
+    {
+        PolicyResponse response = BuildFullResponse();
+        string json = PolicySerializer.Serialize(response.Policy);
+        (string? Message, AutomationLiveSetting LiveSetting)? announcement = null;
+        using var viewModel = new AgentPolicyInspectorViewModel(
+            new StubInspector(new(BrokerPolicyInspectionStatus.Connected, response, json)),
+            (message, liveSetting) => announcement = (message, liveSetting));
+        await viewModel.LoadAsync();
+
+        viewModel.ReportCopyFailure();
+
+        Assert.True(viewModel.HasPolicy);
+        Assert.Equal(json, viewModel.RawJson);
+        Assert.Equal("Could not copy policy JSON", viewModel.Status.Title);
+        Assert.Equal(InfoBarSeverity.Error, viewModel.Status.Severity);
+        Assert.Equal(AutomationLiveSetting.Assertive, announcement?.LiveSetting);
+        Assert.Contains("Could not copy policy JSON", announcement?.Message);
     }
 
     [Fact]
@@ -228,7 +259,8 @@ public class AgentPolicyInspectorViewModelTests
             },
             Policy = new PolicyDocument
             {
-                PolicyVersion = "1.0.0",
+                PolicyFormatVersion =
+                    Devolutions.Now.Policy.Model.PolicyFormatVersion.Parse("1.2.3"),
                 Metadata = new PolicyMetadata
                 {
                     Id = "contoso.full",
@@ -368,7 +400,7 @@ public class AgentPolicyInspectorViewModelTests
                 Server = source.Server,
                 Policy = new PolicyDocument
                 {
-                    PolicyVersion = source.Policy.PolicyVersion,
+                    PolicyFormatVersion = source.Policy.PolicyFormatVersion,
                     Metadata = new PolicyMetadata
                     {
                         Id = policyId,

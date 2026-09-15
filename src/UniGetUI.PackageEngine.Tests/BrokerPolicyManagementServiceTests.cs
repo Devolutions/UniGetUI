@@ -481,6 +481,45 @@ public class BrokerPolicyManagementServiceTests
             <= BrokerPolicyManagementLimits.MaxSanitizedArgumentValueLength);
     }
 
+    [Fact]
+    public async Task ValidateAsync_MarksSanitizedArgumentKeyCollisionsAsTruncated()
+    {
+        using JsonDocument firstValue = JsonDocument.Parse("\"first\"");
+        using JsonDocument secondValue = JsonDocument.Parse("\"second\"");
+        var validation = new PolicyValidationResult
+        {
+            IsValid = false,
+            Findings =
+            [
+                new PolicyFinding
+                {
+                    FindingVersion = "1.0",
+                    Severity = PolicyFindingSeverity.Error,
+                    Code = PolicyFindingCode.InvalidFieldValue,
+                    Message = "invalid",
+                    Arguments = new Dictionary<string, JsonElement>
+                    {
+                        ["ab"] = firstValue.RootElement.Clone(),
+                        ["a\u0007b"] = secondValue.RootElement.Clone(),
+                    },
+                },
+            ],
+        };
+        var service = CreateService(new FakeTransport(new BrokerTransportResponse
+        {
+            StatusCode = 200,
+            Body = BrokerSerializer.Serialize(BuildValidationResponse(validation)),
+        }));
+
+        BrokerPolicyValidationOutcome outcome =
+            await service.ValidateAsync(EmptyDraft(), CancellationToken.None);
+
+        BrokerPolicySanitizedFinding finding = Assert.Single(outcome.Diagnostics!.Findings);
+        Assert.True(finding.ArgumentsTruncated);
+        Assert.Single(finding.Arguments);
+        Assert.Equal("\"first\"", finding.Arguments["ab"]);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("{")]

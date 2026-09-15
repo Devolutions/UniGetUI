@@ -312,8 +312,8 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
                 entry.Key,
                 BrokerPolicyManagementLimits.MaxSanitizedArgumentValueLength);
             (string value, bool valueTruncated) = SerializeSanitizedArgumentValue(entry.Value);
-            sanitized[key] = value;
-            truncated |= keyTruncated || valueTruncated;
+            bool added = sanitized.TryAdd(key, value);
+            truncated |= keyTruncated || valueTruncated || !added;
         }
 
         return (sanitized, truncated);

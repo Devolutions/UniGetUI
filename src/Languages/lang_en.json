@@ -1322,7 +1322,7 @@
   "Authored organization or person responsible for the policy.": "Authored organization or person responsible for the policy.",
   "Software-managed policy document format. It is read-only here and is not the Agent-managed policy revision.": "Software-managed policy document format. It is read-only here and is not the Agent-managed policy revision.",
   "Optional authored description. Clear the checkbox to omit this field from the policy.": "Optional authored description. Clear the checkbox to omit this field from the policy.",
-  "Optional authored HTTPS page where users can learn about this policy.": "Optional authored HTTPS page where users can learn about this policy.",
+  "Optional authored HTTP or HTTPS page where users can learn about this policy.": "Optional authored HTTP or HTTPS page where users can learn about this policy.",
   "Optional ISO 8601 date and time with an explicit offset. Before this instant, the policy is not yet valid.": "Optional ISO 8601 date and time with an explicit offset. Before this instant, the policy is not yet valid.",
   "Optional ISO 8601 date and time with an explicit offset. It must be later than Valid from; after it, the policy is expired.": "Optional ISO 8601 date and time with an explicit offset. It must be later than Valid from; after it, the policy is expired.",
   "Decision used when no enabled rule matches. Deny is the safer fail-closed choice; Allow permits unmatched requests.": "Decision used when no enabled rule matches. Deny is the safer fail-closed choice; Allow permits unmatched requests.",

@@ -11,7 +11,7 @@ public static class PolicyEditorHelp
     public static string Publisher => T("Authored organization or person responsible for the policy.");
     public static string PolicyFormatVersion => T("Software-managed policy document format. It is read-only here and is not the Agent-managed policy revision.");
     public static string Description => T("Optional authored description. Clear the checkbox to omit this field from the policy.");
-    public static string SupportUrl => T("Optional authored HTTPS page where users can learn about this policy.");
+    public static string SupportUrl => T("Optional authored HTTP or HTTPS page where users can learn about this policy.");
     public static string ValidFrom => T("Optional ISO 8601 date and time with an explicit offset. Before this instant, the policy is not yet valid.");
     public static string ValidUntil => T("Optional ISO 8601 date and time with an explicit offset. It must be later than Valid from; after it, the policy is expired.");
     public static string DefaultDecision => T("Decision used when no enabled rule matches. Deny is the safer fail-closed choice; Allow permits unmatched requests.");

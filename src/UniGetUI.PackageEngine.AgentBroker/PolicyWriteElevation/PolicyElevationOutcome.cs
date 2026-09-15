@@ -64,10 +64,22 @@ public enum PolicyElevationOutcome
 /// <summary>What the caller asks the elevated helper to persist.</summary>
 public sealed record PolicyElevationWriteRequest
 {
-    public PolicyElevationWriteRequest(JsonElement draft)
+    public PolicyElevationWriteRequest(
+        JsonElement draft,
+        string expectedStoreToken,
+        string validationReceipt)
     {
         // Clone so the request stays valid after the caller disposes the owning JsonDocument.
         Draft = draft.Clone();
+        ExpectedStoreToken = expectedStoreToken;
+        ValidationReceipt = validationReceipt;
+        PolicyElevationFrame.ValidateRequest(new PolicyElevationRequestMessage
+        {
+            RequestId = new string('0', PolicyElevationProtocol.RequestIdCharacters),
+            Draft = Draft,
+            ExpectedStoreToken = ExpectedStoreToken,
+            ValidationReceipt = ValidationReceipt,
+        });
     }
 
     /// <summary>The policy draft, exactly as the caller composed it.</summary>
@@ -78,9 +90,9 @@ public sealed record PolicyElevationWriteRequest
     public PolicyElevationConflictHandling ConflictHandling { get; init; } =
         PolicyElevationConflictHandling.Reject;
 
-    public string ExpectedStoreToken { get; init; } = string.Empty;
+    public string ExpectedStoreToken { get; }
 
-    public string ValidationReceipt { get; init; } = string.Empty;
+    public string ValidationReceipt { get; }
 
     public bool WarningsAcknowledged { get; init; }
 }

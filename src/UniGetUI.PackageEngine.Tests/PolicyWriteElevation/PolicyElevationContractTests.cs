@@ -85,12 +85,10 @@ public class PolicyElevationContractTests
         PolicyElevationOperation operation = PolicyElevationOperation.Update,
         string token = "store-token",
         string receipt = "validation-receipt")
-        => new(JsonDocument.Parse(DraftJson).RootElement)
+        => new(JsonDocument.Parse(DraftJson).RootElement, token, receipt)
         {
             Operation = operation,
             ConflictHandling = PolicyElevationConflictHandling.Reject,
-            ExpectedStoreToken = token,
-            ValidationReceipt = receipt,
             WarningsAcknowledged = true,
         };
 
@@ -103,6 +101,20 @@ public class PolicyElevationContractTests
             PolicyElevationPipeServer.Create,
             FastTimeouts,
             () => FakeHelperLocator.PackagedHostPath);
+
+    [Theory]
+    [InlineData("", "receipt")]
+    [InlineData("token", "")]
+    [InlineData("token with spaces", "receipt")]
+    public void WriteRequest_RequiresValidCredentialsBeforeElevation(
+        string token,
+        string receipt)
+    {
+        Assert.Throws<PolicyElevationFrameException>(() => new PolicyElevationWriteRequest(
+            JsonDocument.Parse(DraftJson).RootElement,
+            token,
+            receipt));
+    }
 
     /// <summary>A helper that answers every request with one fixed response message.</summary>
     private static FakeHelperLauncher Answering(

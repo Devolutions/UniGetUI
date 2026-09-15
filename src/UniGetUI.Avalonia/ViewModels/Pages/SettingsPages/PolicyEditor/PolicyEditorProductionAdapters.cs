@@ -114,12 +114,13 @@ public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
 
     public async Task<PolicyWriteOutcome> WriteAsync(PolicyEditorWriteRequest request, CancellationToken cancellationToken)
     {
-        var elevationRequest = new PolicyElevationWriteRequest(request.Draft)
+        var elevationRequest = new PolicyElevationWriteRequest(
+            request.Draft,
+            request.ExpectedStoreToken,
+            request.ValidationReceipt)
         {
             Operation = MapOperation(request.Operation),
             ConflictHandling = MapConflictHandling(request.ConflictHandling),
-            ExpectedStoreToken = request.ExpectedStoreToken,
-            ValidationReceipt = request.ValidationReceipt,
             WarningsAcknowledged = request.WarningsAcknowledged,
         };
 

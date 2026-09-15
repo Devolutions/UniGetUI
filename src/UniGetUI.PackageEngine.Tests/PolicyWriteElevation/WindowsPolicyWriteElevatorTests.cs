@@ -22,12 +22,12 @@ public class WindowsPolicyWriteElevatorTests
     private static readonly TimeSpan TestCloseGuardBound = TimeSpan.FromSeconds(2);
 
     private static PolicyElevationWriteRequest BuildRequest() => new(
-        JsonDocument.Parse(DraftJson).RootElement)
+        JsonDocument.Parse(DraftJson).RootElement,
+        "store-token",
+        "validation-receipt")
     {
         Operation = PolicyElevationOperation.ReplaceIdentity,
         ConflictHandling = PolicyElevationConflictHandling.ConfirmOverwrite,
-        ExpectedStoreToken = "store-token",
-        ValidationReceipt = "validation-receipt",
         WarningsAcknowledged = true,
     };
 
@@ -129,11 +129,9 @@ public class WindowsPolicyWriteElevatorTests
             + 1;
         PolicyElevationWriteRequest overLimit = new(
             JsonDocument.Parse(
-                $$"""{"padding":"{{new string('a', paddingLength)}}"}""").RootElement)
-        {
-            ExpectedStoreToken = "token",
-            ValidationReceipt = "receipt",
-        };
+                $$"""{"padding":"{{new string('a', paddingLength)}}"}""").RootElement,
+            "token",
+            "receipt");
         FakeHelperLauncher launcher = FakeHelperLauncher.Running((_, _) => Task.CompletedTask);
 
         PolicyElevationResult result = await Build(launcher)

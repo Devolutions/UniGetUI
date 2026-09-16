@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.ManagerHelpers;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -225,6 +226,55 @@ public sealed class CargoOperationHelperTests
             {
                 Settings.Set(Settings.K.UseAgentBroker, originalSetting);
             }
+        });
+    }
+
+    [Fact]
+    public void ACustomInstallPathKeepsTheUntouchedBinstallCommandLine()
+    {
+        WithBinstallAvailable(manager =>
+        {
+            var options = new InstallOptions
+            {
+                CustomInstallLocation = Path.Join("D:", "tools", "bin"),
+            };
+
+            var parameters = manager.OperationHelper.GetParameters(
+                BinstallPackage(manager),
+                options,
+                OperationType.Update
+            );
+
+            Assert.Equal(
+                [
+                    "binstall",
+                    "cargo-binstall",
+                    "--no-confirm",
+                    "--install-path",
+                    CoreTools.EscapeCommandLineArgument(Path.Join("D:", "tools", "bin")),
+                ],
+                parameters
+            );
+        });
+    }
+
+    [Fact]
+    public void ACustomInstallPathIsNeverRelocatedByTheRetry()
+    {
+        WithBinstallAvailable(manager =>
+        {
+            var package = BinstallPackage(manager);
+            var options = new InstallOptions
+            {
+                CustomInstallLocation = Path.Join("D:", "tools", "bin"),
+            };
+            manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+            Assert.Equal(
+                OperationVeredict.Failure,
+                manager.OperationHelper.GetResult(package, OperationType.Update, [], 101)
+            );
+            Assert.False(package.OverridenOptions.Cargo_DoNotUseBinstall);
         });
     }
 

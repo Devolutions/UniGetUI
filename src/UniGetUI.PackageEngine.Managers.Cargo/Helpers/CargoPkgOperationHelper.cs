@@ -38,8 +38,13 @@ internal sealed class CargoPkgOperationHelper(Cargo cargo) : BasePkgOperationHel
             ? ["--version", CoreTools.EscapeCommandLineArgument(requestedVersion)]
             : [];
 
+        package.OverridenOptions.Cargo_CustomInstallPathRequested =
+            options.CustomInstallLocation.Length is not 0;
+
         bool hasBinstall = UsesBinstall(package);
-        bool targetsBinstallItself = TargetsBinstallItself(package);
+        bool targetsBinstallItself =
+            TargetsBinstallItself(package)
+            && !package.OverridenOptions.Cargo_CustomInstallPathRequested;
 
         List<string> parameters;
         switch (operation)
@@ -117,6 +122,7 @@ internal sealed class CargoPkgOperationHelper(Cargo cargo) : BasePkgOperationHel
         if (
             operation is OperationType.Install or OperationType.Update
             && TargetsBinstallItself(package)
+            && !package.OverridenOptions.Cargo_CustomInstallPathRequested
             && UsesBinstall(package)
             && !OperationIsBrokered(package)
         )

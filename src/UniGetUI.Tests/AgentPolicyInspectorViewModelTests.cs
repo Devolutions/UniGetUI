@@ -55,6 +55,10 @@ public class AgentPolicyInspectorViewModelTests
             viewModel.MetadataRows,
             row => row.Label == "Policy format version" && row.Value == "1.2.3");
         Assert.Contains(viewModel.EnforcementRows, row => row.Label == "Default decision" && row.Value == "Deny");
+        Assert.All(viewModel.MetadataRows, row => Assert.False(string.IsNullOrWhiteSpace(row.HelpText)));
+        Assert.All(viewModel.EnforcementRows, row => Assert.False(string.IsNullOrWhiteSpace(row.HelpText)));
+        Assert.All(viewModel.Rules[0].MatchRows, row => Assert.False(string.IsNullOrWhiteSpace(row.HelpText)));
+        Assert.All(viewModel.Rules[0].ConstraintRows, row => Assert.False(string.IsNullOrWhiteSpace(row.HelpText)));
         Assert.Equal(AutomationLiveSetting.Polite, announcement?.LiveSetting);
         Assert.Contains("Policy management is active", announcement?.Message);
     }

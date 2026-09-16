@@ -78,7 +78,8 @@
             <CheckBox Classes="enum-option"
                       Content="{Binding Display}"
                       IsChecked="{Binding IsSelected}"
-                      controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.MatchOption}"/>
+                      controls:PolicyHelp.Text="{Binding HelpText}"
+                      automation:AutomationProperties.Name="{Binding Display}"/>
         </DataTemplate>
         <DataTemplate DataType="pvm:PolicyValidationFinding" x:DataType="pvm:PolicyValidationFinding">
             <Border Classes="settings-card"
@@ -168,7 +169,8 @@
                                 </StackPanel>
                             </Grid>
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Publisher}"/>
+                                <TextBlock Classes="field-label" Text="{t:Translate Publisher}"
+                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Publisher}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
                                     <TextBox Text="{Binding Document.Publisher}"
                                              Tag="/Metadata/Publisher"
@@ -179,7 +181,8 @@
                                 </StackPanel>
                             </Grid>
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Policy format version}"/>
+                                <TextBlock Classes="field-label" Text="{t:Translate Policy format version}"
+                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PolicyFormatVersion}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
                                     <TextBlock Text="{Binding Document.PolicyFormatVersion}"
                                                Tag="/PolicyFormatVersion"
@@ -208,7 +211,8 @@
                                 </StackPanel>
                             </Grid>
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Support URL}"/>
+                                <TextBlock Classes="field-label" Text="{t:Translate Support URL}"
+                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.SupportUrl}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
                                     <TextBox Text="{Binding Document.SupportUrl}"
                                              Tag="/Metadata/SupportUrl"
@@ -219,7 +223,8 @@
                                 </StackPanel>
                             </Grid>
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Valid from (optional ISO-8601)}"/>
+                                <TextBlock Classes="field-label" Text="{t:Translate Valid from (optional ISO-8601)}"
+                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidFrom}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
                                     <TextBox Text="{Binding Document.ValidFromText}"
                                              Tag="/Metadata/ValidFrom"
@@ -236,7 +241,8 @@
                                 </StackPanel>
                             </Grid>
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Valid until (optional ISO-8601)}"/>
+                                <TextBlock Classes="field-label" Text="{t:Translate Valid until (optional ISO-8601)}"
+                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidUntil}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
                                     <TextBox Text="{Binding Document.ValidUntilText}"
                                              Tag="/Metadata/ValidUntil"
@@ -260,7 +266,8 @@
                     <Border Classes="settings-card policy-section">
                         <StackPanel Spacing="8">
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Default decision}"/>
+                                <TextBlock Classes="field-label" Text="{t:Translate Default decision}"
+                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.DefaultDecision}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
                                     <ComboBox ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.DecisionDisplayItems}"
                                               SelectedIndex="{Binding Document.DecisionIndex}"
@@ -272,7 +279,8 @@
                                 </StackPanel>
                             </Grid>
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Rule precedence}"/>
+                                <TextBlock Classes="field-label" Text="{t:Translate Rule precedence}"
+                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RulePrecedence}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
                                     <TextBlock Text="{Binding Document.RulePrecedenceDisplay}"
                                                Tag="/Enforcement/RulePrecedence"
@@ -396,7 +404,8 @@
                                             </StackPanel>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Priority}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Priority}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Priority}"/>
                                             <StackPanel Grid.Column="1" Spacing="2">
                                                 <TextBox Text="{Binding PriorityText}"
                                                          Tag="/Rules/*/Priority"
@@ -412,7 +421,8 @@
                                             </StackPanel>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Decision}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Decision}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Decision}"/>
                                             <StackPanel Grid.Column="1" Spacing="2">
                                                 <ComboBox ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.DecisionDisplayItems}"
                                                           SelectedIndex="{Binding DecisionIndex}"
@@ -499,21 +509,24 @@
                                         </ItemsControl>
 
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Sources (one per line; optional)}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Sources (one per line; optional)}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Sources}"/>
                                             <TextBox Classes="list-field" Grid.Column="1" Text="{Binding Sources}"
                                                      Tag="/Rules/*/Match/Sources"
                                                      controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Sources}"
                                                      automation:AutomationProperties.Name="{t:Translate Sources}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Package identifiers (one per line; optional)}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Package identifiers (one per line; optional)}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PackageIdentifiers}"/>
                                             <TextBox Classes="list-field" Grid.Column="1" Text="{Binding PackageIdentifiers}"
                                                      Tag="/Rules/*/Match/PackageIdentifiers"
                                                      controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PackageIdentifiers}"
                                                      automation:AutomationProperties.Name="{t:Translate Package identifiers}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Package names (one per line; optional)}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Package names (one per line; optional)}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PackageNames}"/>
                                             <StackPanel Grid.Column="1" Spacing="2">
                                                 <TextBox Classes="list-field"
                                                          Classes.finding-error="{Binding HasPackageNamesErrors}"
@@ -525,7 +538,8 @@
                                             </StackPanel>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Versions (one per line; optional)}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Versions (one per line; optional)}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Versions}"/>
                                             <StackPanel Grid.Column="1" Spacing="2">
                                                 <TextBox Classes="list-field"
                                                          Classes.finding-error="{Binding HasVersionsErrors}"
@@ -542,7 +556,8 @@
                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.VersionRange}"/>
                                         <StackPanel IsVisible="{Binding HasVersionRange}" Spacing="8" Margin="24,0,0,0">
                                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                                <TextBlock Classes="field-label" Text="{t:Translate Minimum version}"/>
+                                                <TextBlock Classes="field-label" Text="{t:Translate Minimum version}"
+                                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.MinimumVersion}"/>
                                                 <StackPanel Grid.Column="1" Spacing="2">
                                                     <TextBox Text="{Binding MinVersion}"
                                                              Tag="/Rules/*/Match/VersionRange/MinVersion"
@@ -553,7 +568,8 @@
                                                 </StackPanel>
                                             </Grid>
                                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                                <TextBlock Classes="field-label" Text="{t:Translate Maximum version}"/>
+                                                <TextBlock Classes="field-label" Text="{t:Translate Maximum version}"
+                                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.MaximumVersion}"/>
                                                 <StackPanel Grid.Column="1" Spacing="2">
                                                     <TextBox Text="{Binding MaxVersion}"
                                                              Tag="/Rules/*/Match/VersionRange/MaxVersion"
@@ -662,7 +678,8 @@
                                                       Tag="/Rules/*/Constraints/AllowCustomInstallLocation"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowCustomLocation}"/>
                                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                                <TextBlock Classes="field-label" Text="{t:Translate Allowed install location patterns}"/>
+                                                <TextBlock Classes="field-label" Text="{t:Translate Allowed install location patterns}"
+                                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.LocationPatterns}"/>
                                                 <TextBox Classes="list-field" Grid.Column="1" Text="{Binding AllowedInstallLocationPatterns}"
                                                          Tag="/Rules/*/Constraints/AllowedInstallLocationPatterns"
                                                          controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.LocationPatterns}"
@@ -672,21 +689,24 @@
                                                       Tag="/Rules/*/Constraints/AllowCustomParameters"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowCustomParameters}"/>
                                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                                <TextBlock Classes="field-label" Text="{t:Translate Allowed custom parameters}"/>
+                                                <TextBlock Classes="field-label" Text="{t:Translate Allowed custom parameters}"
+                                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowedParameters}"/>
                                                 <TextBox Classes="list-field" Grid.Column="1" Text="{Binding AllowedCustomParameters}"
                                                          Tag="/Rules/*/Constraints/AllowedCustomParameters"
                                                          controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowedParameters}"
                                                          automation:AutomationProperties.Name="{t:Translate Allowed custom parameters}"/>
                                             </Grid>
                                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                                <TextBlock Classes="field-label" Text="{t:Translate Allowed custom parameter patterns}"/>
+                                                <TextBlock Classes="field-label" Text="{t:Translate Allowed custom parameter patterns}"
+                                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowedParameterPatterns}"/>
                                                 <TextBox Classes="list-field" Grid.Column="1" Text="{Binding AllowedCustomParameterPatterns}"
                                                          Tag="/Rules/*/Constraints/AllowedCustomParameterPatterns"
                                                          controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowedParameterPatterns}"
                                                          automation:AutomationProperties.Name="{t:Translate Allowed custom parameter patterns}"/>
                                             </Grid>
                                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                                <TextBlock Classes="field-label" Text="{t:Translate Denied custom parameters}"/>
+                                                <TextBlock Classes="field-label" Text="{t:Translate Denied custom parameters}"
+                                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.DeniedParameters}"/>
                                                 <TextBox Classes="list-field" Grid.Column="1" Text="{Binding DeniedCustomParameters}"
                                                          Tag="/Rules/*/Constraints/DeniedCustomParameters"
                                                          controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.DeniedParameters}"
@@ -714,7 +734,7 @@
 
                 <!-- ── Raw JSON mode ── -->
                 <StackPanel IsVisible="{Binding Session.IsRawMode}" Spacing="8">
-                    <TextBlock Text="{t:Translate Edit the canonical policy document as JSON. Switching back to the structured editor requires the document to parse and pass validation.}"
+                    <TextBlock Text="{t:Translate Edit the complete policy as JSON. Valid structure is required to return to guided fields; policy errors remain available there for correction.}"
                                TextWrapping="Wrap" Opacity="0.75"/>
                     <Border Classes="settings-card policy-section" Padding="0">
                         <controls:PolicyJsonEditor x:Name="RawEditor" MinHeight="360" MaxHeight="640"

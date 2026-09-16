@@ -15,13 +15,19 @@ public sealed partial class PolicyEditorEnumOption : ObservableObject
     private readonly Action<bool> _onToggled;
 
     public string Display { get; }
+    public string HelpText { get; }
 
     [ObservableProperty]
     private bool _isSelected;
 
-    public PolicyEditorEnumOption(string display, bool isSelected, Action<bool> onToggled)
+    public PolicyEditorEnumOption(
+        string display,
+        string helpText,
+        bool isSelected,
+        Action<bool> onToggled)
     {
         Display = display;
+        HelpText = helpText;
         _isSelected = isSelected;
         _onToggled = onToggled;
     }
@@ -38,6 +44,7 @@ internal static class PolicyEditorEnumOptionFactory
         return Enum.GetValues<TEnum>()
             .Select(value => new PolicyEditorEnumOption(
                 CoreTools.Translate(value.ToString()),
+                PolicyEditorHelp.EnumOption(value),
                 backing.Contains(value),
                 selected =>
                 {

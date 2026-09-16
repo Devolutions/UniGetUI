@@ -27,10 +27,13 @@
     <UserControl.DataTemplates>
         <DataTemplate DataType="vm:PolicyDetailRow" x:DataType="vm:PolicyDetailRow">
             <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                <TextBlock Classes="field-label" Text="{Binding Label}"/>
+                <TextBlock Classes="field-label"
+                           Text="{Binding Label}"
+                           controls:PolicyHelp.Text="{Binding HelpText}"/>
                 <SelectableTextBlock Grid.Column="1"
                                      Text="{Binding Value}"
                                      TextWrapping="Wrap"
+                                     controls:PolicyHelp.Text="{Binding HelpText}"
                                      automation:AutomationProperties.Name="{Binding AutomationName}"/>
             </Grid>
         </DataTemplate>
@@ -65,14 +68,16 @@
                 <Border Classes="settings-card policy-section">
                     <StackPanel>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                            <TextBlock Classes="field-label" Text="{t:Translate State}"/>
+                            <TextBlock Classes="field-label" Text="{t:Translate State}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ManagementState}"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding ManagementStateText}"
                                        automation:AutomationProperties.Name="{t:Translate Policy management state}"
                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ManagementState}"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                            <TextBlock Classes="field-label" Text="{t:Translate Configured path}"/>
+                            <TextBlock Classes="field-label" Text="{t:Translate Configured path}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ConfiguredPath}"/>
                             <SelectableTextBlock Grid.Column="1"
                                                  Text="{Binding ManagementConfiguredPath}"
                                                  TextWrapping="Wrap"
@@ -80,21 +85,24 @@
                                                  controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ConfiguredPath}"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                            <TextBlock Classes="field-label" Text="{t:Translate Path source}"/>
+                            <TextBlock Classes="field-label" Text="{t:Translate Path source}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PathSource}"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding ManagementSourceText}"
                                        automation:AutomationProperties.Name="{t:Translate Policy path source}"
                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PathSource}"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                            <TextBlock Classes="field-label" Text="{t:Translate Agent write capability}"/>
+                            <TextBlock Classes="field-label" Text="{t:Translate Agent write capability}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AgentWriteCapability}"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding AgentWriteCapabilityText}"
                                        automation:AutomationProperties.Name="{t:Translate Agent write capability}"
                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AgentWriteCapability}"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                            <TextBlock Classes="field-label" Text="{t:Translate Policy changes from this app}"/>
+                            <TextBlock Classes="field-label" Text="{t:Translate Policy changes from this app}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteAvailability}"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding PolicyChangesFromThisAppText}"
                                        automation:AutomationProperties.Name="{t:Translate Policy changes from this app}"
@@ -104,7 +112,8 @@
                               ColumnSpacing="12"
                               Margin="0,3"
                               IsVisible="{Binding HasPolicyChangesReason}">
-                            <TextBlock Classes="field-label" Text="{t:Translate Reason}"/>
+                            <TextBlock Classes="field-label" Text="{t:Translate Reason}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteReason}"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding PolicyChangesReasonText}"
                                        TextWrapping="Wrap"
@@ -112,7 +121,8 @@
                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteReason}"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                            <TextBlock Classes="field-label" Text="{t:Translate Elevation required}"/>
+                            <TextBlock Classes="field-label" Text="{t:Translate Elevation required}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ElevationRequired}"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding ManagementElevationRequiredText}"
                                        automation:AutomationProperties.Name="{t:Translate Policy write elevation requirement}"
@@ -212,24 +222,34 @@
                                 </Expander.Header>
                                 <StackPanel Margin="12,8,4,12">
                                     <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                                        <TextBlock Classes="field-label" Text="{t:Translate Rule ID}"/>
-                                        <SelectableTextBlock Grid.Column="1" Text="{Binding Id}" TextWrapping="Wrap"/>
+                                        <TextBlock Classes="field-label" Text="{t:Translate Rule ID}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleId}"/>
+                                        <SelectableTextBlock Grid.Column="1" Text="{Binding Id}" TextWrapping="Wrap"
+                                                             controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleId}"/>
                                     </Grid>
                                     <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                                        <TextBlock Classes="field-label" Text="{t:Translate Enabled}"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Enabled}"/>
+                                        <TextBlock Classes="field-label" Text="{t:Translate Enabled}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleEnabled}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Enabled}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleEnabled}"/>
                                     </Grid>
                                     <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                                        <TextBlock Classes="field-label" Text="{t:Translate Priority}"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Priority}"/>
+                                        <TextBlock Classes="field-label" Text="{t:Translate Priority}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Priority}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Priority}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Priority}"/>
                                     </Grid>
                                     <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                                        <TextBlock Classes="field-label" Text="{t:Translate Decision}"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Decision}"/>
+                                        <TextBlock Classes="field-label" Text="{t:Translate Decision}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Decision}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Decision}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Decision}"/>
                                     </Grid>
                                     <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                                        <TextBlock Classes="field-label" Text="{t:Translate Reason}"/>
-                                        <SelectableTextBlock Grid.Column="1" Text="{Binding Reason}" TextWrapping="Wrap"/>
+                                        <TextBlock Classes="field-label" Text="{t:Translate Reason}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleReason}"/>
+                                        <SelectableTextBlock Grid.Column="1" Text="{Binding Reason}" TextWrapping="Wrap"
+                                                             controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleReason}"/>
                                     </Grid>
 
                                     <TextBlock Text="{t:Translate Match criteria}"

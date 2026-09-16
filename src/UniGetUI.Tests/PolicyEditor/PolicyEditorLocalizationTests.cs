@@ -105,6 +105,8 @@ public partial class PolicyEditorLocalizationTests
             .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
             .Where(property => property.PropertyType == typeof(string))
             .Select(property => (string)property.GetValue(null)!));
+        keys.UnionWith(AllEnumOptionHelpTexts(includeManagers: false));
+        keys.Add("{0} applies this rule to requests handled by that package manager. Leave all managers clear to include every package manager.");
 
         string[] missing = keys
             .Where(key => !language.TryGetValue(key, out string? value)
@@ -192,20 +194,157 @@ public partial class PolicyEditorLocalizationTests
     [Fact]
     public void PolicyHelp_CoversAuthoredFixedAgentManagedAndDangerousSemantics()
     {
-        Assert.Contains("authored identifier", PolicyEditorHelp.PolicyId, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("software-managed", PolicyEditorHelp.PolicyFormatVersion, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Agent-managed", PolicyEditorHelp.ConfiguredPath, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("fail-closed", PolicyEditorHelp.DefaultDecision, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("permanent identifier", PolicyEditorHelp.PolicyId, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("read-only", PolicyEditorHelp.PolicyFormatVersion, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Agent configuration", PolicyEditorHelp.ConfiguredPath, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("least-privilege", PolicyEditorHelp.DefaultDecision, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("integrity", PolicyEditorHelp.AllowSkipHashCheck, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("dangerous", PolicyEditorHelp.AllowPrePostCommands, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("dependencies", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("agreements", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("reboot", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("high-risk", PolicyEditorHelp.AllowPrePostCommands, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("dependency", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("agreement", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("restart", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("warnings require acknowledgement", PolicyEditorHelp.Save, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not a display name", PolicyEditorHelp.PolicyId, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("contoso-policy", PolicyEditorHelp.PolicyId, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not a display name", PolicyEditorHelp.RuleId, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("allow-winget-updates", PolicyEditorHelp.RuleId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PolicyHelp_CoversEveryDeclaredHelpPropertyAndAvoidsInternalJargon()
+    {
+        string root = FindRepositoryRoot();
+        string surfaces = string.Join(
+            Environment.NewLine,
+            File.ReadAllText(Path.Combine(
+                root,
+                "src",
+                "UniGetUI.Avalonia",
+                "Views",
+                "Pages",
+                "SettingsPages",
+                "PolicyEditor",
+                "PolicyEditorDialog.axaml")),
+            File.ReadAllText(Path.Combine(
+                root,
+                "src",
+                "UniGetUI.Avalonia",
+                "Views",
+                "Pages",
+                "SettingsPages",
+                "AgentPolicyInspector.axaml")),
+            File.ReadAllText(Path.Combine(
+                root,
+                "src",
+                "UniGetUI.Avalonia",
+                "ViewModels",
+                "Pages",
+                "SettingsPages",
+                "AgentPolicyInspectorViewModel.cs")));
+        System.Reflection.PropertyInfo[] properties = typeof(PolicyEditorHelp)
+            .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(property => property.PropertyType == typeof(string))
+            .ToArray();
+
+        Assert.NotEmpty(properties);
+        foreach (System.Reflection.PropertyInfo property in properties)
+        {
+            string help = Assert.IsType<string>(property.GetValue(null));
+            Assert.False(string.IsNullOrWhiteSpace(help), $"{property.Name} has no help text.");
+            Assert.Contains($"PolicyEditorHelp.{property.Name}", surfaces, StringComparison.Ordinal);
+        }
+
+        string[] forbidden =
+        [
+            "DTO",
+            "enum",
+            "nullable",
+            "array",
+            "API endpoint",
+            "wire format",
+            "validator code",
+            "serialization",
+            "schema",
+            "pointer",
+            "SPKI",
+            "implementation class",
+        ];
+        foreach (string help in properties.Select(property => (string)property.GetValue(null)!))
+        {
+            foreach (string term in forbidden)
+            {
+                Assert.DoesNotContain(term, help, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+    }
+
+    [Fact]
+    public void EveryPolicyFieldLabelAndFocusableEditorFieldHasSharedHelp()
+    {
+        string root = FindRepositoryRoot();
+        XDocument[] views =
+        [
+            XDocument.Load(Path.Combine(
+                root,
+                "src",
+                "UniGetUI.Avalonia",
+                "Views",
+                "Pages",
+                "SettingsPages",
+                "PolicyEditor",
+                "PolicyEditorDialog.axaml")),
+            XDocument.Load(Path.Combine(
+                root,
+                "src",
+                "UniGetUI.Avalonia",
+                "Views",
+                "Pages",
+                "SettingsPages",
+                "AgentPolicyInspector.axaml")),
+        ];
+        XNamespace controls = "using:UniGetUI.Avalonia.Views.Controls";
+
+        XElement[] labels = views
+            .SelectMany(view => view.Descendants())
+            .Where(element =>
+                ((string?)element.Attribute("Classes"))?
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Contains("field-label", StringComparer.Ordinal) is true)
+            .ToArray();
+        Assert.NotEmpty(labels);
+        Assert.All(
+            labels,
+            label => Assert.False(string.IsNullOrWhiteSpace(
+                (string?)label.Attribute(controls + "PolicyHelp.Text"))));
+
+        XElement[] taggedEditorFields = views[0]
+            .Descendants()
+            .Where(element => element.Attribute("Tag") is not null)
+            .ToArray();
+        Assert.NotEmpty(taggedEditorFields);
+        Assert.All(
+            taggedEditorFields,
+            field => Assert.False(string.IsNullOrWhiteSpace(
+                (string?)field.Attribute(controls + "PolicyHelp.Text"))));
+    }
+
+    [Fact]
+    public void EnumOptionHelp_ExplainsAdministratorOutcomeAndUnselectedBehavior()
+    {
+        IReadOnlyList<string> helpTexts = AllEnumOptionHelpTexts().ToArray();
+
+        Assert.NotEmpty(helpTexts);
+        Assert.All(helpTexts, help => Assert.False(string.IsNullOrWhiteSpace(help)));
+        Assert.Contains(helpTexts, help =>
+            help.Contains("without administrator privileges", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(helpTexts, help =>
+            help.Contains("requires administrator privileges", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(helpTexts, help =>
+            help.Contains("32-bit", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(helpTexts, help =>
+            help.Contains("current user", StringComparison.OrdinalIgnoreCase));
+        Assert.All(helpTexts, help =>
+            Assert.Contains("Leave", help, StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -224,10 +363,12 @@ public partial class PolicyEditorLocalizationTests
         ];
         foreach (string help in helpTexts)
         {
-            Assert.Contains("Any matches either value", help, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("Yes requires true", help, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("No requires false", help, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Any accepts either", help, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Yes requires", help, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("No requires", help, StringComparison.OrdinalIgnoreCase);
         }
+        Assert.Contains("user interaction", PolicyEditorHelp.InteractiveMatch, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unattended", PolicyEditorHelp.InteractiveMatch, StringComparison.OrdinalIgnoreCase);
 
         string root = FindRepositoryRoot();
         string view = File.ReadAllText(Path.Combine(
@@ -511,6 +652,22 @@ public partial class PolicyEditorLocalizationTests
         }
 
         throw new DirectoryNotFoundException("Could not locate the repository root.");
+    }
+
+    private static IEnumerable<string> AllEnumOptionHelpTexts(bool includeManagers = true)
+    {
+        static IEnumerable<string> Build<TEnum>() where TEnum : struct, Enum =>
+            PolicyEditorEnumOptionFactory.Build(new List<TEnum>(), () => { })
+                .Select(option => option.HelpText);
+
+        IEnumerable<string> help = Build<Devolutions.Now.Policy.Model.Operation>();
+        if (includeManagers)
+            help = help.Concat(Build<Devolutions.Now.Policy.Model.ManagerName>());
+
+        return help
+            .Concat(Build<Devolutions.Now.Policy.Model.Scope>())
+            .Concat(Build<Devolutions.Now.Policy.Model.Architecture>())
+            .Concat(Build<Devolutions.Now.Policy.Model.Elevation>());
     }
 
     [GeneratedRegex("CoreTools\\.Translate\\(\\s*\"(?<key>(?:\\\\.|[^\"\\\\])*)")]

@@ -21,7 +21,7 @@ using PolicyScope = Devolutions.Now.Policy.Model.Scope;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
-public sealed record PolicyDetailRow(string Label, string Value)
+public sealed record PolicyDetailRow(string Label, string Value, string HelpText = "")
 {
     public string AutomationName => $"{Label}: {Value}";
 }
@@ -493,7 +493,57 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     }
 
     private static PolicyDetailRow Row(string label, string value) =>
-        new(CoreTools.Translate(label), value);
+        new(CoreTools.Translate(label), value, HelpForRow(label));
+
+    private static string HelpForRow(string label) => label switch
+    {
+        "Server version" => PolicyEditorHelp.ServerVersion,
+        "Policy ID" => PolicyEditorHelp.PolicyId,
+        "Publisher" => PolicyEditorHelp.Publisher,
+        "Revision" => PolicyEditorHelp.Revision,
+        "Policy format version" => PolicyEditorHelp.PolicyFormatVersion,
+        "Published" => PolicyEditorHelp.Published,
+        "Valid from" => PolicyEditorHelp.ValidFrom,
+        "Valid until" => PolicyEditorHelp.ValidUntil,
+        "Description" => PolicyEditorHelp.Description,
+        "Support URL" => PolicyEditorHelp.SupportUrl,
+        "Default decision" => PolicyEditorHelp.DefaultDecision,
+        "Rule precedence" => PolicyEditorHelp.RulePrecedence,
+        "Audit mode" => PolicyEditorHelp.AuditMode,
+        "Operations" => PolicyEditorHelp.Operations,
+        "Package managers" => PolicyEditorHelp.Managers,
+        "Sources" => PolicyEditorHelp.Sources,
+        "Package identifiers" => PolicyEditorHelp.PackageIdentifiers,
+        "Package names" => PolicyEditorHelp.PackageNames,
+        "Versions" => PolicyEditorHelp.Versions,
+        "Version range" => PolicyEditorHelp.VersionRange,
+        "Scopes" => PolicyEditorHelp.Scopes,
+        "Architectures" => PolicyEditorHelp.Architectures,
+        "Elevation" => PolicyEditorHelp.Elevation,
+        "Interactive" => PolicyEditorHelp.InteractiveMatch,
+        "Skip hash check" => PolicyEditorHelp.SkipHashMatch,
+        "Prerelease" => PolicyEditorHelp.PrereleaseMatch,
+        "Has custom parameters" => PolicyEditorHelp.CustomParametersMatch,
+        "Has custom install location" => PolicyEditorHelp.CustomLocationMatch,
+        "Has pre/post commands" => PolicyEditorHelp.PrePostCommandsMatch,
+        "Has kill-before-operation" => PolicyEditorHelp.KillBeforeMatch,
+        "Has uninstall previous" => PolicyEditorHelp.UninstallPreviousMatch,
+        "Constraints" => PolicyEditorHelp.Constraints,
+        "Allow interactive" => PolicyEditorHelp.AllowInteractive,
+        "Allow skip hash check" => PolicyEditorHelp.AllowSkipHashCheck,
+        "Allow prerelease" => PolicyEditorHelp.AllowPrerelease,
+        "Allow custom install location" => PolicyEditorHelp.AllowCustomLocation,
+        "Allowed install location patterns" => PolicyEditorHelp.LocationPatterns,
+        "Allow custom parameters" => PolicyEditorHelp.AllowCustomParameters,
+        "Allowed custom parameters" => PolicyEditorHelp.AllowedParameters,
+        "Allowed custom parameter patterns" => PolicyEditorHelp.AllowedParameterPatterns,
+        "Denied custom parameters" => PolicyEditorHelp.DeniedParameters,
+        "Allow pre/post commands" => PolicyEditorHelp.AllowPrePostCommands,
+        "Allow kill-before-operation" => PolicyEditorHelp.AllowKillBefore,
+        "Allow uninstall previous" => PolicyEditorHelp.AllowUninstallPrevious,
+        "Allow upgrade" => PolicyEditorHelp.AllowUpgrade,
+        _ => "",
+    };
 
     private static string FormatDate(DateTimeOffset? value) =>
         value?.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)

@@ -283,22 +283,48 @@
                                     <ItemsControl ItemsSource="{Binding Document.RulePrecedenceFindings}" ItemTemplate="{StaticResource InlineFindingTemplate}"/>
                                 </StackPanel>
                             </Grid>
-                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Audit mode}"/>
-                                <StackPanel Grid.Column="1" Spacing="2">
-                                    <ComboBox ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.NullableBooleanDisplayItems}"
-                                              SelectedIndex="{Binding Document.AuditModeIndex}"
-                                              Tag="/Enforcement/AuditMode"
-                                              Classes.finding-error="{Binding Document.HasAuditModeErrors}"
-                                              controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AuditMode}"
-                                              automation:AutomationProperties.Name="{t:Translate Audit mode}"/>
-                                    <ItemsControl ItemsSource="{Binding Document.AuditModeFindings}" ItemTemplate="{StaticResource InlineFindingTemplate}"/>
-                                </StackPanel>
-                            </Grid>
                             <TextBlock Text="{t:Translate Rules are always evaluated by priority; ties are broken toward Deny. This precedence is fixed and cannot be changed.}"
                                        TextWrapping="Wrap" Opacity="0.65" FontSize="12"/>
                         </StackPanel>
                     </Border>
+
+                    <Expander IsExpanded="False"
+                              Margin="40,8,40,0"
+                              automation:AutomationProperties.Name="{t:Translate Advanced policy settings}">
+                        <Expander.Header>
+                            <TextBlock Text="{t:Translate Advanced}"
+                                       FontWeight="SemiBold"/>
+                        </Expander.Header>
+                        <Border Classes="settings-card policy-section" Margin="0,8,0,0">
+                            <StackPanel Spacing="8">
+                                <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                    <TextBlock Classes="field-label"
+                                               Text="{t:Translate Audit mode}"
+                                               controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AuditMode}"/>
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <ComboBox ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.AuditModeDisplayItems}"
+                                                  SelectedIndex="{Binding Document.AuditModeIndex}"
+                                                  Tag="/Enforcement/AuditMode"
+                                                  Classes.finding-error="{Binding Document.HasAuditModeErrors}"
+                                                  controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AuditMode}"
+                                                  automation:AutomationProperties.Name="{t:Translate Audit mode}"/>
+                                        <TextBlock Text="{x:Static pvm:PolicyEditorHelp.AuditMode}"
+                                                   TextWrapping="Wrap"
+                                                   Opacity="0.7"/>
+                                        <Border Classes="finding-warning"
+                                                IsVisible="{Binding Document.IsAuditModeEnabled}"
+                                                Padding="8"
+                                                controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AuditModeWarning}"
+                                                automation:AutomationProperties.Name="{t:Translate Audit mode warning}">
+                                            <TextBlock Text="{x:Static pvm:PolicyEditorHelp.AuditModeWarning}"
+                                                       TextWrapping="Wrap"/>
+                                        </Border>
+                                        <ItemsControl ItemsSource="{Binding Document.AuditModeFindings}" ItemTemplate="{StaticResource InlineFindingTemplate}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Expander>
 
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Classes="section-heading" Text="{t:Translate Rules}"

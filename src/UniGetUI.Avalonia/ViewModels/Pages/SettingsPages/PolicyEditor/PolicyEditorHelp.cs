@@ -16,7 +16,8 @@ public static class PolicyEditorHelp
     public static string ValidUntil => T("Optional ISO 8601 date and time with an explicit offset. It must be later than Valid from; after it, the policy is expired.");
     public static string DefaultDecision => T("Decision used when no enabled rule matches. Deny is the safer fail-closed choice; Allow permits unmatched requests.");
     public static string RulePrecedence => T("Fixed evaluation order: lower priority values run first, and Deny wins ties. This software-managed value cannot be changed.");
-    public static string AuditMode => T("When enabled, decisions are logged but not enforced. Use only for evaluation because denied operations may still proceed.");
+    public static string AuditMode => T("When Yes, the broker still evaluates and logs policy decisions but permits requests the policy would deny. Use Yes only temporarily to evaluate rollout; set No to enforce policy.");
+    public static string AuditModeWarning => T("Audit mode is on. Policy decisions are evaluated and logged, but requests the policy would deny are still permitted. Set Audit mode to No to enforce policy.");
     public static string AddRule => T("Add a new authored rule after the existing rules.");
     public static string RuleEnabled => T("Disabled rules remain in the policy but do not participate in decisions.");
     public static string DuplicateRule => T("Copy this rule to create a similar rule. Give the copy a unique rule ID before validation.");

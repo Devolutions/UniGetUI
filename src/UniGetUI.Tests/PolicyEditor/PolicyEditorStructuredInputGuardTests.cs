@@ -280,7 +280,59 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.Equal("canonical description", document.Description);
         Assert.Equal("https://example.test/support", document.SupportUrl);
         Assert.Equal(0, document.DecisionIndex);
-        Assert.Equal(2, document.AuditModeIndex);
+        Assert.Equal(1, document.AuditModeIndex);
+        Assert.True(document.IsAuditModeEnabled);
+    }
+
+    [Fact]
+    public async Task AuditMode_NullDisplaysNoAndRoundTripsWithoutAddingAValue()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("policy-id", "Contoso"));
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient(),
+            rawSyntaxDebounce: TimeSpan.Zero);
+        var document = new PolicyEditorDocumentUi(viewModel);
+        string original = PolicyEditorRawSyntax.ToCanonicalRaw(session.Draft);
+
+        Assert.Null(session.Draft.Enforcement.AuditMode);
+        Assert.Equal(0, document.AuditModeIndex);
+        Assert.False(document.IsAuditModeEnabled);
+        Assert.DoesNotContain("\"AuditMode\"", original);
+
+        viewModel.SwitchToRawCommand.Execute(null);
+        await viewModel.SwitchToStructuredCommand.ExecuteAsync(null);
+
+        Assert.Null(session.Draft.Enforcement.AuditMode);
+        Assert.Equal(original, PolicyEditorRawSyntax.ToCanonicalRaw(session.Draft));
+    }
+
+    [Fact]
+    public void AuditMode_ExplicitChoicesSerializeFalseAndTrue()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("policy-id", "Contoso"));
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        document.AuditModeIndex = 0;
+        Assert.False(session.Draft.Enforcement.AuditMode);
+        Assert.Contains("\"AuditMode\": false", PolicyEditorRawSyntax.ToCanonicalRaw(session.Draft));
+        Assert.False(document.IsAuditModeEnabled);
+
+        document.AuditModeIndex = 1;
+        Assert.True(session.Draft.Enforcement.AuditMode);
+        Assert.Contains("\"AuditMode\": true", PolicyEditorRawSyntax.ToCanonicalRaw(session.Draft));
+        Assert.True(document.IsAuditModeEnabled);
     }
 
     [Fact]

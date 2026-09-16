@@ -86,6 +86,12 @@ internal static class PolicyEditorEnumDisplay
         CoreTools.Translate("Yes"),
     ];
 
+    public static readonly IReadOnlyList<string> AuditModeDisplayItems =
+    [
+        CoreTools.Translate("No"),
+        CoreTools.Translate("Yes"),
+    ];
+
     public static int IndexOfDecision(Decision value) => Array.IndexOf(Decisions, value);
 
     public static int IndexOfTriState(TriState value) => Array.IndexOf(TriStates, value);
@@ -282,13 +288,18 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
 
     public int AuditModeIndex
     {
-        get => PolicyEditorEnumDisplay.IndexOfNullableBoolean(Draft.Enforcement.AuditMode);
+        get => Draft.Enforcement.AuditMode is true ? 1 : 0;
         set
         {
-            Draft.Enforcement.AuditMode = PolicyEditorEnumDisplay.NullableBooleanFromIndex(value);
-            MarkDirty();
+            if (value is 0 or 1)
+            {
+                Draft.Enforcement.AuditMode = value == 1;
+                OnPropertyChanged(nameof(IsAuditModeEnabled));
+                MarkDirty();
+            }
         }
     }
+    public bool IsAuditModeEnabled => Draft.Enforcement.AuditMode is true;
     public IReadOnlyList<PolicyValidationFinding> AuditModeFindings =>
         FindingsFor("/Enforcement/AuditMode");
     public bool HasAuditModeErrors => HasErrors(AuditModeFindings);
@@ -313,6 +324,7 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         OnPropertyChanged(nameof(ValidUntilError));
         OnPropertyChanged(nameof(DecisionIndex));
         OnPropertyChanged(nameof(AuditModeIndex));
+        OnPropertyChanged(nameof(IsAuditModeEnabled));
         OnPropertyChanged(nameof(RulePrecedenceDisplay));
         OnPropertyChanged(nameof(IsIdentityLocked));
         RefreshFindings();

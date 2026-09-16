@@ -293,6 +293,49 @@ public partial class PolicyEditorLocalizationTests
     }
 
     [Fact]
+    public void AuditMode_IsCollapsedAdvancedTwoStateSettingWithAccessibleWarning()
+    {
+        string root = FindRepositoryRoot();
+        XDocument dialog = XDocument.Load(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorDialog.axaml"));
+        XNamespace controls = "using:UniGetUI.Avalonia.Views.Controls";
+        XNamespace automation =
+            "clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls";
+        XElement auditSelector = Assert.Single(dialog.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Enforcement/AuditMode");
+        XElement advanced = Assert.Single(auditSelector.Ancestors(),
+            element => element.Name.LocalName == "Expander");
+
+        Assert.Equal("False", (string?)advanced.Attribute("IsExpanded"));
+        Assert.Equal(
+            "{x:Static pvm:PolicyEditorEnumDisplay.AuditModeDisplayItems}",
+            (string?)auditSelector.Attribute("ItemsSource"));
+        Assert.Equal(
+            "{x:Static pvm:PolicyEditorHelp.AuditMode}",
+            (string?)auditSelector.Attribute(controls + "PolicyHelp.Text"));
+        XElement warning = Assert.Single(dialog.Descendants(),
+            element => (string?)element.Attribute("IsVisible")
+                == "{Binding Document.IsAuditModeEnabled}");
+        Assert.Equal(
+            "{x:Static pvm:PolicyEditorHelp.AuditModeWarning}",
+            (string?)warning.Attribute(controls + "PolicyHelp.Text"));
+        Assert.Equal(
+            "{t:Translate Audit mode warning}",
+            (string?)warning.Attribute(automation + "AutomationProperties.Name"));
+        Assert.Equal(["No", "Yes"], PolicyEditorEnumDisplay.AuditModeDisplayItems);
+        Assert.Contains("permits requests", PolicyEditorHelp.AuditMode, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("set No to enforce", PolicyEditorHelp.AuditMode, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("still permitted", PolicyEditorHelp.AuditModeWarning, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void PolicyViews_UseSharedTooltipAndAccessibleHelpMetadata()
     {
         string root = FindRepositoryRoot();

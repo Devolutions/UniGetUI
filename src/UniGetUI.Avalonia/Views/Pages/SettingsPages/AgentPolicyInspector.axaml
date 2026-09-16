@@ -39,7 +39,7 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Vertical" Margin="0,8,0,24">
             <TextBlock x:Name="PolicyManagementHeading"
-                       Text="{t:Translate Policy management}"
+                       Text="{t:Translate Package broker policy}"
                        FontSize="16"
                        FontWeight="Bold"
                        Margin="44,8,4,8"
@@ -53,10 +53,10 @@
                         automation:AutomationProperties.Name="{t:Translate Refresh policy information}"/>
             </Grid>
 
-            <ProgressBar IsIndeterminate="{Binding IsManagementLoading}"
-                         IsVisible="{Binding IsManagementLoading}"
+            <ProgressBar IsIndeterminate="{Binding IsPageRefreshActive}"
+                         IsVisible="{Binding IsPageRefreshActive}"
                          Margin="40,0,40,8"
-                         automation:AutomationProperties.Name="{t:Translate Loading policy management state}"/>
+                         automation:AutomationProperties.Name="{t:Translate Loading policy information}"/>
 
             <controls:InfoBar DataContext="{Binding ManagementStatus}"
                               Margin="40,0"/>
@@ -69,8 +69,7 @@
                             <TextBlock Grid.Column="1"
                                        Text="{Binding ManagementStateText}"
                                        automation:AutomationProperties.Name="{t:Translate Policy management state}"
-                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ManagementState}"
-                                       automation:AutomationProperties.LiveSetting="Polite"/>
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ManagementState}"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
                             <TextBlock Classes="field-label" Text="{t:Translate Configured path}"/>
@@ -78,32 +77,28 @@
                                                  Text="{Binding ManagementConfiguredPath}"
                                                  TextWrapping="Wrap"
                                                  automation:AutomationProperties.Name="{t:Translate Configured policy path}"
-                                                 controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ConfiguredPath}"
-                                                 automation:AutomationProperties.LiveSetting="Polite"/>
+                                                 controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ConfiguredPath}"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
                             <TextBlock Classes="field-label" Text="{t:Translate Path source}"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding ManagementSourceText}"
                                        automation:AutomationProperties.Name="{t:Translate Policy path source}"
-                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PathSource}"
-                                       automation:AutomationProperties.LiveSetting="Polite"/>
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PathSource}"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
                             <TextBlock Classes="field-label" Text="{t:Translate Agent write capability}"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding AgentWriteCapabilityText}"
                                        automation:AutomationProperties.Name="{t:Translate Agent write capability}"
-                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AgentWriteCapability}"
-                                       automation:AutomationProperties.LiveSetting="Polite"/>
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AgentWriteCapability}"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
                             <TextBlock Classes="field-label" Text="{t:Translate Policy changes from this app}"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding PolicyChangesFromThisAppText}"
                                        automation:AutomationProperties.Name="{t:Translate Policy changes from this app}"
-                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteAvailability}"
-                                       automation:AutomationProperties.LiveSetting="Polite"/>
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteAvailability}"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
                             <TextBlock Classes="field-label" Text="{t:Translate Reason}"/>
@@ -111,16 +106,14 @@
                                        Text="{Binding PolicyChangesReasonText}"
                                        TextWrapping="Wrap"
                                        automation:AutomationProperties.Name="{t:Translate Policy change availability reason}"
-                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteReason}"
-                                       automation:AutomationProperties.LiveSetting="Polite"/>
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteReason}"/>
                         </Grid>
                         <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
                             <TextBlock Classes="field-label" Text="{t:Translate Elevation required}"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding ManagementElevationRequiredText}"
                                        automation:AutomationProperties.Name="{t:Translate Policy write elevation requirement}"
-                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ElevationRequired}"
-                                       automation:AutomationProperties.LiveSetting="Polite"/>
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ElevationRequired}"/>
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -163,21 +156,12 @@
                            Margin="44,24,4,8"
                            automation:AutomationProperties.HeadingLevel="3"/>
                 <Border Classes="settings-card policy-section" IsVisible="{Binding HasManagementDiagnostics}">
-                    <ItemsControl ItemsSource="{Binding ManagementDiagnosticsRows}"
-                                  automation:AutomationProperties.LiveSetting="Polite"/>
+                    <ItemsControl ItemsSource="{Binding ManagementDiagnosticsRows}"/>
                 </Border>
             </StackPanel>
 
-            <StackPanel x:Name="ActivePolicyInspectionSection"
-                        IsVisible="{Binding IsActivePolicyInspectionVisible}">
-                <ProgressBar IsIndeterminate="{Binding IsLoading}"
-                             IsVisible="{Binding IsLoading}"
-                             Margin="40,24,40,8"
-                             automation:AutomationProperties.Name="{t:Translate Loading active package broker policy}"/>
-
-                <controls:InfoBar DataContext="{Binding Status}"
-                                  Margin="40,0"/>
-
+            <StackPanel x:Name="ActivePolicyDetailsSection"
+                        IsVisible="{Binding HasActivePolicyDetails}">
                 <StackPanel IsVisible="{Binding HasPolicy}">
                 <TextBlock Text="{t:Translate Policy metadata}"
                            FontSize="14"

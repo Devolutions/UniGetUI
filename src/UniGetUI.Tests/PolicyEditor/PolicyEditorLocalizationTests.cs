@@ -265,7 +265,7 @@ public partial class PolicyEditorLocalizationTests
     }
 
     [Fact]
-    public void ActivePolicyInspectionSection_OwnsItsRefreshStatusAndDetails()
+    public void UnifiedPolicyPage_HasOneStatusRefreshAndActiveDetailsSection()
     {
         string root = FindRepositoryRoot();
         XDocument view = XDocument.Load(Path.Combine(
@@ -278,14 +278,14 @@ public partial class PolicyEditorLocalizationTests
             "AgentPolicyInspector.axaml"));
         XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
         XElement section = Assert.Single(view.Descendants(),
-            element => (string?)element.Attribute(x + "Name") == "ActivePolicyInspectionSection");
+            element => (string?)element.Attribute(x + "Name") == "ActivePolicyDetailsSection");
 
         Assert.Equal(
-            "{Binding IsActivePolicyInspectionVisible}",
+            "{Binding HasActivePolicyDetails}",
             (string?)section.Attribute("IsVisible"));
         Assert.DoesNotContain(section.Descendants(),
             element => (string?)element.Attribute("Command") == "{Binding RefreshCommand}");
-        Assert.Contains(section.Descendants(),
+        Assert.DoesNotContain(section.Descendants(),
             element => (string?)element.Attribute("DataContext") == "{Binding Status}");
         Assert.Contains(section.Descendants(),
             element => (string?)element.Attribute("IsVisible") == "{Binding HasPolicy}");
@@ -298,6 +298,9 @@ public partial class PolicyEditorLocalizationTests
         Assert.Null(refresh.Attribute("IsEnabled"));
         Assert.Single(view.Descendants(),
             element => (string?)element.Attribute("Content") == "{t:Translate Refresh}");
+        Assert.Single(view.Descendants(),
+            element => element.Name.LocalName == "InfoBar"
+                && (string?)element.Attribute("DataContext") == "{Binding ManagementStatus}");
     }
 
     [Fact]
@@ -345,15 +348,17 @@ public partial class PolicyEditorLocalizationTests
             "clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls";
         XElement[] statuses = inspector.Descendants()
             .Where(element => element.Name.LocalName == "InfoBar"
-                && ((string?)element.Attribute("DataContext") == "{Binding ManagementStatus}"
-                    || (string?)element.Attribute("DataContext") == "{Binding Status}"))
+                && (string?)element.Attribute("DataContext") == "{Binding ManagementStatus}")
             .ToArray();
 
-        Assert.Equal(2, statuses.Length);
+        Assert.Single(statuses);
         Assert.All(
             statuses,
             status => Assert.Null(
                 status.Attribute(automation + "AutomationProperties.LiveSetting")));
+        Assert.Empty(inspector.Root!
+            .DescendantsAndSelf()
+            .Attributes(automation + "AutomationProperties.LiveSetting"));
     }
 
     private static string FindRepositoryRoot()

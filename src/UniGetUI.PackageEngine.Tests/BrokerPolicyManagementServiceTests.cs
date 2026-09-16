@@ -31,6 +31,7 @@ public class BrokerPolicyManagementServiceTests
         Assert.Equal(PolicyManagementState.Active, result.Snapshot!.State);
         Assert.NotNull(result.Snapshot.Policy);
         Assert.Null(result.Diagnostics);
+        Assert.Equal("2026.8-tests", result.Server!.ServerVersion);
     }
 
     [Fact]
@@ -219,6 +220,44 @@ public class BrokerPolicyManagementServiceTests
         BrokerPolicyManagementResult result = await service.GetManagementAsync(CancellationToken.None);
 
         Assert.Equal(BrokerPolicyManagementStatus.InvalidResponse, result.Status);
+    }
+
+    [Fact]
+    public async Task GetManagementAsync_RejectsActivePolicyWithInvalidMetadata()
+    {
+        PolicyManagementSnapshot snapshot = BuildActiveSnapshot();
+        snapshot.Policy!.Metadata.Id = "invalid id";
+        var service = CreateService(new FakeTransport(new BrokerTransportResponse
+        {
+            StatusCode = 200,
+            Body = BrokerSerializer.Serialize(BuildManagementResponse(snapshot)),
+        }));
+
+        BrokerPolicyManagementResult result =
+            await service.GetManagementAsync(CancellationToken.None);
+
+        Assert.Equal(BrokerPolicyManagementStatus.InvalidResponse, result.Status);
+        Assert.Null(result.Snapshot);
+    }
+
+    [Fact]
+    public async Task GetManagementAsync_RejectsActivePolicyWithTooManyRules()
+    {
+        PolicyManagementSnapshot snapshot = BuildActiveSnapshot();
+        PolicyRule template = Assert.Single(snapshot.Policy!.Rules);
+        snapshot.Policy.Rules =
+            Enumerable.Repeat(template, 1025).ToList();
+        var service = CreateService(new FakeTransport(new BrokerTransportResponse
+        {
+            StatusCode = 200,
+            Body = BrokerSerializer.Serialize(BuildManagementResponse(snapshot)),
+        }));
+
+        BrokerPolicyManagementResult result =
+            await service.GetManagementAsync(CancellationToken.None);
+
+        Assert.Equal(BrokerPolicyManagementStatus.InvalidResponse, result.Status);
+        Assert.Null(result.Snapshot);
     }
 
     [Fact]

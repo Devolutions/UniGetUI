@@ -66,7 +66,8 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
             return new(
                 BrokerPolicyManagementStatus.Retrieved,
                 response.Management,
-                BuildManagementDiagnostics(response.Management));
+                BuildManagementDiagnostics(response.Management),
+                Server: response.Server);
         }
         catch (BrokerClientException ex)
         {
@@ -126,6 +127,8 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
             && Enum.IsDefined(response.Management.State)
             && Enum.IsDefined(response.Management.Source)
             && Enum.IsDefined(response.Management.WriteCapability)
+            && (response.Management.State != PolicyManagementState.Active
+                || BrokerPolicyDocumentValidator.HasRequiredData(response.Management.Policy))
             && (response.Management.ReadOnlyReason is null || Enum.IsDefined(response.Management.ReadOnlyReason.Value));
     }
 

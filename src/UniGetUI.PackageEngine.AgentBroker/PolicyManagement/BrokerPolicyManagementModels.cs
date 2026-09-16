@@ -112,7 +112,8 @@ public sealed record BrokerPolicyManagementResult(
     BrokerPolicyManagementStatus Status,
     PolicyManagementSnapshot? Snapshot = null,
     BrokerPolicyDiagnosticsView? Diagnostics = null,
-    string? ErrorMessage = null);
+    string? ErrorMessage = null,
+    ServerContext? Server = null);
 
 /// <summary>
 /// Result of <see cref="IBrokerPolicyManagementService.ValidateAsync"/>. <see cref="Validation"/> exposes the

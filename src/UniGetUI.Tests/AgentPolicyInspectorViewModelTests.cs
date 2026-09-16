@@ -17,16 +17,17 @@ namespace UniGetUI.Tests;
 public class AgentPolicyInspectorViewModelTests
 {
     [Fact]
-    public async Task LoadAsync_PresentsFullPolicyInDocumentOrder()
+    public async Task LoadPageAsync_PresentsActivePolicyInDocumentOrder()
     {
         PolicyResponse response = BuildFullResponse();
         string json = PolicySerializer.Serialize(response.Policy);
         (string? Message, AutomationLiveSetting LiveSetting)? announcement = null;
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(BrokerPolicyInspectionStatus.Connected, response, json)),
+            new StubManagementService(ActiveManagement(response)),
+            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
             (message, liveSetting) => announcement = (message, liveSetting));
 
-        await viewModel.LoadAsync();
+        await viewModel.LoadPageAsync();
 
         Assert.True(viewModel.HasPolicy);
         Assert.False(viewModel.HasNoRules);
@@ -55,11 +56,11 @@ public class AgentPolicyInspectorViewModelTests
             row => row.Label == "Policy format version" && row.Value == "1.2.3");
         Assert.Contains(viewModel.EnforcementRows, row => row.Label == "Default decision" && row.Value == "Deny");
         Assert.Equal(AutomationLiveSetting.Polite, announcement?.LiveSetting);
-        Assert.Contains("Connected to Devolutions Agent", announcement?.Message);
+        Assert.Contains("Policy management is active", announcement?.Message);
     }
 
     [Fact]
-    public async Task LoadAsync_PreservesWhitespaceOnlyPolicyValues()
+    public async Task LoadPageAsync_PreservesWhitespaceOnlyPolicyValues()
     {
         PolicyResponse response = BuildFullResponse();
         response.Policy.Metadata.Publisher = " ";
@@ -68,14 +69,13 @@ public class AgentPolicyInspectorViewModelTests
         response.Policy.Rules[0].Constraints!.AllowedCustomParameters = [" "];
         string json = PolicySerializer.Serialize(response.Policy);
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(
-                BrokerPolicyInspectionStatus.Connected,
-                response,
-                json)));
+            new StubManagementService(ActiveManagement(response)),
+            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
+            (_, _) => { });
         string? copied = null;
-        viewModel.CopyTextRequested += (_, text) => copied = text;
+        viewModel.CopyTextRequested += (_, request) => copied = request.Text;
 
-        await viewModel.LoadAsync();
+        await viewModel.LoadPageAsync();
 
         PolicyDetailRow publisher = viewModel.MetadataRows.Single(row => row.Label == "Publisher");
         PolicyDetailRow description = viewModel.MetadataRows.Single(row => row.Label == "Description");
@@ -135,22 +135,55 @@ public class AgentPolicyInspectorViewModelTests
         string json = PolicySerializer.Serialize(response.Policy);
         (string? Message, AutomationLiveSetting LiveSetting)? announcement = null;
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(BrokerPolicyInspectionStatus.Connected, response, json)),
+            new StubManagementService(ActiveManagement(response)),
+            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
             (message, liveSetting) => announcement = (message, liveSetting));
-        await viewModel.LoadAsync();
+        await viewModel.LoadPageAsync();
+        PolicyCopyRequest? copyRequest = null;
+        viewModel.CopyTextRequested += (_, request) => copyRequest = request;
+        viewModel.CopyRawJsonCommand.Execute(null);
 
-        viewModel.ReportCopyFailure();
+        viewModel.ReportCopyFailure(Assert.IsType<PolicyCopyRequest>(copyRequest).PageGeneration);
 
         Assert.True(viewModel.HasPolicy);
         Assert.Equal(json, viewModel.RawJson);
-        Assert.Equal("Could not copy policy JSON", viewModel.Status.Title);
-        Assert.Equal(InfoBarSeverity.Error, viewModel.Status.Severity);
+        Assert.Equal("Could not copy policy JSON", viewModel.ManagementStatus.Title);
+        Assert.Equal(InfoBarSeverity.Error, viewModel.ManagementStatus.Severity);
         Assert.Equal(AutomationLiveSetting.Assertive, announcement?.LiveSetting);
         Assert.Contains("Could not copy policy JSON", announcement?.Message);
     }
 
     [Fact]
-    public async Task LoadAsync_PresentsEmptyOptionalPolicy()
+    public async Task ReportCopyFailure_IgnoresRequestFromPreviousRefreshGeneration()
+    {
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        var management = new QueuedManagementService(
+        [
+            Task.FromResult(ActiveManagement(BuildFullResponse())),
+            Task.FromResult(new BrokerPolicyManagementResult(
+                BrokerPolicyManagementStatus.AgentUnavailable)),
+        ]);
+        using var viewModel = new AgentPolicyInspectorViewModel(
+            management,
+            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
+        PolicyCopyRequest? copyRequest = null;
+        viewModel.CopyTextRequested += (_, request) => copyRequest = request;
+
+        await viewModel.LoadPageAsync();
+        viewModel.CopyRawJsonCommand.Execute(null);
+        PolicyCopyRequest staleRequest = Assert.IsType<PolicyCopyRequest>(copyRequest);
+        await viewModel.LoadPageAsync();
+        int announcementCount = announcements.Count;
+
+        viewModel.ReportCopyFailure(staleRequest.PageGeneration);
+
+        Assert.Equal("Devolutions Agent is unavailable", viewModel.ManagementStatus.Title);
+        Assert.Equal(announcementCount, announcements.Count);
+    }
+
+    [Fact]
+    public async Task LoadPageAsync_PresentsEmptyOptionalPolicy()
     {
         var response = new PolicyResponse
         {
@@ -171,60 +204,16 @@ public class AgentPolicyInspectorViewModelTests
             },
         };
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(
-                BrokerPolicyInspectionStatus.Connected,
-                response,
-                PolicySerializer.Serialize(response.Policy))));
+            new StubManagementService(ActiveManagement(response)),
+            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
+            (_, _) => { });
 
-        await viewModel.LoadAsync();
+        await viewModel.LoadPageAsync();
 
         Assert.True(viewModel.HasPolicy);
         Assert.True(viewModel.HasNoRules);
         Assert.Empty(viewModel.Rules);
         Assert.Contains(viewModel.MetadataRows, row => row.Label == "Valid until" && row.Value == "Not set");
-    }
-
-    [Theory]
-    [InlineData(
-        BrokerPolicyInspectionStatus.AgentUnavailable,
-        "Devolutions Agent is unavailable",
-        AutomationLiveSetting.Assertive)]
-    [InlineData(
-        BrokerPolicyInspectionStatus.Unsupported,
-        "Policy inspection is unsupported",
-        AutomationLiveSetting.Polite)]
-    [InlineData(
-        BrokerPolicyInspectionStatus.AccessDenied,
-        "Access to the active policy was denied",
-        AutomationLiveSetting.Assertive)]
-    [InlineData(
-        BrokerPolicyInspectionStatus.PolicyUnavailable,
-        "The active policy is unavailable",
-        AutomationLiveSetting.Assertive)]
-    [InlineData(
-        BrokerPolicyInspectionStatus.InvalidResponse,
-        "The policy response is invalid",
-        AutomationLiveSetting.Assertive)]
-    [InlineData(
-        BrokerPolicyInspectionStatus.UnsupportedPlatform,
-        "Policy inspection is available on Windows only",
-        AutomationLiveSetting.Polite)]
-    public async Task LoadAsync_PresentsFailureState(
-        BrokerPolicyInspectionStatus status,
-        string expectedTitle,
-        AutomationLiveSetting expectedLiveSetting)
-    {
-        (string? Message, AutomationLiveSetting LiveSetting)? announcement = null;
-        using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(status)),
-            (message, liveSetting) => announcement = (message, liveSetting));
-
-        await viewModel.LoadAsync();
-
-        Assert.False(viewModel.HasPolicy);
-        Assert.Equal(expectedTitle, viewModel.Status.Title);
-        Assert.Equal(expectedLiveSetting, announcement?.LiveSetting);
-        Assert.Contains(expectedTitle, announcement?.Message);
     }
 
     [Theory]
@@ -251,7 +240,6 @@ public class AgentPolicyInspectorViewModelTests
     {
         (string? Message, AutomationLiveSetting LiveSetting)? announcement = null;
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(BrokerPolicyInspectionStatus.Unsupported)),
             new StubManagementService(new(status)),
             (message, liveSetting) => announcement = (message, liveSetting));
 
@@ -268,309 +256,171 @@ public class AgentPolicyInspectorViewModelTests
         const string expectedMessage =
             "Communication with the package broker could not be completed. Verify that Devolutions Agent is installed and running. If the problem persists, check the Agent logs, then refresh.";
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(BrokerPolicyInspectionStatus.AgentUnavailable)),
-            new StubManagementService(new(BrokerPolicyManagementStatus.AgentUnavailable)));
+            new StubManagementService(new(BrokerPolicyManagementStatus.AgentUnavailable)),
+            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
+            (_, _) => { });
 
-        await viewModel.LoadAsync();
-        await viewModel.LoadManagementAsync();
+        await viewModel.LoadPageAsync();
 
-        Assert.Equal(expectedMessage, viewModel.Status.Message);
         Assert.Equal(expectedMessage, viewModel.ManagementStatus.Message);
         Assert.False(viewModel.HasPolicy);
     }
 
     [Theory]
-    [InlineData(false, BrokerPolicyInspectionStatus.PolicyUnavailable)]
-    [InlineData(true, BrokerPolicyInspectionStatus.PolicyUnavailable)]
-    [InlineData(false, BrokerPolicyInspectionStatus.AgentUnavailable)]
-    [InlineData(true, BrokerPolicyInspectionStatus.AgentUnavailable)]
-    [InlineData(false, BrokerPolicyInspectionStatus.InvalidResponse)]
-    [InlineData(true, BrokerPolicyInspectionStatus.InvalidResponse)]
-    [InlineData(false, BrokerPolicyInspectionStatus.AccessDenied)]
-    [InlineData(true, BrokerPolicyInspectionStatus.AccessDenied)]
-    public async Task MissingManagement_ReplacesInspectionFailureInEitherCompletionOrder(
-        bool managementFirst,
-        BrokerPolicyInspectionStatus failure)
+    [InlineData(PolicyManagementState.Active)]
+    [InlineData(PolicyManagementState.Missing)]
+    [InlineData(PolicyManagementState.Invalid)]
+    public async Task PageRefresh_UsesExactlyOneManagementRequestAndNoInspection(
+        PolicyManagementState state)
     {
-        var inspection = new TaskCompletionSource<BrokerPolicyInspectionResult>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        var management = new TaskCompletionSource<BrokerPolicyManagementResult>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        using AgentPolicyInspectorViewModel viewModel = CreateQueuedViewModel(
-            [inspection.Task], [management.Task]);
-        Task refresh = viewModel.RefreshPageCommand.ExecuteAsync(null);
-
-        if (managementFirst)
-        {
-            management.SetResult(ManagementSnapshot(PolicyManagementState.Missing));
-            inspection.SetResult(new(failure));
-        }
-        else
-        {
-            inspection.SetResult(new(failure));
-            management.SetResult(ManagementSnapshot(PolicyManagementState.Missing));
-        }
-        await refresh;
-
-        AssertMissingPolicy(viewModel);
-        Assert.False(viewModel.IsActivePolicyInspectionVisible);
-        Assert.Equal("No policy file exists", viewModel.ManagementStatus.Title);
-        Assert.False(viewModel.CanCreate);
-        Assert.Equal("Writable", viewModel.AgentWriteCapabilityText);
-        Assert.Equal("Unavailable", viewModel.PolicyChangesFromThisAppText);
-        Assert.Contains("helper is missing", viewModel.PolicyChangesReasonText);
-    }
-
-    [Fact]
-    public async Task PageRefresh_InvokesBothServicesOnceAndRejectsDuplicateWhileBusy()
-    {
-        var inspection1 = new TaskCompletionSource<BrokerPolicyInspectionResult>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        var management1 = new TaskCompletionSource<BrokerPolicyManagementResult>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        var inspection2 = new TaskCompletionSource<BrokerPolicyInspectionResult>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        var management2 = new TaskCompletionSource<BrokerPolicyManagementResult>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        var inspector = new QueuedInspector([inspection1.Task, inspection2.Task]);
-        var management = new QueuedManagementService([management1.Task, management2.Task]);
-        using var viewModel = new AgentPolicyInspectorViewModel(
-            inspector,
+        var management = new QueuedManagementService(
+            [Task.FromResult(ManagementSnapshot(state))]);
+        using AgentPolicyInspectorViewModel viewModel = CreatePageViewModel(
             management,
-            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
-            (_, _) => { });
-
-        Task first = viewModel.RefreshPageCommand.ExecuteAsync(null);
-        Assert.True(viewModel.IsPageRefreshActive);
-        Assert.False(viewModel.RefreshPageCommand.CanExecute(null));
-        viewModel.RefreshPageCommand.Execute(null);
-        Assert.Equal(1, inspector.Invocations);
-        Assert.Equal(1, management.Invocations);
-        management1.SetResult(ManagementSnapshot(PolicyManagementState.Active));
-        inspection1.SetResult(new(BrokerPolicyInspectionStatus.PolicyUnavailable));
-        await first;
-        Assert.False(viewModel.IsPageRefreshActive);
-        Assert.True(viewModel.RefreshPageCommand.CanExecute(null));
-
-        Task second = viewModel.RefreshPageCommand.ExecuteAsync(null);
-        Assert.True(viewModel.IsPageRefreshActive);
-        viewModel.RefreshPageCommand.Execute(null);
-        Assert.Equal(2, inspector.Invocations);
-        Assert.Equal(2, management.Invocations);
-        management2.SetResult(ManagementSnapshot(PolicyManagementState.Missing));
-        inspection2.SetResult(new(BrokerPolicyInspectionStatus.PolicyUnavailable));
-        await second;
-
-        Assert.False(viewModel.IsPageRefreshActive);
-        Assert.False(viewModel.IsActivePolicyInspectionVisible);
-    }
-
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task PageRefresh_PreservesSuccessfulHalfWhenOtherRequestFails(bool managementFails)
-    {
-        PolicyResponse policy = BuildFullResponse();
-        BrokerPolicyInspectionResult connected = new(
-            BrokerPolicyInspectionStatus.Connected,
-            policy,
-            PolicySerializer.Serialize(policy.Policy));
-        BrokerPolicyManagementResult active = ManagementSnapshot(PolicyManagementState.Active);
-        using AgentPolicyInspectorViewModel viewModel = CreateQueuedViewModel(
-            [
-                Task.FromResult(connected),
-                Task.FromResult(managementFails
-                    ? connected
-                    : new BrokerPolicyInspectionResult(BrokerPolicyInspectionStatus.PolicyUnavailable)),
-            ],
-            [
-                Task.FromResult(active),
-                Task.FromResult(managementFails
-                    ? new BrokerPolicyManagementResult(BrokerPolicyManagementStatus.AgentUnavailable)
-                    : active),
-            ],
             PolicyWriteElevationEligibilityStatus.Eligible);
-        await viewModel.LoadAsync();
-        await viewModel.LoadManagementAsync();
 
         await viewModel.RefreshPageCommand.ExecuteAsync(null);
 
-        Assert.True(viewModel.IsActivePolicyInspectionVisible);
-        if (managementFails)
-        {
-            Assert.True(viewModel.HasPolicy);
-            Assert.Equal("Connected to Devolutions Agent", viewModel.Status.Title);
-            Assert.False(viewModel.HasManagementSnapshot);
-            Assert.Equal("Devolutions Agent is unavailable", viewModel.ManagementStatus.Title);
-        }
-        else
-        {
-            Assert.False(viewModel.HasPolicy);
-            Assert.Equal("The active policy is unavailable", viewModel.Status.Title);
-            Assert.True(viewModel.HasManagementSnapshot);
-            Assert.Equal("Policy management is active", viewModel.ManagementStatus.Title);
-        }
+        Assert.Equal(1, management.Invocations);
+        Assert.Equal(state == PolicyManagementState.Active, viewModel.HasActivePolicyDetails);
+        Assert.Equal(state == PolicyManagementState.Active, viewModel.HasPolicy);
+        Assert.Equal(state.ToString(), viewModel.ManagementStateText);
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task PageRefresh_IsUnavailableWhileEitherIndependentPipelineIsBusy(
-        bool inspectionIsBusy)
+    [InlineData(BrokerPolicyManagementStatus.AgentUnavailable, "Devolutions Agent is unavailable")]
+    [InlineData(BrokerPolicyManagementStatus.AccessDenied, "Access to policy management was denied")]
+    [InlineData(BrokerPolicyManagementStatus.Unsupported, "Policy management is unsupported")]
+    [InlineData(BrokerPolicyManagementStatus.InvalidResponse, "The policy management response is invalid")]
+    [InlineData(BrokerPolicyManagementStatus.UnsafePolicyPath, "The configured policy path is unsafe")]
+    [InlineData(BrokerPolicyManagementStatus.PolicyUnavailable, "The policy management state is unavailable")]
+    public async Task PageRefresh_ManagementFailureDoesNotCallInspection(
+        BrokerPolicyManagementStatus status,
+        string expectedTitle)
     {
-        var inspection = new TaskCompletionSource<BrokerPolicyInspectionResult>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        var management = new TaskCompletionSource<BrokerPolicyManagementResult>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        using var viewModel = new AgentPolicyInspectorViewModel(
-            new QueuedInspector([inspection.Task]),
-            new QueuedManagementService([management.Task]),
-            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
-            (_, _) => { });
-        Task active = inspectionIsBusy
-            ? viewModel.LoadAsync()
-            : viewModel.LoadManagementAsync();
+        var management = new QueuedManagementService(
+            [Task.FromResult(new BrokerPolicyManagementResult(status))]);
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using AgentPolicyInspectorViewModel viewModel = CreatePageViewModel(
+            management,
+            PolicyWriteElevationEligibilityStatus.Eligible,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
 
-        Assert.False(viewModel.RefreshPageCommand.CanExecute(null));
-        viewModel.RefreshPageCommand.Execute(null);
-        if (inspectionIsBusy)
-            inspection.SetResult(new(BrokerPolicyInspectionStatus.PolicyUnavailable));
-        else
-            management.SetResult(ManagementSnapshot(PolicyManagementState.Active));
-        await active;
+        await viewModel.RefreshPageCommand.ExecuteAsync(null);
 
-        Assert.True(viewModel.RefreshPageCommand.CanExecute(null));
+        Assert.Equal(1, management.Invocations);
+        Assert.Equal(expectedTitle, viewModel.ManagementStatus.Title);
+        Assert.False(viewModel.HasActivePolicyDetails);
+        Assert.False(viewModel.HasPolicy);
+        Assert.Single(announcements);
     }
 
-    [Theory]
-    [InlineData(BrokerPolicyManagementStatus.AgentUnavailable)]
-    [InlineData(BrokerPolicyManagementStatus.Unsupported)]
-    [InlineData(BrokerPolicyManagementStatus.Retrieved)]
-    public async Task ManagementRefresh_DoesNotKeepMissingStateOrAcceptStaleMissingResults(
-        BrokerPolicyManagementStatus nextStatus)
+    [Fact]
+    public async Task PageRefresh_ActiveSnapshotRendersCanonicalPolicyInDocumentOrder()
+    {
+        BrokerPolicyManagementResult active = ManagementSnapshot(PolicyManagementState.Active);
+        using AgentPolicyInspectorViewModel viewModel = CreatePageViewModel(
+            new QueuedManagementService([Task.FromResult(active)]),
+            PolicyWriteElevationEligibilityStatus.Eligible);
+
+        await viewModel.RefreshPageCommand.ExecuteAsync(null);
+
+        string expected = PolicySerializer.Serialize(active.Snapshot!.Policy!);
+        Assert.Equal(expected, viewModel.RawJson);
+        Assert.Equal(["first-rule", "second-rule"], viewModel.Rules.Select(rule => rule.Id));
+        Assert.Equal("contoso.full", viewModel.MetadataRows.Single(row => row.Label == "Policy ID").Value);
+        Assert.Contains(
+            viewModel.MetadataRows,
+            row => row.Label == "Server version" && row.Value == "2026.9-tests");
+    }
+
+    [Fact]
+    public async Task PageRefresh_IsNonReentrantAndCancelsStaleGeneration()
     {
         var stale = new TaskCompletionSource<BrokerPolicyManagementResult>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         var newest = new TaskCompletionSource<BrokerPolicyManagementResult>(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        using AgentPolicyInspectorViewModel viewModel = CreateQueuedViewModel(
-            [Task.FromResult(new BrokerPolicyInspectionResult(BrokerPolicyInspectionStatus.PolicyUnavailable))],
-            [Task.FromResult(ManagementSnapshot(PolicyManagementState.Missing)), stale.Task, newest.Task]);
-        await viewModel.LoadAsync();
-        await viewModel.LoadManagementAsync();
-        AssertMissingPolicy(viewModel);
-        Assert.False(viewModel.IsActivePolicyInspectionVisible);
-
-        Task oldRefresh = viewModel.LoadManagementAsync();
-        Assert.True(viewModel.IsActivePolicyInspectionVisible);
-        Assert.Equal("The active policy is unavailable", viewModel.Status.Title);
-        Task newRefresh = viewModel.LoadManagementAsync();
-        newest.SetResult(nextStatus == BrokerPolicyManagementStatus.Retrieved
-            ? ManagementSnapshot(PolicyManagementState.Active)
-            : new(nextStatus));
-        await newRefresh;
-        stale.SetResult(ManagementSnapshot(PolicyManagementState.Missing));
-        await oldRefresh;
-
-        Assert.Equal("The active policy is unavailable", viewModel.Status.Title);
-        Assert.Equal(InfoBarSeverity.Error, viewModel.Status.Severity);
-        Assert.True(viewModel.IsActivePolicyInspectionVisible);
-        Assert.False(viewModel.IsManagementLoading);
-        Assert.NotEqual("Missing", viewModel.ManagementStateText);
-    }
-
-    [Fact]
-    public async Task InspectionRefresh_IgnoresStaleFailureAndRestoresNewestResultWhenManagementIsActive()
-    {
-        var stale = new TaskCompletionSource<BrokerPolicyInspectionResult>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        PolicyResponse policy = BuildFullResponse();
-        using AgentPolicyInspectorViewModel viewModel = CreateQueuedViewModel(
-            [
-                stale.Task,
-                Task.FromResult(new BrokerPolicyInspectionResult(
-                    BrokerPolicyInspectionStatus.Connected, policy, PolicySerializer.Serialize(policy.Policy))),
-            ],
-            [
-                Task.FromResult(ManagementSnapshot(PolicyManagementState.Missing)),
-                Task.FromResult(ManagementSnapshot(PolicyManagementState.Active)),
-            ]);
-        Task oldRefresh = viewModel.LoadAsync();
-        await viewModel.LoadManagementAsync();
-        await viewModel.LoadAsync();
-        AssertMissingPolicy(viewModel);
-        await viewModel.LoadManagementAsync();
-        stale.SetResult(new(BrokerPolicyInspectionStatus.PolicyUnavailable));
-        await oldRefresh;
-
-        Assert.True(viewModel.HasPolicy);
-        Assert.Equal("Connected to Devolutions Agent", viewModel.Status.Title);
-        Assert.Equal(InfoBarSeverity.Success, viewModel.Status.Severity);
-        Assert.False(viewModel.IsLoading);
-    }
-
-    [Fact]
-    public async Task MissingManagement_ClearsPreviouslyDisplayedPolicy()
-    {
-        PolicyResponse policy = BuildFullResponse();
-        using AgentPolicyInspectorViewModel viewModel = CreateQueuedViewModel(
-            [Task.FromResult(new BrokerPolicyInspectionResult(
-                BrokerPolicyInspectionStatus.Connected, policy, PolicySerializer.Serialize(policy.Policy)))],
-            [Task.FromResult(ManagementSnapshot(PolicyManagementState.Missing))]);
-        await viewModel.LoadAsync();
-        Assert.True(viewModel.HasPolicy);
-
-        await viewModel.LoadManagementAsync();
-
-        AssertMissingPolicy(viewModel);
-        Assert.False(viewModel.IsActivePolicyInspectionVisible);
-    }
-
-    [Theory]
-    [InlineData(PolicyManagementState.Active)]
-    [InlineData(PolicyManagementState.Invalid)]
-    public async Task ManagementStateTransitions_RestoreInspectionAfterMissing(
-        PolicyManagementState restoredState)
-    {
-        PolicyResponse policy = BuildFullResponse();
-        using AgentPolicyInspectorViewModel viewModel = CreateQueuedViewModel(
-            [Task.FromResult(new BrokerPolicyInspectionResult(
-                BrokerPolicyInspectionStatus.Connected,
-                policy,
-                PolicySerializer.Serialize(policy.Policy)))],
-            [
-                Task.FromResult(ManagementSnapshot(PolicyManagementState.Active)),
-                Task.FromResult(ManagementSnapshot(PolicyManagementState.Missing)),
-                Task.FromResult(ManagementSnapshot(restoredState)),
-            ],
+        var management = new QueuedManagementService([stale.Task, newest.Task]);
+        using AgentPolicyInspectorViewModel viewModel = CreatePageViewModel(
+            management,
             PolicyWriteElevationEligibilityStatus.Eligible);
-        await viewModel.LoadAsync();
-        await viewModel.LoadManagementAsync();
-        Assert.True(viewModel.IsActivePolicyInspectionVisible);
-        Assert.True(viewModel.HasPolicy);
 
-        await viewModel.LoadManagementAsync();
-        Assert.False(viewModel.IsActivePolicyInspectionVisible);
-        Assert.False(viewModel.HasPolicy);
+        Task first = viewModel.LoadPageAsync();
+        Assert.True(viewModel.IsPageRefreshActive);
+        Assert.False(viewModel.RefreshPageCommand.CanExecute(null));
+        viewModel.RefreshPageCommand.Execute(null);
+        Assert.Equal(1, management.Invocations);
+        Task second = viewModel.LoadPageAsync();
+        newest.SetResult(ManagementSnapshot(PolicyManagementState.Active));
+        await second;
+        stale.SetResult(ManagementSnapshot(PolicyManagementState.Missing));
+        await first;
 
-        await viewModel.LoadManagementAsync();
-        Assert.True(viewModel.IsActivePolicyInspectionVisible);
+        Assert.Equal(2, management.Invocations);
+        Assert.Equal("Active", viewModel.ManagementStateText);
+        Assert.True(viewModel.HasActivePolicyDetails);
         Assert.True(viewModel.HasPolicy);
     }
 
-    private static void AssertMissingPolicy(AgentPolicyInspectorViewModel viewModel)
+    [Fact]
+    public async Task PageRefresh_AnnouncesSupportedManagementStateOnce()
     {
-        Assert.Equal("No active package policy", viewModel.Status.Title);
-        Assert.Equal(
-            "Devolutions Agent reports that no policy file exists at the configured path.",
-            viewModel.Status.Message);
-        Assert.Equal(InfoBarSeverity.Informational, viewModel.Status.Severity);
-        Assert.False(viewModel.HasPolicy);
-        Assert.False(viewModel.HasNoRules);
-        Assert.Empty(viewModel.MetadataRows);
-        Assert.Empty(viewModel.EnforcementRows);
-        Assert.Empty(viewModel.Rules);
-        Assert.Empty(viewModel.RawJson);
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using AgentPolicyInspectorViewModel viewModel = CreatePageViewModel(
+            new QueuedManagementService(
+                [Task.FromResult(ManagementSnapshot(PolicyManagementState.Active))]),
+            PolicyWriteElevationEligibilityStatus.Eligible,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
+
+        await viewModel.RefreshPageCommand.ExecuteAsync(null);
+
+        (string? message, AutomationLiveSetting liveSetting) = Assert.Single(announcements);
+        Assert.Contains("Policy management is active", message);
+        Assert.Equal(AutomationLiveSetting.Polite, liveSetting);
+    }
+
+    [Fact]
+    public async Task PageRefresh_DisposeCancelsManagementRequest()
+    {
+        var management = new CancelAwareManagementService();
+        var viewModel = new AgentPolicyInspectorViewModel(
+            management,
+            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
+            (_, _) => { });
+        Task pending = viewModel.LoadPageAsync();
+
+        viewModel.Dispose();
+        await pending;
+
+        Assert.True(management.Canceled);
+    }
+
+    [Fact]
+    public async Task PageRefresh_TransitionsActiveMissingInvalidAndFailure()
+    {
+        var management = new QueuedManagementService(
+        [
+            Task.FromResult(ManagementSnapshot(PolicyManagementState.Active)),
+            Task.FromResult(ManagementSnapshot(PolicyManagementState.Missing)),
+            Task.FromResult(ManagementSnapshot(PolicyManagementState.Invalid)),
+            Task.FromResult(new BrokerPolicyManagementResult(BrokerPolicyManagementStatus.AgentUnavailable)),
+        ]);
+        using AgentPolicyInspectorViewModel viewModel = CreatePageViewModel(
+            management,
+            PolicyWriteElevationEligibilityStatus.Eligible);
+
+        await viewModel.RefreshPageCommand.ExecuteAsync(null);
+        Assert.True(viewModel.HasActivePolicyDetails);
+        await viewModel.RefreshPageCommand.ExecuteAsync(null);
+        Assert.False(viewModel.HasActivePolicyDetails);
+        Assert.Equal("Missing", viewModel.ManagementStateText);
+        await viewModel.RefreshPageCommand.ExecuteAsync(null);
+        Assert.False(viewModel.HasActivePolicyDetails);
+        Assert.Equal("Invalid", viewModel.ManagementStateText);
+        await viewModel.RefreshPageCommand.ExecuteAsync(null);
+        Assert.False(viewModel.HasManagementSnapshot);
+        Assert.Equal("Devolutions Agent is unavailable", viewModel.ManagementStatus.Title);
     }
 
     private static BrokerPolicyManagementResult ManagementSnapshot(PolicyManagementState state) =>
@@ -582,31 +432,68 @@ public class AgentPolicyInspectorViewModelTests
             StoreToken = "token",
             WriteCapability = PolicyWriteCapability.Writable,
             Policy = state == PolicyManagementState.Active ? BuildFullResponse().Policy : null,
+        }, Server: new ServerContext
+        {
+            ServerVersion = "2026.9-tests",
+            Transport = ApiTransport.HttpNamedPipe,
         });
 
+    private static BrokerPolicyManagementResult ActiveManagement(PolicyResponse response) =>
+        new(
+            BrokerPolicyManagementStatus.Retrieved,
+            new PolicyManagementSnapshot
+            {
+                State = PolicyManagementState.Active,
+                ConfiguredPath = @"C:\ProgramData\Devolutions\Agent\policy.json",
+                Source = PolicyConfigurationSource.ConfiguredPath,
+                StoreToken = "token",
+                WriteCapability = PolicyWriteCapability.Writable,
+                Policy = response.Policy,
+            },
+            Server: response.Server);
+
+    private static AgentPolicyInspectorViewModel CreatePageViewModel(
+        IBrokerPolicyManagementService management,
+        PolicyWriteElevationEligibilityStatus eligibilityStatus,
+        Action<string?, AutomationLiveSetting>? announce = null) =>
+        new(
+            management,
+            new StubWriteElevationEligibility(eligibilityStatus),
+            announce ?? ((_, _) => { }));
+
+    private sealed class CancelAwareManagementService : IBrokerPolicyManagementService
+    {
+        public bool Canceled { get; private set; }
+
+        public async Task<BrokerPolicyManagementResult> GetManagementAsync(
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                return new(BrokerPolicyManagementStatus.AgentUnavailable);
+            }
+            catch (OperationCanceledException)
+            {
+                Canceled = true;
+                throw;
+            }
+        }
+
+        public Task<BrokerPolicyValidationOutcome> ValidateAsync(
+            System.Text.Json.JsonElement draft,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
+
     private static AgentPolicyInspectorViewModel CreateQueuedViewModel(
-        Task<BrokerPolicyInspectionResult>[] inspections,
         Task<BrokerPolicyManagementResult>[] management,
         PolicyWriteElevationEligibilityStatus eligibilityStatus =
             PolicyWriteElevationEligibilityStatus.HelperMissing) =>
         new(
-            new QueuedInspector(inspections),
             new QueuedManagementService(management),
             new StubWriteElevationEligibility(eligibilityStatus),
             (_, _) => { });
-
-    private sealed class QueuedInspector(IEnumerable<Task<BrokerPolicyInspectionResult>> results)
-        : IBrokerPolicyInspector
-    {
-        private readonly Queue<Task<BrokerPolicyInspectionResult>> _results = new(results);
-        public int Invocations { get; private set; }
-
-        public Task<BrokerPolicyInspectionResult> InspectAsync(CancellationToken cancellationToken)
-        {
-            Invocations++;
-            return _results.Dequeue();
-        }
-    }
 
     private sealed class QueuedManagementService(IEnumerable<Task<BrokerPolicyManagementResult>> results)
         : IBrokerPolicyManagementService
@@ -640,7 +527,6 @@ public class AgentPolicyInspectorViewModelTests
             WriteCapability = PolicyWriteCapability.Writable,
         };
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(BrokerPolicyInspectionStatus.Unsupported)),
             new StubManagementService(
                 new BrokerPolicyManagementResult(
                     BrokerPolicyManagementStatus.Retrieved,
@@ -675,7 +561,6 @@ public class AgentPolicyInspectorViewModelTests
             Policy = policy,
         };
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(BrokerPolicyInspectionStatus.Unsupported)),
             new StubManagementService(
                 new BrokerPolicyManagementResult(
                     BrokerPolicyManagementStatus.Retrieved,
@@ -753,10 +638,6 @@ public class AgentPolicyInspectorViewModelTests
             ? inspection.Policy
             : null;
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(
-                BrokerPolicyInspectionStatus.Connected,
-                inspection,
-                PolicySerializer.Serialize(inspection.Policy))),
             new StubManagementService(new(
                 BrokerPolicyManagementStatus.Retrieved,
                 new PolicyManagementSnapshot
@@ -772,14 +653,13 @@ public class AgentPolicyInspectorViewModelTests
         viewModel.OpenPolicyEditorRequested += (_, _) => launchCount++;
 
         await viewModel.LoadManagementAsync();
-        await viewModel.LoadAsync();
         viewModel.EditPolicyCommand.Execute(null);
         viewModel.CreatePolicyCommand.Execute(null);
         viewModel.RepairPolicyCommand.Execute(null);
         viewModel.ReplaceIdentityCommand.Execute(null);
 
         Assert.True(viewModel.HasManagementSnapshot);
-        Assert.Equal(state != PolicyManagementState.Missing, viewModel.HasPolicy);
+        Assert.Equal(state == PolicyManagementState.Active, viewModel.HasPolicy);
         Assert.Equal("Writable", viewModel.AgentWriteCapabilityText);
         Assert.Equal("Unavailable", viewModel.PolicyChangesFromThisAppText);
         Assert.Contains(expectedReason, viewModel.PolicyChangesReasonText);
@@ -818,7 +698,6 @@ public class AgentPolicyInspectorViewModelTests
             PolicyWriteElevationEligibilityStatus.HelperMissing);
         PolicyDocument policy = BuildFullResponse().Policy;
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(BrokerPolicyInspectionStatus.Unsupported)),
             new StubManagementService(new(
                 BrokerPolicyManagementStatus.Retrieved,
                 new PolicyManagementSnapshot
@@ -853,7 +732,7 @@ public class AgentPolicyInspectorViewModelTests
 
         Task first = viewModel.LoadManagementAsync();
         await eligibility.FirstStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        await viewModel.RefreshManagementCommand.ExecuteAsync(null);
+        await viewModel.LoadPageAsync();
         await first;
 
         Assert.True(eligibility.FirstCanceled);
@@ -875,7 +754,7 @@ public class AgentPolicyInspectorViewModelTests
 
         Task first = viewModel.LoadManagementAsync();
         await eligibility.FirstStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        await viewModel.RefreshManagementCommand.ExecuteAsync(null);
+        await viewModel.LoadPageAsync();
         Assert.False(viewModel.CanEdit);
 
         eligibility.CompleteFirst();
@@ -891,7 +770,6 @@ public class AgentPolicyInspectorViewModelTests
     public async Task ManagementFailure_ClearsWritePresentationFromPreviousSnapshot()
     {
         using AgentPolicyInspectorViewModel viewModel = CreateQueuedViewModel(
-            [Task.FromResult(new BrokerPolicyInspectionResult(BrokerPolicyInspectionStatus.Unsupported))],
             [
                 Task.FromResult(ManagementSnapshot(PolicyManagementState.Missing)),
                 Task.FromResult(new BrokerPolicyManagementResult(
@@ -902,14 +780,13 @@ public class AgentPolicyInspectorViewModelTests
         await viewModel.LoadManagementAsync();
         Assert.Equal("Writable", viewModel.AgentWriteCapabilityText);
         Assert.Equal("Available", viewModel.PolicyChangesFromThisAppText);
-        Assert.False(viewModel.IsActivePolicyInspectionVisible);
+        Assert.False(viewModel.HasActivePolicyDetails);
 
-        await viewModel.LoadAsync();
         await viewModel.LoadManagementAsync();
 
         Assert.False(viewModel.HasManagementSnapshot);
-        Assert.True(viewModel.IsActivePolicyInspectionVisible);
-        Assert.Equal("Policy inspection is unsupported", viewModel.Status.Title);
+        Assert.False(viewModel.HasActivePolicyDetails);
+        Assert.Equal("Devolutions Agent is unavailable", viewModel.ManagementStatus.Title);
         Assert.Empty(viewModel.AgentWriteCapabilityText);
         Assert.Empty(viewModel.PolicyChangesFromThisAppText);
         Assert.Empty(viewModel.PolicyChangesReasonText);
@@ -920,62 +797,17 @@ public class AgentPolicyInspectorViewModelTests
     }
 
     [Fact]
-    public async Task Refresh_CancelsStaleRequestAndKeepsNewestResult()
-    {
-        var inspector = new RefreshInspector(BuildFullResponse());
-        using var viewModel = new AgentPolicyInspectorViewModel(inspector);
-
-        Task first = viewModel.LoadAsync();
-        Assert.True(viewModel.IsLoading);
-
-        await viewModel.RefreshCommand.ExecuteAsync(null);
-        await first;
-
-        Assert.True(inspector.FirstRequestCanceled);
-        Assert.True(viewModel.HasPolicy);
-        Assert.Equal("contoso.full", viewModel.MetadataRows.Single(row => row.Label == "Policy ID").Value);
-    }
-
-    [Fact]
-    public async Task Refresh_IgnoresStaleResultWhenInspectorDoesNotHonorCancellation()
-    {
-        var inspector = new NonCancelableRefreshInspector(BuildFullResponse());
-        using var viewModel = new AgentPolicyInspectorViewModel(inspector);
-
-        Task first = viewModel.LoadAsync();
-        await inspector.FirstRequestStarted.Task;
-        await viewModel.RefreshCommand.ExecuteAsync(null);
-        inspector.CompleteFirstRequest();
-        await first;
-
-        Assert.Equal(
-            "newest",
-            viewModel.MetadataRows.Single(row => row.Label == "Policy ID").Value);
-    }
-
-    [Fact]
-    public async Task Dispose_CancelsInFlightRequest()
-    {
-        var inspector = new BlockingInspector();
-        var viewModel = new AgentPolicyInspectorViewModel(inspector);
-        Task pending = viewModel.LoadAsync();
-
-        viewModel.Dispose();
-        await pending;
-
-        Assert.True(inspector.Canceled);
-    }
-
-    [Fact]
     public async Task CopyRawJson_RaisesDisplayedCanonicalJson()
     {
         PolicyResponse response = BuildFullResponse();
         string json = PolicySerializer.Serialize(response.Policy);
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(BrokerPolicyInspectionStatus.Connected, response, json)));
+            new StubManagementService(ActiveManagement(response)),
+            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
+            (_, _) => { });
         string? copied = null;
-        viewModel.CopyTextRequested += (_, text) => copied = text;
-        await viewModel.LoadAsync();
+        viewModel.CopyTextRequested += (_, request) => copied = request.Text;
+        await viewModel.LoadPageAsync();
 
         viewModel.CopyRawJsonCommand.Execute(null);
 
@@ -1104,7 +936,6 @@ public class AgentPolicyInspectorViewModelTests
         IPolicyWriteElevationEligibility eligibility,
         PolicyDocument? policy) =>
         new(
-            new StubInspector(new(BrokerPolicyInspectionStatus.Unsupported)),
             new StubManagementService(new(
                 BrokerPolicyManagementStatus.Retrieved,
                 new PolicyManagementSnapshot
@@ -1199,100 +1030,4 @@ public class AgentPolicyInspectorViewModelTests
         public void CompleteFirst() => _firstCompletion.TrySetResult();
     }
 
-    private sealed class RefreshInspector(PolicyResponse response) : IBrokerPolicyInspector
-    {
-        private int _calls;
-        public bool FirstRequestCanceled { get; private set; }
-
-        public async Task<BrokerPolicyInspectionResult> InspectAsync(CancellationToken cancellationToken)
-        {
-            if (Interlocked.Increment(ref _calls) == 1)
-            {
-                try
-                {
-                    await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-                }
-                catch (OperationCanceledException)
-                {
-                    FirstRequestCanceled = true;
-                    throw;
-                }
-            }
-
-            return new(
-                BrokerPolicyInspectionStatus.Connected,
-                response,
-                PolicySerializer.Serialize(response.Policy));
-        }
-    }
-
-    private sealed class BlockingInspector : IBrokerPolicyInspector
-    {
-        public bool Canceled { get; private set; }
-
-        public async Task<BrokerPolicyInspectionResult> InspectAsync(CancellationToken cancellationToken)
-        {
-            try
-            {
-                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                Canceled = true;
-                throw;
-            }
-
-            throw new InvalidOperationException();
-        }
-    }
-
-    private sealed class NonCancelableRefreshInspector(PolicyResponse response) : IBrokerPolicyInspector
-    {
-        private readonly TaskCompletionSource _completeFirstRequest =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int _calls;
-
-        public TaskCompletionSource FirstRequestStarted { get; } =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public void CompleteFirstRequest() => _completeFirstRequest.SetResult();
-
-        public async Task<BrokerPolicyInspectionResult> InspectAsync(CancellationToken cancellationToken)
-        {
-            PolicyResponse requestResponse;
-            if (Interlocked.Increment(ref _calls) == 1)
-            {
-                FirstRequestStarted.SetResult();
-                await _completeFirstRequest.Task;
-                requestResponse = WithPolicyId(response, "stale");
-            }
-            else
-            {
-                requestResponse = WithPolicyId(response, "newest");
-            }
-
-            return new(
-                BrokerPolicyInspectionStatus.Connected,
-                requestResponse,
-                PolicySerializer.Serialize(requestResponse.Policy));
-        }
-
-        private static PolicyResponse WithPolicyId(PolicyResponse source, string policyId) =>
-            new()
-            {
-                Server = source.Server,
-                Policy = new PolicyDocument
-                {
-                    PolicyFormatVersion = source.Policy.PolicyFormatVersion,
-                    Metadata = new PolicyMetadata
-                    {
-                        Id = policyId,
-                        Publisher = source.Policy.Metadata.Publisher,
-                        Revision = source.Policy.Metadata.Revision,
-                        PublishedAt = source.Policy.Metadata.PublishedAt,
-                    },
-                    Enforcement = source.Policy.Enforcement,
-                },
-            };
-    }
 }

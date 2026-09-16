@@ -39,6 +39,8 @@ public sealed record PolicyEditorLaunchRequest(
     PolicyManagementSnapshot Management,
     PolicyEditorDraftDocument? SeedDraft = null);
 
+public sealed record PolicyCopyRequest(string Text, long PageGeneration);
+
 public sealed class PolicyRuleViewModel
 {
     public required string AutomationName { get; init; }
@@ -54,27 +56,19 @@ public sealed class PolicyRuleViewModel
 
 public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
 {
-    private readonly IBrokerPolicyInspector _inspector;
     private readonly Action<string?, AutomationLiveSetting> _announce;
     private readonly IBrokerPolicyManagementService _managementService;
     private readonly IPolicyWriteElevationEligibility _writeElevationEligibility;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
-    private CancellationTokenSource? _refreshCancellation;
     private CancellationTokenSource? _managementRefreshCancellation;
-    private long _refreshGeneration;
+    private CancellationTokenSource? _pageRefreshCancellation;
+    private long _pageRefreshGeneration;
     private long _managementRefreshGeneration;
     private long _appliedManagementGeneration;
     private int _isDisposed;
-    private BrokerPolicyInspectionResult? _inspectionResult;
     private PolicyManagementSnapshot? _managementSnapshot;
 
-    public InfoBarViewModel Status { get; } = new()
-    {
-        IsClosable = false,
-        IsOpen = true,
-    };
-
-    /// <summary>Status for the independent Phase 2 management-state section (Active/Missing/Invalid).</summary>
+    /// <summary>Single page-level status for policy management and rendering.</summary>
     public InfoBarViewModel ManagementStatus { get; } = new()
     {
         IsClosable = false,
@@ -88,9 +82,8 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     /// <summary>Sanitized Invalid-state findings, or empty when the snapshot is not Invalid.</summary>
     public ObservableCollection<PolicyDetailRow> ManagementDiagnosticsRows { get; } = [];
 
-    [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isPageRefreshActive;
-    [ObservableProperty] private bool _isActivePolicyInspectionVisible = true;
+    [ObservableProperty] private bool _hasActivePolicyDetails;
     [ObservableProperty] private bool _hasPolicy;
     [ObservableProperty] private bool _hasNoRules;
     [ObservableProperty] private string _rawJson = "";
@@ -111,39 +104,20 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _canReplaceIdentity;
     [ObservableProperty] private bool _hasManagementDiagnostics;
 
-    public event EventHandler<string>? CopyTextRequested;
+    public event EventHandler<PolicyCopyRequest>? CopyTextRequested;
     public event EventHandler<PolicyEditorLaunchRequest>? OpenPolicyEditorRequested;
 
     public AgentPolicyInspectorViewModel()
         : this(
-            new BrokerPolicyInspector(),
             new BrokerPolicyManagementService(),
             new PackagedPolicyWriteElevationEligibility(),
             AccessibilityAnnouncementService.Announce)
-    {
-    }
-
-    public AgentPolicyInspectorViewModel(IBrokerPolicyInspector inspector)
-        : this(inspector, AccessibilityAnnouncementService.Announce)
-    {
-    }
-
-    internal AgentPolicyInspectorViewModel(
-        IBrokerPolicyInspector inspector,
-        Action<string?, AutomationLiveSetting> announce)
-        : this(
-            inspector,
-            new BrokerPolicyManagementService(),
-            new PackagedPolicyWriteElevationEligibility(),
-            announce)
     {
     }
 
     public AgentPolicyInspectorViewModel(
-        IBrokerPolicyInspector inspector,
         IBrokerPolicyManagementService managementService)
         : this(
-            inspector,
             managementService,
             new PackagedPolicyWriteElevationEligibility(),
             AccessibilityAnnouncementService.Announce)
@@ -151,11 +125,9 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     }
 
     internal AgentPolicyInspectorViewModel(
-        IBrokerPolicyInspector inspector,
         IBrokerPolicyManagementService managementService,
         Action<string?, AutomationLiveSetting> announce)
         : this(
-            inspector,
             managementService,
             new PackagedPolicyWriteElevationEligibility(),
             announce)
@@ -163,129 +135,120 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     }
 
     internal AgentPolicyInspectorViewModel(
-        IBrokerPolicyInspector inspector,
         IBrokerPolicyManagementService managementService,
         IPolicyWriteElevationEligibility writeElevationEligibility,
         Action<string?, AutomationLiveSetting> announce)
     {
-        _inspector = inspector;
         _announce = announce;
         _managementService = managementService;
         _writeElevationEligibility = writeElevationEligibility;
-        SetStatus(
-            CoreTools.Translate("Loading active package broker policy"),
-            CoreTools.Translate("Contacting the Devolutions Agent service."),
-            InfoBarSeverity.Informational);
         SetManagementStatus(
-            CoreTools.Translate("Loading policy management state"),
+            CoreTools.Translate("Loading package broker policy"),
             CoreTools.Translate("Contacting the Devolutions Agent service."),
             InfoBarSeverity.Informational);
     }
 
-    public Task LoadAsync() => RefreshAsync();
-
-    /// <summary>
-    /// Kept independent from <see cref="LoadAsync"/> (and its own <see cref="BrokerPolicyManagementService"/>
-    /// dependency default) so Phase 1's inspector behavior and tests - which construct this view model with
-    /// only a stub <see cref="IBrokerPolicyInspector"/> - are unaffected by the Phase 2 management surface.
-    /// </summary>
-    public Task LoadManagementAsync() => RefreshManagementAsync();
+    /// <summary>Loads the authoritative management state without consulting any other endpoint.</summary>
+    public Task LoadManagementAsync() => LoadPageAsync();
 
     [RelayCommand(CanExecute = nameof(CanRefreshPage))]
-    private async Task RefreshPageAsync()
-    {
-        if (!CanRefreshPage()) return;
+    private Task RefreshPageAsync() =>
+        CanRefreshPage() ? RefreshPageCoreAsync() : Task.CompletedTask;
 
-        IsPageRefreshActive = true;
-        RefreshPageCommand.NotifyCanExecuteChanged();
-        try
-        {
-            Task management = RefreshManagementAsync();
-            Task inspection = RefreshAsync();
-            await Task.WhenAll(management, inspection);
-        }
-        finally
-        {
-            IsPageRefreshActive = false;
-            RefreshPageCommand.NotifyCanExecuteChanged();
-        }
-    }
+    internal Task LoadPageAsync() => RefreshPageCoreAsync();
 
-    private bool CanRefreshPage() =>
-        Volatile.Read(ref _isDisposed) == 0
-        && !IsPageRefreshActive
-        && !IsLoading
-        && !IsManagementLoading;
-
-    partial void OnIsLoadingChanged(bool value) =>
-        RefreshPageCommand.NotifyCanExecuteChanged();
-
-    partial void OnIsManagementLoadingChanged(bool value) =>
-        RefreshPageCommand.NotifyCanExecuteChanged();
-
-    [RelayCommand(AllowConcurrentExecutions = true)]
-    private async Task RefreshAsync()
+    private async Task RefreshPageCoreAsync()
     {
         if (Volatile.Read(ref _isDisposed) != 0) return;
 
-        long generation = Interlocked.Increment(ref _refreshGeneration);
+        long generation = Interlocked.Increment(ref _pageRefreshGeneration);
         var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
-        CancellationTokenSource? previous = Interlocked.Exchange(ref _refreshCancellation, cancellation);
+        CancellationTokenSource? previous =
+            Interlocked.Exchange(ref _pageRefreshCancellation, cancellation);
         previous?.Cancel();
         previous?.Dispose();
 
-        IsLoading = true;
-        _inspectionResult = null;
-        UpdateInspectionPresentation();
-
+        IsPageRefreshActive = true;
+        RefreshPageCommand.NotifyCanExecuteChanged();
+        ClearManagement();
+        ClearPolicy();
+        HasActivePolicyDetails = false;
+        SetManagementStatus(
+            CoreTools.Translate("Loading package broker policy"),
+            CoreTools.Translate("Contacting the Devolutions Agent service."),
+            InfoBarSeverity.Informational);
         try
         {
-            BrokerPolicyInspectionResult result =
-                await _inspector.InspectAsync(cancellation.Token);
-            if (!CanApply(generation, cancellation)) return;
+            BrokerPolicyManagementResult? management =
+                await RefreshManagementCoreAsync(
+                    announce: false,
+                    cancellation.Token);
+            if (!CanApplyPage(generation, cancellation) || management is null) return;
 
-            ApplyResult(result);
-            AnnounceStatus();
+            AnnounceManagementStatus();
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
         }
         finally
         {
-            if (CanApply(generation, cancellation))
+            if (CanApplyPage(generation, cancellation))
             {
-                IsLoading = false;
+                IsPageRefreshActive = false;
+                RefreshPageCommand.NotifyCanExecuteChanged();
             }
         }
     }
+
+    private bool CanRefreshPage() =>
+        Volatile.Read(ref _isDisposed) == 0
+        && !IsPageRefreshActive
+        && !IsManagementLoading;
+
+    partial void OnIsManagementLoadingChanged(bool value) =>
+        RefreshPageCommand.NotifyCanExecuteChanged();
+
+    private bool CanApplyPage(long generation, CancellationTokenSource cancellation) =>
+        Volatile.Read(ref _isDisposed) == 0
+        && !cancellation.IsCancellationRequested
+        && generation == Volatile.Read(ref _pageRefreshGeneration);
 
     [RelayCommand]
     private void CopyRawJson()
     {
         if (!string.IsNullOrEmpty(RawJson))
         {
-            CopyTextRequested?.Invoke(this, RawJson);
+            CopyTextRequested?.Invoke(
+                this,
+                new PolicyCopyRequest(RawJson, Volatile.Read(ref _pageRefreshGeneration)));
         }
     }
 
-    internal void ReportCopyFailure()
+    internal void ReportCopyFailure(long pageGeneration)
     {
-        if (Volatile.Read(ref _isDisposed) != 0) return;
+        if (Volatile.Read(ref _isDisposed) != 0
+            || pageGeneration != Volatile.Read(ref _pageRefreshGeneration))
+        {
+            return;
+        }
 
-        SetStatus(
+        SetManagementStatus(
             CoreTools.Translate("Could not copy policy JSON"),
             CoreTools.Translate("The canonical policy JSON could not be copied to the clipboard. Try again."),
             InfoBarSeverity.Error);
-        AnnounceStatus();
+        AnnounceManagementStatus();
     }
 
-    [RelayCommand(AllowConcurrentExecutions = true)]
-    private async Task RefreshManagementAsync()
+    private async Task<BrokerPolicyManagementResult?> RefreshManagementCoreAsync(
+        bool announce = true,
+        CancellationToken externalCancellation = default)
     {
-        if (Volatile.Read(ref _isDisposed) != 0) return;
+        if (Volatile.Read(ref _isDisposed) != 0) return null;
 
         long generation = Interlocked.Increment(ref _managementRefreshGeneration);
-        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            _lifetimeCancellation.Token,
+            externalCancellation);
         CancellationTokenSource? previous = Interlocked.Exchange(ref _managementRefreshCancellation, cancellation);
         previous?.Cancel();
         previous?.Dispose();
@@ -295,13 +258,14 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
             CoreTools.Translate("Loading policy management state"),
             CoreTools.Translate("Contacting the Devolutions Agent service."),
             InfoBarSeverity.Informational);
-        UpdateInspectionPresentation();
+        ClearPolicy();
+        HasActivePolicyDetails = false;
 
         try
         {
             BrokerPolicyManagementResult result =
                 await _managementService.GetManagementAsync(cancellation.Token);
-            if (!CanApplyManagement(generation, cancellation)) return;
+            if (!CanApplyManagement(generation, cancellation)) return null;
 
             PolicyWriteElevationEligibility writeEligibility =
                 PolicyWriteElevationEligibility.Eligible;
@@ -313,16 +277,21 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
             {
                 writeEligibility = await _writeElevationEligibility
                     .EvaluateAsync(cancellation.Token);
-                if (!CanApplyManagement(generation, cancellation)) return;
+                if (!CanApplyManagement(generation, cancellation)) return null;
             }
 
             _appliedManagementGeneration = generation;
             ApplyManagementResult(result, writeEligibility);
-            UpdateInspectionPresentation();
-            AnnounceManagementStatus();
+            ApplyUnifiedPagePresentation(result);
+            if (announce)
+            {
+                AnnounceManagementStatus();
+            }
+            return result;
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
+            return null;
         }
         finally
         {
@@ -385,13 +354,6 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
             new PolicyEditorLaunchRequest(PolicyEditorOperationKind.Repair, snapshot, seed));
     }
 
-    private bool CanApply(long generation, CancellationTokenSource cancellation)
-    {
-        return Volatile.Read(ref _isDisposed) == 0
-            && !cancellation.IsCancellationRequested
-            && generation == Volatile.Read(ref _refreshGeneration);
-    }
-
     private bool CanApplyManagement(long generation, CancellationTokenSource cancellation)
     {
         return Volatile.Read(ref _isDisposed) == 0
@@ -399,94 +361,48 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
             && generation == Volatile.Read(ref _managementRefreshGeneration);
     }
 
-    private void ApplyResult(BrokerPolicyInspectionResult result)
-    {
-        _inspectionResult = result;
-        UpdateInspectionPresentation();
-    }
-
-    private void UpdateInspectionPresentation()
+    private void ApplyUnifiedPagePresentation(BrokerPolicyManagementResult result)
     {
         ClearPolicy();
 
-        bool hasCurrentMissingSnapshot =
-            _appliedManagementGeneration == _managementRefreshGeneration
-            && _managementSnapshot is { State: PolicyManagementState.Missing };
-        IsActivePolicyInspectionVisible = !hasCurrentMissingSnapshot;
-        if (hasCurrentMissingSnapshot)
+        switch (result)
         {
-            SetStatus(
-                CoreTools.Translate("No active package policy"),
-                CoreTools.Translate("Devolutions Agent reports that no policy file exists at the configured path."),
-                InfoBarSeverity.Informational);
-            return;
-        }
-
-        if (_inspectionResult is not { } result)
-        {
-            SetStatus(
-                CoreTools.Translate("Loading active package broker policy"),
-                CoreTools.Translate("Contacting the Devolutions Agent service."),
-                InfoBarSeverity.Informational);
-            return;
-        }
-
-        switch (result.Status)
-        {
-            case BrokerPolicyInspectionStatus.Connected when result.Response is not null:
-                ApplyPolicy(result.Response, result.CanonicalJson ?? "");
+            case
+            {
+                Status: BrokerPolicyManagementStatus.Retrieved,
+                Snapshot.State: PolicyManagementState.Active,
+                Snapshot.Policy: not null,
+            }:
+                HasActivePolicyDetails = true;
+                ApplyPolicy(
+                    result.Snapshot.Policy,
+                    PolicySerializer.Serialize(result.Snapshot.Policy),
+                    result.Server?.ServerVersion);
                 break;
-            case BrokerPolicyInspectionStatus.AgentUnavailable:
-                SetStatus(
-                    CoreTools.Translate("Devolutions Agent is unavailable"),
-                    CoreTools.Translate("Communication with the package broker could not be completed. Verify that Devolutions Agent is installed and running. If the problem persists, check the Agent logs, then refresh."),
-                    InfoBarSeverity.Error);
-                break;
-            case BrokerPolicyInspectionStatus.Unsupported:
-                SetStatus(
-                    CoreTools.Translate("Policy inspection is unsupported"),
-                    CoreTools.Translate("The installed Devolutions Agent is reachable but does not support active policy inspection. Update the Agent and try again."),
-                    InfoBarSeverity.Warning);
-                break;
-            case BrokerPolicyInspectionStatus.AccessDenied:
-                SetStatus(
-                    CoreTools.Translate("Access to the active policy was denied"),
-                    CoreTools.Translate("Devolutions Agent did not authorize UniGetUI to inspect the active package policy."),
-                    InfoBarSeverity.Error);
-                break;
-            case BrokerPolicyInspectionStatus.PolicyUnavailable:
-                SetStatus(
-                    CoreTools.Translate("The active policy is unavailable"),
-                    CoreTools.Translate("Devolutions Agent supports policy inspection but could not provide the active policy. Review the Agent configuration and try again."),
-                    InfoBarSeverity.Error);
-                break;
-            case BrokerPolicyInspectionStatus.InvalidResponse:
-                SetStatus(
-                    CoreTools.Translate("The policy response is invalid"),
-                    CoreTools.Translate("Devolutions Agent returned a malformed or incompatible policy response."),
-                    InfoBarSeverity.Error);
-                break;
-            case BrokerPolicyInspectionStatus.UnsupportedPlatform:
-                SetStatus(
-                    CoreTools.Translate("Policy inspection is available on Windows only"),
-                    CoreTools.Translate("This page cannot contact the Windows Devolutions Agent service on the current platform."),
-                    InfoBarSeverity.Warning);
+            case
+            {
+                Status: BrokerPolicyManagementStatus.Retrieved,
+                Snapshot.State: PolicyManagementState.Missing or PolicyManagementState.Invalid,
+            }:
+                HasActivePolicyDetails = false;
                 break;
             default:
-                SetStatus(
-                    CoreTools.Translate("The policy response is invalid"),
-                    CoreTools.Translate("Devolutions Agent returned a malformed or incompatible policy response."),
-                    InfoBarSeverity.Error);
+                HasActivePolicyDetails = false;
                 break;
         }
     }
 
-    private void ApplyPolicy(PolicyResponse response, string canonicalJson)
+    private void ApplyPolicy(
+        PolicyDocument policy,
+        string canonicalJson,
+        string? serverVersion)
     {
-        PolicyDocument policy = response.Policy;
         PolicyMetadata metadata = policy.Metadata;
 
-        MetadataRows.Add(Row("Server version", Value(response.Server.ServerVersion)));
+        if (serverVersion is not null)
+        {
+            MetadataRows.Add(Row("Server version", Value(serverVersion)));
+        }
         MetadataRows.Add(Row("Policy ID", Value(metadata.Id)));
         MetadataRows.Add(Row("Publisher", Value(metadata.Publisher)));
         MetadataRows.Add(Row("Revision", metadata.Revision.ToString(CultureInfo.CurrentCulture)));
@@ -508,10 +424,6 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         RawJson = canonicalJson;
         HasNoRules = Rules.Count == 0;
         HasPolicy = true;
-        SetStatus(
-            CoreTools.Translate("Connected to Devolutions Agent"),
-            CoreTools.Translate("The active package broker policy was loaded successfully."),
-            InfoBarSeverity.Success);
     }
 
     private static PolicyRuleViewModel BuildRule(PolicyRule rule, int index)
@@ -642,7 +554,10 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         switch (result.Status)
         {
             case BrokerPolicyManagementStatus.Retrieved when result.Snapshot is not null:
-                ApplyManagementSnapshot(result.Snapshot, result.Diagnostics, writeEligibility);
+                ApplyManagementSnapshot(
+                    result.Snapshot,
+                    result.Diagnostics,
+                    writeEligibility);
                 break;
             case BrokerPolicyManagementStatus.AgentUnavailable:
                 SetManagementStatus(
@@ -840,26 +755,6 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         return new PolicyDetailRow(label, value);
     }
 
-    private void SetStatus(string title, string message, InfoBarSeverity severity)
-    {
-        Status.Title = title;
-        Status.Message = message;
-        Status.Severity = severity;
-        Status.IsOpen = true;
-    }
-
-    private void AnnounceStatus()
-    {
-        string message = string.IsNullOrEmpty(Status.Message)
-            ? Status.Title
-            : $"{Status.Title}. {Status.Message}";
-        _announce(
-            message,
-            Status.Severity == InfoBarSeverity.Error
-                ? AutomationLiveSetting.Assertive
-                : AutomationLiveSetting.Polite);
-    }
-
     private void AnnounceManagementStatus()
     {
         string message = string.IsNullOrEmpty(ManagementStatus.Message)
@@ -905,7 +800,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         if (Interlocked.Exchange(ref _isDisposed, 1) != 0) return;
 
         _lifetimeCancellation.Cancel();
-        Interlocked.Exchange(ref _refreshCancellation, null)?.Cancel();
         Interlocked.Exchange(ref _managementRefreshCancellation, null)?.Cancel();
+        Interlocked.Exchange(ref _pageRefreshCancellation, null)?.Cancel();
     }
 }

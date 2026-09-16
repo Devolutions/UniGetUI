@@ -17,7 +17,7 @@ public sealed partial class AgentPolicyInspector : UserControl, ISettingsPage, I
     private PolicyEditorDialog? _activeEditorDialog;
 
     public bool CanGoBack => true;
-    public string ShortTitle => CoreTools.Translate("Active package broker policy");
+    public string ShortTitle => CoreTools.Translate("Package broker policy");
 
     public event EventHandler? RestartRequired { add { } remove { } }
     public event EventHandler<Type>? NavigationRequested { add { } remove { } }
@@ -30,29 +30,28 @@ public sealed partial class AgentPolicyInspector : UserControl, ISettingsPage, I
 
         _viewModel.CopyTextRequested += OnCopyTextRequested;
         _viewModel.OpenPolicyEditorRequested += OnOpenPolicyEditorRequested;
-        _ = _viewModel.LoadAsync();
-        _ = _viewModel.LoadManagementAsync();
+        _ = _viewModel.RefreshPageCommand.ExecuteAsync(null);
     }
 
-    private async void OnCopyTextRequested(object? sender, string text)
+    private async void OnCopyTextRequested(object? sender, PolicyCopyRequest request)
     {
         IClipboard? clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
         if (clipboard is null)
         {
             Logger.Error("[AgentBroker] The policy inspector clipboard is unavailable.");
-            _viewModel.ReportCopyFailure();
+            _viewModel.ReportCopyFailure(request.PageGeneration);
             return;
         }
 
         try
         {
-            await clipboard.SetTextAsync(text);
+            await clipboard.SetTextAsync(request.Text);
         }
         catch (Exception ex)
         {
             Logger.Error("[AgentBroker] Failed to copy the active policy JSON to the clipboard.");
             Logger.Error(ex);
-            _viewModel.ReportCopyFailure();
+            _viewModel.ReportCopyFailure(request.PageGeneration);
         }
     }
 
@@ -97,8 +96,7 @@ public sealed partial class AgentPolicyInspector : UserControl, ISettingsPage, I
             dialogViewModel.Dispose();
         }
 
-        _ = _viewModel.LoadAsync();
-        _ = _viewModel.LoadManagementAsync();
+        _ = _viewModel.RefreshPageCommand.ExecuteAsync(null);
     }
 
     public async Task<bool> CanLeaveAsync(PageLeaveReason reason, CancellationToken cancellationToken = default)

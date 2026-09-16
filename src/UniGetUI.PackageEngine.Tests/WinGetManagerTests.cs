@@ -366,6 +366,33 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void ManagerStaysNotReadyWhenNoCandidateExecutableCanBeStarted()
+    {
+        string brokenWinGet = Path.Combine(_testRoot, "winget.exe");
+        File.WriteAllBytes(brokenWinGet, []);
+
+        var manager = new ScriptedCandidatesWinGet([brokenWinGet]);
+        manager.Initialize();
+
+        Assert.True(manager.Status.Found);
+        Assert.False(manager.IsReady());
+        Assert.Equal(brokenWinGet, manager.Status.ExecutablePath);
+    }
+
+    [Fact]
+    public void ManagerStaysNotReadyWhenTheOnlyCandidateExecutableReportsNoVersion()
+    {
+        string failingExecutable = Path.Combine(Environment.SystemDirectory, "timeout.exe");
+        Assert.True(File.Exists(failingExecutable));
+
+        var manager = new ScriptedCandidatesWinGet([failingExecutable]);
+        manager.Initialize();
+
+        Assert.True(manager.Status.Found);
+        Assert.False(manager.IsReady());
+    }
+
+    [Fact]
     public void TryReadExecutableVersionFailsOnAnExecutableThatCannotBeStarted()
     {
         string brokenWinGet = Path.Combine(_testRoot, "winget.exe");
@@ -395,17 +422,17 @@ public sealed class WinGetManagerTests : IDisposable
     {
         const string systemWinGet = @"C:\WindowsApps\winget.exe";
 
-        string resolved = WinGet.ResolveLaunchableExecutableFile(
+        var (resolved, versionOutput, failureReason) = WinGet.ResolveLaunchableExecutableFile(
             systemWinGet,
             _ => (true, "v1.11.400", ""),
             () => throw new InvalidOperationException(
                 "Other candidates should not be looked up when the preferred executable runs."
-            ),
-            out string? versionOutput
+            )
         );
 
         Assert.Equal(systemWinGet, resolved);
         Assert.Equal("v1.11.400", versionOutput);
+        Assert.Null(failureReason);
     }
 
     [Fact]
@@ -417,7 +444,7 @@ public sealed class WinGetManagerTests : IDisposable
         const string bundledPinget = @"C:\Program Files\UniGetUI\pinget.exe";
         List<string> attempted = [];
 
-        string resolved = WinGet.ResolveLaunchableExecutableFile(
+        var (resolved, versionOutput, failureReason) = WinGet.ResolveLaunchableExecutableFile(
             systemWinGet,
             executablePath =>
             {
@@ -426,12 +453,12 @@ public sealed class WinGetManagerTests : IDisposable
                     ? (true, "pinget 0.12.0", "")
                     : (false, "", "no applicable app licenses found");
             },
-            () => [systemWinGet, packagedWinGet, bundledPinget],
-            out string? versionOutput
+            () => [systemWinGet, packagedWinGet, bundledPinget]
         );
 
         Assert.Equal(bundledPinget, resolved);
         Assert.Equal("pinget 0.12.0", versionOutput);
+        Assert.Null(failureReason);
         Assert.Equal([systemWinGet, packagedWinGet, bundledPinget], attempted);
     }
 
@@ -441,15 +468,15 @@ public sealed class WinGetManagerTests : IDisposable
         const string systemWinGet = @"C:\WindowsApps\winget.exe";
         const string bundledPinget = @"C:\Program Files\UniGetUI\pinget.exe";
 
-        string resolved = WinGet.ResolveLaunchableExecutableFile(
+        var (resolved, versionOutput, failureReason) = WinGet.ResolveLaunchableExecutableFile(
             systemWinGet,
             _ => (false, "", "no applicable app licenses found"),
-            () => [systemWinGet, bundledPinget],
-            out string? versionOutput
+            () => [systemWinGet, bundledPinget]
         );
 
         Assert.Equal(systemWinGet, resolved);
         Assert.Null(versionOutput);
+        Assert.Equal("no applicable app licenses found", failureReason);
     }
 
     [Fact]

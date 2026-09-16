@@ -67,6 +67,8 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
         private string? _pendingVersionOutput;
 
+        private string? _pendingVersionFailure;
+
         // winget's local index isn't safe under concurrent process access: a `source update` (writer)
         // running alongside list/upgrade/search (readers) yields partial or empty results. The COM
         // backend serialized this implicitly; the CLI backends (winget.exe / pinget.exe) must do it
@@ -440,30 +442,32 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
 
         private string ResolveLaunchableExecutableFile(string preferredPath, string callArguments)
         {
-            string resolvedPath = ResolveLaunchableExecutableFile(
+            var (resolvedPath, versionOutput, failureReason) = ResolveLaunchableExecutableFile(
                 preferredPath,
                 executablePath => TryReadExecutableVersion(executablePath, callArguments),
-                FindCandidateExecutableFiles,
-                out string? versionOutput
+                FindCandidateExecutableFiles
             );
 
             _pendingVersionOutput = versionOutput;
+            _pendingVersionFailure = failureReason;
             return resolvedPath;
         }
 
-        internal static string ResolveLaunchableExecutableFile(
+        internal static (
+            string Path,
+            string? VersionOutput,
+            string? FailureReason
+        ) ResolveLaunchableExecutableFile(
             string preferredPath,
             Func<string, (bool Succeeded, string Output, string FailureReason)> readVersion,
-            Func<IReadOnlyList<string>> findCandidates,
-            out string? versionOutput
+            Func<IReadOnlyList<string>> findCandidates
         )
         {
             var (succeeded, output, failureReason) = readVersion(preferredPath);
 
             if (succeeded)
             {
-                versionOutput = output;
-                return preferredPath;
+                return (preferredPath, output, null);
             }
 
             Logger.Warn(
@@ -492,13 +496,11 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                 Logger.ImportantInfo(
                     $"WinGet will use {candidate}, since {preferredPath} cannot be run on this machine"
                 );
-                versionOutput = candidateOutput;
-                return candidate;
+                return (candidate, candidateOutput, null);
             }
 
             Logger.Error("No usable WinGet executable could be found on this machine");
-            versionOutput = null;
-            return preferredPath;
+            return (preferredPath, null, failureReason);
         }
 
         internal static (
@@ -569,21 +571,36 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             }
         }
 
-        private static string ReadExecutableVersion(string executablePath, string callArguments)
+        private string ConsumePendingVersion()
         {
-            using Process process = new()
+            string? output = _pendingVersionOutput;
+            string? failureReason = _pendingVersionFailure;
+            _pendingVersionOutput = null;
+            _pendingVersionFailure = null;
+
+            if (output is not null)
             {
-                StartInfo = BuildVersionProcessStartInfo(executablePath, callArguments),
-            };
+                return output;
+            }
 
-            process.Start();
-            string rawVersion = process.StandardOutput.ReadToEnd().Trim();
+            if (failureReason is null)
+            {
+                var (succeeded, probedOutput, probeFailureReason) = TryReadExecutableVersion(
+                    Status.ExecutablePath,
+                    Status.ExecutableCallArgs
+                );
 
-            string error = process.StandardError.ReadToEnd();
-            if (error != "")
-                Logger.Error("WinGet STDERR not empty: " + error);
+                if (succeeded)
+                {
+                    return probedOutput;
+                }
 
-            return rawVersion;
+                failureReason = probeFailureReason;
+            }
+
+            throw new InvalidOperationException(
+                $"The WinGet executable at {Status.ExecutablePath} cannot be run: {failureReason}"
+            );
         }
 
         private static ProcessStartInfo BuildVersionProcessStartInfo(
@@ -637,6 +654,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             path = _path;
             callArguments = "";
             _pendingVersionOutput = null;
+            _pendingVersionFailure = null;
 
             if (!found)
             {
@@ -829,10 +847,7 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             bool usesCliHelper = WinGetHelper.Instance is WinGetCliHelper;
             bool usesPingetHelper = WinGetHelper.Instance is PingetCliHelper;
 
-            string rawVersion =
-                _pendingVersionOutput
-                ?? ReadExecutableVersion(Status.ExecutablePath, Status.ExecutableCallArgs);
-            _pendingVersionOutput = null;
+            string rawVersion = ConsumePendingVersion();
 
             version = usesPingetHelper
                 ? $"Pinget CLI Version: {rawVersion}"

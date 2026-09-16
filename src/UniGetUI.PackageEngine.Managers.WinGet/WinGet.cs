@@ -509,6 +509,9 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             string FailureReason
         ) TryReadExecutableVersion(string executablePath, string callArguments)
         {
+            Task<string>? stdout = null;
+            Task<string>? stderr = null;
+
             try
             {
                 using Process process = new()
@@ -516,28 +519,31 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
                     StartInfo = BuildVersionProcessStartInfo(executablePath, callArguments),
                 };
 
+                var budget = Stopwatch.StartNew();
                 process.Start();
 
-                Task<string> stdout = process.StandardOutput.ReadToEndAsync();
-                Task<string> stderr = process.StandardError.ReadToEndAsync();
+                stdout = process.StandardOutput.ReadToEndAsync();
+                stderr = process.StandardError.ReadToEndAsync();
 
                 if (!process.WaitForExit((int)VersionProbeTimeout.TotalMilliseconds))
                 {
-                    try
-                    {
-                        process.Kill(entireProcessTree: true);
-                    }
-                    catch (Exception killEx)
-                    {
-                        Logger.Warn(
-                            $"Could not kill the unresponsive {executablePath} process: {killEx.Message}"
-                        );
-                    }
-
+                    KillProcessTree(process, executablePath);
                     return (false, "", "the process did not exit in time");
                 }
 
-                process.WaitForExit();
+                TimeSpan remaining = VersionProbeTimeout - budget.Elapsed;
+                if (
+                    !Task.WhenAll(stdout, stderr)
+                        .Wait(remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero)
+                )
+                {
+                    KillProcessTree(process, executablePath);
+                    return (
+                        false,
+                        "",
+                        "the process exited but something it started still holds its output open"
+                    );
+                }
 
                 string output = stdout.GetAwaiter().GetResult().Trim();
                 string error = stderr.GetAwaiter().GetResult().Trim();
@@ -569,6 +575,44 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
             {
                 return (false, "", ex.Message);
             }
+            finally
+            {
+                ObserveAbandonedRead(stdout);
+                ObserveAbandonedRead(stderr);
+            }
+        }
+
+        private static void KillProcessTree(Process process, string executablePath)
+        {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(
+                    $"Could not kill the unresponsive {executablePath} process: {ex.Message}"
+                );
+            }
+        }
+
+        private static void ObserveAbandonedRead(Task<string>? read)
+        {
+            if (read is null)
+            {
+                return;
+            }
+
+            if (read.IsCompleted)
+            {
+                _ = read.Exception;
+                return;
+            }
+
+            read.ContinueWith(static t => _ = t.Exception, TaskScheduler.Default);
         }
 
         private string ConsumePendingVersion()

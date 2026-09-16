@@ -6,8 +6,8 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 public static class PolicyEditorHelp
 {
     public static string StructuredMode => T("Edit supported policy fields with guided controls. Fixed and Agent-managed values cannot be changed here.");
-    public static string RawMode => T("Edit the complete draft JSON. Returning to structured mode requires strict parsing and successful Agent validation.");
-    public static string PolicyId => T("Stable authored identity for this policy. Replacing an active identity is a separate operation because it changes which policy is recognized.");
+    public static string RawMode => T("Edit the complete draft JSON. Returning to structured mode requires valid, projectable JSON; semantic errors remain editable in structured fields.");
+    public static string PolicyId => T("Stable authored identifier, not a display name. Use 1 to 128 characters starting with a letter or number; remaining characters may be letters, numbers, '.', '_', ':' or '-', for example contoso-policy. Replacing it changes which policy is recognized.");
     public static string Publisher => T("Authored organization or person responsible for the policy.");
     public static string PolicyFormatVersion => T("Software-managed policy document format. It is read-only here and is not the Agent-managed policy revision.");
     public static string Description => T("Optional authored description. Clear the checkbox to omit this field from the policy.");
@@ -22,7 +22,7 @@ public static class PolicyEditorHelp
     public static string DuplicateRule => T("Copy this rule to create a similar rule. Give the copy a unique rule ID before validation.");
     public static string MoveRule => T("Change this rule's document order. Priority determines evaluation; order mainly affects readability.");
     public static string DeleteRule => T("Remove this rule from the draft. This cannot be undone after the policy is saved.");
-    public static string RuleId => T("Unique authored identifier for this rule. Use a stable name so findings and audits can identify it.");
+    public static string RuleId => T("Unique authored identifier, not a display name. Use 1 to 128 characters starting with a letter or number; remaining characters may be letters, numbers, '.', '_', ':' or '-', for example allow-winget-updates.");
     public static string Priority => T("Whole number from 0 through 2147483647. Lower values are evaluated first; Deny wins when priorities tie.");
     public static string Decision => T("Effect applied when this enabled rule matches: Allow permits the request and Deny blocks it.");
     public static string RuleReason => T("Optional authored explanation for the rule's decision.");
@@ -41,14 +41,14 @@ public static class PolicyEditorHelp
     public static string Elevation => T("Optional requested elevation states matched by this rule. Select none to match elevated and non-elevated requests.");
     public static string MatchOption => T("Select this value to include it in the rule's match criteria. No selected values means any value.");
     public static string BooleanSelector => T("Choose Any to omit this match, or Yes/No to require that exact request property.");
-    public static string InteractiveMatch => T("Match whether the operation is interactive. Choose Any to omit this criterion.");
-    public static string SkipHashMatch => T("Match whether the request skips hash verification. This is security-sensitive; choose Any to omit this criterion.");
-    public static string PrereleaseMatch => T("Match whether prerelease packages are requested. Choose Any to omit this criterion.");
-    public static string CustomParametersMatch => T("Match whether custom command-line parameters are present. Choose Any to omit this criterion.");
-    public static string CustomLocationMatch => T("Match whether a custom install location is requested. Choose Any to omit this criterion.");
-    public static string PrePostCommandsMatch => T("Match whether pre-operation or post-operation commands are present. Choose Any to omit this criterion.");
-    public static string KillBeforeMatch => T("Match whether processes may be killed before the operation. Choose Any to omit this criterion.");
-    public static string UninstallPreviousMatch => T("Match whether uninstalling a previous version is requested. Choose Any to omit this criterion.");
+    public static string InteractiveMatch => T("Match whether the operation is interactive. Any matches either value; Yes requires true; No requires false.");
+    public static string SkipHashMatch => T("Match whether the request skips hash verification. Any matches either value; Yes requires true; No requires false. Skipping verification is security-sensitive.");
+    public static string PrereleaseMatch => T("Match whether prerelease packages are requested. Any matches either value; Yes requires true; No requires false.");
+    public static string CustomParametersMatch => T("Match whether custom command-line parameters are present. Any matches either value; Yes requires true; No requires false.");
+    public static string CustomLocationMatch => T("Match whether a custom install location is requested. Any matches either value; Yes requires true; No requires false.");
+    public static string PrePostCommandsMatch => T("Match whether pre-operation or post-operation commands are present. Any matches either value; Yes requires true; No requires false.");
+    public static string KillBeforeMatch => T("Match whether processes may be killed before the operation. Any matches either value; Yes requires true; No requires false.");
+    public static string UninstallPreviousMatch => T("Match whether uninstalling a previous version is requested. Any matches either value; Yes requires true; No requires false.");
     public static string Constraints => T("Optional limits applied after a rule matches. Package dependencies, agreements, reboot behavior, and ordinary hash verification remain controlled by the package manager unless represented below.");
     public static string AllowInteractive => T("Allow an interactive package-manager operation after this rule matches.");
     public static string AllowSkipHashCheck => T("Allow bypassing package hash verification. This weakens integrity protection and should be narrowly scoped.");
@@ -71,7 +71,7 @@ public static class PolicyEditorHelp
     public static string GoToRawError => T("Focus the raw JSON editor at the document that could not be parsed or represented.");
     public static string CanonicalJson => T("Read-only canonical JSON returned for the active policy. Copy it for diagnostics or review.");
     public static string CopyCanonicalJson => T("Copy the complete canonical active-policy JSON to the clipboard.");
-    public static string RefreshPolicy => T("Refresh management state and active-policy inspection together.");
+    public static string RefreshPolicy => T("Refresh the authoritative policy management snapshot, including active policy details when present.");
     public static string AgentWriteCapability => T("Authoritative write capability reported by Devolutions Agent.");
     public static string AppWriteAvailability => T("Whether this UniGetUI installation can perform policy changes, considering both Agent capability and trusted-helper availability.");
     public static string AppWriteReason => T("Why policy changes from this app are unavailable. Agent restrictions take precedence over local helper status.");

@@ -100,7 +100,10 @@
                                        automation:AutomationProperties.Name="{t:Translate Policy changes from this app}"
                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteAvailability}"/>
                         </Grid>
-                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                        <Grid ColumnDefinitions="180,*"
+                              ColumnSpacing="12"
+                              Margin="0,3"
+                              IsVisible="{Binding HasPolicyChangesReason}">
                             <TextBlock Classes="field-label" Text="{t:Translate Reason}"/>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding PolicyChangesReasonText}"

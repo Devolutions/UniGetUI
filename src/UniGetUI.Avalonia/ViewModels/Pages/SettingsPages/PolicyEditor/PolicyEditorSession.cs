@@ -289,6 +289,39 @@ public sealed class PolicyEditorSession
             _cleanMutationGeneration = _mutationGeneration;
     }
 
+    public void ProjectRawToStructured(
+        string submittedRawJson,
+        PolicyEditorDraftDocument draft)
+    {
+        ArgumentNullException.ThrowIfNull(submittedRawJson);
+        ArgumentNullException.ThrowIfNull(draft);
+
+        Draft = draft;
+        RawBuffer = submittedRawJson;
+        Mode = PolicyEditorMode.Structured;
+        _lastAnalyzedRawJson = submittedRawJson;
+        _lastAnalyzedCanonicalRawJson = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        _lastAnalyzedDraftId = draft.Metadata.Id;
+        _lastAnalyzedMutationGeneration = _mutationGeneration;
+        _hasLastAnalyzedRawElement = false;
+        IsRawAnalysisPending = false;
+        ClearContentState();
+        _isDirty = !string.Equals(
+            _lastAnalyzedCanonicalRawJson,
+            _baselineRawJson,
+            StringComparison.Ordinal);
+        if (!_isDirty)
+            _cleanMutationGeneration = _mutationGeneration;
+    }
+
+    internal void SetLocalFindings(IReadOnlyList<PolicyValidationFinding> findings)
+    {
+        Validation = null;
+        Findings = PolicyEditorFindingIndex.Build(findings);
+        WarningAcknowledgement = null;
+        Conflict = null;
+    }
+
     public string GetEffectiveRawJson() =>
         Mode == PolicyEditorMode.Raw
             ? RawBuffer

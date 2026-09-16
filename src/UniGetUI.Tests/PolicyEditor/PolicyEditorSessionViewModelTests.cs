@@ -197,6 +197,7 @@ public class PolicyEditorSessionViewModelTests
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, _) = CreateForCreateSession();
         vm.SwitchToRawCommand.Execute(null);
         vm.RawBuffer = "{ not valid json";
+        string submitted = vm.RawBuffer;
         await vm.WaitForRawSyntaxAnalysisAsync();
 
         await vm.SwitchToStructuredCommand.ExecuteAsync(null);
@@ -205,6 +206,7 @@ public class PolicyEditorSessionViewModelTests
         Assert.Equal(PolicyEditorSyntaxErrorKind.InvalidJson, vm.SyntaxError.Kind);
         Assert.Equal("The document is not valid JSON", vm.SyntaxErrorTitle);
         Assert.Equal(PolicyEditorMode.Raw, vm.Session.Mode);
+        Assert.Equal(submitted, vm.RawBuffer);
         Assert.Equal(0, validation.CallCount); // a local syntax failure never reaches authoritative validation
     }
 
@@ -257,64 +259,89 @@ public class PolicyEditorSessionViewModelTests
     }
 
     [Fact]
-    public async Task SwitchToStructuredCommand_LocallyValidButAuthoritativelyInvalid_StaysInRawMode()
+    public async Task SwitchToStructuredCommand_SemanticallyInvalidRuleIdProjectsWithoutCallingValidator()
     {
-        // The core of correction #3: a syntactically valid raw buffer alone must never be treated
-        // as accepted; only an authoritative valid result may advance the session.
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, _) = CreateForCreateSession();
+        vm.Draft.Rules[0].Id = "Allow WinGet updates";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        Assert.True(vm.HasLocalSemanticErrors);
+        Assert.False(vm.ValidateCommand.CanExecute(null));
+        await vm.ValidateCommand.ExecuteAsync(null);
+        Assert.Equal(0, validation.CallCount);
+
         vm.SwitchToRawCommand.Execute(null);
-        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
-        {
-            IsValid = false,
-            Findings = [new PolicyFinding { Path = "/metadata", Severity = PolicyFindingSeverity.Error, Message = "server rejects this" }],
-        });
+        Assert.Contains("\"Id\": \"Allow WinGet updates\"", vm.RawBuffer);
 
         await vm.SwitchToStructuredCommand.ExecuteAsync(null);
 
-        Assert.Equal(1, validation.CallCount);
-        Assert.Equal(PolicyEditorMode.Raw, vm.Session.Mode);
-        Assert.Single(vm.Session.Findings.All);
+        Assert.Equal(0, validation.CallCount);
+        Assert.Equal(PolicyEditorMode.Structured, vm.Session.Mode);
+        Assert.Equal("Allow WinGet updates", vm.Session.Draft.Rules[0].Id);
+        PolicyValidationFinding finding = Assert.Single(vm.Session.Findings.All);
+        Assert.Equal("/Rules/0/Id", finding.Pointer);
+        Assert.Contains("Rule 1 ID", finding.Message);
+        Assert.Contains("spaces are not allowed", finding.Message);
+        Assert.Contains("Rule ID", finding.FriendlyLocation);
+        using var dialog = new PolicyEditorDialogViewModel(vm);
+        Assert.True(dialog.Rules[0].HasIdErrors);
     }
 
     [Fact]
-    public async Task SwitchToStructuredCommand_AuthoritativelyValid_SwitchesToStructuredUsingCanonicalDraft()
+    public async Task SwitchToStructuredCommand_SemanticallyInvalidPolicyIdProjectsWithoutCallingValidator()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, _) =
+            CreateForCreateSession();
+        vm.Draft.Metadata.Id = "invalid policy id";
+        vm.NotifyDraftChangedCommand.Execute(null);
+
+        vm.SwitchToRawCommand.Execute(null);
+        await vm.SwitchToStructuredCommand.ExecuteAsync(null);
+
+        Assert.Equal(PolicyEditorMode.Structured, vm.Session.Mode);
+        Assert.Equal("invalid policy id", vm.Draft.Metadata.Id);
+        Assert.Equal(0, validation.CallCount);
+        PolicyValidationFinding finding = Assert.Single(vm.Findings);
+        Assert.Equal("/Metadata/Id", finding.Pointer);
+        Assert.Contains("spaces are not allowed", finding.Message);
+        Assert.Equal("Policy ID", finding.FriendlyLocation);
+        using var dialog = new PolicyEditorDialogViewModel(vm);
+        Assert.True(dialog.Document.HasIdErrors);
+    }
+
+    [Fact]
+    public async Task SwitchToStructuredCommand_ValidRawEditProjectsWithoutCallingValidator()
     {
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, _) = CreateForCreateSession();
         vm.SwitchToRawCommand.Execute(null);
-        PolicyDraftDocument canonical = PolicyEditorMapper.ToSharedDraft(vm.Session.Draft);
-        canonical.Metadata.Description = "server canonicalized";
-        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
-        {
-            IsValid = true,
-            CanonicalDraft = canonical,
-            ValidationReceipt = "receipt-1",
-            Findings = [],
-        });
+        JsonNode root = JsonNode.Parse(vm.RawBuffer)!;
+        root["Metadata"]!["Description"] = "raw edit";
+        vm.RawBuffer = root.ToJsonString();
+        await vm.WaitForRawSyntaxAnalysisAsync();
 
         await vm.SwitchToStructuredCommand.ExecuteAsync(null);
 
         Assert.Equal(PolicyEditorMode.Structured, vm.Session.Mode);
-        Assert.Equal("server canonicalized", vm.Session.Draft.Metadata.Description);
+        Assert.Equal("raw edit", vm.Session.Draft.Metadata.Description);
+        Assert.Equal(0, validation.CallCount);
         Assert.Null(vm.SyntaxError);
     }
 
     [Fact]
-    public async Task SwitchToStructuredCommand_StaleGenerationSuppression_IgnoresResultIfRawBufferChangedWhileInFlight()
+    public async Task RepeatedModeSwitching_DoesNotChangeDraftContent()
     {
-        // Simulates a slow authoritative validation whose response arrives after the user has already
-        // edited the raw buffer again: the (now stale) response must be discarded rather than silently
-        // applied, and must not switch the session out of raw mode underneath the user.
-        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, _) = CreateForCreateSession();
-        vm.SwitchToRawCommand.Execute(null);
-        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
-        validation.Gate = new TaskCompletionSource();
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, _) =
+            CreateForCreateSession();
+        string expected = PolicyEditorRawSyntax.ToCanonicalRaw(vm.Draft);
 
-        Task switchTask = vm.SwitchToStructuredCommand.ExecuteAsync(null);
-        vm.RawBuffer = vm.RawBuffer + " "; // mutate the in-flight buffer before the validator answers
-        validation.Gate.SetResult();
-        await switchTask;
+        for (int iteration = 0; iteration < 3; iteration++)
+        {
+            vm.SwitchToRawCommand.Execute(null);
+            await vm.SwitchToStructuredCommand.ExecuteAsync(null);
+        }
 
-        Assert.Equal(PolicyEditorMode.Raw, vm.Session.Mode); // never advanced from the stale response
+        Assert.Equal(PolicyEditorMode.Structured, vm.Session.Mode);
+        Assert.Equal(expected, PolicyEditorRawSyntax.ToCanonicalRaw(vm.Draft));
+        Assert.Equal(0, validation.CallCount);
     }
 
     // ---- SaveCommand: create flow -----------------------------------------------------------

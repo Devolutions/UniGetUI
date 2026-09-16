@@ -219,6 +219,7 @@ public class PolicyEditorMapperTests
     public void ToDocument_DeepCopiesLists_MutatingDocumentDoesNotAffectSourceDraft()
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("some-id", "Some Publisher");
+        draft.Rules.Clear();
         draft.Rules.Add(PolicyRuleFactory.CreateBlank());
         draft.Rules[0].Match.Sources.Add("winget");
 
@@ -295,6 +296,7 @@ public class PolicyEditorMapperTests
     public void ToSharedDraft_BuildsPackageDraftDocument_FixedTypeAndNoRevisionOrPublishedAt()
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("some-id", "Some Publisher");
+        draft.Rules.Clear();
         draft.Rules.Add(PolicyRuleFactory.CreateBlank());
 
         PolicyDraftDocument shared = PolicyEditorMapper.ToSharedDraft(draft);

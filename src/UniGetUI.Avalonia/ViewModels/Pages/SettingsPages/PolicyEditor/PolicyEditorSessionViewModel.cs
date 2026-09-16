@@ -25,6 +25,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private Task<bool>? _discardConfirmationTask;
     private long _validationGeneration;
     private long _saveGeneration;
+    private bool _hasLocalSemanticErrors;
     private int _isDisposed;
 
     public PolicyEditorSession Session { get; }
@@ -73,6 +74,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         _ => CoreTools.Translate("The document does not match the policy draft format."),
     };
     public bool HasLocalInputErrors => _localInputErrors.Count > 0;
+    public bool HasLocalSemanticErrors => _hasLocalSemanticErrors;
     public string LocalInputErrorSummary => string.Join(Environment.NewLine, _localInputErrors.Values);
     public bool CanValidateOrSave => CanStartRemoteOperation();
     public bool CanSwitchToRaw => CanStartStructuredOperation();
@@ -121,60 +123,44 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         _structuredDirtyDebounce = structuredDirtyDebounce ?? TimeSpan.FromMilliseconds(300);
         _structuredDraftSerializer =
             structuredDraftSerializer ?? PolicyEditorRawSyntax.ToCanonicalRaw;
+        if (Session.Findings.All.Count == 0)
+        {
+            RefreshLocalSemanticValidation();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanStartStructuredOperation))]
     private void SwitchToRaw()
     {
         Session.SwitchToRaw();
+        RefreshLocalSemanticValidation();
         CancelStructuredDirtyAnalysis();
         CancelRawSyntaxAnalysis();
         SyntaxError = null;
         OnEditorStateChanged();
     }
 
-    [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanStartRemoteOperation))]
-    private async Task SwitchToStructuredAsync(CancellationToken cancellationToken)
+    [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanProjectRawToStructured))]
+    private Task SwitchToStructuredAsync(CancellationToken cancellationToken)
     {
-        using CancellationTokenSource linked = CreateLinkedCancellation(cancellationToken);
-        cancellationToken = linked.Token;
-        if (!CanStartRemoteOperation()) return;
-
+        if (!CanProjectRawToStructured()) return Task.CompletedTask;
         string submitted = Session.RawBuffer;
-        if (!TryGetDraftElement(
+        if (!PolicyEditorRawSyntax.TryParseStrict(
                 submitted,
-                out JsonElement draft,
+                out PolicyEditorDraftDocument? draft,
                 out PolicyEditorSyntaxError? syntaxError))
         {
             SyntaxError = syntaxError;
-            return;
+            return Task.CompletedTask;
         }
 
-        long generation = Interlocked.Increment(ref _validationGeneration);
-        PolicyEditorValidationOutcome outcome =
-            await ValidateCoreAsync(draft, cancellationToken);
-        if (!CanApply(cancellationToken)
-            || generation != Volatile.Read(ref _validationGeneration)
-            || !string.Equals(Session.RawBuffer, submitted, StringComparison.Ordinal))
-            return;
-
-        if (outcome.Validation is not { IsValid: true, CanonicalDraft: not null })
-        {
-            if (outcome.Validation is not null)
-                Session.ApplyValidationResult(
-                    submitted,
-                    outcome.Validation,
-                    outcome.BoundedFindings,
-                    outcome.OmittedFindingCount);
-            LastErrorCode = outcome.ErrorCode;
-            OnEditorStateChanged();
-            return;
-        }
-
-        Session.AcceptValidatedRaw(submitted, outcome.Validation);
+        CancelRawSyntaxAnalysis();
+        Session.ProjectRawToStructured(submitted, draft!);
+        RefreshLocalSemanticValidation();
         SyntaxError = null;
         LastErrorCode = null;
         OnEditorStateChanged();
+        return Task.CompletedTask;
     }
 
     [RelayCommand]
@@ -713,6 +699,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         Volatile.Read(ref _isDisposed) == 0
         && !IsBusy
         && !HasLocalInputErrors
+        && !HasLocalSemanticErrors
         && !IsRawSyntaxPending
         && !RequiresManagementRefresh
         && SyntaxError is null;
@@ -721,6 +708,10 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         Volatile.Read(ref _isDisposed) == 0
         && !IsBusy
         && !HasLocalInputErrors;
+
+    private bool CanProjectRawToStructured() =>
+        CanStartStructuredOperation()
+        && !IsRawSyntaxPending;
 
     private bool CanApply(CancellationToken cancellationToken) =>
         Volatile.Read(ref _isDisposed) == 0 && !cancellationToken.IsCancellationRequested;
@@ -836,6 +827,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsDirty));
         OnPropertyChanged(nameof(IsIdentityLocked));
         OnPropertyChanged(nameof(HasFindings));
+        OnPropertyChanged(nameof(HasLocalSemanticErrors));
         OnPropertyChanged(nameof(HasConflict));
         OnPropertyChanged(nameof(Findings));
         OnPropertyChanged(nameof(IsRawSyntaxPending));
@@ -860,8 +852,18 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
 
     private void OnStructuredDraftChanged()
     {
+        RefreshLocalSemanticValidation();
         ScheduleStructuredDirtyAnalysis();
         OnEditorStateChanged();
+    }
+
+    private void RefreshLocalSemanticValidation()
+    {
+        IReadOnlyList<PolicyValidationFinding> findings =
+            PolicyEditorLocalValidation.ValidateResourceIds(Session.Draft);
+        _hasLocalSemanticErrors = findings.Any(
+            finding => finding.Severity == PolicyValidationSeverity.Error);
+        Session.SetLocalFindings(findings);
     }
 
     private void ReconcileDirtyAtBoundary(string effectiveRawJson)
@@ -1007,12 +1009,14 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                 string? CanonicalRaw,
                 string? DraftId,
                 JsonElement? RawElement,
+                IReadOnlyList<PolicyValidationFinding> LocalFindings,
                 bool IsDirty) result =
                 await Task.Run<(
                    PolicyEditorSyntaxError? Error,
                    string? CanonicalRaw,
                    string? DraftId,
                    JsonElement? RawElement,
+                   IReadOnlyList<PolicyValidationFinding> LocalFindings,
                    bool IsDirty)>(
                    () =>
                    {
@@ -1028,6 +1032,9 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                                : null,
                            parsed ? draft?.Metadata.Id : null,
                            parsed ? (JsonElement?)element : null,
+                           parsed && draft is not null
+                               ? PolicyEditorLocalValidation.ValidateResourceIds(draft)
+                               : [],
                            !string.Equals(
                                raw,
                                dirtySnapshot.BaselineRawJson,
@@ -1047,6 +1054,9 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             }
 
             ApplyDirtyComparison(dirtySnapshot, result.IsDirty);
+            _hasLocalSemanticErrors = result.LocalFindings.Any(
+                finding => finding.Severity == PolicyValidationSeverity.Error);
+            Session.SetLocalFindings(result.LocalFindings);
             SyntaxError = result.Error;
             OnEditorStateChanged();
         }

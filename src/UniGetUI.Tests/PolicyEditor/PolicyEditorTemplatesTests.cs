@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Devolutions.Now.Policy.Model;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 
@@ -16,12 +17,43 @@ public class PolicyEditorTemplatesTests
     }
 
     [Fact]
-    public void CreateNew_DefaultsToDenyAndNoRules()
+    public void CreateNew_DefaultsToDenyAndNarrowWarningFreeWinGetUpdateRule()
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
 
         Assert.Equal(Decision.Deny, draft.Enforcement.DefaultDecision);
-        Assert.Empty(draft.Rules);
+        PolicyEditorDraftRule rule = Assert.Single(draft.Rules);
+        Assert.Equal("allow-winget-updates", rule.Id);
+        Assert.True(rule.Enabled);
+        Assert.Equal(Decision.Allow, rule.Decision);
+        Assert.Equal([Operation.Update], rule.Match.Operations);
+        Assert.Equal([ManagerName.Winget], rule.Match.Managers);
+        Assert.Equal(TriState.False, rule.Match.SkipHashCheck);
+        Assert.Equal(TriState.False, rule.Match.PreRelease);
+        Assert.Equal(TriState.False, rule.Match.HasCustomParameters);
+        Assert.Equal(TriState.False, rule.Match.HasCustomInstallLocation);
+        Assert.Equal(TriState.False, rule.Match.HasPrePostCommands);
+        Assert.Equal(TriState.False, rule.Match.HasKillBeforeOperation);
+        Assert.Equal(TriState.False, rule.Match.HasUninstallPrevious);
+        Assert.Empty(PolicyEditorLocalValidation.ValidateResourceIds(draft));
+
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        Assert.True(PolicyEditorRawSyntax.TryParseStrict(
+            raw,
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error));
+        Assert.Null(error);
+        PolicyEditorDraftRule parsedRule = Assert.Single(parsed!.Rules);
+        Assert.Equal(TriState.False, parsedRule.Match.SkipHashCheck);
+        Assert.Equal(TriState.False, parsedRule.Match.PreRelease);
+        Assert.Equal(TriState.False, parsedRule.Match.HasCustomParameters);
+        Assert.Equal(TriState.False, parsedRule.Match.HasCustomInstallLocation);
+        Assert.Equal(TriState.False, parsedRule.Match.HasPrePostCommands);
+        Assert.Equal(TriState.False, parsedRule.Match.HasKillBeforeOperation);
+        Assert.Equal(TriState.False, parsedRule.Match.HasUninstallPrevious);
+        Assert.Contains("\"SkipHashCheck\": [", raw);
+        Assert.Contains("\"HasUninstallPrevious\": [", raw);
+        Assert.Equal(7, Regex.Matches(raw, @"\[\s*false\s*\]").Count);
     }
 
     [Fact]
@@ -68,6 +100,72 @@ public class PolicyEditorTemplatesTests
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", " ");
 
         Assert.Equal(" ", draft.Metadata.Publisher);
+    }
+
+    [Theory]
+    [InlineData("a", true)]
+    [InlineData("a._:-Z9", true)]
+    [InlineData("-starts-with-dash", false)]
+    [InlineData("contains space", false)]
+    [InlineData("é", false)]
+    public void IsValidResourceId_EnforcesContractCharacters(string value, bool expected) =>
+        Assert.Equal(expected, PolicyEditorTemplates.IsValidResourceId(value));
+
+    [Fact]
+    public void IsValidResourceId_EnforcesMaximumLength()
+    {
+        Assert.True(PolicyEditorTemplates.IsValidResourceId(new string('a', 128)));
+        Assert.False(PolicyEditorTemplates.IsValidResourceId(new string('a', 129)));
+    }
+
+    [Fact]
+    public void LocalResourceIdValidation_ReportsPrecisePointersAndLength()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew(
+            new string('a', 129),
+            "Contoso");
+        draft.Rules[0].Id = "Allow WinGet updates";
+
+        IReadOnlyList<PolicyValidationFinding> findings =
+            PolicyEditorLocalValidation.ValidateResourceIds(draft);
+
+        Assert.Collection(
+            findings,
+            finding =>
+            {
+                Assert.Equal("/Metadata/Id", finding.Pointer);
+                Assert.Contains("cannot exceed 128", finding.Message);
+                Assert.Equal("Policy ID", finding.FriendlyLocation);
+            },
+            finding =>
+            {
+                Assert.Equal("/Rules/0/Id", finding.Pointer);
+                Assert.Contains("spaces are not allowed", finding.Message);
+                Assert.Contains("Rule ID", finding.FriendlyLocation);
+            });
+    }
+
+    [Fact]
+    public void StarterRule_TriStateSelectorsDisplayNo()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("id-1", "Contoso"));
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+        using var rule = new PolicyEditorRuleUi(session.Draft.Rules[0], viewModel);
+        int noIndex = PolicyEditorEnumDisplay.IndexOfTriState(TriState.False);
+
+        Assert.Equal(noIndex, rule.SkipHashCheckIndex);
+        Assert.Equal(noIndex, rule.PreReleaseIndex);
+        Assert.Equal(noIndex, rule.HasCustomParametersIndex);
+        Assert.Equal(noIndex, rule.HasCustomInstallLocationIndex);
+        Assert.Equal(noIndex, rule.HasPrePostCommandsIndex);
+        Assert.Equal(noIndex, rule.HasKillBeforeOperationIndex);
+        Assert.Equal(noIndex, rule.HasUninstallPreviousIndex);
     }
 
     [Fact]

@@ -179,6 +179,7 @@ public partial class PolicyEditorLocalizationTests
         Assert.Contains("Text=\"{Binding PolicyChangesFromThisAppText}\"", view);
         Assert.Contains("Text=\"{t:Translate Reason}\"", view);
         Assert.Contains("Text=\"{Binding PolicyChangesReasonText}\"", view);
+        Assert.Contains("IsVisible=\"{Binding HasPolicyChangesReason}\"", view);
         Assert.Contains(
             "automation:AutomationProperties.Name=\"{t:Translate Policy change availability reason}\"",
             view);
@@ -191,7 +192,7 @@ public partial class PolicyEditorLocalizationTests
     [Fact]
     public void PolicyHelp_CoversAuthoredFixedAgentManagedAndDangerousSemantics()
     {
-        Assert.Contains("authored identity", PolicyEditorHelp.PolicyId, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("authored identifier", PolicyEditorHelp.PolicyId, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("software-managed", PolicyEditorHelp.PolicyFormatVersion, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Agent-managed", PolicyEditorHelp.ConfiguredPath, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("fail-closed", PolicyEditorHelp.DefaultDecision, StringComparison.OrdinalIgnoreCase);
@@ -201,6 +202,94 @@ public partial class PolicyEditorLocalizationTests
         Assert.Contains("agreements", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("reboot", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("warnings require acknowledgement", PolicyEditorHelp.Save, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not a display name", PolicyEditorHelp.PolicyId, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("contoso-policy", PolicyEditorHelp.PolicyId, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not a display name", PolicyEditorHelp.RuleId, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("allow-winget-updates", PolicyEditorHelp.RuleId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void BooleanMatchHelp_ExplainsEveryTriStateAndIsBoundToLabelsAndControls()
+    {
+        string[] helpTexts =
+        [
+            PolicyEditorHelp.InteractiveMatch,
+            PolicyEditorHelp.SkipHashMatch,
+            PolicyEditorHelp.PrereleaseMatch,
+            PolicyEditorHelp.CustomParametersMatch,
+            PolicyEditorHelp.CustomLocationMatch,
+            PolicyEditorHelp.PrePostCommandsMatch,
+            PolicyEditorHelp.KillBeforeMatch,
+            PolicyEditorHelp.UninstallPreviousMatch,
+        ];
+        foreach (string help in helpTexts)
+        {
+            Assert.Contains("Any matches either value", help, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Yes requires true", help, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("No requires false", help, StringComparison.OrdinalIgnoreCase);
+        }
+
+        string root = FindRepositoryRoot();
+        string view = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorDialog.axaml"));
+        string[] helpProperties =
+        [
+            nameof(PolicyEditorHelp.InteractiveMatch),
+            nameof(PolicyEditorHelp.SkipHashMatch),
+            nameof(PolicyEditorHelp.PrereleaseMatch),
+            nameof(PolicyEditorHelp.CustomParametersMatch),
+            nameof(PolicyEditorHelp.CustomLocationMatch),
+            nameof(PolicyEditorHelp.PrePostCommandsMatch),
+            nameof(PolicyEditorHelp.KillBeforeMatch),
+            nameof(PolicyEditorHelp.UninstallPreviousMatch),
+        ];
+        foreach (string property in helpProperties)
+        {
+            Assert.Equal(
+                2,
+                Regex.Matches(
+                    view,
+                    $"controls:PolicyHelp.Text=\"{{x:Static pvm:PolicyEditorHelp.{property}}}\"")
+                    .Count);
+        }
+    }
+
+    [Fact]
+    public void ResourceIdHelp_IsPersistentAndAccessiblyBoundToLabelsAndInputs()
+    {
+        string root = FindRepositoryRoot();
+        string view = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorDialog.axaml"));
+
+        Assert.Equal(
+            2,
+            Regex.Matches(
+                view,
+                "controls:PolicyHelp.Text=\"{x:Static pvm:PolicyEditorHelp.PolicyId}\"")
+                .Count);
+        Assert.Equal(
+            2,
+            Regex.Matches(
+                view,
+                "controls:PolicyHelp.Text=\"{x:Static pvm:PolicyEditorHelp.RuleId}\"")
+                .Count);
+        Assert.Contains("Text=\"{x:Static pvm:PolicyEditorHelp.PolicyId}\"", view);
+        Assert.Contains("Text=\"{x:Static pvm:PolicyEditorHelp.RuleId}\"", view);
+        Assert.Contains("TextWrapping=\"Wrap\"", view);
     }
 
     [Fact]
@@ -262,6 +351,13 @@ public partial class PolicyEditorLocalizationTests
         Assert.True(
             UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor.PolicyEditorDialog
                 .PointerTargetsTag(normalized, "/Rules/*/Match/Versions"));
+        string normalizedRuleId =
+            UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor.PolicyEditorDialog
+                .NormalizeRulePointer("/Rules/0/Id");
+        Assert.Equal("/Rules/*/Id", normalizedRuleId);
+        Assert.True(
+            UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor.PolicyEditorDialog
+                .PointerTargetsTag(normalizedRuleId, "/Rules/*/Id"));
     }
 
     [Fact]

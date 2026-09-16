@@ -96,6 +96,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _agentWriteCapabilityText = "";
     [ObservableProperty] private string _policyChangesFromThisAppText = "";
     [ObservableProperty] private string _policyChangesReasonText = "";
+    [ObservableProperty] private bool _hasPolicyChangesReason;
     [ObservableProperty] private bool _managementElevationRequired;
     [ObservableProperty] private string _managementElevationRequiredText = "";
     [ObservableProperty] private bool _canEdit;
@@ -650,6 +651,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         PolicyChangesFromThisAppText = writable
             ? CoreTools.Translate("Available")
             : CoreTools.Translate("Unavailable");
+        HasPolicyChangesReason = !writable;
         PolicyChangesReasonText = writable
             ? CoreTools.Translate("Not applicable")
             : agentWritable
@@ -786,6 +788,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         AgentWriteCapabilityText = "";
         PolicyChangesFromThisAppText = "";
         PolicyChangesReasonText = "";
+        HasPolicyChangesReason = false;
         ManagementElevationRequired = false;
         ManagementElevationRequiredText = "";
         HasManagementDiagnostics = false;

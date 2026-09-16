@@ -744,9 +744,11 @@ public class PolicyEditorStructuredInputGuardTests
             out PolicyEditorSyntaxError? error));
         Assert.Null(error);
         Assert.Equal("", parsed!.Metadata.Description);
-        Assert.Equal(" ", parsed.Rules[0].Reason);
-        Assert.Equal(" ", parsed.Rules[0].Match.VersionRange!.MinVersion);
-        Assert.Equal("2.0", parsed.Rules[0].Match.VersionRange!.MaxVersion);
+        PolicyEditorDraftRule parsedRule = parsed.Rules.Single(
+            candidate => candidate.Id == draftRule.Id);
+        Assert.Equal(" ", parsedRule.Reason);
+        Assert.Equal(" ", parsedRule.Match.VersionRange!.MinVersion);
+        Assert.Equal("2.0", parsedRule.Match.VersionRange!.MaxVersion);
 
         validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
         {
@@ -758,9 +760,11 @@ public class PolicyEditorStructuredInputGuardTests
 
         Assert.Equal(PolicyEditorMode.Structured, session.Mode);
         Assert.Equal("", session.Draft.Metadata.Description);
-        Assert.Equal(" ", session.Draft.Rules[0].Reason);
-        Assert.Equal(" ", session.Draft.Rules[0].Match.VersionRange!.MinVersion);
-        Assert.Equal("2.0", session.Draft.Rules[0].Match.VersionRange!.MaxVersion);
+        PolicyEditorDraftRule projectedRule = session.Draft.Rules.Single(
+            candidate => candidate.Id == draftRule.Id);
+        Assert.Equal(" ", projectedRule.Reason);
+        Assert.Equal(" ", projectedRule.Match.VersionRange!.MinVersion);
+        Assert.Equal("2.0", projectedRule.Match.VersionRange!.MaxVersion);
     }
 
     [Fact]

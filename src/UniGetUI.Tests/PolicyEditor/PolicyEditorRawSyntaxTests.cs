@@ -19,7 +19,7 @@ public class PolicyEditorRawSyntaxTests
         Assert.Null(error);
         Assert.NotNull(parsed);
         Assert.Equal("id-1", parsed!.Metadata.Id);
-        Assert.Single(parsed.Rules);
+        Assert.Contains(parsed.Rules, rule => rule.Id == "rule-a");
     }
 
     [Theory]

@@ -6,10 +6,14 @@ namespace UniGetUI.Tests.PolicyEditor;
 
 public class PolicyRuleOperationsTests
 {
-    private static PolicyEditorSession StartCreateSession(string id = "id-1", string publisher = "Contoso") =>
-        PolicyEditorSession.StartCreate(
+    private static PolicyEditorSession StartCreateSession(string id = "id-1", string publisher = "Contoso")
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew(id, publisher);
+        draft.Rules.Clear();
+        return PolicyEditorSession.StartCreate(
             PolicyEditorTestFixtures.BuildMissingManagement(),
-            PolicyEditorTemplates.CreateNew(id, publisher));
+            draft);
+    }
 
     [Fact]
     public void CreateRuleId_ProducesContractSafeIdentifier()

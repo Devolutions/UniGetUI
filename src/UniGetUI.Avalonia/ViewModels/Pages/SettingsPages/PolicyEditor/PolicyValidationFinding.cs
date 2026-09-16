@@ -184,12 +184,21 @@ public static class PolicyFindingPresentation
             .Split('/', StringSplitOptions.RemoveEmptyEntries)
             .Select(DecodePointerSegment)
             .ToArray();
+        if (segments.Length == 2
+            && segments[0].Equals("Metadata", StringComparison.OrdinalIgnoreCase)
+            && segments[1].Equals("Id", StringComparison.OrdinalIgnoreCase))
+        {
+            return CoreTools.Translate("Policy ID");
+        }
+
         var parts = new List<string>(3);
         int index = 0;
+        bool isRule = false;
         if (segments.Length >= 2
             && segments[0].Equals("Rules", StringComparison.OrdinalIgnoreCase)
             && int.TryParse(segments[1], out int ruleIndex))
         {
+            isRule = true;
             parts.Add(string.IsNullOrWhiteSpace(sanitizedRuleId)
                 ? CoreTools.Translate("Rule: {0}", ruleIndex + 1)
                 : CoreTools.Translate("Rule: {0}", $"'{sanitizedRuleId}'"));
@@ -205,7 +214,11 @@ public static class PolicyFindingPresentation
                 continue;
             }
 
-            string? label = FieldLabel(segment);
+            string? label = isRule
+                && index == 2
+                && segment.Equals("Id", StringComparison.OrdinalIgnoreCase)
+                    ? CoreTools.Translate("Rule ID")
+                    : FieldLabel(segment);
             if (label is not null
                 && (parts.Count == 0 || !parts[^1].Equals(label, StringComparison.Ordinal)))
             {

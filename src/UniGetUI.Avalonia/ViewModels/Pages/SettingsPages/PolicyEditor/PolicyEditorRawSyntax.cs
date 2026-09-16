@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Devolutions.Now.Policy.Model;
 
@@ -80,7 +81,8 @@ public static partial class PolicyEditorRawSyntax
         PolicyDraftDocument? document;
         try
         {
-            document = PolicySerializer.DeserializePolicyDraftDocumentStrict(rawJson);
+            document = PolicySerializer.DeserializePolicyDraftDocumentStrict(
+                MakeResourceIdsProjectable(rawJson));
         }
         catch (Exception ex) when (ex is JsonException or FormatException or ArgumentException or NotSupportedException)
         {
@@ -102,7 +104,87 @@ public static partial class PolicyEditorRawSyntax
         }
 
         draft = PolicyEditorMapper.ToDraft(document);
+        RestoreAuthoredResourceIds(element, draft);
         return true;
+    }
+
+    private static string MakeResourceIdsProjectable(string rawJson)
+    {
+        // The package deserializer validates ResourceId values while materializing the document.
+        // Substitute only for shape projection, then restore the authored strings for inline editing.
+        JsonNode? root = JsonNode.Parse(rawJson);
+        if (root is not JsonObject policy)
+        {
+            return rawJson;
+        }
+
+        if (policy["Metadata"] is JsonObject metadata)
+        {
+            ReplaceInvalidResourceId(metadata, "Id", "policy");
+        }
+
+        if (policy["Rules"] is JsonArray rules)
+        {
+            for (int index = 0; index < rules.Count; index++)
+            {
+                if (rules[index] is JsonObject rule)
+                {
+                    ReplaceInvalidResourceId(rule, "Id", $"rule-{index + 1}");
+                }
+            }
+        }
+
+        return root.ToJsonString();
+    }
+
+    private static void ReplaceInvalidResourceId(
+        JsonObject owner,
+        string propertyName,
+        string replacement)
+    {
+        if (owner[propertyName] is JsonValue value
+            && value.TryGetValue(out string? authored)
+            && !PolicyEditorTemplates.IsValidResourceId(authored))
+        {
+            owner[propertyName] = replacement;
+        }
+    }
+
+    private static void RestoreAuthoredResourceIds(
+        JsonElement root,
+        PolicyEditorDraftDocument draft)
+    {
+        if (root.TryGetProperty("Metadata", out JsonElement metadata)
+            && metadata.ValueKind == JsonValueKind.Object
+            && metadata.TryGetProperty("Id", out JsonElement policyId)
+            && policyId.ValueKind == JsonValueKind.String)
+        {
+            draft.Metadata.Id = policyId.GetString() ?? "";
+        }
+
+        if (!root.TryGetProperty("Rules", out JsonElement rules)
+            || rules.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        int index = 0;
+        foreach (JsonElement rule in rules.EnumerateArray())
+        {
+            if (index >= draft.Rules.Count)
+            {
+                break;
+            }
+
+            if (rule.ValueKind == JsonValueKind.Object
+                && rule.TryGetProperty("Id", out JsonElement ruleId)
+                && ruleId.ValueKind == JsonValueKind.String)
+            {
+                draft.Rules[index].Id = ruleId.GetString() ?? "";
+            }
+
+            index++;
+        }
     }
 
     private static bool TryCheckDraftContractFields(

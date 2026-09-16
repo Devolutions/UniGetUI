@@ -150,7 +150,9 @@
                     <Border Classes="settings-card policy-section">
                         <StackPanel Spacing="8">
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Policy ID}"/>
+                                <TextBlock Classes="field-label"
+                                           Text="{t:Translate Policy ID}"
+                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PolicyId}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
                                     <TextBox x:Name="PolicyIdInput"
                                              Text="{Binding Document.Id}"
@@ -159,6 +161,9 @@
                                              Classes.finding-error="{Binding Document.HasIdErrors}"
                                              controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PolicyId}"
                                              automation:AutomationProperties.Name="{t:Translate Policy ID}"/>
+                                    <TextBlock Text="{x:Static pvm:PolicyEditorHelp.PolicyId}"
+                                              TextWrapping="Wrap"
+                                              Opacity="0.7"/>
                                     <ItemsControl ItemsSource="{Binding Document.IdFindings}" ItemTemplate="{StaticResource InlineFindingTemplate}"/>
                                 </StackPanel>
                             </Grid>
@@ -349,13 +354,18 @@
                                         <ItemsControl ItemsSource="{Binding Findings}" IsVisible="{Binding HasFindings}"/>
 
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Rule ID}"/>
+                                            <TextBlock Classes="field-label"
+                                                       Text="{t:Translate Rule ID}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleId}"/>
                                             <StackPanel Grid.Column="1" Spacing="2">
                                                 <TextBox Text="{Binding Id}"
                                                          Tag="/Rules/*/Id"
                                                          Classes.finding-error="{Binding HasIdErrors}"
                                                          controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleId}"
                                                          automation:AutomationProperties.Name="{t:Translate Rule ID}"/>
+                                                <TextBlock Text="{x:Static pvm:PolicyEditorHelp.RuleId}"
+                                                          TextWrapping="Wrap"
+                                                          Opacity="0.7"/>
                                                 <ItemsControl ItemsSource="{Binding IdFindings}" ItemTemplate="{StaticResource InlineFindingTemplate}"/>
                                             </StackPanel>
                                         </Grid>
@@ -534,7 +544,8 @@
                                         </StackPanel>
 
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Interactive}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Interactive}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.InteractiveMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding InteractiveIndex}"
                                                       Tag="/Rules/*/Match/Interactive"
@@ -542,7 +553,8 @@
                                                       automation:AutomationProperties.Name="{t:Translate Interactive}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Skip hash check}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Skip hash check}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.SkipHashMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding SkipHashCheckIndex}"
                                                       Tag="/Rules/*/Match/SkipHashCheck"
@@ -550,7 +562,8 @@
                                                       automation:AutomationProperties.Name="{t:Translate Skip hash check}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Prerelease}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Prerelease}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PrereleaseMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding PreReleaseIndex}"
                                                       Tag="/Rules/*/Match/PreRelease"
@@ -558,7 +571,8 @@
                                                       automation:AutomationProperties.Name="{t:Translate Prerelease}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Has custom parameters}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Has custom parameters}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CustomParametersMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding HasCustomParametersIndex}"
                                                       Tag="/Rules/*/Match/HasCustomParameters"
@@ -566,7 +580,8 @@
                                                       automation:AutomationProperties.Name="{t:Translate Has custom parameters}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Has custom install location}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Has custom install location}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CustomLocationMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding HasCustomInstallLocationIndex}"
                                                       Tag="/Rules/*/Match/HasCustomInstallLocation"
@@ -574,7 +589,8 @@
                                                       automation:AutomationProperties.Name="{t:Translate Has custom install location}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Has pre/post commands}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Has pre/post commands}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PrePostCommandsMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding HasPrePostCommandsIndex}"
                                                       Tag="/Rules/*/Match/HasPrePostCommands"
@@ -582,7 +598,8 @@
                                                       automation:AutomationProperties.Name="{t:Translate Has pre/post commands}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Has kill-before-operation}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Has kill-before-operation}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.KillBeforeMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding HasKillBeforeOperationIndex}"
                                                       Tag="/Rules/*/Match/HasKillBeforeOperation"
@@ -590,7 +607,8 @@
                                                       automation:AutomationProperties.Name="{t:Translate Has kill-before-operation}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Has uninstall previous}"/>
+                                            <TextBlock Classes="field-label" Text="{t:Translate Has uninstall previous}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.UninstallPreviousMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding HasUninstallPreviousIndex}"
                                                       Tag="/Rules/*/Match/HasUninstallPrevious"

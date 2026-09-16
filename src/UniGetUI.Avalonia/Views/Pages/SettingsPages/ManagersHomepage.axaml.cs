@@ -124,10 +124,15 @@ public sealed partial class ManagersHomepage : UserControl, ISettingsPage
             badge.Severity = StatusBadgeSeverity.Warning;
             label = CoreTools.Translate("Disabled");
         }
-        else if (manager.Status.Found)
+        else if (manager.IsReady())
         {
             badge.Severity = StatusBadgeSeverity.Success;
             label = CoreTools.Translate("Ready");
+        }
+        else if (manager.Status.Found)
+        {
+            badge.Severity = StatusBadgeSeverity.Error;
+            label = CoreTools.Translate("Failed");
         }
         else
         {

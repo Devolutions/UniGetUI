@@ -1081,5 +1081,7 @@
   "Package name": "Package name",
   "No subfolder": "No subfolder",
   "Enter a name for the new source": "Enter a name for the new source",
-  "Enter a complete source URL, including the protocol (for example https://)": "Enter a complete source URL, including the protocol (for example https://)"
+  "Enter a complete source URL, including the protocol (for example https://)": "Enter a complete source URL, including the protocol (for example https://)",
+  "{pm} could not be loaded": "{pm} could not be loaded",
+  "{pm} was found on your system, but it could not be started. Check the UniGetUI log for more details.": "{pm} was found on your system, but it could not be started. Check the UniGetUI log for more details."
 }

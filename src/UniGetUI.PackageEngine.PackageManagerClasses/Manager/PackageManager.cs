@@ -280,6 +280,23 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
             }
         }
 
+        protected bool IsUserSelectedExecutablePath(string path)
+        {
+            if (!SecureSettings.Get(SecureSettings.K.AllowCustomManagerPaths))
+            {
+                return false;
+            }
+
+            string? exeSelection = Settings.GetDictionaryItem<string, string>(
+                Settings.K.ManagerPaths,
+                Name
+            );
+
+            return !string.IsNullOrEmpty(exeSelection)
+                && File.Exists(exeSelection)
+                && exeSelection.Equals(path, StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>
         /// Returns true if the manager is enabled, false otherwise
         /// </summary>

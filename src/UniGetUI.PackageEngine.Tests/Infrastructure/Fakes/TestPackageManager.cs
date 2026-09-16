@@ -88,6 +88,8 @@ public sealed class TestPackageManager : PackageManager
 
     public string LoadedVersion { get; set; } = "1.0.0-test";
 
+    public Exception? VersionLoadFailure { get; set; }
+
     public int AttemptFastRepairCalls { get; private set; }
 
     public int RefreshPackageIndexesCalls { get; private set; }
@@ -167,6 +169,11 @@ public sealed class TestPackageManager : PackageManager
 
     protected override void _loadManagerVersion(out string version)
     {
+        if (VersionLoadFailure is not null)
+        {
+            throw VersionLoadFailure;
+        }
+
         version = LoadedVersion;
     }
 

@@ -366,6 +366,93 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void TryReadExecutableVersionFailsOnAnExecutableThatCannotBeStarted()
+    {
+        string brokenWinGet = Path.Combine(_testRoot, "winget.exe");
+        File.WriteAllBytes(brokenWinGet, []);
+
+        var (succeeded, output, failureReason) = WinGet.TryReadExecutableVersion(brokenWinGet, "");
+
+        Assert.False(succeeded);
+        Assert.Empty(output);
+        Assert.NotEmpty(failureReason);
+    }
+
+    [Fact]
+    public void TryReadExecutableVersionFailsOnAMissingExecutable()
+    {
+        string missingWinGet = Path.Combine(_testRoot, "missing", "winget.exe");
+
+        var (succeeded, output, failureReason) = WinGet.TryReadExecutableVersion(missingWinGet, "");
+
+        Assert.False(succeeded);
+        Assert.Empty(output);
+        Assert.NotEmpty(failureReason);
+    }
+
+    [Fact]
+    public void ResolveLaunchableExecutableFileKeepsThePreferredExecutableWhenItCanBeRun()
+    {
+        const string systemWinGet = @"C:\WindowsApps\winget.exe";
+
+        string resolved = WinGet.ResolveLaunchableExecutableFile(
+            systemWinGet,
+            _ => (true, "v1.11.400", ""),
+            () => throw new InvalidOperationException(
+                "Other candidates should not be looked up when the preferred executable runs."
+            ),
+            out string? versionOutput
+        );
+
+        Assert.Equal(systemWinGet, resolved);
+        Assert.Equal("v1.11.400", versionOutput);
+    }
+
+    [Fact]
+    public void ResolveLaunchableExecutableFileFallsBackToTheFirstCandidateThatCanBeRun()
+    {
+        const string systemWinGet = @"C:\WindowsApps\winget.exe";
+        const string packagedWinGet =
+            @"C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_1.29.290.0_x64__8wekyb3d8bbwe\winget.exe";
+        const string bundledPinget = @"C:\Program Files\UniGetUI\pinget.exe";
+        List<string> attempted = [];
+
+        string resolved = WinGet.ResolveLaunchableExecutableFile(
+            systemWinGet,
+            executablePath =>
+            {
+                attempted.Add(executablePath);
+                return executablePath == bundledPinget
+                    ? (true, "pinget 0.12.0", "")
+                    : (false, "", "no applicable app licenses found");
+            },
+            () => [systemWinGet, packagedWinGet, bundledPinget],
+            out string? versionOutput
+        );
+
+        Assert.Equal(bundledPinget, resolved);
+        Assert.Equal("pinget 0.12.0", versionOutput);
+        Assert.Equal([systemWinGet, packagedWinGet, bundledPinget], attempted);
+    }
+
+    [Fact]
+    public void ResolveLaunchableExecutableFileKeepsThePreferredExecutableWhenNoCandidateCanBeRun()
+    {
+        const string systemWinGet = @"C:\WindowsApps\winget.exe";
+        const string bundledPinget = @"C:\Program Files\UniGetUI\pinget.exe";
+
+        string resolved = WinGet.ResolveLaunchableExecutableFile(
+            systemWinGet,
+            _ => (false, "", "no applicable app licenses found"),
+            () => [systemWinGet, bundledPinget],
+            out string? versionOutput
+        );
+
+        Assert.Equal(systemWinGet, resolved);
+        Assert.Null(versionOutput);
+    }
+
+    [Fact]
     public void EnumerateOffPathExecutablesReturnsExecutionAliasAndAppInstallerLocations()
     {
         const string localAppData = @"C:\Users\test\AppData\Local";

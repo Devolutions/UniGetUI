@@ -669,9 +669,16 @@ internal static partial class AvaloniaAutoUpdater
             return;
         }
 
+        WindowsInstallScope installScope = AutoUpdaterInstallerArguments.DetectInstallScope(
+            CoreData.UniGetUIExecutableDirectory);
+
         string installerArguments = AutoUpdaterInstallerArguments.ForWindows(
             CoreData.IsPortable,
-            CoreData.UniGetUIExecutableDirectory);
+            CoreData.UniGetUIExecutableDirectory,
+            installScope);
+
+        LogUpdateInfo(
+            $"Installation scope for {CoreData.UniGetUIExecutableDirectory} resolved as {installScope}.");
 
         if (CoreData.IsPortable)
         {

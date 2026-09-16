@@ -9,7 +9,11 @@ public sealed class AutoUpdaterTests
     [Fact]
     public void InstallerArguments_LeaveARegularInstallToTheInstallersOwnDirectoryLogic()
     {
-        string arguments = AutoUpdaterInstallerArguments.ForWindows(false, @"C:\Program Files\UniGetUI");
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(
+            false,
+            @"C:\Program Files\UniGetUI",
+            WindowsInstallScope.Unknown
+        );
 
         Assert.DoesNotContain("/DIR=", arguments);
         Assert.DoesNotContain("/TASKS=", arguments);
@@ -19,7 +23,11 @@ public sealed class AutoUpdaterTests
     [Fact]
     public void InstallerArguments_PinAPortableInstallToItsOwnDirectory()
     {
-        string arguments = AutoUpdaterInstallerArguments.ForWindows(true, @"E:\Portable Apps\UniGetUI");
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(
+            true,
+            @"E:\Portable Apps\UniGetUI",
+            WindowsInstallScope.Unknown
+        );
 
         Assert.Contains(@"/DIR=""E:\Portable Apps\UniGetUI""", arguments);
         Assert.Contains(@"/TASKS=""portableinstall""", arguments);
@@ -29,7 +37,11 @@ public sealed class AutoUpdaterTests
     [Fact]
     public void InstallerArguments_DoNotLeaveATrailingSeparatorBeforeTheClosingQuote()
     {
-        string arguments = AutoUpdaterInstallerArguments.ForWindows(true, @"E:\UniGetUI\");
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(
+            true,
+            @"E:\UniGetUI\",
+            WindowsInstallScope.Unknown
+        );
 
         Assert.Contains(@"/DIR=""E:\UniGetUI""", arguments);
         Assert.DoesNotContain(@"\""", arguments);
@@ -38,7 +50,11 @@ public sealed class AutoUpdaterTests
     [Fact]
     public void InstallerArguments_KeepTheSeparatorForAVolumeRoot()
     {
-        string arguments = AutoUpdaterInstallerArguments.ForWindows(true, @"E:\");
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(
+            true,
+            @"E:\",
+            WindowsInstallScope.Unknown
+        );
 
         Assert.Contains(@"/DIR=""E:\""", arguments);
         Assert.DoesNotContain(@"/DIR=""E:""", arguments);
@@ -47,7 +63,186 @@ public sealed class AutoUpdaterTests
     [Fact]
     public void InstallerArguments_FallBackToDefaultsWhenTheDirectoryIsUnknown()
     {
-        Assert.DoesNotContain("/DIR=", AutoUpdaterInstallerArguments.ForWindows(true, ""));
+        Assert.DoesNotContain("/DIR=", AutoUpdaterInstallerArguments.ForWindows(true, "", WindowsInstallScope.Unknown));
+    }
+
+    [Fact]
+    public void InstallerArguments_RequestAnAllUsersInstallForASystemWideCopy()
+    {
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(
+            false,
+            @"C:\Program Files\UniGetUI",
+            WindowsInstallScope.AllUsers
+        );
+
+        Assert.Contains("/ALLUSERS", arguments);
+        Assert.DoesNotContain("/CURRENTUSER", arguments);
+    }
+
+    [Fact]
+    public void InstallerArguments_RequestAPerUserInstallForAPerUserCopy()
+    {
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(
+            false,
+            @"C:\Users\someone\AppData\Local\Programs\UniGetUI",
+            WindowsInstallScope.CurrentUser
+        );
+
+        Assert.Contains("/CURRENTUSER", arguments);
+        Assert.DoesNotContain("/ALLUSERS", arguments);
+    }
+
+    [Fact]
+    public void InstallerArguments_LeaveTheInstallModeToTheInstallerWhenTheScopeIsUnknown()
+    {
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(
+            false,
+            @"D:\Builds\UniGetUI",
+            WindowsInstallScope.Unknown
+        );
+
+        Assert.DoesNotContain("/ALLUSERS", arguments);
+        Assert.DoesNotContain("/CURRENTUSER", arguments);
+    }
+
+    [Fact]
+    public void InstallerArguments_KeepTheInstallModeAlongsideThePortableArguments()
+    {
+        string arguments = AutoUpdaterInstallerArguments.ForWindows(
+            true,
+            @"C:\Program Files\UniGetUI Portable",
+            WindowsInstallScope.AllUsers
+        );
+
+        Assert.Contains("/ALLUSERS", arguments);
+        Assert.Contains(@"/DIR=""C:\Program Files\UniGetUI Portable""", arguments);
+        Assert.Contains(@"/TASKS=""portableinstall""", arguments);
+    }
+
+    [Fact]
+    public void ResolveInstallScope_PrefersTheSystemWideEntryOverAStalePerUserOne()
+    {
+        WindowsInstallScope scope = AutoUpdaterInstallerArguments.ResolveInstallScope(
+            @"C:\Program Files\UniGetUI",
+            @"C:\Program Files\UniGetUI",
+            @"C:\Users\someone\AppData\Local\Programs\UniGetUI",
+            [@"C:\Program Files"]
+        );
+
+        Assert.Equal(WindowsInstallScope.AllUsers, scope);
+    }
+
+    [Fact]
+    public void ResolveInstallScope_MatchesThePerUserEntryWhenTheCopyLivesThere()
+    {
+        WindowsInstallScope scope = AutoUpdaterInstallerArguments.ResolveInstallScope(
+            @"C:\Users\someone\AppData\Local\Programs\UniGetUI",
+            @"C:\Program Files\UniGetUI",
+            @"C:\Users\someone\AppData\Local\Programs\UniGetUI",
+            [@"C:\Program Files"]
+        );
+
+        Assert.Equal(WindowsInstallScope.CurrentUser, scope);
+    }
+
+    [Fact]
+    public void ResolveInstallScope_IgnoresCasingAndTrailingSeparators()
+    {
+        WindowsInstallScope scope = AutoUpdaterInstallerArguments.ResolveInstallScope(
+            @"c:\program files\unigetui\",
+            @"C:\Program Files\UniGetUI",
+            null,
+            []
+        );
+
+        Assert.Equal(WindowsInstallScope.AllUsers, scope);
+    }
+
+    [Fact]
+    public void ResolveInstallScope_FallsBackToTheProgramFilesRootsWhenNoEntryMatches()
+    {
+        WindowsInstallScope scope = AutoUpdaterInstallerArguments.ResolveInstallScope(
+            @"C:\Program Files\UniGetUI",
+            null,
+            null,
+            [@"C:\Program Files", @"C:\Program Files (x86)"]
+        );
+
+        Assert.Equal(WindowsInstallScope.AllUsers, scope);
+    }
+
+    [Fact]
+    public void ResolveInstallScope_DoesNotMatchASiblingOfAProgramFilesRoot()
+    {
+        WindowsInstallScope scope = AutoUpdaterInstallerArguments.ResolveInstallScope(
+            @"C:\Program Files Custom\UniGetUI",
+            null,
+            null,
+            [@"C:\Program Files"]
+        );
+
+        Assert.Equal(WindowsInstallScope.Unknown, scope);
+    }
+
+    [Fact]
+    public void ResolveInstallScope_ReturnsUnknownForAnUnrecognizedDirectory()
+    {
+        Assert.Equal(
+            WindowsInstallScope.Unknown,
+            AutoUpdaterInstallerArguments.ResolveInstallScope(@"D:\Builds\UniGetUI", null, null, [])
+        );
+        Assert.Equal(
+            WindowsInstallScope.Unknown,
+            AutoUpdaterInstallerArguments.ResolveInstallScope("", @"C:\Program Files\UniGetUI", null, [])
+        );
+    }
+
+    [Fact]
+    public void PreferMatchingPath_PicksTheRegistryViewThatMatchesTheRunningCopy()
+    {
+        Assert.Equal(
+            @"C:\Program Files\UniGetUI",
+            AutoUpdaterInstallerArguments.PreferMatchingPath(
+                @"C:\Program Files\UniGetUI",
+                @"C:\Stale\UniGetUI",
+                @"C:\Program Files\UniGetUI"
+            )
+        );
+    }
+
+    [Fact]
+    public void PreferMatchingPath_FallsBackToTheFirstRecordedPath()
+    {
+        Assert.Equal(
+            @"C:\Stale\UniGetUI",
+            AutoUpdaterInstallerArguments.PreferMatchingPath(
+                @"C:\Program Files\Elsewhere",
+                @"C:\Stale\UniGetUI",
+                @"C:\Other\UniGetUI"
+            )
+        );
+
+        Assert.Equal(
+            @"C:\Other\UniGetUI",
+            AutoUpdaterInstallerArguments.PreferMatchingPath(@"", null, @"C:\Other\UniGetUI")
+        );
+
+        Assert.Null(AutoUpdaterInstallerArguments.PreferMatchingPath(@"C:\Any", null, null));
+    }
+
+    [Fact]
+    public void DetectInstallScope_ReturnsUnknownForADirectoryThatIsNotAnInstallation()
+    {
+        string unrelated = Path.Combine(Path.GetTempPath(), "UniGetUI.ScopeProbe.NotAnInstall");
+
+        Assert.Equal(
+            WindowsInstallScope.Unknown,
+            AutoUpdaterInstallerArguments.DetectInstallScope(unrelated)
+        );
+        Assert.Equal(
+            WindowsInstallScope.Unknown,
+            AutoUpdaterInstallerArguments.DetectInstallScope("")
+        );
     }
 
     [Theory]

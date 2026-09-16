@@ -478,7 +478,7 @@ public partial class PackagesPageViewModel : ViewModelBase
             Dispatcher.UIThread.Post(() => Loader_FinishedLoading(sender, e));
             return;
         }
-        IsLoading = false;
+        IsLoading = Loader.IsLoading;
         _lastLoadTime = DateTime.Now;
         ReloadButtonTooltip = CoreTools.Translate("Last checked: {0}", _lastLoadTime.ToString(CultureInfo.CurrentCulture));
         FilterPackages();

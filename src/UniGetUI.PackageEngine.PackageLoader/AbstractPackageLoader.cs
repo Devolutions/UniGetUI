@@ -112,6 +112,12 @@ namespace UniGetUI.PackageEngine.PackageLoader
         private void CompleteCurrentLoad()
             => Interlocked.Exchange(ref _loadCompletion, null)?.TrySetResult();
 
+        private void CompleteLoad(TaskCompletionSource completion)
+        {
+            Interlocked.CompareExchange(ref _loadCompletion, null, completion);
+            completion.TrySetResult();
+        }
+
         protected virtual bool DidManagerReportFailure(IPackageManager manager) => false;
 
         public void StopLoading(bool emitFinishSignal = true)
@@ -148,6 +154,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
         /// </summary>
         public virtual async Task ReloadPackages()
         {
+            TaskCompletionSource? completion = null;
             try
             {
                 if (DISABLE_RELOAD)
@@ -164,10 +171,10 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
                 LoadOperationIdentifier = new Random().Next();
                 int current_identifier = LoadOperationIdentifier;
-                Volatile.Write(
-                    ref _loadCompletion,
-                    new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+                completion = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously
                 );
+                Volatile.Write(ref _loadCompletion, completion);
                 IsLoading = true;
                 LastLoadReportedFailures = false;
                 StartedLoading?.Invoke(this, EventArgs.Empty);
@@ -241,14 +248,14 @@ namespace UniGetUI.PackageEngine.PackageLoader
                         LastLoadReportedFailures = true;
                 }
 
+                IsLoading = false;
+
                 if (LoadOperationIdentifier == current_identifier)
                 {
                     LastLoadFinishedUtc = DateTime.UtcNow;
-                    InvokeFinishedLoadingEvent();
                     IsLoaded = true;
+                    InvokeFinishedLoadingEvent();
                 }
-
-                IsLoading = false;
             }
             catch (Exception ex)
             {
@@ -258,7 +265,8 @@ namespace UniGetUI.PackageEngine.PackageLoader
             }
             finally
             {
-                CompleteCurrentLoad();
+                if (completion is not null)
+                    CompleteLoad(completion);
             }
         }
 

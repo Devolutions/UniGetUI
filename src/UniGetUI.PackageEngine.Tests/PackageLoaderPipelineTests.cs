@@ -188,4 +188,24 @@ public sealed class PackageLoaderPipelineTests
         Assert.True(changeEvents[1].ProceduralChange);
         Assert.Equal(["Contoso.Accepted"], changeEvents[1].AddedPackages.Select(package => package.Id).Distinct());
     }
+
+    [Fact]
+    public async Task ReloadPackages_ReportsSettledLoadState_WhenFinishedLoadingIsRaised()
+    {
+        var manager = new PackageManagerBuilder().Build();
+        var loader = new TestPackageLoader([manager], loadPackages: _ => []);
+
+        bool? isLoadingWhenFinished = null;
+        bool? isLoadedWhenFinished = null;
+        loader.FinishedLoading += (_, _) =>
+        {
+            isLoadingWhenFinished = loader.IsLoading;
+            isLoadedWhenFinished = loader.IsLoaded;
+        };
+
+        await loader.ReloadPackages();
+
+        Assert.False(isLoadingWhenFinished);
+        Assert.True(isLoadedWhenFinished);
+    }
 }

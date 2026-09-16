@@ -47,6 +47,65 @@ public sealed class PackageLoaderWaitTests
         await AssertCompletesAsync(waitStartedInsideTheEvent);
     }
 
+    [Fact]
+    public async Task WaitForCurrentLoadAsync_KeepsWaiting_WhenARedundantReloadIsRequested()
+    {
+        using var release = new ManualResetEventSlim(false);
+        var manager = new PackageManagerBuilder().Build();
+        var loader = new TestPackageLoader(
+            [manager],
+            loadPackages: _ =>
+            {
+                release.Wait();
+                return [];
+            }
+        );
+
+        Task load = loader.ReloadPackages();
+        Assert.True(loader.IsLoading);
+
+        Task wait = loader.WaitForCurrentLoadAsync();
+        await loader.ReloadPackages();
+
+        Assert.False(wait.IsCompleted);
+
+        release.Set();
+        await load;
+        await AssertCompletesAsync(wait);
+    }
+
+    [Fact]
+    public async Task WaitForCurrentLoadAsync_TracksTheNextLoad_WhenAReloadStartsFromFinishedLoading()
+    {
+        using var release = new ManualResetEventSlim(true);
+        var manager = new PackageManagerBuilder().Build();
+        var loader = new TestPackageLoader(
+            [manager],
+            loadPackages: _ =>
+            {
+                release.Wait();
+                return [];
+            }
+        );
+
+        Task? queued = null;
+        loader.FinishedLoading += (_, _) =>
+        {
+            if (queued is not null) return;
+            release.Reset();
+            queued = loader.ReloadPackages();
+        };
+
+        await loader.ReloadPackages();
+
+        Assert.NotNull(queued);
+        Assert.False(queued.IsCompleted);
+        Assert.False(loader.WaitForCurrentLoadAsync().IsCompleted);
+
+        release.Set();
+        await queued;
+    }
+
     private static async Task AssertCompletesAsync(Task wait)
     {
         Task finished = await Task.WhenAny(wait, Task.Delay(WaitBudget));

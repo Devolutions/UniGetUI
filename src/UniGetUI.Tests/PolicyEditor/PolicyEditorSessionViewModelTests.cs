@@ -262,7 +262,8 @@ public class PolicyEditorSessionViewModelTests
     public async Task SwitchToStructuredCommand_SemanticallyInvalidRuleIdProjectsWithoutCallingValidator()
     {
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, _) = CreateForCreateSession();
-        vm.Draft.Rules[0].Id = "Allow WinGet updates";
+        PolicyEditorDraftRule rule = vm.Session.AddRule();
+        rule.Id = "Allow WinGet updates";
         vm.NotifyDraftChangedCommand.Execute(null);
         Assert.True(vm.HasLocalSemanticErrors);
         Assert.False(vm.ValidateCommand.CanExecute(null));

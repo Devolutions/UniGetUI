@@ -17,43 +17,21 @@ public class PolicyEditorTemplatesTests
     }
 
     [Fact]
-    public void CreateNew_DefaultsToDenyAndNarrowWarningFreeWinGetUpdateRule()
+    public void CreateNew_DefaultsToDenyAndNoRules()
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
 
         Assert.Equal(Decision.Deny, draft.Enforcement.DefaultDecision);
-        PolicyEditorDraftRule rule = Assert.Single(draft.Rules);
-        Assert.Equal("allow-winget-updates", rule.Id);
-        Assert.True(rule.Enabled);
-        Assert.Equal(Decision.Allow, rule.Decision);
-        Assert.Equal([Operation.Update], rule.Match.Operations);
-        Assert.Equal([ManagerName.Winget], rule.Match.Managers);
-        Assert.Equal(TriState.False, rule.Match.SkipHashCheck);
-        Assert.Equal(TriState.False, rule.Match.PreRelease);
-        Assert.Equal(TriState.False, rule.Match.HasCustomParameters);
-        Assert.Equal(TriState.False, rule.Match.HasCustomInstallLocation);
-        Assert.Equal(TriState.False, rule.Match.HasPrePostCommands);
-        Assert.Equal(TriState.False, rule.Match.HasKillBeforeOperation);
-        Assert.Equal(TriState.False, rule.Match.HasUninstallPrevious);
+        Assert.Empty(draft.Rules);
         Assert.Empty(PolicyEditorLocalValidation.ValidateResourceIds(draft));
-
         string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        Assert.Contains("\"Rules\": []", raw);
         Assert.True(PolicyEditorRawSyntax.TryParseStrict(
             raw,
             out PolicyEditorDraftDocument? parsed,
             out PolicyEditorSyntaxError? error));
         Assert.Null(error);
-        PolicyEditorDraftRule parsedRule = Assert.Single(parsed!.Rules);
-        Assert.Equal(TriState.False, parsedRule.Match.SkipHashCheck);
-        Assert.Equal(TriState.False, parsedRule.Match.PreRelease);
-        Assert.Equal(TriState.False, parsedRule.Match.HasCustomParameters);
-        Assert.Equal(TriState.False, parsedRule.Match.HasCustomInstallLocation);
-        Assert.Equal(TriState.False, parsedRule.Match.HasPrePostCommands);
-        Assert.Equal(TriState.False, parsedRule.Match.HasKillBeforeOperation);
-        Assert.Equal(TriState.False, parsedRule.Match.HasUninstallPrevious);
-        Assert.Contains("\"SkipHashCheck\": [", raw);
-        Assert.Contains("\"HasUninstallPrevious\": [", raw);
-        Assert.Equal(7, Regex.Matches(raw, @"\[\s*false\s*\]").Count);
+        Assert.Empty(parsed!.Rules);
     }
 
     [Fact]
@@ -124,7 +102,7 @@ public class PolicyEditorTemplatesTests
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew(
             new string('a', 129),
             "Contoso");
-        draft.Rules[0].Id = "Allow WinGet updates";
+        draft.Rules.Add(PolicyRuleFactory.CreateBlank("Allow WinGet updates"));
 
         IReadOnlyList<PolicyValidationFinding> findings =
             PolicyEditorLocalValidation.ValidateResourceIds(draft);
@@ -146,7 +124,7 @@ public class PolicyEditorTemplatesTests
     }
 
     [Fact]
-    public void StarterRule_TriStateSelectorsDisplayNo()
+    public void AddedRule_TriStateSelectorsDisplayNo()
     {
         PolicyEditorSession session = PolicyEditorSession.StartCreate(
             PolicyEditorTestFixtures.BuildMissingManagement(),
@@ -156,7 +134,8 @@ public class PolicyEditorTemplatesTests
             new FakeValidationClient(),
             new FakeConfirmationPrompt(),
             new FakeWriteClient());
-        using var rule = new PolicyEditorRuleUi(session.Draft.Rules[0], viewModel);
+        PolicyEditorDraftRule added = session.AddRule();
+        using var rule = new PolicyEditorRuleUi(added, viewModel);
         int noIndex = PolicyEditorEnumDisplay.IndexOfTriState(TriState.False);
 
         Assert.Equal(noIndex, rule.SkipHashCheckIndex);

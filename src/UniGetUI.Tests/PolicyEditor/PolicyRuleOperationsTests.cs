@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Model;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
@@ -25,15 +26,31 @@ public class PolicyRuleOperationsTests
     }
 
     [Fact]
-    public void CreateBlank_ProducesDisabledWildcardDenyRule()
+    public void CreateBlank_ProducesEnabledLeastPrivilegeDenyRule()
     {
         PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank();
 
-        Assert.False(rule.Enabled);
+        Assert.True(rule.Enabled);
         Assert.Equal(Devolutions.Now.Policy.Model.Decision.Deny, rule.Decision);
         Assert.Equal(0u, rule.Priority);
         Assert.Null(rule.Constraints);
         Assert.Empty(rule.Match.Operations);
+        Assert.Empty(rule.Match.Managers);
+        Assert.Empty(rule.Match.Sources);
+        Assert.Empty(rule.Match.PackageIdentifiers);
+        Assert.Empty(rule.Match.PackageNames);
+        Assert.Empty(rule.Match.Versions);
+        Assert.Empty(rule.Match.Scopes);
+        Assert.Empty(rule.Match.Architectures);
+        Assert.Empty(rule.Match.Elevation);
+        Assert.Equal(TriState.Omitted, rule.Match.Interactive);
+        Assert.Equal(TriState.False, rule.Match.SkipHashCheck);
+        Assert.Equal(TriState.False, rule.Match.PreRelease);
+        Assert.Equal(TriState.False, rule.Match.HasCustomParameters);
+        Assert.Equal(TriState.False, rule.Match.HasCustomInstallLocation);
+        Assert.Equal(TriState.False, rule.Match.HasPrePostCommands);
+        Assert.Equal(TriState.False, rule.Match.HasKillBeforeOperation);
+        Assert.Equal(TriState.False, rule.Match.HasUninstallPrevious);
     }
 
     [Fact]
@@ -128,10 +145,10 @@ public class PolicyRuleOperationsTests
     {
         List<PolicyEditorDraftRule> rules = [PolicyRuleFactory.CreateBlank("a"), PolicyRuleFactory.CreateBlank("b")];
 
-        PolicyRuleListOperations.SetEnabled(rules, "a", true);
+        PolicyRuleListOperations.SetEnabled(rules, "a", false);
 
-        Assert.True(rules[0].Enabled);
-        Assert.False(rules[1].Enabled);
+        Assert.False(rules[0].Enabled);
+        Assert.True(rules[1].Enabled);
     }
 
     [Fact]
@@ -215,6 +232,12 @@ public class PolicyRuleOperationsTests
 
         Assert.Single(session.Draft.Rules);
         Assert.Same(added, session.Draft.Rules[0]);
+        Assert.True(added.Enabled);
+        Assert.Equal(TriState.False, added.Match.SkipHashCheck);
+        Assert.Empty(added.Match.Operations);
+        Assert.Empty(added.Match.Managers);
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(session.Draft);
+        Assert.Equal(7, Regex.Matches(raw, @"\[\s*false\s*\]").Count);
     }
 
     [Fact]
@@ -243,8 +266,8 @@ public class PolicyRuleOperationsTests
             new FakeWriteClient());
 
         viewModel.ToggleRuleCommand.Execute(second);
-        Assert.False(first.Enabled);
-        Assert.True(second.Enabled);
+        Assert.True(first.Enabled);
+        Assert.False(second.Enabled);
 
         viewModel.MoveRuleUpCommand.Execute(second);
         Assert.Same(second, session.Draft.Rules[0]);

@@ -4,7 +4,7 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 
 /// <summary>
 /// Produces the fail-closed starting point for a brand-new policy document. Everything the template
-/// fixes (policy type, policy format version, rule precedence, default decision, starter rule) is
+/// fixes (policy type, policy format version, rule precedence, default decision, empty rule set) is
 /// non-negotiable at creation time; only the caller-supplied identity (<paramref name="id"/> in
 /// <see cref="CreateNew"/>) and publisher are free-form, because the editor cannot know them in advance.
 /// </summary>
@@ -14,9 +14,7 @@ public static class PolicyEditorTemplates
 
     /// <summary>
     /// Creates a brand-new draft document: fixed type/version, <c>PriorityThenDeny</c>
-    /// precedence, a default decision of <c>Deny</c> (fail closed), and a narrow WinGet update rule.
-    /// The starter rule explicitly rejects sensitive request options so the initial policy is useful
-    /// without producing broad-Allow warnings. The caller must
+    /// precedence, a default decision of <c>Deny</c> (fail closed), and no rules. The caller must
     /// supply the new policy's <paramref name="id"/> and <paramref name="publisher"/>; both are
     /// validated to be non-empty since the write path (external to this domain) requires them.
     /// </summary>
@@ -44,29 +42,7 @@ public static class PolicyEditorTemplates
             {
                 DefaultDecision = PolicyEditorPolicyContract.DefaultTemplateDecision,
             },
-            Rules =
-            [
-                new PolicyEditorDraftRule
-                {
-                    Id = "allow-winget-updates",
-                    Enabled = true,
-                    Priority = 100,
-                    Decision = Decision.Allow,
-                    Reason = "Allow WinGet updates",
-                    Match = new PolicyEditorDraftMatch
-                    {
-                        Operations = [Operation.Update],
-                        Managers = [ManagerName.Winget],
-                        SkipHashCheck = TriState.False,
-                        PreRelease = TriState.False,
-                        HasCustomParameters = TriState.False,
-                        HasCustomInstallLocation = TriState.False,
-                        HasPrePostCommands = TriState.False,
-                        HasKillBeforeOperation = TriState.False,
-                        HasUninstallPrevious = TriState.False,
-                    },
-                },
-            ],
+            Rules = [],
         };
     }
 

@@ -12,17 +12,26 @@ public static class PolicyRuleFactory
     public static string CreateRuleId() => $"rule-{Guid.NewGuid():N}";
 
     /// <summary>
-    /// Creates a new, empty, disabled rule. Empty match collections are wildcards, so keeping the
-    /// rule disabled prevents a newly added deny rule from matching every request before it is edited.
+    /// Creates a new enabled deny rule. Categorical criteria remain wildcards while warning-sensitive
+    /// boolean criteria explicitly require false so the rule starts least-privilege and warning-free.
     /// </summary>
     public static PolicyEditorDraftRule CreateBlank(string? id = null) => new()
     {
         Id = id ?? CreateRuleId(),
-        Enabled = false,
+        Enabled = true,
         Priority = 0,
         Decision = Decision.Deny,
         Reason = null,
-        Match = new PolicyEditorDraftMatch(),
+        Match = new PolicyEditorDraftMatch
+        {
+            SkipHashCheck = TriState.False,
+            PreRelease = TriState.False,
+            HasCustomParameters = TriState.False,
+            HasCustomInstallLocation = TriState.False,
+            HasPrePostCommands = TriState.False,
+            HasKillBeforeOperation = TriState.False,
+            HasUninstallPrevious = TriState.False,
+        },
         Constraints = null,
     };
 }

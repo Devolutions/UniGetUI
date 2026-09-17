@@ -42,12 +42,30 @@
                             CornerRadius="{TemplateBinding CornerRadius}"
                             ClipToBounds="True">
                         <DockPanel>
-                            <ScrollViewer DockPanel.Dock="Top"
-                                          HorizontalScrollBarVisibility="Auto"
-                                          VerticalScrollBarVisibility="Disabled">
-                                <ItemsPresenter Name="PART_ItemsPresenter"
-                                                ItemsPanel="{TemplateBinding ItemsPanel}"/>
-                            </ScrollViewer>
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto">
+                                <Button x:Name="PreviousTabButton"
+                                        Classes="install-options-tab-scroll"
+                                        Click="PreviousTabButton_Click">
+                                    <Path Data="M 5,0 L 0,4 L 5,8 Z"
+                                          Width="5" Height="8"
+                                          Fill="{Binding $parent[Button].Foreground}"/>
+                                </Button>
+                                <ScrollViewer x:Name="TabHeadersScrollViewer"
+                                              Grid.Column="1"
+                                              HorizontalScrollBarVisibility="Hidden"
+                                              VerticalScrollBarVisibility="Disabled">
+                                    <ItemsPresenter Name="PART_ItemsPresenter"
+                                                    ItemsPanel="{TemplateBinding ItemsPanel}"/>
+                                </ScrollViewer>
+                                <Button x:Name="NextTabButton"
+                                        Grid.Column="2"
+                                        Classes="install-options-tab-scroll"
+                                        Click="NextTabButton_Click">
+                                    <Path Data="M 0,0 L 5,4 L 0,8 Z"
+                                          Width="5" Height="8"
+                                          Fill="{Binding $parent[Button].Foreground}"/>
+                                </Button>
+                            </Grid>
                             <Panel ClipToBounds="True">
                                 <ContentPresenter Name="PART_SelectedContentHost2"
                                                   Margin="{TemplateBinding Padding}"
@@ -63,6 +81,22 @@
                     </Border>
                 </ControlTemplate>
             </Setter>
+        </Style>
+        <Style Selector="Button.install-options-tab-scroll">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.install-options-tab-scroll:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        </Style>
+        <Style Selector="Button.install-options-tab-scroll:disabled">
+            <Setter Property="Opacity" Value="0.35"/>
         </Style>
         <Style Selector="TabControl.install-options-tabs TabItem">
             <Setter Property="Padding" Value="12,6"/>
@@ -81,9 +115,11 @@
         </Style>
         <Style Selector="TabControl.install-options-tabs TabItem:selected">
             <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>
+            <Setter Property="CornerRadius" Value="6"/>
         </Style>
         <Style Selector="TabControl.install-options-tabs TabItem:selected /template/ Border#PART_LayoutRoot">
             <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>
+            <Setter Property="CornerRadius" Value="6"/>
         </Style>
         <Style Selector="TabControl.install-options-tabs TabItem:selected:pointerover /template/ Border#PART_LayoutRoot">
             <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>

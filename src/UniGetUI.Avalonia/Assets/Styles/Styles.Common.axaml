@@ -76,6 +76,7 @@
                     <!-- Settings cards -->
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#B3FFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#ECECEC"/>
+                    <SolidColorBrush x:Key="FilterCardBorderBrush"       Color="#ECECEC"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#F6F6F6"/>
                     <StaticResource x:Key="SecondaryActionBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
                     <Thickness x:Key="SecondaryActionBorderThickness">1</Thickness>
@@ -155,8 +156,8 @@
                     </LinearGradientBrush>
                     <Thickness x:Key="SearchFieldBorderThickness">1</Thickness>
                     <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#F2F2F2"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#E0E0E0"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#E8E8E8"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#E1E1E1"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#ECECEC"/>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <!-- Accent fills (lighter accents on dark bg) -->
@@ -201,8 +202,8 @@
                     <Thickness x:Key="SearchFieldBorderThickness">1</Thickness>
                     <!-- Opaque package-details layers remain distinct even when the dialog uses Mica. -->
                     <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#393939"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#4A4A4A"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#15FFFFFF"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#292929"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#252525"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5DFFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#E4000000"/>
                     <!-- WinUI's dark flyout surface is an opaque #2C2C2C. -->
@@ -226,6 +227,8 @@
                     <!-- Settings cards -->
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#19000000"/>
+                    <!-- Filter groups need the stronger pre-adjustment stroke to remain distinct. -->
+                    <SolidColorBrush x:Key="FilterCardBorderBrush"       Color="#393939"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#323232"/>
                     <SolidColorBrush x:Key="SecondaryActionBorderBrush"  Color="Transparent"/>
                     <Thickness x:Key="SecondaryActionBorderThickness">0</Thickness>
@@ -677,7 +680,7 @@
     <Style Selector="Border.settings-card-clickable:pointerover">
         <Setter Property="Background"   Value="{DynamicResource SettingsCardHoverBackground}"/>
     </Style>
-    <Style Selector="Border.settings-card-focused">
+    <Style Selector="Border.settings-card-keyboard-focused">
         <Setter Property="BorderBrush"     Value="{DynamicResource AccentFillColorDefaultBrush}"/>
         <Setter Property="BorderThickness" Value="2"/>
     </Style>

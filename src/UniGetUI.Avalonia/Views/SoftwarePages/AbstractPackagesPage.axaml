@@ -49,6 +49,10 @@
       <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
          <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
       </Style>
+      <Style Selector="Expander.filter-card">
+         <Setter Property="BorderBrush" Value="{DynamicResource FilterCardBorderBrush}"/>
+         <Setter Property="BorderThickness" Value="1"/>
+      </Style>
       <!-- Toolbar buttons: flat, no background/border in normal state (WinUI AppBarButton style) -->
       <Style Selector="#ToolbarRow Button">
          <Setter Property="Background" Value="Transparent"/>
@@ -247,7 +251,8 @@
                     <StackPanel x:Name="SidePanelGrid" Spacing="8" Margin="0,0,0,8">
 
                         <!-- Sources expander -->
-                        <Expander HorizontalAlignment="Stretch"
+                        <Expander Classes="filter-card"
+                                  HorizontalAlignment="Stretch"
                                   HorizontalContentAlignment="Stretch"
                                   IsExpanded="True"
                                   CornerRadius="8"
@@ -366,7 +371,8 @@
                         </Expander>
 
                         <!-- Filter options expander -->
-                        <Expander HorizontalAlignment="Stretch"
+                        <Expander Classes="filter-card"
+                                  HorizontalAlignment="Stretch"
                                   HorizontalContentAlignment="Stretch"
                                   IsExpanded="False"
                                   CornerRadius="8"
@@ -398,7 +404,8 @@
                         </Expander>
 
                         <!-- Search mode expander -->
-                        <Expander HorizontalAlignment="Stretch"
+                        <Expander Classes="filter-card"
+                                  HorizontalAlignment="Stretch"
                                   HorizontalContentAlignment="Stretch"
                                   IsExpanded="True"
                                   CornerRadius="8"

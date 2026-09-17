@@ -1,7 +1,9 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 
@@ -9,6 +11,8 @@ namespace UniGetUI.Avalonia.Views.DialogPages;
 
 public partial class InstallOptionsControl : UserControl
 {
+    private const double TabScrollStep = 160d;
+
     private InstallOptionsViewModel ViewModel => (InstallOptionsViewModel)DataContext!;
 
     public InstallOptionsControl()
@@ -17,6 +21,27 @@ public partial class InstallOptionsControl : UserControl
     }
 
     public void FocusProfileSelector() => ProfileSelectorComboBox.Focus();
+
+    private void PreviousTabButton_Click(object? sender, RoutedEventArgs e)
+        => ScrollTabHeaders(sender as Control, -TabScrollStep);
+
+    private void NextTabButton_Click(object? sender, RoutedEventArgs e)
+        => ScrollTabHeaders(sender as Control, TabScrollStep);
+
+    private static void ScrollTabHeaders(Control? source, double delta)
+    {
+        ScrollViewer? scrollViewer = source?
+            .FindAncestorOfType<TabControl>()?
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .FirstOrDefault(viewer => viewer.Name == "TabHeadersScrollViewer");
+        if (scrollViewer is null) return;
+
+        double maximum = Math.Max(0d,
+            scrollViewer.Extent.Width - scrollViewer.Viewport.Width);
+        double target = Math.Clamp(scrollViewer.Offset.X + delta, 0d, maximum);
+        scrollViewer.Offset = new Vector(target, scrollViewer.Offset.Y);
+    }
 
     private async void SelectDir_Click(object? sender, RoutedEventArgs e)
     {

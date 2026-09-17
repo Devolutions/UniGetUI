@@ -129,8 +129,8 @@ public class SettingsCard : UserControl
         set
         {
             _baseBorderThickness = value;
-            // While focused the border is forced complete (see GotFocus); don't clobber it.
-            if (!_border.Classes.Contains("settings-card-focused"))
+            // While keyboard-focused the border is forced complete (see GotFocus); don't clobber it.
+            if (!_border.Classes.Contains("settings-card-keyboard-focused"))
                 _border.BorderThickness = value;
         }
     }
@@ -237,15 +237,15 @@ public class SettingsCard : UserControl
 
         PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
-        GotFocus += (_, _) =>
+        GotFocus += (_, e) =>
         {
-            if (!_isClickEnabled) return;
-            _border.Classes.Add("settings-card-focused");
+            if (!_isClickEnabled || e.NavigationMethod == NavigationMethod.Pointer) return;
+            _border.Classes.Add("settings-card-keyboard-focused");
             _border.BorderThickness = FocusedBorderThickness(_baseBorderThickness);
         };
         LostFocus += (_, _) =>
         {
-            _border.Classes.Remove("settings-card-focused");
+            _border.Classes.Remove("settings-card-keyboard-focused");
             _border.BorderThickness = _baseBorderThickness;
         };
         SyncAutomationProperties();
@@ -339,6 +339,10 @@ public class SettingsCard : UserControl
         if (!_isClickEnabled) return;
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
 
+        // Pointer activation should retain the normal card stroke. Keep the accent focus visual
+        // for keyboard navigation, where it conveys useful focus information.
+        _border.Classes.Remove("settings-card-keyboard-focused");
+        _border.BorderThickness = _baseBorderThickness;
         InvokeClick();
         e.Handled = true;
     }

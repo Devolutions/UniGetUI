@@ -6,6 +6,7 @@ using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.PackageEngine.AgentBroker;
 using ApiTransport = Devolutions.Now.Policy.Api.Transport;
 using PolicyDecision = Devolutions.Now.Policy.Model.Decision;
+using PolicyManagerName = Devolutions.Now.Policy.Model.ManagerName;
 using PolicyOperation = Devolutions.Now.Policy.Model.Operation;
 
 namespace UniGetUI.Tests;
@@ -30,6 +31,21 @@ public class AgentPolicyInspectorViewModelTests
         Assert.Equal(["first-rule", "second-rule"], viewModel.Rules.Select(rule => rule.Id));
         Assert.Equal(18, viewModel.Rules[0].MatchRows.Count);
         Assert.Equal(13, viewModel.Rules[0].ConstraintRows.Count);
+        Assert.True(viewModel.Rules[0].HasConstraints);
+        Assert.False(viewModel.Rules[1].HasConstraints);
+        Assert.Empty(viewModel.Rules[1].ConstraintRows);
+        Assert.Contains(
+            viewModel.Rules[0].MatchRows,
+            row => row.Label == "Exact package identifiers" && row.Value == "Contoso.App");
+        Assert.Contains(
+            viewModel.Rules[0].MatchRows,
+            row => row.Label == "Exact versions" && row.Value == "1.2.3");
+        Assert.Contains(
+            viewModel.Rules[0].MatchRows,
+            row => row.Label == "Package identifier patterns" && row.Value == "Any");
+        Assert.Contains(
+            viewModel.Rules[0].MatchRows,
+            row => row.Label == "Version range" && row.Value == "Any");
         Assert.Contains(viewModel.MetadataRows, row => row.Label == "Server version" && row.Value == "2026.8-tests");
         Assert.Contains(
             viewModel.MetadataRows,
@@ -45,7 +61,7 @@ public class AgentPolicyInspectorViewModelTests
         PolicyResponse response = BuildFullResponse();
         response.Policy.Metadata.Publisher = " ";
         response.Policy.Metadata.Description = " ";
-        response.Policy.Rules[0].Match.Sources = [" "];
+        response.Policy.Rules[0].Match.SourceNames = [" "];
         response.Policy.Rules[0].Constraints!.AllowedCustomParameters = [" "];
         string json = PolicySerializer.Serialize(response.Policy);
         using var viewModel = new AgentPolicyInspectorViewModel(
@@ -60,7 +76,7 @@ public class AgentPolicyInspectorViewModelTests
 
         PolicyDetailRow publisher = viewModel.MetadataRows.Single(row => row.Label == "Publisher");
         PolicyDetailRow description = viewModel.MetadataRows.Single(row => row.Label == "Description");
-        PolicyDetailRow sources = viewModel.Rules[0].MatchRows.Single(row => row.Label == "Sources");
+        PolicyDetailRow sources = viewModel.Rules[0].MatchRows.Single(row => row.Label == "Source names");
         PolicyDetailRow customParameters = viewModel.Rules[0].ConstraintRows.Single(
             row => row.Label == "Allowed custom parameters");
         Assert.Equal(" ", publisher.Value);
@@ -73,8 +89,6 @@ public class AgentPolicyInspectorViewModelTests
         Assert.NotEqual("None", customParameters.Value);
         Assert.Equal(json, viewModel.RawJson);
         Assert.Contains("\"PolicyFormatVersion\": \"1.2.3\"", viewModel.RawJson);
-        Assert.DoesNotContain("\"PolicyVersion\"", viewModel.RawJson);
-        Assert.DoesNotContain("\"$schema\"", viewModel.RawJson);
         Assert.Contains("\"Publisher\": \" \"", viewModel.RawJson);
         Assert.Contains("\"Description\": \" \"", viewModel.RawJson);
 
@@ -82,8 +96,33 @@ public class AgentPolicyInspectorViewModelTests
 
         Assert.Equal(json, copied);
         Assert.Contains("\"PolicyFormatVersion\": \"1.2.3\"", copied);
-        Assert.DoesNotContain("\"PolicyVersion\"", copied);
-        Assert.DoesNotContain("\"$schema\"", copied);
+    }
+
+    [Fact]
+    public async Task LoadAsync_PresentsPatternAndRangeConditionsSeparately()
+    {
+        PolicyResponse response = BuildFullResponse();
+        response.Policy.Rules[0].Match.PackageIdentifiers = PatternPackageIdentifiers("Contoso.*");
+        response.Policy.Rules[0].Match.Version = RangeVersions("1.0.0", "2.0.0");
+        string json = PolicySerializer.Serialize(response.Policy);
+        using var viewModel = new AgentPolicyInspectorViewModel(
+            new StubInspector(new(BrokerPolicyInspectionStatus.Connected, response, json)));
+
+        await viewModel.LoadAsync();
+
+        Assert.Contains(
+            viewModel.Rules[0].MatchRows,
+            row => row.Label == "Exact package identifiers" && row.Value == "Any");
+        Assert.Contains(
+            viewModel.Rules[0].MatchRows,
+            row => row.Label == "Package identifier patterns" && row.Value == "Contoso.*");
+        Assert.Contains(
+            viewModel.Rules[0].MatchRows,
+            row => row.Label == "Exact versions" && row.Value == "Any");
+        Assert.Contains(
+            viewModel.Rules[0].MatchRows,
+            row => row.Label == "Version range"
+                && row.Value == "1.0.0 to 2.0.0; include prerelease: No");
     }
 
     [Fact]
@@ -125,7 +164,6 @@ public class AgentPolicyInspectorViewModelTests
                 Enforcement = new PolicyEnforcement
                 {
                     DefaultDecision = PolicyDecision.Allow,
-                    RulePrecedence = RulePrecedence.PriorityThenDeny,
                 },
             },
         };
@@ -275,7 +313,6 @@ public class AgentPolicyInspectorViewModelTests
                 Enforcement = new PolicyEnforcement
                 {
                     DefaultDecision = PolicyDecision.Deny,
-                    RulePrecedence = RulePrecedence.PriorityThenDeny,
                     AuditMode = true,
                 },
                 Rules =
@@ -289,8 +326,11 @@ public class AgentPolicyInspectorViewModelTests
                         Match = new PolicyMatch
                         {
                             Operations = [PolicyOperation.Install],
-                            PackageIdentifiers = ["Contoso.App"],
-                            Interactive = [false],
+                            Managers = [PolicyManagerName.Winget],
+                            SourceNames = ["community"],
+                            PackageIdentifiers = ExactPackageIdentifiers("Contoso.App"),
+                            Version = ExactVersions("1.2.3"),
+                            Interactive = false,
                         },
                         Constraints = new PolicyConstraints
                         {
@@ -305,10 +345,46 @@ public class AgentPolicyInspectorViewModelTests
                         Enabled = false,
                         Priority = 20,
                         Decision = PolicyDecision.Deny,
+                        Match = new PolicyMatch
+                        {
+                            Operations = [PolicyOperation.Uninstall],
+                        },
                     },
                 ],
             },
         };
+
+    private static PackageIdentifierCondition ExactPackageIdentifiers(params string[] identifiers)
+    {
+        var condition = new PackageIdentifierCondition();
+        condition.UseExact([.. identifiers]);
+        return condition;
+    }
+
+    private static VersionCondition ExactVersions(params string[] versions)
+    {
+        var condition = new VersionCondition();
+        condition.UseExact([.. versions]);
+        return condition;
+    }
+
+    private static PackageIdentifierCondition PatternPackageIdentifiers(params string[] patterns)
+    {
+        var condition = new PackageIdentifierCondition();
+        condition.UsePatterns([.. patterns]);
+        return condition;
+    }
+
+    private static VersionCondition RangeVersions(string minVersion, string maxVersion)
+    {
+        var condition = new VersionCondition();
+        condition.UseRange(new VersionRange
+        {
+            MinVersion = minVersion,
+            MaxVersion = maxVersion,
+        });
+        return condition;
+    }
 
     private sealed class StubInspector(BrokerPolicyInspectionResult result) : IBrokerPolicyInspector
     {

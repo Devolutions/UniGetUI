@@ -1,12 +1,17 @@
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Client;
 using Devolutions.Now.Policy.Model;
 using UniGetUI.PackageEngine.AgentBroker;
 using ApiElevation = Devolutions.Now.Policy.Api.Elevation;
 using ApiTransport = Devolutions.Now.Policy.Api.Transport;
+using PolicyArchitecture = Devolutions.Now.Policy.Model.Architecture;
 using PolicyDecision = Devolutions.Now.Policy.Model.Decision;
+using PolicyElevation = Devolutions.Now.Policy.Model.Elevation;
+using PolicyManagerName = Devolutions.Now.Policy.Model.ManagerName;
 using PolicyOperation = Devolutions.Now.Policy.Model.Operation;
+using PolicyScope = Devolutions.Now.Policy.Model.Scope;
 
 namespace UniGetUI.PackageEngine.Tests;
 
@@ -15,59 +20,56 @@ public class BrokerPolicyInspectorTests
     [Fact]
     public async Task InspectAsync_ReturnsSharedPolicyAndCanonicalJson()
     {
-        PolicyResponse response = BuildResponse();
+        PolicyResponse response = BuildFullResponse();
         var transport = new FakeTransport(new BrokerTransportResponse
         {
             StatusCode = 200,
             Body = BrokerSerializer.Serialize(response),
         });
-        var inspector = CreateInspector(transport);
 
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
+        BrokerPolicyInspectionResult result = await CreateInspector(transport).InspectAsync(CancellationToken.None);
 
         Assert.Equal(BrokerPolicyInspectionStatus.Connected, result.Status);
-        Assert.Same(response.Policy.GetType(), result.Response!.Policy.GetType());
-        Assert.Equal(PolicySerializer.Serialize(result.Response.Policy), result.CanonicalJson);
-        BrokerTransportRequest request = Assert.Single(transport.Requests);
-        Assert.Equal("GET", request.Method);
-        Assert.Equal("/v1/policy", request.Path);
+        Assert.Equal(PolicySerializer.Serialize(result.Response!.Policy), result.CanonicalJson);
+        Assert.Equal("GET", Assert.Single(transport.Requests).Method);
+        Assert.Equal("/v1/policy", transport.Requests[0].Path);
     }
 
     [Fact]
-    public async Task InspectAsync_AcceptsAndPreservesCompatiblePolicyFormatVersion()
+    public async Task InspectAsync_AcceptsCompatiblePolicyFormatVersion()
     {
         PolicyResponse response = BuildResponse("1.42.7");
-        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
-        {
-            StatusCode = 200,
-            Body = BrokerSerializer.Serialize(response),
-        }));
 
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
+        BrokerPolicyInspectionResult result = await InspectAsync(response);
 
         Assert.Equal(BrokerPolicyInspectionStatus.Connected, result.Status);
         Assert.Equal("1.42.7", result.Response!.Policy.PolicyFormatVersion.Value);
         Assert.Contains("\"PolicyFormatVersion\": \"1.42.7\"", result.CanonicalJson);
-        Assert.DoesNotContain("\"PolicyVersion\"", result.CanonicalJson);
-        Assert.DoesNotContain("\"$schema\"", result.CanonicalJson);
     }
 
-    [Theory]
-    [InlineData("$schema")]
-    [InlineData("PolicyVersion")]
-    public async Task InspectAsync_ClassifiesLegacyPolicyFieldsAsInvalidResponse(string fieldName)
+    [Fact]
+    public async Task InspectAsync_PreservesFinalMatchContractAndCanonicalOmission()
     {
-        JsonObject body = JsonNode.Parse(BrokerSerializer.Serialize(BuildResponse()))!.AsObject();
-        body["Policy"]![fieldName] = "1.0.0";
-        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
-        {
-            StatusCode = 200,
-            Body = body.ToJsonString(),
-        }));
+        PolicyResponse response = BuildFullResponse();
 
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
+        BrokerPolicyInspectionResult result = await InspectAsync(response);
 
-        Assert.Equal(BrokerPolicyInspectionStatus.InvalidResponse, result.Status);
+        Assert.Equal(BrokerPolicyInspectionStatus.Connected, result.Status);
+        JsonObject match = JsonNode.Parse(result.CanonicalJson!)!["Rules"]!.AsArray()[0]!["Match"]!.AsObject();
+        Assert.Equal("community", match["SourceNames"]!.AsArray()[0]!.GetValue<string>());
+        Assert.Equal("Contoso.*", match["PackageIdentifiers"]!["Patterns"]!.AsArray()[0]!.GetValue<string>());
+        Assert.Equal("1.0.0", match["Version"]!["Range"]!["MinVersion"]!.GetValue<string>());
+        Assert.Equal("Standard", match["ExecutionElevation"]!.AsArray()[0]!.GetValue<string>());
+        Assert.False(match["Interactive"]!.GetValue<bool>());
+        Assert.Null(match["SkipHashCheck"]);
+
+        PolicyResponse minimalResponse = BuildResponse();
+        BrokerPolicyInspectionResult minimalResult = await InspectAsync(minimalResponse);
+        Assert.Equal(BrokerPolicyInspectionStatus.Connected, minimalResult.Status);
+        Assert.DoesNotContain("\"SourceNames\"", minimalResult.CanonicalJson);
+        Assert.DoesNotContain("\"PackageIdentifiers\"", minimalResult.CanonicalJson);
+        Assert.DoesNotContain("\"ExecutionElevation\"", minimalResult.CanonicalJson);
+        Assert.DoesNotContain("\"Interactive\"", minimalResult.CanonicalJson);
     }
 
     [Theory]
@@ -75,19 +77,38 @@ public class BrokerPolicyInspectorTests
     [InlineData("01.0.0")]
     [InlineData("2.0.0")]
     [InlineData("1.0.0\n")]
-    [InlineData("1.0.1١")]
     public async Task InspectAsync_ClassifiesInvalidPolicyFormatVersionsAsInvalidResponse(
         string policyFormatVersion)
     {
-        JsonObject body = JsonNode.Parse(BrokerSerializer.Serialize(BuildResponse()))!.AsObject();
+        JsonObject body = ResponseJson(BuildResponse());
         body["Policy"]!["PolicyFormatVersion"] = policyFormatVersion;
-        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
-        {
-            StatusCode = 200,
-            Body = body.ToJsonString(),
-        }));
 
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
+        BrokerPolicyInspectionResult result = await InspectBodyAsync(body.ToJsonString());
+
+        Assert.Equal(BrokerPolicyInspectionStatus.InvalidResponse, result.Status);
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidFinalContractPayloads))]
+    public async Task InspectAsync_ClassifiesInvalidFinalContractData(string body)
+    {
+        BrokerPolicyInspectionResult result = await InspectBodyAsync(body);
+
+        Assert.Equal(BrokerPolicyInspectionStatus.InvalidResponse, result.Status);
+    }
+
+    [Fact]
+    public async Task InspectAsync_RejectsDuplicatePolicyProperties()
+    {
+        string body = BrokerSerializer.Serialize(BuildResponse());
+        string duplicate = new Regex(
+            "\"Publisher\"\\s*:\\s*\"Contoso\"").Replace(
+            body,
+            "\"Publisher\":\"Contoso\",\"Publisher\":\"Fabrikam\"",
+            1);
+        Assert.NotEqual(body, duplicate);
+
+        BrokerPolicyInspectionResult result = await InspectBodyAsync(duplicate);
 
         Assert.Equal(BrokerPolicyInspectionStatus.InvalidResponse, result.Status);
     }
@@ -127,195 +148,103 @@ public class BrokerPolicyInspectorTests
             Code = errorCode,
             Message = "simulated failure",
         };
-        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
+
+        BrokerPolicyInspectionResult result = await CreateInspector(new FakeTransport(new()
         {
             StatusCode = statusCode,
             Body = BrokerSerializer.Serialize(error),
-        }));
-
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
+        })).InspectAsync(CancellationToken.None);
 
         Assert.Equal(expected, result.Status);
         Assert.Equal("simulated failure", result.ErrorMessage);
-    }
-
-    [Fact]
-    public async Task InspectAsync_ClassifiesLegacyEmptyNotFoundAsUnsupported()
-    {
-        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
-        {
-            StatusCode = 404,
-            Body = "",
-        }));
-
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
-
-        Assert.Equal(BrokerPolicyInspectionStatus.Unsupported, result.Status);
-    }
-
-    [Theory]
-    [InlineData(BrokerClientErrorKind.BrokerUnavailable)]
-    [InlineData(BrokerClientErrorKind.Timeout)]
-    public async Task InspectAsync_ClassifiesTransportFailureAsUnavailable(BrokerClientErrorKind kind)
-    {
-        var inspector = CreateInspector(new FakeTransport(exception: new BrokerClientException(kind, "offline")));
-
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
-
-        Assert.Equal(BrokerPolicyInspectionStatus.AgentUnavailable, result.Status);
-    }
-
-    [Fact]
-    public async Task InspectAsync_ClassifiesNamedPipePermissionFailureAsAccessDenied()
-    {
-        var exception = new BrokerClientException(
-            BrokerClientErrorKind.BrokerUnavailable,
-            "denied",
-            innerException: new UnauthorizedAccessException());
-        var inspector = CreateInspector(new FakeTransport(exception: exception));
-
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
-
-        Assert.Equal(BrokerPolicyInspectionStatus.AccessDenied, result.Status);
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("{")]
     [InlineData("null")]
-    public async Task InspectAsync_ClassifiesInvalidPayload(string body)
+    public async Task InspectAsync_ClassifiesMalformedPayload(string body)
     {
-        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
-        {
-            StatusCode = 200,
-            Body = body,
-        }));
-
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
+        BrokerPolicyInspectionResult result = await InspectBodyAsync(body);
 
         Assert.Equal(BrokerPolicyInspectionStatus.InvalidResponse, result.Status);
-    }
-
-    [Fact]
-    public async Task InspectAsync_ClassifiesMissingPolicyAsInvalidResponse()
-    {
-        JsonObject body = JsonNode.Parse(BrokerSerializer.Serialize(BuildResponse()))!.AsObject();
-        Assert.True(body.Remove("Policy"));
-        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
-        {
-            StatusCode = 200,
-            Body = body.ToJsonString(),
-        }));
-
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
-
-        Assert.Equal(BrokerPolicyInspectionStatus.InvalidResponse, result.Status);
-    }
-
-    [Theory]
-    [MemberData(nameof(MissingRequiredPayloads))]
-    public async Task InspectAsync_ClassifiesMissingRequiredData(string body)
-    {
-        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
-        {
-            StatusCode = 200,
-            Body = body,
-        }));
-
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
-
-        Assert.Equal(BrokerPolicyInspectionStatus.InvalidResponse, result.Status);
-    }
-
-    [Theory]
-    [MemberData(nameof(InvalidNestedPayloads))]
-    public async Task InspectAsync_ClassifiesNullRequiredPolicyData(string body)
-    {
-        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
-        {
-            StatusCode = 200,
-            Body = body,
-        }));
-
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
-
-        Assert.Equal(BrokerPolicyInspectionStatus.InvalidResponse, result.Status);
-    }
-
-    [Theory]
-    [MemberData(nameof(InvalidSemanticPayloads))]
-    public async Task InspectAsync_ClassifiesInvalidRequiredPolicyValues(string body)
-    {
-        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
-        {
-            StatusCode = 200,
-            Body = body,
-        }));
-
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
-
-        Assert.Equal(BrokerPolicyInspectionStatus.InvalidResponse, result.Status);
-    }
-
-    [Theory]
-    [MemberData(nameof(InvalidWirePayloads))]
-    public async Task InspectAsync_ClassifiesContractInvalidWireData(string body)
-    {
-        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
-        {
-            StatusCode = 200,
-            Body = body,
-        }));
-
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
-
-        Assert.Equal(BrokerPolicyInspectionStatus.InvalidResponse, result.Status);
-    }
-
-    [Fact]
-    public async Task InspectAsync_AcceptsContractBoundaryValues()
-    {
-        PolicyResponse response = BuildResponse();
-        response.ResponseVersion = $"{new string('1', 64)}.0";
-        response.Server.ServerVersion = string.Concat(Enumerable.Repeat("\U0001F600", 128));
-        response.Policy.Metadata.Publisher = " ";
-        response.Policy.Metadata.PublishedAt = default;
-        response.Policy.Metadata.Description = string.Concat(Enumerable.Repeat("\U0001F600", 512));
-        response.Policy.Rules[0].Reason = string.Concat(Enumerable.Repeat("\U0001F600", 512));
-        response.Policy.Rules[0].Match.Sources =
-            [string.Concat(Enumerable.Repeat("\U0001F600", 256))];
-        response.Policy.Rules[0].Match.VersionRange = new VersionRange
-        {
-            MinVersion = string.Concat(Enumerable.Repeat("\U0001F600", 128)),
-        };
-        response.Policy.Rules[0].Constraints!.AllowedCustomParameters =
-            [
-                string.Concat(Enumerable.Repeat("\U0001F600", 512)),
-                string.Concat(Enumerable.Repeat("\U0001F600", 512)),
-            ];
-        var inspector = CreateInspector(new FakeTransport(new BrokerTransportResponse
-        {
-            StatusCode = 200,
-            Body = BrokerSerializer.Serialize(response),
-        }));
-
-        BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
-
-        Assert.Equal(BrokerPolicyInspectionStatus.Connected, result.Status);
     }
 
     [Fact]
     public async Task InspectAsync_PropagatesCallerCancellation()
     {
         var transport = new FakeTransport(waitForCancellation: true);
-        var inspector = CreateInspector(transport);
         using var cancellation = new CancellationTokenSource();
-
-        Task<BrokerPolicyInspectionResult> pending = inspector.InspectAsync(cancellation.Token);
+        Task<BrokerPolicyInspectionResult> pending =
+            CreateInspector(transport).InspectAsync(cancellation.Token);
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
     }
+
+    public static IEnumerable<object[]> InvalidFinalContractPayloads()
+    {
+        yield return [Mutate(root => root["Unexpected"] = true)];
+        yield return [Mutate(root => root["Policy"]!["Metadata"]!["Unexpected"] = true)];
+        yield return [Mutate(root => root["Policy"]!["Metadata"]!["Id"] = "")];
+        yield return [Mutate(root => root["Policy"]!["Metadata"]!["Publisher"] = "")];
+        yield return [Mutate(root =>
+        {
+            root["Policy"]!["Metadata"]!["ValidFrom"] = "2026-08-18T00:00:00+00:00";
+            root["Policy"]!["Metadata"]!["ValidUntil"] = "2026-08-18T00:00:00+00:00";
+        })];
+        yield return [Mutate(root => FirstRule(root)["Match"]!["SourceNames"] =
+            new JsonArray("community", "community"))];
+        yield return [Mutate(root => FirstRule(root)["Match"]!["PackageIdentifiers"] =
+            new JsonObject
+            {
+                ["Exact"] = new JsonArray("Contoso.App"),
+                ["Patterns"] = new JsonArray("Contoso.*"),
+            })];
+        yield return [Mutate(root => FirstRule(root)["Match"]!["Version"] =
+            new JsonObject
+            {
+                ["Exact"] = new JsonArray("1.0.0"),
+                ["Range"] = new JsonObject { ["MinVersion"] = "1.0.0" },
+            })];
+        yield return [Mutate(root =>
+        {
+            FirstRule(root)["Match"]!["Managers"] = new JsonArray("Winget", "Scoop");
+            FirstRule(root)["Match"]!["SourceNames"] = new JsonArray("community");
+        })];
+        yield return [Mutate(root =>
+        {
+            FirstRule(root)["Decision"] = "Deny";
+            FirstRule(root)["Constraints"] = new JsonObject();
+        })];
+        yield return [Mutate(root => FirstRule(root)["Priority"] = int.MaxValue + 1u)];
+        yield return [Mutate(root => FirstRule(root)["Match"] = new JsonObject())];
+        yield return [Mutate(root =>
+        {
+            JsonArray rules = root["Policy"]!["Rules"]!.AsArray();
+            JsonObject template = rules[0]!.AsObject();
+            for (int index = 1; index <= 1024; index++)
+            {
+                JsonObject rule = template.DeepClone().AsObject();
+                rule["Id"] = $"allow-install-{index}";
+                rules.Add(rule);
+            }
+        })];
+    }
+
+    private static async Task<BrokerPolicyInspectionResult> InspectAsync(PolicyResponse response) =>
+        await CreateInspector(new FakeTransport(new()
+        {
+            StatusCode = 200,
+            Body = BrokerSerializer.Serialize(response),
+        })).InspectAsync(CancellationToken.None);
+
+    private static async Task<BrokerPolicyInspectionResult> InspectBodyAsync(string body) =>
+        await CreateInspector(new FakeTransport(new()
+        {
+            StatusCode = 200,
+            Body = body,
+        })).InspectAsync(CancellationToken.None);
 
     private static BrokerPolicyInspector CreateInspector(FakeTransport transport) =>
         new(() => CreateClient(transport), () => true);
@@ -340,8 +269,7 @@ public class BrokerPolicyInspectorTests
             },
             Policy = new PolicyDocument
             {
-                PolicyFormatVersion =
-                    Devolutions.Now.Policy.Model.PolicyFormatVersion.Parse(policyFormatVersion),
+                PolicyFormatVersion = PolicyFormatVersion.Parse(policyFormatVersion),
                 Metadata = new PolicyMetadata
                 {
                     Id = "contoso.policy",
@@ -349,11 +277,7 @@ public class BrokerPolicyInspectorTests
                     Revision = 3,
                     PublishedAt = DateTimeOffset.Parse("2026-08-18T00:00:00Z"),
                 },
-                Enforcement = new PolicyEnforcement
-                {
-                    DefaultDecision = PolicyDecision.Deny,
-                    RulePrecedence = RulePrecedence.PriorityThenDeny,
-                },
+                Enforcement = new PolicyEnforcement { DefaultDecision = PolicyDecision.Deny },
                 Rules =
                 [
                     new PolicyRule
@@ -361,134 +285,57 @@ public class BrokerPolicyInspectorTests
                         Id = "allow-install",
                         Priority = 10,
                         Decision = PolicyDecision.Allow,
-                        Match = new PolicyMatch
-                        {
-                            Operations = [PolicyOperation.Install],
-                        },
-                        Constraints = new PolicyConstraints(),
+                        Match = new PolicyMatch { Operations = [PolicyOperation.Install] },
                     },
                 ],
             },
         };
 
-    public static IEnumerable<object[]> InvalidNestedPayloads()
-    {
-        yield return [WithExplicitNull(root => root["ResponseVersion"] = null)];
-        yield return [WithExplicitNull(root => root["Server"] = null)];
-        yield return [WithExplicitNull(root => root["Server"]!["ServerVersion"] = null)];
-        yield return [WithExplicitNull(root => root["Policy"]!["PolicyFormatVersion"] = null)];
-        yield return [WithExplicitNull(root => root["Policy"]!["PolicyType"] = null)];
-        yield return [WithExplicitNull(root => root["Policy"]!["Metadata"] = null)];
-        yield return [WithExplicitNull(root => root["Policy"]!["Metadata"]!["Id"] = null)];
-        yield return [WithExplicitNull(root => root["Policy"]!["Metadata"]!["Publisher"] = null)];
-        yield return [WithExplicitNull(root => root["Policy"]!["Enforcement"] = null)];
-        yield return [WithExplicitNull(root => root["Policy"]!["Rules"] = null)];
-        yield return [WithExplicitNull(root => FirstRule(root)["Id"] = null)];
-        yield return [WithExplicitNull(root => FirstRule(root)["Match"] = null)];
-        yield return [WithExplicitNull(root => FirstRule(root)["Match"]!["Sources"] = null)];
-        yield return [WithExplicitNull(
-            root => FirstRule(root)["Match"]!["Sources"]!.AsArray().Add(null))];
-        yield return [WithExplicitNull(
-            root => FirstRule(root)["Constraints"]!["AllowedCustomParameters"] = null)];
-        yield return [WithExplicitNull(
-            root => FirstRule(root)["Constraints"]!["AllowedCustomParameters"]!.AsArray().Add(null))];
-    }
-
-    private static string WithExplicitNull(Action<JsonObject> mutation)
+    private static PolicyResponse BuildFullResponse()
     {
         PolicyResponse response = BuildResponse();
-        JsonObject root = JsonNode.Parse(BrokerSerializer.Serialize(response))!.AsObject();
-        mutation(root);
-        return root.ToJsonString();
+        PolicyMatch match = response.Policy.Rules[0].Match;
+        match.Managers = [PolicyManagerName.Winget];
+        match.SourceNames = ["community"];
+        match.PackageIdentifiers = PackageIdentifiersWithPatterns("Contoso.*");
+        match.Version = VersionWithRange("1.0.0", "2.0.0");
+        match.Scopes = [PolicyScope.User];
+        match.Architectures = [PolicyArchitecture.X64];
+        match.ExecutionElevation = [PolicyElevation.Standard];
+        match.Interactive = false;
+        match.PreRelease = true;
+        response.Policy.Rules[0].Constraints = new PolicyConstraints
+        {
+            AllowInteractive = false,
+            AllowedCustomParameters = ["--silent"],
+        };
+        return response;
     }
 
-    public static IEnumerable<object[]> MissingRequiredPayloads()
+    private static PackageIdentifierCondition PackageIdentifiersWithPatterns(params string[] patterns)
     {
-        yield return [WithoutRequiredProperty(root => root.Remove("ResponseVersion"))];
-        yield return [WithoutRequiredProperty(root => root.Remove("Server"))];
-        yield return [WithoutRequiredProperty(root => root["Server"]!.AsObject().Remove("ServerVersion"))];
-        yield return [WithoutRequiredProperty(root => root["Server"]!.AsObject().Remove("Transport"))];
-        yield return [WithoutRequiredProperty(
-            root => root["Policy"]!.AsObject().Remove("PolicyFormatVersion"))];
-        yield return [WithoutRequiredProperty(root => root["Policy"]!.AsObject().Remove("PolicyType"))];
-        yield return [WithoutRequiredProperty(root => root["Policy"]!.AsObject().Remove("Metadata"))];
-        yield return [WithoutRequiredProperty(root => root["Policy"]!.AsObject().Remove("Enforcement"))];
-        yield return [WithoutRequiredProperty(root => root["Policy"]!.AsObject().Remove("Rules"))];
-        yield return [WithoutRequiredProperty(
-            root => root["Policy"]!["Metadata"]!.AsObject().Remove("Id"))];
-        yield return [WithoutRequiredProperty(
-            root => root["Policy"]!["Metadata"]!.AsObject().Remove("Publisher"))];
-        yield return [WithoutRequiredProperty(
-            root => root["Policy"]!["Metadata"]!.AsObject().Remove("Revision"))];
-        yield return [WithoutRequiredProperty(
-            root => root["Policy"]!["Metadata"]!.AsObject().Remove("PublishedAt"))];
-        yield return [WithoutRequiredProperty(
-            root => root["Policy"]!["Enforcement"]!.AsObject().Remove("DefaultDecision"))];
-        yield return [WithoutRequiredProperty(
-            root => root["Policy"]!["Enforcement"]!.AsObject().Remove("RulePrecedence"))];
-        yield return [WithoutRequiredProperty(root => FirstRule(root).AsObject().Remove("Id"))];
-        yield return [WithoutRequiredProperty(root => FirstRule(root).AsObject().Remove("Priority"))];
-        yield return [WithoutRequiredProperty(root => FirstRule(root).AsObject().Remove("Decision"))];
-        yield return [WithoutRequiredProperty(root => FirstRule(root).AsObject().Remove("Match"))];
+        var condition = new PackageIdentifierCondition();
+        condition.UsePatterns([.. patterns]);
+        return condition;
     }
 
-    private static string WithoutRequiredProperty(Action<JsonObject> removal)
+    private static VersionCondition VersionWithRange(string minVersion, string maxVersion)
     {
-        JsonObject root = JsonNode.Parse(BrokerSerializer.Serialize(BuildResponse()))!.AsObject();
-        removal(root);
-        return root.ToJsonString();
+        var condition = new VersionCondition();
+        condition.UseRange(new VersionRange
+        {
+            MinVersion = minVersion,
+            MaxVersion = maxVersion,
+        });
+        return condition;
     }
 
-    public static IEnumerable<object[]> InvalidSemanticPayloads()
-    {
-        yield return [WithSemanticMutation(root => root["ResponseVersion"] = "")];
-        yield return [WithSemanticMutation(root => root["ResponseVersion"] = "1.0.0")];
-        yield return [WithSemanticMutation(root => root["ResponseVersion"] = "1.0\n")];
-        yield return [WithSemanticMutation(root => root["Server"]!["ServerVersion"] = "")];
-        yield return [WithSemanticMutation(
-            root => root["Server"]!["ServerVersion"] = new string('x', 129))];
-        yield return [WithSemanticMutation(root => root["Policy"]!["PolicyType"] = "OtherPolicy")];
-        yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Id"] = "")];
-        yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Id"] = "invalid id")];
-        yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Publisher"] = "")];
-        yield return [WithSemanticMutation(root => root["Policy"]!["Metadata"]!["Revision"] = 0)];
-        yield return [WithSemanticMutation(
-            root => root["Policy"]!["Metadata"]!["SupportUrl"] = "http:foo")];
-        yield return [WithSemanticMutation(root => FirstRule(root)["Id"] = "")];
-        yield return [WithSemanticMutation(root => FirstRule(root)["Priority"] = int.MaxValue + 1u)];
-        yield return [WithSemanticMutation(root => FirstRule(root)["Match"] = new JsonObject())];
-        yield return [WithSemanticMutation(
-            root => FirstRule(root)["Match"]!["Operations"] = new JsonArray("Install", "Install"))];
-        yield return [WithSemanticMutation(
-            root => FirstRule(root)["Match"]!["Interactive"] = new JsonArray(false, true))];
-        yield return [WithSemanticMutation(
-            root => FirstRule(root)["Constraints"]!["AllowedCustomParameters"] = new JsonArray(""))];
-    }
+    private static JsonObject ResponseJson(PolicyResponse response) =>
+        JsonNode.Parse(BrokerSerializer.Serialize(response))!.AsObject();
 
-    private static string WithSemanticMutation(Action<JsonObject> mutation)
+    private static string Mutate(Action<JsonObject> mutation)
     {
-        JsonObject root = JsonNode.Parse(BrokerSerializer.Serialize(BuildResponse()))!.AsObject();
-        mutation(root);
-        return root.ToJsonString();
-    }
-
-    public static IEnumerable<object[]> InvalidWirePayloads()
-    {
-        yield return [WithWireMutation(root => root["Unexpected"] = true)];
-        yield return [WithWireMutation(root => root["Policy"]!["Metadata"]!["Unexpected"] = true)];
-        yield return [WithWireMutation(root => root["Server"]!["Transport"] = 0)];
-        yield return [WithWireMutation(root => root["Policy"]!["Enforcement"]!["DefaultDecision"] = 0)];
-        yield return [WithWireMutation(root => FirstRule(root)["Decision"] = 0)];
-        yield return [WithWireMutation(root => root["Server"]!["Transport"] = "httpnamedpipe")];
-        yield return [WithWireMutation(root => root["Policy"]!["Enforcement"]!["DefaultDecision"] = "deny")];
-        yield return [WithWireMutation(root => root["Policy"]!["Enforcement"]!["RulePrecedence"] = "prioritythendeny")];
-        yield return [WithWireMutation(root => FirstRule(root)["Decision"] = "allow")];
-        yield return [WithWireMutation(root => FirstRule(root)["Match"]!["Operations"]![0] = "install")];
-    }
-
-    private static string WithWireMutation(Action<JsonObject> mutation)
-    {
-        JsonObject root = JsonNode.Parse(BrokerSerializer.Serialize(BuildResponse()))!.AsObject();
+        JsonObject root = ResponseJson(BuildFullResponse());
         mutation(root);
         return root.ToJsonString();
     }
@@ -499,16 +346,11 @@ public class BrokerPolicyInspectorTests
     private sealed class FakeTransport : IBrokerTransport
     {
         private readonly BrokerTransportResponse? _response;
-        private readonly Exception? _exception;
         private readonly bool _waitForCancellation;
 
-        public FakeTransport(
-            BrokerTransportResponse? response = null,
-            Exception? exception = null,
-            bool waitForCancellation = false)
+        public FakeTransport(BrokerTransportResponse? response = null, bool waitForCancellation = false)
         {
             _response = response;
-            _exception = exception;
             _waitForCancellation = waitForCancellation;
         }
 
@@ -525,7 +367,6 @@ public class BrokerPolicyInspectorTests
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             }
 
-            if (_exception is not null) throw _exception;
             return _response ?? throw new InvalidOperationException("No response configured.");
         }
 

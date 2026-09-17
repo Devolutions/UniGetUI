@@ -676,15 +676,10 @@ namespace UniGetUI.Core.Data
                         continue;
                     }
 
-                    string value = line[(separator + 1)..].Trim().Trim('"');
+                    string value = DecodeXdgUserDirectoryValue(line[(separator + 1)..].Trim());
                     if (value.Length is 0)
                     {
                         continue;
-                    }
-
-                    if (value.StartsWith("$HOME", StringComparison.Ordinal))
-                    {
-                        value = GetUserHomeDirectory() + value["$HOME".Length..];
                     }
 
                     return value;
@@ -697,6 +692,38 @@ namespace UniGetUI.Core.Data
             }
 
             return null;
+        }
+
+        private static string DecodeXdgUserDirectoryValue(string value)
+        {
+            string inner = value.Length >= 2 && value[0] is '"' && value[^1] is '"'
+                ? value[1..^1]
+                : value;
+
+            StringBuilder builder = new(inner.Length);
+            for (int index = 0; index < inner.Length; index++)
+            {
+                char character = inner[index];
+
+                if (character is '\\'
+                    && index + 1 < inner.Length
+                    && inner[index + 1] is '"' or '\\' or '$' or '`')
+                {
+                    builder.Append(inner[++index]);
+                    continue;
+                }
+
+                if (index is 0 && inner.StartsWith("$HOME", StringComparison.Ordinal))
+                {
+                    builder.Append(GetUserHomeDirectory());
+                    index += "$HOME".Length - 1;
+                    continue;
+                }
+
+                builder.Append(character);
+            }
+
+            return builder.ToString();
         }
 #endif
 

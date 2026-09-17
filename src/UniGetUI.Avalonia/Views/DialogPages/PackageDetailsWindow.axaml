@@ -94,7 +94,7 @@
             <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}"/>
         </Style>
         <Style Selector="Ellipse.pip.active">
-            <Setter Property="Fill" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+            <Setter Property="Fill" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
             <Setter Property="Width" Value="10"/>
             <Setter Property="Height" Value="10"/>
         </Style>
@@ -242,8 +242,7 @@
                             VerticalAlignment="Top"
                             Background="{DynamicResource InstallOptionsSectionBackground}"
                             CornerRadius="8"
-                            BorderBrush="{DynamicResource SettingsCardBorderBrush}"
-                            BorderThickness="1">
+                            BorderThickness="0">
                         <Expander x:Name="InstallOptionsExpander"
                                   HorizontalAlignment="Stretch"
                                   HorizontalContentAlignment="Stretch"
@@ -342,7 +341,7 @@
                                     <!-- WinUI FlipView's E0E2 glyph, expressed as geometry so it
                                          stays identical on systems without Segoe Fluent Icons. -->
                                     <Path Data="M 6.8,0.7 C 7.7,0.1 8.7,0.7 8.7,1.7 L 8.7,10.3 C 8.7,11.3 7.7,11.9 6.8,11.3 L 0.8,7 C -0.1,6.4 -0.1,5.6 0.8,5 Z"
-                                          Width="8" Height="12"
+                                          Width="5" Height="8"
                                           Fill="{Binding $parent[Button].Foreground}"/>
                                 </Button>
                                 <Button x:Name="NextScreenshotButton"
@@ -352,7 +351,7 @@
                                         IsVisible="{Binding HasScreenshots}">
                                     <!-- WinUI FlipView's E0E3 glyph. -->
                                     <Path Data="M 1.9,0.7 C 1,0.1 0,0.7 0,1.7 L 0,10.3 C 0,11.3 1,11.9 1.9,11.3 L 7.9,7 C 8.8,6.4 8.8,5.6 7.9,5 Z"
-                                          Width="8" Height="12"
+                                          Width="5" Height="8"
                                           Fill="{Binding $parent[Button].Foreground}"/>
                                 </Button>
                             </Panel>

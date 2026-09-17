@@ -31,7 +31,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     private bool _pendingPillAnimate;
 
     private const double PillHeight = 16d;
-    private static readonly TimeSpan PillAnimationDuration = TimeSpan.FromMilliseconds(400);
+    private static readonly TimeSpan PillAnimationDuration = TimeSpan.FromMilliseconds(300);
 
     /// <summary>
     /// Whether the nav item text labels are shown. False renders an icon-only rail; true renders the
@@ -276,20 +276,23 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             if (progress >= 1d)
                 break;
 
-            try
-            {
-                await Task.Delay(16, cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
+            await NextAnimationFrameAsync();
         }
 
         if (version != _pillAnimationVersion || cancellationToken.IsCancellationRequested)
             return;
 
         SetPillEdges(targetTop, targetBottom);
+    }
+
+    private Task<TimeSpan> NextAnimationFrameAsync()
+    {
+        if (TopLevel.GetTopLevel(NavigationSelectionPill) is not { } topLevel)
+            return Task.FromResult(TimeSpan.Zero);
+
+        var completion = new TaskCompletionSource<TimeSpan>();
+        topLevel.RequestAnimationFrame(completion.SetResult);
+        return completion.Task;
     }
 
     private void SetPillEdges(double top, double bottom)

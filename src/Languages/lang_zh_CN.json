@@ -809,7 +809,6 @@
   "Are you sure you want to create a new package bundle?": "您确定要创建一个新的软件包合集吗？",
   "Any unsaved changes will be lost": "未保存的更改将会丢失",
   "Warning!": "警告！",
-  "For security reasons, custom command-line arguments are disabled by default. Go to UniGetUI security settings to change this.": "出于安全原因，自定义命令行参数默认处于禁用状态。可前往 UniGetUI 安全设置更改此设置。",
   "Change default options": "更改默认选项",
   "Ignore future updates for this package": "忽略此软件包的后续更新",
   "For security reasons, pre-operation and post-operation scripts are disabled by default. Go to UniGetUI security settings to change this.": "出于安全原因，操作前和操作后脚本默认处于禁用状态。可前往 UniGetUI 安全设置更改此设置。",

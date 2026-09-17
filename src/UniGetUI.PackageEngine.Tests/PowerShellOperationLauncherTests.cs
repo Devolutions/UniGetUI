@@ -5,9 +5,9 @@ using UniGetUI.Core.Tools;
 namespace UniGetUI.PackageEngine.Tests;
 
 /// <summary>
-/// Drives the checked-in operation launcher through the real powershell.exe using the same
-/// ArgumentList mechanism the app uses, so the -File launch path is verified end to end rather
-/// than only in theory.
+/// Drives the checked-in operation launcher through the real PowerShell hosts (powershell.exe
+/// & pwsh.exe) using the same ArgumentList mechanism the app uses, so the -File launch path is
+/// verified end to end rather than only in theory. 
 /// </summary>
 public sealed class PowerShellOperationLauncherTests
 {
@@ -48,13 +48,22 @@ public sealed class PowerShellOperationLauncherTests
             "powershell.exe"
         );
 
+    private static string? PowerShell7Path()
+    {
+        (bool found, string path) = CoreTools.Which("pwsh.exe");
+        return found ? path : null;
+    }
+
     private sealed record Result(int ExitCode, string StdOut, string StdErr);
 
-    private static Result Run(params string[] operationParameters)
+    private static Result Run(params string[] operationParameters) =>
+        RunWith(PowerShellPath(), operationParameters);
+
+    private static Result RunWith(string powerShellPath, params string[] operationParameters)
     {
         var startInfo = new ProcessStartInfo
         {
-            FileName = PowerShellPath(),
+            FileName = powerShellPath,
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -116,10 +125,11 @@ public sealed class PowerShellOperationLauncherTests
         Assert.Empty(result.StdErr.Trim());
     }
 
-    // powershell.exe splits "-Confirm:$false" into "-Confirm" and the literal text "$false"
-    // before the launcher runs, and splatting cannot bind that text to a switch. The launcher
-    // converts the pair back into a real boolean; without that, the operation silently fails
-    // with "a positional parameter cannot be found".
+    // Windows PowerShell 5.x splits "-Confirm:$false" into "-Confirm" and the literal text
+    // "$false" before the launcher runs, and splatting cannot bind that text to a switch. The
+    // launcher converts the pair back into a real boolean; without that, the operation silently
+    // fails with "a positional parameter cannot be found". PowerShell 7 splits the same pair but
+    // hands over a real boolean instead, which is covered separately below.
     [Fact]
     public void TheColonSwitchSyntaxTheHelpersEmitIsAccepted()
     {
@@ -167,6 +177,89 @@ public sealed class PowerShellOperationLauncherTests
         {
             File.Delete(target);
         }
+    }
+
+    [Fact]
+    public void TheColonSwitchSyntaxTheHelpersEmitIsAcceptedUnderPowerShell7()
+    {
+        string? powerShell7 = PowerShell7Path();
+        if (powerShell7 is null)
+            return;
+
+        string target = Path.Combine(
+            Path.GetTempPath(),
+            $"unigetui_confirm_pwsh_{Guid.NewGuid():N}.txt"
+        );
+
+        try
+        {
+            var result = RunWith(
+                powerShell7,
+                "plain",
+                "New-Item",
+                "-Path",
+                target,
+                "-ItemType",
+                "File",
+                "-Force",
+                "-Confirm:$false"
+            );
+
+            Assert.DoesNotContain("positional parameter", result.StdErr);
+            Assert.Equal(0, result.ExitCode);
+            Assert.True(File.Exists(target), "The cmdlet did not run with -Confirm:$false bound.");
+        }
+        finally
+        {
+            File.Delete(target);
+        }
+    }
+
+    [Fact]
+    public void APlainSwitchWithoutAValueStillBindsUnderPowerShell7()
+    {
+        string? powerShell7 = PowerShell7Path();
+        if (powerShell7 is null)
+            return;
+
+        string target = Path.Combine(
+            Path.GetTempPath(),
+            $"unigetui_force_pwsh_{Guid.NewGuid():N}.txt"
+        );
+
+        try
+        {
+            var result = RunWith(
+                powerShell7,
+                "plain",
+                "New-Item",
+                "-Path",
+                target,
+                "-ItemType",
+                "File",
+                "-Force"
+            );
+
+            Assert.Equal(0, result.ExitCode);
+            Assert.True(File.Exists(target));
+        }
+        finally
+        {
+            File.Delete(target);
+        }
+    }
+
+    [Fact]
+    public void ABooleanLookingStringIsStillPassedAsDataUnderPowerShell7()
+    {
+        string? powerShell7 = PowerShell7Path();
+        if (powerShell7 is null)
+            return;
+
+        var result = RunWith(powerShell7, "plain", "Write-Output", "$false");
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("$false", result.StdOut);
     }
 
     [Fact]

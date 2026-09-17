@@ -77,17 +77,25 @@ for ($i = 2; $i -lt $args.Count; $i++)
 {
     $item = [string]$args[$i]
 
-    # powershell.exe splits "-Switch:$false" into "-Switch" and the literal text "$false" before
-    # this script runs, and splatting cannot bind that text to a switch. Such a pair is turned
-    # into a real boolean and bound by name through a hashtable, which does accept one.
+    # powershell.exe and pwsh.exe both split "-Switch:$false" into "-Switch" and a second argument 
+    # before this script runs, but Windows PowerShell 5.x (powershell.exe) passes the literal text
+    # "$false" while PowerShell 7 (pwsh.exe) has already turned it into a bool. Splatting cannot 
+    # bind either of them to a switch, so either is converted back into a real boolean and bound
+    # by name through a hashtable, which does accept one.
     if ($item -match '^-([A-Za-z][A-Za-z0-9_]*)$' -and ($i + 1) -lt $args.Count)
     {
         $switchName = $Matches[1]
-        $next = [string]$args[$i + 1]
+        $raw = $args[$i + 1]
+        $next = [string]$raw
 
-        if (($next -eq '$false' -or $next -eq '$true') -and (Test-IsSwitchParameter $switchName))
+        $boolValue =
+            if ($raw -is [bool]) { $raw }
+            elseif ($next -in '$true', '$false') { $next -eq '$true' }
+            else { $null }
+
+        if ($null -ne $boolValue -and (Test-IsSwitchParameter $switchName))
         {
-            $named[$switchName] = ($next -eq '$true')
+            $named[$switchName] = $boolValue
             $i++
             continue
         }

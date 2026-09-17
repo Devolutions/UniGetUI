@@ -57,12 +57,14 @@ public sealed class SmoothScrollManager
         if (e.Source is not Visual source || HasNativeWheelInteraction(source)) return;
         Control? sourceControl = source.FindAncestorOfType<Control>(includeSelf: true);
         if (sourceControl is null || !GetIsEnabled(sourceControl)) return;
+        bool isPrecisionTouchpadScroll = IsPrecisionTouchpadScroll(e.Delta);
 
         // DataGrid implements scrolling itself rather than through an ancestor ScrollViewer.
         // Resolve it first to preserve the package list's virtualization-aware inertia path.
         if (source.FindAncestorOfType<DataGrid>(includeSelf: true) is { } grid)
         {
-            _animators.GetValue(grid, static control => new(control)).AddImpulse(e.Delta);
+            _animators.GetValue(grid, static control => new(control))
+                .ApplyInput(e.Delta, isPrecisionTouchpadScroll);
             e.Handled = true;
             return;
         }
@@ -73,18 +75,45 @@ public sealed class SmoothScrollManager
 
         if (horizontalTarget is not null && ReferenceEquals(horizontalTarget, verticalTarget))
         {
-            _animators.GetValue(horizontalTarget, static control => new(control)).AddImpulse(e.Delta);
+            _animators.GetValue(horizontalTarget, static control => new(control))
+                .ApplyInput(e.Delta, isPrecisionTouchpadScroll);
         }
         else
         {
             if (horizontalTarget is not null)
                 _animators.GetValue(horizontalTarget, static control => new(control))
-                    .AddImpulse(new Vector(e.Delta.X, 0));
+                    .ApplyInput(new Vector(e.Delta.X, 0), isPrecisionTouchpadScroll);
             if (verticalTarget is not null)
                 _animators.GetValue(verticalTarget, static control => new(control))
-                    .AddImpulse(new Vector(0, e.Delta.Y));
+                    .ApplyInput(new Vector(0, e.Delta.Y), isPrecisionTouchpadScroll);
         }
         e.Handled = true;
+    }
+
+    private void ApplyInput(Vector delta, bool isPrecisionTouchpadScroll)
+    {
+        if (isPrecisionTouchpadScroll)
+        {
+            // Precision touchpads already provide a stream of small, inertial deltas. Applying
+            // those deltas directly keeps the viewport attached to the fingers and avoids adding
+            // a second inertia curve on top of the one supplied by the operating system.
+            Stop();
+            ScrollBy(delta * SmoothScrollPhysics.WheelDistance);
+            return;
+        }
+
+        AddImpulse(delta);
+    }
+
+    private static bool IsPrecisionTouchpadScroll(Vector delta)
+        => IsPrecisionTouchpadDelta(delta.X) || IsPrecisionTouchpadDelta(delta.Y);
+
+    private static bool IsPrecisionTouchpadDelta(double delta)
+    {
+        // Avalonia exposes mouse wheels and precision touchpads through the same event. Traditional
+        // wheel deltas are integral notches, whereas precision touchpads emit fractional deltas.
+        double absoluteDelta = Math.Abs(delta);
+        return absoluteDelta - (int)absoluteDelta > 1e-6;
     }
 
     private void AddImpulse(Vector delta)

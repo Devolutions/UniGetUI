@@ -7,6 +7,7 @@ using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
 
@@ -27,11 +28,14 @@ public sealed class SmoothScrollManager
 
     private const double MaximumFrameTime = 1.0 / 30.0;
     private const double StopVelocity = 4.0;
-    private const double PrecisionInertiaDelay = 0.05;
     private const double PrecisionGestureRetention = 0.12;
-    private const double MaximumPrecisionSampleInterval = 0.08;
-    private const double PrecisionVelocityBlend = 0.5;
-    private const double MaximumPrecisionVelocity = 3600.0;
+    private const double OverpanResistance = 0.4;
+    private const double MaximumOverpan = 48.0;
+    private const double OverpanReleaseDelay = 0.04;
+    private const double OverpanSpringStrength = 280.0;
+    private const double OverpanSpringDamping = 24.0;
+    private const double OverpanStopDistance = 0.1;
+    private const double OverpanStopVelocity = 2.0;
 
     private static readonly ConditionalWeakTable<Control, SmoothScrollManager> _animators = new();
     private static readonly ConditionalWeakTable<TopLevel, PrecisionInputState> _precisionInputStates = new();
@@ -42,7 +46,12 @@ public sealed class SmoothScrollManager
     private TimeSpan? _lastFrame;
     private bool _frameRequested;
     private long _lastPrecisionInputTimestamp;
-    private bool _precisionInertiaPending;
+    private Vector _overpan;
+    private Vector _overpanVelocity;
+    private Visual? _overpanVisual;
+    private ITransform? _originalOverpanTransform;
+    private ITransform? _appliedOverpanTransform;
+    private TranslateTransform? _overpanTranslation;
 
     private SmoothScrollManager(Control target)
     {
@@ -86,13 +95,21 @@ public sealed class SmoothScrollManager
 
         ScrollViewer? horizontalTarget = FindScrollTarget(source, e.Delta.X, horizontal: true);
         ScrollViewer? verticalTarget = FindScrollTarget(source, e.Delta.Y, horizontal: false);
+        bool handledBoundary = false;
+        if (isPrecisionTouchpadScroll)
+        {
+            Vector boundaryDelta = new(
+                horizontalTarget is null ? e.Delta.X : 0,
+                verticalTarget is null ? e.Delta.Y : 0);
+            if (boundaryDelta != default)
+                handledBoundary = ApplyPrecisionInputAtBoundary(source, boundaryDelta);
+        }
+
         if (horizontalTarget is null && verticalTarget is null)
         {
-            // Do not fall back to Avalonia's much larger conventional wheel step at a hard edge.
-            // WinUI keeps the manipulation owned by the current scroll chain while its boundary
-            // response settles; consuming it here gives the same stable stop and cancels our tail.
-            if (isPrecisionTouchpadScroll && StopPrecisionInputAtBoundary(source, e.Delta))
-                e.Handled = true;
+            // Keep a precision manipulation owned by the current scroll chain at a hard edge.
+            // The manager turns only the unconsumed part into a resisted visual overpan.
+            if (handledBoundary) e.Handled = true;
             return;
         }
 
@@ -117,61 +134,65 @@ public sealed class SmoothScrollManager
     {
         if (isPrecisionTouchpadScroll)
         {
-            // Keep the viewport attached to the fingers while the native delta stream is active.
-            // WinUI's compositor manipulation maps less aggressively than Avalonia's conventional
-            // 48-DIP wheel step, so precision input uses its own sensitivity. A short inertia tail
-            // is armed below, but does not begin until native input has gone quiet.
-            Vector step = delta * SmoothScrollPhysics.PrecisionTouchpadDistance;
-            if (!ScrollBy(step))
-            {
-                Stop();
-                return;
-            }
-
-            TrackPrecisionVelocity(step);
+            // Windows already emits the touchpad's decelerating delta stream. Apply it directly:
+            // synthesizing another fling here makes even a deliberate finger stop drift afterward.
+            _velocity = default;
+            _lastFrame = null;
+            ApplyPrecisionInput(delta * SmoothScrollPhysics.PrecisionTouchpadDistance);
             return;
         }
 
-        if (_lastPrecisionInputTimestamp != 0) Stop();
+        ResetOverpan();
         AddImpulse(delta);
     }
 
-    private void TrackPrecisionVelocity(Vector step)
+    private void ApplyPrecisionInput(Vector step)
     {
-        long now = Stopwatch.GetTimestamp();
-        if (_lastPrecisionInputTimestamp != 0)
+        ApplyPrecisionAxis(step.X, horizontal: true);
+        ApplyPrecisionAxis(step.Y, horizontal: false);
+
+        if (_overpan != default)
         {
-            double elapsed = Stopwatch.GetElapsedTime(_lastPrecisionInputTimestamp, now).TotalSeconds;
-            if (elapsed > 0 && elapsed <= MaximumPrecisionSampleInterval)
-            {
-                Vector sample = step / elapsed;
-                _velocity = new Vector(
-                    BlendPrecisionVelocity(_velocity.X, sample.X),
-                    BlendPrecisionVelocity(_velocity.Y, sample.Y));
-            }
-            else
-            {
-                _velocity = default;
-            }
+            _lastPrecisionInputTimestamp = Stopwatch.GetTimestamp();
+            _overpanVelocity = default;
+            UpdateOverpanTransform();
+            RequestFrame();
         }
         else
         {
-            // One isolated fractional event is not enough to infer a fling velocity reliably.
-            _velocity = default;
+            ResetOverpan();
         }
-
-        _lastPrecisionInputTimestamp = now;
-        _precisionInertiaPending = true;
-        _lastFrame = null;
-        RequestFrame();
     }
 
-    private static double BlendPrecisionVelocity(double current, double sample)
+    private void ApplyPrecisionAxis(double step, bool horizontal)
     {
-        if (sample == 0) return 0;
-        sample = Math.Clamp(sample, -MaximumPrecisionVelocity, MaximumPrecisionVelocity);
-        if (current == 0 || Math.Sign(current) != Math.Sign(sample)) return sample;
-        return current + (sample - current) * PrecisionVelocityBlend;
+        if (step == 0) return;
+
+        double displacement = horizontal ? _overpan.X : _overpan.Y;
+        if (displacement != 0)
+        {
+            if (Math.Sign(displacement) == Math.Sign(step))
+            {
+                SetOverpanAxis(displacement + step * OverpanResistance, horizontal);
+                return;
+            }
+
+            // Pull the exposed empty region back one-to-one with the fingers. Only the portion
+            // beyond the resting point is allowed to resume ordinary scrolling.
+            double restored = displacement + step;
+            if (restored != 0 && Math.Sign(restored) == Math.Sign(displacement))
+            {
+                SetOverpanAxis(restored, horizontal);
+                return;
+            }
+
+            SetOverpanAxis(0, horizontal);
+            step = restored;
+            if (step == 0) return;
+        }
+
+        if (!ScrollByAxis(step, horizontal))
+            SetOverpanAxis(step * OverpanResistance, horizontal);
     }
 
     private static bool IsPrecisionTouchpadScroll(TopLevel topLevel, Vector delta)
@@ -234,18 +255,20 @@ public sealed class SmoothScrollManager
         return null;
     }
 
-    private static bool StopPrecisionInputAtBoundary(Visual source, Vector delta)
+    private static bool ApplyPrecisionInputAtBoundary(Visual source, Vector delta)
     {
         bool foundBoundary = false;
         if (delta.X != 0 && FindBoundaryScrollHost(source, horizontal: true) is { } horizontalHost)
         {
-            _animators.GetValue(horizontalHost, static control => new(control)).Stop();
+            _animators.GetValue(horizontalHost, static control => new(control))
+                .ApplyInput(new Vector(delta.X, 0), isPrecisionTouchpadScroll: true);
             foundBoundary = true;
         }
 
         if (delta.Y != 0 && FindBoundaryScrollHost(source, horizontal: false) is { } verticalHost)
         {
-            _animators.GetValue(verticalHost, static control => new(control)).Stop();
+            _animators.GetValue(verticalHost, static control => new(control))
+                .ApplyInput(new Vector(0, delta.Y), isPrecisionTouchpadScroll: true);
             foundBoundary = true;
         }
 
@@ -293,20 +316,36 @@ public sealed class SmoothScrollManager
     {
         _frameRequested = false;
 
-        if (_precisionInertiaPending)
+        if (_overpan != default)
         {
             double quietTime = Stopwatch.GetElapsedTime(_lastPrecisionInputTimestamp).TotalSeconds;
-            if (quietTime < PrecisionInertiaDelay)
+            if (quietTime < OverpanReleaseDelay)
             {
                 RequestFrame();
                 return;
             }
 
-            _precisionInertiaPending = false;
+            double springDt = _lastFrame is { } springLast
+                ? (now - springLast).TotalSeconds
+                : 1.0 / 60.0;
             _lastFrame = now;
-            if (_velocity == default)
+            if (springDt <= 0) springDt = 1.0 / 60.0;
+            springDt = Math.Min(springDt, MaximumFrameTime);
+
+            (double x, double velocityX) = StepSpring(_overpan.X, _overpanVelocity.X, springDt);
+            (double y, double velocityY) = StepSpring(_overpan.Y, _overpanVelocity.Y, springDt);
+            _overpan = new Vector(x, y);
+            _overpanVelocity = new Vector(velocityX, velocityY);
+            UpdateOverpanTransform();
+
+            double distanceSquared = _overpan.X * _overpan.X + _overpan.Y * _overpan.Y;
+            double velocitySquared = _overpanVelocity.X * _overpanVelocity.X +
+                                     _overpanVelocity.Y * _overpanVelocity.Y;
+            bool isAtRest = distanceSquared < OverpanStopDistance * OverpanStopDistance &&
+                            velocitySquared < OverpanStopVelocity * OverpanStopVelocity;
+            if (isAtRest)
             {
-                Stop();
+                ResetOverpan();
                 return;
             }
 
@@ -323,9 +362,7 @@ public sealed class SmoothScrollManager
 
         // Integrate the exponential velocity curve over the frame. This makes travel independent
         // of refresh rate, unlike applying a fixed fraction on every animation callback.
-        var frame = _lastPrecisionInputTimestamp == 0
-            ? SmoothScrollPhysics.Integrate(_velocity.X, _velocity.Y, dt)
-            : SmoothScrollPhysics.IntegratePrecisionTouchpad(_velocity.X, _velocity.Y, dt);
+        var frame = SmoothScrollPhysics.Integrate(_velocity.X, _velocity.Y, dt);
         var step = new Vector(frame.StepX, frame.StepY);
 
         bool scrolled = ScrollBy(step);
@@ -356,12 +393,116 @@ public sealed class SmoothScrollManager
         return true;
     }
 
+    private bool ScrollByAxis(double step, bool horizontal)
+    {
+        if (_target is DataGrid grid)
+            return UpdateDataGridScroll(grid,
+                horizontal ? new Vector(step, 0) : new Vector(0, step));
+
+        var viewer = (ScrollViewer)_target;
+        Vector oldOffset = viewer.Offset;
+        double maximum = horizontal
+            ? Math.Max(0, viewer.Extent.Width - viewer.Viewport.Width)
+            : Math.Max(0, viewer.Extent.Height - viewer.Viewport.Height);
+        double oldAxis = horizontal ? oldOffset.X : oldOffset.Y;
+        double newAxis = Math.Clamp(oldAxis - step, 0, maximum);
+        if (newAxis == oldAxis) return false;
+
+        viewer.Offset = horizontal
+            ? new Vector(newAxis, oldOffset.Y)
+            : new Vector(oldOffset.X, newAxis);
+        return true;
+    }
+
+    private void SetOverpanAxis(double value, bool horizontal)
+    {
+        value = Math.Clamp(value, -MaximumOverpan, MaximumOverpan);
+        _overpan = horizontal
+            ? new Vector(value, _overpan.Y)
+            : new Vector(_overpan.X, value);
+    }
+
+    private void UpdateOverpanTransform()
+    {
+        if (_overpanVisual is null && !TryAttachOverpanTransform()) return;
+        _overpanTranslation!.X = _overpan.X;
+        _overpanTranslation.Y = _overpan.Y;
+    }
+
+    private bool TryAttachOverpanTransform()
+    {
+        ScrollContentPresenter? presenter = null;
+        double largestOverflow = double.NegativeInfinity;
+
+        foreach (Visual descendant in _target.GetVisualDescendants())
+        {
+            if (descendant is not ScrollContentPresenter candidate || candidate.Child is not Visual)
+                continue;
+
+            double overflow = Math.Max(0, candidate.Extent.Width - candidate.Viewport.Width) +
+                              Math.Max(0, candidate.Extent.Height - candidate.Viewport.Height);
+            if (overflow <= largestOverflow) continue;
+            presenter = candidate;
+            largestOverflow = overflow;
+        }
+
+        if (presenter?.Child is not Visual visual) return false;
+
+        _overpanVisual = visual;
+        _originalOverpanTransform = visual.RenderTransform;
+        _overpanTranslation = new TranslateTransform();
+        if (_originalOverpanTransform is null)
+        {
+            _appliedOverpanTransform = _overpanTranslation;
+        }
+        else
+        {
+            var group = new TransformGroup();
+            // TransformGroup stores mutable Transforms. Preserve an immutable transform by
+            // snapshotting its matrix for the short-lived overpan, then restore the original.
+            group.Children.Add(_originalOverpanTransform is Transform originalTransform
+                ? originalTransform
+                : new MatrixTransform(_originalOverpanTransform.Value));
+            group.Children.Add(_overpanTranslation);
+            _appliedOverpanTransform = group;
+        }
+
+        visual.RenderTransform = _appliedOverpanTransform;
+        return true;
+    }
+
+    private static (double Position, double Velocity) StepSpring(
+        double position,
+        double velocity,
+        double elapsedSeconds)
+    {
+        double acceleration = -OverpanSpringStrength * position - OverpanSpringDamping * velocity;
+        velocity += acceleration * elapsedSeconds;
+        position += velocity * elapsedSeconds;
+        return (position, velocity);
+    }
+
+    private void ResetOverpan()
+    {
+        _lastPrecisionInputTimestamp = 0;
+        _overpan = default;
+        _overpanVelocity = default;
+
+        if (_overpanVisual is not null &&
+            ReferenceEquals(_overpanVisual.RenderTransform, _appliedOverpanTransform))
+            _overpanVisual.RenderTransform = _originalOverpanTransform;
+
+        _overpanVisual = null;
+        _originalOverpanTransform = null;
+        _appliedOverpanTransform = null;
+        _overpanTranslation = null;
+    }
+
     private void Stop()
     {
         _velocity = default;
         _lastFrame = null;
-        _lastPrecisionInputTimestamp = 0;
-        _precisionInertiaPending = false;
+        ResetOverpan();
     }
 
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "UpdateScroll")]

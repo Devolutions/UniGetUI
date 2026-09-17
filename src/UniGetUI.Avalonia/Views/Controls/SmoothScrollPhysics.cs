@@ -7,7 +7,6 @@ internal static class SmoothScrollPhysics
     internal const double DecayTime = 0.15;
     internal const double WheelDistance = 48.0;
     internal const double PrecisionTouchpadDistance = WheelDistance / 2.0;
-    internal const double PrecisionTouchpadDecayTime = DecayTime * 2.0;
     private const double WheelVelocityImpulse = WheelDistance / DecayTime;
     private const double MaximumVelocity = 7200.0;
 
@@ -24,27 +23,9 @@ internal static class SmoothScrollPhysics
         double velocityX,
         double velocityY,
         double elapsedSeconds)
-        => IntegrateWithDecay(velocityX, velocityY, elapsedSeconds, DecayTime);
-
-    internal static (double StepX, double StepY, double VelocityX, double VelocityY)
-        IntegratePrecisionTouchpad(
-            double velocityX,
-            double velocityY,
-            double elapsedSeconds)
-        => IntegrateWithDecay(
-            velocityX,
-            velocityY,
-            elapsedSeconds,
-            PrecisionTouchpadDecayTime);
-
-    private static (double StepX, double StepY, double VelocityX, double VelocityY) IntegrateWithDecay(
-        double velocityX,
-        double velocityY,
-        double elapsedSeconds,
-        double decayTime)
     {
-        double decay = Math.Exp(-elapsedSeconds / decayTime);
-        double distanceFactor = decayTime * (1.0 - decay);
+        double decay = Math.Exp(-elapsedSeconds / DecayTime);
+        double distanceFactor = DecayTime * (1.0 - decay);
         return (
             velocityX * distanceFactor,
             velocityY * distanceFactor,

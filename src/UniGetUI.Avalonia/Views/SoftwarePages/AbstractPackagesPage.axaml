@@ -53,6 +53,18 @@
          <Setter Property="BorderBrush" Value="{DynamicResource FilterCardBorderBrush}"/>
          <Setter Property="BorderThickness" Value="1"/>
       </Style>
+      <!-- Avalonia's Expander draws the collapsed outline in its nested header template and the
+           expanded lower outline in ExpanderContent. Apply the pre-alpha stroke to both parts. -->
+      <Style Selector="Expander.filter-card /template/ ToggleButton#ExpanderHeader">
+         <Setter Property="BorderBrush" Value="{DynamicResource FilterCardBorderBrush}"/>
+         <Setter Property="BorderThickness" Value="1"/>
+      </Style>
+      <Style Selector="Expander.filter-card /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
+         <Setter Property="BorderBrush" Value="{DynamicResource FilterCardBorderBrush}"/>
+      </Style>
+      <Style Selector="Expander.filter-card /template/ Border#ExpanderContent">
+         <Setter Property="BorderBrush" Value="{DynamicResource FilterCardBorderBrush}"/>
+      </Style>
       <!-- Toolbar buttons: flat, no background/border in normal state (WinUI AppBarButton style) -->
       <Style Selector="#ToolbarRow Button">
          <Setter Property="Background" Value="Transparent"/>

@@ -156,8 +156,14 @@
                     </LinearGradientBrush>
                     <Thickness x:Key="SearchFieldBorderThickness">1</Thickness>
                     <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#F2F2F2"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#E1E1E1"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#ECECEC"/>
+                    <!-- Former WinUI TabView: SystemChromeAltHigh surface +
+                         SolidBackgroundFillColorTertiary selected tab. -->
+                    <SolidColorBrush x:Key="InstallOptionsTabBackground" Color="#F3F3F3"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#E9E9E9"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabPressedBackground" Color="#E3E3E3"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedHoverBackground" Color="#FCFCFC"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedPressedBackground" Color="#F5F5F5"/>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <!-- Accent fills (lighter accents on dark bg) -->
@@ -202,8 +208,12 @@
                     <Thickness x:Key="SearchFieldBorderThickness">1</Thickness>
                     <!-- Opaque package-details layers remain distinct even when the dialog uses Mica. -->
                     <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#393939"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#292929"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#252525"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabBackground" Color="#181818"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#2D2D2D"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#242424"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabPressedBackground" Color="#202020"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedHoverBackground" Color="#323232"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedPressedBackground" Color="#292929"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5DFFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#E4000000"/>
                     <!-- WinUI's dark flyout surface is an opaque #2C2C2C. -->

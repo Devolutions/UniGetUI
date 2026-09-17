@@ -42,4 +42,18 @@ public class PolicyEditorFocusNavigationTests
 
         Assert.Same(expected, target);
     }
+
+    [Fact]
+    public void FindingNavigationExpandsAllCollapsedAncestorSections()
+    {
+        var first = new Expander { IsExpanded = false };
+        var second = new Expander { IsExpanded = true };
+
+        bool changed = PolicyEditorDialog.ExpandCollapsedAncestors([first, second]);
+
+        Assert.True(changed);
+        Assert.True(first.IsExpanded);
+        Assert.True(second.IsExpanded);
+        Assert.False(PolicyEditorDialog.ExpandCollapsedAncestors([first, second]));
+    }
 }

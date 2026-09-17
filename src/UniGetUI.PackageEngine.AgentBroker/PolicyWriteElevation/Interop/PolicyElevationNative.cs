@@ -80,12 +80,12 @@ internal static partial class PolicyElevationNative
     }
 
     internal const uint WtdUiNone = 2;
-    internal const uint WtdRevokeNone = 0;
+    internal const uint WtdRevokeWholeChain = 1;
     internal const uint WtdChoiceFile = 1;
     internal const uint WtdStateActionVerify = 1;
     internal const uint WtdStateActionClose = 2;
     internal const uint WtdSaferFlag = 0x100;
-    internal const uint WtdCacheOnlyUrlRetrieval = 0x1000;
+    internal const uint WtdRevocationCheckChain = 0x40;
     internal const uint WtdLifetimeSigningFlag = 0x800;
 
     internal static readonly Guid WinTrustActionGenericVerifyV2 =

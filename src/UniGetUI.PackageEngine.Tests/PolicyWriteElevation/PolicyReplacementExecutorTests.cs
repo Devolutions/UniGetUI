@@ -30,6 +30,40 @@ public class PolicyReplacementExecutorTests
     }
 
     [Fact]
+    public void ElevatedBrokerTransportBudgetsTheCompleteReplacementResponse()
+    {
+        Assert.True(
+            AuthenticatedBrokerTransport.MaxPolicyManagementResponseBytes
+            > BrokerApi.MaxPolicyManagementBodyBytes * 3);
+    }
+
+    [Fact]
+    public void PrivilegedTrustChecksUseQueryOnlyTokensAndOnlineWholeChainRevocation()
+    {
+        string root = FindRepositoryRoot();
+        string processInspector = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.PackageEngine.AgentBroker",
+            "PolicyWriteElevation",
+            "Interop",
+            "WindowsProcessInspector.cs"));
+        string trustVerifier = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.PackageEngine.AgentBroker",
+            "PolicyWriteElevation",
+            "Interop",
+            "WindowsAuthenticodeTrustVerifier.cs"));
+
+        Assert.DoesNotContain("TokenDuplicate", processInspector);
+        Assert.DoesNotContain("DuplicateTokenEx", processInspector);
+        Assert.Contains("WtdRevokeWholeChain", trustVerifier);
+        Assert.Contains("WtdRevocationCheckChain", trustVerifier);
+        Assert.DoesNotContain("WtdCacheOnlyUrlRetrieval", trustVerifier);
+    }
+
+    [Fact]
     public void UnreadableBrokerError_IsUnknownBecausePersistenceCannotBeRuledOut()
     {
         var exception = new BrokerClientException(

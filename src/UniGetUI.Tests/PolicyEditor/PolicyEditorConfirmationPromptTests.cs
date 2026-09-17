@@ -8,6 +8,27 @@ namespace UniGetUI.Tests.PolicyEditor;
 public class PolicyEditorConfirmationPromptTests
 {
     [Fact]
+    public void ConfirmationPromptRestoresAndActivatesItsOwnerBeforeShowing()
+    {
+        string root = FindRepositoryRoot();
+        string source = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorConfirmationPrompt.cs"));
+        int restore = source.IndexOf("EnsureOwnerVisible();", StringComparison.Ordinal);
+        int show = source.IndexOf("dialog.ShowDialog(_owner)", StringComparison.Ordinal);
+
+        Assert.True(restore >= 0 && show > restore);
+        Assert.Contains("WindowState.Minimized", source);
+        Assert.Contains("_owner.Activate()", source);
+    }
+
+    [Fact]
     public void CancelPendingChoice_DisablesRequiredChoiceBeforeRequestingClose()
     {
         var dialog = new ImmersiveConfirmationDialog
@@ -89,5 +110,18 @@ public class PolicyEditorConfirmationPromptTests
         Assert.Contains("draft-id", warnings);
         Assert.True(warnings.IndexOf("3", StringComparison.Ordinal)
             < warnings.IndexOf("draft-id", StringComparison.Ordinal));
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        for (DirectoryInfo? directory = new(AppContext.BaseDirectory);
+             directory is not null;
+             directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "src", "UniGetUI.Windows.slnx")))
+                return directory.FullName;
+        }
+
+        throw new DirectoryNotFoundException("Repository root was not found.");
     }
 }

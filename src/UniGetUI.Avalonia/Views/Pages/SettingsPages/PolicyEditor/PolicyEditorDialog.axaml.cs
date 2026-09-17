@@ -238,6 +238,18 @@ public partial class PolicyEditorDialog : ImmersiveDialog
             .OrderByDescending(control => ((string)control.Tag!).Length)
             .FirstOrDefault();
         target ??= root;
+        Expander[] collapsedAncestors = target.GetVisualAncestors()
+            .OfType<Expander>()
+            .Where(expander => !expander.IsExpanded)
+            .ToArray();
+        if (ExpandCollapsedAncestors(collapsedAncestors))
+        {
+            Dispatcher.UIThread.Post(
+                () => FocusBestMatchingControl(root, pointer),
+                DispatcherPriority.Loaded);
+            return;
+        }
+
         target.BringIntoView();
         Control? focusTarget = FindFocusableTarget(target);
         if (focusTarget is not null)
@@ -250,6 +262,19 @@ public partial class PolicyEditorDialog : ImmersiveDialog
         Control? fallback = FindFocusableTarget(root);
         fallback?.BringIntoView();
         fallback?.Focus();
+    }
+
+    internal static bool ExpandCollapsedAncestors(IEnumerable<Expander> ancestors)
+    {
+        bool expanded = false;
+        foreach (Expander expander in ancestors)
+        {
+            if (expander.IsExpanded)
+                continue;
+            expander.IsExpanded = true;
+            expanded = true;
+        }
+        return expanded;
     }
 
     internal static Control? FindFocusableTarget(Control target)

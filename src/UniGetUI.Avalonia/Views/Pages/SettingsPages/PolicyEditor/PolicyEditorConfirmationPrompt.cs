@@ -27,6 +27,7 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
 
     public async Task<bool> ConfirmAsync(PolicyEditorConfirmationRequest request, CancellationToken cancellationToken)
     {
+        EnsureOwnerVisible();
         (string title, string primaryText) = DescribeAction(request.Kind);
         object body = BuildBody(request);
 
@@ -50,6 +51,15 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
             () => Dispatcher.UIThread.Post(dialog.CancelPendingChoice));
         await dialog.ShowDialog(_owner);
         return !cancellationToken.IsCancellationRequested && dialog.Result == true;
+    }
+
+    private void EnsureOwnerVisible()
+    {
+        if (!_owner.IsVisible)
+            _owner.Show();
+        if (_owner.WindowState == WindowState.Minimized)
+            _owner.WindowState = WindowState.Normal;
+        _owner.Activate();
     }
 
     private static (string Title, string PrimaryText) DescribeAction(PolicyEditorConfirmationKind kind) => kind switch

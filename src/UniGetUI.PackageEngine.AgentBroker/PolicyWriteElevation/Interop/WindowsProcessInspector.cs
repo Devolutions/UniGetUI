@@ -88,7 +88,7 @@ public static class WindowsProcessInspector
 
         if (!PolicyElevationNative.OpenProcessToken(
                 processHandle,
-                PolicyElevationNative.TokenQuery | PolicyElevationNative.TokenDuplicate,
+                PolicyElevationNative.TokenQuery,
                 out SafeAccessTokenHandle token))
         {
             return false;
@@ -108,32 +108,18 @@ public static class WindowsProcessInspector
 
             isElevated = elevation is not 0;
 
-            if (!PolicyElevationNative.DuplicateTokenEx(
-                    token,
-                    PolicyElevationNative.TokenQuery,
-                    nint.Zero,
-                    PolicyElevationNative.SecurityImpersonationLevel,
-                    PolicyElevationNative.TokenImpersonationType,
-                    out SafeAccessTokenHandle impersonation))
+            try
+            {
+                using var identity = new WindowsIdentity(token.DangerousGetHandle());
+                isAdministrator = identity.Groups?.Any(group =>
+                    group is SecurityIdentifier sid
+                    && sid.IsWellKnown(WellKnownSidType.BuiltinAdministratorsSid)) == true;
+            }
+            catch (Exception ex) when (ex is ArgumentException
+                                           or SecurityException
+                                           or UnauthorizedAccessException)
             {
                 return false;
-            }
-
-            using (impersonation)
-            {
-                var administrators = new System.Security.Principal.SecurityIdentifier(
-                    System.Security.Principal.WellKnownSidType.BuiltinAdministratorsSid,
-                    null);
-
-                byte[] sid = new byte[administrators.BinaryLength];
-                administrators.GetBinaryForm(sid, 0);
-
-                if (!PolicyElevationNative.CheckTokenMembership(impersonation, sid, out bool member))
-                {
-                    return false;
-                }
-
-                isAdministrator = member;
             }
         }
 

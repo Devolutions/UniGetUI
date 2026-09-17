@@ -95,12 +95,12 @@ public sealed class WindowsAuthenticodeTrustVerifier : IPolicyElevationTrustVeri
             {
                 cbStruct = (uint)Marshal.SizeOf<PolicyElevationNative.WinTrustData>(),
                 dwUIChoice = PolicyElevationNative.WtdUiNone,
-                fdwRevocationChecks = PolicyElevationNative.WtdRevokeNone,
+                fdwRevocationChecks = PolicyElevationNative.WtdRevokeWholeChain,
                 dwUnionChoice = PolicyElevationNative.WtdChoiceFile,
                 pFile = fileInfoPointer,
                 dwStateAction = PolicyElevationNative.WtdStateActionVerify,
                 dwProvFlags = PolicyElevationNative.WtdSaferFlag
-                    | PolicyElevationNative.WtdCacheOnlyUrlRetrieval,
+                    | PolicyElevationNative.WtdRevocationCheckChain,
             };
 
             Guid action = PolicyElevationNative.WinTrustActionGenericVerifyV2;

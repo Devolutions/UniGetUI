@@ -15,6 +15,8 @@ internal sealed class AuthenticatedBrokerTransport : IBrokerTransport
     private const int ConnectTimeoutMilliseconds = 5000;
     private const int ReadTimeoutMilliseconds = 30000;
     private const int MaxHeaderBytes = 65536;
+    internal const int MaxPolicyManagementResponseBytes =
+        BrokerApi.MaxPolicyManagementBodyBytes * 3 + MaxHeaderBytes;
     private readonly string _pipeName;
 
     public AuthenticatedBrokerTransport(string? pipeName = null)
@@ -176,7 +178,7 @@ internal sealed class AuthenticatedBrokerTransport : IBrokerTransport
                 if (contentLength is not null
                     || !int.TryParse(lines[index][(separator + 1)..].Trim(), out int parsed)
                     || parsed < 0
-                    || parsed > BrokerApi.MaxPolicyManagementBodyBytes)
+                    || parsed > MaxPolicyManagementResponseBytes)
                 {
                     throw BrokerFailure(
                         BrokerClientErrorKind.InvalidResponse,

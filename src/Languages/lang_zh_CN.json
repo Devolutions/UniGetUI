@@ -133,7 +133,7 @@
   "Architecture & Location": "架构和位置",
   "Command-line": "命令行",
   "Close apps": "关闭应用",
-  "Pre/Post install": "安装前 / 后",
+  "Pre/Post install": "安装前/后",
   "Select the processes that should be closed before this package is installed, updated or uninstalled.": "选择在安装、更新或卸载此软件包之前应关闭的进程。",
   "Write here the process names here, separated by commas (,)": "在此输入进程名称，以英文逗号 (,) 分隔",
   "Try to kill the processes that refuse to close when requested to": "尝试强制结束拒绝关闭的进程",

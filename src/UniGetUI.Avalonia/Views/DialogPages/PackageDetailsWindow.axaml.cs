@@ -29,6 +29,8 @@ namespace UniGetUI.Avalonia.Views;
 public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     private const double WideThreshold = 950;
+    private const double ScreenshotSwipeThreshold = 1.5;
+    private const double ScreenshotGestureRetention = 0.12;
     private const string ContributeUrl = "https://github.com/Devolutions/UniGetUI";
 
     private enum LayoutMode { Unset, Normal, Wide }
@@ -41,6 +43,9 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     private readonly TEL_InstallReferral _referral;
     private InstallOptionsViewModel? _installVm;
     private InstallOptions? _installOpts;
+    private double _screenshotHorizontalDelta;
+    private long _lastScreenshotScrollTimestamp;
+    private bool _screenshotScrollCommitted;
 
     public PackageDetailsWindow(
         IPackage package,
@@ -84,6 +89,10 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
                 _vm.SelectedScreenshotIndex++;
         };
         ScreenshotPips.AddHandler(Button.ClickEvent, OnPipClicked);
+        ScreenshotsBorder.AddHandler(
+            PointerWheelChangedEvent,
+            OnScreenshotPointerWheelChanged,
+            RoutingStrategies.Tunnel);
 
         SizeChanged += (_, _) =>
         {
@@ -149,6 +158,40 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         int idx = ScreenshotPips.IndexFromContainer(cursor);
         if (idx >= 0 && idx < _vm.ScreenshotCount)
             _vm.SelectedScreenshotIndex = idx;
+    }
+
+    private void OnScreenshotPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (_vm.ScreenshotCount < 2 || e.KeyModifiers != KeyModifiers.None ||
+            Math.Abs(e.Delta.X) <= Math.Abs(e.Delta.Y))
+            return;
+
+        long now = Stopwatch.GetTimestamp();
+        if (_lastScreenshotScrollTimestamp == 0 ||
+            Stopwatch.GetElapsedTime(_lastScreenshotScrollTimestamp, now).TotalSeconds > ScreenshotGestureRetention)
+        {
+            _screenshotHorizontalDelta = 0;
+            _screenshotScrollCommitted = false;
+        }
+
+        _lastScreenshotScrollTimestamp = now;
+        e.Handled = true;
+        if (_screenshotScrollCommitted) return;
+
+        // Accumulate the high-resolution horizontal deltas and commit at most one page per
+        // touchpad gesture, matching FlipView rather than treating its inertial tail as new pages.
+        _screenshotHorizontalDelta += e.Delta.X;
+        if (Math.Abs(_screenshotHorizontalDelta) < ScreenshotSwipeThreshold) return;
+
+        int direction = _screenshotHorizontalDelta < 0 ? 1 : -1;
+        int target = Math.Clamp(
+            _vm.SelectedScreenshotIndex + direction,
+            0,
+            _vm.ScreenshotCount - 1);
+        if (target != _vm.SelectedScreenshotIndex)
+            _vm.SelectedScreenshotIndex = target;
+
+        _screenshotScrollCommitted = true;
     }
 
     private void UpdatePips()

@@ -811,7 +811,6 @@
   "Warning!": "警告！",
   "Change default options": "更改默认选项",
   "Ignore future updates for this package": "忽略此软件包的后续更新",
-  "For security reasons, pre-operation and post-operation scripts are disabled by default. Go to UniGetUI security settings to change this.": "出于安全原因，操作前和操作后脚本默认处于禁用状态。可前往 UniGetUI 安全设置更改此设置。",
   "You can define the commands that will be run before or after this package is installed, updated or uninstalled. They will be run on a command prompt, so CMD scripts will work here.": "您可以定义在安装、更新或卸载此软件包之前或之后运行的命令。这些命令将在命令提示符下运行，所以可在此处使用 CMD 脚本。",
   "Change this and unlock": "更改并解锁",
   "{0} Install options are currently locked because {0} follows the default install options.": "已锁定 {0} 安装选项，因为 {0} 遵循默认安装选项。",

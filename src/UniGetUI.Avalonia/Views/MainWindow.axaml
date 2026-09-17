@@ -758,6 +758,7 @@
                                 Click="ModalCloseButton_Click"
                                 automation:AutomationProperties.Name="{t:Translate Close}">
                             <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/cross.svg"
+                                              Foreground="{Binding $parent[Button].Foreground}"
                                               Width="12"
                                               Height="12"/>
                         </Button>

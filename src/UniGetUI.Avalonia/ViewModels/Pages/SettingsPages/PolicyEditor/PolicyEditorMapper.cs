@@ -23,7 +23,7 @@ public static class PolicyEditorMapper
             PolicyFormatVersion = document.PolicyFormatVersion,
             Metadata = ToDraft(document.Metadata),
             Enforcement = ToDraft(document.Enforcement),
-            Rules = document.Rules.Select(ToDraft).ToList(),
+            Rules = ToOrderedDraftRules(document.Rules),
         };
     }
 
@@ -31,6 +31,27 @@ public static class PolicyEditorMapper
     {
         ArgumentNullException.ThrowIfNull(document);
 
+        return new PolicyEditorDraftDocument
+        {
+            PolicyFormatVersion = document.PolicyFormatVersion,
+            Metadata = new PolicyEditorDraftMetadata
+            {
+                Id = document.Metadata.Id,
+                Publisher = document.Metadata.Publisher,
+                ValidFrom = document.Metadata.ValidFrom,
+                ValidUntil = document.Metadata.ValidUntil,
+                Description = document.Metadata.Description,
+                SupportUrl = document.Metadata.SupportUrl,
+            },
+            Enforcement = ToDraft(document.Enforcement),
+            Rules = ToOrderedDraftRules(document.Rules),
+        };
+    }
+
+    internal static PolicyEditorDraftDocument ToDraftPreservingRuleOrder(
+        PolicyDraftDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
         return new PolicyEditorDraftDocument
         {
             PolicyFormatVersion = document.PolicyFormatVersion,
@@ -66,8 +87,48 @@ public static class PolicyEditorMapper
                 SupportUrl = draft.Metadata.SupportUrl,
             },
             Enforcement = ToDocument(draft.Enforcement),
-            Rules = draft.Rules.Select(ToDocument).ToList(),
+            Rules = draft.Rules
+                .Select((rule, index) => ToDocument(rule, checked((uint)index)))
+                .ToList(),
         };
+    }
+
+    internal static PolicyDraftDocument ToSharedDraftPreservingPriorities(
+        PolicyEditorDraftDocument draft)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        return new PolicyDraftDocument
+        {
+            PolicyFormatVersion = draft.PolicyFormatVersion,
+            PolicyType = PolicyEditorPolicyContract.PolicyType,
+            Metadata = new PolicyDraftMetadata
+            {
+                Id = draft.Metadata.Id,
+                Publisher = draft.Metadata.Publisher,
+                ValidFrom = draft.Metadata.ValidFrom,
+                ValidUntil = draft.Metadata.ValidUntil,
+                Description = draft.Metadata.Description,
+                SupportUrl = draft.Metadata.SupportUrl,
+            },
+            Enforcement = ToDocument(draft.Enforcement),
+            Rules = draft.Rules.Select(rule => ToDocument(rule, rule.Priority)).ToList(),
+        };
+    }
+
+    internal static void NormalizeStructuredRuleOrder(
+        List<PolicyEditorDraftRule> rules)
+    {
+        PolicyEditorDraftRule[] ordered = rules
+            .Select((rule, sourceIndex) => (Rule: rule, SourceIndex: sourceIndex))
+            .OrderBy(item => item.Rule.Priority)
+            .ThenBy(item =>
+                item.Rule.Decision == Devolutions.Now.Policy.Model.Decision.Deny ? 0 : 1)
+            .ThenBy(item => item.SourceIndex)
+            .Select(item => item.Rule)
+            .ToArray();
+        rules.Clear();
+        rules.AddRange(ordered);
+        PolicyRuleListOperations.NormalizePriorities(rules);
     }
 
     /// <summary>Builds a committed document only from authoritative server metadata.</summary>
@@ -84,7 +145,9 @@ public static class PolicyEditorMapper
             PolicyFormatVersion = draft.PolicyFormatVersion,
             Metadata = ToDocument(draft.Metadata, revision, publishedAt),
             Enforcement = ToDocument(draft.Enforcement),
-            Rules = draft.Rules.Select(ToDocument).ToList(),
+            Rules = draft.Rules
+                .Select((rule, index) => ToDocument(rule, checked((uint)index)))
+                .ToList(),
         };
     }
 
@@ -202,19 +265,40 @@ public static class PolicyEditorMapper
         Decision = rule.Decision,
         Reason = rule.Reason,
         Match = ToDraft(rule.Match),
-        Constraints = rule.Constraints is null ? null : ToDraft(rule.Constraints),
+        Constraints = rule.Decision != Devolutions.Now.Policy.Model.Decision.Allow
+            || rule.Constraints is null
+                ? null
+                : ToDraft(rule.Constraints),
     };
 
-    private static PolicyRule ToDocument(PolicyEditorDraftRule draft) => new()
+    private static PolicyRule ToDocument(PolicyEditorDraftRule draft, uint priority) => new()
     {
         Id = draft.Id,
         Enabled = draft.Enabled,
-        Priority = draft.Priority,
+        Priority = priority,
         Decision = draft.Decision,
         Reason = draft.Reason,
         Match = ToDocument(draft.Match),
-        Constraints = draft.Constraints is null ? null : ToDocument(draft.Constraints),
+        Constraints = draft.Decision != Devolutions.Now.Policy.Model.Decision.Allow
+            || draft.Constraints is null
+            ? null
+            : ToDocument(draft.Constraints),
     };
+
+    private static List<PolicyEditorDraftRule> ToOrderedDraftRules(
+        IEnumerable<PolicyRule> rules)
+    {
+        List<PolicyEditorDraftRule> ordered = rules
+            .Select((rule, index) => (Rule: rule, SourceIndex: index))
+            .OrderBy(item => item.Rule.Priority)
+            .ThenBy(item =>
+                item.Rule.Decision == Devolutions.Now.Policy.Model.Decision.Deny ? 0 : 1)
+            .ThenBy(item => item.SourceIndex)
+            .Select(item => ToDraft(item.Rule))
+            .ToList();
+        PolicyRuleListOperations.NormalizePriorities(ordered);
+        return ordered;
+    }
 
     private static PolicyRule CloneRule(PolicyRule rule) => new()
     {

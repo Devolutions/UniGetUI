@@ -56,6 +56,12 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
     {
         PolicyEditorConfirmationKind.Warnings =>
             (CoreTools.Translate("Save policy with warnings?"), CoreTools.Translate("Save anyway")),
+        PolicyEditorConfirmationKind.EnableAuditMode =>
+            (CoreTools.Translate("Enable Audit mode?"), CoreTools.Translate("Enable Audit mode")),
+        PolicyEditorConfirmationKind.EnableDefaultAllow =>
+            (CoreTools.Translate("Allow unmatched package requests?"), CoreTools.Translate("Use Allow as default")),
+        PolicyEditorConfirmationKind.RemoveAllowSafetyLimits =>
+            (CoreTools.Translate("Change this rule to Deny?"), CoreTools.Translate("Remove limits and change")),
         PolicyEditorConfirmationKind.ReplaceIdentity =>
             (CoreTools.Translate("Replace the active policy?"), CoreTools.Translate("Replace")),
         PolicyEditorConfirmationKind.Create =>
@@ -118,6 +124,13 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
             "Validation reported {0} warning(s) for policy '{1}'. Do you want to save it anyway?",
             request.WarningCount,
             request.DraftId),
+        PolicyEditorConfirmationKind.EnableAuditMode => CoreTools.Translate(
+            "Audit mode still evaluates and logs policy decisions, but requests the policy would deny will be permitted. Enable Audit mode and save this policy?"),
+        PolicyEditorConfirmationKind.EnableDefaultAllow => CoreTools.Translate(
+            "The default decision will permit every package request that does not match an enabled rule. Use Allow as the default and save this policy?"),
+        PolicyEditorConfirmationKind.RemoveAllowSafetyLimits => CoreTools.Translate(
+            "Rule '{0}' has Additional safety limits that apply only to Allow rules. Changing it to Deny will remove those limits. Continue?",
+            request.RuleId ?? "?"),
         PolicyEditorConfirmationKind.ReplaceIdentity => CoreTools.Translate(
             "This will replace the active policy '{0}' with a new policy '{1}'. This cannot be undone.",
             request.ActivePolicyId ?? "?",

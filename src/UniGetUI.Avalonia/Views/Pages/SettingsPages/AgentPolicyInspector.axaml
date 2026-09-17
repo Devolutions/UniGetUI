@@ -234,7 +234,7 @@
                                                    controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleEnabled}"/>
                                     </Grid>
                                     <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
-                                        <TextBlock Classes="field-label" Text="{t:Translate Priority}"
+                                        <TextBlock Classes="field-label" Text="{t:Translate Evaluation order}"
                                                    controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Priority}"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Priority}"
                                                    controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Priority}"/>

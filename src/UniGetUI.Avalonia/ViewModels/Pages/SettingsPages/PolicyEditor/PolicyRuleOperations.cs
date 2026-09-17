@@ -12,28 +12,59 @@ public static class PolicyRuleFactory
     public static string CreateRuleId() => $"rule-{Guid.NewGuid():N}";
 
     /// <summary>
-    /// Creates a new enabled deny rule. Categorical criteria remain wildcards while warning-sensitive
-    /// boolean criteria explicitly require false so the rule starts least-privilege and warning-free.
+    /// Creates a new disabled deny rule. Every match criterion is initially unrestricted, so the rule
+    /// has no effect until an administrator narrows and enables it.
     /// </summary>
     public static PolicyEditorDraftRule CreateBlank(string? id = null) => new()
     {
         Id = id ?? CreateRuleId(),
-        Enabled = true,
+        Enabled = false,
         Priority = 0,
         Decision = Decision.Deny,
         Reason = null,
-        Match = new PolicyEditorDraftMatch
-        {
-            SkipHashCheck = TriState.False,
-            PreRelease = TriState.False,
-            HasCustomParameters = TriState.False,
-            HasCustomInstallLocation = TriState.False,
-            HasPrePostCommands = TriState.False,
-            HasKillBeforeOperation = TriState.False,
-            HasUninstallPrevious = TriState.False,
-        },
+        Match = new PolicyEditorDraftMatch(),
         Constraints = null,
     };
+}
+
+internal static class PolicyEditorRuleSemantics
+{
+    public static bool HasConfiguredSafetyLimits(PolicyEditorDraftConstraints? constraints) =>
+        constraints is not null
+        && (!constraints.AllowInteractive
+            || !constraints.AllowSkipHashCheck
+            || !constraints.AllowPreRelease
+            || !constraints.AllowCustomInstallLocation
+            || constraints.AllowedInstallLocationPatterns.Count > 0
+            || !constraints.AllowCustomParameters
+            || constraints.AllowedCustomParameters.Count > 0
+            || constraints.AllowedCustomParameterPatterns.Count > 0
+            || constraints.DeniedCustomParameters.Count > 0
+            || !constraints.AllowPrePostCommands
+            || !constraints.AllowKillBeforeOperation
+            || !constraints.AllowUninstallPrevious
+            || !constraints.AllowUpgrade);
+
+    public static bool IsCatchAll(PolicyEditorDraftMatch match) =>
+        match.VersionRange is null
+        && match.Operations.Count == 0
+        && match.Managers.Count == 0
+        && match.Sources.Count == 0
+        && match.PackageIdentifiers.Count == 0
+        && match.PackageNames.Count == 0
+        && match.Versions.Count == 0
+        && match.Scopes.Count == 0
+        && match.Architectures.Count == 0
+        && match.Elevation.Count == 0
+        && match.Interactive == TriState.Omitted
+        && match.SkipHashCheck == TriState.Omitted
+        && match.PreRelease == TriState.Omitted
+        && match.HasCustomParameters == TriState.Omitted
+        && match.HasCustomInstallLocation == TriState.Omitted
+        && match.HasPrePostCommands == TriState.Omitted
+        && match.HasKillBeforeOperation == TriState.Omitted
+        && match.HasUninstallPrevious == TriState.Omitted;
+
 }
 
 /// <summary>
@@ -50,6 +81,7 @@ public static class PolicyRuleListOperations
         ArgumentNullException.ThrowIfNull(rule);
         EnsureIdIsUnique(rules, rule.Id);
         rules.Add(rule);
+        NormalizePriorities(rules);
     }
 
     public static void Edit(List<PolicyEditorDraftRule> rules, string id, Action<PolicyEditorDraftRule> mutate)
@@ -75,6 +107,7 @@ public static class PolicyRuleListOperations
         PolicyEditorDraftRule copy = source.CloneWithNewId(generatedId);
         int index = rules.IndexOf(source);
         rules.Insert(index + 1, copy);
+        NormalizePriorities(rules);
         return generatedId;
     }
 
@@ -87,11 +120,17 @@ public static class PolicyRuleListOperations
         bool enabled) =>
         Find(rules, rule).Enabled = enabled;
 
-    public static void Delete(List<PolicyEditorDraftRule> rules, string id) =>
+    public static void Delete(List<PolicyEditorDraftRule> rules, string id)
+    {
         rules.Remove(Find(rules, id));
+        NormalizePriorities(rules);
+    }
 
-    public static void Delete(List<PolicyEditorDraftRule> rules, PolicyEditorDraftRule rule) =>
+    public static void Delete(List<PolicyEditorDraftRule> rules, PolicyEditorDraftRule rule)
+    {
         rules.Remove(Find(rules, rule));
+        NormalizePriorities(rules);
+    }
 
     /// <summary>Moves a rule to a new position in document order. <paramref name="newIndex"/> is
     /// clamped to the valid range.</summary>
@@ -107,10 +146,16 @@ public static class PolicyRuleListOperations
         int clamped = Math.Clamp(newIndex, 0, rules.Count - 1);
         rules.Remove(rule);
         rules.Insert(clamped, rule);
+        NormalizePriorities(rules);
     }
 
-    public static void SetPriority(List<PolicyEditorDraftRule> rules, string id, uint priority) =>
-        Find(rules, id).Priority = priority;
+    internal static void NormalizePriorities(List<PolicyEditorDraftRule> rules)
+    {
+        for (int index = 0; index < rules.Count; index++)
+        {
+            rules[index].Priority = checked((uint)index);
+        }
+    }
 
     private static void EnsureIdIsUnique(List<PolicyEditorDraftRule> rules, string id)
     {

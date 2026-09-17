@@ -78,6 +78,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     public string LocalInputErrorSummary => string.Join(Environment.NewLine, _localInputErrors.Values);
     public bool CanValidateOrSave => CanStartRemoteOperation();
     public bool CanSwitchToRaw => CanStartStructuredOperation();
+    public bool CanSwitchToStructured => CanProjectRawToStructured();
 
     public string RawBuffer
     {
@@ -180,6 +181,64 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         OnStructuredDraftChanged();
     }
 
+    internal async Task ChangeRuleDecisionAsync(
+        PolicyEditorRuleUi ruleUi,
+        int selectedIndex,
+        CancellationToken cancellationToken = default)
+    {
+        if (selectedIndex < 0
+            || selectedIndex >= PolicyEditorEnumDisplay.Decisions.Length
+            || Volatile.Read(ref _isDisposed) != 0
+            || IsBusy)
+        {
+            ruleUi.RefreshDecisionPresentation();
+            return;
+        }
+
+        Devolutions.Now.Policy.Model.Decision selected =
+            PolicyEditorEnumDisplay.Decisions[selectedIndex];
+        if (selected == ruleUi.Rule.Decision)
+        {
+            ruleUi.RefreshDecisionPresentation();
+            return;
+        }
+
+        if (selected == Devolutions.Now.Policy.Model.Decision.Deny
+            && PolicyEditorRuleSemantics.HasConfiguredSafetyLimits(ruleUi.Rule.Constraints))
+        {
+            using CancellationTokenSource linked = CreateLinkedCancellation(cancellationToken);
+            IsBusy = true;
+            bool confirmed;
+            try
+            {
+                confirmed = await _confirmationPrompt.ConfirmAsync(
+                    new PolicyEditorConfirmationRequest(
+                        PolicyEditorConfirmationKind.RemoveAllowSafetyLimits,
+                        GetInitialOperation(),
+                        Session.Draft.Metadata.Id,
+                        Session.OriginManagement.StoreToken,
+                        Session.OriginManagement.State,
+                        Session.OriginManagement.Policy?.Metadata.Id,
+                        Findings,
+                        RuleId: ruleUi.Rule.Id),
+                    linked.Token);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+
+            if (!confirmed || !CanApply(linked.Token))
+            {
+                ruleUi.RefreshDecisionPresentation();
+                return;
+            }
+        }
+
+        ruleUi.ApplyDecision(selected);
+        OnEditorStateChanged();
+    }
+
     public void NotifyLocalInputChanged()
     {
         Session.NotifyDraftChanged();
@@ -199,6 +258,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsDirty));
         OnPropertyChanged(nameof(CanValidateOrSave));
         OnPropertyChanged(nameof(CanSwitchToRaw));
+        OnPropertyChanged(nameof(CanSwitchToStructured));
         NotifyCommandStates();
     }
 
@@ -556,6 +616,59 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                 Session.AcknowledgeWarnings();
             }
 
+            PolicyEditorDraftDocument canonicalDraft =
+                PolicyEditorMapper.ToDraft(validation.CanonicalDraft);
+            bool loadedAuditMode =
+                Session.OriginManagement.Policy?.Enforcement.AuditMode is true;
+            if (!loadedAuditMode && canonicalDraft.Enforcement.AuditMode is true)
+            {
+                bool acknowledged = await _confirmationPrompt.ConfirmAsync(
+                    new PolicyEditorConfirmationRequest(
+                        PolicyEditorConfirmationKind.EnableAuditMode,
+                        operation,
+                        validation.CanonicalDraft.Metadata.Id,
+                        token,
+                        state,
+                        activePolicyId,
+                        validation.Findings.All),
+                    cancellationToken);
+                if (!CanApply(cancellationToken)
+                    || saveGeneration != Volatile.Read(ref _saveGeneration)
+                    || Session.MutationGeneration != attemptGeneration)
+                {
+                    return;
+                }
+                if (!acknowledged)
+                    return;
+            }
+
+            bool loadedDefaultAllow =
+                Session.OriginManagement.Policy?.Enforcement.DefaultDecision
+                == Devolutions.Now.Policy.Model.Decision.Allow;
+            if (!loadedDefaultAllow
+                && canonicalDraft.Enforcement.DefaultDecision
+                    == Devolutions.Now.Policy.Model.Decision.Allow)
+            {
+                bool acknowledged = await _confirmationPrompt.ConfirmAsync(
+                    new PolicyEditorConfirmationRequest(
+                        PolicyEditorConfirmationKind.EnableDefaultAllow,
+                        operation,
+                        validation.CanonicalDraft.Metadata.Id,
+                        token,
+                        state,
+                        activePolicyId,
+                        validation.Findings.All),
+                    cancellationToken);
+                if (!CanApply(cancellationToken)
+                    || saveGeneration != Volatile.Read(ref _saveGeneration)
+                    || Session.MutationGeneration != attemptGeneration)
+                {
+                    return;
+                }
+                if (!acknowledged)
+                    return;
+            }
+
             PolicyEditorConfirmationKind? operationConfirmation =
                 conflictHandling == PolicyConflictHandling.ConfirmOverwrite
                     ? null
@@ -775,6 +888,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(CanValidateOrSave));
         OnPropertyChanged(nameof(CanSwitchToRaw));
+        OnPropertyChanged(nameof(CanSwitchToStructured));
         SwitchToRawCommand.NotifyCanExecuteChanged();
         SwitchToStructuredCommand.NotifyCanExecuteChanged();
         ValidateCommand.NotifyCanExecuteChanged();
@@ -860,7 +974,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private void RefreshLocalSemanticValidation()
     {
         IReadOnlyList<PolicyValidationFinding> findings =
-            PolicyEditorLocalValidation.ValidateResourceIds(Session.Draft);
+            PolicyEditorLocalValidation.ValidateDraft(Session.Draft);
         _hasLocalSemanticErrors = findings.Any(
             finding => finding.Severity == PolicyValidationSeverity.Error);
         Session.SetLocalFindings(findings);
@@ -1028,12 +1142,12 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                        return (
                            error,
                            parsed && draft is not null
-                               ? PolicyEditorRawSyntax.ToCanonicalRaw(draft)
+                               ? PolicyEditorRawSyntax.ToCanonicalRawPreservingPriorities(draft)
                                : null,
                            parsed ? draft?.Metadata.Id : null,
                            parsed ? (JsonElement?)element : null,
                            parsed && draft is not null
-                               ? PolicyEditorLocalValidation.ValidateResourceIds(draft)
+                               ? PolicyEditorLocalValidation.ValidateDraft(draft)
                                : [],
                            !string.Equals(
                                raw,

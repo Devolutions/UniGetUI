@@ -296,6 +296,7 @@ public sealed class PolicyEditorSession
         ArgumentNullException.ThrowIfNull(submittedRawJson);
         ArgumentNullException.ThrowIfNull(draft);
 
+        PolicyEditorMapper.NormalizeStructuredRuleOrder(draft.Rules);
         Draft = draft;
         RawBuffer = submittedRawJson;
         Mode = PolicyEditorMode.Structured;
@@ -400,13 +401,6 @@ public sealed class PolicyEditorSession
     {
         EnsureStructuredMode();
         PolicyRuleListOperations.Move(Draft.Rules, rule, newIndex);
-        InvalidateContentState();
-    }
-
-    public void SetRulePriority(string id, uint priority)
-    {
-        EnsureStructuredMode();
-        PolicyRuleListOperations.SetPriority(Draft.Rules, id, priority);
         InvalidateContentState();
     }
 
@@ -707,7 +701,8 @@ public sealed class PolicyEditorSession
             return false;
         }
 
-        PolicyDraftDocument shared = PolicyEditorMapper.ToSharedDraft(parsed);
+        PolicyDraftDocument shared =
+            PolicyEditorMapper.ToSharedDraftPreservingPriorities(parsed);
         canonicalRawJson = PolicySerializer.Serialize(shared);
         draftId = shared.Metadata.Id;
         return true;

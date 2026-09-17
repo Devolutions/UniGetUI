@@ -108,8 +108,11 @@ public partial class PolicyEditorDialog : ImmersiveDialog
         if (_viewModel is null
             || _viewModel.Session.HasLocalInputErrors
             || GetRule(sender) is not { } rule) return;
+        PolicyEditorDraftRule moved = rule.Rule;
         _viewModel.Session.MoveRuleUpCommand.Execute(rule.Rule);
         _viewModel.RebuildRules();
+        _viewModel.AnnounceRulePosition(moved);
+        FocusMovedRule(moved);
     }
 
     private void MoveRuleDownButton_Click(object? sender, RoutedEventArgs e)
@@ -117,8 +120,36 @@ public partial class PolicyEditorDialog : ImmersiveDialog
         if (_viewModel is null
             || _viewModel.Session.HasLocalInputErrors
             || GetRule(sender) is not { } rule) return;
+        PolicyEditorDraftRule moved = rule.Rule;
         _viewModel.Session.MoveRuleDownCommand.Execute(rule.Rule);
         _viewModel.RebuildRules();
+        _viewModel.AnnounceRulePosition(moved);
+        FocusMovedRule(moved);
+    }
+
+    private void FocusMovedRule(PolicyEditorDraftRule moved)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            Expander? expander = this.GetVisualDescendants()
+                .OfType<Expander>()
+                .FirstOrDefault(control =>
+                    control.DataContext is PolicyEditorRuleUi rule
+                    && ReferenceEquals(rule.Rule, moved));
+            expander?.BringIntoView();
+            expander?.Focus();
+        }, DispatcherPriority.Loaded);
+    }
+
+    private async void RuleDecision_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_viewModel is null
+            || sender is not ComboBox { DataContext: PolicyEditorRuleUi rule } selector)
+        {
+            return;
+        }
+
+        await _viewModel.Session.ChangeRuleDecisionAsync(rule, selector.SelectedIndex);
     }
 
     private void FindingNavigateButton_Click(object? sender, RoutedEventArgs e)

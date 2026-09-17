@@ -367,7 +367,6 @@ public class PolicyEditorFindingIndexTests
             [
                 Error(PolicyFindingCode.UnsupportedPolicyFormatVersion, "/PolicyFormatVersion", "format 2 is unsupported"),
                 Error(PolicyFindingCode.InvalidValidityInterval, "/Metadata/ValidUntil", "must follow ValidFrom"),
-                Error(PolicyFindingCode.InvalidFieldValue, "/Rules/0/Priority", "exceeds 2147483647"),
                 Error(PolicyFindingCode.InvalidFieldValue, "/Rules/0/Match/PackageNames", "unsupported PackageNames"),
                 Error(PolicyFindingCode.InvalidFieldValue, "/Rules/0/Match/Versions/0", "invalid semantic version"),
             ],
@@ -386,44 +385,12 @@ public class PolicyEditorFindingIndexTests
         Assert.False(dialog.Document.HasValidFromErrors);
         Assert.False(dialog.Document.HasPublisherErrors);
         PolicyEditorRuleUi rule = Assert.Single(dialog.Rules);
-        Assert.True(rule.HasPriorityErrors);
         Assert.True(rule.HasPackageNamesErrors);
         Assert.True(rule.HasVersionsErrors);
-        Assert.Contains("2147483647", Assert.Single(rule.PriorityFindings).Message);
         Assert.Contains("PackageNames", Assert.Single(rule.PackageNamesFindings).Message);
         Assert.Contains("semantic version", Assert.Single(rule.VersionsFindings).Message);
         Assert.False(rule.HasMinVersionErrors);
         Assert.False(rule.HasMaxVersionErrors);
-    }
-
-    [Fact]
-    public void RuleFindingAtIndexTen_DoesNotLeakIntoRuleAtIndexOne()
-    {
-        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
-            PolicyEditorTestFixtures.BuildActiveManagement());
-        for (int index = 0; index <= 10; index++)
-        {
-            session.AddRule(PolicyRuleFactory.CreateBlank($"rule-{index}"));
-        }
-
-        string raw = session.GetEffectiveRawJson();
-        session.ApplyValidationResult(raw, new PolicyValidationResult
-        {
-            IsValid = false,
-            Findings =
-            [
-                Error(PolicyFindingCode.InvalidFieldValue, "/Rules/10/Priority", "out of range"),
-            ],
-        });
-        using var sessionViewModel = new PolicyEditorSessionViewModel(
-            session,
-            new FakeValidationClient(),
-            new FakeConfirmationPrompt(),
-            new FakeWriteClient());
-        using var dialog = new PolicyEditorDialogViewModel(sessionViewModel, (_, _) => { });
-
-        Assert.False(dialog.Rules[1].HasPriorityErrors);
-        Assert.True(dialog.Rules[10].HasPriorityErrors);
     }
 
     [Fact]

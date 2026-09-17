@@ -2,6 +2,8 @@ using Avalonia.Automation;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Model;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
+using ModelDecision = Devolutions.Now.Policy.Model.Decision;
+using ModelOperation = Devolutions.Now.Policy.Model.Operation;
 
 namespace UniGetUI.Tests.PolicyEditor;
 
@@ -9,7 +11,6 @@ namespace UniGetUI.Tests.PolicyEditor;
 /// Covers the typed-input guard contract of the UI-only wrappers in
 /// <c>PolicyEditorStructuredUi.cs</c> (<see cref="PolicyEditorDocumentUi"/> and
 /// <see cref="PolicyEditorRuleUi"/>): invalid text typed into <c>ValidFromText</c>/<c>ValidUntilText</c>/
-/// <c>PriorityText</c> must be preserved verbatim (never silently reverted or reformatted), must surface
 /// a localized local error, and must block <c>ValidateCommand</c>/<c>SaveCommand</c> until corrected.
 /// Blank date text must clear the underlying value rather than error. The Save button's <c>IsEnabled</c>
 /// binding (<c>CanValidateOrSave</c>) and <c>SaveCommand.CanExecute</c> are asserted to always agree,
@@ -515,110 +516,6 @@ public class PolicyEditorStructuredInputGuardTests
     }
 
     [Fact]
-    public async Task SuccessfulInflightSave_PreservesNewerInvalidPriorityWrapperAndError()
-    {
-        var validation = new FakeValidationClient();
-        var writer = new FakeWriteClient { Gate = new TaskCompletionSource() };
-        PolicyEditorSession session = PolicyEditorSession.StartCreate(
-            PolicyEditorTestFixtures.BuildMissingManagement(),
-            PolicyEditorTemplates.CreateNew("test-policy", "Contoso"));
-        session.AddRule();
-        var sessionViewModel = new PolicyEditorSessionViewModel(
-            session,
-            validation,
-            new FakeConfirmationPrompt(),
-            writer);
-        using var dialog = new PolicyEditorDialogViewModel(sessionViewModel);
-        PolicyEditorRuleUi originalWrapper = dialog.Rules[0];
-        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
-        {
-            IsValid = true,
-            ValidationReceipt = "receipt-priority",
-            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(sessionViewModel.Draft),
-        });
-        writer.NextOutcome = PolicyWriteOutcome.Success(
-            PolicyEditorTestFixtures.BuildReplacementResponse(
-                PolicyEditorTestFixtures.BuildDocument(id: "test-policy"),
-                "saved-token"));
-
-        Task pending = sessionViewModel.SaveCommand.ExecuteAsync(null);
-        originalWrapper.PriorityText = "not-a-priority";
-        writer.Gate.SetResult();
-        await pending;
-
-        Assert.Same(originalWrapper, dialog.Rules[0]);
-        Assert.Equal("not-a-priority", originalWrapper.PriorityText);
-        Assert.NotNull(originalWrapper.PriorityError);
-        Assert.True(sessionViewModel.HasLocalInputErrors);
-        Assert.True(sessionViewModel.SavedWithNewerChanges);
-        Assert.Equal(originalWrapper.PriorityError, dialog.Status.Message);
-        Assert.NotEqual("The package broker policy was saved successfully.", dialog.Status.Message);
-    }
-
-    [Fact]
-    public void InvalidPriorityText_IsRetained_ExposesLocalizedError_AndBlocksValidateAndSave()
-    {
-        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
-        PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
-        var rule = new PolicyEditorRuleUi(draftRule, viewModel);
-        try
-        {
-            uint originalPriority = rule.Rule.Priority;
-
-            rule.PriorityText = "-1";
-
-            Assert.Equal("-1", rule.PriorityText);
-            Assert.Equal(originalPriority, rule.Rule.Priority);
-            Assert.False(string.IsNullOrEmpty(rule.PriorityError));
-            Assert.True(viewModel.HasLocalInputErrors);
-            AssertSaveGuardAgrees(viewModel);
-            Assert.False(viewModel.ValidateCommand.CanExecute(null));
-            Assert.False(viewModel.SaveCommand.CanExecute(null));
-            Assert.False(viewModel.SwitchToRawCommand.CanExecute(null));
-
-            rule.PriorityText = "not a number either";
-
-            Assert.Equal("not a number either", rule.PriorityText);
-            Assert.False(string.IsNullOrEmpty(rule.PriorityError));
-
-            rule.PriorityText = "42";
-
-            Assert.Equal((uint)42, rule.Rule.Priority);
-            Assert.Null(rule.PriorityError);
-            Assert.False(viewModel.HasLocalInputErrors);
-            AssertSaveGuardAgrees(viewModel);
-            Assert.True(viewModel.ValidateCommand.CanExecute(null));
-            Assert.True(viewModel.SaveCommand.CanExecute(null));
-            Assert.True(viewModel.SwitchToRawCommand.CanExecute(null));
-        }
-
-        finally
-        {
-            rule.Dispose();
-        }
-    }
-
-    [Fact]
-    public void PriorityText_IsLimitedToTheCommittedRevisionCompatibleInt32Range()
-    {
-        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
-        PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
-        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
-
-        rule.PriorityText = int.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture);
-
-        Assert.Equal((uint)int.MaxValue, rule.Rule.Priority);
-        Assert.Null(rule.PriorityError);
-
-        rule.PriorityText = ((uint)int.MaxValue + 1).ToString(
-            System.Globalization.CultureInfo.InvariantCulture);
-
-        Assert.Equal((uint)int.MaxValue, rule.Rule.Priority);
-        Assert.NotNull(rule.PriorityError);
-        Assert.False(viewModel.SaveCommand.CanExecute(null));
-    }
-
-    [Fact]
     public void RuleIdChange_NotifiesAutomationName()
     {
         using PolicyEditorSessionViewModel viewModel = CreateViewModel();
@@ -702,6 +599,7 @@ public class PolicyEditorStructuredInputGuardTests
             new FakeConfirmationPrompt(),
             new FakeWriteClient());
         using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+        rule.ApplyDecision(Devolutions.Now.Policy.Model.Decision.Allow);
         var changed = new HashSet<string?>();
         rule.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
         rule.HasVersionRange = true;
@@ -737,6 +635,7 @@ public class PolicyEditorStructuredInputGuardTests
             new FakeConfirmationPrompt(),
             new FakeWriteClient());
         using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+        rule.ApplyDecision(Devolutions.Now.Policy.Model.Decision.Allow);
         var changed = new HashSet<string?>();
         rule.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
         rule.HasConstraints = true;
@@ -757,6 +656,75 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.Contains(nameof(PolicyEditorRuleUi.AllowSkipHashCheck), changed);
         Assert.Contains(nameof(PolicyEditorRuleUi.AllowCustomParameters), changed);
         Assert.Contains(nameof(PolicyEditorRuleUi.AllowedCustomParameters), changed);
+    }
+
+    [Fact]
+    public async Task AllowToDeny_ConfiguredSafetyLimitsRequireAtomicConfirmation()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("test-policy", "Contoso"));
+        PolicyEditorDraftRule draftRule = session.AddRule();
+        draftRule.Match.Operations.Add(ModelOperation.Install);
+        draftRule.Decision = ModelDecision.Allow;
+        draftRule.Constraints = new PolicyEditorDraftConstraints
+        {
+            AllowInteractive = false,
+            AllowedCustomParameters = ["--silent"],
+        };
+        var prompt = new FakeConfirmationPrompt { NextResult = false };
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            prompt,
+            new FakeWriteClient());
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+
+        await viewModel.ChangeRuleDecisionAsync(
+            rule,
+            PolicyEditorEnumDisplay.IndexOfDecision(ModelDecision.Deny));
+
+        Assert.Equal(ModelDecision.Allow, draftRule.Decision);
+        Assert.NotNull(draftRule.Constraints);
+        Assert.Equal(["--silent"], draftRule.Constraints.AllowedCustomParameters);
+        Assert.Equal(PolicyEditorConfirmationKind.RemoveAllowSafetyLimits, prompt.LastRequest!.Kind);
+
+        prompt.NextResult = true;
+        await viewModel.ChangeRuleDecisionAsync(
+            rule,
+            PolicyEditorEnumDisplay.IndexOfDecision(ModelDecision.Deny));
+
+        Assert.Equal(ModelDecision.Deny, draftRule.Decision);
+        Assert.Null(draftRule.Constraints);
+        Assert.DoesNotContain(
+            "\"Constraints\"",
+            PolicyEditorRawSyntax.ToCanonicalRaw(session.Draft));
+    }
+
+    [Fact]
+    public async Task AllowToDeny_NoSafetyLimitsRequiresNoConfirmation()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("test-policy", "Contoso"));
+        PolicyEditorDraftRule draftRule = session.AddRule();
+        draftRule.Match.Operations.Add(ModelOperation.Install);
+        draftRule.Decision = ModelDecision.Allow;
+        var prompt = new FakeConfirmationPrompt();
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            prompt,
+            new FakeWriteClient());
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+
+        await viewModel.ChangeRuleDecisionAsync(
+            rule,
+            PolicyEditorEnumDisplay.IndexOfDecision(ModelDecision.Deny));
+
+        Assert.Equal(0, prompt.CallCount);
+        Assert.Equal(ModelDecision.Deny, draftRule.Decision);
+        Assert.Null(draftRule.Constraints);
     }
 
     [Fact]

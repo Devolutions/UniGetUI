@@ -23,7 +23,7 @@ public class PolicyEditorTemplatesTests
 
         Assert.Equal(Decision.Deny, draft.Enforcement.DefaultDecision);
         Assert.Empty(draft.Rules);
-        Assert.Empty(PolicyEditorLocalValidation.ValidateResourceIds(draft));
+        Assert.Empty(PolicyEditorLocalValidation.ValidateDraft(draft));
         string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
         Assert.Contains("\"Rules\": []", raw);
         Assert.True(PolicyEditorRawSyntax.TryParseStrict(
@@ -103,9 +103,10 @@ public class PolicyEditorTemplatesTests
             new string('a', 129),
             "Contoso");
         draft.Rules.Add(PolicyRuleFactory.CreateBlank("Allow WinGet updates"));
+        draft.Rules[0].Match.Operations.Add(Operation.Install);
 
         IReadOnlyList<PolicyValidationFinding> findings =
-            PolicyEditorLocalValidation.ValidateResourceIds(draft);
+            PolicyEditorLocalValidation.ValidateDraft(draft);
 
         Assert.Collection(
             findings,
@@ -123,8 +124,83 @@ public class PolicyEditorTemplatesTests
             });
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void SourceNames_RequireExactlyOneManager(int managerCount)
+    {
+        PolicyEditorDraftDocument draft =
+            PolicyEditorTemplates.CreateNew("policy", "Contoso");
+        PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("source-rule");
+        rule.Match.Sources.Add("corporate");
+        if (managerCount >= 1) rule.Match.Managers.Add(ManagerName.Winget);
+        if (managerCount >= 2) rule.Match.Managers.Add(ManagerName.Scoop);
+        draft.Rules.Add(rule);
+
+        PolicyValidationFinding finding = Assert.Single(
+            PolicyEditorLocalValidation.ValidateDraft(draft),
+            item => item.Pointer == "/Rules/0/Match/Managers");
+
+        Assert.Contains("exactly one Package manager", finding.Message);
+        Assert.Contains("separate rules", finding.Message);
+    }
+
     [Fact]
-    public void AddedRule_TriStateSelectorsDisplayNo()
+    public void SourceNames_WithOneManagerAreValid()
+    {
+        PolicyEditorDraftDocument draft =
+            PolicyEditorTemplates.CreateNew("policy", "Contoso");
+        PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("source-rule");
+        rule.Match.Sources.Add("corporate");
+        rule.Match.Managers.Add(ManagerName.Winget);
+        draft.Rules.Add(rule);
+
+        Assert.DoesNotContain(
+            PolicyEditorLocalValidation.ValidateDraft(draft),
+            item => item.Pointer.EndsWith("/Managers", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void SafetyAdvisories_AppearOnlyForSelectedRiskyAllowStatesAndAreDeduplicated()
+    {
+        PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("allow-rule");
+        rule.Decision = Decision.Allow;
+        rule.Match.Operations.Add(Operation.Install);
+        rule.Constraints = new PolicyEditorDraftConstraints
+        {
+            AllowInteractive = true,
+            AllowSkipHashCheck = true,
+            AllowPreRelease = true,
+            AllowCustomInstallLocation = true,
+            AllowCustomParameters = true,
+            AllowPrePostCommands = true,
+            AllowKillBeforeOperation = true,
+            AllowUninstallPrevious = true,
+        };
+
+        IReadOnlyList<string> advisories = PolicyEditorAdvisories.ForRule(rule);
+
+        Assert.Equal(advisories.Count, advisories.Distinct(StringComparer.Ordinal).Count());
+        Assert.Contains(advisories, message => message.Contains("integrity", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(advisories, message => message.Contains("custom install", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(advisories, message => message.Contains("arbitrary commands", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(advisories, message => message.Contains("user interaction", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(advisories, message => message.Contains("prerelease", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(advisories, message => message.Contains("stopped", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(advisories, message => message.Contains("removing", StringComparison.OrdinalIgnoreCase));
+
+        rule.Decision = Decision.Deny;
+        Assert.Empty(PolicyEditorAdvisories.ForRule(rule));
+
+        rule.Decision = Decision.Allow;
+        rule.Match.Managers.Add(ManagerName.Winget);
+        rule.Match.PackageIdentifiers.Add("Contoso.App");
+        rule.Constraints.AllowSkipHashCheck = false;
+        Assert.Empty(PolicyEditorAdvisories.ForRule(rule));
+    }
+
+    [Fact]
+    public void AddedRule_TriStateSelectorsDisplayDoesNotMatter()
     {
         PolicyEditorSession session = PolicyEditorSession.StartCreate(
             PolicyEditorTestFixtures.BuildMissingManagement(),
@@ -136,15 +212,51 @@ public class PolicyEditorTemplatesTests
             new FakeWriteClient());
         PolicyEditorDraftRule added = session.AddRule();
         using var rule = new PolicyEditorRuleUi(added, viewModel);
-        int noIndex = PolicyEditorEnumDisplay.IndexOfTriState(TriState.False);
+        int omittedIndex = PolicyEditorEnumDisplay.IndexOfTriState(TriState.Omitted);
 
-        Assert.Equal(noIndex, rule.SkipHashCheckIndex);
-        Assert.Equal(noIndex, rule.PreReleaseIndex);
-        Assert.Equal(noIndex, rule.HasCustomParametersIndex);
-        Assert.Equal(noIndex, rule.HasCustomInstallLocationIndex);
-        Assert.Equal(noIndex, rule.HasPrePostCommandsIndex);
-        Assert.Equal(noIndex, rule.HasKillBeforeOperationIndex);
-        Assert.Equal(noIndex, rule.HasUninstallPreviousIndex);
+        Assert.False(added.Enabled);
+        Assert.Equal(omittedIndex, rule.InteractiveIndex);
+        Assert.Equal(omittedIndex, rule.SkipHashCheckIndex);
+        Assert.Equal(omittedIndex, rule.PreReleaseIndex);
+        Assert.Equal(omittedIndex, rule.HasCustomParametersIndex);
+        Assert.Equal(omittedIndex, rule.HasCustomInstallLocationIndex);
+        Assert.Equal(omittedIndex, rule.HasPrePostCommandsIndex);
+        Assert.Equal(omittedIndex, rule.HasKillBeforeOperationIndex);
+        Assert.Equal(omittedIndex, rule.HasUninstallPreviousIndex);
+        Assert.Equal("Does not matter", PolicyEditorEnumDisplay.TriStateDisplayItems[omittedIndex]);
+        Assert.True(rule.IsDisabled);
+        Assert.False(rule.IsEnabledWithoutMatchConditions);
+
+        rule.Enabled = true;
+        Assert.False(rule.IsDisabled);
+        Assert.True(rule.IsEnabledWithoutMatchConditions);
+
+        rule.InteractiveIndex = PolicyEditorEnumDisplay.IndexOfTriState(TriState.False);
+        Assert.False(rule.IsEnabledWithoutMatchConditions);
+    }
+
+    [Fact]
+    public void RuleMovementAvailabilityTracksVisibleBoundaries()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartCreate(
+            PolicyEditorTestFixtures.BuildMissingManagement(),
+            PolicyEditorTemplates.CreateNew("id-1", "Contoso"));
+        PolicyEditorDraftRule first = session.AddRule();
+        first.Match.Operations.Add(Operation.Install);
+        PolicyEditorDraftRule second = session.AddRule();
+        second.Match.Operations.Add(Operation.Update);
+        using var viewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+        using var firstUi = new PolicyEditorRuleUi(first, 0, viewModel);
+        using var secondUi = new PolicyEditorRuleUi(second, 1, viewModel);
+
+        Assert.False(firstUi.CanMoveUp);
+        Assert.True(firstUi.CanMoveDown);
+        Assert.True(secondUi.CanMoveUp);
+        Assert.False(secondUi.CanMoveDown);
     }
 
     [Fact]

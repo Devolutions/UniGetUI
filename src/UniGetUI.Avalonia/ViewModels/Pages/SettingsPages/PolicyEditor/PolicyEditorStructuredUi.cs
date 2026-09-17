@@ -16,6 +16,8 @@ public sealed partial class PolicyEditorEnumOption : ObservableObject
 
     public string Display { get; }
     public string HelpText { get; }
+    public string AdvisoryText { get; }
+    public bool IsAdvisoryVisible => IsSelected && !string.IsNullOrEmpty(AdvisoryText);
 
     [ObservableProperty]
     private bool _isSelected;
@@ -23,16 +25,22 @@ public sealed partial class PolicyEditorEnumOption : ObservableObject
     public PolicyEditorEnumOption(
         string display,
         string helpText,
+        string advisoryText,
         bool isSelected,
         Action<bool> onToggled)
     {
         Display = display;
         HelpText = helpText;
+        AdvisoryText = advisoryText;
         _isSelected = isSelected;
         _onToggled = onToggled;
     }
 
-    partial void OnIsSelectedChanged(bool value) => _onToggled(value);
+    partial void OnIsSelectedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsAdvisoryVisible));
+        _onToggled(value);
+    }
 }
 
 /// <summary>Builds <see cref="PolicyEditorEnumOption"/> lists for every value of a match enum.</summary>
@@ -45,6 +53,7 @@ internal static class PolicyEditorEnumOptionFactory
             .Select(value => new PolicyEditorEnumOption(
                 CoreTools.Translate(value.ToString()),
                 PolicyEditorHelp.EnumOption(value),
+                "",
                 backing.Contains(value),
                 selected =>
                 {
@@ -80,7 +89,7 @@ internal static class PolicyEditorEnumDisplay
 
     public static readonly IReadOnlyList<string> TriStateDisplayItems =
     [
-        CoreTools.Translate("Any"),
+        CoreTools.Translate("Does not matter"),
         CoreTools.Translate("No"),
         CoreTools.Translate("Yes"),
     ];
@@ -280,10 +289,13 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
             if (value >= 0 && value < PolicyEditorEnumDisplay.Decisions.Length)
             {
                 Draft.Enforcement.DefaultDecision = PolicyEditorEnumDisplay.Decisions[value];
+                OnPropertyChanged(nameof(IsDefaultAllow));
                 MarkDirty();
             }
         }
     }
+    public bool IsDefaultAllow =>
+        Draft.Enforcement.DefaultDecision == Decision.Allow;
     public IReadOnlyList<PolicyValidationFinding> DefaultDecisionFindings =>
         FindingsFor("/Enforcement/DefaultDecision");
     public bool HasDefaultDecisionErrors => HasErrors(DefaultDecisionFindings);
@@ -330,6 +342,7 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         OnPropertyChanged(nameof(ValidFromError));
         OnPropertyChanged(nameof(ValidUntilError));
         OnPropertyChanged(nameof(DecisionIndex));
+        OnPropertyChanged(nameof(IsDefaultAllow));
         OnPropertyChanged(nameof(AuditModeIndex));
         OnPropertyChanged(nameof(IsAuditModeEnabled));
         OnPropertyChanged(nameof(RulePrecedenceDisplay));
@@ -433,9 +446,6 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
 {
     private readonly PolicyEditorSessionViewModel _sessionViewModel;
     private readonly int _ruleIndex;
-    private readonly object _priorityErrorKey = new();
-    private string _priorityText;
-    private string? _priorityError;
 
     public PolicyEditorDraftRule Rule { get; }
 
@@ -447,7 +457,6 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         Rule = rule;
         _ruleIndex = ruleIndex;
         _sessionViewModel = sessionViewModel;
-        _priorityText = Rule.Priority.ToString(CultureInfo.InvariantCulture);
 
         OperationOptions = PolicyEditorEnumOptionFactory.Build(Rule.Match.Operations, MarkDirty);
         ManagerOptions = PolicyEditorEnumOptionFactory.Build(Rule.Match.Managers, MarkDirty);
@@ -485,46 +494,12 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         set { Rule.Enabled = value; MarkDirty(); }
     }
 
-    public string PriorityText
-    {
-        get => _priorityText;
-        set
-        {
-            value ??= "";
-            if (string.Equals(_priorityText, value, StringComparison.Ordinal)) return;
-            _priorityText = value;
-            OnPropertyChanged();
-            if (uint.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out uint parsed)
-                && parsed <= int.MaxValue)
-            {
-                Rule.Priority = parsed;
-                SetPriorityError(null);
-                MarkDirty();
-            }
-            else
-            {
-                SetPriorityError(CoreTools.Translate("Enter a whole number from 0 through 2147483647."));
-                _sessionViewModel.NotifyLocalInputChanged();
-            }
-        }
-    }
-    public IReadOnlyList<PolicyValidationFinding> PriorityFindings => FindingsFor("/Priority");
-    public bool HasPriorityErrors => HasErrors(PriorityFindings);
+    public int EvaluationOrder => _ruleIndex + 1;
+    public bool CanMoveUp => _ruleIndex > 0;
+    public bool CanMoveDown => _ruleIndex < _sessionViewModel.Rules.Count - 1;
 
-    public string? PriorityError => _priorityError;
-
-    public int DecisionIndex
-    {
-        get => PolicyEditorEnumDisplay.IndexOfDecision(Rule.Decision);
-        set
-        {
-            if (value >= 0 && value < PolicyEditorEnumDisplay.Decisions.Length)
-            {
-                Rule.Decision = PolicyEditorEnumDisplay.Decisions[value];
-                MarkDirty();
-            }
-        }
-    }
+    public int DecisionIndex => PolicyEditorEnumDisplay.IndexOfDecision(Rule.Decision);
+    public bool IsAllowDecision => Rule.Decision == Decision.Allow;
     public IReadOnlyList<PolicyValidationFinding> DecisionFindings => FindingsFor("/Decision");
     public bool HasDecisionErrors => HasErrors(DecisionFindings);
 
@@ -682,17 +657,49 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         set => SetTriState(v => Rule.Match.HasUninstallPrevious = v, value);
     }
 
+    public bool IsDisabled => !Rule.Enabled;
+    public bool IsEnabledWithoutMatchConditions =>
+        Rule.Enabled && PolicyEditorRuleSemantics.IsCatchAll(Rule.Match);
+    public IReadOnlyList<string> SafetyAdvisories =>
+        PolicyEditorAdvisories.ForRule(Rule);
+    public bool HasSafetyAdvisories => SafetyAdvisories.Count > 0;
+    public IReadOnlyList<PolicyValidationFinding> MatchFindings =>
+        FindingsEndingAt("/Match");
+    public bool HasMatchErrors => HasErrors(MatchFindings);
+
     public bool HasConstraints
     {
         get => Rule.Constraints is not null;
         set
         {
+            if (!IsAllowDecision) return;
             if (value == (Rule.Constraints is not null)) return;
             Rule.Constraints = value ? new PolicyEditorDraftConstraints() : null;
             MarkDirty();
             OnPropertyChanged();
             NotifyConstraintPropertiesChanged();
         }
+    }
+
+    internal void ApplyDecision(Decision decision)
+    {
+        Rule.Decision = decision;
+        if (!IsAllowDecision)
+        {
+            Rule.Constraints = null;
+            NotifyConstraintPropertiesChanged();
+        }
+        OnPropertyChanged(nameof(DecisionIndex));
+        OnPropertyChanged(nameof(IsAllowDecision));
+        OnPropertyChanged(nameof(HasConstraints));
+        MarkDirty();
+    }
+
+    internal void RefreshDecisionPresentation()
+    {
+        OnPropertyChanged(nameof(DecisionIndex));
+        OnPropertyChanged(nameof(IsAllowDecision));
+        OnPropertyChanged(nameof(HasConstraints));
     }
 
     public bool AllowInteractive
@@ -793,9 +800,9 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         foreach (string property in new[]
         {
             nameof(IdFindings), nameof(HasIdErrors),
-            nameof(PriorityFindings), nameof(HasPriorityErrors),
             nameof(DecisionFindings), nameof(HasDecisionErrors),
             nameof(ReasonFindings), nameof(HasReasonErrors),
+            nameof(MatchFindings), nameof(HasMatchErrors),
             nameof(PackageNamesFindings), nameof(HasPackageNamesErrors),
             nameof(VersionsFindings), nameof(HasVersionsErrors),
             nameof(MinVersionFindings), nameof(HasMinVersionErrors),
@@ -857,17 +864,18 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
     private PolicyEditorDraftConstraints EnsureConstraints() =>
         Rule.Constraints ??= new PolicyEditorDraftConstraints();
 
-    private void MarkDirty() => _sessionViewModel.NotifyDraftChangedCommand.Execute(null);
-
-    private void SetPriorityError(string? error)
+    private void MarkDirty()
     {
-        if (string.Equals(_priorityError, error, StringComparison.Ordinal)) return;
-        _priorityError = error;
-        _sessionViewModel.SetLocalInputError(_priorityErrorKey, error);
-        OnPropertyChanged(nameof(PriorityError));
+        OnPropertyChanged(nameof(IsDisabled));
+        OnPropertyChanged(nameof(IsEnabledWithoutMatchConditions));
+        OnPropertyChanged(nameof(SafetyAdvisories));
+        OnPropertyChanged(nameof(HasSafetyAdvisories));
+        _sessionViewModel.NotifyDraftChangedCommand.Execute(null);
     }
 
-    public void Dispose() => _sessionViewModel.SetLocalInputError(_priorityErrorKey, null);
+    public void Dispose()
+    {
+    }
 
     private static string Join(IEnumerable<string>? values) =>
         values is null ? "" : string.Join(Environment.NewLine, values);

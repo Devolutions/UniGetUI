@@ -22,6 +22,57 @@ public class PolicyEditorRawSyntaxTests
         Assert.Contains(parsed.Rules, rule => rule.Id == "rule-a");
     }
 
+    [Fact]
+    public void RawProjection_PreservesRuleIdentityBeforeEffectiveOrdering()
+    {
+        PolicyEditorDraftDocument draft =
+            PolicyEditorTemplates.CreateNew("policy", "Contoso");
+        PolicyEditorDraftRule later = PolicyRuleFactory.CreateBlank("later");
+        later.Priority = 20;
+        later.Decision = Decision.Allow;
+        later.Match.PackageIdentifiers.Add("Later.App");
+        PolicyEditorDraftRule first = PolicyRuleFactory.CreateBlank("first");
+        first.Priority = 10;
+        first.Decision = Decision.Deny;
+        first.Match.PackageIdentifiers.Add("First.App");
+        draft.Rules.Add(later);
+        draft.Rules.Add(first);
+        string raw = PolicyEditorRawSyntax.ToCanonicalRawPreservingPriorities(draft);
+        JsonNode root = JsonNode.Parse(raw)!;
+        root["Rules"]![0]!["Id"] = "Later invalid";
+        root["Rules"]![1]!["Id"] = "First invalid";
+
+        Assert.True(PolicyEditorRawSyntax.TryParseStrict(
+            root.ToJsonString(),
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error));
+        PolicyEditorMapper.NormalizeStructuredRuleOrder(parsed!.Rules);
+
+        Assert.Null(error);
+        Assert.Equal(["First invalid", "Later invalid"], parsed.Rules.Select(rule => rule.Id));
+        Assert.Equal(
+            ["First.App", "Later.App"],
+            parsed.Rules.Select(rule => Assert.Single(rule.Match.PackageIdentifiers)));
+    }
+
+    [Fact]
+    public void RawCanonicalization_PreservesAuthoredPriorityUntilStructuredProjection()
+    {
+        PolicyEditorDraftDocument draft =
+            PolicyEditorTemplates.CreateNew("policy", "Contoso");
+        PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("rule");
+        rule.Priority = 20;
+        rule.Match.Operations.Add(Operation.Install);
+        draft.Rules.Add(rule);
+
+        string rawCanonical =
+            PolicyEditorRawSyntax.ToCanonicalRawPreservingPriorities(draft);
+        string structuredCanonical = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+
+        Assert.Contains("\"Priority\": 20", rawCanonical);
+        Assert.Contains("\"Priority\": 0", structuredCanonical);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

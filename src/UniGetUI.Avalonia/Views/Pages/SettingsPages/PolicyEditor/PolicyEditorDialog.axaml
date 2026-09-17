@@ -75,11 +75,19 @@
 
     <dialogs:ImmersiveDialog.DataTemplates>
         <DataTemplate DataType="pvm:PolicyEditorEnumOption" x:DataType="pvm:PolicyEditorEnumOption">
-            <CheckBox Classes="enum-option"
-                      Content="{Binding Display}"
-                      IsChecked="{Binding IsSelected}"
-                      controls:PolicyHelp.Text="{Binding HelpText}"
-                      automation:AutomationProperties.Name="{Binding Display}"/>
+            <StackPanel>
+                <CheckBox Classes="enum-option"
+                          Content="{Binding Display}"
+                          IsChecked="{Binding IsSelected}"
+                          controls:PolicyHelp.Text="{Binding HelpText}"
+                          automation:AutomationProperties.Name="{Binding Display}"/>
+                <Border Classes="finding-warning"
+                        IsVisible="{Binding IsAdvisoryVisible}"
+                        Padding="6"
+                        controls:PolicyHelp.Text="{Binding AdvisoryText}">
+                    <TextBlock Text="{Binding AdvisoryText}" TextWrapping="Wrap"/>
+                </Border>
+            </StackPanel>
         </DataTemplate>
         <DataTemplate DataType="pvm:PolicyValidationFinding" x:DataType="pvm:PolicyValidationFinding">
             <Border Classes="settings-card"
@@ -123,7 +131,7 @@
                     Content="{t:Translate Structured}"
                     Classes.accent="{Binding Session.IsStructuredMode}"
                     Classes="secondary-action"
-                    IsEnabled="{Binding Session.CanValidateOrSave}"
+                    IsEnabled="{Binding Session.CanSwitchToStructured}"
                     Click="StructuredModeButton_Click"
                     controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.StructuredMode}"
                     automation:AutomationProperties.Name="{t:Translate Switch to the structured editor}"/>
@@ -266,19 +274,6 @@
                     <Border Classes="settings-card policy-section">
                         <StackPanel Spacing="8">
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Default decision}"
-                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.DefaultDecision}"/>
-                                <StackPanel Grid.Column="1" Spacing="2">
-                                    <ComboBox ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.DecisionDisplayItems}"
-                                              SelectedIndex="{Binding Document.DecisionIndex}"
-                                              Tag="/Enforcement/DefaultDecision"
-                                              Classes.finding-error="{Binding Document.HasDefaultDecisionErrors}"
-                                              controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.DefaultDecision}"
-                                              automation:AutomationProperties.Name="{t:Translate Default decision}"/>
-                                    <ItemsControl ItemsSource="{Binding Document.DefaultDecisionFindings}" ItemTemplate="{StaticResource InlineFindingTemplate}"/>
-                                </StackPanel>
-                            </Grid>
-                            <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                 <TextBlock Classes="field-label" Text="{t:Translate Rule precedence}"
                                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RulePrecedence}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
@@ -305,6 +300,26 @@
                         </Expander.Header>
                         <Border Classes="settings-card policy-section" Margin="0,8,0,0">
                             <StackPanel Spacing="8">
+                                <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
+                                    <TextBlock Classes="field-label" Text="{t:Translate Default decision}"
+                                               controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.DefaultDecision}"/>
+                                    <StackPanel Grid.Column="1" Spacing="2">
+                                        <ComboBox ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.DecisionDisplayItems}"
+                                                  SelectedIndex="{Binding Document.DecisionIndex}"
+                                                  Tag="/Enforcement/DefaultDecision"
+                                                  Classes.finding-error="{Binding Document.HasDefaultDecisionErrors}"
+                                                  controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.DefaultDecision}"
+                                                  automation:AutomationProperties.Name="{t:Translate Default decision}"/>
+                                        <ItemsControl ItemsSource="{Binding Document.DefaultDecisionFindings}" ItemTemplate="{StaticResource InlineFindingTemplate}"/>
+                                        <Border Classes="finding-warning"
+                                                IsVisible="{Binding Document.IsDefaultAllow}"
+                                                Padding="8"
+                                                controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.DefaultAllowAdvisory}">
+                                            <TextBlock Text="{x:Static pvm:PolicyEditorHelp.DefaultAllowAdvisory}"
+                                                       TextWrapping="Wrap"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
                                 <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                     <TextBlock Classes="field-label"
                                                Text="{t:Translate Audit mode}"
@@ -351,6 +366,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="pvm:PolicyEditorRuleUi">
                                 <Expander Margin="0,0,0,10"
+                                          Focusable="True"
                                           HorizontalAlignment="Stretch"
                                           HorizontalContentAlignment="Stretch"
                                           automation:AutomationProperties.Name="{Binding AutomationName}">
@@ -370,10 +386,12 @@
                                                     automation:AutomationProperties.Name="{t:Translate Duplicate rule}"/>
                                             <Button Grid.Column="3" Classes="secondary-action" Content="{t:Translate Move up}"
                                                     Click="MoveRuleUpButton_Click"
+                                                    IsEnabled="{Binding CanMoveUp}"
                                                     controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.MoveRule}"
                                                     automation:AutomationProperties.Name="{t:Translate Move rule up}"/>
                                             <Button Grid.Column="4" Classes="secondary-action" Content="{t:Translate Move down}"
                                                     Click="MoveRuleDownButton_Click"
+                                                    IsEnabled="{Binding CanMoveDown}"
                                                     controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.MoveRule}"
                                                     automation:AutomationProperties.Name="{t:Translate Move rule down}"/>
                                             <Button Grid.Column="5" Classes="secondary-action" Content="{t:Translate Delete}"
@@ -386,6 +404,23 @@
                                     <StackPanel Margin="12,8,4,12" Spacing="8">
 
                                         <ItemsControl ItemsSource="{Binding Findings}" IsVisible="{Binding HasFindings}"/>
+
+                                        <Border Classes="settings-card"
+                                                IsVisible="{Binding IsDisabled}"
+                                                Padding="8"
+                                                controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.DisabledRuleHint}"
+                                                automation:AutomationProperties.Name="{t:Translate Disabled rule notice}">
+                                            <TextBlock Text="{x:Static pvm:PolicyEditorHelp.DisabledRuleHint}"
+                                                       TextWrapping="Wrap"/>
+                                        </Border>
+                                        <Border Classes="finding-warning"
+                                                IsVisible="{Binding IsEnabledWithoutMatchConditions}"
+                                                Padding="8"
+                                                controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.UnrestrictedRuleWarning}"
+                                                automation:AutomationProperties.Name="{t:Translate Unrestricted rule warning}">
+                                            <TextBlock Text="{x:Static pvm:PolicyEditorHelp.UnrestrictedRuleWarning}"
+                                                       TextWrapping="Wrap"/>
+                                        </Border>
 
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                             <TextBlock Classes="field-label"
@@ -404,21 +439,12 @@
                                             </StackPanel>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Priority}"
+                                            <TextBlock Classes="field-label" Text="{t:Translate Evaluation order}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Priority}"/>
-                                            <StackPanel Grid.Column="1" Spacing="2">
-                                                <TextBox Text="{Binding PriorityText}"
-                                                         Tag="/Rules/*/Priority"
-                                                         Classes.finding-error="{Binding HasPriorityErrors}"
-                                                         controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Priority}"
-                                                         automation:AutomationProperties.Name="{t:Translate Priority}"/>
-                                                <TextBlock Text="{Binding PriorityError}"
-                                                           IsVisible="{Binding PriorityError, Converter={x:Static ObjectConverters.IsNotNull}}"
-                                                           Classes="finding-error"
-                                                           TextWrapping="Wrap"
-                                                           automation:AutomationProperties.LiveSetting="Assertive"/>
-                                                <ItemsControl ItemsSource="{Binding PriorityFindings}" ItemTemplate="{StaticResource InlineFindingTemplate}"/>
-                                            </StackPanel>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding EvaluationOrder}"
+                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Priority}"
+                                                       automation:AutomationProperties.Name="{t:Translate Evaluation order}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                             <TextBlock Classes="field-label" Text="{t:Translate Decision}"
@@ -426,6 +452,7 @@
                                             <StackPanel Grid.Column="1" Spacing="2">
                                                 <ComboBox ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.DecisionDisplayItems}"
                                                           SelectedIndex="{Binding DecisionIndex}"
+                                                          SelectionChanged="RuleDecision_SelectionChanged"
                                                           Tag="/Rules/*/Decision"
                                                           Classes.finding-error="{Binding HasDecisionErrors}"
                                                           controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Decision}"
@@ -450,8 +477,25 @@
                                             </StackPanel>
                                         </Grid>
 
-                                        <TextBlock Classes="section-heading" Text="{t:Translate Match criteria}"
+                                        <TextBlock Classes="section-heading"
+                                                   Classes.finding-error="{Binding HasMatchErrors}"
+                                                   Text="{t:Translate Match criteria}"
+                                                   Tag="/Rules/*/Match"
+                                                   Focusable="True"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RequestCharacteristics}"
                                                    automation:AutomationProperties.HeadingLevel="3"/>
+                                        <ItemsControl ItemsSource="{Binding MatchFindings}"
+                                                      ItemTemplate="{StaticResource InlineFindingTemplate}"/>
+                                        <ItemsControl ItemsSource="{Binding SafetyAdvisories}"
+                                                      IsVisible="{Binding HasSafetyAdvisories}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="x:String">
+                                                    <Border Classes="finding-warning" Padding="8" Margin="0,0,0,4">
+                                                        <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
 
                                         <TextBlock Classes="field-label"
                                                    Text="{t:Translate Operations (optional)}"
@@ -509,12 +553,12 @@
                                         </ItemsControl>
 
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Sources (one per line; optional)}"
+                                            <TextBlock Classes="field-label" Text="{t:Translate Source names (one per line; optional)}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Sources}"/>
                                             <TextBox Classes="list-field" Grid.Column="1" Text="{Binding Sources}"
                                                      Tag="/Rules/*/Match/Sources"
                                                      controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Sources}"
-                                                     automation:AutomationProperties.Name="{t:Translate Sources}"/>
+                                                     automation:AutomationProperties.Name="{t:Translate Source names}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                             <TextBlock Classes="field-label" Text="{t:Translate Package identifiers (one per line; optional)}"
@@ -585,6 +629,11 @@
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.IncludePrerelease}"/>
                                         </StackPanel>
 
+                                        <TextBlock Classes="section-heading"
+                                                   Text="{t:Translate Request characteristics}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RequestCharacteristics}"
+                                                   automation:AutomationProperties.HeadingLevel="3"/>
+
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                             <TextBlock Classes="field-label" Text="{t:Translate Interactive}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.InteractiveMatch}"/>
@@ -613,55 +662,59 @@
                                                       automation:AutomationProperties.Name="{t:Translate Prerelease}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Has custom parameters}"
+                                            <TextBlock Classes="field-label" Text="{t:Translate Custom parameters}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CustomParametersMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding HasCustomParametersIndex}"
                                                       Tag="/Rules/*/Match/HasCustomParameters"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CustomParametersMatch}"
-                                                      automation:AutomationProperties.Name="{t:Translate Has custom parameters}"/>
+                                                      automation:AutomationProperties.Name="{t:Translate Custom parameters}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Has custom install location}"
+                                            <TextBlock Classes="field-label" Text="{t:Translate Custom install location}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CustomLocationMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding HasCustomInstallLocationIndex}"
                                                       Tag="/Rules/*/Match/HasCustomInstallLocation"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CustomLocationMatch}"
-                                                      automation:AutomationProperties.Name="{t:Translate Has custom install location}"/>
+                                                      automation:AutomationProperties.Name="{t:Translate Custom install location}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Has pre/post commands}"
+                                            <TextBlock Classes="field-label" Text="{t:Translate Pre/post commands}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PrePostCommandsMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding HasPrePostCommandsIndex}"
                                                       Tag="/Rules/*/Match/HasPrePostCommands"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PrePostCommandsMatch}"
-                                                      automation:AutomationProperties.Name="{t:Translate Has pre/post commands}"/>
+                                                      automation:AutomationProperties.Name="{t:Translate Pre/post commands}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Has kill-before-operation}"
+                                            <TextBlock Classes="field-label" Text="{t:Translate Stop running apps before operation}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.KillBeforeMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding HasKillBeforeOperationIndex}"
                                                       Tag="/Rules/*/Match/HasKillBeforeOperation"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.KillBeforeMatch}"
-                                                      automation:AutomationProperties.Name="{t:Translate Has kill-before-operation}"/>
+                                                      automation:AutomationProperties.Name="{t:Translate Stop running apps before operation}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Has uninstall previous}"
+                                            <TextBlock Classes="field-label" Text="{t:Translate Uninstall previous version}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.UninstallPreviousMatch}"/>
                                             <ComboBox Grid.Column="1" ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.TriStateDisplayItems}"
                                                       SelectedIndex="{Binding HasUninstallPreviousIndex}"
                                                       Tag="/Rules/*/Match/HasUninstallPrevious"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.UninstallPreviousMatch}"
-                                                      automation:AutomationProperties.Name="{t:Translate Has uninstall previous}"/>
+                                                      automation:AutomationProperties.Name="{t:Translate Uninstall previous version}"/>
                                         </Grid>
 
-                                        <TextBlock Classes="section-heading" Text="{t:Translate Constraints}"
+                                        <TextBlock Classes="section-heading"
+                                                   Text="{t:Translate Additional safety limits}"
+                                                   IsVisible="{Binding IsAllowDecision}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Constraints}"
                                                    automation:AutomationProperties.HeadingLevel="3"/>
-                                        <CheckBox Content="{t:Translate This rule defines constraints}"
+                                        <CheckBox Content="{t:Translate Add safety limits to this Allow rule}"
                                                   IsChecked="{Binding HasConstraints}"
+                                                  IsVisible="{Binding IsAllowDecision}"
                                                   Tag="/Rules/*/Constraints"
                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Constraints}"/>
                                         <StackPanel IsVisible="{Binding HasConstraints}" Spacing="6" Margin="24,0,0,0">

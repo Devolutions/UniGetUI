@@ -37,6 +37,23 @@ public class PolicyEditorSessionViewModelTests
     }
 
     private static (PolicyEditorSessionViewModel ViewModel, FakeValidationClient Validation, FakeConfirmationPrompt Prompt, FakeWriteClient Writer)
+        CreateForUpdateSessionWithAudit(bool? auditMode)
+    {
+        PolicyDocument policy = PolicyEditorTestFixtures.BuildDocument(id: "id-1");
+        policy.Enforcement.AuditMode = auditMode;
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement(policy, "token-1"));
+        var validation = new FakeValidationClient();
+        var prompt = new FakeConfirmationPrompt();
+        var writer = new FakeWriteClient();
+        return (
+            new PolicyEditorSessionViewModel(session, validation, prompt, writer),
+            validation,
+            prompt,
+            writer);
+    }
+
+    private static (PolicyEditorSessionViewModel ViewModel, FakeValidationClient Validation, FakeConfirmationPrompt Prompt, FakeWriteClient Writer)
         CreateForOperation(PolicyEditorOperationKind operation)
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
@@ -138,6 +155,9 @@ public class PolicyEditorSessionViewModelTests
         Assert.Equal(1, validation.CallCount);
 
         vm.AddRuleCommand.Execute(null); // mutates the draft -> Session.IsValidationCurrent becomes false
+        vm.Draft.Rules[^1].Match.Operations.Add(
+            Devolutions.Now.Policy.Model.Operation.Install);
+        vm.NotifyDraftChangedCommand.Execute(null);
         validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm, receipt: "receipt-2"));
         PolicyDocument authoritative = PolicyEditorTestFixtures.BuildDocument(id: "id-1");
         writer.NextOutcome = PolicyWriteOutcome.Success(
@@ -264,6 +284,7 @@ public class PolicyEditorSessionViewModelTests
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, _) = CreateForCreateSession();
         PolicyEditorDraftRule rule = vm.Session.AddRule();
         rule.Id = "Allow WinGet updates";
+        rule.Match.Operations.Add(Devolutions.Now.Policy.Model.Operation.Install);
         vm.NotifyDraftChangedCommand.Execute(null);
         Assert.True(vm.HasLocalSemanticErrors);
         Assert.False(vm.ValidateCommand.CanExecute(null));
@@ -515,6 +536,165 @@ public class PolicyEditorSessionViewModelTests
         Assert.Equal(1, writer.CallCount);
         Assert.Equal(PolicyReplacementOperation.Update, writer.LastRequest!.Operation);
         Assert.True(vm.LastSaveSucceeded);
+    }
+
+    [Fact]
+    public async Task SaveCommand_NarrowedAllow_DoesNotPrompt()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, FakeConfirmationPrompt prompt, FakeWriteClient writer) =
+            CreateForUpdateSession();
+        PolicyEditorDraftRule rule = vm.Session.AddRule();
+        rule.Enabled = true;
+        rule.Decision = Devolutions.Now.Policy.Model.Decision.Allow;
+        rule.Match.Operations.Add(Devolutions.Now.Policy.Model.Operation.Install);
+        vm.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, prompt.CallCount);
+        Assert.Equal(1, writer.CallCount);
+    }
+
+    [Fact]
+    public async Task BlankRule_AllowsEditingButBlocksSaveUntilConfiguredOrDeleted()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, FakeWriteClient writer) =
+            CreateForUpdateSession();
+        PolicyEditorDraftRule blank = vm.Session.AddRule();
+        vm.NotifyDraftChangedCommand.Execute(null);
+
+        Assert.False(blank.Enabled);
+        Assert.True(vm.HasLocalSemanticErrors);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+        PolicyValidationFinding finding = Assert.Single(
+            vm.Findings,
+            item => item.Pointer == "/Rules/0/Match");
+        Assert.Contains("at least one request condition", finding.Message);
+
+        vm.SwitchToRawCommand.Execute(null);
+        Assert.Contains("\"Match\": {", vm.RawBuffer);
+        await vm.SwitchToStructuredCommand.ExecuteAsync(null);
+        Assert.Equal(PolicyEditorMode.Structured, vm.Session.Mode);
+        Assert.Contains(vm.Findings, item => item.Pointer == "/Rules/0/Match");
+
+        blank = vm.Draft.Rules[0];
+        blank.Match.Interactive = TriState.False;
+        vm.NotifyDraftChangedCommand.Execute(null);
+        Assert.False(vm.HasLocalSemanticErrors);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+        await vm.SaveCommand.ExecuteAsync(null);
+        Assert.Equal(1, writer.CallCount);
+
+        PolicyEditorDraftRule secondBlank = vm.Session.AddRule();
+        vm.NotifyDraftChangedCommand.Execute(null);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+        vm.Session.DeleteRule(secondBlank);
+        vm.NotifyDraftChangedCommand.Execute(null);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task SaveCommand_NewlyEnabledAuditMode_RequiresConfirmation()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, FakeConfirmationPrompt prompt, FakeWriteClient writer) =
+            CreateForUpdateSessionWithAudit(false);
+        vm.Draft.Enforcement.AuditMode = true;
+        vm.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+        prompt.NextResult = false;
+
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(PolicyEditorConfirmationKind.EnableAuditMode, prompt.LastRequest!.Kind);
+        Assert.Equal(0, writer.CallCount);
+        Assert.True(vm.Draft.Enforcement.AuditMode);
+
+        prompt.NextResult = true;
+        await vm.SaveCommand.ExecuteAsync(null);
+        Assert.Equal(2, prompt.CallCount);
+        Assert.Equal(1, writer.CallCount);
+    }
+
+    [Fact]
+    public async Task SaveCommand_AuditModeAlreadyEnabled_DoesNotPrompt()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, FakeConfirmationPrompt prompt, FakeWriteClient writer) =
+            CreateForUpdateSessionWithAudit(true);
+        vm.Draft.Metadata.Description = "unrelated change";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, prompt.CallCount);
+        Assert.Equal(1, writer.CallCount);
+    }
+
+    [Fact]
+    public async Task SaveCommand_CreateWithAuditMode_PromptsBeforeCreateConfirmation()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, FakeConfirmationPrompt prompt, _) =
+            CreateForCreateSession();
+        vm.Draft.Enforcement.AuditMode = true;
+        vm.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            [PolicyEditorConfirmationKind.EnableAuditMode, PolicyEditorConfirmationKind.Create],
+            prompt.AllRequests.Select(request => request.Kind));
+    }
+
+    [Fact]
+    public async Task SaveCommand_NewDefaultAllow_RequiresConfirmation()
+    {
+        (PolicyEditorSessionViewModel vm, FakeValidationClient validation, FakeConfirmationPrompt prompt, FakeWriteClient writer) =
+            CreateForUpdateSession();
+        vm.Draft.Enforcement.DefaultDecision =
+            Devolutions.Now.Policy.Model.Decision.Allow;
+        vm.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+        prompt.NextResult = false;
+
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(PolicyEditorConfirmationKind.EnableDefaultAllow, prompt.LastRequest!.Kind);
+        Assert.Equal(0, writer.CallCount);
+        Assert.Equal(
+            Devolutions.Now.Policy.Model.Decision.Allow,
+            vm.Draft.Enforcement.DefaultDecision);
+
+        prompt.NextResult = true;
+        await vm.SaveCommand.ExecuteAsync(null);
+        Assert.Equal(2, prompt.CallCount);
+        Assert.Equal(1, writer.CallCount);
+    }
+
+    [Fact]
+    public async Task SaveCommand_LoadedDefaultAllow_DoesNotPromptForUnrelatedSave()
+    {
+        PolicyDocument policy = PolicyEditorTestFixtures.BuildDocument(
+            defaultDecision: Devolutions.Now.Policy.Model.Decision.Allow);
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement(policy, "token-1"));
+        var validation = new FakeValidationClient();
+        var prompt = new FakeConfirmationPrompt();
+        var writer = new FakeWriteClient();
+        using var vm = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            prompt,
+            writer);
+        vm.Draft.Metadata.Description = "unrelated";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, prompt.CallCount);
+        Assert.Equal(1, writer.CallCount);
     }
 
     [Fact]

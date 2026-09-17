@@ -86,7 +86,8 @@ public sealed record PolicyEditorConfirmationRequest(
     PolicyManagementState State,
     string? ActivePolicyId,
     IReadOnlyList<PolicyValidationFinding> Findings,
-    int WarningCount = 0);
+    int WarningCount = 0,
+    string? RuleId = null);
 
 public interface IPolicyEditorConfirmationPrompt
 {

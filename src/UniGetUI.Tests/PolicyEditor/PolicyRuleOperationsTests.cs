@@ -26,11 +26,11 @@ public class PolicyRuleOperationsTests
     }
 
     [Fact]
-    public void CreateBlank_ProducesEnabledLeastPrivilegeDenyRule()
+    public void CreateBlank_ProducesDisabledUnrestrictedDenyRule()
     {
         PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank();
 
-        Assert.True(rule.Enabled);
+        Assert.False(rule.Enabled);
         Assert.Equal(Devolutions.Now.Policy.Model.Decision.Deny, rule.Decision);
         Assert.Equal(0u, rule.Priority);
         Assert.Null(rule.Constraints);
@@ -44,13 +44,13 @@ public class PolicyRuleOperationsTests
         Assert.Empty(rule.Match.Architectures);
         Assert.Empty(rule.Match.Elevation);
         Assert.Equal(TriState.Omitted, rule.Match.Interactive);
-        Assert.Equal(TriState.False, rule.Match.SkipHashCheck);
-        Assert.Equal(TriState.False, rule.Match.PreRelease);
-        Assert.Equal(TriState.False, rule.Match.HasCustomParameters);
-        Assert.Equal(TriState.False, rule.Match.HasCustomInstallLocation);
-        Assert.Equal(TriState.False, rule.Match.HasPrePostCommands);
-        Assert.Equal(TriState.False, rule.Match.HasKillBeforeOperation);
-        Assert.Equal(TriState.False, rule.Match.HasUninstallPrevious);
+        Assert.Equal(TriState.Omitted, rule.Match.SkipHashCheck);
+        Assert.Equal(TriState.Omitted, rule.Match.PreRelease);
+        Assert.Equal(TriState.Omitted, rule.Match.HasCustomParameters);
+        Assert.Equal(TriState.Omitted, rule.Match.HasCustomInstallLocation);
+        Assert.Equal(TriState.Omitted, rule.Match.HasPrePostCommands);
+        Assert.Equal(TriState.Omitted, rule.Match.HasKillBeforeOperation);
+        Assert.Equal(TriState.Omitted, rule.Match.HasUninstallPrevious);
     }
 
     [Fact]
@@ -145,10 +145,10 @@ public class PolicyRuleOperationsTests
     {
         List<PolicyEditorDraftRule> rules = [PolicyRuleFactory.CreateBlank("a"), PolicyRuleFactory.CreateBlank("b")];
 
-        PolicyRuleListOperations.SetEnabled(rules, "a", false);
+        PolicyRuleListOperations.SetEnabled(rules, "a", true);
 
-        Assert.False(rules[0].Enabled);
-        Assert.True(rules[1].Enabled);
+        Assert.True(rules[0].Enabled);
+        Assert.False(rules[1].Enabled);
     }
 
     [Fact]
@@ -183,6 +183,7 @@ public class PolicyRuleOperationsTests
         PolicyRuleListOperations.Move(rules, "c", 0);
 
         Assert.Equal(["c", "a", "b"], rules.Select(r => r.Id));
+        Assert.Equal([0u, 1u, 2u], rules.Select(r => r.Priority));
     }
 
     [Fact]
@@ -193,17 +194,7 @@ public class PolicyRuleOperationsTests
         PolicyRuleListOperations.Move(rules, "a", 999);
 
         Assert.Equal(["b", "a"], rules.Select(r => r.Id));
-    }
-
-    [Fact]
-    public void SetPriority_UpdatesTheNamedRuleOnly()
-    {
-        List<PolicyEditorDraftRule> rules = [PolicyRuleFactory.CreateBlank("a"), PolicyRuleFactory.CreateBlank("b")];
-
-        PolicyRuleListOperations.SetPriority(rules, "a", 42);
-
-        Assert.Equal(42u, rules[0].Priority);
-        Assert.Equal(0u, rules[1].Priority);
+        Assert.Equal([0u, 1u], rules.Select(r => r.Priority));
     }
 
     // ---- Enforcement through the session (structured-mode-only gating) -----------------------
@@ -217,7 +208,6 @@ public class PolicyRuleOperationsTests
         Assert.Throws<InvalidOperationException>(() => session.AddRule());
         Assert.Throws<InvalidOperationException>(() => session.DeleteRule("whatever"));
         Assert.Throws<InvalidOperationException>(() => session.SetRuleEnabled("whatever", true));
-        Assert.Throws<InvalidOperationException>(() => session.SetRulePriority("whatever", 1));
         Assert.Throws<InvalidOperationException>(() => session.MoveRule("whatever", 0));
         Assert.Throws<InvalidOperationException>(() => session.DuplicateRule("whatever"));
         Assert.Throws<InvalidOperationException>(() => session.EditRule("whatever", _ => { }));
@@ -232,12 +222,14 @@ public class PolicyRuleOperationsTests
 
         Assert.Single(session.Draft.Rules);
         Assert.Same(added, session.Draft.Rules[0]);
-        Assert.True(added.Enabled);
-        Assert.Equal(TriState.False, added.Match.SkipHashCheck);
+        Assert.False(added.Enabled);
+        Assert.Equal(TriState.Omitted, added.Match.SkipHashCheck);
         Assert.Empty(added.Match.Operations);
         Assert.Empty(added.Match.Managers);
         string raw = PolicyEditorRawSyntax.ToCanonicalRaw(session.Draft);
-        Assert.Equal(7, Regex.Matches(raw, @"\[\s*false\s*\]").Count);
+        Assert.DoesNotContain("[false]", raw);
+        Assert.Contains("\"SkipHashCheck\": []", raw);
+        Assert.Contains("\"HasUninstallPrevious\": []", raw);
     }
 
     [Fact]
@@ -266,8 +258,8 @@ public class PolicyRuleOperationsTests
             new FakeWriteClient());
 
         viewModel.ToggleRuleCommand.Execute(second);
-        Assert.True(first.Enabled);
-        Assert.False(second.Enabled);
+        Assert.False(first.Enabled);
+        Assert.True(second.Enabled);
 
         viewModel.MoveRuleUpCommand.Execute(second);
         Assert.Same(second, session.Draft.Rules[0]);

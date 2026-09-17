@@ -103,7 +103,7 @@ public static partial class PolicyEditorRawSyntax
             return false;
         }
 
-        draft = PolicyEditorMapper.ToDraft(document);
+        draft = PolicyEditorMapper.ToDraftPreservingRuleOrder(document);
         RestoreAuthoredResourceIds(element, draft);
         return true;
     }
@@ -287,6 +287,11 @@ public static partial class PolicyEditorRawSyntax
     /// </summary>
     public static string ToCanonicalRaw(PolicyEditorDraftDocument draft) =>
         PolicySerializer.Serialize(PolicyEditorMapper.ToSharedDraft(draft));
+
+    internal static string ToCanonicalRawPreservingPriorities(
+        PolicyEditorDraftDocument draft) =>
+        PolicySerializer.Serialize(
+            PolicyEditorMapper.ToSharedDraftPreservingPriorities(draft));
 
     private static bool TryCheckFixedContract(PolicyDraftDocument document, out PolicyEditorSyntaxError? error)
     {

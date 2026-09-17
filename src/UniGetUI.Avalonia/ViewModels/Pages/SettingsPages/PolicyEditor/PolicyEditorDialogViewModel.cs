@@ -88,6 +88,23 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         RebuildRules();
     }
 
+    public void AnnounceRulePosition(PolicyEditorDraftRule rule)
+    {
+        int? index = Session.Rules
+            .Select((candidate, candidateIndex) => (candidate, candidateIndex))
+            .Where(item => ReferenceEquals(item.candidate, rule))
+            .Select(item => (int?)item.candidateIndex)
+            .FirstOrDefault();
+        if (index is null) return;
+        _announce(
+            CoreTools.Translate(
+                "Rule '{0}' is now position {1} of {2}.",
+                rule.Id,
+                index.Value + 1,
+                Session.Rules.Count),
+            AutomationLiveSetting.Polite);
+    }
+
     private void OnSessionPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(PolicyEditorSessionViewModel.LastWriteCompletion)

@@ -52,6 +52,9 @@ public enum PolicyValidationSeverity
 public enum PolicyEditorConfirmationKind
 {
     Warnings,
+    EnableAuditMode,
+    EnableDefaultAllow,
+    RemoveAllowSafetyLimits,
     ReplaceIdentity,
     Create,
     Repair,

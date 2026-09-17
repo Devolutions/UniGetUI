@@ -5,7 +5,7 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 
 internal static class PolicyEditorLocalValidation
 {
-    public static IReadOnlyList<PolicyValidationFinding> ValidateResourceIds(
+    public static IReadOnlyList<PolicyValidationFinding> ValidateDraft(
         PolicyEditorDraftDocument draft)
     {
         var findings = new List<PolicyValidationFinding>();
@@ -22,17 +22,39 @@ internal static class PolicyEditorLocalValidation
         for (int index = 0; index < draft.Rules.Count; index++)
         {
             PolicyEditorDraftRule rule = draft.Rules[index];
-            if (PolicyEditorTemplates.IsValidResourceId(rule.Id))
+            if (!PolicyEditorTemplates.IsValidResourceId(rule.Id))
             {
-                continue;
+                findings.Add(new(
+                    $"/Rules/{index}/Id",
+                    rule.Id,
+                    PolicyValidationSeverity.Error,
+                    DescribeRuleIdError(rule.Id, index),
+                    PolicyFindingCode.InvalidFieldValue));
             }
 
-            findings.Add(new(
-                $"/Rules/{index}/Id",
-                rule.Id,
-                PolicyValidationSeverity.Error,
-                DescribeRuleIdError(rule.Id, index),
-                PolicyFindingCode.InvalidFieldValue));
+            if (PolicyEditorRuleSemantics.IsCatchAll(rule.Match))
+            {
+                findings.Add(new(
+                    $"/Rules/{index}/Match",
+                    rule.Id,
+                    PolicyValidationSeverity.Error,
+                    CoreTools.Translate(
+                        "Rule {0} needs at least one request condition. Configure Request characteristics or another match field, or delete the rule.",
+                        index + 1),
+                    PolicyFindingCode.InvalidFieldValue));
+            }
+
+            if (rule.Match.Sources.Count > 0 && rule.Match.Managers.Count != 1)
+            {
+                findings.Add(new(
+                    $"/Rules/{index}/Match/Managers",
+                    rule.Id,
+                    PolicyValidationSeverity.Error,
+                    CoreTools.Translate(
+                        "Rule {0} uses Source names and must select exactly one Package manager. Create separate rules for different managers.",
+                        index + 1),
+                    PolicyFindingCode.InvalidFieldValue));
+            }
         }
 
         return findings;

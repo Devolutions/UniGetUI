@@ -363,9 +363,9 @@ public partial class PolicyEditorLocalizationTests
         ];
         foreach (string help in helpTexts)
         {
-            Assert.Contains("Any accepts either", help, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("Yes requires", help, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("No requires", help, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Does not matter ignores", help, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Yes matches", help, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("No matches", help, StringComparison.OrdinalIgnoreCase);
         }
         Assert.Contains("user interaction", PolicyEditorHelp.InteractiveMatch, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("unattended", PolicyEditorHelp.InteractiveMatch, StringComparison.OrdinalIgnoreCase);
@@ -400,6 +400,63 @@ public partial class PolicyEditorLocalizationTests
                     $"controls:PolicyHelp.Text=\"{{x:Static pvm:PolicyEditorHelp.{property}}}\"")
                     .Count);
         }
+    }
+
+    [Fact]
+    public void RequestCharacteristics_UseUserFacingLabelsAndMatchOnlyHelp()
+    {
+        string root = FindRepositoryRoot();
+        string view = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorDialog.axaml"));
+
+        Assert.Contains("Text=\"{t:Translate Request characteristics}\"", view);
+        Assert.Contains("Text=\"{t:Translate Custom parameters}\"", view);
+        Assert.Contains("Text=\"{t:Translate Custom install location}\"", view);
+        Assert.Contains("Text=\"{t:Translate Pre/post commands}\"", view);
+        Assert.Contains("Text=\"{t:Translate Stop running apps before operation}\"", view);
+        Assert.Contains("Text=\"{t:Translate Uninstall previous version}\"", view);
+        Assert.DoesNotContain("Text=\"{t:Translate Has custom", view);
+        Assert.DoesNotContain("Text=\"{t:Translate Has pre/post", view);
+        Assert.Contains("no effect", PolicyEditorHelp.DisabledRuleHint, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("every package request", PolicyEditorHelp.UnrestrictedRuleWarning, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("prohibit", PolicyEditorHelp.CustomParametersMatch, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("allow", PolicyEditorHelp.CustomParametersMatch, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("IsEnabled=\"{Binding CanMoveUp}\"", view);
+        Assert.Contains("IsEnabled=\"{Binding CanMoveDown}\"", view);
+        Assert.Contains("IsEnabled=\"{Binding Session.CanSwitchToStructured}\"", view);
+        Assert.Contains("Focusable=\"True\"", view);
+        string codeBehind = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorDialog.axaml.cs"));
+        Assert.Contains("FocusMovedRule", codeBehind);
+        string dialogViewModel = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "ViewModels",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorDialogViewModel.cs"));
+        Assert.Contains("AnnounceRulePosition", dialogViewModel);
+        Assert.Contains("AutomationLiveSetting.Polite", dialogViewModel);
+        Assert.Contains("Text=\"{t:Translate Additional safety limits}\"", view);
+        Assert.Contains("IsVisible=\"{Binding IsAllowDecision}\"", view);
+        Assert.Contains("IsVisible=\"{Binding HasSafetyAdvisories}\"", view);
+        Assert.Contains("IsVisible=\"{Binding IsAdvisoryVisible}\"", view);
     }
 
     [Fact]
@@ -451,10 +508,13 @@ public partial class PolicyEditorLocalizationTests
             "clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls";
         XElement auditSelector = Assert.Single(dialog.Descendants(),
             element => (string?)element.Attribute("Tag") == "/Enforcement/AuditMode");
+        XElement defaultSelector = Assert.Single(dialog.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Enforcement/DefaultDecision");
         XElement advanced = Assert.Single(auditSelector.Ancestors(),
             element => element.Name.LocalName == "Expander");
 
         Assert.Equal("False", (string?)advanced.Attribute("IsExpanded"));
+        Assert.Contains(defaultSelector.Ancestors(), element => element == advanced);
         Assert.Equal(
             "{x:Static pvm:PolicyEditorEnumDisplay.AuditModeDisplayItems}",
             (string?)auditSelector.Attribute("ItemsSource"));
@@ -474,6 +534,21 @@ public partial class PolicyEditorLocalizationTests
         Assert.Contains("permits requests", PolicyEditorHelp.AuditMode, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("set No to enforce", PolicyEditorHelp.AuditMode, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("still permitted", PolicyEditorHelp.AuditModeWarning, StringComparison.OrdinalIgnoreCase);
+
+        string confirmationPrompt = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorConfirmationPrompt.cs"));
+        Assert.Contains("PolicyEditorConfirmationKind.EnableAuditMode", confirmationPrompt);
+        Assert.Contains("AccessibilityAnnouncementService.Announce", confirmationPrompt);
+        Assert.Contains("requests the policy would deny will be permitted", confirmationPrompt);
+        Assert.Contains("PolicyEditorConfirmationKind.EnableDefaultAllow", confirmationPrompt);
+        Assert.Contains("PolicyEditorConfirmationKind.RemoveAllowSafetyLimits", confirmationPrompt);
     }
 
     [Fact]
@@ -513,7 +588,7 @@ public partial class PolicyEditorLocalizationTests
         Assert.Equal(
             "{Binding Document.PolicyFormatVersion}",
             (string?)format.Attribute("Text"));
-        Assert.Contains(editor.Descendants(),
+        Assert.DoesNotContain(editor.Descendants(),
             element => (string?)element.Attribute("Tag") == "/Rules/*/Priority");
         Assert.Contains(editor.Descendants(),
             element => (string?)element.Attribute("Tag") == "/Rules/*/Match/PackageNames");

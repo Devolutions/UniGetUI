@@ -417,9 +417,16 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         EnforcementRows.Add(Row("Default decision", TranslateEnum(policy.Enforcement.DefaultDecision)));
         EnforcementRows.Add(Row("Audit mode", FormatNullableBoolean(policy.Enforcement.AuditMode)));
 
-        for (int index = 0; index < policy.Rules.Count; index++)
+        PolicyRule[] orderedRules = policy.Rules
+            .Select((rule, sourceIndex) => (Rule: rule, SourceIndex: sourceIndex))
+            .OrderBy(item => item.Rule.Priority)
+            .ThenBy(item => item.Rule.Decision == PolicyDecision.Deny ? 0 : 1)
+            .ThenBy(item => item.SourceIndex)
+            .Select(item => item.Rule)
+            .ToArray();
+        for (int index = 0; index < orderedRules.Length; index++)
         {
-            Rules.Add(BuildRule(policy.Rules[index], index));
+            Rules.Add(BuildRule(orderedRules[index], index));
         }
 
         RawJson = canonicalJson;
@@ -438,7 +445,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
             AutomationName = CoreTools.Translate("Rule {0}: {1}", index + 1, Value(rule.Id)),
             Id = Value(rule.Id),
             Enabled = FormatBoolean(rule.Enabled),
-            Priority = rule.Priority.ToString(CultureInfo.CurrentCulture),
+            Priority = (index + 1).ToString(CultureInfo.CurrentCulture),
             Decision = TranslateEnum(rule.Decision),
             Reason = Value(rule.Reason),
             HasConstraints = hasConstraints,
@@ -512,7 +519,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         "Audit mode" => PolicyEditorHelp.AuditMode,
         "Operations" => PolicyEditorHelp.Operations,
         "Package managers" => PolicyEditorHelp.Managers,
-        "Sources" => PolicyEditorHelp.Sources,
+        "Source names" => PolicyEditorHelp.Sources,
         "Package identifiers" => PolicyEditorHelp.PackageIdentifiers,
         "Package names" => PolicyEditorHelp.PackageNames,
         "Versions" => PolicyEditorHelp.Versions,
@@ -523,11 +530,11 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         "Interactive" => PolicyEditorHelp.InteractiveMatch,
         "Skip hash check" => PolicyEditorHelp.SkipHashMatch,
         "Prerelease" => PolicyEditorHelp.PrereleaseMatch,
-        "Has custom parameters" => PolicyEditorHelp.CustomParametersMatch,
-        "Has custom install location" => PolicyEditorHelp.CustomLocationMatch,
-        "Has pre/post commands" => PolicyEditorHelp.PrePostCommandsMatch,
-        "Has kill-before-operation" => PolicyEditorHelp.KillBeforeMatch,
-        "Has uninstall previous" => PolicyEditorHelp.UninstallPreviousMatch,
+        "Custom parameters" => PolicyEditorHelp.CustomParametersMatch,
+        "Custom install location" => PolicyEditorHelp.CustomLocationMatch,
+        "Pre/post commands" => PolicyEditorHelp.PrePostCommandsMatch,
+        "Stop running apps before operation" => PolicyEditorHelp.KillBeforeMatch,
+        "Uninstall previous version" => PolicyEditorHelp.UninstallPreviousMatch,
         "Constraints" => PolicyEditorHelp.Constraints,
         "Allow interactive" => PolicyEditorHelp.AllowInteractive,
         "Allow skip hash check" => PolicyEditorHelp.AllowSkipHashCheck,

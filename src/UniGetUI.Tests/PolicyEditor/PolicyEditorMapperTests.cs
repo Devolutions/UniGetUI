@@ -62,7 +62,7 @@ public class PolicyEditorMapperTests
         PolicyRule sourceRule = document.Rules[0];
         Assert.Equal(sourceRule.Id, draftRule.Id);
         Assert.Equal(sourceRule.Enabled, draftRule.Enabled);
-        Assert.Equal(sourceRule.Priority, draftRule.Priority);
+        Assert.Equal(0u, draftRule.Priority);
         Assert.Equal(sourceRule.Decision, draftRule.Decision);
         Assert.Equal(sourceRule.Reason, draftRule.Reason);
 
@@ -309,6 +309,59 @@ public class PolicyEditorMapperTests
         System.Reflection.PropertyInfo[] props = shared.Metadata.GetType().GetProperties();
         Assert.DoesNotContain(props, p => p.Name == "Revision");
         Assert.DoesNotContain(props, p => p.Name == "PublishedAt");
+    }
+
+    [Fact]
+    public void ToDraft_OrdersByEvaluatorPrecedenceAndNormalizesPriorities()
+    {
+        PolicyRule later = PolicyEditorTestFixtures.BuildMinimalRule("later");
+        later.Priority = 20;
+        later.Decision = Decision.Allow;
+        PolicyRule tiedAllow = PolicyEditorTestFixtures.BuildMinimalRule("tied-allow");
+        tiedAllow.Priority = 10;
+        tiedAllow.Decision = Decision.Allow;
+        PolicyRule tiedDenyFirst = PolicyEditorTestFixtures.BuildMinimalRule("tied-deny-first");
+        tiedDenyFirst.Priority = 10;
+        tiedDenyFirst.Decision = Decision.Deny;
+        PolicyRule tiedDenySecond = PolicyEditorTestFixtures.BuildMinimalRule("tied-deny-second");
+        tiedDenySecond.Priority = 10;
+        tiedDenySecond.Decision = Decision.Deny;
+        PolicyDocument document = PolicyEditorTestFixtures.BuildDocument(
+            rules: [later, tiedAllow, tiedDenyFirst, tiedDenySecond]);
+
+        PolicyEditorDraftDocument draft = PolicyEditorMapper.ToDraft(document);
+        PolicyDraftDocument serialized = PolicyEditorMapper.ToSharedDraft(draft);
+
+        Assert.Equal(
+            ["tied-deny-first", "tied-deny-second", "tied-allow", "later"],
+            draft.Rules.Select(rule => rule.Id));
+        Assert.Equal([0u, 1u, 2u, 3u], draft.Rules.Select(rule => rule.Priority));
+        Assert.Equal([0u, 1u, 2u, 3u], serialized.Rules.Select(rule => rule.Priority));
+    }
+
+    [Fact]
+    public void StructuredRuleMove_NormalizesStableUniquePriorities()
+    {
+        PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("policy", "Contoso");
+        PolicyEditorDraftRule first = PolicyRuleFactory.CreateBlank("first");
+        first.Match.Operations.Add(Operation.Install);
+        PolicyEditorDraftRule second = PolicyRuleFactory.CreateBlank("second");
+        second.Match.Operations.Add(Operation.Update);
+        PolicyRuleListOperations.Add(draft.Rules, first);
+        PolicyRuleListOperations.Add(draft.Rules, second);
+
+        PolicyRuleListOperations.Move(draft.Rules, second, 0);
+        string once = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        Assert.True(PolicyEditorRawSyntax.TryParseStrict(
+            once,
+            out PolicyEditorDraftDocument? projected,
+            out PolicyEditorSyntaxError? error));
+        string twice = PolicyEditorRawSyntax.ToCanonicalRaw(projected!);
+
+        Assert.Null(error);
+        Assert.Equal(["second", "first"], draft.Rules.Select(rule => rule.Id));
+        Assert.Equal([0u, 1u], draft.Rules.Select(rule => rule.Priority));
+        Assert.Equal(once, twice);
     }
 
     [Fact]

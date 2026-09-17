@@ -1,5 +1,6 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Devolutions.Now.Policy.Model;
 using UniGetUI.Core.Tools;
 
@@ -151,6 +152,8 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         _sessionViewModel = sessionViewModel;
         _validFromText = Draft.Metadata.ValidFrom?.ToString("O", CultureInfo.InvariantCulture) ?? "";
         _validUntilText = Draft.Metadata.ValidUntil?.ToString("O", CultureInfo.InvariantCulture) ?? "";
+        ClearValidFromCommand = new RelayCommand(ClearValidFrom);
+        ClearValidUntilCommand = new RelayCommand(ClearValidUntil);
     }
 
     private PolicyEditorDraftDocument Draft => _sessionViewModel.Draft;
@@ -297,6 +300,8 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
     }
     public string ValidityWindowAdvisory => CoreTools.Translate(
         "This policy is outside its configured validity window. If saved now, package operations will be rejected until the policy becomes valid again.");
+    public IRelayCommand ClearValidFromCommand { get; }
+    public IRelayCommand ClearValidUntilCommand { get; }
 
     public void ClearValidFrom()
     {

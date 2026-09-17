@@ -60,6 +60,52 @@ public class PolicyEditorStructuredInputGuardTests
     }
 
     [Fact]
+    public void ValidityClearCommands_ResetOnlyTheirEndpointAndOmitItFromJson()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var document = new PolicyEditorDocumentUi(viewModel);
+        var changed = new HashSet<string?>();
+        document.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+        document.ValidFromText = "2026-08-29T12:00:00Z";
+        document.ValidUntilText = "2026-08-30T12:00:00Z";
+        Assert.True(viewModel.IsDirty);
+        changed.Clear();
+
+        document.ClearValidFromCommand.Execute(null);
+
+        Assert.Null(viewModel.Draft.Metadata.ValidFrom);
+        Assert.Null(document.ValidFromDate);
+        Assert.Null(document.ValidFromTime);
+        Assert.Null(document.ValidFromError);
+        Assert.NotNull(viewModel.Draft.Metadata.ValidUntil);
+        Assert.DoesNotContain(
+            "\"ValidFrom\"",
+            PolicyEditorRawSyntax.ToCanonicalRaw(viewModel.Draft));
+        Assert.Contains(
+            "\"ValidUntil\"",
+            PolicyEditorRawSyntax.ToCanonicalRaw(viewModel.Draft));
+        Assert.Contains(nameof(PolicyEditorDocumentUi.ValidFromDate), changed);
+        Assert.Contains(nameof(PolicyEditorDocumentUi.ValidFromTime), changed);
+        Assert.Contains(nameof(PolicyEditorDocumentUi.IsOutsideValidityWindow), changed);
+
+        changed.Clear();
+        document.ClearValidUntilCommand.Execute(null);
+
+        Assert.Null(viewModel.Draft.Metadata.ValidUntil);
+        Assert.Null(document.ValidUntilDate);
+        Assert.Null(document.ValidUntilTime);
+        Assert.Null(document.ValidUntilError);
+        Assert.False(document.IsOutsideValidityWindow);
+        Assert.DoesNotContain(
+            "\"ValidUntil\"",
+            PolicyEditorRawSyntax.ToCanonicalRaw(viewModel.Draft));
+        Assert.Contains(nameof(PolicyEditorDocumentUi.ValidUntilDate), changed);
+        Assert.Contains(nameof(PolicyEditorDocumentUi.ValidUntilTime), changed);
+        Assert.Contains(nameof(PolicyEditorDocumentUi.IsOutsideValidityWindow), changed);
+        Assert.True(viewModel.IsDirty);
+    }
+
+    [Fact]
     public void ValidityControls_ShowCurrentTimeZoneAndOutsideWindowAdvisory()
     {
         using PolicyEditorSessionViewModel viewModel = CreateViewModel();

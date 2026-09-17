@@ -287,22 +287,25 @@
                                 <TextBlock Classes="field-label" Text="{t:Translate Valid from}"
                                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidFrom}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
-                                    <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8"
-                                          Tag="/Metadata/ValidFrom"
-                                          controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidFrom}">
-                                        <DatePicker SelectedDate="{Binding Document.ValidFromDate}"
+                                    <WrapPanel Orientation="Horizontal"
+                                               Tag="/Metadata/ValidFrom"
+                                               controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidFrom}">
+                                        <DatePicker SelectedDate="{Binding Document.ValidFromDate, Mode=TwoWay}"
+                                                    MinWidth="220"
+                                                    Margin="0,0,12,8"
                                                     controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidFrom}"
                                                     automation:AutomationProperties.Name="{t:Translate Valid from date}"/>
-                                        <TimePicker Grid.Column="1"
-                                                    SelectedTime="{Binding Document.ValidFromTime}"
+                                        <TimePicker SelectedTime="{Binding Document.ValidFromTime, Mode=TwoWay}"
                                                     ClockIdentifier="24HourClock"
+                                                    MinWidth="150"
+                                                    Margin="0,0,12,8"
                                                     controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidFrom}"
                                                     automation:AutomationProperties.Name="{t:Translate Valid from time}"/>
-                                        <Button Grid.Column="2"
-                                                Content="{t:Translate Clear}"
-                                                Click="ClearValidFromButton_Click"
+                                        <Button Content="{t:Translate Clear}"
+                                                Command="{Binding Document.ClearValidFromCommand}"
+                                                Margin="0,0,0,8"
                                                 automation:AutomationProperties.Name="{t:Translate Clear Valid from}"/>
-                                    </Grid>
+                                    </WrapPanel>
                                     <TextBlock Text="{Binding Document.ValidFromError}"
                                                IsVisible="{Binding Document.ValidFromError, Converter={x:Static ObjectConverters.IsNotNull}}"
                                                Classes="finding-error"
@@ -315,22 +318,25 @@
                                 <TextBlock Classes="field-label" Text="{t:Translate Valid until}"
                                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidUntil}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
-                                    <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8"
-                                          Tag="/Metadata/ValidUntil"
-                                          controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidUntil}">
-                                        <DatePicker SelectedDate="{Binding Document.ValidUntilDate}"
+                                    <WrapPanel Orientation="Horizontal"
+                                               Tag="/Metadata/ValidUntil"
+                                               controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidUntil}">
+                                        <DatePicker SelectedDate="{Binding Document.ValidUntilDate, Mode=TwoWay}"
+                                                    MinWidth="220"
+                                                    Margin="0,0,12,8"
                                                     controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidUntil}"
                                                     automation:AutomationProperties.Name="{t:Translate Valid until date}"/>
-                                        <TimePicker Grid.Column="1"
-                                                    SelectedTime="{Binding Document.ValidUntilTime}"
+                                        <TimePicker SelectedTime="{Binding Document.ValidUntilTime, Mode=TwoWay}"
                                                     ClockIdentifier="24HourClock"
+                                                    MinWidth="150"
+                                                    Margin="0,0,12,8"
                                                     controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidUntil}"
                                                     automation:AutomationProperties.Name="{t:Translate Valid until time}"/>
-                                        <Button Grid.Column="2"
-                                                Content="{t:Translate Clear}"
-                                                Click="ClearValidUntilButton_Click"
+                                        <Button Content="{t:Translate Clear}"
+                                                Command="{Binding Document.ClearValidUntilCommand}"
+                                                Margin="0,0,0,8"
                                                 automation:AutomationProperties.Name="{t:Translate Clear Valid until}"/>
-                                    </Grid>
+                                    </WrapPanel>
                                     <TextBlock Text="{Binding Document.ValidUntilError}"
                                                IsVisible="{Binding Document.ValidUntilError, Converter={x:Static ObjectConverters.IsNotNull}}"
                                                Classes="finding-error"

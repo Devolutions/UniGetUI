@@ -639,16 +639,21 @@ public partial class PolicyEditorLocalizationTests
             "PolicyEditor",
             "PolicyEditorDialog.axaml"));
 
-        Assert.Contains("<DatePicker SelectedDate=\"{Binding Document.ValidFromDate}\"", view);
-        Assert.Contains("<TimePicker Grid.Column=\"1\"", view);
-        Assert.Contains("SelectedTime=\"{Binding Document.ValidFromTime}\"", view);
-        Assert.Contains("<DatePicker SelectedDate=\"{Binding Document.ValidUntilDate}\"", view);
-        Assert.Contains("SelectedTime=\"{Binding Document.ValidUntilTime}\"", view);
+        Assert.Contains("<WrapPanel Orientation=\"Horizontal\"", view);
+        Assert.Contains("SelectedDate=\"{Binding Document.ValidFromDate, Mode=TwoWay}\"", view);
+        Assert.Contains("SelectedTime=\"{Binding Document.ValidFromTime, Mode=TwoWay}\"", view);
+        Assert.Contains("SelectedDate=\"{Binding Document.ValidUntilDate, Mode=TwoWay}\"", view);
+        Assert.Contains("SelectedTime=\"{Binding Document.ValidUntilTime, Mode=TwoWay}\"", view);
+        Assert.Equal(2, Regex.Matches(view, "MinWidth=\"220\"").Count);
+        Assert.Equal(2, Regex.Matches(view, "MinWidth=\"150\"").Count);
+        Assert.Equal(4, Regex.Matches(view, "Margin=\"0,0,12,8\"").Count);
         Assert.Contains("Text=\"{Binding Document.LocalTimeZoneText}\"", view);
         Assert.Contains("IsVisible=\"{Binding Document.IsOutsideValidityWindow}\"", view);
         Assert.Contains("ContentTemplate=\"{StaticResource PolicyAdvisoryTemplate}\"", view);
-        Assert.Contains("Click=\"ClearValidFromButton_Click\"", view);
-        Assert.Contains("Click=\"ClearValidUntilButton_Click\"", view);
+        Assert.Contains("Command=\"{Binding Document.ClearValidFromCommand}\"", view);
+        Assert.Contains("Command=\"{Binding Document.ClearValidUntilCommand}\"", view);
+        Assert.DoesNotContain("Click=\"ClearValidFromButton_Click\"", view);
+        Assert.DoesNotContain("Click=\"ClearValidUntilButton_Click\"", view);
         Assert.DoesNotContain("Text=\"{Binding Document.ValidFromText}\"", view);
         Assert.DoesNotContain("Text=\"{Binding Document.ValidUntilText}\"", view);
     }

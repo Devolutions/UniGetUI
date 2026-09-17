@@ -122,7 +122,12 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
                 findingsList.Children.Add(warning);
             }
 
-            panel.Children.Add(findingsList);
+            panel.Children.Add(new ScrollViewer
+            {
+                MaxHeight = 240,
+                VerticalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
+                Content = findingsList,
+            });
         }
 
         return panel;

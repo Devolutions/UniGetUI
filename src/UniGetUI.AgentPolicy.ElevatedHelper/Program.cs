@@ -70,6 +70,16 @@ internal static class Program
         PolicyElevationLaunchArguments launch,
         PolicyElevationHelperStageTimeouts stageTimeouts)
     {
+        if (!WindowsProcessInspector.TryGetTokenElevation(
+                PolicyElevationNative.GetCurrentProcess(),
+                out bool isElevated,
+                out bool isAdministrator)
+            || !isElevated
+            || !isAdministrator)
+        {
+            return PolicyElevationProtocol.ExitPeerAuthenticationFailed;
+        }
+
         AuthenticatedHostContext? authenticatedHost = null;
         NamedPipeClientStream? pipe = null;
         try

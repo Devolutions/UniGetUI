@@ -12,6 +12,12 @@ public sealed record PolicyElevationPeerExpectation(
     /// <summary>Require the peer token to be elevated and a member of BUILTIN\Administrators.</summary>
     public bool RequireElevatedAdministrator { get; init; }
 
+    /// <summary>
+    /// Require a fresh signer binding. The host may disable this only after preflight bound the same
+    /// handle-pinned helper and host paths for the lifetime of the exchange.
+    /// </summary>
+    public bool RequireSignerBinding { get; init; } = true;
+
     /// <summary>Require the peer to live under an administrator-protected install root.</summary>
     public bool RequireProtectedInstallRoot { get; init; } =
         PolicyElevationTrustPolicy.RequireProtectedInstallRoot;
@@ -190,11 +196,13 @@ public static class WindowsPeerAuthenticator
             }
         }
 
+        if (!expectation.RequireSignerBinding)
+            return PolicyElevationPeerAuthenticationResult.Authenticated;
+
         PolicyElevationSignerBindingResult binding = PolicyElevationSignerBinding.Bind(
             trustVerifier,
             selfCanonicalImagePath,
             canonicalImagePath);
-
         return binding.IsBound
             ? PolicyElevationPeerAuthenticationResult.Authenticated
             : PolicyElevationPeerAuthenticationResult.Rejected(

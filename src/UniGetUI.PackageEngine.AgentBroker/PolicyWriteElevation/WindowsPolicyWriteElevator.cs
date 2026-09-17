@@ -78,7 +78,12 @@ public sealed class WindowsPipePeerAuthenticator : IPolicyElevationPipePeerAuthe
             helper.CreationTimeUtcTicks,
             helper.SessionId)
         {
-            RequireElevatedAdministrator = true,
+            // The exact signed helper self-checks its own elevated administrator token before it
+            // connects. Avoid opening a different administrator account's token from this host.
+            RequireElevatedAdministrator = false,
+            // Preflight already bound these exact handle-pinned binaries. Repeating online
+            // Authenticode validation here would make connected-peer authentication unbounded.
+            RequireSignerBinding = false,
             Verification = location.Verification,
         };
 

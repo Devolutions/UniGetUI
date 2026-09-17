@@ -29,6 +29,26 @@ public class PolicyEditorConfirmationPromptTests
     }
 
     [Fact]
+    public void WarningDetailsAreScrollableInsideTheConfirmationBody()
+    {
+        string root = FindRepositoryRoot();
+        string source = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorConfirmationPrompt.cs"));
+
+        Assert.Contains("new ScrollViewer", source);
+        Assert.Contains("MaxHeight = 240", source);
+        Assert.Contains("ScrollBarVisibility.Auto", source);
+        Assert.Contains("Content = findingsList", source);
+    }
+
+    [Fact]
     public void CancelPendingChoice_DisablesRequiredChoiceBeforeRequestingClose()
     {
         var dialog = new ImmersiveConfirmationDialog

@@ -64,6 +64,29 @@ public class PolicyReplacementExecutorTests
     }
 
     [Fact]
+    public void TrustedHelperSelfChecksElevationAndHostDoesNotOpenCrossAccountToken()
+    {
+        string root = FindRepositoryRoot();
+        string helper = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.AgentPolicy.ElevatedHelper",
+            "Program.cs"));
+        string host = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.PackageEngine.AgentBroker",
+            "PolicyWriteElevation",
+            "WindowsPolicyWriteElevator.cs"));
+
+        Assert.Contains("PolicyElevationNative.GetCurrentProcess()", helper);
+        Assert.Contains("|| !isElevated", helper);
+        Assert.Contains("|| !isAdministrator", helper);
+        Assert.Contains("RequireElevatedAdministrator = false", host);
+        Assert.Contains("RequireSignerBinding = false", host);
+    }
+
+    [Fact]
     public void UnreadableBrokerError_IsUnknownBecausePersistenceCannotBeRuledOut()
     {
         var exception = new BrokerClientException(

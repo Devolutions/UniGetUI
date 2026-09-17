@@ -2,6 +2,9 @@ name: Build Windows portable
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - small-ui-fixes
 
 permissions:
   contents: read

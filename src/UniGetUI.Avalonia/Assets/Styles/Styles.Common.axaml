@@ -27,8 +27,9 @@
                     <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush"  Color="#06000000"/>
                     <!-- Accent text (darker accents read better on light bg) -->
                     <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush"   Color="{DynamicResource SystemAccentColorDark2}"/>
-                    <!-- Package-state badges retain the darker accent used in light mode. -->
-                    <StaticResource x:Key="PackageTagBadgeBackgroundBrush" ResourceKey="AccentTextFillColorPrimaryBrush"/>
+                    <!-- Use the light accent variant behind dark linework. -->
+                    <SolidColorBrush x:Key="PackageTagBadgeBackgroundBrush" Color="{DynamicResource SystemAccentColorLight3}"/>
+                    <SolidColorBrush x:Key="PackageTagBadgeForegroundBrush" Color="#E4000000"/>
                     <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColorDark3}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorDark1}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorDisabledBrush"  Color="#5C000000"/>
@@ -174,8 +175,9 @@
                     <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush"  Color="#0AFFFFFF"/>
                     <!-- Accent text -->
                     <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush"   Color="{DynamicResource SystemAccentColorLight3}"/>
-                    <!-- A filled accent badge gives white status linework enough contrast in dark mode. -->
-                    <StaticResource x:Key="PackageTagBadgeBackgroundBrush" ResourceKey="AccentFillColorDefaultBrush"/>
+                    <!-- Flip to the dark accent variant behind white linework in dark mode. -->
+                    <SolidColorBrush x:Key="PackageTagBadgeBackgroundBrush" Color="{DynamicResource SystemAccentColorDark2}"/>
+                    <SolidColorBrush x:Key="PackageTagBadgeForegroundBrush" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColorLight3}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorLight2}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorDisabledBrush"  Color="#5CFFFFFF"/>

@@ -237,12 +237,21 @@
         <!-- One shared indicator moves between items so selection changes use WinUI's
              leading/trailing-edge stretch instead of fading separate item indicators. -->
         <Canvas Grid.RowSpan="2" IsHitTestVisible="False">
-            <Border x:Name="NavigationSelectionPill"
-                    Width="3"
-                    Height="16"
-                    CornerRadius="1.5"
-                    Background="{DynamicResource AccentFillColorDefaultBrush}"
-                    IsVisible="False"/>
+            <!-- Fixed-radius caps preserve the original pill silhouette while the rectangular
+                 stem stretches between them using render transforms only. -->
+            <Panel x:Name="NavigationSelectionPill"
+                   Width="3" Height="16"
+                   IsVisible="False">
+                <Ellipse x:Name="NavigationPillTopCap"
+                         Width="3" Height="3"
+                         Fill="{DynamicResource AccentFillColorDefaultBrush}"/>
+                <Border x:Name="NavigationPillStem"
+                        Width="3" Height="1"
+                        Background="{DynamicResource AccentFillColorDefaultBrush}"/>
+                <Ellipse x:Name="NavigationPillBottomCap"
+                         Width="3" Height="3"
+                         Fill="{DynamicResource AccentFillColorDefaultBrush}"/>
+            </Panel>
         </Canvas>
     </Grid>
 </UserControl>

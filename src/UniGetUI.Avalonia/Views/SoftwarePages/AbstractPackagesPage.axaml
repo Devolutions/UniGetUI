@@ -583,7 +583,7 @@
                                                                       HorizontalAlignment="Right"
                                                                       VerticalAlignment="Bottom"/>
                                                     <controls:SvgIcon Path="{Binding TagSymbolIconPath}"
-                                                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                      Foreground="{DynamicResource PackageTagBadgeForegroundBrush}"
                                                                       Width="20" Height="20"
                                                                       Margin="0,0,-3,-3"
                                                                       IsVisible="{Binding TagIconVisible}"
@@ -742,7 +742,7 @@
                                                                       HorizontalAlignment="Right"
                                                                       VerticalAlignment="Bottom"/>
                                                     <controls:SvgIcon Path="{Binding TagSymbolIconPath}"
-                                                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                      Foreground="{DynamicResource PackageTagBadgeForegroundBrush}"
                                                                       Width="28" Height="28"
                                                                       Margin="0,0,-4,-4"
                                                                       IsVisible="{Binding TagIconVisible}"
@@ -853,7 +853,7 @@
                                                                       HorizontalAlignment="Right"
                                                                       VerticalAlignment="Bottom"/>
                                                     <controls:SvgIcon Path="{Binding TagSymbolIconPath}"
-                                                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                      Foreground="{DynamicResource PackageTagBadgeForegroundBrush}"
                                                                       Width="38" Height="38"
                                                                       Margin="0,0,-5,-5"
                                                                       IsVisible="{Binding TagIconVisible}"

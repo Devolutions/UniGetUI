@@ -366,6 +366,48 @@ public class PolicyEditorSessionViewModelTests
         Assert.Equal(0, validation.CallCount);
     }
 
+    [Fact]
+    public async Task AlreadySelectedModeCannotOverwriteItsCurrentSource()
+    {
+        (PolicyEditorSessionViewModel vm, _, _, _) = CreateForCreateSession();
+        string structured = PolicyEditorRawSyntax.ToCanonicalRaw(vm.Draft);
+
+        Assert.False(vm.SwitchToStructuredCommand.CanExecute(null));
+        vm.SwitchToStructuredCommand.Execute(null);
+        Assert.Equal(structured, PolicyEditorRawSyntax.ToCanonicalRaw(vm.Draft));
+
+        vm.SwitchToRawCommand.Execute(null);
+        JsonNode root = JsonNode.Parse(vm.RawBuffer)!;
+        root["Metadata"]!["Description"] = "unsaved raw edit";
+        vm.RawBuffer = root.ToJsonString();
+        await vm.WaitForRawSyntaxAnalysisAsync();
+        string edited = vm.RawBuffer;
+
+        Assert.False(vm.SwitchToRawCommand.CanExecute(null));
+        vm.SwitchToRawCommand.Execute(null);
+        Assert.Equal(edited, vm.RawBuffer);
+        Assert.True(vm.IsDirty);
+    }
+
+    [Fact]
+    public async Task FormattingOnlyRawAnalysisPreservesConflictState()
+    {
+        (PolicyEditorSessionViewModel vm, _, _, _) = CreateForCreateSession();
+        vm.SwitchToRawCommand.Execute(null);
+        vm.Session.CaptureConflict(
+            PolicyEditorTestFixtures.BuildMissingManagement("new-token"),
+            PolicyEditorMapper.ToSharedDraft(vm.Draft),
+            "receipt",
+            vm.Draft.Metadata.Id);
+        string formatted = $"\r\n{vm.RawBuffer}\r\n";
+
+        vm.RawBuffer = formatted;
+        await vm.WaitForRawSyntaxAnalysisAsync();
+
+        Assert.NotNull(vm.Session.Conflict);
+        Assert.True(vm.Session.IsConflictCurrent(vm.Session.Conflict));
+    }
+
     // ---- SaveCommand: create flow -----------------------------------------------------------
 
     [Fact]
@@ -572,6 +614,7 @@ public class PolicyEditorSessionViewModelTests
             Assert.True(draftRule.IsIncompleteNewRule);
         }
         Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.False(vm.SwitchToRawCommand.CanExecute(null));
 
         await vm.SaveCommand.ExecuteAsync(null);
 
@@ -584,16 +627,11 @@ public class PolicyEditorSessionViewModelTests
             item => item.Pointer == "/Rules/0/Match");
         Assert.Contains("at least one request condition", finding.Message);
 
-        vm.SwitchToRawCommand.Execute(null);
-        Assert.Contains("\"Match\": {", vm.RawBuffer);
-        await vm.SwitchToStructuredCommand.ExecuteAsync(null);
-        Assert.Equal(PolicyEditorMode.Structured, vm.Session.Mode);
-        Assert.Contains(vm.Findings, item => item.Pointer == "/Rules/0/Match");
-
         blank = vm.Draft.Rules[0];
         blank.Match.Interactive = TriState.False;
         vm.NotifyDraftChangedCommand.Execute(null);
         Assert.False(vm.HasLocalSemanticErrors);
+        Assert.True(vm.SwitchToRawCommand.CanExecute(null));
         validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
         await vm.SaveCommand.ExecuteAsync(null);
         Assert.Equal(1, writer.CallCount);
@@ -624,8 +662,10 @@ public class PolicyEditorSessionViewModelTests
         vm.RawBuffer = root.ToJsonString();
         await vm.WaitForRawSyntaxAnalysisAsync();
 
-        Assert.True(vm.HasLocalSemanticErrors);
-        Assert.Contains(vm.Findings, finding => finding.Pointer == "/Rules/0/Match");
+        Assert.False(vm.HasLocalSemanticErrors);
+        Assert.NotNull(vm.SyntaxError);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.InvalidPolicyDraft, vm.SyntaxError!.Kind);
+        Assert.Contains("/Rules/0/Match", vm.SyntaxError.Pointer);
     }
 
     [Fact]

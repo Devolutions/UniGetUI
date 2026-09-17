@@ -17,8 +17,9 @@ internal static class PolicyEditorAdvisories
         }
 
         if (rule.Decision == Decision.Allow
-            && (rule.Match.PackageIdentifiers.Any(IsUniversalPattern)
-                || rule.Match.Sources.Any(IsUniversalPattern)))
+            && ((rule.Match.PackageIdentifierMode == PackageIdentifierMode.Patterns
+                    && rule.Match.PackageIdentifierPatterns.Any(IsUniversalPattern))
+                || rule.Match.SourceNames.Any(IsUniversalPattern)))
         {
             messages.Add(CoreTools.Translate(
                 "This Allow rule uses a universal package or source pattern and may authorize requests far beyond the intended scope."));
@@ -30,8 +31,8 @@ internal static class PolicyEditorAdvisories
         if (limits.AllowSkipHashCheck)
             messages.Add(CoreTools.Translate("This rule permits bypassing package integrity checks."));
         bool broadScope = rule.Match.Managers.Count == 0
-            && rule.Match.Sources.Count == 0
-            && rule.Match.PackageIdentifiers.Count == 0;
+            && rule.Match.SourceNames.Count == 0
+            && rule.Match.PackageIdentifierMode == PackageIdentifierMode.Omitted;
         if (limits.AllowPrePostCommands && broadScope)
             messages.Add(CoreTools.Translate("This broadly scoped rule permits arbitrary commands before or after package operations."));
         if (limits.AllowCustomParameters

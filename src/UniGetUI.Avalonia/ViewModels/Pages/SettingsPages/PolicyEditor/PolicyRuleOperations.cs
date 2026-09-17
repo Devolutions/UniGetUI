@@ -29,6 +29,18 @@ public static class PolicyRuleFactory
 
 internal static class PolicyEditorRuleSemantics
 {
+    private static readonly HashSet<ManagerName> SourceCapableManagers =
+    [
+        ManagerName.Winget,
+        ManagerName.PowerShell,
+        ManagerName.PowerShell7,
+        ManagerName.Chocolatey,
+        ManagerName.Flatpak,
+        ManagerName.Homebrew,
+        ManagerName.Scoop,
+        ManagerName.Vcpkg,
+    ];
+
     public static bool HasConfiguredSafetyLimits(PolicyEditorDraftConstraints? constraints) =>
         constraints is not null
         && (!constraints.AllowInteractive
@@ -46,16 +58,14 @@ internal static class PolicyEditorRuleSemantics
             || !constraints.AllowUpgrade);
 
     public static bool IsCatchAll(PolicyEditorDraftMatch match) =>
-        match.VersionRange is null
+        !HasVersionCriterion(match)
+        && !HasPackageIdentifierCriterion(match)
         && match.Operations.Count == 0
         && match.Managers.Count == 0
-        && match.Sources.Count == 0
-        && match.PackageIdentifiers.Count == 0
-        && match.PackageNames.Count == 0
-        && match.Versions.Count == 0
+        && match.SourceNames.Count == 0
         && match.Scopes.Count == 0
         && match.Architectures.Count == 0
-        && match.Elevation.Count == 0
+        && match.ExecutionElevation.Count == 0
         && match.Interactive == TriState.Omitted
         && match.SkipHashCheck == TriState.Omitted
         && match.PreRelease == TriState.Omitted
@@ -64,6 +74,27 @@ internal static class PolicyEditorRuleSemantics
         && match.HasPrePostCommands == TriState.Omitted
         && match.HasKillBeforeOperation == TriState.Omitted
         && match.HasUninstallPrevious == TriState.Omitted;
+
+    public static bool SupportsSourceNames(ManagerName manager) =>
+        SourceCapableManagers.Contains(manager);
+
+    public static bool HasPackageIdentifierCriterion(PolicyEditorDraftMatch match) =>
+        match.PackageIdentifierMode switch
+        {
+            PackageIdentifierMode.Exact => match.ExactPackageIdentifiers.Count > 0,
+            PackageIdentifierMode.Patterns => match.PackageIdentifierPatterns.Count > 0,
+            _ => false,
+        };
+
+    public static bool HasVersionCriterion(PolicyEditorDraftMatch match) =>
+        match.VersionMode switch
+        {
+            PackageVersionMode.Exact => match.ExactVersions.Count > 0,
+            PackageVersionMode.Range =>
+                !string.IsNullOrEmpty(match.VersionRange?.MinVersion)
+                || !string.IsNullOrEmpty(match.VersionRange?.MaxVersion),
+            _ => false,
+        };
 
 }
 

@@ -5,15 +5,12 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 /// <summary>
 /// Editable projection of <see cref="PolicyDocument"/>. Deliberately excludes
 /// <see cref="PolicyMetadata.Revision"/> and <see cref="PolicyMetadata.PublishedAt"/> (server/write-path
-/// assigned bookkeeping, never user-edited) and exposes <see cref="PolicyType"/> as a fixed,
-/// read-only value instead of an editable field: see <see cref="PolicyEditorPolicyContract"/>.
+/// assigned bookkeeping, never user-edited).
 /// Use <see cref="PolicyEditorMapper"/> to convert to/from the wire model, and <see cref="Clone"/> for a
 /// full, independent deep copy (used for snapshots, undo points, and conflict capture).
 /// </summary>
 public sealed class PolicyEditorDraftDocument
 {
-    public string PolicyType => PolicyEditorPolicyContract.PolicyType;
-
     public required PolicyFormatVersion PolicyFormatVersion { get; set; }
 
     public required PolicyEditorDraftMetadata Metadata { get; set; }
@@ -57,16 +54,10 @@ public sealed class PolicyEditorDraftMetadata
     };
 }
 
-/// <summary>
-/// Editable projection of <see cref="PolicyEnforcement"/>. <see cref="RulePrecedence"/> is fixed
-/// (see <see cref="PolicyEditorPolicyContract"/>); only <see cref="DefaultDecision"/> and
-/// <see cref="AuditMode"/> are user-editable.
-/// </summary>
+/// <summary>Editable projection of <see cref="PolicyEnforcement"/>.</summary>
 public sealed class PolicyEditorDraftEnforcement
 {
     public required Decision DefaultDecision { get; set; }
-
-    public RulePrecedence RulePrecedence => PolicyEditorPolicyContract.FixedRulePrecedence;
 
     public bool? AuditMode { get; set; }
 
@@ -116,9 +107,8 @@ public sealed class PolicyEditorDraftRule
 }
 
 /// <summary>
-/// Editable projection of <see cref="PolicyMatch"/>. The eight boolean criteria are exposed as
-/// <see cref="TriState"/> instead of <c>List&lt;bool&gt;</c>; see <see cref="TriState"/> and
-/// <see cref="PolicyEditorMapper"/> for the conversion rules.
+/// Editable projection of <see cref="PolicyMatch"/>. Exclusive package identifier and version
+/// conditions carry an explicit mode so incompatible final-contract shapes cannot coexist.
 /// </summary>
 public sealed class PolicyEditorDraftMatch
 {
@@ -126,13 +116,17 @@ public sealed class PolicyEditorDraftMatch
 
     public List<ManagerName> Managers { get; set; } = [];
 
-    public List<string> Sources { get; set; } = [];
+    public List<string> SourceNames { get; set; } = [];
 
-    public List<string> PackageIdentifiers { get; set; } = [];
+    public PackageIdentifierMode PackageIdentifierMode { get; set; }
 
-    public List<string> PackageNames { get; set; } = [];
+    public List<string> ExactPackageIdentifiers { get; set; } = [];
 
-    public List<string> Versions { get; set; } = [];
+    public List<string> PackageIdentifierPatterns { get; set; } = [];
+
+    public PackageVersionMode VersionMode { get; set; }
+
+    public List<string> ExactVersions { get; set; } = [];
 
     public PolicyEditorDraftVersionRange? VersionRange { get; set; }
 
@@ -140,7 +134,7 @@ public sealed class PolicyEditorDraftMatch
 
     public List<Architecture> Architectures { get; set; } = [];
 
-    public List<Elevation> Elevation { get; set; } = [];
+    public List<Elevation> ExecutionElevation { get; set; } = [];
 
     public TriState Interactive { get; set; }
 
@@ -162,14 +156,16 @@ public sealed class PolicyEditorDraftMatch
     {
         Operations = [.. Operations],
         Managers = [.. Managers],
-        Sources = [.. Sources],
-        PackageIdentifiers = [.. PackageIdentifiers],
-        PackageNames = [.. PackageNames],
-        Versions = [.. Versions],
+        SourceNames = [.. SourceNames],
+        PackageIdentifierMode = PackageIdentifierMode,
+        ExactPackageIdentifiers = [.. ExactPackageIdentifiers],
+        PackageIdentifierPatterns = [.. PackageIdentifierPatterns],
+        VersionMode = VersionMode,
+        ExactVersions = [.. ExactVersions],
         VersionRange = VersionRange?.Clone(),
         Scopes = [.. Scopes],
         Architectures = [.. Architectures],
-        Elevation = [.. Elevation],
+        ExecutionElevation = [.. ExecutionElevation],
         Interactive = Interactive,
         SkipHashCheck = SkipHashCheck,
         PreRelease = PreRelease,

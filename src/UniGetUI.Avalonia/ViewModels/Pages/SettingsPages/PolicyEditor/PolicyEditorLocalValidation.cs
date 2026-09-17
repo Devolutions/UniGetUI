@@ -44,7 +44,7 @@ internal static class PolicyEditorLocalValidation
                     PolicyFindingCode.InvalidFieldValue));
             }
 
-            if (rule.Match.Sources.Count > 0 && rule.Match.Managers.Count != 1)
+            if (rule.Match.SourceNames.Count > 0 && rule.Match.Managers.Count != 1)
             {
                 findings.Add(new(
                     $"/Rules/{index}/Match/Managers",
@@ -55,9 +55,61 @@ internal static class PolicyEditorLocalValidation
                         index + 1),
                     PolicyFindingCode.InvalidFieldValue));
             }
+            else if (rule.Match.SourceNames.Count > 0
+                && !PolicyEditorRuleSemantics.SupportsSourceNames(rule.Match.Managers[0]))
+            {
+                findings.Add(new(
+                    $"/Rules/{index}/Match/Managers",
+                    rule.Id,
+                    PolicyValidationSeverity.Error,
+                    CoreTools.Translate(
+                        "Rule {0} uses Source names, but the selected package manager does not support configured sources. Choose a source-capable manager or remove Source names.",
+                        index + 1),
+                    PolicyFindingCode.InvalidFieldValue));
+            }
+
+            AddExclusiveConditionFindings(findings, rule, index);
         }
 
         return findings;
+    }
+
+    private static void AddExclusiveConditionFindings(
+        List<PolicyValidationFinding> findings,
+        PolicyEditorDraftRule rule,
+        int index)
+    {
+        if (rule.Match.PackageIdentifierMode != PackageIdentifierMode.Omitted
+            && !PolicyEditorRuleSemantics.HasPackageIdentifierCriterion(rule.Match))
+        {
+            string member = rule.Match.PackageIdentifierMode == PackageIdentifierMode.Exact
+                ? "Exact"
+                : "Patterns";
+            findings.Add(new(
+                $"/Rules/{index}/Match/PackageIdentifiers/{member}",
+                rule.Id,
+                PolicyValidationSeverity.Error,
+                CoreTools.Translate(
+                    "Rule {0} must include at least one package identifier for the selected match mode.",
+                    index + 1),
+                PolicyFindingCode.InvalidFieldValue));
+        }
+
+        if (rule.Match.VersionMode != PackageVersionMode.Omitted
+            && !PolicyEditorRuleSemantics.HasVersionCriterion(rule.Match))
+        {
+            string member = rule.Match.VersionMode == PackageVersionMode.Exact
+                ? "Exact"
+                : "Range";
+            findings.Add(new(
+                $"/Rules/{index}/Match/Version/{member}",
+                rule.Id,
+                PolicyValidationSeverity.Error,
+                CoreTools.Translate(
+                    "Rule {0} must include at least one exact version or a semantic-version range for the selected match mode.",
+                    index + 1),
+                PolicyFindingCode.InvalidFieldValue));
+        }
     }
 
     private static string DescribePolicyIdError(string value) =>

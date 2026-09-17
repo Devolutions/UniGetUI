@@ -152,10 +152,10 @@ public class PolicyEditorFindingIndexTests
         "Priority exceeds 2147483647")]
     [InlineData(
         PolicyFindingCode.InvalidFieldType,
-        "/Rules/0/Match/PackageNames",
-        "PackageNames must be an array of strings",
+        "/Rules/0/Match/PackageIdentifiers/Exact",
+        "Exact package identifiers must be an array of strings",
         "A policy field has the wrong value type.",
-        "PackageNames must be an array of strings")]
+        "Exact package identifiers must be an array of strings")]
     [InlineData(
         PolicyFindingCode.MissingRequiredField,
         "/Metadata/Publisher",
@@ -164,16 +164,16 @@ public class PolicyEditorFindingIndexTests
         "Publisher is required")]
     [InlineData(
         PolicyFindingCode.UnknownField,
-        "/Rules/0/Match/UnsupportedPackageNames",
-        "Unsupported field 'UnsupportedPackageNames'",
+        "/Rules/0/Match/UnsupportedPackageCondition",
+        "Unsupported field 'UnsupportedPackageCondition'",
         "The policy draft contains an unknown field.",
-        "Unsupported field 'UnsupportedPackageNames'")]
+        "Unsupported field 'UnsupportedPackageCondition'")]
     [InlineData(
         PolicyFindingCode.InvalidFieldValue,
-        "/Rules/0/Match/Versions/0",
-        "'not-semver' is not a valid semantic version",
+        "/Rules/0/Match/Version/Exact/0",
+        "Exact version entries cannot be empty",
         "A policy field has an invalid value.",
-        "not-semver")]
+        "cannot be empty")]
     [InlineData(
         PolicyFindingCode.InvalidValidityInterval,
         "/Metadata/ValidUntil",
@@ -411,7 +411,9 @@ public class PolicyEditorFindingIndexTests
     {
         PolicyEditorSession session = PolicyEditorSession.StartUpdate(
             PolicyEditorTestFixtures.BuildActiveManagement());
-        session.AddRule(PolicyRuleFactory.CreateBlank("first-rule"));
+        PolicyEditorDraftRule draftRule =
+            session.AddRule(PolicyRuleFactory.CreateBlank("first-rule"));
+        draftRule.Match.Operations.Add(Devolutions.Now.Policy.Model.Operation.Install);
         string raw = session.GetEffectiveRawJson();
         var validation = new PolicyValidationResult
         {
@@ -420,8 +422,8 @@ public class PolicyEditorFindingIndexTests
             [
                 Error(PolicyFindingCode.UnsupportedPolicyFormatVersion, "/PolicyFormatVersion", "format 2 is unsupported"),
                 Error(PolicyFindingCode.InvalidValidityInterval, "/Metadata/ValidUntil", "must follow ValidFrom"),
-                Error(PolicyFindingCode.InvalidFieldValue, "/Rules/0/Match/PackageNames", "unsupported PackageNames"),
-                Error(PolicyFindingCode.InvalidFieldValue, "/Rules/0/Match/Versions/0", "invalid semantic version"),
+                Error(PolicyFindingCode.InvalidFieldValue, "/Rules/0/Match/PackageIdentifiers/Exact/0", "invalid package identifier"),
+                Error(PolicyFindingCode.InvalidFieldValue, "/Rules/0/Match/Version/Exact/0", "invalid exact version"),
             ],
         };
         session.ApplyValidationResult(raw, validation);
@@ -438,10 +440,10 @@ public class PolicyEditorFindingIndexTests
         Assert.False(dialog.Document.HasValidFromErrors);
         Assert.False(dialog.Document.HasPublisherErrors);
         PolicyEditorRuleUi rule = Assert.Single(dialog.Rules);
-        Assert.True(rule.HasPackageNamesErrors);
-        Assert.True(rule.HasVersionsErrors);
-        Assert.Contains("PackageNames", Assert.Single(rule.PackageNamesFindings).Message);
-        Assert.Contains("semantic version", Assert.Single(rule.VersionsFindings).Message);
+        Assert.True(rule.HasExactPackageIdentifierErrors);
+        Assert.True(rule.HasExactVersionErrors);
+        Assert.Contains("package identifier", Assert.Single(rule.ExactPackageIdentifierFindings).Message);
+        Assert.Contains("exact version", Assert.Single(rule.ExactVersionFindings).Message);
         Assert.False(rule.HasMinVersionErrors);
         Assert.False(rule.HasMaxVersionErrors);
     }

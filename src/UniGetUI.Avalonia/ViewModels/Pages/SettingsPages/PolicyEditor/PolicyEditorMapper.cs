@@ -76,7 +76,6 @@ public static class PolicyEditorMapper
         return new PolicyDraftDocument
         {
             PolicyFormatVersion = draft.PolicyFormatVersion,
-            PolicyType = PolicyEditorPolicyContract.PolicyType,
             Metadata = new PolicyDraftMetadata
             {
                 Id = draft.Metadata.Id,
@@ -100,7 +99,6 @@ public static class PolicyEditorMapper
         return new PolicyDraftDocument
         {
             PolicyFormatVersion = draft.PolicyFormatVersion,
-            PolicyType = PolicyEditorPolicyContract.PolicyType,
             Metadata = new PolicyDraftMetadata
             {
                 Id = draft.Metadata.Id,
@@ -141,7 +139,6 @@ public static class PolicyEditorMapper
 
         return new PolicyDocument
         {
-            PolicyType = PolicyEditorPolicyContract.PolicyType,
             PolicyFormatVersion = draft.PolicyFormatVersion,
             Metadata = ToDocument(draft.Metadata, revision, publishedAt),
             Enforcement = ToDocument(draft.Enforcement),
@@ -160,7 +157,6 @@ public static class PolicyEditorMapper
 
         return new PolicyDocument
         {
-            PolicyType = document.PolicyType,
             PolicyFormatVersion = document.PolicyFormatVersion,
             Metadata = CloneMetadata(document.Metadata),
             Enforcement = CloneEnforcement(document.Enforcement),
@@ -172,8 +168,7 @@ public static class PolicyEditorMapper
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        return PolicySerializer.DeserializePolicyDraftDocumentStrict(PolicySerializer.Serialize(document))
-            ?? throw new InvalidOperationException("Serialized policy draft unexpectedly deserialized as null.");
+        return PolicyDraftDocument.ParseJson(PolicySerializer.Serialize(document));
     }
 
     public static PolicyManagementSnapshot CloneManagementSnapshot(
@@ -244,14 +239,12 @@ public static class PolicyEditorMapper
     private static PolicyEnforcement ToDocument(PolicyEditorDraftEnforcement draft) => new()
     {
         DefaultDecision = draft.DefaultDecision,
-        RulePrecedence = PolicyEditorPolicyContract.FixedRulePrecedence,
         AuditMode = draft.AuditMode,
     };
 
     private static PolicyEnforcement CloneEnforcement(PolicyEnforcement enforcement) => new()
     {
         DefaultDecision = enforcement.DefaultDecision,
-        RulePrecedence = enforcement.RulePrecedence,
         AuditMode = enforcement.AuditMode,
     };
 
@@ -315,14 +308,16 @@ public static class PolicyEditorMapper
     {
         Operations = [.. match.Operations],
         Managers = [.. match.Managers],
-        Sources = [.. match.Sources],
-        PackageIdentifiers = [.. match.PackageIdentifiers],
-        PackageNames = [.. match.PackageNames],
-        Versions = [.. match.Versions],
-        VersionRange = match.VersionRange is null ? null : ToDraft(match.VersionRange),
+        SourceNames = [.. match.SourceNames],
+        PackageIdentifierMode = GetPackageIdentifierMode(match.PackageIdentifiers),
+        ExactPackageIdentifiers = [.. match.PackageIdentifiers?.Exact ?? []],
+        PackageIdentifierPatterns = [.. match.PackageIdentifiers?.Patterns ?? []],
+        VersionMode = GetVersionMode(match.Version),
+        ExactVersions = [.. match.Version?.Exact ?? []],
+        VersionRange = match.Version?.Range is null ? null : ToDraft(match.Version.Range),
         Scopes = [.. match.Scopes],
         Architectures = [.. match.Architectures],
-        Elevation = [.. match.Elevation],
+        ExecutionElevation = [.. match.ExecutionElevation],
         Interactive = ToTriState(match.Interactive),
         SkipHashCheck = ToTriState(match.SkipHashCheck),
         PreRelease = ToTriState(match.PreRelease),
@@ -337,14 +332,12 @@ public static class PolicyEditorMapper
     {
         Operations = [.. draft.Operations],
         Managers = [.. draft.Managers],
-        Sources = [.. draft.Sources],
-        PackageIdentifiers = [.. draft.PackageIdentifiers],
-        PackageNames = [.. draft.PackageNames],
-        Versions = [.. draft.Versions],
-        VersionRange = draft.VersionRange is null ? null : ToDocument(draft.VersionRange),
+        SourceNames = [.. draft.SourceNames],
+        PackageIdentifiers = ToDocumentPackageIdentifiers(draft),
+        Version = ToDocumentVersion(draft),
         Scopes = [.. draft.Scopes],
         Architectures = [.. draft.Architectures],
-        Elevation = [.. draft.Elevation],
+        ExecutionElevation = [.. draft.ExecutionElevation],
         Interactive = FromTriState(draft.Interactive),
         SkipHashCheck = FromTriState(draft.SkipHashCheck),
         PreRelease = FromTriState(draft.PreRelease),
@@ -359,22 +352,20 @@ public static class PolicyEditorMapper
     {
         Operations = [.. match.Operations],
         Managers = [.. match.Managers],
-        Sources = [.. match.Sources],
-        PackageIdentifiers = [.. match.PackageIdentifiers],
-        PackageNames = [.. match.PackageNames],
-        Versions = [.. match.Versions],
-        VersionRange = match.VersionRange is null ? null : CloneVersionRange(match.VersionRange),
+        SourceNames = [.. match.SourceNames],
+        PackageIdentifiers = ClonePackageIdentifiers(match.PackageIdentifiers),
+        Version = CloneVersion(match.Version),
         Scopes = [.. match.Scopes],
         Architectures = [.. match.Architectures],
-        Elevation = [.. match.Elevation],
-        Interactive = [.. match.Interactive],
-        SkipHashCheck = [.. match.SkipHashCheck],
-        PreRelease = [.. match.PreRelease],
-        HasCustomParameters = [.. match.HasCustomParameters],
-        HasCustomInstallLocation = [.. match.HasCustomInstallLocation],
-        HasPrePostCommands = [.. match.HasPrePostCommands],
-        HasKillBeforeOperation = [.. match.HasKillBeforeOperation],
-        HasUninstallPrevious = [.. match.HasUninstallPrevious],
+        ExecutionElevation = [.. match.ExecutionElevation],
+        Interactive = match.Interactive,
+        SkipHashCheck = match.SkipHashCheck,
+        PreRelease = match.PreRelease,
+        HasCustomParameters = match.HasCustomParameters,
+        HasCustomInstallLocation = match.HasCustomInstallLocation,
+        HasPrePostCommands = match.HasPrePostCommands,
+        HasKillBeforeOperation = match.HasKillBeforeOperation,
+        HasUninstallPrevious = match.HasUninstallPrevious,
     };
 
     private static PolicyEditorDraftVersionRange ToDraft(VersionRange range) => new()
@@ -452,20 +443,106 @@ public static class PolicyEditorMapper
     // ---- Tri-state boolean-match conversion --------------------------------------------------
 
     /// <summary>
-    /// Converts the contract's empty-or-single-value boolean match into a tri-state.
+    /// Converts the contract's nullable boolean match into a tri-state.
     /// </summary>
-    internal static TriState ToTriState(IReadOnlyCollection<bool> values) => values.Count switch
+    internal static TriState ToTriState(bool? value) => value switch
     {
-        0 => TriState.Omitted,
-        1 => values.First() ? TriState.True : TriState.False,
-        _ => throw new InvalidDataException("Boolean policy match arrays may contain at most one value."),
+        null => TriState.Omitted,
+        true => TriState.True,
+        false => TriState.False,
     };
 
-    internal static List<bool> FromTriState(TriState state) => state switch
+    internal static bool? FromTriState(TriState state) => state switch
     {
-        TriState.Omitted => [],
-        TriState.True => [true],
-        TriState.False => [false],
+        TriState.Omitted => null,
+        TriState.True => true,
+        TriState.False => false,
         _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unknown tri-state value."),
     };
+
+    private static PackageIdentifierMode GetPackageIdentifierMode(
+        PackageIdentifierCondition? condition) =>
+        condition?.Patterns?.Count > 0
+            ? PackageIdentifierMode.Patterns
+            : condition?.Exact?.Count > 0
+                ? PackageIdentifierMode.Exact
+                : PackageIdentifierMode.Omitted;
+
+    private static PackageVersionMode GetVersionMode(VersionCondition? condition) =>
+        condition?.Range is not null
+            ? PackageVersionMode.Range
+            : condition?.Exact?.Count > 0
+                ? PackageVersionMode.Exact
+                : PackageVersionMode.Omitted;
+
+    private static PackageIdentifierCondition? ToDocumentPackageIdentifiers(
+        PolicyEditorDraftMatch draft)
+    {
+        var condition = new PackageIdentifierCondition();
+        switch (draft.PackageIdentifierMode)
+        {
+            case PackageIdentifierMode.Omitted:
+                return null;
+            case PackageIdentifierMode.Exact:
+                condition.UseExact([.. draft.ExactPackageIdentifiers]);
+                return condition;
+            case PackageIdentifierMode.Patterns:
+                condition.UsePatterns([.. draft.PackageIdentifierPatterns]);
+                return condition;
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(draft),
+                    draft.PackageIdentifierMode,
+                    "Unknown package identifier mode.");
+        }
+    }
+
+    private static VersionCondition? ToDocumentVersion(PolicyEditorDraftMatch draft)
+    {
+        var condition = new VersionCondition();
+        switch (draft.VersionMode)
+        {
+            case PackageVersionMode.Omitted:
+                return null;
+            case PackageVersionMode.Exact:
+                condition.UseExact([.. draft.ExactVersions]);
+                return condition;
+            case PackageVersionMode.Range:
+                condition.UseRange(ToDocument(
+                    draft.VersionRange ?? new PolicyEditorDraftVersionRange()));
+                return condition;
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(draft),
+                    draft.VersionMode,
+                    "Unknown package version mode.");
+        }
+    }
+
+    private static PackageIdentifierCondition? ClonePackageIdentifiers(
+        PackageIdentifierCondition? condition)
+    {
+        if (condition is null)
+            return null;
+
+        var clone = new PackageIdentifierCondition();
+        if (condition.Patterns?.Count > 0)
+            clone.UsePatterns([.. condition.Patterns]);
+        else
+            clone.UseExact([.. condition.Exact ?? []]);
+        return clone;
+    }
+
+    private static VersionCondition? CloneVersion(VersionCondition? condition)
+    {
+        if (condition is null)
+            return null;
+
+        var clone = new VersionCondition();
+        if (condition.Range is not null)
+            clone.UseRange(CloneVersionRange(condition.Range));
+        else
+            clone.UseExact([.. condition.Exact ?? []]);
+        return clone;
+    }
 }

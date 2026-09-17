@@ -10,7 +10,9 @@ public class PolicyEditorRawSyntaxTests
     public void TryParseStrict_ValidCanonicalRaw_Succeeds()
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
-        draft.Rules.Add(PolicyRuleFactory.CreateBlank("rule-a"));
+        PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("rule-a");
+        rule.Match.Operations.Add(Operation.Install);
+        draft.Rules.Add(rule);
         string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
 
         bool ok = PolicyEditorRawSyntax.TryParseStrict(raw, out PolicyEditorDraftDocument? parsed, out PolicyEditorSyntaxError? error);
@@ -30,11 +32,13 @@ public class PolicyEditorRawSyntaxTests
         PolicyEditorDraftRule later = PolicyRuleFactory.CreateBlank("later");
         later.Priority = 20;
         later.Decision = Decision.Allow;
-        later.Match.PackageIdentifiers.Add("Later.App");
+        later.Match.PackageIdentifierMode = PackageIdentifierMode.Exact;
+        later.Match.ExactPackageIdentifiers.Add("Later.App");
         PolicyEditorDraftRule first = PolicyRuleFactory.CreateBlank("first");
         first.Priority = 10;
         first.Decision = Decision.Deny;
-        first.Match.PackageIdentifiers.Add("First.App");
+        first.Match.PackageIdentifierMode = PackageIdentifierMode.Exact;
+        first.Match.ExactPackageIdentifiers.Add("First.App");
         draft.Rules.Add(later);
         draft.Rules.Add(first);
         string raw = PolicyEditorRawSyntax.ToCanonicalRawPreservingPriorities(draft);
@@ -52,7 +56,7 @@ public class PolicyEditorRawSyntaxTests
         Assert.Equal(["First invalid", "Later invalid"], parsed.Rules.Select(rule => rule.Id));
         Assert.Equal(
             ["First.App", "Later.App"],
-            parsed.Rules.Select(rule => Assert.Single(rule.Match.PackageIdentifiers)));
+            parsed.Rules.Select(rule => Assert.Single(rule.Match.ExactPackageIdentifiers)));
     }
 
     [Fact]
@@ -99,17 +103,66 @@ public class PolicyEditorRawSyntaxTests
         Assert.Equal("", error.Pointer);
     }
 
+    [Fact]
+    public void TryParseStrict_DuplicateProperty_IsRejectedWithoutNormalization()
+    {
+        string raw = PolicySerializer.Serialize(BuildValidPackageDraft());
+        string duplicate = raw.Replace(
+            "\"Publisher\": \"Contoso\"",
+            "\"Publisher\": \"Contoso\", \"Publisher\": \"Fabrikam\"",
+            StringComparison.Ordinal);
+        Assert.NotEqual(raw, duplicate);
+
+        Assert.False(PolicyEditorRawSyntax.TryParseStrict(
+            duplicate,
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error));
+        Assert.Null(parsed);
+        Assert.NotNull(error);
+    }
+
+    [Theory]
+    [InlineData("Sources", "[\"community\"]")]
+    [InlineData("PackageNames", "[\"Contoso App\"]")]
+    [InlineData("Versions", "[\"1.0.0\"]")]
+    [InlineData("Elevation", "[\"Standard\"]")]
+    [InlineData("Interactive", "[true]")]
+    public void TryParseStrict_RemovedMatchShapes_AreRejected(
+        string property,
+        string value)
+    {
+        JsonNode root = JsonNode.Parse(PolicySerializer.Serialize(BuildValidPackageDraft()))!;
+        root["Rules"] = new JsonArray(JsonNode.Parse(
+            $$"""
+            {
+              "Id": "rule",
+              "Enabled": false,
+              "Priority": 0,
+              "Decision": "Deny",
+              "Match": {
+                "Operations": ["Install"],
+                "{{property}}": {{value}}
+              }
+            }
+            """));
+
+        Assert.False(PolicyEditorRawSyntax.TryParseStrict(
+            root.ToJsonString(),
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error));
+        Assert.Null(parsed);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.InvalidPolicyDraft, error!.Kind);
+    }
+
     private static PolicyDraftDocument BuildValidPackageDraft(string id = "contoso-policy")
     {
         return new PolicyDraftDocument
         {
             PolicyFormatVersion = PolicyFormatVersion.Parse("1.2.3"),
-            PolicyType = PolicyEditorPolicyContract.PolicyType,
             Metadata = new PolicyDraftMetadata { Id = id, Publisher = "Contoso" },
             Enforcement = new PolicyEnforcement
             {
                 DefaultDecision = Decision.Deny,
-                RulePrecedence = RulePrecedence.PriorityThenDeny,
             },
             Rules = [],
         };
@@ -223,7 +276,7 @@ public class PolicyEditorRawSyntaxTests
     }
 
     [Fact]
-    public void TryParseStrict_WrongPolicyType_FailsClosedWithPolicyTypePointer()
+    public void TryParseStrict_RemovedPolicyTypeField_IsRejected()
     {
         JsonNode root = JsonNode.Parse(PolicySerializer.Serialize(BuildValidPackageDraft()))!;
         root["PolicyType"] = "SomeOtherPolicy";
@@ -233,8 +286,7 @@ public class PolicyEditorRawSyntaxTests
 
         Assert.False(ok);
         Assert.Null(parsed);
-        Assert.Equal(PolicyEditorSyntaxErrorKind.UnsupportedPolicyType, error!.Kind);
-        Assert.Equal("/PolicyType", error.Pointer);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.InvalidPolicyDraft, error!.Kind);
     }
 
     [Fact]
@@ -257,7 +309,7 @@ public class PolicyEditorRawSyntaxTests
     }
 
     [Fact]
-    public void TryParseStrict_WrongRulePrecedence_FailsClosedWithRulePrecedencePointer()
+    public void TryParseStrict_RemovedRulePrecedenceField_IsRejected()
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
         string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
@@ -272,8 +324,7 @@ public class PolicyEditorRawSyntaxTests
 
         Assert.False(ok);
         Assert.Null(parsed);
-        Assert.Equal(PolicyEditorSyntaxErrorKind.UnsupportedRulePrecedence, error!.Kind);
-        Assert.Equal("/Enforcement/RulePrecedence", error.Pointer);
+        Assert.Equal(PolicyEditorSyntaxErrorKind.InvalidPolicyDraft, error!.Kind);
     }
 
     [Fact]
@@ -300,7 +351,9 @@ public class PolicyEditorRawSyntaxTests
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("round-trip-id", "Contoso");
         draft.Enforcement.DefaultDecision = Decision.Allow;
-        draft.Rules.Add(PolicyRuleFactory.CreateBlank("rule-a"));
+        PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("rule-a");
+        rule.Match.Operations.Add(Operation.Install);
+        draft.Rules.Add(rule);
 
         string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
         bool ok = PolicyEditorRawSyntax.TryParseStrict(raw, out PolicyEditorDraftDocument? parsed, out _);
@@ -349,7 +402,9 @@ public class PolicyEditorRawSyntaxTests
     public void ToCanonicalRaw_NeverEmitsRevisionOrPublishedAt()
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
-        draft.Rules.Add(PolicyRuleFactory.CreateBlank("rule-a"));
+        PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("rule-a");
+        rule.Match.Operations.Add(Operation.Install);
+        draft.Rules.Add(rule);
 
         string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
 

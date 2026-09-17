@@ -183,7 +183,6 @@ public class BrokerPolicyInspectorTests
         BrokerPolicyInspectionResult result = await inspector.InspectAsync(CancellationToken.None);
         Assert.Equal(BrokerPolicyInspectionStatus.AgentUnavailable, result.Status);
     }
-    }
 
     [Theory]
     [InlineData("")]
@@ -372,11 +371,16 @@ public class BrokerPolicyInspectorTests
     private sealed class FakeTransport : IBrokerTransport
     {
         private readonly BrokerTransportResponse? _response;
+        private readonly Exception? _exception;
         private readonly bool _waitForCancellation;
 
-        public FakeTransport(BrokerTransportResponse? response = null, bool waitForCancellation = false)
+        public FakeTransport(
+            BrokerTransportResponse? response = null,
+            Exception? exception = null,
+            bool waitForCancellation = false)
         {
             _response = response;
+            _exception = exception;
             _waitForCancellation = waitForCancellation;
         }
 
@@ -391,6 +395,11 @@ public class BrokerPolicyInspectorTests
             if (_waitForCancellation)
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+
+            if (_exception is not null)
+            {
+                throw _exception;
             }
 
             return _response ?? throw new InvalidOperationException("No response configured.");

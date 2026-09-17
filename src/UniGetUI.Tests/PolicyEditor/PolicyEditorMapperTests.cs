@@ -45,7 +45,6 @@ public class PolicyEditorMapperTests
         PolicyEditorDraftDocument draft = PolicyEditorMapper.ToDraft(document);
 
         Assert.Equal(document.PolicyFormatVersion, draft.PolicyFormatVersion);
-        Assert.Equal(document.PolicyType, draft.PolicyType);
 
         Assert.Equal(document.Metadata.Id, draft.Metadata.Id);
         Assert.Equal(document.Metadata.Publisher, draft.Metadata.Publisher);
@@ -55,7 +54,6 @@ public class PolicyEditorMapperTests
         Assert.Equal(document.Metadata.SupportUrl, draft.Metadata.SupportUrl);
 
         Assert.Equal(document.Enforcement.DefaultDecision, draft.Enforcement.DefaultDecision);
-        Assert.Equal(document.Enforcement.RulePrecedence, draft.Enforcement.RulePrecedence);
         Assert.Equal(document.Enforcement.AuditMode, draft.Enforcement.AuditMode);
 
         PolicyEditorDraftRule draftRule = Assert.Single(draft.Rules);
@@ -68,17 +66,19 @@ public class PolicyEditorMapperTests
 
         Assert.Equal(sourceRule.Match.Operations, draftRule.Match.Operations);
         Assert.Equal(sourceRule.Match.Managers, draftRule.Match.Managers);
-        Assert.Equal(sourceRule.Match.Sources, draftRule.Match.Sources);
-        Assert.Equal(sourceRule.Match.PackageIdentifiers, draftRule.Match.PackageIdentifiers);
-        Assert.Equal(sourceRule.Match.PackageNames, draftRule.Match.PackageNames);
-        Assert.Equal(sourceRule.Match.Versions, draftRule.Match.Versions);
+        Assert.Equal(sourceRule.Match.SourceNames, draftRule.Match.SourceNames);
+        Assert.Equal(PackageIdentifierMode.Exact, draftRule.Match.PackageIdentifierMode);
+        Assert.Equal(
+            sourceRule.Match.PackageIdentifiers!.Exact,
+            draftRule.Match.ExactPackageIdentifiers);
+        Assert.Equal(PackageVersionMode.Range, draftRule.Match.VersionMode);
         Assert.NotNull(draftRule.Match.VersionRange);
-        Assert.Equal(sourceRule.Match.VersionRange!.MinVersion, draftRule.Match.VersionRange!.MinVersion);
-        Assert.Equal(sourceRule.Match.VersionRange!.MaxVersion, draftRule.Match.VersionRange!.MaxVersion);
-        Assert.Equal(sourceRule.Match.VersionRange!.IncludePrerelease, draftRule.Match.VersionRange!.IncludePrerelease);
+        Assert.Equal(sourceRule.Match.Version!.Range!.MinVersion, draftRule.Match.VersionRange!.MinVersion);
+        Assert.Equal(sourceRule.Match.Version.Range.MaxVersion, draftRule.Match.VersionRange.MaxVersion);
+        Assert.Equal(sourceRule.Match.Version.Range.IncludePrerelease, draftRule.Match.VersionRange.IncludePrerelease);
         Assert.Equal(sourceRule.Match.Scopes, draftRule.Match.Scopes);
         Assert.Equal(sourceRule.Match.Architectures, draftRule.Match.Architectures);
-        Assert.Equal(sourceRule.Match.Elevation, draftRule.Match.Elevation);
+        Assert.Equal(sourceRule.Match.ExecutionElevation, draftRule.Match.ExecutionElevation);
 
         // Every boolean tri-state criterion round-trips through the mapper's ToTriState/FromTriState.
         Assert.Equal(TriState.True, draftRule.Match.Interactive);
@@ -108,17 +108,14 @@ public class PolicyEditorMapperTests
         Assert.Equal(sourceConstraints.AllowUpgrade, draftConstraints.AllowUpgrade);
     }
 
-    // ---- Tri-state boolean-match conversion (correction #4: mixed/2+ element arrays are contract-
-    // invalid/unreachable and must throw, never be silently normalized) ------------------------------
-
     [Theory]
-    [InlineData(new bool[] { }, TriState.Omitted)]
-    [InlineData(new[] { true }, TriState.True)]
-    [InlineData(new[] { false }, TriState.False)]
-    public void ToDraft_NormalizesEmptyOrSingleElementBooleanListsToTriState(bool[] wireValues, TriState expected)
+    [InlineData(null, TriState.Omitted)]
+    [InlineData(true, TriState.True)]
+    [InlineData(false, TriState.False)]
+    public void ToDraft_MapsNullableBooleanToTriState(bool? wireValue, TriState expected)
     {
         PolicyRule rule = PolicyEditorTestFixtures.BuildMinimalRule();
-        rule.Match.Interactive = [.. wireValues];
+        rule.Match.Interactive = wireValue;
         PolicyDocument document = PolicyEditorTestFixtures.BuildDocument(rules: rule);
 
         PolicyEditorDraftDocument draft = PolicyEditorMapper.ToDraft(document);
@@ -127,51 +124,93 @@ public class PolicyEditorMapperTests
     }
 
     [Theory]
-    [InlineData(new[] { true, false })]
-    [InlineData(new[] { false, true })]
-    [InlineData(new[] { true, true })]
-    [InlineData(new[] { false, false })]
-    [InlineData(new[] { true, false, true })]
-    public void ToTriState_RejectsMultiElementBooleanLists_ContractInvalidUnreachable(bool[] wireValues)
-    {
-        Assert.Throws<InvalidDataException>(() => PolicyEditorMapper.ToTriState(wireValues));
-    }
-
-    [Theory]
-    [InlineData(new[] { true, false })]
-    [InlineData(new[] { false, true })]
-    public void ToDraft_RejectsMultiElementBooleanMatchLists_DoesNotSilentlyNormalizeToOmitted(bool[] wireValues)
-    {
-        PolicyRule rule = PolicyEditorTestFixtures.BuildMinimalRule();
-        rule.Match.Interactive = [.. wireValues];
-        PolicyDocument document = PolicyEditorTestFixtures.BuildDocument(rules: rule);
-
-        Assert.Throws<InvalidDataException>(() => PolicyEditorMapper.ToDraft(document));
-    }
-
-    [Theory]
     [InlineData(TriState.Omitted)]
     [InlineData(TriState.True)]
     [InlineData(TriState.False)]
     public void FromTriState_RoundTripsThroughToTriState(TriState state)
     {
-        List<bool> wire = PolicyEditorMapper.FromTriState(state);
+        bool? wire = PolicyEditorMapper.FromTriState(state);
         TriState roundTripped = PolicyEditorMapper.ToTriState(wire);
 
         Assert.Equal(state, roundTripped);
     }
 
+    [Fact]
+    public void FinalConditionModes_AreExclusiveAndCanonicalJsonOmitsInactiveShapes()
+    {
+        PolicyEditorDraftDocument draft =
+            PolicyEditorTemplates.CreateNew("policy", "Contoso");
+        PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("rule");
+        draft.Rules.Add(rule);
+
+        rule.Match.PackageIdentifierMode = PackageIdentifierMode.Exact;
+        rule.Match.ExactPackageIdentifiers.Add("Contoso.App");
+        rule.Match.PackageIdentifierPatterns.Add("Ignored.*");
+        rule.Match.VersionMode = PackageVersionMode.Exact;
+        rule.Match.ExactVersions.Add("release-channel-A");
+        rule.Match.VersionRange = new PolicyEditorDraftVersionRange
+        {
+            MinVersion = "1.0.0",
+            MaxVersion = "2.0.0",
+        };
+        rule.Match.Interactive = TriState.True;
+
+        string exact = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+
+        Assert.Contains("\"Exact\": [", exact);
+        Assert.Contains("\"release-channel-A\"", exact);
+        Assert.Contains("\"Interactive\": true", exact);
+        Assert.DoesNotContain("\"Patterns\"", exact);
+        Assert.DoesNotContain("\"Range\"", exact);
+        Assert.DoesNotContain("[true]", exact);
+
+        rule.Match.PackageIdentifierMode = PackageIdentifierMode.Patterns;
+        rule.Match.VersionMode = PackageVersionMode.Range;
+        string ranged = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+
+        Assert.Contains("\"Patterns\": [", ranged);
+        Assert.Contains("\"Range\": {", ranged);
+        Assert.DoesNotContain("\"release-channel-A\"", ranged);
+        Assert.DoesNotContain("\"Contoso.App\"", ranged);
+
+        rule.Match.PackageIdentifierMode = PackageIdentifierMode.Omitted;
+        rule.Match.VersionMode = PackageVersionMode.Omitted;
+        string omitted = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+
+        Assert.DoesNotContain("\"PackageIdentifiers\"", omitted);
+        Assert.DoesNotContain("\"Version\"", omitted);
+    }
+
+    [Fact]
+    public void NullableBooleanMatch_OmittedSerializesAsNoProperty()
+    {
+        PolicyEditorDraftDocument draft =
+            PolicyEditorTemplates.CreateNew("policy", "Contoso");
+        PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("rule");
+        rule.Match.Operations.Add(Operation.Install);
+        draft.Rules.Add(rule);
+
+        string omitted = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        Assert.DoesNotContain("\"Interactive\"", omitted);
+
+        rule.Match.Interactive = TriState.False;
+        string selected = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        Assert.Contains("\"Interactive\": false", selected);
+        Assert.DoesNotContain("[false]", selected);
+    }
+
     // ---- PolicyDocument <-> PolicyEditorDraftDocument (authoritative committed shape) -------------
 
     [Fact]
-    public void ToDocument_ProducesFixedPolicyTypeRegardlessOfDraftContent()
+    public void ToDocument_ProducesFinalContractWithoutRemovedFields()
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("some-id", "Some Publisher");
 
         PolicyDocument document = PolicyEditorMapper.ToDocument(draft, revision: 1, publishedAt: DateTimeOffset.UtcNow);
 
-        Assert.Equal(PolicyEditorPolicyContract.PolicyType, document.PolicyType);
-        Assert.Equal(RulePrecedence.PriorityThenDeny, document.Enforcement.RulePrecedence);
+        string json = PolicySerializer.Serialize(document);
+        Assert.DoesNotContain("\"PolicyType\"", json);
+        Assert.DoesNotContain("\"RulePrecedence\"", json);
     }
 
     [Fact]
@@ -208,10 +247,10 @@ public class PolicyEditorMapperTests
         PolicyDocument document = PolicyEditorTestFixtures.BuildDocument(rules: rule);
 
         PolicyEditorDraftDocument draft = PolicyEditorMapper.ToDraft(document);
-        draft.Rules[0].Match.Sources.Add("new-source");
+        draft.Rules[0].Match.SourceNames.Add("new-source");
         draft.Metadata.Description = "changed";
 
-        Assert.DoesNotContain("new-source", document.Rules[0].Match.Sources);
+        Assert.DoesNotContain("new-source", document.Rules[0].Match.SourceNames);
         Assert.NotEqual("changed", document.Metadata.Description);
     }
 
@@ -220,13 +259,15 @@ public class PolicyEditorMapperTests
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("some-id", "Some Publisher");
         draft.Rules.Clear();
-        draft.Rules.Add(PolicyRuleFactory.CreateBlank());
-        draft.Rules[0].Match.Sources.Add("winget");
+        PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank();
+        rule.Match.Operations.Add(Operation.Install);
+        draft.Rules.Add(rule);
+        draft.Rules[0].Match.SourceNames.Add("winget");
 
         PolicyDocument document = PolicyEditorMapper.ToDocument(draft, revision: 1, publishedAt: DateTimeOffset.UtcNow);
-        document.Rules[0].Match.Sources.Add("extra");
+        document.Rules[0].Match.SourceNames.Add("extra");
 
-        Assert.Single(draft.Rules[0].Match.Sources);
+        Assert.Single(draft.Rules[0].Match.SourceNames);
     }
 
     [Fact]
@@ -237,12 +278,12 @@ public class PolicyEditorMapperTests
 
         PolicyDocument clone = PolicyEditorMapper.CloneDocument(original);
         clone.Metadata.Description = "changed";
-        clone.Rules[0].Match.Sources.Add("added");
+        clone.Rules[0].Match.SourceNames.Add("added");
 
         Assert.Equal(original.Metadata.Revision, clone.Metadata.Revision);
         Assert.Equal(original.Metadata.PublishedAt, clone.Metadata.PublishedAt);
         Assert.NotEqual("changed", original.Metadata.Description);
-        Assert.DoesNotContain("added", original.Rules[0].Match.Sources);
+        Assert.DoesNotContain("added", original.Rules[0].Match.SourceNames);
     }
 
     // ---- PolicyDraftDocument (package draft, no Revision/PublishedAt) <-> PolicyEditorDraftDocument ----
@@ -254,7 +295,6 @@ public class PolicyEditorMapperTests
         var packageDraft = new PolicyDraftDocument
         {
             PolicyFormatVersion = PolicyFormatVersion.Parse("1.2.3"),
-            PolicyType = PolicyEditorPolicyContract.PolicyType,
             Metadata = new PolicyDraftMetadata
             {
                 Id = "draft-id",
@@ -267,7 +307,6 @@ public class PolicyEditorMapperTests
             Enforcement = new PolicyEnforcement
             {
                 DefaultDecision = Decision.Allow,
-                RulePrecedence = RulePrecedence.PriorityThenDeny,
                 AuditMode = true,
             },
             Rules = [PolicyEditorTestFixtures.BuildFullRule()],
@@ -293,17 +332,20 @@ public class PolicyEditorMapperTests
     }
 
     [Fact]
-    public void ToSharedDraft_BuildsPackageDraftDocument_FixedTypeAndNoRevisionOrPublishedAt()
+    public void ToSharedDraft_BuildsFinalPackageDraftWithoutRemovedOrServerFields()
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("some-id", "Some Publisher");
         draft.Rules.Clear();
-        draft.Rules.Add(PolicyRuleFactory.CreateBlank());
+        PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank();
+        rule.Match.Operations.Add(Operation.Install);
+        draft.Rules.Add(rule);
 
         PolicyDraftDocument shared = PolicyEditorMapper.ToSharedDraft(draft);
 
-        Assert.Equal(PolicyEditorPolicyContract.PolicyType, shared.PolicyType);
-        Assert.Equal(RulePrecedence.PriorityThenDeny, shared.Enforcement.RulePrecedence);
         Assert.Single(shared.Rules);
+        string json = PolicySerializer.Serialize(shared);
+        Assert.DoesNotContain("\"PolicyType\"", json);
+        Assert.DoesNotContain("\"RulePrecedence\"", json);
 
         // The package's own PolicyDraftMetadata type has no Revision/PublishedAt members either.
         System.Reflection.PropertyInfo[] props = shared.Metadata.GetType().GetProperties();
@@ -387,12 +429,10 @@ public class PolicyEditorMapperTests
         var source = new PolicyDraftDocument
         {
             PolicyFormatVersion = PolicyFormatVersion.Current,
-            PolicyType = PolicyEditorPolicyContract.PolicyType,
             Metadata = new PolicyDraftMetadata { Id = "id-1", Publisher = "Contoso" },
             Enforcement = new PolicyEnforcement
             {
                 DefaultDecision = Decision.Deny,
-                RulePrecedence = RulePrecedence.PriorityThenDeny,
             },
             Rules = [],
         };

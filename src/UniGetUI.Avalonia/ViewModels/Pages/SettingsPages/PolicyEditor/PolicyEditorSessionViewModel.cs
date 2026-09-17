@@ -64,12 +64,8 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             CoreTools.Translate("PolicyFormatVersion must be a canonical three-part numeric version such as 1.0.0."),
         PolicyEditorSyntaxErrorKind.UnsupportedPolicyFormatVersion =>
             CoreTools.Translate("The policy draft uses an unsupported policy format version. This version supports major version 1."),
-        PolicyEditorSyntaxErrorKind.UnsupportedPolicyType =>
-            CoreTools.Translate("The policy draft uses an unsupported policy type."),
         PolicyEditorSyntaxErrorKind.MissingEnforcement =>
             CoreTools.Translate("The policy draft is missing the Enforcement object."),
-        PolicyEditorSyntaxErrorKind.UnsupportedRulePrecedence =>
-            CoreTools.Translate("The policy draft uses an unsupported rule precedence."),
         PolicyEditorSyntaxErrorKind.MissingMetadata =>
             CoreTools.Translate("The policy draft is missing the Metadata object."),
         _ => CoreTools.Translate("The document does not match the policy draft format."),
@@ -78,7 +74,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     public bool HasLocalSemanticErrors => _hasLocalSemanticErrors;
     public string LocalInputErrorSummary => string.Join(Environment.NewLine, _localInputErrors.Values);
     public bool CanValidateOrSave => CanStartRemoteOperation();
-    public bool CanSwitchToRaw => CanStartStructuredOperation();
+    public bool CanSwitchToRaw => CanSwitchStructuredToRaw();
     public bool CanSwitchToStructured => CanProjectRawToStructured();
 
     public string RawBuffer
@@ -131,9 +127,12 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanStartStructuredOperation))]
+    [RelayCommand(CanExecute = nameof(CanSwitchStructuredToRaw))]
     private void SwitchToRaw()
     {
+        if (Session.Mode != PolicyEditorMode.Structured)
+            return;
+
         Session.SwitchToRaw();
         RefreshLocalSemanticValidation();
         CancelStructuredDirtyAnalysis();
@@ -145,7 +144,8 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanProjectRawToStructured))]
     private Task SwitchToStructuredAsync(CancellationToken cancellationToken)
     {
-        if (!CanProjectRawToStructured()) return Task.CompletedTask;
+        if (Session.Mode != PolicyEditorMode.Raw || !CanProjectRawToStructured())
+            return Task.CompletedTask;
         string submitted = Session.RawBuffer;
         if (!PolicyEditorRawSyntax.TryParseStrict(
                 submitted,
@@ -776,8 +776,15 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         && !IsBusy
         && !HasLocalInputErrors;
 
+    private bool CanSwitchStructuredToRaw() =>
+        CanStartStructuredOperation()
+        && Session.Mode == PolicyEditorMode.Structured
+        && !Session.Draft.Rules.Any(rule =>
+            PolicyEditorRuleSemantics.IsCatchAll(rule.Match));
+
     private bool CanProjectRawToStructured() =>
         CanStartStructuredOperation()
+        && Session.Mode == PolicyEditorMode.Raw
         && !IsRawSyntaxPending;
 
     private bool CanApply(CancellationToken cancellationToken) =>
@@ -1029,10 +1036,20 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
 
             PolicyEditorDraftDocument draftSnapshot = Session.Draft.Clone();
             bool isDirty = await Task.Run(
-                () => !string.Equals(
-                    _structuredDraftSerializer(draftSnapshot),
-                    snapshot.BaselineRawJson,
-                    StringComparison.Ordinal),
+                () =>
+                {
+                    try
+                    {
+                        return !string.Equals(
+                            _structuredDraftSerializer(draftSnapshot),
+                            snapshot.BaselineRawJson,
+                            StringComparison.Ordinal);
+                    }
+                    catch (JsonException)
+                    {
+                        return true;
+                    }
+                },
                 cancellation.Token);
             if (cancellation.IsCancellationRequested
                 || Volatile.Read(ref _isDisposed) != 0)
@@ -1156,9 +1173,17 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             }
 
             ApplyDirtyComparison(dirtySnapshot, result.IsDirty);
-            _hasLocalSemanticErrors = result.LocalFindings.Any(
-                finding => finding.Severity == PolicyValidationSeverity.Error);
-            Session.SetLocalFindings(result.LocalFindings);
+            if (!Session.LastRawAnalysisWasFormattingOnly)
+            {
+                _hasLocalSemanticErrors = result.LocalFindings.Any(
+                    finding => finding.Severity == PolicyValidationSeverity.Error);
+                Session.SetLocalFindings(result.LocalFindings);
+            }
+            else
+            {
+                _hasLocalSemanticErrors = Session.Findings.All.Any(
+                    finding => finding.Severity == PolicyValidationSeverity.Error);
+            }
             SyntaxError = result.Error;
             OnEditorStateChanged();
         }

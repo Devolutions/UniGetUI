@@ -91,7 +91,6 @@ public partial class PolicyEditorLocalizationTests
         keys.UnionWith(Enum.GetNames<Devolutions.Now.Policy.Model.Architecture>());
         keys.UnionWith(Enum.GetNames<Devolutions.Now.Policy.Model.Elevation>());
         keys.UnionWith(Enum.GetNames<Devolutions.Now.Policy.Model.Decision>());
-        keys.UnionWith(Enum.GetNames<Devolutions.Now.Policy.Model.RulePrecedence>());
         keys.UnionWith(Enum.GetNames<ErrorCode>());
         keys.UnionWith(Enum.GetNames<PolicyValidationSeverity>());
         keys.UnionWith(
@@ -698,9 +697,27 @@ public partial class PolicyEditorLocalizationTests
         Assert.DoesNotContain(editor.Descendants(),
             element => (string?)element.Attribute("Tag") == "/Rules/*/Priority");
         Assert.Contains(editor.Descendants(),
-            element => (string?)element.Attribute("Tag") == "/Rules/*/Match/PackageNames");
+            element => (string?)element.Attribute("Tag") == "/Rules/*/Match/PackageIdentifiers/Exact");
         Assert.Contains(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Rules/*/Match/Version/Exact");
+        Assert.Contains(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Rules/*/Match/PackageIdentifiers/Patterns");
+        Assert.Contains(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Rules/*/Match/Version/Range/MinVersion");
+        Assert.Contains(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Rules/*/Match/ExecutionElevation");
+        Assert.Contains(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Rules/*/Match/SourceNames");
+        Assert.DoesNotContain(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Rules/*/Match/PackageNames");
+        Assert.DoesNotContain(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Rules/*/Match/Sources");
+        Assert.DoesNotContain(editor.Descendants(),
             element => (string?)element.Attribute("Tag") == "/Rules/*/Match/Versions");
+        Assert.DoesNotContain(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Rules/*/Match/Elevation");
+        Assert.DoesNotContain(editor.Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Enforcement/RulePrecedence");
         Assert.Contains(editor.Descendants(),
             element => (string?)element.Attribute("Click") == "FindingNavigateButton_Click");
         Assert.Contains(editor.Descendants(),
@@ -708,15 +725,15 @@ public partial class PolicyEditorLocalizationTests
 
         Assert.True(
             UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor.PolicyEditorDialog
-                .TryGetRuleIndex("/Rules/3/Match/Versions/1", out int ruleIndex));
+                .TryGetRuleIndex("/Rules/3/Match/Version/Exact/1", out int ruleIndex));
         Assert.Equal(3, ruleIndex);
         string normalized =
             UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor.PolicyEditorDialog
-                .NormalizeRulePointer("/Rules/3/Match/Versions/1");
-        Assert.Equal("/Rules/*/Match/Versions/1", normalized);
+                .NormalizeRulePointer("/Rules/3/Match/Version/Exact/1");
+        Assert.Equal("/Rules/*/Match/Version/Exact/1", normalized);
         Assert.True(
             UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor.PolicyEditorDialog
-                .PointerTargetsTag(normalized, "/Rules/*/Match/Versions"));
+                .PointerTargetsTag(normalized, "/Rules/*/Match/Version/Exact"));
         string normalizedRuleId =
             UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor.PolicyEditorDialog
                 .NormalizeRulePointer("/Rules/0/Id");

@@ -32,7 +32,9 @@ public class PolicyEditorDraftFingerprintTests
 
         Assert.Equal(PolicyEditorDraftFingerprint.Compute(original), PolicyEditorDraftFingerprint.Compute(clone));
 
-        clone.Rules.Add(PolicyRuleFactory.CreateBlank("rule-a"));
+        PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("rule-a");
+        rule.Match.Operations.Add(Devolutions.Now.Policy.Model.Operation.Install);
+        clone.Rules.Add(rule);
 
         Assert.NotEqual(PolicyEditorDraftFingerprint.Compute(original), PolicyEditorDraftFingerprint.Compute(clone));
     }

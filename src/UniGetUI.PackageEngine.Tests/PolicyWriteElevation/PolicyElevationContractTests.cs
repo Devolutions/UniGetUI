@@ -32,7 +32,6 @@ public class PolicyElevationContractTests
         Enforcement = new PolicyEnforcement
         {
             DefaultDecision = Devolutions.Now.Policy.Model.Decision.Deny,
-            RulePrecedence = RulePrecedence.PriorityThenDeny,
         },
         Rules = [],
     };
@@ -44,7 +43,6 @@ public class PolicyElevationContractTests
         Enforcement = new PolicyEnforcement
         {
             DefaultDecision = Devolutions.Now.Policy.Model.Decision.Deny,
-            RulePrecedence = RulePrecedence.PriorityThenDeny,
         },
         Rules = [],
     };

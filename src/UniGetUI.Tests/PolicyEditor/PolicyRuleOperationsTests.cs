@@ -36,13 +36,16 @@ public class PolicyRuleOperationsTests
         Assert.Null(rule.Constraints);
         Assert.Empty(rule.Match.Operations);
         Assert.Empty(rule.Match.Managers);
-        Assert.Empty(rule.Match.Sources);
-        Assert.Empty(rule.Match.PackageIdentifiers);
-        Assert.Empty(rule.Match.PackageNames);
-        Assert.Empty(rule.Match.Versions);
+        Assert.Empty(rule.Match.SourceNames);
+        Assert.Equal(PackageIdentifierMode.Omitted, rule.Match.PackageIdentifierMode);
+        Assert.Empty(rule.Match.ExactPackageIdentifiers);
+        Assert.Empty(rule.Match.PackageIdentifierPatterns);
+        Assert.Equal(PackageVersionMode.Omitted, rule.Match.VersionMode);
+        Assert.Empty(rule.Match.ExactVersions);
+        Assert.Null(rule.Match.VersionRange);
         Assert.Empty(rule.Match.Scopes);
         Assert.Empty(rule.Match.Architectures);
-        Assert.Empty(rule.Match.Elevation);
+        Assert.Empty(rule.Match.ExecutionElevation);
         Assert.Equal(TriState.Omitted, rule.Match.Interactive);
         Assert.Equal(TriState.Omitted, rule.Match.SkipHashCheck);
         Assert.Equal(TriState.Omitted, rule.Match.PreRelease);
@@ -226,10 +229,10 @@ public class PolicyRuleOperationsTests
         Assert.Equal(TriState.Omitted, added.Match.SkipHashCheck);
         Assert.Empty(added.Match.Operations);
         Assert.Empty(added.Match.Managers);
+        added.Match.Operations.Add(Devolutions.Now.Policy.Model.Operation.Install);
         string raw = PolicyEditorRawSyntax.ToCanonicalRaw(session.Draft);
-        Assert.DoesNotContain("[false]", raw);
-        Assert.Contains("\"SkipHashCheck\": []", raw);
-        Assert.Contains("\"HasUninstallPrevious\": []", raw);
+        Assert.DoesNotContain("\"SkipHashCheck\"", raw);
+        Assert.DoesNotContain("\"HasUninstallPrevious\"", raw);
     }
 
     [Fact]

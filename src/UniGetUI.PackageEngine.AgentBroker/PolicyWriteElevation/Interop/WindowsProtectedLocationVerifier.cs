@@ -211,6 +211,59 @@ public sealed class WindowsProtectedLocationVerifier : IPolicyElevationLocationV
         }
     }
 
+    public PolicyElevationLocationVerification VerifyExecutable(string executablePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(executablePath);
+        string? directory = Path.GetDirectoryName(executablePath);
+        if (string.IsNullOrEmpty(directory))
+        {
+            return PolicyElevationLocationVerification.Rejected(
+                GenericRejection,
+                "The executable has no parent directory to verify.");
+        }
+
+        var handles = new List<SafeFileHandle>();
+        try
+        {
+            if (!TryOpenDirectoryChain(
+                    directory,
+                    handles,
+                    out string? canonicalRoot,
+                    out PolicyElevationLocationVerification? failure)
+                || canonicalRoot is null)
+            {
+                return failure!;
+            }
+
+            if (!TryVerifyObject(
+                    executablePath,
+                    isDirectory: false,
+                    PolicyElevationAccessPolicy.FileControlMask,
+                    handles,
+                    out string? canonicalExecutable,
+                    out failure)
+                || canonicalExecutable is null)
+            {
+                return failure!;
+            }
+
+            SafeFileHandle[] held = [.. handles];
+            handles.Clear();
+            return PolicyElevationLocationVerification.Protected(
+                held,
+                canonicalRoot,
+                canonicalExecutable,
+                canonicalExecutable);
+        }
+        finally
+        {
+            foreach (SafeFileHandle handle in handles)
+            {
+                handle.Dispose();
+            }
+        }
+    }
+
     /// <summary>
     /// Applies the whole per-object rule set — open without following reparse points, reject a
     /// reparse point, require the handle-resolved path to match, and require control to be

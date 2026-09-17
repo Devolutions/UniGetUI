@@ -24,7 +24,9 @@ internal static class PolicyReplacementExecutor
 
         try
         {
-            using var client = new BrokerClient(CreateClientOptions(effectiveUser));
+            using var transport = new AuthenticatedBrokerTransport();
+            BrokerClientOptions options = CreateClientOptions(effectiveUser, transport);
+            using var client = new BrokerClient(options);
 
             PolicyReplacementResponse replacement =
                 await PolicyElevationReplacementDispatcher.DispatchAsync(
@@ -91,7 +93,9 @@ internal static class PolicyReplacementExecutor
                     : PolicyElevationDisposition.Rejected;
     }
 
-    internal static BrokerClientOptions CreateClientOptions(string effectiveUser)
+    internal static BrokerClientOptions CreateClientOptions(
+        string effectiveUser,
+        IBrokerTransport? transport = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(effectiveUser);
         if (!WindowsProcessInspector.IsValidEffectiveUser(effectiveUser))
@@ -101,6 +105,7 @@ internal static class PolicyReplacementExecutor
 
         return new BrokerClientOptions
         {
+            Transport = transport!,
             RequestedElevation = Elevation.Elevated,
             EffectiveUser = effectiveUser,
             ClientExecutablePath = Environment.ProcessPath,

@@ -18,7 +18,6 @@ internal static class PolicyEditorTestFixtures
     {
         return new PolicyDocument
         {
-            PolicyType = "PackageBrokerPolicy",
             PolicyFormatVersion = PolicyFormatVersion.Parse("1.2.3"),
             Metadata = new PolicyMetadata
             {
@@ -34,7 +33,6 @@ internal static class PolicyEditorTestFixtures
             Enforcement = new PolicyEnforcement
             {
                 DefaultDecision = defaultDecision,
-                RulePrecedence = RulePrecedence.PriorityThenDeny,
                 AuditMode = true,
             },
             Rules = [.. rules],
@@ -53,23 +51,21 @@ internal static class PolicyEditorTestFixtures
             Match = new PolicyMatch
             {
                 Operations = [Operation.Install, Operation.Update],
-                Managers = [ManagerName.Winget, ManagerName.Scoop],
-                Sources = ["winget"],
-                PackageIdentifiers = ["Contoso.App"],
-                PackageNames = ["Contoso App"],
-                Versions = ["1.0.0"],
-                VersionRange = new VersionRange { MinVersion = "1.0.0", MaxVersion = "2.0.0", IncludePrerelease = false },
+                Managers = [ManagerName.Winget],
+                SourceNames = ["winget"],
+                PackageIdentifiers = ExactPackageIdentifiers("Contoso.App"),
+                Version = RangeVersions("1.0.0", "2.0.0"),
                 Scopes = [Scope.Machine],
                 Architectures = [Architecture.X64],
-                Elevation = [Elevation.Standard],
-                Interactive = [true],
-                SkipHashCheck = [false],
-                PreRelease = [],
-                HasCustomParameters = [true],
-                HasCustomInstallLocation = [false],
-                HasPrePostCommands = [],
-                HasKillBeforeOperation = [true],
-                HasUninstallPrevious = [false],
+                ExecutionElevation = [Elevation.Standard],
+                Interactive = true,
+                SkipHashCheck = false,
+                PreRelease = null,
+                HasCustomParameters = true,
+                HasCustomInstallLocation = false,
+                HasPrePostCommands = null,
+                HasKillBeforeOperation = true,
+                HasUninstallPrevious = false,
             },
             Constraints = new PolicyConstraints
             {
@@ -102,6 +98,38 @@ internal static class PolicyEditorTestFixtures
             Match = new PolicyMatch(),
             Constraints = null,
         };
+    }
+
+    public static PackageIdentifierCondition ExactPackageIdentifiers(params string[] identifiers)
+    {
+        var condition = new PackageIdentifierCondition();
+        condition.UseExact([.. identifiers]);
+        return condition;
+    }
+
+    public static PackageIdentifierCondition PatternPackageIdentifiers(params string[] patterns)
+    {
+        var condition = new PackageIdentifierCondition();
+        condition.UsePatterns([.. patterns]);
+        return condition;
+    }
+
+    public static VersionCondition ExactVersions(params string[] versions)
+    {
+        var condition = new VersionCondition();
+        condition.UseExact([.. versions]);
+        return condition;
+    }
+
+    public static VersionCondition RangeVersions(string? minVersion, string? maxVersion)
+    {
+        var condition = new VersionCondition();
+        condition.UseRange(new VersionRange
+        {
+            MinVersion = minVersion,
+            MaxVersion = maxVersion,
+        });
+        return condition;
     }
 
     /// <summary>Builds an <c>Active</c> management snapshot carrying <paramref name="policy"/> (or a

@@ -142,8 +142,6 @@ public static class PolicyFindingPresentation
                     fallbackMessage),
             PolicyFindingCode.DuplicateRuleId =>
                 CoreTools.Translate("Rule IDs must be unique."),
-            PolicyFindingCode.IneffectiveBooleanMatch =>
-                CoreTools.Translate("A boolean match must be omitted, true, or false; mixed arrays are invalid."),
             PolicyFindingCode.InvalidVersionRange =>
                 DescribeWithSpecificDetail(
                     CoreTools.Translate("The version range is invalid."),
@@ -158,8 +156,6 @@ public static class PolicyFindingPresentation
                 DescribeWithSpecificDetail(
                     CoreTools.Translate("The policy validity interval is invalid."),
                     fallbackMessage),
-            PolicyFindingCode.UnsupportedPolicyType =>
-                CoreTools.Translate("The policy type is unsupported."),
             PolicyFindingCode.UnsupportedPolicyFormatVersion =>
                 DescribeWithSpecificDetail(
                     CoreTools.Translate("The policy format version is unsupported."),
@@ -327,7 +323,6 @@ public static class PolicyFindingPresentation
         segment.ToUpperInvariant() switch
         {
             "$SCHEMA" => CoreTools.Translate("Schema"),
-            "POLICYTYPE" => CoreTools.Translate("Policy type"),
             "POLICYFORMATVERSION" => CoreTools.Translate("Policy format version"),
             "METADATA" => CoreTools.Translate("Metadata"),
             "ID" => CoreTools.Translate("ID"),
@@ -338,7 +333,6 @@ public static class PolicyFindingPresentation
             "VALIDUNTIL" => CoreTools.Translate("Valid until"),
             "ENFORCEMENT" => CoreTools.Translate("Enforcement"),
             "DEFAULTDECISION" => CoreTools.Translate("Default decision"),
-            "RULEPRECEDENCE" => CoreTools.Translate("Rule precedence"),
             "AUDITMODE" => CoreTools.Translate("Audit mode"),
             "RULES" => null,
             "ENABLED" => CoreTools.Translate("Enabled"),
@@ -348,17 +342,18 @@ public static class PolicyFindingPresentation
             "MATCH" => CoreTools.Translate("Match criteria"),
             "OPERATIONS" => CoreTools.Translate("Operations"),
             "MANAGERS" => CoreTools.Translate("Package managers"),
-            "SOURCES" => CoreTools.Translate("Sources"),
+            "SOURCENAMES" => CoreTools.Translate("Source names"),
             "PACKAGEIDENTIFIERS" => CoreTools.Translate("Package identifiers"),
-            "PACKAGENAMES" => CoreTools.Translate("Package names"),
-            "VERSIONS" => CoreTools.Translate("Versions"),
-            "VERSIONRANGE" => CoreTools.Translate("Version range"),
+            "EXACT" => CoreTools.Translate("Exact values"),
+            "PATTERNS" => CoreTools.Translate("Patterns"),
+            "VERSION" => CoreTools.Translate("Package version"),
+            "RANGE" => CoreTools.Translate("Semantic version range"),
             "MINVERSION" => CoreTools.Translate("Minimum version"),
             "MAXVERSION" => CoreTools.Translate("Maximum version"),
             "INCLUDEPRERELEASE" => CoreTools.Translate("Include prerelease versions"),
             "SCOPES" => CoreTools.Translate("Scopes"),
             "ARCHITECTURES" => CoreTools.Translate("Architectures"),
-            "ELEVATION" => CoreTools.Translate("Elevation"),
+            "EXECUTIONELEVATION" => CoreTools.Translate("Execution privilege"),
             "INTERACTIVE" => CoreTools.Translate("Interactive"),
             "SKIPHASHCHECK" => CoreTools.Translate("Skip hash check"),
             "PRERELEASE" => CoreTools.Translate("Prerelease"),
@@ -367,7 +362,7 @@ public static class PolicyFindingPresentation
             "HASPREPOSTCOMMANDS" => CoreTools.Translate("Pre/post commands"),
             "HASKILLBEFOREOPERATION" => CoreTools.Translate("Stop running apps before operation"),
             "HASUNINSTALLPREVIOUS" => CoreTools.Translate("Uninstall previous version"),
-            "CONSTRAINTS" => CoreTools.Translate("Constraints"),
+            "CONSTRAINTS" => CoreTools.Translate("Additional safety limits"),
             _ => Humanize(segment),
         };
 

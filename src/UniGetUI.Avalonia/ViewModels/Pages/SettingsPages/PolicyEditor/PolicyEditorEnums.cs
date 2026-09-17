@@ -1,16 +1,27 @@
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 
 /// <summary>
-/// Tri-state representation of a boolean policy match criterion. The wire format represents these
-/// as a <c>List&lt;bool&gt;</c> (see <c>PolicyMatch.Interactive</c> and its siblings), where an empty
-/// list means "don't care" and a single-element list pins the criterion to that value. The editor
-/// only ever produces these three states. The shared contract rejects lists with more than one item.
+/// Tri-state representation of a nullable boolean policy match criterion.
 /// </summary>
 public enum TriState
 {
     Omitted,
     False,
     True,
+}
+
+public enum PackageIdentifierMode
+{
+    Omitted,
+    Exact,
+    Patterns,
+}
+
+public enum PackageVersionMode
+{
+    Omitted,
+    Exact,
+    Range,
 }
 
 /// <summary>

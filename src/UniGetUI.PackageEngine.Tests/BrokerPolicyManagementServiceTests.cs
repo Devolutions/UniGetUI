@@ -758,7 +758,6 @@ public class BrokerPolicyManagementServiceTests
         Enforcement = new PolicyEnforcement
         {
             DefaultDecision = ModelDecision.Deny,
-            RulePrecedence = RulePrecedence.PriorityThenDeny,
         },
         Rules =
         [

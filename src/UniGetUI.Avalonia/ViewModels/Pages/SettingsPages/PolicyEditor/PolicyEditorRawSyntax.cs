@@ -17,9 +17,7 @@ public enum PolicyEditorSyntaxErrorKind
     MissingPolicyFormatVersion,
     InvalidPolicyFormatVersion,
     UnsupportedPolicyFormatVersion,
-    UnsupportedPolicyType,
     MissingEnforcement,
-    UnsupportedRulePrecedence,
     MissingMetadata,
 }
 
@@ -30,9 +28,8 @@ public sealed record PolicyEditorSyntaxError(PolicyEditorSyntaxErrorKind Kind, s
 /// The two seams between the editor's raw-text surface and its structured surface:
 /// <see cref="TryParseStrict"/> (raw -&gt; structured, only for syntactically and structurally valid
 /// text) and <see cref="ToCanonicalRaw"/> (structured -&gt; raw, always succeeds). Parsing is strict and
-/// fails closed: invalid JSON, JSON that doesn't match the wire shape, or JSON that disagrees with the
-/// fixed policy-type/rule-precedence contract (see <see cref="PolicyEditorPolicyContract"/>) is
-/// rejected outright with a <see cref="PolicyEditorSyntaxError"/> and the original raw text is left
+/// fails closed: invalid JSON or JSON that doesn't match the final shared policy shape is rejected
+/// outright with a <see cref="PolicyEditorSyntaxError"/> and the original raw text is left
 /// completely untouched by the caller (this class never mutates or truncates input). Agent-side
 /// semantic validation (e.g. whether specific values make operational sense) is intentionally out of
 /// scope here — it is external, see <see cref="IPolicyValidationClient"/>.
@@ -81,8 +78,7 @@ public static partial class PolicyEditorRawSyntax
         PolicyDraftDocument? document;
         try
         {
-            document = PolicySerializer.DeserializePolicyDraftDocumentStrict(
-                MakeResourceIdsProjectable(rawJson));
+            document = PolicyDraftDocument.ParseJson(MakeResourceIdsProjectable(rawJson));
         }
         catch (Exception ex) when (ex is JsonException or FormatException or ArgumentException or NotSupportedException)
         {
@@ -231,41 +227,11 @@ public static partial class PolicyEditorRawSyntax
         }
 
         if (root.ValueKind == JsonValueKind.Object
-            && root.TryGetProperty("PolicyType", out JsonElement policyType)
-            && policyType.ValueKind == JsonValueKind.String
-            && !string.Equals(
-                policyType.GetString(),
-                PolicyEditorPolicyContract.PolicyType,
-                StringComparison.Ordinal))
-        {
-            error = new PolicyEditorSyntaxError(
-                PolicyEditorSyntaxErrorKind.UnsupportedPolicyType,
-                "/PolicyType");
-            return false;
-        }
-
-        if (root.ValueKind == JsonValueKind.Object
             && !root.TryGetProperty("Enforcement", out _))
         {
             error = new PolicyEditorSyntaxError(
                 PolicyEditorSyntaxErrorKind.MissingEnforcement,
                 "/Enforcement");
-            return false;
-        }
-
-        if (root.ValueKind == JsonValueKind.Object
-            && root.TryGetProperty("Enforcement", out JsonElement enforcement)
-            && enforcement.ValueKind == JsonValueKind.Object
-            && enforcement.TryGetProperty("RulePrecedence", out JsonElement precedence)
-            && precedence.ValueKind == JsonValueKind.String
-            && !string.Equals(
-                precedence.GetString(),
-                PolicyEditorPolicyContract.FixedRulePrecedence.ToString(),
-                StringComparison.Ordinal))
-        {
-            error = new PolicyEditorSyntaxError(
-                PolicyEditorSyntaxErrorKind.UnsupportedRulePrecedence,
-                "/Enforcement/RulePrecedence");
             return false;
         }
 
@@ -295,27 +261,11 @@ public static partial class PolicyEditorRawSyntax
 
     private static bool TryCheckFixedContract(PolicyDraftDocument document, out PolicyEditorSyntaxError? error)
     {
-        if (!string.Equals(document.PolicyType, PolicyEditorPolicyContract.PolicyType, StringComparison.Ordinal))
-        {
-            error = new PolicyEditorSyntaxError(
-                PolicyEditorSyntaxErrorKind.UnsupportedPolicyType,
-                "/PolicyType");
-            return false;
-        }
-
         if (document.Enforcement is null)
         {
             error = new PolicyEditorSyntaxError(
                 PolicyEditorSyntaxErrorKind.MissingEnforcement,
                 "/Enforcement");
-            return false;
-        }
-
-        if (document.Enforcement.RulePrecedence != PolicyEditorPolicyContract.FixedRulePrecedence)
-        {
-            error = new PolicyEditorSyntaxError(
-                PolicyEditorSyntaxErrorKind.UnsupportedRulePrecedence,
-                "/Enforcement/RulePrecedence");
             return false;
         }
 
@@ -358,8 +308,18 @@ public static partial class PolicyEditorRawSyntax
         }
     }
 
-    private static string PointerFromException(Exception ex) =>
-        ex is JsonException { Path: { Length: > 0 } path } ? ConvertJsonPathToPointer(path) : "";
+    private static string PointerFromException(Exception ex)
+    {
+        if (ex is JsonException { Path: { Length: > 0 } path })
+        {
+            return ConvertJsonPathToPointer(path);
+        }
+
+        Match pathInMessage = JsonPathInMessage().Match(ex.Message);
+        return pathInMessage.Success
+            ? ConvertJsonPathToPointer(pathInMessage.Groups["path"].Value)
+            : "";
+    }
 
     /// <summary>Converts a System.Text.Json exception path (e.g. <c>$.rules[0].match.versions[1]</c>)
     /// into an RFC 6901 JSON Pointer (e.g. <c>/rules/0/match/versions/1</c>).</summary>
@@ -377,4 +337,7 @@ public static partial class PolicyEditorRawSyntax
 
     [GeneratedRegex(@"\.([A-Za-z_][A-Za-z0-9_]*)|\[(\d+)\]", RegexOptions.CultureInvariant)]
     private static partial Regex JsonPathSegment();
+
+    [GeneratedRegex(@"\bat (?<path>\$(?:\.[A-Za-z_][A-Za-z0-9_]*|\[\d+\])+)\b", RegexOptions.CultureInvariant)]
+    private static partial Regex JsonPathInMessage();
 }

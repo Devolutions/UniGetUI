@@ -111,11 +111,12 @@ public class AgentPolicyInspectorViewModelTests
         PolicyResponse response = BuildFullResponse();
         response.Policy.Rules[0].Match.PackageIdentifiers = PatternPackageIdentifiers("Contoso.*");
         response.Policy.Rules[0].Match.Version = RangeVersions("1.0.0", "2.0.0");
-        string json = PolicySerializer.Serialize(response.Policy);
         using var viewModel = new AgentPolicyInspectorViewModel(
-            new StubInspector(new(BrokerPolicyInspectionStatus.Connected, response, json)));
+            new StubManagementService(ActiveManagement(response)),
+            new StubWriteElevationEligibility(PolicyWriteElevationEligibilityStatus.Eligible),
+            (_, _) => { });
 
-        await viewModel.LoadAsync();
+        await viewModel.LoadPageAsync();
 
         Assert.Contains(
             viewModel.Rules[0].MatchRows,
@@ -920,12 +921,6 @@ public class AgentPolicyInspectorViewModelTests
             MaxVersion = maxVersion,
         });
         return condition;
-    }
-
-    private sealed class StubInspector(BrokerPolicyInspectionResult result) : IBrokerPolicyInspector
-    {
-        public Task<BrokerPolicyInspectionResult> InspectAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(result);
     }
 
     private sealed class StubManagementService(BrokerPolicyManagementResult result)

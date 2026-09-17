@@ -40,6 +40,47 @@ public class PolicyEditorStructuredInputGuardTests
     }
 
     [Fact]
+    public void EmptyValidityControls_CombineDateAndTimeInEitherSelectionOrder()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var document = new PolicyEditorDocumentUi(viewModel);
+        DateTime firstDate = new(2026, 10, 15);
+        DateTime secondDate = new(2027, 1, 20);
+
+        document.ValidFromDate = new DateTimeOffset(
+            firstDate,
+            TimeZoneInfo.Local.GetUtcOffset(firstDate));
+
+        Assert.Null(viewModel.Draft.Metadata.ValidFrom);
+        Assert.Equal(firstDate, document.ValidFromDate!.Value.Date);
+        Assert.Null(document.ValidFromTime);
+
+        document.ValidFromTime = TimeSpan.FromHours(12);
+
+        Assert.NotNull(viewModel.Draft.Metadata.ValidFrom);
+        Assert.Equal(firstDate, document.ValidFromDate!.Value.Date);
+        Assert.Equal(TimeSpan.FromHours(12), document.ValidFromTime);
+
+        document.ClearValidFromCommand.Execute(null);
+        document.ValidUntilTime = TimeSpan.FromHours(18);
+
+        Assert.Null(viewModel.Draft.Metadata.ValidUntil);
+        Assert.Null(document.ValidUntilDate);
+        Assert.Equal(TimeSpan.FromHours(18), document.ValidUntilTime);
+
+        document.ValidUntilDate = new DateTimeOffset(
+            secondDate,
+            TimeZoneInfo.Local.GetUtcOffset(secondDate));
+
+        Assert.NotNull(viewModel.Draft.Metadata.ValidUntil);
+        Assert.Equal(secondDate, document.ValidUntilDate!.Value.Date);
+        Assert.Equal(TimeSpan.FromHours(18), document.ValidUntilTime);
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(viewModel.Draft);
+        Assert.Contains("\"ValidUntil\"", raw);
+        Assert.DoesNotContain("\"ValidFrom\"", raw);
+    }
+
+    [Fact]
     public void ValidityControls_BlockEqualOrInvertedWindowAndClearRestoresValidity()
     {
         using PolicyEditorSessionViewModel viewModel = CreateViewModel();
@@ -332,7 +373,6 @@ public class PolicyEditorStructuredInputGuardTests
         canonical = new PolicyDraftDocument
         {
             PolicyFormatVersion = PolicyFormatVersion.Parse("1.2.3"),
-            PolicyType = canonical.PolicyType,
             Metadata = canonical.Metadata,
             Enforcement = canonical.Enforcement,
             Rules = canonical.Rules,
@@ -370,7 +410,6 @@ public class PolicyEditorStructuredInputGuardTests
             nameof(PolicyEditorDocumentUi.ValidUntilError),
             nameof(PolicyEditorDocumentUi.DecisionIndex),
             nameof(PolicyEditorDocumentUi.AuditModeIndex),
-            nameof(PolicyEditorDocumentUi.RulePrecedenceDisplay),
             nameof(PolicyEditorDocumentUi.IsIdentityLocked),
         ];
         Assert.All(expectedProperties, property => Assert.Contains(property, changed));
@@ -638,10 +677,65 @@ public class PolicyEditorStructuredInputGuardTests
         PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
         using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
 
-        rule.Sources = " leading\r\n \r\n\r\ntrailing \n";
+        rule.SourceNames = " leading\r\n \r\n\r\ntrailing \n";
 
-        Assert.Equal([" leading", " ", "trailing "], draftRule.Match.Sources);
-        Assert.Equal(" leading\r\n \r\ntrailing ", rule.Sources);
+        Assert.Equal([" leading", " ", "trailing "], draftRule.Match.SourceNames);
+        Assert.Equal(" leading\r\n \r\ntrailing ", rule.SourceNames);
+    }
+
+    [Fact]
+    public void SourceNames_AppearOnlyForOneSourceCapableManagerButExistingValuesStayEditable()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+
+        Assert.False(rule.CanUseSourceNames);
+        Assert.False(rule.IsSourceNamesVisible);
+
+        draftRule.Match.Managers.Add(Devolutions.Now.Policy.Model.ManagerName.Winget);
+        viewModel.NotifyDraftChangedCommand.Execute(null);
+        Assert.True(rule.CanUseSourceNames);
+        Assert.True(rule.IsSourceNamesVisible);
+
+        rule.SourceNames = "corporate";
+        draftRule.Match.Managers.Clear();
+        draftRule.Match.Managers.Add(Devolutions.Now.Policy.Model.ManagerName.Npm);
+        viewModel.NotifyDraftChangedCommand.Execute(null);
+
+        Assert.False(rule.CanUseSourceNames);
+        Assert.True(rule.IsSourceNamesVisible);
+        Assert.Contains(
+            viewModel.Findings,
+            finding => finding.Pointer == "/Rules/0/Match/Managers");
+    }
+
+    [Fact]
+    public void ExclusiveConditionModes_RequireAValueAndExposeOnlySelectedMode()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+
+        rule.PackageIdentifierModeIndex = (int)PackageIdentifierMode.Patterns;
+        Assert.True(rule.IsPackageIdentifierPatternMode);
+        Assert.False(rule.IsExactPackageIdentifierMode);
+        Assert.Contains(
+            viewModel.Findings,
+            finding => finding.Pointer == "/Rules/0/Match/PackageIdentifiers/Patterns");
+
+        rule.PackageIdentifierPatterns = "Contoso.*";
+        Assert.DoesNotContain(
+            viewModel.Findings,
+            finding => finding.Pointer == "/Rules/0/Match/PackageIdentifiers/Patterns");
+
+        rule.PackageVersionModeIndex = (int)PackageVersionMode.Exact;
+        Assert.True(rule.IsExactVersionMode);
+        Assert.False(rule.IsVersionRangeMode);
+        rule.ExactVersions = "non-semantic-release";
+        Assert.DoesNotContain(
+            viewModel.Findings,
+            finding => finding.Pointer == "/Rules/0/Match/Version/Exact");
     }
 
     [Fact]
@@ -686,7 +780,7 @@ public class PolicyEditorStructuredInputGuardTests
     }
 
     [Fact]
-    public void VersionRangeToggle_RefreshesDisplayedPropertiesToMatchDraft()
+    public void VersionModeToggle_RefreshesDisplayedPropertiesAndPreservesRangeDraft()
     {
         PolicyEditorSession session = PolicyEditorSession.StartCreate(
             PolicyEditorTestFixtures.BuildMissingManagement(),
@@ -701,21 +795,21 @@ public class PolicyEditorStructuredInputGuardTests
         rule.ApplyDecision(Devolutions.Now.Policy.Model.Decision.Allow);
         var changed = new HashSet<string?>();
         rule.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
-        rule.HasVersionRange = true;
+        rule.PackageVersionModeIndex = (int)PackageVersionMode.Range;
         rule.MinVersion = "1.2.3";
         rule.MaxVersion = "2.0.0";
         rule.IncludePrerelease = true;
         changed.Clear();
 
-        rule.HasVersionRange = false;
-        rule.HasVersionRange = true;
+        rule.PackageVersionModeIndex = (int)PackageVersionMode.Omitted;
+        rule.PackageVersionModeIndex = (int)PackageVersionMode.Range;
 
-        Assert.Null(rule.MinVersion);
-        Assert.Null(rule.MaxVersion);
-        Assert.False(rule.IncludePrerelease);
-        Assert.Null(draftRule.Match.VersionRange!.MinVersion);
-        Assert.Null(draftRule.Match.VersionRange.MaxVersion);
-        Assert.False(draftRule.Match.VersionRange.IncludePrerelease);
+        Assert.Equal("1.2.3", rule.MinVersion);
+        Assert.Equal("2.0.0", rule.MaxVersion);
+        Assert.True(rule.IncludePrerelease);
+        Assert.Equal("1.2.3", draftRule.Match.VersionRange!.MinVersion);
+        Assert.Equal("2.0.0", draftRule.Match.VersionRange.MaxVersion);
+        Assert.True(draftRule.Match.VersionRange.IncludePrerelease);
         Assert.Contains(nameof(PolicyEditorRuleUi.MinVersion), changed);
         Assert.Contains(nameof(PolicyEditorRuleUi.MaxVersion), changed);
         Assert.Contains(nameof(PolicyEditorRuleUi.IncludePrerelease), changed);
@@ -847,15 +941,15 @@ public class PolicyEditorStructuredInputGuardTests
         document.Description = "";
         rule.HasReason = true;
         rule.Reason = " ";
-        rule.HasVersionRange = true;
-        rule.MinVersion = " ";
-        rule.MaxVersion = "2.0";
+        rule.PackageVersionModeIndex = (int)PackageVersionMode.Range;
+        rule.MinVersion = "1.0.0";
+        rule.MaxVersion = "2.0.0";
         rule.MinVersion = "";
         rule.MaxVersion = "";
         Assert.Null(draftRule.Match.VersionRange!.MinVersion);
         Assert.Null(draftRule.Match.VersionRange.MaxVersion);
-        rule.MinVersion = " ";
-        rule.MaxVersion = "2.0";
+        rule.MinVersion = "1.0.0";
+        rule.MaxVersion = "2.0.0";
 
         viewModel.SwitchToRawCommand.Execute(null);
         Assert.True(session.TryParseRaw(
@@ -866,8 +960,8 @@ public class PolicyEditorStructuredInputGuardTests
         PolicyEditorDraftRule parsedRule = parsed.Rules.Single(
             candidate => candidate.Id == draftRule.Id);
         Assert.Equal(" ", parsedRule.Reason);
-        Assert.Equal(" ", parsedRule.Match.VersionRange!.MinVersion);
-        Assert.Equal("2.0", parsedRule.Match.VersionRange!.MaxVersion);
+        Assert.Equal("1.0.0", parsedRule.Match.VersionRange!.MinVersion);
+        Assert.Equal("2.0.0", parsedRule.Match.VersionRange!.MaxVersion);
 
         validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
         {
@@ -882,8 +976,8 @@ public class PolicyEditorStructuredInputGuardTests
         PolicyEditorDraftRule projectedRule = session.Draft.Rules.Single(
             candidate => candidate.Id == draftRule.Id);
         Assert.Equal(" ", projectedRule.Reason);
-        Assert.Equal(" ", projectedRule.Match.VersionRange!.MinVersion);
-        Assert.Equal("2.0", projectedRule.Match.VersionRange!.MaxVersion);
+        Assert.Equal("1.0.0", projectedRule.Match.VersionRange!.MinVersion);
+        Assert.Equal("2.0.0", projectedRule.Match.VersionRange!.MaxVersion);
     }
 
     [Fact]

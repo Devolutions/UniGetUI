@@ -69,6 +69,7 @@ public sealed class PolicyEditorSession
     public long MutationGeneration => _mutationGeneration;
 
     public bool IsRawAnalysisPending { get; private set; }
+    internal bool LastRawAnalysisWasFormattingOnly { get; private set; }
 
     public bool IsIdentityLocked => Operation == PolicyEditorOperationKind.Update;
 
@@ -204,6 +205,7 @@ public sealed class PolicyEditorSession
             || analyzedMutationGeneration != _mutationGeneration
             || !string.Equals(RawBuffer, analyzedRawJson, StringComparison.Ordinal))
         {
+            LastRawAnalysisWasFormattingOnly = false;
             return false;
         }
 
@@ -217,6 +219,7 @@ public sealed class PolicyEditorSession
                 _lastAnalyzedCanonicalRawJson,
                 canonicalRawJson,
                 StringComparison.Ordinal);
+        LastRawAnalysisWasFormattingOnly = formattingOnly;
         if (formattingOnly)
         {
             if (Validation is not null

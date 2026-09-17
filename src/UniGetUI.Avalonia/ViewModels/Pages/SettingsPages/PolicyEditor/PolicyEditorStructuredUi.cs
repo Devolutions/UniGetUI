@@ -8,7 +8,7 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 
 /// <summary>
 /// A single checkbox-style option for a multi-select enum match field (e.g. Operations, Managers,
-/// Scopes, Architectures, Elevation). Deliberately non-generic (one concrete type serves every enum
+/// Scopes, Architectures, Execution elevation). Deliberately non-generic (one concrete type serves every enum
 /// list) so a single compiled AXAML <c>DataTemplate</c> can render all of them.
 /// </summary>
 public sealed partial class PolicyEditorEnumOption : ObservableObject
@@ -109,6 +109,20 @@ internal static class PolicyEditorEnumDisplay
         CoreTools.Translate("Yes"),
     ];
 
+    public static readonly IReadOnlyList<string> PackageIdentifierModeDisplayItems =
+    [
+        CoreTools.Translate("Does not matter"),
+        CoreTools.Translate("Exact identifiers"),
+        CoreTools.Translate("Identifier patterns"),
+    ];
+
+    public static readonly IReadOnlyList<string> PackageVersionModeDisplayItems =
+    [
+        CoreTools.Translate("Does not matter"),
+        CoreTools.Translate("Exact versions"),
+        CoreTools.Translate("Semantic version range"),
+    ];
+
     public static int IndexOfDecision(Decision value) => Array.IndexOf(Decisions, value);
 
     public static int IndexOfTriState(TriState value) => Array.IndexOf(TriStates, value);
@@ -145,6 +159,10 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
     private string _validUntilText;
     private string? _validFromError;
     private string? _validUntilError;
+    private DateTimeOffset? _pendingValidFromDate;
+    private DateTimeOffset? _pendingValidUntilDate;
+    private TimeSpan? _pendingValidFromTime;
+    private TimeSpan? _pendingValidUntilTime;
     private bool _hasValidityOrderError;
 
     public PolicyEditorDocumentUi(PolicyEditorSessionViewModel sessionViewModel)
@@ -231,14 +249,10 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
 
     public DateTimeOffset? ValidFromDate
     {
-        get => LocalDate(Draft.Metadata.ValidFrom);
-        set
-        {
-            UpdateLocalValidity(
-                isStart: true,
-                value,
-                ValidFromTime);
-        }
+        get => Draft.Metadata.ValidFrom is { } value
+            ? LocalDate(value)
+            : _pendingValidFromDate;
+        set => SetLocalValidityDate(isStart: true, value);
     }
     internal string ValidFromText
     {
@@ -247,22 +261,17 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
     }
     public TimeSpan? ValidFromTime
     {
-        get => LocalTime(Draft.Metadata.ValidFrom);
-        set
-        {
-            UpdateLocalValidity(
-                isStart: true,
-                ValidFromDate,
-                value);
-        }
+        get => Draft.Metadata.ValidFrom is { } value
+            ? LocalTime(value)
+            : _pendingValidFromTime;
+        set => SetLocalValidityTime(isStart: true, value);
     }
     public DateTimeOffset? ValidUntilDate
     {
-        get => LocalDate(Draft.Metadata.ValidUntil);
-        set => UpdateLocalValidity(
-            isStart: false,
-            value,
-            ValidUntilTime);
+        get => Draft.Metadata.ValidUntil is { } value
+            ? LocalDate(value)
+            : _pendingValidUntilDate;
+        set => SetLocalValidityDate(isStart: false, value);
     }
     internal string ValidUntilText
     {
@@ -271,11 +280,10 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
     }
     public TimeSpan? ValidUntilTime
     {
-        get => LocalTime(Draft.Metadata.ValidUntil);
-        set => UpdateLocalValidity(
-            isStart: false,
-            ValidUntilDate,
-            value);
+        get => Draft.Metadata.ValidUntil is { } value
+            ? LocalTime(value)
+            : _pendingValidUntilTime;
+        set => SetLocalValidityTime(isStart: false, value);
     }
     public string LocalTimeZoneText
     {
@@ -305,22 +313,34 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
 
     public void ClearValidFrom()
     {
+        bool changed = Draft.Metadata.ValidFrom is not null
+            || _pendingValidFromDate is not null
+            || _pendingValidFromTime is not null
+            || _validFromError is not null;
         _validFromText = "";
         Draft.Metadata.ValidFrom = null;
+        _pendingValidFromDate = null;
+        _pendingValidFromTime = null;
         SetValidFromError(null);
         NotifyValidityChanged();
         ValidateValidityOrder();
-        MarkDirty();
+        if (changed) MarkDirty();
     }
 
     public void ClearValidUntil()
     {
+        bool changed = Draft.Metadata.ValidUntil is not null
+            || _pendingValidUntilDate is not null
+            || _pendingValidUntilTime is not null
+            || _validUntilError is not null;
         _validUntilText = "";
         Draft.Metadata.ValidUntil = null;
+        _pendingValidUntilDate = null;
+        _pendingValidUntilTime = null;
         SetValidUntilError(null);
         NotifyValidityChanged();
         ValidateValidityOrder();
-        MarkDirty();
+        if (changed) MarkDirty();
     }
 
     public string? ValidFromError => _validFromError;
@@ -351,11 +371,6 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         FindingsFor("/Enforcement/DefaultDecision");
     public bool HasDefaultDecisionErrors => HasErrors(DefaultDecisionFindings);
 
-    public string RulePrecedenceDisplay => CoreTools.Translate(Draft.Enforcement.RulePrecedence.ToString());
-    public IReadOnlyList<PolicyValidationFinding> RulePrecedenceFindings =>
-        FindingsFor("/Enforcement/RulePrecedence");
-    public bool HasRulePrecedenceErrors => HasErrors(RulePrecedenceFindings);
-
     public int AuditModeIndex
     {
         get => Draft.Enforcement.AuditMode is true ? 1 : 0;
@@ -378,6 +393,7 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
 
     public void RefreshFromDraft()
     {
+        ClearPendingValiditySelections();
         SetValidFromError(null);
         SetValidUntilError(null);
         OnPropertyChanged(nameof(PolicyFormatVersion));
@@ -393,7 +409,6 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         OnPropertyChanged(nameof(IsDefaultAllow));
         OnPropertyChanged(nameof(AuditModeIndex));
         OnPropertyChanged(nameof(IsAuditModeEnabled));
-        OnPropertyChanged(nameof(RulePrecedenceDisplay));
         OnPropertyChanged(nameof(IsIdentityLocked));
         RefreshFindings();
     }
@@ -410,7 +425,6 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
             nameof(ValidFromFindings), nameof(HasValidFromErrors),
             nameof(ValidUntilFindings), nameof(HasValidUntilErrors),
             nameof(DefaultDecisionFindings), nameof(HasDefaultDecisionErrors),
-            nameof(RulePrecedenceFindings), nameof(HasRulePrecedenceErrors),
             nameof(AuditModeFindings), nameof(HasAuditModeErrors),
         })
         {
@@ -447,17 +461,59 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         OnPropertyChanged(nameof(ValidUntilError));
     }
 
-    private void UpdateLocalValidity(
-        bool isStart,
-        DateTimeOffset? date,
-        TimeSpan? time)
+    private void SetLocalValidityDate(bool isStart, DateTimeOffset? date)
     {
+        DateTimeOffset? current = isStart ? ValidFromDate : ValidUntilDate;
+        if (current?.Date == date?.Date)
+            return;
+
+        TimeSpan? time = isStart ? ValidFromTime : ValidUntilTime;
+        if (isStart)
+        {
+            Draft.Metadata.ValidFrom = null;
+            _pendingValidFromDate = date;
+            _pendingValidFromTime = time;
+        }
+        else
+        {
+            Draft.Metadata.ValidUntil = null;
+            _pendingValidUntilDate = date;
+            _pendingValidUntilTime = time;
+        }
+
+        CommitPendingLocalValidity(isStart);
+    }
+
+    private void SetLocalValidityTime(bool isStart, TimeSpan? time)
+    {
+        TimeSpan? current = isStart ? ValidFromTime : ValidUntilTime;
+        if (current == time)
+            return;
+
+        DateTimeOffset? date = isStart ? ValidFromDate : ValidUntilDate;
+        if (isStart)
+        {
+            Draft.Metadata.ValidFrom = null;
+            _pendingValidFromDate = date;
+            _pendingValidFromTime = time;
+        }
+        else
+        {
+            Draft.Metadata.ValidUntil = null;
+            _pendingValidUntilDate = date;
+            _pendingValidUntilTime = time;
+        }
+
+        CommitPendingLocalValidity(isStart);
+    }
+
+    private void CommitPendingLocalValidity(bool isStart)
+    {
+        DateTimeOffset? date = isStart ? _pendingValidFromDate : _pendingValidUntilDate;
+        TimeSpan? time = isStart ? _pendingValidFromTime : _pendingValidUntilTime;
         if (date is null || time is null)
         {
-            if (isStart)
-                Draft.Metadata.ValidFrom = null;
-            else
-                Draft.Metadata.ValidUntil = null;
+            if (isStart) SetValidFromError(null); else SetValidUntilError(null);
             NotifyValidityChanged();
             ValidateValidityOrder();
             MarkDirty();
@@ -471,21 +527,32 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
             : zone.IsAmbiguousTime(local)
                 ? CoreTools.Translate("This local time occurs twice because of a daylight-saving time change. Choose a time outside the repeated hour.")
                 : null;
-        if (isStart)
-            SetValidFromError(error);
-        else
-            SetValidUntilError(error);
         if (error is not null)
         {
+            if (isStart) Draft.Metadata.ValidFrom = null; else Draft.Metadata.ValidUntil = null;
+            ValidateValidityOrder();
+            if (isStart) SetValidFromError(error); else SetValidUntilError(error);
             NotifyValidityChanged();
+            MarkDirty();
             return;
         }
+        if (isStart) SetValidFromError(null); else SetValidUntilError(null);
 
         var absolute = new DateTimeOffset(local, zone.GetUtcOffset(local));
         if (isStart)
+        {
             Draft.Metadata.ValidFrom = absolute;
+            _pendingValidFromDate = null;
+            _pendingValidFromTime = null;
+            _validFromText = absolute.ToString("O", CultureInfo.InvariantCulture);
+        }
         else
+        {
             Draft.Metadata.ValidUntil = absolute;
+            _pendingValidUntilDate = null;
+            _pendingValidUntilTime = null;
+            _validUntilText = absolute.ToString("O", CultureInfo.InvariantCulture);
+        }
         ValidateValidityOrder();
         NotifyValidityChanged();
         MarkDirty();
@@ -518,11 +585,15 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         if (isStart)
         {
             Draft.Metadata.ValidFrom = value;
+            _pendingValidFromDate = null;
+            _pendingValidFromTime = null;
             SetValidFromError(null);
         }
         else
         {
             Draft.Metadata.ValidUntil = value;
+            _pendingValidUntilDate = null;
+            _pendingValidUntilTime = null;
             SetValidUntilError(null);
         }
         ValidateValidityOrder();
@@ -560,6 +631,14 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         OnPropertyChanged(nameof(ValidityWindowAdvisory));
     }
 
+    private void ClearPendingValiditySelections()
+    {
+        _pendingValidFromDate = null;
+        _pendingValidFromTime = null;
+        _pendingValidUntilDate = null;
+        _pendingValidUntilTime = null;
+    }
+
     private static DateTimeOffset? LocalDate(DateTimeOffset? value)
     {
         if (value is null) return null;
@@ -578,7 +657,7 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
 /// UI-facing wrapper over a single <see cref="PolicyEditorDraftRule"/>: every field of
 /// <see cref="PolicyEditorDraftMatch"/> and <see cref="PolicyEditorDraftConstraints"/>, projected as
 /// bindable properties (string-joined lists, index-based enum pickers, on-demand nullable
-/// sub-object creation for <c>VersionRange</c>/<c>Constraints</c>). See <see cref="PolicyEditorDocumentUi"/>
+/// sub-object creation for package conditions and constraints). See <see cref="PolicyEditorDocumentUi"/>
 /// for why every setter routes through <c>NotifyDraftChangedCommand</c> instead of raising its own
 /// change notification.
 /// </summary>
@@ -602,7 +681,8 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         ManagerOptions = PolicyEditorEnumOptionFactory.Build(Rule.Match.Managers, MarkDirty);
         ScopeOptions = PolicyEditorEnumOptionFactory.Build(Rule.Match.Scopes, MarkDirty);
         ArchitectureOptions = PolicyEditorEnumOptionFactory.Build(Rule.Match.Architectures, MarkDirty);
-        ElevationOptions = PolicyEditorEnumOptionFactory.Build(Rule.Match.Elevation, MarkDirty);
+        ExecutionElevationOptions =
+            PolicyEditorEnumOptionFactory.Build(Rule.Match.ExecutionElevation, MarkDirty);
     }
 
     public PolicyEditorRuleUi(
@@ -681,49 +761,95 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
     public IReadOnlyList<PolicyEditorEnumOption> ManagerOptions { get; }
     public IReadOnlyList<PolicyEditorEnumOption> ScopeOptions { get; }
     public IReadOnlyList<PolicyEditorEnumOption> ArchitectureOptions { get; }
-    public IReadOnlyList<PolicyEditorEnumOption> ElevationOptions { get; }
+    public IReadOnlyList<PolicyEditorEnumOption> ExecutionElevationOptions { get; }
 
-    public string Sources
+    public string SourceNames
     {
-        get => Join(Rule.Match.Sources);
-        set => SetListField(Rule.Match.Sources, value);
+        get => Join(Rule.Match.SourceNames);
+        set => SetListField(Rule.Match.SourceNames, value);
     }
+    public bool CanUseSourceNames =>
+        Rule.Match.Managers.Count == 1
+        && PolicyEditorRuleSemantics.SupportsSourceNames(Rule.Match.Managers[0]);
+    public bool IsSourceNamesVisible =>
+        CanUseSourceNames || Rule.Match.SourceNames.Count > 0;
 
-    public string PackageIdentifiers
-    {
-        get => Join(Rule.Match.PackageIdentifiers);
-        set => SetListField(Rule.Match.PackageIdentifiers, value);
-    }
+    public IReadOnlyList<string> PackageIdentifierModeItems =>
+        PolicyEditorEnumDisplay.PackageIdentifierModeDisplayItems;
 
-    public string PackageNames
+    public int PackageIdentifierModeIndex
     {
-        get => Join(Rule.Match.PackageNames);
-        set => SetListField(Rule.Match.PackageNames, value);
-    }
-    public IReadOnlyList<PolicyValidationFinding> PackageNamesFindings =>
-        FindingsFor("/Match/PackageNames");
-    public bool HasPackageNamesErrors => HasErrors(PackageNamesFindings);
-
-    public string Versions
-    {
-        get => Join(Rule.Match.Versions);
-        set => SetListField(Rule.Match.Versions, value);
-    }
-    public IReadOnlyList<PolicyValidationFinding> VersionsFindings => FindingsFor("/Match/Versions");
-    public bool HasVersionsErrors => HasErrors(VersionsFindings);
-
-    public bool HasVersionRange
-    {
-        get => Rule.Match.VersionRange is not null;
+        get => (int)Rule.Match.PackageIdentifierMode;
         set
         {
-            if (value == (Rule.Match.VersionRange is not null)) return;
-            Rule.Match.VersionRange = value ? new PolicyEditorDraftVersionRange() : null;
-            MarkDirty();
+            if (!Enum.IsDefined((PackageIdentifierMode)value)
+                || value == PackageIdentifierModeIndex)
+                return;
+            Rule.Match.PackageIdentifierMode = (PackageIdentifierMode)value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsExactPackageIdentifierMode));
+            OnPropertyChanged(nameof(IsPackageIdentifierPatternMode));
+            MarkDirty();
+        }
+    }
+
+    public bool IsExactPackageIdentifierMode =>
+        Rule.Match.PackageIdentifierMode == PackageIdentifierMode.Exact;
+    public bool IsPackageIdentifierPatternMode =>
+        Rule.Match.PackageIdentifierMode == PackageIdentifierMode.Patterns;
+
+    public string ExactPackageIdentifiers
+    {
+        get => Join(Rule.Match.ExactPackageIdentifiers);
+        set => SetListField(Rule.Match.ExactPackageIdentifiers, value);
+    }
+    public IReadOnlyList<PolicyValidationFinding> ExactPackageIdentifierFindings =>
+        FindingsFor("/Match/PackageIdentifiers/Exact");
+    public bool HasExactPackageIdentifierErrors => HasErrors(ExactPackageIdentifierFindings);
+
+    public string PackageIdentifierPatterns
+    {
+        get => Join(Rule.Match.PackageIdentifierPatterns);
+        set => SetListField(Rule.Match.PackageIdentifierPatterns, value);
+    }
+    public IReadOnlyList<PolicyValidationFinding> PackageIdentifierPatternFindings =>
+        FindingsFor("/Match/PackageIdentifiers/Patterns");
+    public bool HasPackageIdentifierPatternErrors =>
+        HasErrors(PackageIdentifierPatternFindings);
+
+    public IReadOnlyList<string> PackageVersionModeItems =>
+        PolicyEditorEnumDisplay.PackageVersionModeDisplayItems;
+
+    public int PackageVersionModeIndex
+    {
+        get => (int)Rule.Match.VersionMode;
+        set
+        {
+            if (!Enum.IsDefined((PackageVersionMode)value)
+                || value == PackageVersionModeIndex)
+                return;
+            Rule.Match.VersionMode = (PackageVersionMode)value;
+            if (Rule.Match.VersionMode == PackageVersionMode.Range)
+                Rule.Match.VersionRange ??= new PolicyEditorDraftVersionRange();
+            MarkDirty();
+            OnPropertyChanged(nameof(PackageVersionModeIndex));
+            OnPropertyChanged(nameof(IsExactVersionMode));
+            OnPropertyChanged(nameof(IsVersionRangeMode));
             NotifyVersionRangePropertiesChanged();
         }
     }
+
+    public bool IsExactVersionMode => Rule.Match.VersionMode == PackageVersionMode.Exact;
+    public bool IsVersionRangeMode => Rule.Match.VersionMode == PackageVersionMode.Range;
+
+    public string ExactVersions
+    {
+        get => Join(Rule.Match.ExactVersions);
+        set => SetListField(Rule.Match.ExactVersions, value);
+    }
+    public IReadOnlyList<PolicyValidationFinding> ExactVersionFindings =>
+        FindingsFor("/Match/Version/Exact");
+    public bool HasExactVersionErrors => HasErrors(ExactVersionFindings);
 
     public string? MinVersion
     {
@@ -731,7 +857,7 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         set { EnsureVersionRange().MinVersion = string.IsNullOrEmpty(value) ? null : value; MarkDirty(); }
     }
     public IReadOnlyList<PolicyValidationFinding> MinVersionFindings =>
-        [.. FindingsFor("/Match/VersionRange/MinVersion"), .. FindingsEndingAt("/Match/VersionRange")];
+        [.. FindingsFor("/Match/Version/Range/MinVersion"), .. FindingsEndingAt("/Match/Version/Range")];
     public bool HasMinVersionErrors => HasErrors(MinVersionFindings);
 
     public string? MaxVersion
@@ -740,7 +866,7 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         set { EnsureVersionRange().MaxVersion = string.IsNullOrEmpty(value) ? null : value; MarkDirty(); }
     }
     public IReadOnlyList<PolicyValidationFinding> MaxVersionFindings =>
-        [.. FindingsFor("/Match/VersionRange/MaxVersion"), .. FindingsEndingAt("/Match/VersionRange")];
+        [.. FindingsFor("/Match/Version/Range/MaxVersion"), .. FindingsEndingAt("/Match/Version/Range")];
     public bool HasMaxVersionErrors => HasErrors(MaxVersionFindings);
 
     public bool IncludePrerelease
@@ -946,8 +1072,9 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             nameof(DecisionFindings), nameof(HasDecisionErrors),
             nameof(ReasonFindings), nameof(HasReasonErrors),
             nameof(MatchFindings), nameof(HasMatchErrors),
-            nameof(PackageNamesFindings), nameof(HasPackageNamesErrors),
-            nameof(VersionsFindings), nameof(HasVersionsErrors),
+            nameof(ExactPackageIdentifierFindings), nameof(HasExactPackageIdentifierErrors),
+            nameof(PackageIdentifierPatternFindings), nameof(HasPackageIdentifierPatternErrors),
+            nameof(ExactVersionFindings), nameof(HasExactVersionErrors),
             nameof(MinVersionFindings), nameof(HasMinVersionErrors),
             nameof(MaxVersionFindings), nameof(HasMaxVersionErrors),
         })
@@ -1012,6 +1139,8 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsDisabled));
         OnPropertyChanged(nameof(IsIncompleteNewRule));
         OnPropertyChanged(nameof(IsEnabledWithoutMatchConditions));
+        OnPropertyChanged(nameof(CanUseSourceNames));
+        OnPropertyChanged(nameof(IsSourceNamesVisible));
         OnPropertyChanged(nameof(SafetyAdvisories));
         OnPropertyChanged(nameof(HasSafetyAdvisories));
         _sessionViewModel.NotifyDraftChangedCommand.Execute(null);

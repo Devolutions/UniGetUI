@@ -7,13 +7,14 @@ namespace UniGetUI.Tests.PolicyEditor;
 public class PolicyEditorTemplatesTests
 {
     [Fact]
-    public void CreateNew_FixesTypeFormatVersionAndPrecedence()
+    public void CreateNew_UsesCurrentFinalFormat()
     {
         PolicyEditorDraftDocument draft = PolicyEditorTemplates.CreateNew("id-1", "Contoso");
 
-        Assert.Equal(PolicyEditorPolicyContract.PolicyType, draft.PolicyType);
         Assert.Equal(PolicyFormatVersion.Current, draft.PolicyFormatVersion);
-        Assert.Equal(RulePrecedence.PriorityThenDeny, draft.Enforcement.RulePrecedence);
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(draft);
+        Assert.DoesNotContain("\"PolicyType\"", raw);
+        Assert.DoesNotContain("\"RulePrecedence\"", raw);
     }
 
     [Fact]
@@ -132,7 +133,7 @@ public class PolicyEditorTemplatesTests
         PolicyEditorDraftDocument draft =
             PolicyEditorTemplates.CreateNew("policy", "Contoso");
         PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("source-rule");
-        rule.Match.Sources.Add("corporate");
+        rule.Match.SourceNames.Add("corporate");
         if (managerCount >= 1) rule.Match.Managers.Add(ManagerName.Winget);
         if (managerCount >= 2) rule.Match.Managers.Add(ManagerName.Scoop);
         draft.Rules.Add(rule);
@@ -151,7 +152,7 @@ public class PolicyEditorTemplatesTests
         PolicyEditorDraftDocument draft =
             PolicyEditorTemplates.CreateNew("policy", "Contoso");
         PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("source-rule");
-        rule.Match.Sources.Add("corporate");
+        rule.Match.SourceNames.Add("corporate");
         rule.Match.Managers.Add(ManagerName.Winget);
         draft.Rules.Add(rule);
 
@@ -194,7 +195,8 @@ public class PolicyEditorTemplatesTests
 
         rule.Decision = Decision.Allow;
         rule.Match.Managers.Add(ManagerName.Winget);
-        rule.Match.PackageIdentifiers.Add("Contoso.App");
+        rule.Match.PackageIdentifierMode = PackageIdentifierMode.Exact;
+        rule.Match.ExactPackageIdentifiers.Add("Contoso.App");
         rule.Constraints.AllowSkipHashCheck = false;
         Assert.Empty(PolicyEditorAdvisories.ForRule(rule));
     }

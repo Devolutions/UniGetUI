@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Avalonia.Automation;
 using Devolutions.Now.Policy.Api;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 using UniGetUI.PackageEngine.AgentBroker.PolicyManagement;
@@ -7,6 +8,58 @@ namespace UniGetUI.Tests.PolicyEditor;
 
 public class PolicyEditorFindingIndexTests
 {
+    [Fact]
+    public async Task FixedFindingSummary_SelectsFirstErrorAndCyclesInSourceOrder()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement());
+        var validation = new FakeValidationClient();
+        using var sessionViewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+        var announcements = new List<(string? Message, AutomationLiveSetting LiveSetting)>();
+        using var dialog = new PolicyEditorDialogViewModel(
+            sessionViewModel,
+            (message, liveSetting) => announcements.Add((message, liveSetting)));
+        PolicyValidationFinding? navigated = null;
+        dialog.FindingNavigationRequested += (_, finding) => navigated = finding;
+        validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
+        {
+            IsValid = false,
+            Findings =
+            [
+                new PolicyFinding
+                {
+                    Path = "/Metadata/Publisher",
+                    Severity = PolicyFindingSeverity.Warning,
+                    Message = "review publisher",
+                },
+                new PolicyFinding
+                {
+                    Path = "/Metadata/Id",
+                    Severity = PolicyFindingSeverity.Error,
+                    Message = "correct id",
+                },
+            ],
+        });
+
+        await sessionViewModel.SaveCommand.ExecuteAsync(null);
+
+        Assert.True(dialog.HasFindingSummary);
+        Assert.Equal("/Metadata/Id", dialog.SelectedFinding!.Pointer);
+        Assert.Equal("/Metadata/Id", navigated!.Pointer);
+        Assert.Equal("1 error(s), 1 warning(s)", dialog.FindingCountText);
+
+        dialog.SelectNextFinding();
+        Assert.Equal("/Metadata/Publisher", dialog.SelectedFinding!.Pointer);
+        dialog.SelectPreviousFinding();
+        Assert.Equal("/Metadata/Id", dialog.SelectedFinding!.Pointer);
+        Assert.Contains(announcements, item =>
+            item.LiveSetting == AutomationLiveSetting.Assertive);
+    }
+
     private static PolicyValidationFinding Finding(string pointer, string? ruleId, string message = "message") =>
         new(pointer, ruleId, PolicyValidationSeverity.Warning, message);
 

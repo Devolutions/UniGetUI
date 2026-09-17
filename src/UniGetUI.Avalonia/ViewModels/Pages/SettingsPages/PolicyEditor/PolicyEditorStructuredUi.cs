@@ -658,6 +658,8 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
     }
 
     public bool IsDisabled => !Rule.Enabled;
+    public bool IsIncompleteNewRule =>
+        _sessionViewModel.IsDeferredBlankRule(Rule);
     public bool IsEnabledWithoutMatchConditions =>
         Rule.Enabled && PolicyEditorRuleSemantics.IsCatchAll(Rule.Match);
     public IReadOnlyList<string> SafetyAdvisories =>
@@ -797,6 +799,7 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(Findings));
         OnPropertyChanged(nameof(HasFindings));
+        OnPropertyChanged(nameof(IsIncompleteNewRule));
         foreach (string property in new[]
         {
             nameof(IdFindings), nameof(HasIdErrors),
@@ -867,6 +870,7 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
     private void MarkDirty()
     {
         OnPropertyChanged(nameof(IsDisabled));
+        OnPropertyChanged(nameof(IsIncompleteNewRule));
         OnPropertyChanged(nameof(IsEnabledWithoutMatchConditions));
         OnPropertyChanged(nameof(SafetyAdvisories));
         OnPropertyChanged(nameof(HasSafetyAdvisories));

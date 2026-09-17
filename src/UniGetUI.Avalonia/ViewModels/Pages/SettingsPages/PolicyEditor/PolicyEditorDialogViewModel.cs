@@ -22,6 +22,7 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
 {
     private readonly Action<string?, AutomationLiveSetting> _announce;
     private long _announcedWriteCompletionGeneration;
+    private int _selectedFindingIndex = -1;
 
     public PolicyEditorSessionViewModel Session { get; }
 
@@ -30,6 +31,34 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
     public ObservableCollection<PolicyEditorRuleUi> Rules { get; } = [];
 
     public InfoBarViewModel Status { get; } = new() { IsClosable = false, IsOpen = false };
+    public event EventHandler<PolicyValidationFinding?>? FindingNavigationRequested;
+
+    public PolicyValidationFinding? SelectedFinding =>
+        _selectedFindingIndex >= 0 && _selectedFindingIndex < Session.Findings.Count
+            ? Session.Findings[_selectedFindingIndex]
+            : null;
+    public bool HasFindingSummary => Session.SyntaxError is not null || SelectedFinding is not null;
+    public bool HasMultipleFindings => Session.SyntaxError is null && Session.Findings.Count > 1;
+    public string FindingCountText
+    {
+        get
+        {
+            if (Session.SyntaxError is not null)
+                return CoreTools.Translate("1 error");
+            int errors = Session.Findings.Count(finding =>
+                finding.Severity == PolicyValidationSeverity.Error);
+            int warnings = Session.Findings.Count(finding =>
+                finding.Severity == PolicyValidationSeverity.Warning);
+            return CoreTools.Translate(
+                "{0} error(s), {1} warning(s)",
+                errors,
+                warnings);
+        }
+    }
+    public string SelectedFindingMessage =>
+        Session.SyntaxError is not null
+            ? Session.SyntaxErrorMessage
+            : SelectedFinding?.Message ?? "";
 
     public PolicyEditorDialogViewModel(PolicyEditorSessionViewModel session)
         : this(session, AccessibilityAnnouncementService.Announce)
@@ -46,6 +75,7 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         Document = new PolicyEditorDocumentUi(session);
         Session.PropertyChanged += OnSessionPropertyChanged;
         RebuildRules();
+        SelectFirstFinding(navigate: false);
         RefreshStatus();
     }
 
@@ -137,6 +167,14 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
                     firstWarning.AutomationName,
                     AutomationLiveSetting.Polite);
             }
+
+            SelectFirstFinding(navigate: firstError is not null);
+        }
+        else if (e.PropertyName == nameof(PolicyEditorSessionViewModel.SyntaxError))
+        {
+            RefreshFindingSummary();
+            if (Session.SyntaxError is not null)
+                FindingNavigationRequested?.Invoke(this, null);
         }
 
         if (e.PropertyName is nameof(PolicyEditorSessionViewModel.LastWriteFailureKind)
@@ -164,6 +202,53 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         }
 
         RefreshStatus();
+    }
+
+    public void SelectPreviousFinding()
+    {
+        if (Session.Findings.Count == 0) return;
+        _selectedFindingIndex =
+            (_selectedFindingIndex - 1 + Session.Findings.Count) % Session.Findings.Count;
+        RefreshFindingSummary();
+        FindingNavigationRequested?.Invoke(this, SelectedFinding);
+    }
+
+    public void SelectNextFinding()
+    {
+        if (Session.Findings.Count == 0) return;
+        _selectedFindingIndex =
+            (_selectedFindingIndex + 1) % Session.Findings.Count;
+        RefreshFindingSummary();
+        FindingNavigationRequested?.Invoke(this, SelectedFinding);
+    }
+
+    public void NavigateToSelectedFinding() =>
+        FindingNavigationRequested?.Invoke(this, SelectedFinding);
+
+    private void SelectFirstFinding(bool navigate)
+    {
+        PolicyValidationFinding? firstError = Session.Findings.FirstOrDefault(
+            finding => finding.Severity == PolicyValidationSeverity.Error);
+        PolicyValidationFinding? selected = firstError ?? Session.Findings.FirstOrDefault();
+        _selectedFindingIndex = selected is null
+            ? -1
+            : Session.Findings
+                .Select((finding, index) => (finding, index))
+                .Where(item => ReferenceEquals(item.finding, selected))
+                .Select(item => item.index)
+                .FirstOrDefault();
+        RefreshFindingSummary();
+        if (navigate && selected is not null)
+            FindingNavigationRequested?.Invoke(this, selected);
+    }
+
+    private void RefreshFindingSummary()
+    {
+        OnPropertyChanged(nameof(SelectedFinding));
+        OnPropertyChanged(nameof(HasFindingSummary));
+        OnPropertyChanged(nameof(HasMultipleFindings));
+        OnPropertyChanged(nameof(FindingCountText));
+        OnPropertyChanged(nameof(SelectedFindingMessage));
     }
 
     private void RefreshStatus()
@@ -264,7 +349,7 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
                 errorCount > 0
                     ? CoreTools.Translate("Validation found errors")
                     : CoreTools.Translate("Validation found warnings"),
-                CoreTools.Translate("Review the findings below before saving."),
+                CoreTools.Translate("Correct the selected error or review the warning before saving."),
                 errorCount > 0 ? InfoBarSeverity.Error : InfoBarSeverity.Warning,
                 announce: false);
             return;

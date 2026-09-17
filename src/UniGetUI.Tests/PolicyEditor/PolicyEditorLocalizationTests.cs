@@ -453,10 +453,30 @@ public partial class PolicyEditorLocalizationTests
             "PolicyEditorDialogViewModel.cs"));
         Assert.Contains("AnnounceRulePosition", dialogViewModel);
         Assert.Contains("AutomationLiveSetting.Polite", dialogViewModel);
+        XDocument editor = XDocument.Parse(view);
+        XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
+        XElement rulesHeader = Assert.Single(editor.Descendants(),
+            element => (string?)element.Attribute(x + "Name") == "RulesSectionHeader");
+        XElement addRule = Assert.Single(rulesHeader.Descendants(),
+            element => (string?)element.Attribute("Click") == "AddRuleButton_Click");
+        Assert.Equal("Auto,Auto", (string?)rulesHeader.Attribute("ColumnDefinitions"));
+        Assert.Equal("Left", (string?)rulesHeader.Attribute("HorizontalAlignment"));
+        Assert.Equal("Center", (string?)addRule.Attribute("VerticalAlignment"));
+        Assert.DoesNotContain(
+            ((string?)rulesHeader.Attribute("ColumnDefinitions")) ?? "",
+            "*",
+            StringComparison.Ordinal);
         Assert.Contains("Text=\"{t:Translate Additional safety limits}\"", view);
         Assert.Contains("IsVisible=\"{Binding IsAllowDecision}\"", view);
         Assert.Contains("IsVisible=\"{Binding HasSafetyAdvisories}\"", view);
         Assert.Contains("IsVisible=\"{Binding IsAdvisoryVisible}\"", view);
+        Assert.DoesNotContain("Command=\"{Binding Session.ValidateCommand}\"", view);
+        Assert.DoesNotContain("ItemsSource=\"{Binding Session.Findings}\"", view);
+        Assert.Contains("IsVisible=\"{Binding HasFindingSummary}\"", view);
+        Assert.Contains("Text=\"{Binding SelectedFindingMessage}\"", view);
+        Assert.Contains("Click=\"TopFindingNavigateButton_Click\"", view);
+        Assert.Contains("Click=\"PreviousFindingButton_Click\"", view);
+        Assert.Contains("Click=\"NextFindingButton_Click\"", view);
     }
 
     [Fact]
@@ -649,13 +669,30 @@ public partial class PolicyEditorLocalizationTests
 
         XElement refresh = Assert.Single(view.Descendants(),
             element => (string?)element.Attribute("Command") == "{Binding RefreshPageCommand}");
+        XElement header = Assert.Single(view.Descendants(),
+            element => (string?)element.Attribute(x + "Name") == "PolicyPageHeader");
+        XElement heading = Assert.Single(view.Descendants(),
+            element => (string?)element.Attribute(x + "Name") == "PolicyManagementHeading");
+        Assert.Same(header, refresh.Parent);
+        Assert.Same(header, heading.Parent);
+        Assert.Equal("40,0,40,12", (string?)header.Attribute("Margin"));
+        Assert.Equal("Center", (string?)heading.Attribute("VerticalAlignment"));
+        Assert.Equal("Center", (string?)refresh.Attribute("VerticalAlignment"));
         Assert.DoesNotContain(refresh.Ancestors(), element => element == section);
         Assert.Null(refresh.Attribute("IsEnabled"));
         Assert.Single(view.Descendants(),
             element => (string?)element.Attribute("Content") == "{t:Translate Refresh}");
-        Assert.Single(view.Descendants(),
+        XElement status = Assert.Single(view.Descendants(),
             element => element.Name.LocalName == "InfoBar"
                 && (string?)element.Attribute("DataContext") == "{Binding ManagementStatus}");
+        Assert.Equal("40,0,40,12", (string?)status.Attribute("Margin"));
+        Assert.DoesNotContain(
+            view.Root!.DescendantsAndSelf().Attributes("Margin"),
+            margin => margin.Value.StartsWith("44,", StringComparison.Ordinal));
+        Assert.Contains(view.Descendants(),
+            element => ((string?)element.Attribute("Classes"))?
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Contains("policy-section-heading", StringComparer.Ordinal) is true);
     }
 
     [Fact]

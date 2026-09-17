@@ -18,12 +18,13 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly object _discardConfirmationLock = new();
     private readonly Dictionary<object, string> _localInputErrors = [];
+    private readonly HashSet<PolicyEditorDraftRule> _deferredBlankRules =
+        new(ReferenceEqualityComparer.Instance);
     private CancellationTokenSource? _rawSyntaxCancellation;
     private Task _rawSyntaxAnalysis = Task.CompletedTask;
     private CancellationTokenSource? _structuredDirtyCancellation;
     private Task _structuredDirtyAnalysis = Task.CompletedTask;
     private Task<bool>? _discardConfirmationTask;
-    private long _validationGeneration;
     private long _saveGeneration;
     private bool _hasLocalSemanticErrors;
     private int _isDisposed;
@@ -265,7 +266,8 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void AddRule()
     {
-        Session.AddRule();
+        PolicyEditorDraftRule rule = Session.AddRule();
+        _deferredBlankRules.Add(rule);
         OnStructuredDraftChanged();
     }
 
@@ -289,6 +291,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private void DeleteRule(PolicyEditorDraftRule? rule)
     {
         if (rule is null) return;
+        _deferredBlankRules.Remove(rule);
         Session.DeleteRule(rule);
         OnStructuredDraftChanged();
     }
@@ -312,44 +315,11 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanStartRemoteOperation))]
-    private async Task ValidateAsync(CancellationToken cancellationToken)
-    {
-        using CancellationTokenSource linked = CreateLinkedCancellation(cancellationToken);
-        cancellationToken = linked.Token;
-        if (!CanStartRemoteOperation()) return;
-
-        string raw = Session.GetEffectiveRawJson();
-        ReconcileDirtyAtBoundary(raw);
-        if (!TryGetDraftElement(raw, out JsonElement draft, out PolicyEditorSyntaxError? error))
-        {
-            SyntaxError = error;
-            return;
-        }
-
-        long generation = Interlocked.Increment(ref _validationGeneration);
-        PolicyEditorValidationOutcome outcome =
-            await ValidateCoreAsync(draft, cancellationToken);
-        if (!CanApply(cancellationToken)
-            || generation != Volatile.Read(ref _validationGeneration)
-            || !string.Equals(Session.GetEffectiveRawJson(), raw, StringComparison.Ordinal))
-            return;
-
-        if (outcome.Validation is not null)
-            Session.ApplyValidationResult(
-                raw,
-                outcome.Validation,
-                outcome.BoundedFindings,
-                outcome.OmittedFindingCount);
-        LastErrorCode = outcome.ErrorCode;
-        SyntaxError = null;
-        OnEditorStateChanged();
-    }
-
-    [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanStartRemoteOperation))]
     private async Task SaveAsync(CancellationToken cancellationToken)
     {
         using CancellationTokenSource linked = CreateLinkedCancellation(cancellationToken);
         cancellationToken = linked.Token;
+        PromoteDeferredBlankRules();
         if (!CanStartRemoteOperation()) return;
 
         await SaveCoreAsync(
@@ -792,22 +762,6 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task<PolicyEditorValidationOutcome> ValidateCoreAsync(
-        JsonElement draft,
-        CancellationToken cancellationToken)
-    {
-        IsBusy = true;
-        try
-        {
-            return await _validationClient.ValidateAsync(draft, cancellationToken);
-        }
-        finally
-        {
-            StatusMessage = "";
-            IsBusy = false;
-        }
-    }
-
     private bool CanStartRemoteOperation() =>
         Volatile.Read(ref _isDisposed) == 0
         && !IsBusy
@@ -891,7 +845,6 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(CanSwitchToStructured));
         SwitchToRawCommand.NotifyCanExecuteChanged();
         SwitchToStructuredCommand.NotifyCanExecuteChanged();
-        ValidateCommand.NotifyCanExecuteChanged();
         SaveCommand.NotifyCanExecuteChanged();
         ConfirmOverwriteCommand.NotifyCanExecuteChanged();
     }
@@ -951,7 +904,6 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _isDisposed, 1) != 0) return;
-        Interlocked.Increment(ref _validationGeneration);
         Interlocked.Increment(ref _saveGeneration);
         CancelRawSyntaxAnalysis();
         CancelStructuredDirtyAnalysis();
@@ -974,10 +926,46 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private void RefreshLocalSemanticValidation()
     {
         IReadOnlyList<PolicyValidationFinding> findings =
-            PolicyEditorLocalValidation.ValidateDraft(Session.Draft);
+            PolicyEditorLocalValidation.ValidateDraft(Session.Draft)
+                .Where(finding => !IsDeferredBlankFinding(finding))
+                .ToArray();
         _hasLocalSemanticErrors = findings.Any(
             finding => finding.Severity == PolicyValidationSeverity.Error);
         Session.SetLocalFindings(findings);
+    }
+
+    internal bool IsDeferredBlankRule(PolicyEditorDraftRule rule) =>
+        _deferredBlankRules.Contains(rule)
+        && PolicyEditorRuleSemantics.IsCatchAll(rule.Match);
+
+    private bool IsDeferredBlankFinding(PolicyValidationFinding finding)
+    {
+        if (!finding.Pointer.EndsWith("/Match", StringComparison.Ordinal)
+            || !TryGetRuleIndex(finding.Pointer, out int index)
+            || index < 0
+            || index >= Session.Draft.Rules.Count)
+        {
+            return false;
+        }
+
+        return IsDeferredBlankRule(Session.Draft.Rules[index]);
+    }
+
+    private static bool TryGetRuleIndex(string pointer, out int index)
+    {
+        index = -1;
+        string[] segments = pointer.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length >= 2
+            && segments[0].Equals("Rules", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(segments[1], out index);
+    }
+
+    private void PromoteDeferredBlankRules()
+    {
+        if (_deferredBlankRules.Count == 0) return;
+        _deferredBlankRules.Clear();
+        RefreshLocalSemanticValidation();
+        OnEditorStateChanged();
     }
 
     private void ReconcileDirtyAtBoundary(string effectiveRawJson)

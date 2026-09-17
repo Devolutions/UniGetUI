@@ -22,6 +22,11 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
+        <Style Selector="TextBlock.policy-section-heading">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="40,24,40,8"/>
+        </Style>
     </UserControl.Styles>
 
     <UserControl.DataTemplates>
@@ -41,28 +46,32 @@
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Vertical" Margin="0,8,0,24">
-            <TextBlock x:Name="PolicyManagementHeading"
-                       Text="{t:Translate Package broker policy}"
-                       FontSize="16"
-                       FontWeight="Bold"
-                       Margin="44,8,4,8"
-                       automation:AutomationProperties.HeadingLevel="2"/>
-
-            <Grid ColumnDefinitions="*,Auto" Margin="40,0,40,8">
+            <Grid x:Name="PolicyPageHeader"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12"
+                  Margin="40,0,40,12">
+                <TextBlock x:Name="PolicyManagementHeading"
+                           Text="{t:Translate Package broker policy}"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           automation:AutomationProperties.HeadingLevel="2"/>
                 <Button Grid.Column="1"
                         Command="{Binding RefreshPageCommand}"
                         Content="{t:Translate Refresh}"
+                        VerticalAlignment="Center"
                         controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RefreshPolicy}"
                         automation:AutomationProperties.Name="{t:Translate Refresh policy information}"/>
             </Grid>
 
             <ProgressBar IsIndeterminate="{Binding IsPageRefreshActive}"
                          IsVisible="{Binding IsPageRefreshActive}"
-                         Margin="40,0,40,8"
+                         Margin="40,0,40,12"
                          automation:AutomationProperties.Name="{t:Translate Loading policy information}"/>
 
             <controls:InfoBar DataContext="{Binding ManagementStatus}"
-                              Margin="40,0"/>
+                              Margin="40,0,40,12"/>
 
             <StackPanel IsVisible="{Binding HasManagementSnapshot}">
                 <Border Classes="settings-card policy-section">
@@ -162,11 +171,9 @@
                             automation:AutomationProperties.Name="{t:Translate Replace the active policy identity}"/>
                 </Grid>
 
-                <TextBlock Text="{t:Translate Diagnostics}"
+                <TextBlock Classes="policy-section-heading"
+                           Text="{t:Translate Diagnostics}"
                            IsVisible="{Binding HasManagementDiagnostics}"
-                           FontSize="14"
-                           FontWeight="SemiBold"
-                           Margin="44,24,4,8"
                            automation:AutomationProperties.HeadingLevel="3"/>
                 <Border Classes="settings-card policy-section" IsVisible="{Binding HasManagementDiagnostics}">
                     <ItemsControl ItemsSource="{Binding ManagementDiagnosticsRows}"/>
@@ -176,28 +183,22 @@
             <StackPanel x:Name="ActivePolicyDetailsSection"
                         IsVisible="{Binding HasActivePolicyDetails}">
                 <StackPanel IsVisible="{Binding HasPolicy}">
-                <TextBlock Text="{t:Translate Policy metadata}"
-                           FontSize="14"
-                           FontWeight="SemiBold"
-                           Margin="44,32,4,8"
+                <TextBlock Classes="policy-section-heading"
+                           Text="{t:Translate Policy metadata}"
                            automation:AutomationProperties.HeadingLevel="2"/>
                 <Border Classes="settings-card policy-section">
                     <ItemsControl ItemsSource="{Binding MetadataRows}"/>
                 </Border>
 
-                <TextBlock Text="{t:Translate Enforcement}"
-                           FontSize="14"
-                           FontWeight="SemiBold"
-                           Margin="44,32,4,8"
+                <TextBlock Classes="policy-section-heading"
+                           Text="{t:Translate Enforcement}"
                            automation:AutomationProperties.HeadingLevel="2"/>
                 <Border Classes="settings-card policy-section">
                     <ItemsControl ItemsSource="{Binding EnforcementRows}"/>
                 </Border>
 
-                <TextBlock Text="{t:Translate Rules}"
-                           FontSize="14"
-                           FontWeight="SemiBold"
-                           Margin="44,32,4,8"
+                <TextBlock Classes="policy-section-heading"
+                           Text="{t:Translate Rules}"
                            automation:AutomationProperties.HeadingLevel="2"/>
                 <Border Classes="settings-card policy-section" IsVisible="{Binding HasNoRules}">
                     <TextBlock Text="{t:Translate The active policy contains no rules.}"
@@ -273,7 +274,7 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <Grid ColumnDefinitions="*,Auto" Margin="44,24,40,8">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="40,24,40,8">
                     <TextBlock Text="{t:Translate Canonical policy JSON}"
                                FontSize="14"
                                FontWeight="SemiBold"

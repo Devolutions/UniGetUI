@@ -121,12 +121,43 @@
         </DataTemplate>
     </dialogs:ImmersiveDialog.DataTemplates>
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20,12,20,16" RowSpacing="10">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="20,12,20,16" RowSpacing="10">
 
         <controls:InfoBar Grid.Row="0"
                           DataContext="{Binding Status}"/>
 
-        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+        <Border Grid.Row="1"
+                Classes="settings-card"
+                IsVisible="{Binding HasFindingSummary}"
+                Padding="10,8"
+                automation:AutomationProperties.LiveSetting="Polite">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
+                <TextBlock Text="{Binding FindingCountText}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding SelectedFindingMessage}"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="2"
+                        Content="{t:Translate Previous}"
+                        IsVisible="{Binding HasMultipleFindings}"
+                        Click="PreviousFindingButton_Click"
+                        automation:AutomationProperties.Name="{t:Translate Previous validation finding}"/>
+                <Button Grid.Column="3"
+                        Content="{t:Translate Next}"
+                        IsVisible="{Binding HasMultipleFindings}"
+                        Click="NextFindingButton_Click"
+                        automation:AutomationProperties.Name="{t:Translate Next validation finding}"/>
+                <Button Grid.Column="4"
+                        Content="{t:Translate Go to field}"
+                        Click="TopFindingNavigateButton_Click"
+                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.GoToFinding}"
+                        automation:AutomationProperties.Name="{t:Translate Go to affected policy field}"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
             <Button x:Name="StructuredModeButton" Grid.Column="0"
                     Content="{t:Translate Structured}"
                     Classes.accent="{Binding Session.IsStructuredMode}"
@@ -148,7 +179,7 @@
                        VerticalAlignment="Center" Opacity="0.7"/>
         </Grid>
 
-        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="16" Margin="2,0,2,8">
 
                 <!-- ── Structured mode ── -->
@@ -349,11 +380,16 @@
                         </Border>
                     </Expander>
 
-                    <Grid ColumnDefinitions="*,Auto">
+                    <Grid x:Name="RulesSectionHeader"
+                          ColumnDefinitions="Auto,Auto"
+                          ColumnSpacing="12"
+                          HorizontalAlignment="Left">
                         <TextBlock Classes="section-heading" Text="{t:Translate Rules}"
                                    automation:AutomationProperties.HeadingLevel="2"/>
                         <Button Grid.Column="1" Content="{t:Translate Add rule}"
                                 Click="AddRuleButton_Click"
+                                VerticalAlignment="Center"
+                                Margin="0,8,0,0"
                                 controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AddRule}"
                                 automation:AutomationProperties.Name="{t:Translate Add rule}"/>
                     </Grid>
@@ -486,6 +522,13 @@
                                                    automation:AutomationProperties.HeadingLevel="3"/>
                                         <ItemsControl ItemsSource="{Binding MatchFindings}"
                                                       ItemTemplate="{StaticResource InlineFindingTemplate}"/>
+                                        <Border Classes="settings-card"
+                                                IsVisible="{Binding IsIncompleteNewRule}"
+                                                Padding="8"
+                                                controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.IncompleteRuleHint}">
+                                            <TextBlock Text="{x:Static pvm:PolicyEditorHelp.IncompleteRuleHint}"
+                                                       TextWrapping="Wrap"/>
+                                        </Border>
                                         <ItemsControl ItemsSource="{Binding SafetyAdvisories}"
                                                       IsVisible="{Binding HasSafetyAdvisories}">
                                             <ItemsControl.ItemTemplate>
@@ -810,38 +853,24 @@
                             automation:AutomationProperties.Name="{t:Translate Go to raw JSON error}"/>
                 </StackPanel>
 
-                <!-- ── Findings summary (both modes) ── -->
-                <StackPanel IsVisible="{Binding Session.HasFindings}" Spacing="4">
-                    <TextBlock Classes="section-heading" Text="{t:Translate Validation findings}"
-                               controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Findings}"
-                               automation:AutomationProperties.HeadingLevel="2"/>
-                    <ItemsControl ItemsSource="{Binding Session.Findings}"
-                                  automation:AutomationProperties.LiveSetting="Polite"/>
-                </StackPanel>
-
             </StackPanel>
         </ScrollViewer>
 
-        <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+        <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
             <TextBlock Grid.Column="0" Text="{Binding WriteFailureMessage}" IsVisible="{Binding HasWriteFailure}"
                        Classes="finding-error" VerticalAlignment="Center" TextWrapping="Wrap"/>
-            <Button Grid.Column="1" Content="{t:Translate Validate}"
-                    Command="{Binding Session.ValidateCommand}"
-                    IsEnabled="{Binding Session.CanValidateOrSave}"
-                    controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Validate}"
-                    automation:AutomationProperties.Name="{t:Translate Validate policy}"/>
-            <Button Grid.Column="2" Content="{t:Translate Overwrite}"
+            <Button Grid.Column="1" Content="{t:Translate Overwrite}"
                     Command="{Binding Session.ConfirmOverwriteCommand}"
                     IsVisible="{Binding Session.HasConflict}"
                     IsEnabled="{Binding Session.CanValidateOrSave}"
                     controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Overwrite}"
                     automation:AutomationProperties.Name="{t:Translate Overwrite the policy that changed elsewhere}"/>
-            <Button Grid.Column="3" Classes="accent" Content="{t:Translate Save}"
+            <Button Grid.Column="2" Classes="accent" Content="{t:Translate Save}"
                     Command="{Binding Session.SaveCommand}"
                     IsEnabled="{Binding Session.CanValidateOrSave}"
                     controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Save}"
                     automation:AutomationProperties.Name="{t:Translate Save policy}"/>
-            <Button Grid.Column="4" Content="{t:Translate Close}"
+            <Button Grid.Column="3" Content="{t:Translate Close}"
                     Click="CloseButton_Click"
                     automation:AutomationProperties.Name="{t:Translate Close policy editor}"/>
         </Grid>

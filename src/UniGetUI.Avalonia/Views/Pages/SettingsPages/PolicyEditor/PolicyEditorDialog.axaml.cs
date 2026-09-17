@@ -36,7 +36,9 @@ public partial class PolicyEditorDialog : ImmersiveDialog
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
+        _viewModel?.FindingNavigationRequested -= OnFindingNavigationRequested;
         _viewModel = DataContext as PolicyEditorDialogViewModel;
+        _viewModel?.FindingNavigationRequested += OnFindingNavigationRequested;
         SyncEditorFromSession();
     }
 
@@ -160,6 +162,35 @@ public partial class PolicyEditorDialog : ImmersiveDialog
             return;
         }
 
+        NavigateToFinding(finding);
+    }
+
+    private void PreviousFindingButton_Click(object? sender, RoutedEventArgs e) =>
+        _viewModel?.SelectPreviousFinding();
+
+    private void NextFindingButton_Click(object? sender, RoutedEventArgs e) =>
+        _viewModel?.SelectNextFinding();
+
+    private void TopFindingNavigateButton_Click(object? sender, RoutedEventArgs e) =>
+        _viewModel?.NavigateToSelectedFinding();
+
+    private void OnFindingNavigationRequested(
+        object? sender,
+        PolicyValidationFinding? finding)
+    {
+        if (finding is null)
+        {
+            RawEditor.BringIntoView();
+            RawEditor.Focus();
+            return;
+        }
+
+        NavigateToFinding(finding);
+    }
+
+    private void NavigateToFinding(PolicyValidationFinding finding)
+    {
+        if (_viewModel is null) return;
         if (_viewModel.Session.IsRawMode)
         {
             RawEditor.BringIntoView();

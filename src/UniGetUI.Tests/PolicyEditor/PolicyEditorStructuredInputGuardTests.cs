@@ -11,7 +11,7 @@ namespace UniGetUI.Tests.PolicyEditor;
 /// Covers the typed-input guard contract of the UI-only wrappers in
 /// <c>PolicyEditorStructuredUi.cs</c> (<see cref="PolicyEditorDocumentUi"/> and
 /// <see cref="PolicyEditorRuleUi"/>): invalid text typed into <c>ValidFromText</c>/<c>ValidUntilText</c>/
-/// a localized local error, and must block <c>ValidateCommand</c>/<c>SaveCommand</c> until corrected.
+/// a localized local error, and must block <c>SaveCommand</c>/<c>SaveCommand</c> until corrected.
 /// Blank date text must clear the underlying value rather than error. The Save button's <c>IsEnabled</c>
 /// binding (<c>CanValidateOrSave</c>) and <c>SaveCommand.CanExecute</c> are asserted to always agree,
 /// since both are wired to the same busy/error guard and must never diverge.
@@ -25,7 +25,7 @@ public class PolicyEditorStructuredInputGuardTests
         var document = new PolicyEditorDocumentUi(viewModel);
 
         AssertSaveGuardAgrees(viewModel);
-        Assert.True(viewModel.ValidateCommand.CanExecute(null));
+        Assert.True(viewModel.SaveCommand.CanExecute(null));
         Assert.True(viewModel.SaveCommand.CanExecute(null));
 
         document.ValidFromText = "not a date";
@@ -37,7 +37,7 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.True(viewModel.IsDirty);
         Assert.False(viewModel.CanValidateOrSave);
         AssertSaveGuardAgrees(viewModel);
-        Assert.False(viewModel.ValidateCommand.CanExecute(null));
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
         Assert.False(viewModel.SaveCommand.CanExecute(null));
 
         document.ValidFromText = "2026-08-29T12:34:56Z";
@@ -209,7 +209,7 @@ public class PolicyEditorStructuredInputGuardTests
         var document = new PolicyEditorDocumentUi(viewModel);
         document.SupportUrl = " ";
 
-        await viewModel.ValidateCommand.ExecuteAsync(null);
+        await viewModel.SaveCommand.ExecuteAsync(null);
 
         Assert.Equal(
             " ",
@@ -988,7 +988,7 @@ public class PolicyEditorStructuredInputGuardTests
             ],
         });
 
-        await viewModel.ValidateCommand.ExecuteAsync(null);
+        await viewModel.SaveCommand.ExecuteAsync(null);
 
         Assert.Collection(
             announcements,
@@ -1022,7 +1022,7 @@ public class PolicyEditorStructuredInputGuardTests
             viewModel,
             (message, liveSetting) => announcements.Add((message, liveSetting)));
 
-        Task pending = viewModel.ValidateCommand.ExecuteAsync(null);
+        Task pending = viewModel.SaveCommand.ExecuteAsync(null);
 
         (string? message, AutomationLiveSetting liveSetting) = Assert.Single(announcements);
         Assert.Contains("Working", message);
@@ -1038,7 +1038,7 @@ public class PolicyEditorStructuredInputGuardTests
     [InlineData(WriteAnnouncementScenario.Saved)]
     [InlineData(WriteAnnouncementScenario.Rejected)]
     [InlineData(WriteAnnouncementScenario.Conflict)]
-    public async Task CompletedWriteOutcome_IsNotReannouncedByLaterValidation(
+    public async Task CompletedWriteOutcome_IsReplacedByNextSaveOutcome(
         WriteAnnouncementScenario scenario)
     {
         var validation = new FakeValidationClient();
@@ -1063,11 +1063,11 @@ public class PolicyEditorStructuredInputGuardTests
         announcements.Clear();
         validation.NextOutcome = ValidOutcome(viewModel, "receipt-validation");
 
-        await viewModel.ValidateCommand.ExecuteAsync(null);
+        await viewModel.SaveCommand.ExecuteAsync(null);
 
-        (string? message, AutomationLiveSetting liveSetting) = Assert.Single(announcements);
-        Assert.Contains("Working", message);
-        Assert.Equal(AutomationLiveSetting.Polite, liveSetting);
+        Assert.Equal(2, announcements.Count);
+        Assert.Contains("Working", announcements[0].Message);
+        Assert.Equal(AutomationLiveSetting.Polite, announcements[0].LiveSetting);
     }
 
     [Fact]
@@ -1138,7 +1138,7 @@ public class PolicyEditorStructuredInputGuardTests
         using PolicyEditorSessionViewModel viewModel = CreateViewModel(validation);
 
         Assert.True(viewModel.SaveCommand.CanExecute(null));
-        Task validateTask = viewModel.ValidateCommand.ExecuteAsync(null);
+        Task validateTask = viewModel.SaveCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.IsBusy);
         Assert.False(viewModel.CanValidateOrSave);
@@ -1168,7 +1168,7 @@ public class PolicyEditorStructuredInputGuardTests
             CanonicalDraft = PolicyEditorMapper.ToSharedDraft(viewModel.Draft),
         });
 
-        Task pending = viewModel.ValidateCommand.ExecuteAsync(null);
+        Task pending = viewModel.SaveCommand.ExecuteAsync(null);
         Assert.True(viewModel.IsBusy);
         Assert.False(await viewModel.ConfirmDiscardAsync());
 

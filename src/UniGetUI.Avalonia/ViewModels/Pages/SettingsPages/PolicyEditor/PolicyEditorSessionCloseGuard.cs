@@ -73,7 +73,6 @@ public static class PolicyEditorSessionCloseGuard
 
     private static IAsyncRelayCommand? FindRunningCommand(PolicyEditorSessionViewModel session)
     {
-        if (session.ValidateCommand.IsRunning) return session.ValidateCommand;
         if (session.SaveCommand.IsRunning) return session.SaveCommand;
         if (session.ConfirmOverwriteCommand.IsRunning) return session.ConfirmOverwriteCommand;
         if (session.SwitchToStructuredCommand.IsRunning) return session.SwitchToStructuredCommand;

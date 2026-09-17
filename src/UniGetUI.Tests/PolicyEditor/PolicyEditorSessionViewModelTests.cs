@@ -91,15 +91,15 @@ public class PolicyEditorSessionViewModelTests
             Findings = findings ?? [],
         };
 
-    // ---- ValidateCommand --------------------------------------------------------------------
+    // ---- SaveCommand --------------------------------------------------------------------
 
     [Fact]
-    public async Task ValidateCommand_ValidOutcome_AppliesValidationToSession()
+    public async Task SaveCommand_ValidOutcome_AppliesValidationToSession()
     {
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, _) = CreateForCreateSession();
         validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
 
-        await vm.ValidateCommand.ExecuteAsync(null);
+        await vm.SaveCommand.ExecuteAsync(null);
 
         Assert.Equal(1, validation.CallCount);
         Assert.NotNull(vm.Session.Validation);
@@ -107,7 +107,7 @@ public class PolicyEditorSessionViewModelTests
     }
 
     [Fact]
-    public async Task ValidateCommand_InvalidOutcome_RecordsFindingsButNoCurrentValidation()
+    public async Task SaveCommand_InvalidOutcome_RecordsFindingsButNoCurrentValidation()
     {
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, _) = CreateForCreateSession();
         validation.NextOutcome = new PolicyEditorValidationOutcome(new PolicyValidationResult
@@ -116,7 +116,7 @@ public class PolicyEditorSessionViewModelTests
             Findings = [new PolicyFinding { Path = "/rules", Severity = PolicyFindingSeverity.Error, Message = "bad" }],
         });
 
-        await vm.ValidateCommand.ExecuteAsync(null);
+        await vm.SaveCommand.ExecuteAsync(null);
 
         Assert.Null(vm.Session.Validation);
         Assert.Single(vm.Session.Findings.All);
@@ -130,7 +130,7 @@ public class PolicyEditorSessionViewModelTests
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, FakeWriteClient writer) =
             CreateForCreateSession("id-1");
         validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
-        await vm.ValidateCommand.ExecuteAsync(null);
+        await vm.SaveCommand.ExecuteAsync(null);
         Assert.Equal(1, validation.CallCount);
         PolicyDocument authoritative = PolicyEditorTestFixtures.BuildDocument(id: "id-1");
         writer.NextOutcome = PolicyWriteOutcome.Success(
@@ -151,7 +151,7 @@ public class PolicyEditorSessionViewModelTests
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, FakeWriteClient writer) =
             CreateForCreateSession("id-1");
         validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm, receipt: "receipt-1"));
-        await vm.ValidateCommand.ExecuteAsync(null);
+        await vm.SaveCommand.ExecuteAsync(null);
         Assert.Equal(1, validation.CallCount);
 
         vm.AddRuleCommand.Execute(null); // mutates the draft -> Session.IsValidationCurrent becomes false
@@ -268,14 +268,14 @@ public class PolicyEditorSessionViewModelTests
         vm.RawBuffer = PolicyEditorRawSyntax.ToCanonicalRaw(vm.Draft) + " ";
 
         Assert.True(vm.IsRawSyntaxPending);
-        Assert.False(vm.ValidateCommand.CanExecute(null));
+        Assert.False(vm.SaveCommand.CanExecute(null));
         Assert.False(vm.SaveCommand.CanExecute(null));
         Assert.False(vm.SwitchToStructuredCommand.CanExecute(null));
 
         await vm.WaitForRawSyntaxAnalysisAsync();
 
         Assert.False(vm.IsRawSyntaxPending);
-        Assert.True(vm.ValidateCommand.CanExecute(null));
+        Assert.True(vm.SaveCommand.CanExecute(null));
     }
 
     [Fact]
@@ -287,8 +287,8 @@ public class PolicyEditorSessionViewModelTests
         rule.Match.Operations.Add(Devolutions.Now.Policy.Model.Operation.Install);
         vm.NotifyDraftChangedCommand.Execute(null);
         Assert.True(vm.HasLocalSemanticErrors);
-        Assert.False(vm.ValidateCommand.CanExecute(null));
-        await vm.ValidateCommand.ExecuteAsync(null);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+        await vm.SaveCommand.ExecuteAsync(null);
         Assert.Equal(0, validation.CallCount);
 
         vm.SwitchToRawCommand.Execute(null);
@@ -561,12 +561,24 @@ public class PolicyEditorSessionViewModelTests
     {
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, FakeWriteClient writer) =
             CreateForUpdateSession();
-        PolicyEditorDraftRule blank = vm.Session.AddRule();
-        vm.NotifyDraftChangedCommand.Execute(null);
+        vm.AddRuleCommand.Execute(null);
+        PolicyEditorDraftRule blank = vm.Draft.Rules[0];
 
         Assert.False(blank.Enabled);
+        Assert.False(vm.HasLocalSemanticErrors);
+        Assert.Empty(vm.Findings);
+        using (var draftRule = new PolicyEditorRuleUi(blank, vm))
+        {
+            Assert.True(draftRule.IsIncompleteNewRule);
+        }
+        Assert.True(vm.SaveCommand.CanExecute(null));
+
+        await vm.SaveCommand.ExecuteAsync(null);
+
         Assert.True(vm.HasLocalSemanticErrors);
         Assert.False(vm.SaveCommand.CanExecute(null));
+        Assert.Equal(0, validation.CallCount);
+        Assert.Equal(0, writer.CallCount);
         PolicyValidationFinding finding = Assert.Single(
             vm.Findings,
             item => item.Pointer == "/Rules/0/Match");
@@ -586,12 +598,34 @@ public class PolicyEditorSessionViewModelTests
         await vm.SaveCommand.ExecuteAsync(null);
         Assert.Equal(1, writer.CallCount);
 
-        PolicyEditorDraftRule secondBlank = vm.Session.AddRule();
-        vm.NotifyDraftChangedCommand.Execute(null);
-        Assert.False(vm.SaveCommand.CanExecute(null));
-        vm.Session.DeleteRule(secondBlank);
-        vm.NotifyDraftChangedCommand.Execute(null);
+        vm.AddRuleCommand.Execute(null);
+        PolicyEditorDraftRule secondBlank = vm.Draft.Rules[^1];
         Assert.True(vm.SaveCommand.CanExecute(null));
+        vm.DeleteRuleCommand.Execute(secondBlank);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task ImportedRawBlankRule_IsImmediatelyInvalid()
+    {
+        (PolicyEditorSessionViewModel vm, _, _, _) = CreateForUpdateSession();
+        vm.SwitchToRawCommand.Execute(null);
+        JsonNode root = JsonNode.Parse(vm.RawBuffer)!;
+        root["Rules"] = new JsonArray(JsonNode.Parse(
+            """
+            {
+              "Id": "blank",
+              "Enabled": false,
+              "Priority": 0,
+              "Decision": "Deny",
+              "Match": {}
+            }
+            """));
+        vm.RawBuffer = root.ToJsonString();
+        await vm.WaitForRawSyntaxAnalysisAsync();
+
+        Assert.True(vm.HasLocalSemanticErrors);
+        Assert.Contains(vm.Findings, finding => finding.Pointer == "/Rules/0/Match");
     }
 
     [Fact]
@@ -715,7 +749,7 @@ public class PolicyEditorSessionViewModelTests
         Assert.Equal("unsaved change", vm.Session.Draft.Metadata.Description);
         Assert.True(vm.IsDirty);
         Assert.False(vm.SaveCommand.CanExecute(null));
-        Assert.False(vm.ValidateCommand.CanExecute(null));
+        Assert.False(vm.SaveCommand.CanExecute(null));
         Assert.False(vm.ConfirmOverwriteCommand.CanExecute(null));
     }
 

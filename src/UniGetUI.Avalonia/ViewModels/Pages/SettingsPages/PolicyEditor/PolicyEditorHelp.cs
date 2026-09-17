@@ -27,6 +27,7 @@ public static class PolicyEditorHelp
     public static string AddRule => T("Add a disabled Deny rule with no match restrictions. Configure when it should apply, then enable it.");
     public static string RuleEnabled => T("A disabled rule has no effect. Enable it only after defining the requests it should match and confirming its Allow or Deny decision.");
     public static string DisabledRuleHint => T("This rule is disabled and has no effect. Configure its request characteristics, then enable it when ready.");
+    public static string IncompleteRuleHint => T("Choose at least one condition before this rule can be saved, or delete the rule.");
     public static string UnrestrictedRuleWarning => T("This enabled rule has no narrowing match conditions, so it applies to every package request. Add at least one match condition or disable the rule.");
     public static string DuplicateRule => T("Copy this rule as a starting point for a similar exception or restriction. Give the copy a unique rule ID.");
     public static string MoveRule => T("Move the rule to change its evaluation order. Moving a rule can change which Allow or Deny decision wins.");
@@ -72,10 +73,8 @@ public static class PolicyEditorHelp
     public static string AllowKillBefore => T("Permit named processes to be closed before the package operation. Turn off to prevent policy-approved requests from terminating applications.");
     public static string AllowUninstallPrevious => T("Permit removing an installed version before applying an update. Turn off to require updates that do not uninstall first.");
     public static string AllowUpgrade => T("Permit an install request to leave an already installed package unchanged instead of upgrading it. Turn off to reject requests that use this option.");
-    public static string Validate => T("Check the current policy with Devolutions Agent without saving it. Correct errors before saving and review every warning.");
     public static string Save => T("Check and save the policy. Warnings require acknowledgement, and Windows may ask for administrator approval.");
     public static string Overwrite => T("Replace a policy that changed after editing began. Review the newer policy first because overwriting discards those external changes.");
-    public static string Findings => T("Errors must be corrected before saving; warnings require review and confirmation. Use Go to field to open the affected setting.");
     public static string GoToFinding => T("Open and focus the setting associated with this finding.");
     public static string GoToRawError => T("Focus the policy JSON so you can correct the reported formatting or structure problem.");
     public static string CanonicalJson => T("Read-only JSON for the active policy exactly as Devolutions Agent recognizes it. Use it for review, diagnostics, or comparison.");

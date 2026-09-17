@@ -23,7 +23,7 @@ public class PolicyEditorSessionCloseGuardTests
         var validation = new CancelAwareValidationClient();
         using PolicyEditorSessionViewModel viewModel = CreateViewModel(validation);
 
-        Task validateTask = viewModel.ValidateCommand.ExecuteAsync(null);
+        Task validateTask = viewModel.SaveCommand.ExecuteAsync(null);
         Assert.True(viewModel.IsBusy);
 
         bool settled = await PolicyEditorSessionCloseGuard.TryCancelActiveOperationAsync(viewModel, ShortBound);
@@ -39,7 +39,7 @@ public class PolicyEditorSessionCloseGuardTests
         var validation = new FakeValidationClient { Gate = new TaskCompletionSource() };
         using PolicyEditorSessionViewModel viewModel = CreateViewModel(validation);
 
-        Task validateTask = viewModel.ValidateCommand.ExecuteAsync(null);
+        Task validateTask = viewModel.SaveCommand.ExecuteAsync(null);
         Assert.True(viewModel.IsBusy);
 
         bool settled = await PolicyEditorSessionCloseGuard.TryCancelActiveOperationAsync(viewModel, ShortBound);
@@ -60,7 +60,7 @@ public class PolicyEditorSessionCloseGuardTests
         var validation = new FakeValidationClient { Gate = new TaskCompletionSource() };
         using PolicyEditorSessionViewModel viewModel = CreateViewModel(validation);
         using var cancellation = new CancellationTokenSource();
-        Task validateTask = viewModel.ValidateCommand.ExecuteAsync(null);
+        Task validateTask = viewModel.SaveCommand.ExecuteAsync(null);
 
         Task<bool> close = PolicyEditorSessionCloseGuard.TryCancelActiveOperationAsync(
             viewModel,

@@ -1161,7 +1161,6 @@
   "Stop using a folder for this package": "Stop using a folder for this package",
   "Pick a folder from the list above, otherwise nothing will be moved.": "Pick a folder from the list above, otherwise nothing will be moved.",
   "Move": "Move",
-  "Delete": "Delete",
   "Shortcut": "Shortcut",
   "Currently in": "Currently in",
   "Rename to": "Rename to",
@@ -1658,5 +1657,6 @@
   "Restrict package requests to approved source names configured in exactly one selected source-capable package manager. Names are matched exactly; use a separate rule for each manager.": "Restrict package requests to approved source names configured in exactly one selected source-capable package manager. Names are matched exactly; use a separate rule for each manager.",
   "Rule {0} must include at least one exact version or a semantic-version range for the selected match mode.": "Rule {0} must include at least one exact version or a semantic-version range for the selected match mode.",
   "Rule {0} must include at least one package identifier for the selected match mode.": "Rule {0} must include at least one package identifier for the selected match mode.",
-  "Rule {0} uses Source names, but the selected package manager does not support configured sources. Choose a source-capable manager or remove Source names.": "Rule {0} uses Source names, but the selected package manager does not support configured sources. Choose a source-capable manager or remove Source names."
+  "Rule {0} uses Source names, but the selected package manager does not support configured sources. Choose a source-capable manager or remove Source names.": "Rule {0} uses Source names, but the selected package manager does not support configured sources. Choose a source-capable manager or remove Source names.",
+  "Start Menu shortcuts list": "Start Menu shortcuts list"
 }

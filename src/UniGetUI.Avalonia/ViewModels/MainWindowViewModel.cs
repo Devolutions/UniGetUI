@@ -858,15 +858,30 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public async Task LoadCloudBundleAsync(string content)
     {
-        if (!await NavigateToAsync(PageType.Bundles))
-            return;
-        await BundlesPage.OpenFromString(content, BundleFormatType.UBUNDLE, "GitHub Gist");
+        await NavigateThenLoadBundleAsync(
+            () => NavigateToAsync(PageType.Bundles),
+            () => BundlesPage.OpenFromString(
+                content,
+                BundleFormatType.UBUNDLE,
+                "GitHub Gist"));
     }
 
     public async Task LoadBundleFromFileAsync(string path)
     {
-        NavigateTo(PageType.Bundles);
-        await BundlesPage.OpenFromFile(path);
+        await NavigateThenLoadBundleAsync(
+            () => NavigateToAsync(PageType.Bundles),
+            () => BundlesPage.OpenFromFile(path));
+    }
+
+    internal static async Task<bool> NavigateThenLoadBundleAsync(
+        Func<Task<bool>> navigate,
+        Func<Task> load)
+    {
+        if (!await navigate())
+            return false;
+
+        await load();
+        return true;
     }
 
     public async Task<bool> CanShutdownAsync(CancellationToken cancellationToken = default)

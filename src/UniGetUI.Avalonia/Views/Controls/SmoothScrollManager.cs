@@ -173,7 +173,7 @@ public sealed class SmoothScrollManager
         {
             if (Math.Sign(displacement) == Math.Sign(step))
             {
-                SetOverpanAxis(displacement + step * OverpanResistance, horizontal);
+                SetOverpanAxis(AddResistedOverpan(displacement, step), horizontal);
                 return;
             }
 
@@ -192,7 +192,7 @@ public sealed class SmoothScrollManager
         }
 
         if (!ScrollByAxis(step, horizontal))
-            SetOverpanAxis(step * OverpanResistance, horizontal);
+            SetOverpanAxis(AddResistedOverpan(0, step), horizontal);
     }
 
     private static bool IsPrecisionTouchpadScroll(TopLevel topLevel, Vector delta)
@@ -422,6 +422,18 @@ public sealed class SmoothScrollManager
             : new Vector(_overpan.X, value);
     }
 
+    private static double AddResistedOverpan(double displacement, double input)
+    {
+        double remaining = Math.Max(0, MaximumOverpan - Math.Abs(displacement));
+        if (remaining == 0 || input == 0) return displacement;
+
+        // Consume an exponentially smaller fraction of the remaining travel. This approaches
+        // the limit asymptotically, so the user feels increasing resistance rather than a clamp.
+        double added = remaining *
+                       (1.0 - Math.Exp(-Math.Abs(input) * OverpanResistance / MaximumOverpan));
+        return Math.CopySign(Math.Abs(displacement) + added, input);
+    }
+
     private void UpdateOverpanTransform()
     {
         if (_overpanVisual is null && !TryAttachOverpanTransform()) return;
@@ -431,22 +443,42 @@ public sealed class SmoothScrollManager
 
     private bool TryAttachOverpanTransform()
     {
+        Visual? visual = null;
+        if (_target is DataGrid)
+        {
+            // DataGrid owns its scrolling and has no ScrollContentPresenter. Move its virtualized
+            // rows presenter so list pages get the same visible endpoint overpan as ScrollViewer.
+            foreach (Visual descendant in _target.GetVisualDescendants())
+            {
+                if (descendant is Control { Name: "PART_RowsPresenter" })
+                {
+                    visual = descendant;
+                    break;
+                }
+            }
+        }
+
         ScrollContentPresenter? presenter = null;
         double largestOverflow = double.NegativeInfinity;
 
-        foreach (Visual descendant in _target.GetVisualDescendants())
+        if (visual is null)
         {
-            if (descendant is not ScrollContentPresenter candidate || candidate.Child is not Visual)
-                continue;
+            foreach (Visual descendant in _target.GetVisualDescendants())
+            {
+                if (descendant is not ScrollContentPresenter candidate || candidate.Child is not Visual)
+                    continue;
 
-            double overflow = Math.Max(0, candidate.Extent.Width - candidate.Viewport.Width) +
-                              Math.Max(0, candidate.Extent.Height - candidate.Viewport.Height);
-            if (overflow <= largestOverflow) continue;
-            presenter = candidate;
-            largestOverflow = overflow;
+                double overflow = Math.Max(0, candidate.Extent.Width - candidate.Viewport.Width) +
+                                  Math.Max(0, candidate.Extent.Height - candidate.Viewport.Height);
+                if (overflow <= largestOverflow) continue;
+                presenter = candidate;
+                largestOverflow = overflow;
+            }
+
+            visual = presenter?.Child as Visual;
         }
 
-        if (presenter?.Child is not Visual visual) return false;
+        if (visual is null) return false;
 
         _overpanVisual = visual;
         _originalOverpanTransform = visual.RenderTransform;

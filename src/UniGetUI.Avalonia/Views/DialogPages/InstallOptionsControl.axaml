@@ -184,7 +184,7 @@
             </StackPanel>
         </Grid>
 
-        <Border Background="{DynamicResource AppDialogDarkBackground}" CornerRadius="8" Padding="16,8">
+        <Border Background="{DynamicResource InstallOptionsTabBackground}" CornerRadius="8" Padding="16,8">
             <StackPanel Orientation="Vertical" Spacing="4">
                 <CheckBox Content="{Binding IgnoreUpdatesCheckBox_Content, FallbackValue='Ignore future updates for this package'}"
                           IsChecked="{Binding IgnoreUpdatesChecked}"
@@ -203,7 +203,7 @@
         </Border>
 
         <!-- ── Follow-global-options card ── -->
-        <Border Background="{DynamicResource AppDialogDarkBackground}" CornerRadius="8" Padding="16,8">
+        <Border Background="{DynamicResource InstallOptionsTabBackground}" CornerRadius="8" Padding="16,8">
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8">
                 <TextBlock x:Name="FollowGlobalLabelBlock"
                            Grid.Row="0" Grid.Column="0"
@@ -709,7 +709,7 @@
         </Grid>
 
         <!-- ── Command-line preview ── -->
-        <Border Background="{DynamicResource AppDialogDarkBackground}" CornerRadius="8" Padding="12">
+        <Border Background="{DynamicResource InstallOptionsTabBackground}" CornerRadius="8" Padding="12">
             <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <TextBlock Grid.Column="0" Text="{Binding CommandPreviewLabel}" Opacity="0.7"
@@ -721,7 +721,7 @@
                             Padding="10,4" CornerRadius="4"
                             Click="Manual_Click"/>
                 </Grid>
-                <Border Background="{DynamicResource AppDialogDarkBackground}" CornerRadius="4" Padding="8">
+                <Border Background="{DynamicResource InstallOptionsTabSelectedBackground}" CornerRadius="4" Padding="8">
                     <SelectableTextBlock Text="{Binding CommandPreview}"
                                automation:AutomationProperties.Name="{Binding CommandPreviewLabel}"
                                FontFamily="Consolas,Cascadia Mono,Menlo,monospace"

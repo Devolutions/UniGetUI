@@ -314,6 +314,23 @@
                                     </Carousel.ItemTemplate>
                                 </Carousel>
 
+                                <!-- Pointer-wheel touchpad gestures expose normalized deltas rather than
+                                     manipulation coordinates. This two-page layer lets the viewport follow
+                                     those deltas directly before settling at the halfway point. -->
+                                <Grid x:Name="ScreenshotGestureLayer"
+                                      IsVisible="False"
+                                      IsHitTestVisible="False"
+                                      ClipToBounds="True">
+                                    <Image x:Name="GestureCurrentScreenshot"
+                                           Stretch="Uniform"
+                                           HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Stretch"/>
+                                    <Image x:Name="GestureAdjacentScreenshot"
+                                           Stretch="Uniform"
+                                           HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Stretch"/>
+                                </Grid>
+
                                 <!-- Contributor banner shown when no screenshots -->
                                 <Grid IsVisible="{Binding !HasScreenshots}"
                                       Background="{DynamicResource AppDialogDarkBackground}"

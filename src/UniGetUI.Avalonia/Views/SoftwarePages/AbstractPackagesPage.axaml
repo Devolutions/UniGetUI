@@ -107,10 +107,16 @@
          <ResourceDictionary.ThemeDictionaries>
             <ResourceDictionary x:Key="Light">
                <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#ECECEC"/>
+               <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="#ECECEC"/>
+               <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="#ECECEC"/>
+               <SolidColorBrush x:Key="ExpanderHeaderBorderBrushDisabled" Color="#ECECEC"/>
                <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#ECECEC"/>
             </ResourceDictionary>
             <ResourceDictionary x:Key="Dark">
                <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#393939"/>
+               <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="#393939"/>
+               <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="#393939"/>
+               <SolidColorBrush x:Key="ExpanderHeaderBorderBrushDisabled" Color="#393939"/>
                <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#393939"/>
             </ResourceDictionary>
          </ResourceDictionary.ThemeDictionaries>

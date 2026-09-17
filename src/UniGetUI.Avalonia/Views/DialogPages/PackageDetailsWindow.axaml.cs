@@ -1,6 +1,9 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Threading;
 using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Controls.Shapes;
@@ -8,6 +11,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
@@ -29,8 +33,10 @@ namespace UniGetUI.Avalonia.Views;
 public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.ImmersiveDialog
 {
     private const double WideThreshold = 950;
-    private const double ScreenshotSwipeThreshold = 1.5;
     private const double ScreenshotGestureRetention = 0.12;
+    private const double ScreenshotGestureSettleSeconds = 0.18;
+    private const double ScreenshotEdgeOverpan = 48.0;
+    private const double ScreenshotEdgeResistance = 0.4;
     private const string ContributeUrl = "https://github.com/Devolutions/UniGetUI";
 
     private enum LayoutMode { Unset, Normal, Wide }
@@ -43,9 +49,14 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     private readonly TEL_InstallReferral _referral;
     private InstallOptionsViewModel? _installVm;
     private InstallOptions? _installOpts;
-    private double _screenshotHorizontalDelta;
-    private long _lastScreenshotScrollTimestamp;
-    private bool _screenshotScrollCommitted;
+    private readonly DispatcherTimer _screenshotGestureTimer;
+    private readonly IPageTransition? _screenshotPageTransition;
+    private readonly TranslateTransform _gestureCurrentTranslate = new();
+    private readonly TranslateTransform _gestureAdjacentTranslate = new();
+    private double _screenshotDragOffset;
+    private int _screenshotGestureStartIndex;
+    private bool _screenshotGestureActive;
+    private bool _screenshotGestureSettling;
 
     public PackageDetailsWindow(
         IPackage package,
@@ -60,6 +71,15 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         // Honor the OS "reduce motion" preference: drop the screenshot slide animation.
         if (MotionPreference.ReducedMotion)
             ScreenshotsCarousel.PageTransition = null;
+
+        GestureCurrentScreenshot.RenderTransform = _gestureCurrentTranslate;
+        GestureAdjacentScreenshot.RenderTransform = _gestureAdjacentTranslate;
+        _screenshotPageTransition = ScreenshotsCarousel.PageTransition;
+        _screenshotGestureTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(ScreenshotGestureRetention),
+        };
+        _screenshotGestureTimer.Tick += CompleteScreenshotGesture;
 
         _vm.CloseRequested += (_, _) => Close();
         _vm.DetailsLoaded += (_, _) =>
@@ -166,32 +186,138 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
             Math.Abs(e.Delta.X) <= Math.Abs(e.Delta.Y))
             return;
 
-        long now = Stopwatch.GetTimestamp();
-        if (_lastScreenshotScrollTimestamp == 0 ||
-            Stopwatch.GetElapsedTime(_lastScreenshotScrollTimestamp, now).TotalSeconds > ScreenshotGestureRetention)
+        e.Handled = true;
+        if (_screenshotGestureSettling) return;
+        if (!_screenshotGestureActive) BeginScreenshotGesture();
+
+        _screenshotGestureTimer.Stop();
+        double width = Math.Max(1, ScreenshotsBorder.Bounds.Width);
+        double input = e.Delta.X * SmoothScrollPhysics.PrecisionTouchpadDistance;
+        double candidate = _screenshotDragOffset + input;
+        int adjacentIndex = GetAdjacentScreenshotIndex(candidate);
+        if (adjacentIndex == _screenshotGestureStartIndex)
         {
-            _screenshotHorizontalDelta = 0;
-            _screenshotScrollCommitted = false;
+            GestureAdjacentScreenshot.Source = null;
+            // Reversing an edge pull follows the fingers one-to-one back toward rest. Resistance
+            // applies only while pulling farther into the unavailable page.
+            _screenshotDragOffset = _screenshotDragOffset != 0 &&
+                                    Math.Sign(_screenshotDragOffset) != Math.Sign(input)
+                ? candidate
+                : AddScreenshotEdgeResistance(_screenshotDragOffset, input);
+        }
+        else
+        {
+            _screenshotDragOffset = Math.Clamp(candidate, -width, width);
+            GestureAdjacentScreenshot.Source = _vm.Screenshots[adjacentIndex];
         }
 
-        _lastScreenshotScrollTimestamp = now;
-        e.Handled = true;
-        if (_screenshotScrollCommitted) return;
+        UpdateScreenshotGestureTransforms(width);
+        _screenshotGestureTimer.Start();
+    }
 
-        // Accumulate the high-resolution horizontal deltas and commit at most one page per
-        // touchpad gesture, matching FlipView rather than treating its inertial tail as new pages.
-        _screenshotHorizontalDelta += e.Delta.X;
-        if (Math.Abs(_screenshotHorizontalDelta) < ScreenshotSwipeThreshold) return;
+    private void BeginScreenshotGesture()
+    {
+        _screenshotGestureActive = true;
+        _screenshotGestureStartIndex = _vm.SelectedScreenshotIndex;
+        _screenshotDragOffset = 0;
+        GestureCurrentScreenshot.Source = _vm.Screenshots[_screenshotGestureStartIndex];
+        GestureAdjacentScreenshot.Source = null;
+        _gestureCurrentTranslate.X = 0;
+        _gestureAdjacentTranslate.X = 0;
+        ScreenshotsCarousel.Opacity = 0;
+        ScreenshotGestureLayer.IsVisible = true;
+    }
 
-        int direction = _screenshotHorizontalDelta < 0 ? 1 : -1;
-        int target = Math.Clamp(
-            _vm.SelectedScreenshotIndex + direction,
+    private int GetAdjacentScreenshotIndex(double offset)
+    {
+        int direction = offset < 0 ? 1 : offset > 0 ? -1 : 0;
+        return Math.Clamp(
+            _screenshotGestureStartIndex + direction,
             0,
             _vm.ScreenshotCount - 1);
-        if (target != _vm.SelectedScreenshotIndex)
-            _vm.SelectedScreenshotIndex = target;
+    }
 
-        _screenshotScrollCommitted = true;
+    private void UpdateScreenshotGestureTransforms(double width)
+    {
+        _gestureCurrentTranslate.X = _screenshotDragOffset;
+        if (GestureAdjacentScreenshot.Source is null) return;
+        _gestureAdjacentTranslate.X = _screenshotDragOffset < 0
+            ? width + _screenshotDragOffset
+            : -width + _screenshotDragOffset;
+    }
+
+    private static double AddScreenshotEdgeResistance(double displacement, double input)
+    {
+        double remaining = Math.Max(0, ScreenshotEdgeOverpan - Math.Abs(displacement));
+        if (remaining == 0 || input == 0) return displacement;
+        double added = remaining *
+                       (1.0 - Math.Exp(-Math.Abs(input) * ScreenshotEdgeResistance / ScreenshotEdgeOverpan));
+        return Math.CopySign(Math.Abs(displacement) + added, input);
+    }
+
+    private async void CompleteScreenshotGesture(object? sender, EventArgs e)
+    {
+        _screenshotGestureTimer.Stop();
+        if (!_screenshotGestureActive || _screenshotGestureSettling) return;
+
+        _screenshotGestureSettling = true;
+        double width = Math.Max(1, ScreenshotsBorder.Bounds.Width);
+        int adjacentIndex = GetAdjacentScreenshotIndex(_screenshotDragOffset);
+        bool commit = adjacentIndex != _screenshotGestureStartIndex &&
+                      Math.Abs(_screenshotDragOffset) >= width * 0.5;
+        double targetOffset = commit ? Math.CopySign(width, _screenshotDragOffset) : 0;
+
+        if (!MotionPreference.ReducedMotion)
+        {
+            var easing = new SplineEasing(0.1, 0.9, 0.2, 1);
+            Task current = AnimateScreenshotTranslate(
+                _gestureCurrentTranslate, _screenshotDragOffset, targetOffset, easing);
+            Task adjacent = GestureAdjacentScreenshot.Source is null
+                ? Task.CompletedTask
+                : AnimateScreenshotTranslate(
+                    _gestureAdjacentTranslate,
+                    _gestureAdjacentTranslate.X,
+                    commit ? 0 : Math.CopySign(width, -_screenshotDragOffset),
+                    easing);
+            await Task.WhenAll(current, adjacent);
+        }
+
+        if (commit)
+        {
+            ScreenshotsCarousel.PageTransition = null;
+            _vm.SelectedScreenshotIndex = adjacentIndex;
+            ScreenshotsCarousel.PageTransition = _screenshotPageTransition;
+        }
+
+        ScreenshotGestureLayer.IsVisible = false;
+        ScreenshotsCarousel.Opacity = 1;
+        GestureCurrentScreenshot.Source = null;
+        GestureAdjacentScreenshot.Source = null;
+        _gestureCurrentTranslate.X = 0;
+        _gestureAdjacentTranslate.X = 0;
+        _screenshotDragOffset = 0;
+        _screenshotGestureActive = false;
+        _screenshotGestureSettling = false;
+    }
+
+    private static Task AnimateScreenshotTranslate(
+        TranslateTransform transform,
+        double from,
+        double to,
+        Easing easing)
+    {
+        var animation = new Animation
+        {
+            Duration = TimeSpan.FromSeconds(ScreenshotGestureSettleSeconds),
+            Easing = easing,
+            FillMode = FillMode.Forward,
+            Children =
+            {
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter(TranslateTransform.XProperty, from) } },
+                new KeyFrame { Cue = new Cue(1), Setters = { new Setter(TranslateTransform.XProperty, to) } },
+            },
+        };
+        return animation.RunAsync(transform, CancellationToken.None);
     }
 
     private void UpdatePips()

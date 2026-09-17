@@ -4,10 +4,11 @@ namespace UniGetUI.Avalonia.Views.Controls;
 
 internal static class SmoothScrollPhysics
 {
-    internal const double DecayTime = 0.15;
+    internal const double DecayTime = 0.45;
     internal const double WheelDistance = 48.0;
     internal const double PrecisionTouchpadDistance = WheelDistance / 2.0;
-    private const double WheelVelocityImpulse = WheelDistance / DecayTime;
+    private const double WheelImpulseTime = 0.15;
+    private const double WheelVelocityImpulse = WheelDistance / WheelImpulseTime;
     private const double MaximumVelocity = 7200.0;
 
     internal static (double X, double Y) AddImpulse(

@@ -207,7 +207,7 @@
                     <Thickness x:Key="SearchFieldBorderThickness">1</Thickness>
                     <!-- Opaque package-details layers remain distinct even when the dialog uses Mica. -->
                     <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#393939"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabBackground" Color="#181818"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabBackground" Color="#1C1C1C"/>
                     <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#2D2D2D"/>
                     <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#242424"/>
                     <SolidColorBrush x:Key="InstallOptionsTabPressedBackground" Color="#202020"/>

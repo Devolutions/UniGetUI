@@ -30,6 +30,12 @@ public sealed class DirectionalSlideTransition : IPageTransition
 
     public bool Reverse { get; set; }
 
+    /// <summary>
+    /// Uses the direction supplied by controls such as Carousel. TransitioningContentControl does
+    /// not provide a useful direction, so settings and About continue to set <see cref="Reverse"/>.
+    /// </summary>
+    public bool FollowForwardDirection { get; set; }
+
     public async Task Start(Visual? from, Visual? to, bool forward, CancellationToken cancellationToken)
     {
         // Honor the OS "reduce motion" preference: swap pages instantly, no slide.
@@ -40,7 +46,7 @@ public sealed class DirectionalSlideTransition : IPageTransition
             return;
         }
 
-        double sign = Reverse ? -1d : 1d;
+        double sign = (Reverse || (FollowForwardDirection && !forward)) ? -1d : 1d;
         double width = (to ?? from)?.GetVisualParent()?.Bounds.Width
                        ?? (to ?? from)?.Bounds.Width ?? 0d;
         var hidden = new List<ScrollViewer>();

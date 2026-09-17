@@ -4,6 +4,7 @@
         xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        xmlns:infrastructure="using:UniGetUI.Avalonia.Infrastructure"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.PackageDetailsWindow"
         x:DataType="vm:PackageDetailsViewModel"
@@ -87,8 +88,9 @@
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
         <Style Selector="Ellipse.pip">
-            <Setter Property="Width" Value="8"/>
-            <Setter Property="Height" Value="8"/>
+            <!-- WinUI carousel indicators use a compact 2:1 inactive/active diameter ratio. -->
+            <Setter Property="Width" Value="5"/>
+            <Setter Property="Height" Value="5"/>
             <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}"/>
         </Style>
         <Style Selector="Ellipse.pip.active">
@@ -103,10 +105,10 @@
             <Setter Property="Height" Value="48"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Background" Value="#80000000"/>
+            <Setter Property="Background" Value="{DynamicResource CarouselNavigationBackground}"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Foreground" Value="{DynamicResource CarouselNavigationForeground}"/>
+            <Setter Property="CornerRadius" Value="16"/>
             <Setter Property="Opacity" Value="0"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -115,6 +117,10 @@
                     <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
                 </Transitions>
             </Setter>
+        </Style>
+        <Style Selector="Button.carousel-nav:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource CarouselNavigationHoverBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource CarouselNavigationHoverForeground}"/>
         </Style>
         <Style Selector="Border#ScreenshotsBorder:pointerover Button.carousel-nav">
             <Setter Property="Opacity" Value="0.9"/>
@@ -236,7 +242,8 @@
                             VerticalAlignment="Top"
                             Background="{DynamicResource InstallOptionsSectionBackground}"
                             CornerRadius="8"
-                            BorderThickness="0">
+                            BorderBrush="{DynamicResource SettingsCardBorderBrush}"
+                            BorderThickness="1">
                         <Expander x:Name="InstallOptionsExpander"
                                   HorizontalAlignment="Stretch"
                                   HorizontalContentAlignment="Stretch"
@@ -295,7 +302,7 @@
                                           ItemsSource="{Binding Screenshots}"
                                           SelectedIndex="{Binding SelectedScreenshotIndex, Mode=TwoWay}">
                                     <Carousel.PageTransition>
-                                        <PageSlide Duration="0:0:0.25" Orientation="Horizontal"/>
+                                        <infrastructure:DirectionalSlideTransition FollowForwardDirection="True"/>
                                     </Carousel.PageTransition>
                                     <Carousel.ItemTemplate>
                                         <DataTemplate>
@@ -331,14 +338,23 @@
                                         Classes="carousel-nav"
                                         HorizontalAlignment="Left"
                                         Margin="6,0,0,0"
-                                        Content="‹"
-                                        IsVisible="{Binding HasScreenshots}"/>
+                                        IsVisible="{Binding HasScreenshots}">
+                                    <!-- WinUI FlipView's E0E2 glyph, expressed as geometry so it
+                                         stays identical on systems without Segoe Fluent Icons. -->
+                                    <Path Data="M 6.8,0.7 C 7.7,0.1 8.7,0.7 8.7,1.7 L 8.7,10.3 C 8.7,11.3 7.7,11.9 6.8,11.3 L 0.8,7 C -0.1,6.4 -0.1,5.6 0.8,5 Z"
+                                          Width="8" Height="12"
+                                          Fill="{Binding $parent[Button].Foreground}"/>
+                                </Button>
                                 <Button x:Name="NextScreenshotButton"
                                         Classes="carousel-nav"
                                         HorizontalAlignment="Right"
                                         Margin="0,0,6,0"
-                                        Content="›"
-                                        IsVisible="{Binding HasScreenshots}"/>
+                                        IsVisible="{Binding HasScreenshots}">
+                                    <!-- WinUI FlipView's E0E3 glyph. -->
+                                    <Path Data="M 1.9,0.7 C 1,0.1 0,0.7 0,1.7 L 0,10.3 C 0,11.3 1,11.9 1.9,11.3 L 7.9,7 C 8.8,6.4 8.8,5.6 7.9,5 Z"
+                                          Width="8" Height="12"
+                                          Fill="{Binding $parent[Button].Foreground}"/>
+                                </Button>
                             </Panel>
                         </Border>
 

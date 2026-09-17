@@ -9,6 +9,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Controls;
@@ -66,7 +67,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         {
             UpdatePips();
             UpdateScreenshotHeight();
-        });
+        }, DispatcherPriority.Loaded);
 
         MainActionButton.Click += (_, _) => OnMainAction();
         ActionVariantsButton.Flyout = BuildActionFlyout();
@@ -134,7 +135,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
             {
                 UpdatePips();
                 UpdateScreenshotHeight();
-            });
+            }, DispatcherPriority.Loaded);
     }
 
     private void OnPipClicked(object? sender, RoutedEventArgs e)
@@ -156,8 +157,14 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         int i = 0;
         foreach (var container in ScreenshotPips.GetRealizedContainers())
         {
-            // The pip template is <Button><Ellipse/></Button>; the realized container is the Button itself.
-            if (container is Button btn && btn.Content is Ellipse ellipse)
+            // ItemsControl may wrap the data template's Button in a ContentPresenter. Resolve the
+            // actual ellipse instead of assuming the realized container is the Button itself.
+            Ellipse? ellipse = container is Button { Content: Ellipse direct }
+                ? direct
+                : container.GetVisualDescendants()
+                    .OfType<Ellipse>()
+                    .FirstOrDefault(candidate => candidate.Classes.Contains("pip"));
+            if (ellipse is not null)
                 ellipse.Classes.Set("active", i == active);
             i++;
         }

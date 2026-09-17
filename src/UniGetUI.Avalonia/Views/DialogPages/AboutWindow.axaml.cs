@@ -20,8 +20,10 @@ public partial class AboutWindow : UniGetUI.Avalonia.Views.DialogPages.Immersive
     public AboutWindow()
     {
         InitializeComponent();
-        ContentFrame.PageTransition = _slide;
+        // Seed the first page before enabling transitions. Running a page transition while the
+        // dialog is still detached from a visual root prevents the About dialog from opening.
         ContentFrame.Content = _pages[0];
+        ContentFrame.PageTransition = _slide;
     }
 
     protected override void OnOpened(EventArgs e)

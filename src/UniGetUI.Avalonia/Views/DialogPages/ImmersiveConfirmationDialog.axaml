@@ -36,13 +36,12 @@
                         VerticalContentAlignment="Center"/>
                 <Button x:Name="SecondaryButton"
                         Grid.Column="1"
+                        Classes="secondary-action"
                         Height="32"
                         MinWidth="0"
                         Padding="11,5,11,6"
                         CornerRadius="4"
                         FontSize="14"
-                        Background="{DynamicResource AppDialogBackground}"
-                        BorderThickness="0"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"/>

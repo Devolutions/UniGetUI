@@ -79,6 +79,8 @@
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#F6F6F6"/>
                     <StaticResource x:Key="SecondaryActionBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
                     <Thickness x:Key="SecondaryActionBorderThickness">1</Thickness>
+                    <StaticResource x:Key="SettingsActionBorderBrush" ResourceKey="SecondaryActionBorderBrush"/>
+                    <Thickness x:Key="SettingsActionBorderThickness">1</Thickness>
                     <!-- WinUI dropdown controls use the same control/card fill as settings actions. -->
                     <StaticResource x:Key="ComboBoxBackground" ResourceKey="SettingsCardBackground"/>
                     <StaticResource x:Key="ComboBoxBackgroundUnfocused" ResourceKey="SettingsCardBackground"/>
@@ -117,6 +119,10 @@
                     <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#EEEEEE"/>
                     <SolidColorBrush x:Key="IgnoredUpdatesListBackground" Color="#F3F3F3"/>
                     <SolidColorBrush x:Key="ScreenshotLetterboxBackground" Color="#202020"/>
+                    <SolidColorBrush x:Key="CarouselNavigationBackground" Color="#CCFFFFFF"/>
+                    <SolidColorBrush x:Key="CarouselNavigationHoverBackground" Color="#F2FFFFFF"/>
+                    <SolidColorBrush x:Key="CarouselNavigationForeground" Color="#9E000000"/>
+                    <SolidColorBrush x:Key="CarouselNavigationHoverForeground" Color="#E4000000"/>
                     <SolidColorBrush x:Key="SmokeFillColorDefaultBrush" Color="#4D000000"/>
                     <!-- Warning banner -->
                     <SolidColorBrush x:Key="WarningBannerBackground"     Color="#FFF4CE"/>
@@ -193,7 +199,9 @@
                     <SolidColorBrush x:Key="SearchBoxInactiveBackground"      Color="#0FFFFFFF"/>
                     <SolidColorBrush x:Key="SearchBoxFocusedBackground"       Color="#B31E1E1E"/>
                     <SolidColorBrush x:Key="SearchBoxFocusedBorderBrush"      Color="#12FFFFFF"/>
-                    <SolidColorBrush x:Key="SearchFieldBorderBrush"           Color="Transparent"/>
+                    <!-- WinUI's dark control stroke is present, but deliberately low contrast. -->
+                    <SolidColorBrush x:Key="ControlElevationBorderBrush"      Color="#15FFFFFF"/>
+                    <StaticResource x:Key="SearchFieldBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
                     <Thickness x:Key="SearchFieldBorderThickness">1</Thickness>
                     <!-- Opaque package-details layers remain distinct even when the dialog uses Mica. -->
                     <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#393939"/>
@@ -223,18 +231,21 @@
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#19000000"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#323232"/>
-                    <SolidColorBrush x:Key="SecondaryActionBorderBrush"  Color="Transparent"/>
-                    <Thickness x:Key="SecondaryActionBorderThickness">0</Thickness>
+                    <StaticResource x:Key="SecondaryActionBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <Thickness x:Key="SecondaryActionBorderThickness">1</Thickness>
+                    <!-- Preserve the pre-existing borderless dark settings-button interaction. -->
+                    <SolidColorBrush x:Key="SettingsActionBorderBrush" Color="Transparent"/>
+                    <Thickness x:Key="SettingsActionBorderThickness">0</Thickness>
                     <!-- WinUI dropdown controls use the same control/card fill as settings actions. -->
                     <StaticResource x:Key="ComboBoxBackground" ResourceKey="SettingsCardBackground"/>
                     <StaticResource x:Key="ComboBoxBackgroundUnfocused" ResourceKey="SettingsCardBackground"/>
                     <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="SettingsCardHoverBackground"/>
                     <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="SettingsCardHoverBackground"/>
-                    <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="Transparent"/>
-                    <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushUnfocused" Color="Transparent"/>
-                    <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="Transparent"/>
-                    <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="Transparent"/>
-                    <Thickness x:Key="ComboBoxOutlineThickness">0</Thickness>
+                    <StaticResource x:Key="ComboBoxBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ComboBoxBackgroundBorderBrushUnfocused" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="ControlElevationBorderBrush"/>
+                    <Thickness x:Key="ComboBoxOutlineThickness">1</Thickness>
                     <!-- Shared WinUI dropdown surface and neutral item states. -->
                     <StaticResource x:Key="ComboBoxDropDownBackground" ResourceKey="MenuSurfaceBrush"/>
                     <StaticResource x:Key="ComboBoxDropDownBorderBrush" ResourceKey="MenuSurfaceBorderBrush"/>
@@ -262,6 +273,10 @@
                     <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#1A1A1A"/>
                     <SolidColorBrush x:Key="IgnoredUpdatesListBackground" Color="#1A1A1A"/>
                     <SolidColorBrush x:Key="ScreenshotLetterboxBackground" Color="#202020"/>
+                    <SolidColorBrush x:Key="CarouselNavigationBackground" Color="#CC2C2C2C"/>
+                    <SolidColorBrush x:Key="CarouselNavigationHoverBackground" Color="#F2393939"/>
+                    <SolidColorBrush x:Key="CarouselNavigationForeground" Color="#9EFFFFFF"/>
+                    <SolidColorBrush x:Key="CarouselNavigationHoverForeground" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="SmokeFillColorDefaultBrush" Color="#4D000000"/>
                     <!-- Warning banner -->
                     <SolidColorBrush x:Key="WarningBannerBackground"     Color="#433519"/>
@@ -331,6 +346,12 @@
     <Style Selector="Button.secondary-action:pressed">
         <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
     </Style>
+    <Style Selector="Button.secondary-action.settings-action,
+                     Button.secondary-action.settings-action:pointerover,
+                     Button.secondary-action.settings-action:pressed">
+        <Setter Property="BorderBrush" Value="{DynamicResource SettingsActionBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="{DynamicResource SettingsActionBorderThickness}"/>
+    </Style>
 
     <!-- Shared trigger used by button-hosted dropdowns. It intentionally does not target
          every Button: toolbar commands and ordinary flyouts retain their own semantics. -->
@@ -338,8 +359,8 @@
         <Setter Property="Padding" Value="10,6"/>
         <Setter Property="CornerRadius" Value="4"/>
         <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SecondaryActionBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="{DynamicResource SecondaryActionBorderThickness}"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="Button.dropdown-trigger.wide">

@@ -244,12 +244,21 @@
                    IsVisible="False">
                 <Ellipse x:Name="NavigationPillTopCap"
                          Width="3" Height="3"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Top"
+                         RenderTransformOrigin="0%,0%"
                          Fill="{DynamicResource AccentFillColorDefaultBrush}"/>
                 <Border x:Name="NavigationPillStem"
                         Width="3" Height="1"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        RenderTransformOrigin="0%,0%"
                         Background="{DynamicResource AccentFillColorDefaultBrush}"/>
                 <Ellipse x:Name="NavigationPillBottomCap"
                          Width="3" Height="3"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Top"
+                         RenderTransformOrigin="0%,0%"
                          Fill="{DynamicResource AccentFillColorDefaultBrush}"/>
             </Panel>
         </Canvas>

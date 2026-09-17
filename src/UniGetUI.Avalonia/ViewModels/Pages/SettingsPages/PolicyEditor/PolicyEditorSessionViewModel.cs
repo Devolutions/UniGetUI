@@ -329,10 +329,16 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        await SaveCoreAsync(
-            conflict: null,
-            PolicyConflictHandling.Reject,
-            cancellationToken);
+        try
+        {
+            await SaveCoreAsync(
+                conflict: null,
+                PolicyConflictHandling.Reject,
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
     }
 
     [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanStartRemoteOperation))]
@@ -377,10 +383,16 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        await SaveCoreAsync(
-            conflict,
-            PolicyConflictHandling.ConfirmOverwrite,
-            cancellationToken);
+        try
+        {
+            await SaveCoreAsync(
+                conflict,
+                PolicyConflictHandling.ConfirmOverwrite,
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
     }
 
     public async Task<bool> ConfirmDiscardAsync(

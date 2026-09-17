@@ -876,6 +876,39 @@ public class PolicyEditorSessionViewModelTests
     }
 
     [Fact]
+    public async Task SaveCommand_ICommandExecutionContainsExpectedPreDispatchCancellation()
+    {
+        PolicyManagementSnapshot initial = PolicyEditorTestFixtures.BuildActiveManagement(
+            PolicyEditorTestFixtures.BuildDocument(id: "id-1"),
+            "token-1");
+        var validation = new FakeValidationClient();
+        var elevator = new GatedCancelledElevator();
+        var writer = new WindowsPolicyEditorWriteClient(
+            elevator,
+            new FailIfCalledManagementService());
+        using var vm = new PolicyEditorSessionViewModel(
+            PolicyEditorSession.StartUpdate(initial),
+            validation,
+            new FakeConfirmationPrompt(),
+            writer);
+        vm.Session.Draft.Metadata.Description = "keep this draft";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        validation.NextOutcome = new PolicyEditorValidationOutcome(ValidResultFor(vm));
+
+        ((System.Windows.Input.ICommand)vm.SaveCommand).Execute(null);
+        await elevator.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        vm.SaveCommand.Cancel();
+        elevator.Release.SetResult();
+        await vm.SaveCommand.ExecutionTask!;
+
+        Assert.False(vm.LastSaveSucceeded);
+        Assert.Equal(PolicyWriteFailureKind.None, vm.LastWriteFailureKind);
+        Assert.Equal("keep this draft", vm.Session.Draft.Metadata.Description);
+        Assert.True(vm.IsDirty);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task SaveCommand_CancelAfterDispatchedAuthenticatedRejection_AppliesRejection()
     {
         (PolicyEditorSessionViewModel vm, FakeValidationClient validation, _, FakeWriteClient writer) =

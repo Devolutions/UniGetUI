@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Input;
@@ -77,6 +78,23 @@ internal static class AvaloniaPackageOperationHelper
         _ = op.MainThread();
     }
 
+    internal static async Task<IStorageFolder?> GetDefaultDownloadFolderAsync(TopLevel win)
+    {
+        try
+        {
+            if (await Task.Run(InstallerDownloadLocation.ResolveStartDirectory) is not { } directory)
+                return null;
+
+            return await win.StorageProvider.TryGetFolderFromPathAsync(directory);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn("Could not resolve the default installer download location:");
+            Logger.Warn(ex);
+            return null;
+        }
+    }
+
     /// <summary>
     /// Prompts the user with a save-file dialog and downloads the installer for
     /// a single package into the chosen location.
@@ -113,6 +131,7 @@ internal static class AvaloniaPackageOperationHelper
         var file = await win.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             SuggestedFileName = suggestedName,
+            SuggestedStartLocation = await GetDefaultDownloadFolderAsync(win),
             FileTypeChoices =
             [
                 new FilePickerFileType(CoreTools.Translate("Installer")) { Patterns = [$"*.{ext}"] },
@@ -147,8 +166,11 @@ internal static class AvaloniaPackageOperationHelper
 
         if (eligible.Count == 0) return;
 
-        var folders = await win.StorageProvider.OpenFolderPickerAsync(
-            new FolderPickerOpenOptions { AllowMultiple = false });
+        var folders = await win.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            AllowMultiple = false,
+            SuggestedStartLocation = await GetDefaultDownloadFolderAsync(win),
+        });
 
         var folder = folders.FirstOrDefault();
         var outputPath = folder?.TryGetLocalPath();
@@ -179,8 +201,11 @@ internal static class AvaloniaPackageOperationHelper
         TEL_InstallReferral referral,
         MainWindow win)
     {
-        var folders = await win.StorageProvider.OpenFolderPickerAsync(
-            new FolderPickerOpenOptions { AllowMultiple = false });
+        var folders = await win.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            AllowMultiple = false,
+            SuggestedStartLocation = await GetDefaultDownloadFolderAsync(win),
+        });
         var folder = folders.FirstOrDefault();
         var outputPath = folder?.TryGetLocalPath();
         if (outputPath is null) return;

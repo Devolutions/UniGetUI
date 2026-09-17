@@ -1084,6 +1084,10 @@
   "No subfolder": "No subfolder",
   "Enter a name for the new source": "Enter a name for the new source",
   "Enter a complete source URL, including the protocol (for example https://)": "Enter a complete source URL, including the protocol (for example https://)",
+  "Not set": "Not set",
+  "Default location for downloaded installers": "Default location for downloaded installers",
+  "Reset the default installer download location": "Reset the default installer download location",
+  "Open the default installer download location": "Open the default installer download location",
   "{pm} could not be loaded": "{pm} could not be loaded",
   "{pm} was found on your system, but it could not be started. Check the UniGetUI log for more details.": "{pm} was found on your system, but it could not be started. Check the UniGetUI log for more details."
 }

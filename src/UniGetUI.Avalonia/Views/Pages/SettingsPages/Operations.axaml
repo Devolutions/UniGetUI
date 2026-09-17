@@ -47,11 +47,40 @@
                                           Margin="44,32,4,8"
                                           automation:AutomationProperties.HeadingLevel="2"/>
 
+            <settings:ButtonCard x:Name="DownloadLocationCard"
+                                 Text="{t:Translate Default location for downloaded installers}"
+                                 ButtonText="{t:Translate Select}"
+                                 Command="{Binding PickDownloadDirectoryCommand}"
+                                 CommandParameter="{Binding $self}"
+                                 CornerRadius="8,8,0,0">
+                <settings:ButtonCard.Description>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="{Binding DownloadDirectoryLabel}"
+                                   VerticalAlignment="Center"
+                                   MaxWidth="360"
+                                   FontSize="12"
+                                   Opacity="0.7"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <Button Content="{t:Translate Reset}"
+                                Margin="4,0"
+                                IsEnabled="{Binding IsCustomDownloadDirectorySet}"
+                                Command="{Binding ResetDownloadDirectoryCommand}"
+                                automation:AutomationProperties.Name="{t:Translate Reset the default installer download location}"/>
+                        <Button Content="{t:Translate Open}"
+                                Margin="4,0"
+                                IsEnabled="{Binding IsCustomDownloadDirectorySet}"
+                                Command="{Binding OpenDownloadDirectoryCommand}"
+                                automation:AutomationProperties.Name="{t:Translate Open the default installer download location}"/>
+                    </StackPanel>
+                </settings:ButtonCard.Description>
+            </settings:ButtonCard>
+
             <settings:ComboboxCard x:Name="InstallerNameSchemeCard"
                                    SettingName="InstallerFileNameScheme"
                                    Text="{t:Translate Name of the downloaded installer files}"
                                    Description="{t:Translate Text='Adding the version to the file name makes downloaded installers sortable and keeps a new download from overwriting the installer of an older version.'}"
-                                   CornerRadius="8"/>
+                                   BorderThickness="1,0,1,1"
+                                   CornerRadius="0,0,8,8"/>
 
             <settings:TranslatedTextBlock Text="Environment variables in custom install options"
                                           FontSize="14"

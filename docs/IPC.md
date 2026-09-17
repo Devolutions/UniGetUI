@@ -223,7 +223,7 @@ These keys are used by package-related endpoints such as install, update, uninst
 | `wait` | Boolean |
 | `architecture` | Architecture override |
 | `location` | Install location override |
-| `outputPath` | Download output path |
+| `outputPath` | Download output path. Defaults to the download location configured in the settings, or to the user's Downloads folder |
 
 ### App navigation query parameters
 

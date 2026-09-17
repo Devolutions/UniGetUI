@@ -209,13 +209,6 @@ public static class IpcPackageApi
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (string.IsNullOrWhiteSpace(request.OutputPath))
-        {
-            throw new InvalidOperationException(
-                "The outputPath parameter is required when downloading a package."
-            );
-        }
-
         var package = FindAnyPackage(request);
         if (!package.Manager.Capabilities.CanDownloadInstaller)
         {
@@ -224,7 +217,20 @@ public static class IpcPackageApi
             );
         }
 
-        var operation = new DownloadOperation(package, request.OutputPath);
+        string outputPath = request.OutputPath ?? "";
+        if (string.IsNullOrWhiteSpace(outputPath))
+        {
+            outputPath = InstallerDownloadLocation.ResolveExistingDirectory();
+            if (!Directory.Exists(outputPath))
+            {
+                throw new InvalidOperationException(
+                    "The outputPath parameter is required when downloading a package: the "
+                        + $"configured download location \"{outputPath}\" could not be created."
+                );
+            }
+        }
+
+        var operation = new DownloadOperation(package, outputPath);
         string operationId = IpcOperationApi.Track(operation);
 
         if (request.WaitForCompletion == false)

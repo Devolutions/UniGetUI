@@ -92,6 +92,7 @@ public static class SettingsSearchIndex
         new("Choose how many operations should be performed in parallel", ["parallel", "concurrency"], typeof(Operations), "ParallelOperationCount"),
         new("Clear successful operations from the operation list after a 5 second delay", ["clear successful", "maintain installs"], typeof(Operations), "ClearSuccessfulOpsCard"),
         new("Try to kill the processes that refuse to close when requested to", ["kill processes"], typeof(Operations), "KillProcessesCard"),
+        new("Default location for downloaded installers", ["download location", "download folder", "download directory", "save installers", "installer folder"], typeof(Operations), "DownloadLocationCard"),
         new("Name of the downloaded installer files", ["installer name", "download name", "file name", "version in file name", "rename installers"], typeof(Operations), "InstallerNameSchemeCard"),
         new("Ask to delete desktop shortcuts created during an install or upgrade.", ["desktop shortcuts", "shortcut remover"], typeof(Operations), "AskToDeleteNewDesktopShortcuts"),
         new("Ask about the Start Menu shortcuts created during an install or upgrade.", ["start menu shortcuts", "start menu folder", "move shortcuts", "relocate shortcuts", "organize start menu"], typeof(Operations), "AskAboutNewStartMenuShortcuts"),

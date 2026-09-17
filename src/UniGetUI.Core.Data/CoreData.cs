@@ -307,6 +307,12 @@ namespace UniGetUI.Core.Data
         }
 
         /// <summary>
+        /// The directory where downloaded installers are saved when the user has not
+        /// chosen a default download location.
+        /// </summary>
+        public static string UniGetUI_DefaultInstallerDownloadDirectory => GetDownloadsRoot();
+
+        /// <summary>
         /// The directory where package backups will be saved by default.
         /// </summary>
         public static string UniGetUI_DefaultBackupDirectory
@@ -599,6 +605,37 @@ namespace UniGetUI.Core.Data
             }
 
             return Path.Join(GetUserHomeDirectory(), ".local", "share");
+        }
+
+        private static string GetDownloadsRoot()
+        {
+#if WINDOWS
+            const string downloadsKnownFolderId = "{374DE290-123F-4565-9164-39C4925E467B}";
+            try
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders"
+                );
+                if (key?.GetValue(downloadsKnownFolderId) is string knownFolder
+                    && !string.IsNullOrWhiteSpace(knownFolder))
+                {
+                    return Environment.ExpandEnvironmentVariables(knownFolder);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("Could not read the Downloads known folder from the registry:");
+                Logger.Warn(ex);
+            }
+#else
+            string? xdgDownloadDir = Environment.GetEnvironmentVariable("XDG_DOWNLOAD_DIR");
+            if (!string.IsNullOrWhiteSpace(xdgDownloadDir))
+            {
+                return xdgDownloadDir;
+            }
+#endif
+
+            return Path.Join(GetUserHomeDirectory(), "Downloads");
         }
 
         private static string GetDocumentsRoot()

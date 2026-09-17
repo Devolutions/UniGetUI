@@ -284,7 +284,7 @@
                                 Spacing="8">
                         <Border CornerRadius="8" ClipToBounds="True"
                                 x:Name="ScreenshotsBorder"
-                                Height="320">
+                                MinHeight="130">
                             <Panel>
                                 <!-- Neutral WinUI fallback only behind actual screenshots; the empty-state
                                      banner below composites over the themed window background instead. -->

@@ -26,9 +26,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     private bool _pendingPillAnimate;
 
     private const double PillHeight = 16d;
-    private const double MaxPillStretch = 1.0d;
-    private const double PillStretchReferenceDistance = 120d;
-    private static readonly TimeSpan PillAnimationDuration = TimeSpan.FromMilliseconds(180);
+    private static readonly TimeSpan PillAnimationDuration = TimeSpan.FromMilliseconds(400);
 
     /// <summary>
     /// Whether the nav item text labels are shown. False renders an icon-only rail; true renders the
@@ -203,8 +201,9 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             return;
         }
 
-        double currentCenter = _pillTranslate.Y + ((PillHeight / 2d) * _pillScale.ScaleY);
-        if (Math.Abs(currentCenter - targetCenter) < 0.5)
+        double currentTop = _pillTranslate.Y;
+        double currentBottom = currentTop + (PillHeight * _pillScale.ScaleY);
+        if (Math.Abs(currentTop - targetTop) < 0.5)
         {
             _pillScale.ScaleY = 1d;
             _pillTranslate.Y = targetTop;
@@ -213,7 +212,14 @@ public partial class SidebarView : BaseView<SidebarViewModel>
 
         _pillAnimationCancellation = new CancellationTokenSource();
         int version = ++_pillAnimationVersion;
-        _ = AnimatePillAsync(currentCenter, targetCenter, version, _pillAnimationCancellation.Token);
+        _ = AnimatePillEdgesAsync(
+            currentTop,
+            currentBottom,
+            targetTop,
+            targetTop + PillHeight,
+            targetCenter > currentTop + ((currentBottom - currentTop) / 2d),
+            version,
+            _pillAnimationCancellation.Token);
     }
 
     private void ClearPendingPillLayout()
@@ -231,14 +237,15 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             MoveSelectionPill(item, _pendingPillAnimate);
     }
 
-    private async Task AnimatePillAsync(
-        double startCenter,
-        double targetCenter,
+    private async Task AnimatePillEdgesAsync(
+        double startTop,
+        double startBottom,
+        double targetTop,
+        double targetBottom,
+        bool movingDown,
         int version,
         CancellationToken cancellationToken)
     {
-        double distance = Math.Abs(targetCenter - startCenter);
-        double stretch = MaxPillStretch * Math.Clamp(distance / PillStretchReferenceDistance, 0d, 1d);
         long started = Stopwatch.GetTimestamp();
         double durationMs = PillAnimationDuration.TotalMilliseconds;
 
@@ -252,12 +259,19 @@ public partial class SidebarView : BaseView<SidebarViewModel>
                 0d,
                 1d);
 
-            double eased = EvaluateBezier(progress, 0.33d, 0d, 0.1d, 1d);
-            double center = Lerp(startCenter, targetCenter, eased);
-            double scaleY = 1d + (stretch * Math.Sin(Math.PI * progress));
+            // Preserve the original WinUI-like edge motion: the leading edge arrives quickly
+            // while the trailing edge catches up. Expressing the resulting rectangle as a
+            // translate + scale keeps every frame in the render pipeline and avoids layout.
+            double lead = EvaluateBezier(progress, 0d, 0d, 0d, 1d);
+            double trail = EvaluateBezier(progress, 0.5d, 0d, 0.2d, 1d);
+            double topProgress = movingDown ? trail : lead;
+            double bottomProgress = movingDown ? lead : trail;
+            double top = Lerp(startTop, targetTop, topProgress);
+            double bottom = Lerp(startBottom, targetBottom, bottomProgress);
+            double scaleY = Math.Max(1d, bottom - top) / PillHeight;
 
             _pillScale.ScaleY = scaleY;
-            _pillTranslate.Y = center - ((PillHeight / 2d) * scaleY);
+            _pillTranslate.Y = top;
 
             if (progress >= 1d)
                 break;
@@ -276,7 +290,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             return;
 
         _pillScale.ScaleY = 1d;
-        _pillTranslate.Y = targetCenter - (PillHeight / 2d);
+        _pillTranslate.Y = targetTop;
     }
 
     private static double Lerp(double start, double end, double progress)

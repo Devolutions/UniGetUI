@@ -15,15 +15,21 @@ using Avalonia.VisualTree;
 namespace UniGetUI.Avalonia.Infrastructure;
 
 /// <summary>
-/// Horizontal page slide whose direction is set explicitly via <see cref="Reverse"/>.
+/// Fluent horizontal navigation whose direction is set explicitly via <see cref="Reverse"/>.
 /// (TransitioningContentControl always reports forward navigation, so the caller toggles this
-/// before changing content.) Reverse=false slides the incoming page in from the right
-/// (drill-in); Reverse=true slides it in from the left (back navigation).
+/// before changing content.) Reverse=false brings the incoming page from the right
+/// (drill-in); Reverse=true brings it from the left (back navigation). WinUI navigation
+/// moves content only a short distance and uses different enter/exit curves; applying one
+/// symmetric easing to two full-width pages makes the transition read as linear.
 /// Scrollbars are hidden for the duration so they don't drag across the view.
 /// </summary>
 public sealed class DirectionalSlideTransition : IPageTransition
 {
-    public TimeSpan Duration { get; set; } = TimeSpan.FromMilliseconds(220);
+    public TimeSpan Duration { get; set; } = TimeSpan.FromMilliseconds(250);
+
+    private static readonly TimeSpan ExitDuration = TimeSpan.FromMilliseconds(167);
+    private const double EnterOffset = 48d;
+    private const double ExitOffset = 16d;
 
     public bool Reverse { get; set; }
 
@@ -38,9 +44,6 @@ public sealed class DirectionalSlideTransition : IPageTransition
         }
 
         double sign = Reverse ? -1d : 1d;
-        double width = (to ?? from)?.GetVisualParent()?.Bounds.Width
-                       ?? (to ?? from)?.Bounds.Width ?? 0d;
-
         var hidden = new List<ScrollViewer>();
         HideScrollBars(from, hidden);
         HideScrollBars(to, hidden);
@@ -49,9 +52,11 @@ public sealed class DirectionalSlideTransition : IPageTransition
         {
             var tasks = new List<Task>();
             if (from is not null)
-                tasks.Add(Slide(from, 0d, -sign * width, cancellationToken));
+                tasks.Add(Animate(from, 0d, -sign * ExitOffset, 1d, 0d,
+                    ExitDuration, new SplineEasing(1d, 0d, 1d, 1d), cancellationToken));
             if (to is not null)
-                tasks.Add(Slide(to, sign * width, 0d, cancellationToken));
+                tasks.Add(Animate(to, sign * EnterOffset, 0d, 0d, 1d,
+                    Duration, new SplineEasing(0d, 0d, 0d, 1d), cancellationToken));
             await Task.WhenAll(tasks);
         }
         finally
@@ -60,16 +65,18 @@ public sealed class DirectionalSlideTransition : IPageTransition
                 sv.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         }
 
-        if (cancellationToken.IsCancellationRequested)
-            return;
-
         // Hide before clearing the transform so the outgoing page never snaps back on-screen.
         if (from is not null)
         {
             from.IsVisible = false;
             from.RenderTransform = null;
+            from.Opacity = 1d;
         }
-        to?.RenderTransform = null;
+        if (to is not null)
+        {
+            to.RenderTransform = null;
+            to.Opacity = 1d;
+        }
     }
 
     private static void HideScrollBars(Visual? root, List<ScrollViewer> hidden)
@@ -87,17 +94,41 @@ public sealed class DirectionalSlideTransition : IPageTransition
         }
     }
 
-    private Task Slide(Visual target, double fromX, double toX, CancellationToken cancellationToken)
+    private static Task Animate(
+        Visual target,
+        double fromX,
+        double toX,
+        double fromOpacity,
+        double toOpacity,
+        TimeSpan duration,
+        Easing easing,
+        CancellationToken cancellationToken)
     {
         var anim = new Animation
         {
-            Duration = Duration,
-            Easing = new CubicEaseInOut(),
+            Duration = duration,
+            Easing = easing,
             FillMode = FillMode.Forward,
             Children =
             {
-                new KeyFrame { Cue = new Cue(0d), Setters = { new Setter(TranslateTransform.XProperty, fromX) } },
-                new KeyFrame { Cue = new Cue(1d), Setters = { new Setter(TranslateTransform.XProperty, toX) } },
+                new KeyFrame
+                {
+                    Cue = new Cue(0d),
+                    Setters =
+                    {
+                        new Setter(TranslateTransform.XProperty, fromX),
+                        new Setter(Visual.OpacityProperty, fromOpacity),
+                    },
+                },
+                new KeyFrame
+                {
+                    Cue = new Cue(1d),
+                    Setters =
+                    {
+                        new Setter(TranslateTransform.XProperty, toX),
+                        new Setter(Visual.OpacityProperty, toOpacity),
+                    },
+                },
             },
         };
         return anim.RunAsync(target, cancellationToken);

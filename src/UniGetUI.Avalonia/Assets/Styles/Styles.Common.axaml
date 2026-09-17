@@ -27,6 +27,8 @@
                     <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush"  Color="#06000000"/>
                     <!-- Accent text (darker accents read better on light bg) -->
                     <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush"   Color="{DynamicResource SystemAccentColorDark2}"/>
+                    <!-- Package-state badges retain the darker accent used in light mode. -->
+                    <StaticResource x:Key="PackageTagBadgeBackgroundBrush" ResourceKey="AccentTextFillColorPrimaryBrush"/>
                     <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColorDark3}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorDark1}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorDisabledBrush"  Color="#5C000000"/>
@@ -172,6 +174,8 @@
                     <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush"  Color="#0AFFFFFF"/>
                     <!-- Accent text -->
                     <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush"   Color="{DynamicResource SystemAccentColorLight3}"/>
+                    <!-- A filled accent badge gives white status linework enough contrast in dark mode. -->
+                    <StaticResource x:Key="PackageTagBadgeBackgroundBrush" ResourceKey="AccentFillColorDefaultBrush"/>
                     <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColorLight3}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorLight2}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorDisabledBrush"  Color="#5CFFFFFF"/>
@@ -197,7 +201,7 @@
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#E4000000"/>
                     <!-- WinUI's dark flyout surface is an opaque #2C2C2C. -->
                     <SolidColorBrush x:Key="MenuSurfaceBrush"            Color="#FF2C2C2C"/>
-                    <SolidColorBrush x:Key="MenuSurfaceBorderBrush"      Color="#26FFFFFF"/>
+                    <SolidColorBrush x:Key="MenuSurfaceBorderBrush"      Color="#33000000"/>
                     <SolidColorBrush x:Key="MenuDividerBrush"            Color="#15FFFFFF"/>
                     <!-- Text on accent -->
                     <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush"      Color="#000000"/>
@@ -215,7 +219,7 @@
                     <StaticResource x:Key="AccentButtonForegroundDisabled" ResourceKey="TextOnAccentFillColorDisabledBrush"/>
                     <!-- Settings cards -->
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
-                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#393939"/>
+                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#19000000"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#323232"/>
                     <SolidColorBrush x:Key="SecondaryActionBorderBrush"  Color="Transparent"/>
                     <Thickness x:Key="SecondaryActionBorderThickness">0</Thickness>
@@ -247,7 +251,7 @@
                     <SolidColorBrush x:Key="MicaPageBackground"          Color="#202020"/>
                     <SolidColorBrush x:Key="AppSplitterBackground"       Color="#1A1A1A"/>
                     <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#1C1C1C"/>
-                    <SolidColorBrush x:Key="AppBorderBrush"              Color="#353535"/>
+                    <SolidColorBrush x:Key="AppBorderBrush"              Color="#15FFFFFF"/>
                     <SolidColorBrush x:Key="AppBadgeBackground"          Color="#3C3C3C"/>
                     <!-- Dialogs -->
                     <SolidColorBrush x:Key="AppDialogBackground"         Color="#2C2C2C"/>

@@ -15,7 +15,7 @@ namespace UniGetUI.Avalonia.Infrastructure;
 /// </summary>
 public sealed class EntrancePageTransition : IPageTransition
 {
-    public TimeSpan Duration { get; set; } = TimeSpan.FromMilliseconds(220);
+    public TimeSpan Duration { get; set; } = TimeSpan.FromMilliseconds(250);
 
     /// <summary>How far (px) the incoming page slides up as it fades in.</summary>
     public double VerticalOffset { get; set; } = 28;
@@ -39,7 +39,9 @@ public sealed class EntrancePageTransition : IPageTransition
         var enter = new Animation
         {
             Duration = Duration,
-            Easing = new CubicEaseOut(),
+            // WinUI's Fluent direct-entrance curve: immediate response followed by a
+            // pronounced deceleration as the page settles into place.
+            Easing = new SplineEasing(0d, 0d, 0d, 1d),
             FillMode = FillMode.Forward,
             Children =
             {

@@ -163,7 +163,7 @@
                             VerticalContentAlignment="Stretch">
                 <!-- Page-switch animation: fade + subtle slide-up (WinUI Frame entrance feel) -->
                 <TransitioningContentControl.PageTransition>
-                    <infra:EntrancePageTransition Duration="0:0:0.22" VerticalOffset="28"/>
+                    <infra:EntrancePageTransition Duration="0:0:0.25" VerticalOffset="28"/>
                 </TransitioningContentControl.PageTransition>
             </TransitioningContentControl>
 

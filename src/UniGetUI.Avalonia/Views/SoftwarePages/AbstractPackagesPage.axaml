@@ -576,7 +576,7 @@
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
                                                                       Width="24" Height="24" IsVisible="{Binding !HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="{Binding TagBackdropIconPath}"
-                                                                      Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                                                      Foreground="{DynamicResource PackageTagBadgeBackgroundBrush}"
                                                                       Width="20" Height="20"
                                                                       Margin="0,0,-3,-3"
                                                                       IsVisible="{Binding TagIconVisible}"
@@ -735,7 +735,7 @@
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
                                                                       Width="44" Height="44" IsVisible="{Binding !HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="{Binding TagBackdropIconPath}"
-                                                                      Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                                                      Foreground="{DynamicResource PackageTagBadgeBackgroundBrush}"
                                                                       Width="28" Height="28"
                                                                       Margin="0,0,-4,-4"
                                                                       IsVisible="{Binding TagIconVisible}"
@@ -846,7 +846,7 @@
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
                                                                       Width="64" Height="64" IsVisible="{Binding !HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="{Binding TagBackdropIconPath}"
-                                                                      Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                                                      Foreground="{DynamicResource PackageTagBadgeBackgroundBrush}"
                                                                       Width="38" Height="38"
                                                                       Margin="0,0,-5,-5"
                                                                       IsVisible="{Binding TagIconVisible}"

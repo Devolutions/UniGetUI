@@ -58,13 +58,13 @@
             <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
             <!-- Cards / panels: WinUI's translucent card layer over the Mica backdrop -->
             <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
-            <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#26FFFFFF"/>
+            <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#19000000"/>
             <!-- Package list: near-transparent so Mica shows through, matching WinUI's SystemFillColorNeutralBackground -->
             <SolidColorBrush x:Key="PackageListBackground"       Color="#08FFFFFF"/>
             <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#15FFFFFF"/>
             <SolidColorBrush x:Key="AppSplitterBackground"       Color="#66000000"/>
             <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#66202020"/>
-            <SolidColorBrush x:Key="AppBorderBrush"              Color="#33FFFFFF"/>
+            <SolidColorBrush x:Key="AppBorderBrush"              Color="#15FFFFFF"/>
             <SolidColorBrush x:Key="AppBadgeBackground"          Color="#66383838"/>
             <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#662C2C2C"/>
             <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#66393939"/>
@@ -84,8 +84,8 @@
             <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed"     Color="#8C2D2D2D"/>
             <SolidColorBrush x:Key="ExpanderHeaderBackgroundDisabled"    Color="#402D2D2D"/>
             <SolidColorBrush x:Key="ExpanderContentBackground"           Color="Transparent"/>
-            <SolidColorBrush x:Key="ExpanderHeaderBorderBrush"           Color="#26FFFFFF"/>
-            <SolidColorBrush x:Key="ExpanderContentBorderBrush"          Color="#26FFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBorderBrush"           Color="#19000000"/>
+            <SolidColorBrush x:Key="ExpanderContentBorderBrush"          Color="#19000000"/>
             <!-- Tab headers -->
             <SolidColorBrush x:Key="TabItemHeaderBackgroundSelected"              Color="#662C2C2C"/>
             <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselected"            Color="Transparent"/>

@@ -1,0 +1,64 @@
+name: Build Windows portable
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Windows x64 portable
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Install repository .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Record source revision
+        shell: pwsh
+        run: |
+          $sha = git rev-parse HEAD
+          $shortSha = git rev-parse --short HEAD
+          "BUILD_SHA=$sha" >> $env:GITHUB_ENV
+          "BUILD_SHORT_SHA=$shortSha" >> $env:GITHUB_ENV
+
+      - name: Build portable x64 package
+        shell: pwsh
+        run: |
+          ./scripts/build.ps1 `
+            -Configuration Release `
+            -Platform x64 `
+            -OutputPath "$PWD/output" `
+            -SkipTests `
+            -SkipInstaller
+
+      - name: Rename package and write checksum
+        shell: pwsh
+        run: |
+          $source = "$PWD/output/UniGetUI.x64.zip"
+          $destination = "$PWD/output/UniGetUI-$env:BUILD_SHORT_SHA-win-x64.zip"
+
+          if (-not (Test-Path $source)) {
+              throw "Expected build output was not produced: $source"
+          }
+
+          Move-Item $source $destination
+          $hash = Get-FileHash $destination -Algorithm SHA256
+          "$($hash.Hash)  $([IO.Path]::GetFileName($destination))" |
+              Set-Content "$PWD/output/SHA256SUMS.txt"
+
+      - name: Upload portable build
+        uses: actions/upload-artifact@v7
+        with:
+          name: UniGetUI-${{ env.BUILD_SHORT_SHA }}-win-x64
+          path: |
+            output/UniGetUI-*-win-x64.zip
+            output/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30

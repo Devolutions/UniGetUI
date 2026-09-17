@@ -62,7 +62,11 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
             BuildDetailsInlines();
         };
         _vm.PropertyChanged += OnVmPropertyChanged;
-        _vm.Screenshots.CollectionChanged += (_, _) => Dispatcher.UIThread.Post(UpdatePips);
+        _vm.Screenshots.CollectionChanged += (_, _) => Dispatcher.UIThread.Post(() =>
+        {
+            UpdatePips();
+            UpdateScreenshotHeight();
+        });
 
         MainActionButton.Click += (_, _) => OnMainAction();
         ActionVariantsButton.Flyout = BuildActionFlyout();
@@ -80,7 +84,12 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         };
         ScreenshotPips.AddHandler(Button.ClickEvent, OnPipClicked);
 
-        SizeChanged += (_, _) => ApplyLayoutForCurrentSize();
+        SizeChanged += (_, _) =>
+        {
+            ApplyLayoutForCurrentSize();
+            // Recalculate after the responsive grid has received its new column width.
+            Dispatcher.UIThread.Post(UpdateScreenshotHeight, DispatcherPriority.Loaded);
+        };
 
         // Seed inline blocks with loading placeholders.
         BuildBasicInfoInlines();
@@ -121,7 +130,11 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     {
         if (e.PropertyName == nameof(PackageDetailsViewModel.SelectedScreenshotIndex)
             || e.PropertyName == nameof(PackageDetailsViewModel.ScreenshotCount))
-            Dispatcher.UIThread.Post(UpdatePips);
+            Dispatcher.UIThread.Post(() =>
+            {
+                UpdatePips();
+                UpdateScreenshotHeight();
+            });
     }
 
     private void OnPipClicked(object? sender, RoutedEventArgs e)
@@ -156,29 +169,57 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     {
         var wide = Bounds.Width >= WideThreshold;
         var mode = wide ? LayoutMode.Wide : LayoutMode.Normal;
-        if (mode == _layoutMode) return;
-        _layoutMode = mode;
-
-        if (mode == LayoutMode.Wide)
+        if (mode != _layoutMode)
         {
-            // Ensure two columns and the right-column panels live in RightPanel.
-            EnsureChild(RightPanel, ScreenshotsPanel, 0);
-            EnsureChild(RightPanel, DetailsPanel, 1);
-            RightPanel.IsVisible = true;
-            MainGrid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
+            _layoutMode = mode;
 
-            ScreenshotsBorder.Height = _vm.HasScreenshots ? 320 : 150;
+            if (mode == LayoutMode.Wide)
+            {
+                // Ensure two columns and the right-column panels live in RightPanel.
+                EnsureChild(RightPanel, ScreenshotsPanel, 0);
+                EnsureChild(RightPanel, DetailsPanel, 1);
+                RightPanel.IsVisible = true;
+                MainGrid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
+            }
+            else
+            {
+                // Move screenshots + details into LeftPanel (after install options) and collapse the right column.
+                EnsureChild(LeftPanel, ScreenshotsPanel, LeftPanel.Children.Count);
+                EnsureChild(LeftPanel, DetailsPanel, LeftPanel.Children.Count);
+                RightPanel.IsVisible = false;
+                MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
+            }
         }
-        else
+
+        UpdateScreenshotHeight();
+    }
+
+    private void UpdateScreenshotHeight()
+    {
+        if (!_vm.HasScreenshots
+            || _vm.SelectedScreenshotIndex < 0
+            || _vm.SelectedScreenshotIndex >= _vm.Screenshots.Count)
         {
-            // Move screenshots + details into LeftPanel (after install options) and collapse the right column.
-            EnsureChild(LeftPanel, ScreenshotsPanel, LeftPanel.Children.Count);
-            EnsureChild(LeftPanel, DetailsPanel, LeftPanel.Children.Count);
-            RightPanel.IsVisible = false;
-            MainGrid.ColumnDefinitions[1].Width = new GridLength(0);
-
-            ScreenshotsBorder.Height = _vm.HasScreenshots ? 225 : 130;
+            ScreenshotsBorder.Height = _layoutMode == LayoutMode.Wide ? 150 : 130;
+            return;
         }
+
+        PixelSize pixels = _vm.Screenshots[_vm.SelectedScreenshotIndex].PixelSize;
+        if (pixels.Width <= 0 || pixels.Height <= 0)
+            return;
+
+        double width = ScreenshotsBorder.Bounds.Width;
+        if (width <= 0)
+        {
+            double contentWidth = Math.Max(0, Bounds.Width - 48);
+            width = _layoutMode == LayoutMode.Wide
+                ? Math.Max(0, (contentWidth - MainGrid.ColumnSpacing) / 2)
+                : contentWidth;
+        }
+
+        double aspectRatio = (double)pixels.Width / pixels.Height;
+        double maximumHeight = _layoutMode == LayoutMode.Wide ? 420 : 560;
+        ScreenshotsBorder.Height = Math.Clamp(width / aspectRatio, 180, maximumHeight);
     }
 
     /// <summary>Move <paramref name="child"/> to <paramref name="target"/> at the given index, removing from its old parent first.</summary>

@@ -81,7 +81,7 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
 
     public string Title => Session.Session.Operation switch
     {
-        PolicyEditorOperationKind.Update => CoreTools.Translate("Edit policy '{0}'", Session.Draft.Metadata.Id),
+        PolicyEditorOperationKind.Update => CoreTools.Translate("Edit policy {0}", Session.Draft.Metadata.Id),
         PolicyEditorOperationKind.ReplaceIdentity => CoreTools.Translate("Replace active policy identity"),
         PolicyEditorOperationKind.Create => CoreTools.Translate("Create a new package broker policy"),
         PolicyEditorOperationKind.Repair => CoreTools.Translate("Repair the stored package broker policy"),
@@ -128,7 +128,7 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         if (index is null) return;
         _announce(
             CoreTools.Translate(
-                "Rule '{0}' is now position {1} of {2}.",
+                "Rule {0} is now position {1} of {2}.",
                 rule.Id,
                 index.Value + 1,
                 Session.Rules.Count),

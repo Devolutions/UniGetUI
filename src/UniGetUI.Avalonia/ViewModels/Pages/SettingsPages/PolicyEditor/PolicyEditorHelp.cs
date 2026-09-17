@@ -17,8 +17,8 @@ public static class PolicyEditorHelp
     public static string Published => T("Date and time when Devolutions Agent last committed this policy revision.");
     public static string Description => T("Optional summary of the policy's purpose. Turn this field off to leave the description out.");
     public static string SupportUrl => T("Optional HTTP or HTTPS page where users can learn about this policy or request an exception.");
-    public static string ValidFrom => T("Optional date and time when enforcement begins. Leave empty to make the policy effective immediately after it is saved.");
-    public static string ValidUntil => T("Optional date and time when enforcement ends. Leave empty for no expiry; when set, it must be later than Valid from.");
+    public static string ValidFrom => T("Optional local date and time when the policy begins. Before this instant, Devolutions Agent rejects package operations; leave empty for immediate validity.");
+    public static string ValidUntil => T("Optional local date and time when the policy ends. After this instant, Devolutions Agent rejects package operations; leave empty for no expiry.");
     public static string DefaultDecision => T("Action taken when no enabled rule matches. Choose Deny for a least-privilege policy; choose Allow only when unmatched package requests should proceed.");
     public static string DefaultAllowAdvisory => T("Default Allow permits every package request that does not match an enabled rule.");
     public static string RulePrecedence => T("Rules with lower priority numbers are considered first, and Deny wins when priorities tie. This order is fixed.");

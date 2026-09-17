@@ -19,6 +19,59 @@ namespace UniGetUI.Tests.PolicyEditor;
 public class PolicyEditorStructuredInputGuardTests
 {
     [Fact]
+    public void ValidityControls_ProjectOffsetInstantToLocalTimeWithoutChangingInstant()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        DateTimeOffset source = DateTimeOffset.Parse("2026-08-29T12:34:56+09:00");
+        viewModel.Draft.Metadata.ValidFrom = source;
+        var document = new PolicyEditorDocumentUi(viewModel);
+        DateTimeOffset expectedLocal = TimeZoneInfo.ConvertTime(source, TimeZoneInfo.Local);
+
+        Assert.Equal(expectedLocal.Date, document.ValidFromDate!.Value.Date);
+        Assert.Equal(expectedLocal.TimeOfDay, document.ValidFromTime);
+
+        string raw = PolicyEditorRawSyntax.ToCanonicalRaw(viewModel.Draft);
+        Assert.True(PolicyEditorRawSyntax.TryParseStrict(
+            raw,
+            out PolicyEditorDraftDocument? parsed,
+            out PolicyEditorSyntaxError? error));
+        Assert.Null(error);
+        Assert.Equal(source.ToUniversalTime(), parsed!.Metadata.ValidFrom!.Value.ToUniversalTime());
+    }
+
+    [Fact]
+    public void ValidityControls_BlockEqualOrInvertedWindowAndClearRestoresValidity()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        var document = new PolicyEditorDocumentUi(viewModel);
+        document.ValidFromText = "2026-08-29T12:00:00Z";
+        document.ValidUntilText = "2026-08-29T12:00:00Z";
+
+        Assert.Contains("later than", document.ValidUntilError);
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
+
+        document.ValidUntilText = "2026-08-29T11:59:59Z";
+        Assert.Contains("later than", document.ValidUntilError);
+        document.ClearValidUntil();
+
+        Assert.Null(document.ValidUntilError);
+        Assert.Null(viewModel.Draft.Metadata.ValidUntil);
+        Assert.True(viewModel.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ValidityControls_ShowCurrentTimeZoneAndOutsideWindowAdvisory()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        viewModel.Draft.Metadata.ValidFrom = DateTimeOffset.UtcNow.AddDays(1);
+        var document = new PolicyEditorDocumentUi(viewModel);
+
+        Assert.Contains("UTC", document.LocalTimeZoneText);
+        Assert.True(document.IsOutsideValidityWindow);
+        Assert.Contains("rejected", document.ValidityWindowAdvisory);
+    }
+
+    [Fact]
     public void InvalidValidFromText_IsRetained_ExposesLocalizedError_AndBlocksValidateAndSave()
     {
         using PolicyEditorSessionViewModel viewModel = CreateViewModel();

@@ -303,6 +303,18 @@ public partial class PolicyEditorLocalizationTests
                 "AgentPolicyInspector.axaml")),
         ];
         XNamespace controls = "using:UniGetUI.Avalonia.Views.Controls";
+        XNamespace automation =
+            "clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls";
+
+        static bool HasHelp(
+            XElement element,
+            XNamespace controlsNamespace,
+            XNamespace automationNamespace) =>
+            !string.IsNullOrWhiteSpace(
+                (string?)element.Attribute(controlsNamespace + "PolicyHelp.Text"))
+            || !string.IsNullOrWhiteSpace(
+                (string?)element.Attribute(
+                    automationNamespace + "AutomationProperties.HelpText"));
 
         XElement[] labels = views
             .SelectMany(view => view.Descendants())
@@ -314,8 +326,7 @@ public partial class PolicyEditorLocalizationTests
         Assert.NotEmpty(labels);
         Assert.All(
             labels,
-            label => Assert.False(string.IsNullOrWhiteSpace(
-                (string?)label.Attribute(controls + "PolicyHelp.Text"))));
+            label => Assert.True(HasHelp(label, controls, automation)));
 
         XElement[] taggedEditorFields = views[0]
             .Descendants()
@@ -324,8 +335,15 @@ public partial class PolicyEditorLocalizationTests
         Assert.NotEmpty(taggedEditorFields);
         Assert.All(
             taggedEditorFields,
-            field => Assert.False(string.IsNullOrWhiteSpace(
-                (string?)field.Attribute(controls + "PolicyHelp.Text"))));
+            field => Assert.True(HasHelp(field, controls, automation)));
+
+        XElement auditSelector = Assert.Single(views[0].Descendants(),
+            element => (string?)element.Attribute("Tag") == "/Enforcement/AuditMode");
+        Assert.Null(auditSelector.Attribute(controls + "PolicyHelp.Text"));
+        Assert.Equal(
+            "{x:Static pvm:PolicyEditorHelp.AuditMode}",
+            (string?)auditSelector.Attribute(
+                automation + "AutomationProperties.HelpText"));
     }
 
     [Fact]
@@ -540,20 +558,56 @@ public partial class PolicyEditorLocalizationTests
             (string?)auditSelector.Attribute("ItemsSource"));
         Assert.Equal(
             "{x:Static pvm:PolicyEditorHelp.AuditMode}",
-            (string?)auditSelector.Attribute(controls + "PolicyHelp.Text"));
+            (string?)auditSelector.Attribute(
+                automation + "AutomationProperties.HelpText"));
         XElement warning = Assert.Single(dialog.Descendants(),
             element => (string?)element.Attribute("IsVisible")
                 == "{Binding Document.IsAuditModeEnabled}");
         Assert.Equal(
             "{x:Static pvm:PolicyEditorHelp.AuditModeWarning}",
-            (string?)warning.Attribute(controls + "PolicyHelp.Text"));
+            (string?)warning.Attribute("Content"));
         Assert.Equal(
-            "{t:Translate Audit mode warning}",
-            (string?)warning.Attribute(automation + "AutomationProperties.Name"));
+            "{StaticResource PolicyAdvisoryTemplate}",
+            (string?)warning.Attribute("ContentTemplate"));
+        Assert.Null(warning.Attribute(automation + "AutomationProperties.Name"));
         Assert.Equal(["No", "Yes"], PolicyEditorEnumDisplay.AuditModeDisplayItems);
         Assert.Contains("permits requests", PolicyEditorHelp.AuditMode, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("set No to enforce", PolicyEditorHelp.AuditMode, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("still permitted", PolicyEditorHelp.AuditModeWarning, StringComparison.OrdinalIgnoreCase);
+
+        XElement advisoryTemplate = Assert.Single(dialog.Descendants(),
+            element => (string?)element.Attribute(
+                XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml") + "Key")
+                == "PolicyAdvisoryTemplate");
+        XElement advisoryBorder = Assert.Single(advisoryTemplate.Descendants(),
+            element => ((string?)element.Attribute("Classes"))?
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Contains("policy-advisory", StringComparer.Ordinal) is true);
+        XElement advisoryIcon = Assert.Single(advisoryTemplate.Descendants(),
+            element => element.Name.LocalName == "SvgIcon");
+        XElement advisoryText = Assert.Single(advisoryTemplate.Descendants(),
+            element => element.Name.LocalName == "TextBlock");
+        Assert.Equal(
+            "avares://UniGetUI/Assets/Symbols/warning_round.svg",
+            (string?)advisoryIcon.Attribute("Path"));
+        Assert.Equal(
+            "Raw",
+            (string?)advisoryIcon.Attribute(
+                automation + "AutomationProperties.AccessibilityView"));
+        Assert.Equal(
+            "Polite",
+            (string?)advisoryBorder.Attribute(
+                automation + "AutomationProperties.LiveSetting"));
+        Assert.Equal("Wrap", (string?)advisoryText.Attribute("TextWrapping"));
+
+        XElement advisoryStyle = Assert.Single(dialog.Descendants(),
+            element => (string?)element.Attribute("Selector")
+                == "Border.policy-advisory");
+        string styleText = advisoryStyle.ToString();
+        Assert.Contains("{DynamicResource WarningBannerBackground}", styleText);
+        Assert.Contains("{DynamicResource WarningBannerBorderBrush}", styleText);
+        Assert.Contains("BorderThickness", styleText);
+        Assert.Contains("CornerRadius", styleText);
 
         string confirmationPrompt = File.ReadAllText(Path.Combine(
             root,
@@ -569,6 +623,34 @@ public partial class PolicyEditorLocalizationTests
         Assert.Contains("requests the policy would deny will be permitted", confirmationPrompt);
         Assert.Contains("PolicyEditorConfirmationKind.EnableDefaultAllow", confirmationPrompt);
         Assert.Contains("PolicyEditorConfirmationKind.RemoveAllowSafetyLimits", confirmationPrompt);
+    }
+
+    [Fact]
+    public void ValidityWindow_UsesAccessibleLocalDateTimeControlsAndSharedAdvisory()
+    {
+        string root = FindRepositoryRoot();
+        string view = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorDialog.axaml"));
+
+        Assert.Contains("<DatePicker SelectedDate=\"{Binding Document.ValidFromDate}\"", view);
+        Assert.Contains("<TimePicker Grid.Column=\"1\"", view);
+        Assert.Contains("SelectedTime=\"{Binding Document.ValidFromTime}\"", view);
+        Assert.Contains("<DatePicker SelectedDate=\"{Binding Document.ValidUntilDate}\"", view);
+        Assert.Contains("SelectedTime=\"{Binding Document.ValidUntilTime}\"", view);
+        Assert.Contains("Text=\"{Binding Document.LocalTimeZoneText}\"", view);
+        Assert.Contains("IsVisible=\"{Binding Document.IsOutsideValidityWindow}\"", view);
+        Assert.Contains("ContentTemplate=\"{StaticResource PolicyAdvisoryTemplate}\"", view);
+        Assert.Contains("Click=\"ClearValidFromButton_Click\"", view);
+        Assert.Contains("Click=\"ClearValidUntilButton_Click\"", view);
+        Assert.DoesNotContain("Text=\"{Binding Document.ValidFromText}\"", view);
+        Assert.DoesNotContain("Text=\"{Binding Document.ValidUntilText}\"", view);
     }
 
     [Fact]

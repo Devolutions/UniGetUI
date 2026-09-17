@@ -118,10 +118,10 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
         return panel;
     }
 
-    private static string DescribeMessage(PolicyEditorConfirmationRequest request) => request.Kind switch
+    internal static string DescribeMessage(PolicyEditorConfirmationRequest request) => request.Kind switch
     {
         PolicyEditorConfirmationKind.Warnings => CoreTools.Translate(
-            "Validation reported {0} warning(s) for policy '{1}'. Do you want to save it anyway?",
+            "Validation reported {0} warning(s) for policy {1}. Do you want to save it anyway?",
             request.WarningCount,
             request.DraftId),
         PolicyEditorConfirmationKind.EnableAuditMode => CoreTools.Translate(
@@ -129,38 +129,41 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
         PolicyEditorConfirmationKind.EnableDefaultAllow => CoreTools.Translate(
             "The default decision will permit every package request that does not match an enabled rule. Use Allow as the default and save this policy?"),
         PolicyEditorConfirmationKind.RemoveAllowSafetyLimits => CoreTools.Translate(
-            "Rule '{0}' has Additional safety limits that apply only to Allow rules. Changing it to Deny will remove those limits. Continue?",
+            "Rule {0} has Additional safety limits that apply only to Allow rules. Changing it to Deny will remove those limits. Continue?",
             request.RuleId ?? "?"),
         PolicyEditorConfirmationKind.ReplaceIdentity => CoreTools.Translate(
-            "This will replace the active policy '{0}' with a new policy '{1}'. This cannot be undone.",
+            "This will replace the active policy {0} with a new policy {1}. This cannot be undone.",
             request.ActivePolicyId ?? "?",
             request.DraftId),
         PolicyEditorConfirmationKind.Create => CoreTools.Translate(
-            "This will create a new package broker policy '{0}'.",
+            "This will create a new package broker policy {0}.",
             request.DraftId),
         PolicyEditorConfirmationKind.Repair => CoreTools.Translate(
-            "The stored policy file is invalid and will be replaced with '{0}'.",
+            "The stored policy file is invalid and will be replaced with {0}.",
             request.DraftId),
         PolicyEditorConfirmationKind.ConfirmOverwrite => request.Operation switch
         {
             PolicyReplacementOperation.Update => CoreTools.Translate(
-                "The active policy '{0}' changed since editing began. Overwrite that exact current version with your changes?",
+                "The active policy {0} changed since editing began. Overwrite that exact current version with your changes?",
                 request.ActivePolicyId ?? request.DraftId),
             PolicyReplacementOperation.ReplaceIdentity => CoreTools.Translate(
-                "The policy store now contains active policy '{0}'. Replace it with the different policy identity '{1}'?",
+                "The policy store now contains active policy {0}. Replace it with the different policy identity {1}?",
                 request.ActivePolicyId ?? "?",
                 request.DraftId),
             PolicyReplacementOperation.Create => CoreTools.Translate(
-                "The policy store is now missing. Create policy '{0}' against that exact current state?",
+                "The policy store is now missing. Create policy {0} against that exact current state?",
                 request.DraftId),
             PolicyReplacementOperation.Repair => CoreTools.Translate(
-                "The policy store is now invalid. Replace it with repaired policy '{0}' against that exact current state?",
+                "The policy store is now invalid. Replace it with repaired policy {0} against that exact current state?",
                 request.DraftId),
             _ => CoreTools.Translate("Do you want to continue?"),
         },
-        PolicyEditorConfirmationKind.DiscardChanges => CoreTools.Translate(
-            "You have unsaved changes to policy '{0}'. Discard them?",
-            request.DraftId),
+        PolicyEditorConfirmationKind.DiscardChanges =>
+            string.IsNullOrWhiteSpace(request.DraftId)
+                ? CoreTools.Translate("You have unsaved policy changes. Discard them?")
+                : CoreTools.Translate(
+                    "You have unsaved changes to policy {0}. Discard them?",
+                    request.DraftId),
         _ => CoreTools.Translate("Do you want to continue?"),
     };
 }

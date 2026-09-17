@@ -144,12 +144,13 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
     private string _validUntilText;
     private string? _validFromError;
     private string? _validUntilError;
+    private bool _hasValidityOrderError;
 
     public PolicyEditorDocumentUi(PolicyEditorSessionViewModel sessionViewModel)
     {
         _sessionViewModel = sessionViewModel;
-        _validFromText = Format(Draft.Metadata.ValidFrom);
-        _validUntilText = Format(Draft.Metadata.ValidUntil);
+        _validFromText = Draft.Metadata.ValidFrom?.ToString("O", CultureInfo.InvariantCulture) ?? "";
+        _validUntilText = Draft.Metadata.ValidUntil?.ToString("O", CultureInfo.InvariantCulture) ?? "";
     }
 
     private PolicyEditorDraftDocument Draft => _sessionViewModel.Draft;
@@ -225,51 +226,96 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
     public IReadOnlyList<PolicyValidationFinding> SupportUrlFindings => FindingsFor("/Metadata/SupportUrl");
     public bool HasSupportUrlErrors => HasErrors(SupportUrlFindings);
 
-    /// <summary>Round-trip ISO-8601 text. Invalid input is retained and blocks validation/save.</summary>
-    public string ValidFromText
+    public DateTimeOffset? ValidFromDate
     {
-        get => _validFromText;
+        get => LocalDate(Draft.Metadata.ValidFrom);
         set
         {
-            value ??= "";
-            if (string.Equals(_validFromText, value, StringComparison.Ordinal)) return;
-            _validFromText = value;
-            OnPropertyChanged();
-            if (TryParse(value, out DateTimeOffset? parsed))
-            {
-                Draft.Metadata.ValidFrom = parsed;
-                SetValidFromError(null);
-                MarkDirty();
-            }
-            else
-            {
-                SetValidFromError(CoreTools.Translate("Enter a valid ISO 8601 date and time."));
-                _sessionViewModel.NotifyLocalInputChanged();
-            }
+            UpdateLocalValidity(
+                isStart: true,
+                value,
+                ValidFromTime);
         }
     }
-
-    public string ValidUntilText
+    internal string ValidFromText
     {
-        get => _validUntilText;
+        get => _validFromText;
+        set => SetAbsoluteValidity(isStart: true, value);
+    }
+    public TimeSpan? ValidFromTime
+    {
+        get => LocalTime(Draft.Metadata.ValidFrom);
         set
         {
-            value ??= "";
-            if (string.Equals(_validUntilText, value, StringComparison.Ordinal)) return;
-            _validUntilText = value;
-            OnPropertyChanged();
-            if (TryParse(value, out DateTimeOffset? parsed))
-            {
-                Draft.Metadata.ValidUntil = parsed;
-                SetValidUntilError(null);
-                MarkDirty();
-            }
-            else
-            {
-                SetValidUntilError(CoreTools.Translate("Enter a valid ISO 8601 date and time."));
-                _sessionViewModel.NotifyLocalInputChanged();
-            }
+            UpdateLocalValidity(
+                isStart: true,
+                ValidFromDate,
+                value);
         }
+    }
+    public DateTimeOffset? ValidUntilDate
+    {
+        get => LocalDate(Draft.Metadata.ValidUntil);
+        set => UpdateLocalValidity(
+            isStart: false,
+            value,
+            ValidUntilTime);
+    }
+    internal string ValidUntilText
+    {
+        get => _validUntilText;
+        set => SetAbsoluteValidity(isStart: false, value);
+    }
+    public TimeSpan? ValidUntilTime
+    {
+        get => LocalTime(Draft.Metadata.ValidUntil);
+        set => UpdateLocalValidity(
+            isStart: false,
+            ValidUntilDate,
+            value);
+    }
+    public string LocalTimeZoneText
+    {
+        get
+        {
+            TimeZoneInfo zone = TimeZoneInfo.Local;
+            TimeSpan offset = zone.GetUtcOffset(DateTimeOffset.Now);
+            return CoreTools.Translate(
+                "{0} (UTC{1})",
+                zone.StandardName,
+                $"{(offset < TimeSpan.Zero ? "-" : "+")}{offset.Duration():hh\\:mm}");
+        }
+    }
+    public bool IsOutsideValidityWindow
+    {
+        get
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            return Draft.Metadata.ValidFrom is { } from && now < from.ToUniversalTime()
+                || Draft.Metadata.ValidUntil is { } until && now > until.ToUniversalTime();
+        }
+    }
+    public string ValidityWindowAdvisory => CoreTools.Translate(
+        "This policy is outside its configured validity window. If saved now, package operations will be rejected until the policy becomes valid again.");
+
+    public void ClearValidFrom()
+    {
+        _validFromText = "";
+        Draft.Metadata.ValidFrom = null;
+        SetValidFromError(null);
+        NotifyValidityChanged();
+        ValidateValidityOrder();
+        MarkDirty();
+    }
+
+    public void ClearValidUntil()
+    {
+        _validUntilText = "";
+        Draft.Metadata.ValidUntil = null;
+        SetValidUntilError(null);
+        NotifyValidityChanged();
+        ValidateValidityOrder();
+        MarkDirty();
     }
 
     public string? ValidFromError => _validFromError;
@@ -327,8 +373,6 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
 
     public void RefreshFromDraft()
     {
-        _validFromText = Format(Draft.Metadata.ValidFrom);
-        _validUntilText = Format(Draft.Metadata.ValidUntil);
         SetValidFromError(null);
         SetValidUntilError(null);
         OnPropertyChanged(nameof(PolicyFormatVersion));
@@ -337,8 +381,7 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         OnPropertyChanged(nameof(Description));
         OnPropertyChanged(nameof(HasDescription));
         OnPropertyChanged(nameof(SupportUrl));
-        OnPropertyChanged(nameof(ValidFromText));
-        OnPropertyChanged(nameof(ValidUntilText));
+        NotifyValidityChanged();
         OnPropertyChanged(nameof(ValidFromError));
         OnPropertyChanged(nameof(ValidUntilError));
         OnPropertyChanged(nameof(DecisionIndex));
@@ -399,38 +442,130 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         OnPropertyChanged(nameof(ValidUntilError));
     }
 
-    private static string Format(DateTimeOffset? value) =>
-        value?.ToString("O", CultureInfo.InvariantCulture) ?? "";
-
-    private static bool TryParse(string? text, out DateTimeOffset? parsed)
+    private void UpdateLocalValidity(
+        bool isStart,
+        DateTimeOffset? date,
+        TimeSpan? time)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        if (date is null || time is null)
         {
-            parsed = null;
-            return true;
+            if (isStart)
+                Draft.Metadata.ValidFrom = null;
+            else
+                Draft.Metadata.ValidUntil = null;
+            NotifyValidityChanged();
+            ValidateValidityOrder();
+            MarkDirty();
+            return;
         }
 
-        string normalized = text.EndsWith('Z')
-            ? text[..^1] + "+00:00"
-            : text;
-        string[] formats =
-        [
-            "yyyy-MM-dd'T'HH:mm:sszzz",
-            "yyyy-MM-dd'T'HH:mm:ss.FFFFFFFzzz",
-        ];
-        if (DateTimeOffset.TryParseExact(
+        DateTime local = date.Value.Date + time.Value;
+        TimeZoneInfo zone = TimeZoneInfo.Local;
+        string? error = zone.IsInvalidTime(local)
+            ? CoreTools.Translate("This local time does not exist because of a daylight-saving time change. Choose another time.")
+            : zone.IsAmbiguousTime(local)
+                ? CoreTools.Translate("This local time occurs twice because of a daylight-saving time change. Choose a time outside the repeated hour.")
+                : null;
+        if (isStart)
+            SetValidFromError(error);
+        else
+            SetValidUntilError(error);
+        if (error is not null)
+        {
+            NotifyValidityChanged();
+            return;
+        }
+
+        var absolute = new DateTimeOffset(local, zone.GetUtcOffset(local));
+        if (isStart)
+            Draft.Metadata.ValidFrom = absolute;
+        else
+            Draft.Metadata.ValidUntil = absolute;
+        ValidateValidityOrder();
+        NotifyValidityChanged();
+        MarkDirty();
+    }
+
+    private void SetAbsoluteValidity(bool isStart, string? text)
+    {
+        text ??= "";
+        if (isStart) _validFromText = text; else _validUntilText = text;
+        if (string.IsNullOrEmpty(text))
+        {
+            if (isStart) ClearValidFrom(); else ClearValidUntil();
+            return;
+        }
+
+        string normalized = text.EndsWith('Z') ? text[..^1] + "+00:00" : text;
+        if (!DateTimeOffset.TryParseExact(
                 normalized,
-                formats,
+                ["yyyy-MM-dd'T'HH:mm:sszzz", "yyyy-MM-dd'T'HH:mm:ss.FFFFFFFzzz"],
                 CultureInfo.InvariantCulture,
                 DateTimeStyles.None,
                 out DateTimeOffset value))
         {
-            parsed = value;
-            return true;
+            string error = CoreTools.Translate("Enter a valid ISO 8601 date and time.");
+            if (isStart) SetValidFromError(error); else SetValidUntilError(error);
+            _sessionViewModel.NotifyLocalInputChanged();
+            return;
         }
 
-        parsed = null;
-        return false;
+        if (isStart)
+        {
+            Draft.Metadata.ValidFrom = value;
+            SetValidFromError(null);
+        }
+        else
+        {
+            Draft.Metadata.ValidUntil = value;
+            SetValidUntilError(null);
+        }
+        ValidateValidityOrder();
+        NotifyValidityChanged();
+        MarkDirty();
+    }
+
+    private void ValidateValidityOrder()
+    {
+        if (Draft.Metadata.ValidFrom is { } from
+            && Draft.Metadata.ValidUntil is { } until
+            && from >= until)
+        {
+            _hasValidityOrderError = true;
+            SetValidUntilError(CoreTools.Translate(
+                "Valid until must be later than Valid from."));
+        }
+        else if (_hasValidityOrderError)
+        {
+            _hasValidityOrderError = false;
+            SetValidUntilError(null);
+        }
+    }
+
+    private void NotifyValidityChanged()
+    {
+        OnPropertyChanged(nameof(ValidFromDate));
+        OnPropertyChanged(nameof(ValidFromText));
+        OnPropertyChanged(nameof(ValidFromTime));
+        OnPropertyChanged(nameof(ValidUntilDate));
+        OnPropertyChanged(nameof(ValidUntilText));
+        OnPropertyChanged(nameof(ValidUntilTime));
+        OnPropertyChanged(nameof(LocalTimeZoneText));
+        OnPropertyChanged(nameof(IsOutsideValidityWindow));
+        OnPropertyChanged(nameof(ValidityWindowAdvisory));
+    }
+
+    private static DateTimeOffset? LocalDate(DateTimeOffset? value)
+    {
+        if (value is null) return null;
+        DateTimeOffset local = TimeZoneInfo.ConvertTime(value.Value, TimeZoneInfo.Local);
+        return new DateTimeOffset(local.Date, local.Offset);
+    }
+
+    private static TimeSpan? LocalTime(DateTimeOffset? value)
+    {
+        if (value is null) return null;
+        return TimeZoneInfo.ConvertTime(value.Value, TimeZoneInfo.Local).TimeOfDay;
     }
 }
 

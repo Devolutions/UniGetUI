@@ -80,6 +80,12 @@ public partial class PolicyEditorDialog : ImmersiveDialog
         SyncEditorFromSession();
     }
 
+    private void ClearValidFromButton_Click(object? sender, RoutedEventArgs e) =>
+        _viewModel?.Document.ClearValidFrom();
+
+    private void ClearValidUntilButton_Click(object? sender, RoutedEventArgs e) =>
+        _viewModel?.Document.ClearValidUntil();
+
     private void AddRuleButton_Click(object? sender, RoutedEventArgs e)
     {
         if (_viewModel is null || _viewModel.Session.HasLocalInputErrors) return;

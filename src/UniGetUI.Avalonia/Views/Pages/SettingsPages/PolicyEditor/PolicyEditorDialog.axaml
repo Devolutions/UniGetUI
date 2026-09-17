@@ -60,6 +60,13 @@
             <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorCriticalBrush}"/>
             <Setter Property="BorderThickness" Value="2"/>
         </Style>
+        <Style Selector="Border.policy-advisory">
+            <Setter Property="Background" Value="{DynamicResource WarningBannerBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource WarningBannerBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="10,8"/>
+        </Style>
     </dialogs:ImmersiveDialog.Styles>
 
     <dialogs:ImmersiveDialog.Resources>
@@ -71,6 +78,24 @@
                        Classes.finding-warning="{Binding IsWarning}"
                        automation:AutomationProperties.Name="{Binding AutomationName}"/>
         </DataTemplate>
+        <DataTemplate x:Key="PolicyAdvisoryTemplate" x:DataType="x:String">
+            <Border Classes="policy-advisory"
+                    automation:AutomationProperties.Name="{Binding}"
+                    automation:AutomationProperties.LiveSetting="Polite">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/warning_round.svg"
+                                      Width="16"
+                                      Height="16"
+                                      VerticalAlignment="Top"
+                                      Foreground="{DynamicResource WarningBannerBorderBrush}"
+                                      automation:AutomationProperties.AccessibilityView="Raw"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding}"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
     </dialogs:ImmersiveDialog.Resources>
 
     <dialogs:ImmersiveDialog.DataTemplates>
@@ -81,12 +106,9 @@
                           IsChecked="{Binding IsSelected}"
                           controls:PolicyHelp.Text="{Binding HelpText}"
                           automation:AutomationProperties.Name="{Binding Display}"/>
-                <Border Classes="finding-warning"
-                        IsVisible="{Binding IsAdvisoryVisible}"
-                        Padding="6"
-                        controls:PolicyHelp.Text="{Binding AdvisoryText}">
-                    <TextBlock Text="{Binding AdvisoryText}" TextWrapping="Wrap"/>
-                </Border>
+                <ContentControl Content="{Binding AdvisoryText}"
+                                ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                IsVisible="{Binding IsAdvisoryVisible}"/>
             </StackPanel>
         </DataTemplate>
         <DataTemplate DataType="pvm:PolicyValidationFinding" x:DataType="pvm:PolicyValidationFinding">
@@ -262,15 +284,25 @@
                                 </StackPanel>
                             </Grid>
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Valid from (optional ISO-8601)}"
+                                <TextBlock Classes="field-label" Text="{t:Translate Valid from}"
                                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidFrom}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
-                                    <TextBox Text="{Binding Document.ValidFromText}"
-                                             Tag="/Metadata/ValidFrom"
-                                             PlaceholderText="2025-01-01T00:00:00Z"
-                                             Classes.finding-error="{Binding Document.HasValidFromErrors}"
-                                             controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidFrom}"
-                                             automation:AutomationProperties.Name="{t:Translate Valid from}"/>
+                                    <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8"
+                                          Tag="/Metadata/ValidFrom"
+                                          controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidFrom}">
+                                        <DatePicker SelectedDate="{Binding Document.ValidFromDate}"
+                                                    controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidFrom}"
+                                                    automation:AutomationProperties.Name="{t:Translate Valid from date}"/>
+                                        <TimePicker Grid.Column="1"
+                                                    SelectedTime="{Binding Document.ValidFromTime}"
+                                                    ClockIdentifier="24HourClock"
+                                                    controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidFrom}"
+                                                    automation:AutomationProperties.Name="{t:Translate Valid from time}"/>
+                                        <Button Grid.Column="2"
+                                                Content="{t:Translate Clear}"
+                                                Click="ClearValidFromButton_Click"
+                                                automation:AutomationProperties.Name="{t:Translate Clear Valid from}"/>
+                                    </Grid>
                                     <TextBlock Text="{Binding Document.ValidFromError}"
                                                IsVisible="{Binding Document.ValidFromError, Converter={x:Static ObjectConverters.IsNotNull}}"
                                                Classes="finding-error"
@@ -280,15 +312,25 @@
                                 </StackPanel>
                             </Grid>
                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                <TextBlock Classes="field-label" Text="{t:Translate Valid until (optional ISO-8601)}"
+                                <TextBlock Classes="field-label" Text="{t:Translate Valid until}"
                                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidUntil}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
-                                    <TextBox Text="{Binding Document.ValidUntilText}"
-                                             Tag="/Metadata/ValidUntil"
-                                             PlaceholderText="2025-01-01T00:00:00Z"
-                                             Classes.finding-error="{Binding Document.HasValidUntilErrors}"
-                                             controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidUntil}"
-                                             automation:AutomationProperties.Name="{t:Translate Valid until}"/>
+                                    <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8"
+                                          Tag="/Metadata/ValidUntil"
+                                          controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidUntil}">
+                                        <DatePicker SelectedDate="{Binding Document.ValidUntilDate}"
+                                                    controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidUntil}"
+                                                    automation:AutomationProperties.Name="{t:Translate Valid until date}"/>
+                                        <TimePicker Grid.Column="1"
+                                                    SelectedTime="{Binding Document.ValidUntilTime}"
+                                                    ClockIdentifier="24HourClock"
+                                                    controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ValidUntil}"
+                                                    automation:AutomationProperties.Name="{t:Translate Valid until time}"/>
+                                        <Button Grid.Column="2"
+                                                Content="{t:Translate Clear}"
+                                                Click="ClearValidUntilButton_Click"
+                                                automation:AutomationProperties.Name="{t:Translate Clear Valid until}"/>
+                                    </Grid>
                                     <TextBlock Text="{Binding Document.ValidUntilError}"
                                                IsVisible="{Binding Document.ValidUntilError, Converter={x:Static ObjectConverters.IsNotNull}}"
                                                Classes="finding-error"
@@ -297,6 +339,13 @@
                                     <ItemsControl ItemsSource="{Binding Document.ValidUntilFindings}" ItemTemplate="{StaticResource InlineFindingTemplate}"/>
                                 </StackPanel>
                             </Grid>
+                            <TextBlock Text="{Binding Document.LocalTimeZoneText}"
+                                       TextWrapping="Wrap"
+                                       Opacity="0.7"
+                                       automation:AutomationProperties.Name="{t:Translate Validity time zone}"/>
+                            <ContentControl Content="{Binding Document.ValidityWindowAdvisory}"
+                                            ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                            IsVisible="{Binding Document.IsOutsideValidityWindow}"/>
                         </StackPanel>
                     </Border>
 
@@ -342,37 +391,28 @@
                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.DefaultDecision}"
                                                   automation:AutomationProperties.Name="{t:Translate Default decision}"/>
                                         <ItemsControl ItemsSource="{Binding Document.DefaultDecisionFindings}" ItemTemplate="{StaticResource InlineFindingTemplate}"/>
-                                        <Border Classes="finding-warning"
-                                                IsVisible="{Binding Document.IsDefaultAllow}"
-                                                Padding="8"
-                                                controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.DefaultAllowAdvisory}">
-                                            <TextBlock Text="{x:Static pvm:PolicyEditorHelp.DefaultAllowAdvisory}"
-                                                       TextWrapping="Wrap"/>
-                                        </Border>
+                                        <ContentControl Content="{x:Static pvm:PolicyEditorHelp.DefaultAllowAdvisory}"
+                                                        ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                                        IsVisible="{Binding Document.IsDefaultAllow}"/>
                                     </StackPanel>
                                 </Grid>
                                 <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                     <TextBlock Classes="field-label"
                                                Text="{t:Translate Audit mode}"
-                                               controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AuditMode}"/>
+                                               automation:AutomationProperties.HelpText="{x:Static pvm:PolicyEditorHelp.AuditMode}"/>
                                     <StackPanel Grid.Column="1" Spacing="4">
                                         <ComboBox ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.AuditModeDisplayItems}"
                                                   SelectedIndex="{Binding Document.AuditModeIndex}"
                                                   Tag="/Enforcement/AuditMode"
                                                   Classes.finding-error="{Binding Document.HasAuditModeErrors}"
-                                                  controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AuditMode}"
+                                                  automation:AutomationProperties.HelpText="{x:Static pvm:PolicyEditorHelp.AuditMode}"
                                                   automation:AutomationProperties.Name="{t:Translate Audit mode}"/>
                                         <TextBlock Text="{x:Static pvm:PolicyEditorHelp.AuditMode}"
                                                    TextWrapping="Wrap"
                                                    Opacity="0.7"/>
-                                        <Border Classes="finding-warning"
-                                                IsVisible="{Binding Document.IsAuditModeEnabled}"
-                                                Padding="8"
-                                                controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AuditModeWarning}"
-                                                automation:AutomationProperties.Name="{t:Translate Audit mode warning}">
-                                            <TextBlock Text="{x:Static pvm:PolicyEditorHelp.AuditModeWarning}"
-                                                       TextWrapping="Wrap"/>
-                                        </Border>
+                                        <ContentControl Content="{x:Static pvm:PolicyEditorHelp.AuditModeWarning}"
+                                                        ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                                        IsVisible="{Binding Document.IsAuditModeEnabled}"/>
                                         <ItemsControl ItemsSource="{Binding Document.AuditModeFindings}" ItemTemplate="{StaticResource InlineFindingTemplate}"/>
                                     </StackPanel>
                                 </Grid>
@@ -449,14 +489,9 @@
                                             <TextBlock Text="{x:Static pvm:PolicyEditorHelp.DisabledRuleHint}"
                                                        TextWrapping="Wrap"/>
                                         </Border>
-                                        <Border Classes="finding-warning"
-                                                IsVisible="{Binding IsEnabledWithoutMatchConditions}"
-                                                Padding="8"
-                                                controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.UnrestrictedRuleWarning}"
-                                                automation:AutomationProperties.Name="{t:Translate Unrestricted rule warning}">
-                                            <TextBlock Text="{x:Static pvm:PolicyEditorHelp.UnrestrictedRuleWarning}"
-                                                       TextWrapping="Wrap"/>
-                                        </Border>
+                                        <ContentControl Content="{x:Static pvm:PolicyEditorHelp.UnrestrictedRuleWarning}"
+                                                        ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                                        IsVisible="{Binding IsEnabledWithoutMatchConditions}"/>
 
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                             <TextBlock Classes="field-label"
@@ -533,9 +568,9 @@
                                                       IsVisible="{Binding HasSafetyAdvisories}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="x:String">
-                                                    <Border Classes="finding-warning" Padding="8" Margin="0,0,0,4">
-                                                        <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
-                                                    </Border>
+                                                    <ContentControl Content="{Binding}"
+                                                                    ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                                                    Margin="0,0,0,4"/>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>

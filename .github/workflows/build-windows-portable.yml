@@ -39,7 +39,8 @@ jobs:
             -Platform x64 `
             -OutputPath "$PWD/output" `
             -SkipTests `
-            -SkipInstaller
+            -SkipInstaller `
+            -SerialBuild
 
       - name: Rename package and write checksum
         shell: pwsh

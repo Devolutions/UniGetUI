@@ -24,6 +24,10 @@
 
 .PARAMETER MaxInstallerCompression
     Use the strongest Inno Setup compression settings for the installer.
+
+.PARAMETER SerialBuild
+    Disable shared compilation and parallel MSBuild workers. Useful on CI runners where
+    compiler-server file locks can race while publishing the project graph.
 #>
 [CmdletBinding()]
 param(
@@ -33,6 +37,7 @@ param(
     [switch] $SkipTests,
     [switch] $SkipInstaller,
     [switch] $MaxInstallerCompression,
+    [switch] $SerialBuild,
     [string] $Version
 )
 
@@ -80,7 +85,25 @@ if (-not $SkipTests) {
 Write-Host "`n=== Publishing $Configuration|$Platform ===" -ForegroundColor Cyan
 dotnet clean $WindowsSolution -v m --nologo /p:Platform=$Platform
 
-dotnet publish $PublishProject /noLogo /p:Configuration=$Configuration /p:Platform=$Platform -p:RuntimeIdentifier=win-$Platform --ignore-failed-sources -v m
+$PublishArgs = @(
+    $PublishProject,
+    "/noLogo",
+    "/p:Configuration=$Configuration",
+    "/p:Platform=$Platform",
+    "-p:RuntimeIdentifier=win-$Platform",
+    "--ignore-failed-sources",
+    "-v", "m"
+)
+if ($SerialBuild) {
+    dotnet build-server shutdown
+    $PublishArgs += @(
+        "/p:UseSharedCompilation=false",
+        "/p:BuildInParallel=false",
+        "/m:1"
+    )
+}
+
+dotnet publish @PublishArgs
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish Avalonia failed with exit code $LASTEXITCODE"
 }

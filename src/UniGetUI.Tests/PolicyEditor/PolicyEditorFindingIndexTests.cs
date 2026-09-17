@@ -60,6 +60,30 @@ public class PolicyEditorFindingIndexTests
             item.LiveSetting == AutomationLiveSetting.Assertive);
     }
 
+    [Fact]
+    public void LiveLocalFindingRefreshDoesNotRequestFocusNavigation()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement());
+        PolicyEditorDraftRule rule = session.AddRule(
+            PolicyRuleFactory.CreateBlank("invalid rule id"));
+        rule.Match.Operations.Add(Devolutions.Now.Policy.Model.Operation.Install);
+        using var sessionViewModel = new PolicyEditorSessionViewModel(
+            session,
+            new FakeValidationClient(),
+            new FakeConfirmationPrompt(),
+            new FakeWriteClient());
+        using var dialog = new PolicyEditorDialogViewModel(sessionViewModel, (_, _) => { });
+        PolicyValidationFinding? navigated = null;
+        dialog.FindingNavigationRequested += (_, finding) => navigated = finding;
+
+        dialog.Document.Publisher = "Updated publisher";
+
+        Assert.Contains(sessionViewModel.Findings, finding =>
+            finding.Pointer == "/Rules/0/Id");
+        Assert.Null(navigated);
+    }
+
     private static PolicyValidationFinding Finding(string pointer, string? ruleId, string message = "message") =>
         new(pointer, ruleId, PolicyValidationSeverity.Warning, message);
 

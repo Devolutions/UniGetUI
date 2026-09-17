@@ -22,6 +22,7 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
 {
     private readonly Action<string?, AutomationLiveSetting> _announce;
     private long _announcedWriteCompletionGeneration;
+    private long _handledFindingNavigationGeneration;
     private int _selectedFindingIndex = -1;
 
     public PolicyEditorSessionViewModel Session { get; }
@@ -72,6 +73,7 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         Session = session;
         _announce = announce;
         _announcedWriteCompletionGeneration = session.LastWriteCompletion?.Generation ?? 0;
+        _handledFindingNavigationGeneration = session.FindingNavigationGeneration;
         Document = new PolicyEditorDocumentUi(session);
         Session.PropertyChanged += OnSessionPropertyChanged;
         RebuildRules();
@@ -168,7 +170,13 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
                     AutomationLiveSetting.Polite);
             }
 
-            SelectFirstFinding(navigate: firstError is not null);
+            SelectFirstFinding(navigate: false);
+        }
+        else if (e.PropertyName == nameof(PolicyEditorSessionViewModel.FindingNavigationGeneration)
+                 && Session.FindingNavigationGeneration > _handledFindingNavigationGeneration)
+        {
+            _handledFindingNavigationGeneration = Session.FindingNavigationGeneration;
+            SelectFirstFinding(navigate: true);
         }
         else if (e.PropertyName == nameof(PolicyEditorSessionViewModel.SyntaxError))
         {

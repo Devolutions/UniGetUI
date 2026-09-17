@@ -54,12 +54,17 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.Null(viewModel.Draft.Metadata.ValidFrom);
         Assert.Equal(firstDate, document.ValidFromDate!.Value.Date);
         Assert.Null(document.ValidFromTime);
+        Assert.NotNull(document.ValidFromError);
+        Assert.True(viewModel.IsDirty);
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
+        Assert.False(viewModel.SwitchToRawCommand.CanExecute(null));
 
         document.ValidFromTime = TimeSpan.FromHours(12);
 
         Assert.NotNull(viewModel.Draft.Metadata.ValidFrom);
         Assert.Equal(firstDate, document.ValidFromDate!.Value.Date);
         Assert.Equal(TimeSpan.FromHours(12), document.ValidFromTime);
+        Assert.Null(document.ValidFromError);
 
         document.ClearValidFromCommand.Execute(null);
         document.ValidUntilTime = TimeSpan.FromHours(18);
@@ -67,6 +72,8 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.Null(viewModel.Draft.Metadata.ValidUntil);
         Assert.Null(document.ValidUntilDate);
         Assert.Equal(TimeSpan.FromHours(18), document.ValidUntilTime);
+        Assert.NotNull(document.ValidUntilError);
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
 
         document.ValidUntilDate = new DateTimeOffset(
             secondDate,
@@ -75,6 +82,7 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.NotNull(viewModel.Draft.Metadata.ValidUntil);
         Assert.Equal(secondDate, document.ValidUntilDate!.Value.Date);
         Assert.Equal(TimeSpan.FromHours(18), document.ValidUntilTime);
+        Assert.Null(document.ValidUntilError);
         string raw = PolicyEditorRawSyntax.ToCanonicalRaw(viewModel.Draft);
         Assert.Contains("\"ValidUntil\"", raw);
         Assert.DoesNotContain("\"ValidFrom\"", raw);

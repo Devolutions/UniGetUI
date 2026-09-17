@@ -1658,5 +1658,6 @@
   "Rule {0} must include at least one exact version or a semantic-version range for the selected match mode.": "Rule {0} must include at least one exact version or a semantic-version range for the selected match mode.",
   "Rule {0} must include at least one package identifier for the selected match mode.": "Rule {0} must include at least one package identifier for the selected match mode.",
   "Rule {0} uses Source names, but the selected package manager does not support configured sources. Choose a source-capable manager or remove Source names.": "Rule {0} uses Source names, but the selected package manager does not support configured sources. Choose a source-capable manager or remove Source names.",
-  "Start Menu shortcuts list": "Start Menu shortcuts list"
+  "Start Menu shortcuts list": "Start Menu shortcuts list",
+  "Choose both a date and time, or clear this validity limit.": "Choose both a date and time, or clear this validity limit."
 }

@@ -26,6 +26,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private Task _structuredDirtyAnalysis = Task.CompletedTask;
     private Task<bool>? _discardConfirmationTask;
     private long _saveGeneration;
+    private long _findingNavigationGeneration;
     private bool _hasLocalSemanticErrors;
     private int _isDisposed;
 
@@ -76,6 +77,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     public bool CanValidateOrSave => CanStartRemoteOperation();
     public bool CanSwitchToRaw => CanSwitchStructuredToRaw();
     public bool CanSwitchToStructured => CanProjectRawToStructured();
+    public long FindingNavigationGeneration => _findingNavigationGeneration;
 
     public string RawBuffer
     {
@@ -320,7 +322,12 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         using CancellationTokenSource linked = CreateLinkedCancellation(cancellationToken);
         cancellationToken = linked.Token;
         PromoteDeferredBlankRules();
-        if (!CanStartRemoteOperation()) return;
+        if (!CanStartRemoteOperation())
+        {
+            if (HasLocalSemanticErrors)
+                RequestFindingNavigation();
+            return;
+        }
 
         await SaveCoreAsync(
             conflict: null,
@@ -524,7 +531,11 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                 OnEditorStateChanged();
                 validation = Session.Validation;
                 if (validation is null)
+                {
+                    if (Session.Findings.All.Any(finding => finding.IsError))
+                        RequestFindingNavigation();
                     return;
+                }
             }
 
             string canonicalRaw = PolicySerializer.Serialize(validation.CanonicalDraft);
@@ -854,6 +865,12 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         SwitchToStructuredCommand.NotifyCanExecuteChanged();
         SaveCommand.NotifyCanExecuteChanged();
         ConfirmOverwriteCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RequestFindingNavigation()
+    {
+        _findingNavigationGeneration++;
+        OnPropertyChanged(nameof(FindingNavigationGeneration));
     }
 
     private bool TryGetDraftElement(

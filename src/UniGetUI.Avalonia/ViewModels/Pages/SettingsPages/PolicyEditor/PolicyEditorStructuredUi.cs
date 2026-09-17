@@ -513,9 +513,11 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         TimeSpan? time = isStart ? _pendingValidFromTime : _pendingValidUntilTime;
         if (date is null || time is null)
         {
-            if (isStart) SetValidFromError(null); else SetValidUntilError(null);
-            NotifyValidityChanged();
             ValidateValidityOrder();
+            string incompleteError = CoreTools.Translate(
+                "Choose both a date and time, or clear this validity limit.");
+            if (isStart) SetValidFromError(incompleteError); else SetValidUntilError(incompleteError);
+            NotifyValidityChanged();
             MarkDirty();
             return;
         }

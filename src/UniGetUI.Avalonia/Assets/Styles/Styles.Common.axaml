@@ -76,7 +76,6 @@
                     <!-- Settings cards -->
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#B3FFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#ECECEC"/>
-                    <SolidColorBrush x:Key="FilterCardBorderBrush"       Color="#ECECEC"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#F6F6F6"/>
                     <StaticResource x:Key="SecondaryActionBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
                     <Thickness x:Key="SecondaryActionBorderThickness">1</Thickness>
@@ -237,8 +236,6 @@
                     <!-- Settings cards -->
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#19000000"/>
-                    <!-- Filter groups need the stronger pre-adjustment stroke to remain distinct. -->
-                    <SolidColorBrush x:Key="FilterCardBorderBrush"       Color="#393939"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#323232"/>
                     <SolidColorBrush x:Key="SecondaryActionBorderBrush"  Color="Transparent"/>
                     <Thickness x:Key="SecondaryActionBorderThickness">0</Thickness>

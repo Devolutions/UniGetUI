@@ -49,22 +49,6 @@
       <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
          <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
       </Style>
-      <Style Selector="Expander.filter-card">
-         <Setter Property="BorderBrush" Value="{DynamicResource FilterCardBorderBrush}"/>
-         <Setter Property="BorderThickness" Value="1"/>
-      </Style>
-      <!-- Avalonia's Expander draws the collapsed outline in its nested header template and the
-           expanded lower outline in ExpanderContent. Apply the pre-alpha stroke to both parts. -->
-      <Style Selector="Expander.filter-card /template/ ToggleButton#ExpanderHeader">
-         <Setter Property="BorderBrush" Value="{DynamicResource FilterCardBorderBrush}"/>
-         <Setter Property="BorderThickness" Value="1"/>
-      </Style>
-      <Style Selector="Expander.filter-card /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
-         <Setter Property="BorderBrush" Value="{DynamicResource FilterCardBorderBrush}"/>
-      </Style>
-      <Style Selector="Expander.filter-card /template/ Border#ExpanderContent">
-         <Setter Property="BorderBrush" Value="{DynamicResource FilterCardBorderBrush}"/>
-      </Style>
       <!-- Toolbar buttons: flat, no background/border in normal state (WinUI AppBarButton style) -->
       <Style Selector="#ToolbarRow Button">
          <Setter Property="Background" Value="Transparent"/>
@@ -117,7 +101,21 @@
    </UserControl.Styles>
 
    <UserControl.Resources>
-      <conv:ScaleClampConverter x:Key="ScaleClampConverter"/>
+      <ResourceDictionary>
+         <!-- Keep the filter pane's native Expander template and restore the clearly visible
+              outline it had before the application-wide border-alpha reduction. -->
+         <ResourceDictionary.ThemeDictionaries>
+            <ResourceDictionary x:Key="Light">
+               <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#ECECEC"/>
+               <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#ECECEC"/>
+            </ResourceDictionary>
+            <ResourceDictionary x:Key="Dark">
+               <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#393939"/>
+               <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#393939"/>
+            </ResourceDictionary>
+         </ResourceDictionary.ThemeDictionaries>
+         <conv:ScaleClampConverter x:Key="ScaleClampConverter"/>
+      </ResourceDictionary>
    </UserControl.Resources>
 
    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="8,6,8,8">
@@ -263,8 +261,7 @@
                     <StackPanel x:Name="SidePanelGrid" Spacing="8" Margin="0,0,0,8">
 
                         <!-- Sources expander -->
-                        <Expander Classes="filter-card"
-                                  HorizontalAlignment="Stretch"
+                        <Expander HorizontalAlignment="Stretch"
                                   HorizontalContentAlignment="Stretch"
                                   IsExpanded="True"
                                   CornerRadius="8"
@@ -383,8 +380,7 @@
                         </Expander>
 
                         <!-- Filter options expander -->
-                        <Expander Classes="filter-card"
-                                  HorizontalAlignment="Stretch"
+                        <Expander HorizontalAlignment="Stretch"
                                   HorizontalContentAlignment="Stretch"
                                   IsExpanded="False"
                                   CornerRadius="8"
@@ -416,8 +412,7 @@
                         </Expander>
 
                         <!-- Search mode expander -->
-                        <Expander Classes="filter-card"
-                                  HorizontalAlignment="Stretch"
+                        <Expander HorizontalAlignment="Stretch"
                                   HorizontalContentAlignment="Stretch"
                                   IsExpanded="True"
                                   CornerRadius="8"

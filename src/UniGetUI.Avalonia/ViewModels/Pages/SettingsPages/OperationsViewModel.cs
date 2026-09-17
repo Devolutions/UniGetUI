@@ -64,10 +64,10 @@ public partial class OperationsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task OpenDownloadDirectory()
+    private void OpenDownloadDirectory()
     {
-        string directory = await Task.Run(InstallerDownloadLocation.ResolveExistingDirectory);
-        CoreTools.Launch(directory);
+        if (InstallerDownloadLocation.GetCustomDirectory() is { } directory)
+            CoreTools.Launch(directory);
     }
 
     [RelayCommand]

@@ -12,13 +12,16 @@ public static class InstallerDownloadLocation
 
     public static string? GetCustomDirectory()
     {
-        string directory = Settings.GetValue(Settings.K.DefaultInstallerDownloadDirectory).Trim();
-        return directory.Length > 0 ? directory : null;
+        string directory = Settings.GetValue(Settings.K.DefaultInstallerDownloadDirectory);
+        return string.IsNullOrWhiteSpace(directory) ? null : directory;
     }
 
     public static void SetCustomDirectory(string? directory)
     {
-        Settings.SetValue(Settings.K.DefaultInstallerDownloadDirectory, directory?.Trim() ?? "");
+        Settings.SetValue(
+            Settings.K.DefaultInstallerDownloadDirectory,
+            string.IsNullOrWhiteSpace(directory) ? "" : directory
+        );
     }
 
     public static string? ResolveStartDirectory()

@@ -306,11 +306,14 @@ namespace UniGetUI.Core.Data
             }
         }
 
+        public static string? TEST_DownloadsDirectoryOverride { private get; set; }
+
         /// <summary>
         /// The directory where downloaded installers are saved when the user has not
         /// chosen a default download location.
         /// </summary>
-        public static string UniGetUI_DefaultInstallerDownloadDirectory => GetDownloadsRoot();
+        public static string UniGetUI_DefaultInstallerDownloadDirectory =>
+            TEST_DownloadsDirectoryOverride ?? GetDownloadsRoot();
 
         /// <summary>
         /// The directory where package backups will be saved by default.
@@ -629,6 +632,11 @@ namespace UniGetUI.Core.Data
             }
 #else
             string? xdgDownloadDir = Environment.GetEnvironmentVariable("XDG_DOWNLOAD_DIR");
+            if (string.IsNullOrWhiteSpace(xdgDownloadDir))
+            {
+                xdgDownloadDir = ReadXdgUserDirectory("XDG_DOWNLOAD_DIR");
+            }
+
             if (!string.IsNullOrWhiteSpace(xdgDownloadDir))
             {
                 return xdgDownloadDir;
@@ -637,6 +645,60 @@ namespace UniGetUI.Core.Data
 
             return Path.Join(GetUserHomeDirectory(), "Downloads");
         }
+
+#if !WINDOWS
+        private static string? ReadXdgUserDirectory(string name)
+        {
+            try
+            {
+                string configHome =
+                    Environment.GetEnvironmentVariable("XDG_CONFIG_HOME") is { Length: > 0 } home
+                        ? home
+                        : Path.Join(GetUserHomeDirectory(), ".config");
+
+                string userDirsFile = Path.Join(configHome, "user-dirs.dirs");
+                if (!File.Exists(userDirsFile))
+                {
+                    return null;
+                }
+
+                foreach (string rawLine in File.ReadLines(userDirsFile))
+                {
+                    string line = rawLine.Trim();
+                    if (line.Length is 0 || line.StartsWith('#'))
+                    {
+                        continue;
+                    }
+
+                    int separator = line.IndexOf('=');
+                    if (separator < 0 || line[..separator].Trim() != name)
+                    {
+                        continue;
+                    }
+
+                    string value = line[(separator + 1)..].Trim().Trim('"');
+                    if (value.Length is 0)
+                    {
+                        continue;
+                    }
+
+                    if (value.StartsWith("$HOME", StringComparison.Ordinal))
+                    {
+                        value = GetUserHomeDirectory() + value["$HOME".Length..];
+                    }
+
+                    return value;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Could not read {name} from the XDG user directories file:");
+                Logger.Warn(ex);
+            }
+
+            return null;
+        }
+#endif
 
         private static string GetDocumentsRoot()
         {

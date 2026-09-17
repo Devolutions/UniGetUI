@@ -43,6 +43,7 @@ public sealed class SmoothScrollManager
 
     private readonly Control _target;
     private Vector _velocity;
+    private Vector _pendingPrecisionStep;
     private TimeSpan? _lastFrame;
     private bool _frameRequested;
     private long _lastPrecisionInputTimestamp;
@@ -138,7 +139,19 @@ public sealed class SmoothScrollManager
             // synthesizing another fling here makes even a deliberate finger stop drift afterward.
             _velocity = default;
             _lastFrame = null;
-            ApplyPrecisionInput(delta * SmoothScrollPhysics.PrecisionTouchpadDistance);
+            Vector step = delta * SmoothScrollPhysics.PrecisionTouchpadDistance;
+            if (_target is DataGrid)
+            {
+                // DataGrid.UpdateScroll assigns (rather than adds to) its pending layout scroll.
+                // Multiple touchpad packets before one layout otherwise overwrite each other.
+                // Preserve every fractional delta and submit one combined step per frame.
+                if (_pendingPrecisionStep.X * step.X < 0 || _pendingPrecisionStep.Y * step.Y < 0)
+                    _pendingPrecisionStep = default;
+                _pendingPrecisionStep += step;
+                RequestFrame();
+            }
+            else
+                ApplyPrecisionInput(step);
             return;
         }
 
@@ -191,8 +204,28 @@ public sealed class SmoothScrollManager
             if (step == 0) return;
         }
 
-        if (!ScrollByAxis(step, horizontal))
+        if (!ScrollByAxis(step, horizontal) && IsAtBoundary(step, horizontal))
             SetOverpanAxis(AddResistedOverpan(0, step), horizontal);
+    }
+
+    private bool IsAtBoundary(double step, bool horizontal)
+    {
+        if (_target is ScrollViewer viewer)
+        {
+            double maximum = horizontal ? viewer.Extent.Width - viewer.Viewport.Width
+                : viewer.Extent.Height - viewer.Viewport.Height;
+            double offset = horizontal ? viewer.Offset.X : viewer.Offset.Y;
+            return maximum > 0 && (step > 0 ? offset <= 0 : offset >= maximum);
+        }
+
+        string name = horizontal ? "PART_HorizontalScrollbar" : "PART_VerticalScrollbar";
+        foreach (Visual descendant in _target.GetVisualDescendants())
+        {
+            if (descendant is ScrollBar bar && bar.Name == name)
+                return bar.Maximum > bar.Minimum &&
+                       (step > 0 ? bar.Value <= bar.Minimum : bar.Value >= bar.Maximum);
+        }
+        return false;
     }
 
     private static bool IsPrecisionTouchpadScroll(TopLevel topLevel, Vector delta)
@@ -315,6 +348,14 @@ public sealed class SmoothScrollManager
     private void OnFrame(TimeSpan now)
     {
         _frameRequested = false;
+
+        if (_pendingPrecisionStep != default)
+        {
+            Vector pendingStep = _pendingPrecisionStep;
+            _pendingPrecisionStep = default;
+            ApplyPrecisionInput(pendingStep);
+            return;
+        }
 
         if (_overpan != default)
         {
@@ -511,6 +552,9 @@ public sealed class SmoothScrollManager
         double acceleration = -OverpanSpringStrength * position - OverpanSpringDamping * velocity;
         velocity += acceleration * elapsedSeconds;
         position += velocity * elapsedSeconds;
+        // A released edge must settle at zero, never cross it and expose the opposite edge.
+        if (position * (position - velocity * elapsedSeconds) <= 0)
+            return (0, 0);
         return (position, velocity);
     }
 
@@ -533,6 +577,7 @@ public sealed class SmoothScrollManager
     private void Stop()
     {
         _velocity = default;
+        _pendingPrecisionStep = default;
         _lastFrame = null;
         ResetOverpan();
     }

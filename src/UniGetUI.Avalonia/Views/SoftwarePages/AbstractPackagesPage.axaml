@@ -102,22 +102,13 @@
 
    <UserControl.Resources>
       <ResourceDictionary>
-         <!-- Keep the filter pane's native Expander template and restore the clearly visible
-              outline it had before the application-wide border-alpha reduction. -->
+         <!-- Only the outer compact pane keeps the pre-alpha outline. -->
          <ResourceDictionary.ThemeDictionaries>
             <ResourceDictionary x:Key="Light">
-               <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#ECECEC"/>
-               <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="#ECECEC"/>
-               <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="#ECECEC"/>
-               <SolidColorBrush x:Key="ExpanderHeaderBorderBrushDisabled" Color="#ECECEC"/>
-               <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#ECECEC"/>
+               <SolidColorBrush x:Key="FilterPaneOutlineBrush" Color="#ECECEC"/>
             </ResourceDictionary>
             <ResourceDictionary x:Key="Dark">
-               <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#393939"/>
-               <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="#393939"/>
-               <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="#393939"/>
-               <SolidColorBrush x:Key="ExpanderHeaderBorderBrushDisabled" Color="#393939"/>
-               <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#393939"/>
+               <SolidColorBrush x:Key="FilterPaneOutlineBrush" Color="#393939"/>
             </ResourceDictionary>
          </ResourceDictionary.ThemeDictionaries>
          <conv:ScaleClampConverter x:Key="ScaleClampConverter"/>
@@ -473,6 +464,7 @@
             <!-- ===== INLINE FILTER PANE ===== -->
             <Border x:Name="InlineSidePanel"
                     Grid.Column="0"
+                    BorderBrush="{DynamicResource FilterPaneOutlineBrush}"
                     CornerRadius="8"
                     ClipToBounds="True">
                 <Border.CacheMode>
@@ -507,7 +499,7 @@
                     HorizontalAlignment="Left"
                     CornerRadius="0,8,8,0"
                     BorderThickness="0,1,1,1"
-                    BorderBrush="{DynamicResource SettingsCardBorderBrush}"
+                    BorderBrush="{DynamicResource FilterPaneOutlineBrush}"
                     Background="{DynamicResource AppWindowBackground}"
                     ClipToBounds="True"
                     IsVisible="False">

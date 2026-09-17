@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Threading;
 using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Animation.Easings;
@@ -11,7 +10,6 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
@@ -182,7 +180,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
 
     private void OnScreenshotPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
-        if (_vm.ScreenshotCount < 2 || e.KeyModifiers != KeyModifiers.None ||
+        if (_vm.Screenshots.Count < 2 || e.KeyModifiers != KeyModifiers.None ||
             Math.Abs(e.Delta.X) <= Math.Abs(e.Delta.Y))
             return;
 
@@ -218,7 +216,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     private void BeginScreenshotGesture()
     {
         _screenshotGestureActive = true;
-        _screenshotGestureStartIndex = _vm.SelectedScreenshotIndex;
+        _screenshotGestureStartIndex = Math.Clamp(_vm.SelectedScreenshotIndex, 0, _vm.Screenshots.Count - 1);
         _screenshotDragOffset = 0;
         GestureCurrentScreenshot.Source = _vm.Screenshots[_screenshotGestureStartIndex];
         GestureAdjacentScreenshot.Source = null;
@@ -234,7 +232,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         return Math.Clamp(
             _screenshotGestureStartIndex + direction,
             0,
-            _vm.ScreenshotCount - 1);
+            _vm.Screenshots.Count - 1);
     }
 
     private void UpdateScreenshotGestureTransforms(double width)
@@ -300,24 +298,35 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         _screenshotGestureSettling = false;
     }
 
-    private static Task AnimateScreenshotTranslate(
+    private Task AnimateScreenshotTranslate(
         TranslateTransform transform,
         double from,
         double to,
         Easing easing)
     {
-        var animation = new Animation
+        // Avalonia's transform animator expects a Visual target and redirects setters to its
+        // RenderTransform. Passing a TranslateTransform itself throws during animation setup.
+        // Drive the existing transform on rendering frames instead.
+        if (TopLevel.GetTopLevel(this) is not { } top)
         {
-            Duration = TimeSpan.FromSeconds(ScreenshotGestureSettleSeconds),
-            Easing = easing,
-            FillMode = FillMode.Forward,
-            Children =
-            {
-                new KeyFrame { Cue = new Cue(0), Setters = { new Setter(TranslateTransform.XProperty, from) } },
-                new KeyFrame { Cue = new Cue(1), Setters = { new Setter(TranslateTransform.XProperty, to) } },
-            },
-        };
-        return animation.RunAsync(transform, CancellationToken.None);
+            transform.X = to;
+            return Task.CompletedTask;
+        }
+
+        var completion = new TaskCompletionSource();
+        TimeSpan? started = null;
+        void Frame(TimeSpan now)
+        {
+            started ??= now;
+            double progress = Math.Clamp((now - started.Value).TotalSeconds / ScreenshotGestureSettleSeconds, 0, 1);
+            transform.X = from + (to - from) * easing.Ease(progress);
+            if (progress >= 1 || TopLevel.GetTopLevel(this) is null)
+                completion.TrySetResult();
+            else
+                top.RequestAnimationFrame(Frame);
+        }
+        top.RequestAnimationFrame(Frame);
+        return completion.Task;
     }
 
     private void UpdatePips()

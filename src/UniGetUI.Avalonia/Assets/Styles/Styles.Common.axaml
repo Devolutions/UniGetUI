@@ -117,6 +117,7 @@
                     <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#EEEEEE"/>
                     <SolidColorBrush x:Key="IgnoredUpdatesListBackground" Color="#F3F3F3"/>
                     <SolidColorBrush x:Key="ScreenshotLetterboxBackground" Color="#202020"/>
+                    <SolidColorBrush x:Key="ScreenshotEmptyBackground" Color="#F3F3F3"/>
                     <SolidColorBrush x:Key="CarouselNavigationBackground" Color="#CCFFFFFF"/>
                     <SolidColorBrush x:Key="CarouselNavigationHoverBackground" Color="#F2FFFFFF"/>
                     <SolidColorBrush x:Key="CarouselNavigationForeground" Color="#9E000000"/>
@@ -276,6 +277,7 @@
                     <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#1A1A1A"/>
                     <SolidColorBrush x:Key="IgnoredUpdatesListBackground" Color="#1A1A1A"/>
                     <SolidColorBrush x:Key="ScreenshotLetterboxBackground" Color="#202020"/>
+                    <SolidColorBrush x:Key="ScreenshotEmptyBackground" Color="#202020"/>
                     <SolidColorBrush x:Key="CarouselNavigationBackground" Color="#CC2C2C2C"/>
                     <SolidColorBrush x:Key="CarouselNavigationHoverBackground" Color="#F2393939"/>
                     <SolidColorBrush x:Key="CarouselNavigationForeground" Color="#9EFFFFFF"/>

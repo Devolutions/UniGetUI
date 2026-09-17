@@ -57,10 +57,12 @@
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="14"/>
         </Style>
         <Style Selector="Button.action-chevron">
-            <Setter Property="Width" Value="34"/>
+            <Setter Property="Width" Value="30"/>
             <Setter Property="Height" Value="40"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0"/>
@@ -208,6 +210,7 @@
 
                     <!-- ── Action button (split: main + chevron dropdown) ── -->
                     <Grid x:Name="ActionsPanel"
+                          Width="250"
                           VerticalAlignment="Top"
                           HorizontalAlignment="Left"
                           ColumnSpacing="0">
@@ -333,7 +336,7 @@
 
                                 <!-- Contributor banner shown when no screenshots -->
                                 <Grid IsVisible="{Binding !HasScreenshots}"
-                                      Background="{DynamicResource AppDialogDarkBackground}"
+                                      Background="{DynamicResource ScreenshotEmptyBackground}"
                                       ColumnDefinitions="*,Auto"
                                       Margin="0"
                                       ColumnSpacing="12">

@@ -31,6 +31,7 @@ public sealed class PolicyRuleViewModel
     public required string Priority { get; init; }
     public required string Decision { get; init; }
     public required string Reason { get; init; }
+    public required bool HasConstraints { get; init; }
     public required IReadOnlyList<PolicyDetailRow> MatchRows { get; init; }
     public required IReadOnlyList<PolicyDetailRow> ConstraintRows { get; init; }
 }
@@ -222,7 +223,6 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         MetadataRows.Add(Row("Support URL", Value(metadata.SupportUrl)));
 
         EnforcementRows.Add(Row("Default decision", TranslateEnum(policy.Enforcement.DefaultDecision)));
-        EnforcementRows.Add(Row("Rule precedence", TranslateEnum(policy.Enforcement.RulePrecedence)));
         EnforcementRows.Add(Row("Audit mode", FormatNullableBoolean(policy.Enforcement.AuditMode)));
 
         for (int index = 0; index < policy.Rules.Count; index++)
@@ -242,6 +242,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     private static PolicyRuleViewModel BuildRule(PolicyRule rule, int index)
     {
         PolicyMatch match = rule.Match;
+        bool hasConstraints = rule.Decision == PolicyDecision.Allow;
         PolicyConstraints? constraints = rule.Constraints;
 
         return new PolicyRuleViewModel
@@ -252,28 +253,37 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
             Priority = rule.Priority.ToString(CultureInfo.CurrentCulture),
             Decision = TranslateEnum(rule.Decision),
             Reason = Value(rule.Reason),
+            HasConstraints = hasConstraints,
             MatchRows =
             [
                 Row("Operations", FormatEnumList<PolicyOperation>(match.Operations)),
                 Row("Package managers", FormatEnumList<PolicyManagerName>(match.Managers)),
-                Row("Sources", FormatList(match.Sources, anyWhenEmpty: true)),
-                Row("Package identifiers", FormatList(match.PackageIdentifiers, anyWhenEmpty: true)),
-                Row("Package names", FormatList(match.PackageNames, anyWhenEmpty: true)),
-                Row("Versions", FormatList(match.Versions, anyWhenEmpty: true)),
-                Row("Version range", FormatVersionRange(match.VersionRange)),
+                Row("Source names", FormatList(match.SourceNames, anyWhenEmpty: true)),
+                Row(
+                    "Exact package identifiers",
+                    FormatList(match.PackageIdentifiers?.Exact ?? [], anyWhenEmpty: true)),
+                Row(
+                    "Package identifier patterns",
+                    FormatList(match.PackageIdentifiers?.Patterns ?? [], anyWhenEmpty: true)),
+                Row(
+                    "Exact versions",
+                    FormatList(match.Version?.Exact ?? [], anyWhenEmpty: true)),
+                Row("Version range", FormatVersionRange(match.Version?.Range)),
                 Row("Scopes", FormatEnumList<PolicyScope>(match.Scopes)),
                 Row("Architectures", FormatEnumList<PolicyArchitecture>(match.Architectures)),
-                Row("Elevation", FormatEnumList<PolicyElevation>(match.Elevation)),
-                Row("Interactive", FormatBooleanList(match.Interactive)),
-                Row("Skip hash check", FormatBooleanList(match.SkipHashCheck)),
-                Row("Prerelease", FormatBooleanList(match.PreRelease)),
-                Row("Has custom parameters", FormatBooleanList(match.HasCustomParameters)),
-                Row("Has custom install location", FormatBooleanList(match.HasCustomInstallLocation)),
-                Row("Has pre/post commands", FormatBooleanList(match.HasPrePostCommands)),
-                Row("Has kill-before-operation", FormatBooleanList(match.HasKillBeforeOperation)),
-                Row("Has uninstall previous", FormatBooleanList(match.HasUninstallPrevious)),
+                Row("Execution elevation", FormatEnumList<PolicyElevation>(match.ExecutionElevation)),
+                Row("Interactive", FormatMatchBoolean(match.Interactive)),
+                Row("Skip hash check", FormatMatchBoolean(match.SkipHashCheck)),
+                Row("Prerelease", FormatMatchBoolean(match.PreRelease)),
+                Row("Has custom parameters", FormatMatchBoolean(match.HasCustomParameters)),
+                Row("Has custom install location", FormatMatchBoolean(match.HasCustomInstallLocation)),
+                Row("Has pre/post commands", FormatMatchBoolean(match.HasPrePostCommands)),
+                Row("Has kill-before-operation", FormatMatchBoolean(match.HasKillBeforeOperation)),
+                Row("Has uninstall previous", FormatMatchBoolean(match.HasUninstallPrevious)),
             ],
-            ConstraintRows = constraints is null
+            ConstraintRows = !hasConstraints
+                ? []
+                : constraints is null
                 ? [Row("Constraints", CoreTools.Translate("Not set"))]
                 :
                 [
@@ -307,8 +317,8 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     private static string FormatNullableBoolean(bool? value) =>
         value.HasValue ? FormatBoolean(value.Value) : CoreTools.Translate("Not set");
 
-    private static string FormatBooleanList(IEnumerable<bool> values) =>
-        FormatList(values.Select(FormatBoolean), anyWhenEmpty: true);
+    private static string FormatMatchBoolean(bool? value) =>
+        value.HasValue ? FormatBoolean(value.Value) : CoreTools.Translate("Any");
 
     private static string FormatEnumList<T>(IEnumerable<T> values) where T : struct, Enum =>
         FormatList(values.Select(TranslateEnum), anyWhenEmpty: true);

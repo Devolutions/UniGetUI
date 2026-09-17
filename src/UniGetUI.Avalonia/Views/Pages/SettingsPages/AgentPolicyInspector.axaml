@@ -126,12 +126,14 @@
                                                automation:AutomationProperties.HeadingLevel="3"/>
                                     <ItemsControl ItemsSource="{Binding MatchRows}"/>
 
-                                    <TextBlock Text="{t:Translate Constraints}"
-                                               FontWeight="SemiBold"
-                                               FontSize="14"
-                                               Margin="0,16,0,4"
-                                               automation:AutomationProperties.HeadingLevel="3"/>
-                                    <ItemsControl ItemsSource="{Binding ConstraintRows}"/>
+                                    <StackPanel IsVisible="{Binding HasConstraints}">
+                                        <TextBlock Text="{t:Translate Constraints}"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="14"
+                                                   Margin="0,16,0,4"
+                                                   automation:AutomationProperties.HeadingLevel="3"/>
+                                        <ItemsControl ItemsSource="{Binding ConstraintRows}"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </Expander>
                         </DataTemplate>

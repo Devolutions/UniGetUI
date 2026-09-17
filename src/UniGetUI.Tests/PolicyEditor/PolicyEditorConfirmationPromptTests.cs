@@ -1,7 +1,7 @@
+using Devolutions.Now.Policy.Api;
+using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 using UniGetUI.Avalonia.Views.DialogPages;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor;
-using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
-using Devolutions.Now.Policy.Api;
 
 namespace UniGetUI.Tests.PolicyEditor;
 

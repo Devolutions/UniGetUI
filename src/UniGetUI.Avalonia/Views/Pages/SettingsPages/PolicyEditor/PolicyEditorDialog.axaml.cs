@@ -239,7 +239,28 @@ public partial class PolicyEditorDialog : ImmersiveDialog
             .FirstOrDefault();
         target ??= root;
         target.BringIntoView();
-        target.Focus();
+        Control? focusTarget = FindFocusableTarget(target);
+        if (focusTarget is not null)
+        {
+            focusTarget.BringIntoView();
+            if (focusTarget.Focus())
+                return;
+        }
+
+        Control? fallback = FindFocusableTarget(root);
+        fallback?.BringIntoView();
+        fallback?.Focus();
+    }
+
+    internal static Control? FindFocusableTarget(Control target)
+    {
+        if (target is { Focusable: true, IsVisible: true, IsEnabled: true })
+            return target;
+
+        return target.GetVisualDescendants()
+            .OfType<Control>()
+            .FirstOrDefault(control =>
+                control is { Focusable: true, IsVisible: true, IsEnabled: true });
     }
 
     internal static bool PointerTargetsTag(string pointer, string tag) =>

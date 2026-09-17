@@ -1,5 +1,5 @@
-using UniGetUI.Core.Tools;
 using Devolutions.Now.Policy.Model;
+using UniGetUI.Core.Tools;
 using PolicyElevation = Devolutions.Now.Policy.Model.Elevation;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;

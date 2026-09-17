@@ -1,11 +1,11 @@
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
-using UniGetUI.Core.Logging;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.Pages;
 using UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.Pages.SettingsPages;

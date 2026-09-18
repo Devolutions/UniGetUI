@@ -304,6 +304,26 @@ namespace UniGetUI.PackageEngine.Operations
         /// </summary>
         protected override async Task<OperationVeredict> PerformOperation()
         {
+            // Observational stage marker only: structured progress starts as indeterminate
+            // with the role's stage label (e.g. "Installing..."). Re-reported on every
+            // attempt, so AutoRetry restarts also reset any previous speed. This changes
+            // nothing about execution, retries, elevation, proxy, or result handling.
+            ReportProgress(
+                Role switch
+                {
+                    OperationType.Install => OperationProgress.ForStage(
+                        OperationProgressStage.Installing
+                    ),
+                    OperationType.Update => OperationProgress.ForStage(
+                        OperationProgressStage.Updating
+                    ),
+                    OperationType.Uninstall => OperationProgress.ForStage(
+                        OperationProgressStage.Uninstalling
+                    ),
+                    _ => OperationProgress.Unknown,
+                }
+            );
+
             if (!ShouldUseAgentBroker())
             {
                 return await base.PerformOperation();

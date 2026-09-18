@@ -47,12 +47,20 @@ public class DownloadOperation : AbstractOperation
 
     protected override void ApplyRetryAction(string retryMode) { }
 
+    /// <summary>
+    /// Creates the HTTP client for the download. Virtual so tests can serve an
+    /// in-memory payload without standing up a loopback server.
+    /// </summary>
+    protected virtual HttpClient CreateHttpClient() =>
+        new(CoreTools.GenericHttpClientParameters);
+
     protected override async Task<OperationVeredict> PerformOperation()
     {
         bool downloadFileCreated = false;
         try
         {
             CancellationToken.ThrowIfCancellationRequested();
+            ReportProgress(OperationProgress.ForStage(OperationProgressStage.Downloading));
             Line(
                 $"Fetching download url for package {_package.Name} from {_package.Manager.DisplayName}...",
                 LineType.Information
@@ -86,7 +94,7 @@ public class DownloadOperation : AbstractOperation
             }
 
             Line($"Download URL found at {downloadUrl} ", LineType.Information);
-            using var httpClient = new HttpClient(CoreTools.GenericHttpClientParameters);
+            using var httpClient = CreateHttpClient();
             using var response = await httpClient.GetAsync(
                 downloadUrl,
                 HttpCompletionOption.ResponseHeadersRead,
@@ -124,6 +132,12 @@ public class DownloadOperation : AbstractOperation
                         if (progress != oldProgress)
                         {
                             oldProgress = progress;
+                            ReportProgress(
+                                OperationProgress.FromDownload(
+                                    (ulong)totalRead,
+                                    (ulong)totalBytes
+                                )
+                            );
                             Line(
                                 CoreTools.TextProgressGenerator(
                                     30,

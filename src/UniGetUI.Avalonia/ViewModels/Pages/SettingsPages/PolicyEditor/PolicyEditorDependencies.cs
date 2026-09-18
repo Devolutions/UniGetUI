@@ -24,15 +24,13 @@ public sealed record PolicyEditorWriteRequest(
     PolicyConflictHandling ConflictHandling,
     string ExpectedStoreToken,
     JsonElement Draft,
-    string ValidationReceipt,
-    bool WarningsAcknowledged)
+    string ValidationReceipt)
 {
     public PolicyReplacementRequest ToSharedRequest() => new()
     {
         ExpectedStoreToken = ExpectedStoreToken,
         Operation = Operation,
         ConflictHandling = ConflictHandling,
-        WarningsAcknowledged = WarningsAcknowledged,
         Draft = Draft.Clone(),
         ValidationReceipt = ValidationReceipt,
     };
@@ -99,7 +97,6 @@ public sealed record PolicyEditorConfirmationRequest(
     PolicyManagementState State,
     string? ActivePolicyId,
     IReadOnlyList<PolicyValidationFinding> Findings,
-    int WarningCount = 0,
     string? RuleId = null);
 
 public interface IPolicyEditorConfirmationPrompt

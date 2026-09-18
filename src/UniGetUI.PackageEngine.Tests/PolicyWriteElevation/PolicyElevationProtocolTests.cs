@@ -68,7 +68,6 @@ public class PolicyElevationProtocolTests
             // Control characters are escaped as \uXXXX, the worst case the budget assumes.
             ExpectedStoreToken = new string('\u0001', PolicyElevationProtocol.MaxStoreTokenCharacters),
             ValidationReceipt = new string('\u0001', PolicyElevationProtocol.MaxValidationReceiptCharacters),
-            WarningsAcknowledged = true,
             Draft = JsonDocument.Parse("{}").RootElement.Clone(),
         };
 
@@ -121,9 +120,9 @@ public class PolicyElevationProtocolTests
         => Assert.Equal(1223, PolicyElevationProtocol.ErrorCancelled);
 
     [Theory]
-    [InlineData("""{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":0,"conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","warningsAcknowledged":false,"draft":{}}""")]
-    [InlineData("""{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":"update","conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","warningsAcknowledged":false,"draft":{}}""")]
-    [InlineData("""{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":"Update","conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","warningsAcknowledged":false,"draft":{},"extra":true}""")]
+    [InlineData("""{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":0,"conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","draft":{}}""")]
+    [InlineData("""{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":"update","conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","draft":{}}""")]
+    [InlineData("""{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":"Update","conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","draft":{},"extra":true}""")]
     public async Task RequestJson_RejectsNumericWrongCaseAndUnknownMembers(string json)
     {
         await using var stream = new MemoryStream();

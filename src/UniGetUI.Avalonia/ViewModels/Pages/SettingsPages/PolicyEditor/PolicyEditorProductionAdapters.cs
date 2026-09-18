@@ -121,7 +121,6 @@ public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
         {
             Operation = MapOperation(request.Operation),
             ConflictHandling = MapConflictHandling(request.ConflictHandling),
-            WarningsAcknowledged = request.WarningsAcknowledged,
         };
 
         PolicyElevationResult result;

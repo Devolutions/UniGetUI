@@ -28,7 +28,6 @@ public class WindowsPolicyWriteElevatorTests
     {
         Operation = PolicyElevationOperation.ReplaceIdentity,
         ConflictHandling = PolicyElevationConflictHandling.ConfirmOverwrite,
-        WarningsAcknowledged = true,
     };
 
     private static WindowsPolicyWriteElevator Build(
@@ -67,7 +66,6 @@ public class WindowsPolicyWriteElevatorTests
 
         Assert.Equal("store-token", result.Request.ExpectedStoreToken);
         Assert.Equal("validation-receipt", result.Request.ValidationReceipt);
-        Assert.True(result.Request.WarningsAcknowledged);
     }
 
     [Fact]
@@ -596,7 +594,7 @@ public class WindowsPolicyWriteElevatorTests
                         ? 409
                         : null,
                     BrokerErrorCode = disposition == PolicyElevationDisposition.Rejected
-                        ? ErrorCode.WarningConfirmationRequired.ToString()
+                        ? ErrorCode.InvalidPolicy.ToString()
                         : null,
                 },
                 CancellationToken.None);
@@ -629,7 +627,7 @@ public class WindowsPolicyWriteElevatorTests
         else
         {
             Assert.Equal(409, result.BrokerStatusCode);
-            Assert.Equal(ErrorCode.WarningConfirmationRequired.ToString(), result.BrokerErrorCode);
+            Assert.Equal(ErrorCode.InvalidPolicy.ToString(), result.BrokerErrorCode);
         }
         AssertDraftPreserved(result);
     }

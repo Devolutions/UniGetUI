@@ -94,7 +94,6 @@ public sealed record PolicyElevationWriteRequest
 
     public string ValidationReceipt { get; }
 
-    public bool WarningsAcknowledged { get; init; }
 }
 
 /// <summary>

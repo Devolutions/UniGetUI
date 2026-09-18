@@ -87,7 +87,6 @@ public class PolicyElevationContractTests
         {
             Operation = operation,
             ConflictHandling = PolicyElevationConflictHandling.Reject,
-            WarningsAcknowledged = true,
         };
 
     private static WindowsPolicyWriteElevator Build(IElevatedHelperLauncher launcher)

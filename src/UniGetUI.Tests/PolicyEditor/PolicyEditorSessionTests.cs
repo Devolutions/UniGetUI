@@ -333,86 +333,6 @@ public class PolicyEditorSessionTests
         Assert.Equal("server-canonicalized content", session.Draft.Metadata.Description);
     }
 
-    // ---- Warning acknowledgement tied to exact validated content ---------------------------------
-
-    [Fact]
-    public void AcknowledgeWarnings_RequiresACurrentValidationWithWarnings()
-    {
-        PolicyEditorSession session = PolicyEditorSession.StartCreate(
-            PolicyEditorTestFixtures.BuildMissingManagement(), NewDraft());
-
-        Assert.Throws<InvalidOperationException>(session.AcknowledgeWarnings);
-    }
-
-    private static void ApplyWarningValidation(PolicyEditorSession session)
-    {
-        string submitted = session.GetEffectiveRawJson();
-        var valid = new PolicyValidationResult
-        {
-            IsValid = true,
-            CanonicalDraft = PolicyEditorMapper.ToSharedDraft(session.Draft),
-            ValidationReceipt = "receipt-1",
-            Findings =
-            [
-                new PolicyFinding
-                {
-                    Path = "/rules",
-                    Severity = PolicyFindingSeverity.Warning,
-                    Message = "example warning",
-                },
-            ],
-        };
-        session.ApplyValidationResult(submitted, valid);
-    }
-
-    [Fact]
-    public void AcknowledgeWarnings_SetsHasCurrentWarningAcknowledgement()
-    {
-        PolicyEditorSession session = PolicyEditorSession.StartCreate(
-            PolicyEditorTestFixtures.BuildMissingManagement(), NewDraft());
-        ApplyWarningValidation(session);
-
-        session.AcknowledgeWarnings();
-
-        Assert.True(session.HasCurrentWarningAcknowledgement);
-        Assert.NotNull(session.WarningAcknowledgement);
-    }
-
-    [Fact]
-    public void AcknowledgeWarnings_IsInvalidatedByAnySubsequentEdit_EvenIfContentIsLaterReverted()
-    {
-        // Unlike a fingerprint-only scheme, any edit clears the whole validation state (correction #3's
-        // "no stale reuse"): reverting to the exact same content does NOT restore the prior
-        // acknowledgement, because there is no longer a current Validation to check it against.
-        PolicyEditorSession session = PolicyEditorSession.StartCreate(
-            PolicyEditorTestFixtures.BuildMissingManagement(), NewDraft());
-        ApplyWarningValidation(session);
-        session.AcknowledgeWarnings();
-
-        session.Draft.Metadata.Description = "temporary change";
-        session.NotifyDraftChanged();
-        Assert.False(session.HasCurrentWarningAcknowledgement);
-        Assert.Null(session.Validation);
-
-        session.Draft.Metadata.Description = null; // revert to the exact content acknowledged before
-        session.NotifyDraftChanged();
-        Assert.False(session.HasCurrentWarningAcknowledgement); // still false: no current Validation at all
-    }
-
-    [Fact]
-    public void ClearWarningAcknowledgement_IsImpliedByAnyInvalidatingOperation()
-    {
-        PolicyEditorSession session = PolicyEditorSession.StartCreate(
-            PolicyEditorTestFixtures.BuildMissingManagement(), NewDraft());
-        ApplyWarningValidation(session);
-        session.AcknowledgeWarnings();
-
-        session.NotifyDraftChanged();
-
-        Assert.False(session.HasCurrentWarningAcknowledgement);
-        Assert.Null(session.WarningAcknowledgement);
-    }
-
     // ---- Validation currency ----------------------------------------------------------------
 
     [Fact]
@@ -620,8 +540,6 @@ public class PolicyEditorSessionTests
             PolicyEditorTestFixtures.BuildMissingManagement(), NewDraft());
         session.Draft.Metadata.Description = "unsaved edit";
         session.NotifyDraftChanged();
-        ApplyWarningValidation(session);
-        session.AcknowledgeWarnings();
         session.CaptureConflict(
             PolicyEditorTestFixtures.BuildMissingManagement(),
             PolicyEditorMapper.ToSharedDraft(session.Draft),
@@ -642,7 +560,6 @@ public class PolicyEditorSessionTests
         Assert.True(session.IsIdentityLocked);
         Assert.Equal("authoritative saved content", session.Draft.Metadata.Description);
         Assert.Null(session.Validation);
-        Assert.Null(session.WarningAcknowledgement);
         Assert.Null(session.Conflict);
         Assert.Equal(PolicyEditorMode.Structured, session.Mode);
     }

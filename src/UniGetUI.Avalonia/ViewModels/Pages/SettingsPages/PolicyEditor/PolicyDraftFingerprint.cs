@@ -2,8 +2,7 @@ namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 
 /// <summary>
 /// A content-based fingerprint of a <see cref="PolicyEditorDraftDocument"/>, used to detect whether the
-/// draft has actually changed (dirty tracking) and to tie a warning acknowledgement to the exact
-/// draft state it was granted against (see <see cref="PolicyEditorWarningAcknowledgement"/>).
+/// draft has actually changed (dirty tracking).
 /// Computed from the canonical draft JSON, which omits server-managed metadata.
 /// </summary>
 public readonly struct PolicyEditorDraftFingerprint : IEquatable<PolicyEditorDraftFingerprint>

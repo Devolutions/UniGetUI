@@ -8,17 +8,7 @@ public sealed record PolicyEditorValidationState(
     string SubmittedRawJson,
     PolicyDraftDocument CanonicalDraft,
     string Receipt,
-    PolicyEditorFindingIndex Findings,
-    int WarningCount)
-{
-    public bool HasWarnings => WarningCount > 0;
-}
-
-public sealed record PolicyEditorWarningAcknowledgement(
-    string CanonicalRawJson,
-    string Receipt,
-    int WarningCount,
-    IReadOnlyList<string> WarningKeys);
+    PolicyEditorFindingIndex Findings);
 
 public sealed record PolicyEditorConflictSnapshot(
     string SubmittedCanonicalRawJson,
@@ -62,8 +52,6 @@ public sealed class PolicyEditorSession
     public PolicyEditorFindingIndex Findings { get; private set; } =
         PolicyEditorFindingIndex.Build([]);
 
-    public PolicyEditorWarningAcknowledgement? WarningAcknowledgement { get; private set; }
-
     public PolicyEditorConflictSnapshot? Conflict { get; private set; }
 
     public long MutationGeneration => _mutationGeneration;
@@ -82,29 +70,6 @@ public sealed class PolicyEditorSession
             Validation.SubmittedRawJson,
             GetEffectiveRawJson(),
             StringComparison.Ordinal);
-
-    public bool HasCurrentWarningAcknowledgement
-    {
-        get
-        {
-            if (Validation is null || WarningAcknowledgement is null)
-                return false;
-
-            string canonical = PolicySerializer.Serialize(Validation.CanonicalDraft);
-            return string.Equals(
-                    WarningAcknowledgement.CanonicalRawJson,
-                    canonical,
-                    StringComparison.Ordinal)
-                && string.Equals(
-                    WarningAcknowledgement.Receipt,
-                    Validation.Receipt,
-                    StringComparison.Ordinal)
-                && WarningAcknowledgement.WarningCount == Validation.WarningCount
-                && WarningAcknowledgement.WarningKeys.SequenceEqual(
-                    GetWarningKeys(Validation.Findings),
-                    StringComparer.Ordinal);
-        }
-    }
 
     private PolicyEditorSession(
         PolicyEditorOperationKind operation,
@@ -314,7 +279,6 @@ public sealed class PolicyEditorSession
     {
         Validation = null;
         Findings = PolicyEditorFindingIndex.Build(findings);
-        WarningAcknowledgement = null;
         Conflict = null;
     }
 
@@ -427,8 +391,6 @@ public sealed class PolicyEditorSession
                 sanitized,
                 validation.Findings.Count - take);
         }
-        WarningAcknowledgement = null;
-
         if (!validation.IsValid
             || validation.CanonicalDraft is null
             || string.IsNullOrWhiteSpace(validation.ValidationReceipt))
@@ -441,22 +403,8 @@ public sealed class PolicyEditorSession
             submittedRawJson,
             PolicyEditorMapper.CloneDraftDocument(validation.CanonicalDraft),
             validation.ValidationReceipt,
-            Findings,
-            validation.Findings.Count(
-                finding => finding.Severity == PolicyFindingSeverity.Warning));
+            Findings);
         Operation = ResolveOperationForDraftId(validation.CanonicalDraft.Metadata.Id);
-    }
-
-    public void AcknowledgeWarnings()
-    {
-        if (Validation is null || !Validation.HasWarnings)
-            throw new InvalidOperationException("There are no current validated warnings.");
-
-        WarningAcknowledgement = new PolicyEditorWarningAcknowledgement(
-            PolicySerializer.Serialize(Validation.CanonicalDraft),
-            Validation.Receipt,
-            Validation.WarningCount,
-            GetWarningKeys(Validation.Findings));
     }
 
     public void CaptureConflict(
@@ -544,7 +492,6 @@ public sealed class PolicyEditorSession
         IsRawAnalysisPending = false;
         Validation = null;
         Findings = PolicyEditorFindingIndex.Build([]);
-        WarningAcknowledgement = null;
         Conflict = null;
     }
 
@@ -571,7 +518,6 @@ public sealed class PolicyEditorSession
         _isDirty = _mutationGeneration != _cleanMutationGeneration;
         Validation = null;
         Findings = PolicyEditorFindingIndex.Build([]);
-        WarningAcknowledgement = null;
         Conflict = null;
     }
 
@@ -638,7 +584,6 @@ public sealed class PolicyEditorSession
     {
         Validation = null;
         Findings = PolicyEditorFindingIndex.Build([]);
-        WarningAcknowledgement = null;
         Conflict = null;
     }
 
@@ -709,15 +654,6 @@ public sealed class PolicyEditorSession
         if (Mode != PolicyEditorMode.Structured)
             throw new InvalidOperationException("Rule edits require structured mode.");
     }
-
-    private static IReadOnlyList<string> GetWarningKeys(
-        PolicyEditorFindingIndex findings) =>
-        findings.All
-            .Where(finding => finding.Severity == PolicyValidationSeverity.Warning)
-            .Select(finding =>
-                $"{finding.Code}\u001f{finding.Pointer}\u001f{finding.RuleId}")
-            .Order(StringComparer.Ordinal)
-            .ToArray();
 
     private static void RequireState(
         PolicyManagementSnapshot management,

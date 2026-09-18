@@ -78,7 +78,6 @@ public static class PolicyElevationProtocol
     private const int QuoteBytes = 2;
     private const int MaxEscapedBytesPerCharacter = 6;
     private const int MaxInt32Bytes = 11;
-    private const int MaxBooleanBytes = 5;
     private const int MaxOperationBytes = QuoteBytes + 15;
     private const int MaxConflictHandlingBytes = QuoteBytes + 16;
     private const int ActiveManagementStateBytes = QuoteBytes + 6;
@@ -110,13 +109,13 @@ public static class PolicyElevationProtocol
     private const int RejectedDispositionBytes = QuoteBytes + 8;
 
     // {"protocolVersion":…,"requestId":…,"operation":…,"conflictHandling":…,
-    //  "expectedStoreToken":…,"validationReceipt":…,"warningsAcknowledged":…,"draft":…}
-    private const int RequestPropertyCount = 8;
+    //  "expectedStoreToken":…,"validationReceipt":…,"draft":…}
+    private const int RequestPropertyCount = 7;
     // protocolVersion(15) requestId(9) operation(9) conflictHandling(16) expectedStoreToken(18)
-    // validationReceipt(17) warningsAcknowledged(20) draft(5) = 109 name characters, plus three
+    // validationReceipt(17) draft(5) = 89 name characters, plus three
     // bytes of quoting and colon per property. Asserted against the real contract by
     // PolicyElevationProtocolTests.
-    public const int RequestPropertyNameCharacters = 109;
+    public const int RequestPropertyNameCharacters = 89;
 
     private const int RequestPropertyNameBytes =
         RequestPropertyNameCharacters + (RequestPropertyCount * PropertyNameOverheadBytes);
@@ -133,8 +132,7 @@ public static class PolicyElevationProtocol
         + MaxOperationBytes
         + MaxConflictHandlingBytes
         + StoreTokenValueBytes
-        + ValidationReceiptValueBytes
-        + MaxBooleanBytes; // warningsAcknowledged
+        + ValidationReceiptValueBytes;
 
     // {"protocolVersion":…,"requestId":…,"disposition":…,"brokerStatusCode":…,
     //  "brokerErrorCode":…,"committedStoreToken":…,"conflictStoreToken":…,

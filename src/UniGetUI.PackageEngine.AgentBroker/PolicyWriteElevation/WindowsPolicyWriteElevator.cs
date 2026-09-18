@@ -429,7 +429,6 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
             ConflictHandling = request.ConflictHandling,
             ExpectedStoreToken = request.ExpectedStoreToken,
             ValidationReceipt = request.ValidationReceipt,
-            WarningsAcknowledged = request.WarningsAcknowledged,
             Draft = request.Draft,
         };
 

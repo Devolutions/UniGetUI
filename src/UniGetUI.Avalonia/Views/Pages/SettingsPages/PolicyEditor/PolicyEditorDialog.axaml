@@ -365,12 +365,17 @@
                     <TextBlock Classes="section-heading" Text="{t:Translate Enforcement}"
                                automation:AutomationProperties.HeadingLevel="2"/>
 
-                    <Expander IsExpanded="False"
+                    <Expander IsExpanded="{Binding Document.HasEnforcementAdvisory}"
                               Margin="40,0,40,0"
                               automation:AutomationProperties.Name="{t:Translate Advanced policy settings}">
                         <Expander.Header>
-                            <TextBlock Text="{t:Translate Advanced}"
-                                       FontWeight="SemiBold"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{t:Translate Advanced}"
+                                           FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Document.EnforcementAdvisoryCountText}"
+                                           IsVisible="{Binding Document.HasEnforcementAdvisory}"
+                                           Classes="finding-warning"/>
+                            </StackPanel>
                         </Expander.Header>
                         <Border Classes="settings-card policy-section" Margin="0,8,0,0">
                             <StackPanel Spacing="8">

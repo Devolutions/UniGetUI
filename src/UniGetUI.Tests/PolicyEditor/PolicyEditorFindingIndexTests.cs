@@ -50,18 +50,14 @@ public class PolicyEditorFindingIndexTests
         Assert.True(dialog.HasFindingSummary);
         Assert.Equal("/Metadata/Id", dialog.SelectedFinding!.Pointer);
         Assert.Equal("/Metadata/Id", navigated!.Pointer);
-        Assert.Equal("1 error(s), 1 warning(s)", dialog.FindingCountText);
-
-        dialog.SelectNextFinding();
-        Assert.Equal("/Metadata/Publisher", dialog.SelectedFinding!.Pointer);
-        dialog.SelectPreviousFinding();
-        Assert.Equal("/Metadata/Id", dialog.SelectedFinding!.Pointer);
+        Assert.Equal("1 error(s)", dialog.FindingCountText);
+        Assert.False(dialog.HasMultipleFindings);
         Assert.Contains(announcements, item =>
             item.LiveSetting == AutomationLiveSetting.Assertive);
     }
 
     [Fact]
-    public async Task DeclinedWarningConfirmationReturnsToSelectedFirstWarning()
+    public async Task AuthoritativeWarningAppearsInlineWithoutSaveConfirmation()
     {
         PolicyEditorSession session = PolicyEditorSession.StartUpdate(
             PolicyEditorTestFixtures.BuildActiveManagement());
@@ -99,13 +95,22 @@ public class PolicyEditorFindingIndexTests
             new FakeWriteClient());
         using var dialog = new PolicyEditorDialogViewModel(sessionViewModel, (_, _) => { });
 
-        await sessionViewModel.SaveCommand.ExecuteAsync(null);
+        sessionViewModel.NotifyDraftChangedCommand.Execute(null);
+        await sessionViewModel.WaitForAuthoritativeValidationAsync();
 
-        Assert.Equal(PolicyEditorConfirmationKind.Warnings, prompt.LastRequest!.Kind);
+        Assert.Equal(0, prompt.CallCount);
         Assert.Equal(
             "/Rules/0/Constraints/AllowSkipHashCheck",
-            dialog.SelectedFinding!.NavigationPointer);
-        Assert.True(dialog.HasFindingSummary);
+            Assert.Single(sessionViewModel.Findings).NavigationPointer);
+        Assert.False(dialog.HasFindingSummary);
+
+        await sessionViewModel.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, prompt.CallCount);
+        Assert.Equal(
+            "/Rules/0/Constraints/AllowSkipHashCheck",
+            Assert.Single(sessionViewModel.Findings).NavigationPointer);
+        Assert.False(dialog.HasFindingSummary);
     }
 
     [Fact]
@@ -365,7 +370,7 @@ public class PolicyEditorFindingIndexTests
     }
 
     [Fact]
-    public void LocalInfoFinding_DoesNotRequireWarningAcknowledgement()
+    public void LocalInfoFindingDoesNotCreateSaveAcknowledgementState()
     {
         PolicyEditorSession session = PolicyEditorSession.StartUpdate(
             PolicyEditorTestFixtures.BuildActiveManagement());
@@ -386,11 +391,9 @@ public class PolicyEditorFindingIndexTests
         session.ApplyValidationResult(raw, validation, [info]);
 
         Assert.NotNull(session.Validation);
-        Assert.False(session.Validation.HasWarnings);
         Assert.Equal(
             PolicyValidationSeverity.Info,
             Assert.Single(session.Findings.All).Severity);
-        Assert.Throws<InvalidOperationException>(session.AcknowledgeWarnings);
     }
 
     [Theory]

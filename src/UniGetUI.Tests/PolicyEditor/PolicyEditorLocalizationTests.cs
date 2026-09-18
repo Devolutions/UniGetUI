@@ -563,7 +563,13 @@ public partial class PolicyEditorLocalizationTests
         XElement advanced = Assert.Single(auditSelector.Ancestors(),
             element => element.Name.LocalName == "Expander");
 
-        Assert.Equal("False", (string?)advanced.Attribute("IsExpanded"));
+        Assert.Equal(
+            "{Binding Document.HasEnforcementAdvisory}",
+            (string?)advanced.Attribute("IsExpanded"));
+        Assert.Contains(
+            advanced.Descendants(),
+            element => (string?)element.Attribute("Text")
+                == "{Binding Document.EnforcementAdvisoryCountText}");
         Assert.Contains(defaultSelector.Ancestors(), element => element == advanced);
         Assert.Equal(
             "{x:Static pvm:PolicyEditorEnumDisplay.AuditModeDisplayItems}",

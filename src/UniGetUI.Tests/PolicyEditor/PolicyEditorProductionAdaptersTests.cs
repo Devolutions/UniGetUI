@@ -269,8 +269,7 @@ public class PolicyEditorProductionAdaptersTests
             PolicyConflictHandling.Reject,
             "expected-token",
             document.RootElement.Clone(),
-            "validation-receipt",
-            WarningsAcknowledged: false);
+            "validation-receipt");
     }
 
     private static string FindRepositoryRoot()

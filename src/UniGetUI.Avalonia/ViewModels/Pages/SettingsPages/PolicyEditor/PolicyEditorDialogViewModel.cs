@@ -35,11 +35,11 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
     public event EventHandler<PolicyValidationFinding?>? FindingNavigationRequested;
 
     public PolicyValidationFinding? SelectedFinding =>
-        _selectedFindingIndex >= 0 && _selectedFindingIndex < Session.Findings.Count
-            ? Session.Findings[_selectedFindingIndex]
+        _selectedFindingIndex >= 0 && _selectedFindingIndex < ErrorFindings.Count
+            ? ErrorFindings[_selectedFindingIndex]
             : null;
     public bool HasFindingSummary => Session.SyntaxError is not null || SelectedFinding is not null;
-    public bool HasMultipleFindings => Session.SyntaxError is null && Session.Findings.Count > 1;
+    public bool HasMultipleFindings => Session.SyntaxError is null && ErrorFindings.Count > 1;
     public bool CanNavigateFinding =>
         !(Session.IsRawMode && Session.IsRawSyntaxPending);
     public string FindingCountText
@@ -50,12 +50,7 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
                 return CoreTools.Translate("1 error");
             int errors = Session.Findings.Count(finding =>
                 finding.Severity == PolicyValidationSeverity.Error);
-            int warnings = Session.Findings.Count(finding =>
-                finding.Severity == PolicyValidationSeverity.Warning);
-            return CoreTools.Translate(
-                "{0} error(s), {1} warning(s)",
-                errors,
-                warnings);
+            return CoreTools.Translate("{0} error(s)", errors);
         }
     }
     public string SelectedFindingMessage =>
@@ -167,13 +162,6 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
                     firstError.AutomationName,
                     AutomationLiveSetting.Assertive);
             }
-            else if (Session.Findings.FirstOrDefault() is { } firstWarning)
-            {
-                _announce(
-                    firstWarning.AutomationName,
-                    AutomationLiveSetting.Polite);
-            }
-
             SelectFirstFinding(navigate: false);
         }
         else if (e.PropertyName == nameof(PolicyEditorSessionViewModel.FindingNavigationGeneration)
@@ -225,18 +213,18 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
 
     public void SelectPreviousFinding()
     {
-        if (Session.Findings.Count == 0) return;
+        if (ErrorFindings.Count == 0) return;
         _selectedFindingIndex =
-            (_selectedFindingIndex - 1 + Session.Findings.Count) % Session.Findings.Count;
+            (_selectedFindingIndex - 1 + ErrorFindings.Count) % ErrorFindings.Count;
         RefreshFindingSummary();
         RequestFindingNavigation(SelectedFinding);
     }
 
     public void SelectNextFinding()
     {
-        if (Session.Findings.Count == 0) return;
+        if (ErrorFindings.Count == 0) return;
         _selectedFindingIndex =
-            (_selectedFindingIndex + 1) % Session.Findings.Count;
+            (_selectedFindingIndex + 1) % ErrorFindings.Count;
         RefreshFindingSummary();
         RequestFindingNavigation(SelectedFinding);
     }
@@ -246,12 +234,10 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
 
     private void SelectFirstFinding(bool navigate)
     {
-        PolicyValidationFinding? firstError = Session.Findings.FirstOrDefault(
-            finding => finding.Severity == PolicyValidationSeverity.Error);
-        PolicyValidationFinding? selected = firstError ?? Session.Findings.FirstOrDefault();
+        PolicyValidationFinding? selected = ErrorFindings.FirstOrDefault();
         _selectedFindingIndex = selected is null
             ? -1
-            : Session.Findings
+            : ErrorFindings
                 .Select((finding, index) => (finding, index))
                 .Where(item => ReferenceEquals(item.finding, selected))
                 .Select(item => item.index)
@@ -266,6 +252,11 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         if (CanNavigateFinding)
             FindingNavigationRequested?.Invoke(this, finding);
     }
+
+    private IReadOnlyList<PolicyValidationFinding> ErrorFindings =>
+        Session.Findings
+            .Where(finding => finding.Severity == PolicyValidationSeverity.Error)
+            .ToArray();
 
     private void RefreshFindingSummary()
     {

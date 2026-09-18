@@ -14,8 +14,7 @@ public static class PolicyElevationReplacementDispatcher
             request.Operation,
             request.ConflictHandling,
             request.ExpectedStoreToken,
-            request.ValidationReceipt,
-            request.WarningsAcknowledged));
+            request.ValidationReceipt));
     }
 
     public static bool IsBrokerRequestWithinLimit(PolicyElevationRequestMessage request) =>
@@ -34,8 +33,7 @@ public static class PolicyElevationReplacementDispatcher
             request.Operation,
             request.ConflictHandling,
             request.ExpectedStoreToken,
-            request.ValidationReceipt,
-            request.WarningsAcknowledged);
+            request.ValidationReceipt);
 
         if (GetBrokerRequestBodyByteCount(replacementRequest) > BrokerApi.MaxPolicyManagementBodyBytes)
         {
@@ -51,8 +49,7 @@ public static class PolicyElevationReplacementDispatcher
         PolicyElevationOperation operation,
         PolicyElevationConflictHandling conflictHandling,
         string expectedStoreToken,
-        string validationReceipt,
-        bool warningsAcknowledged) =>
+        string validationReceipt) =>
         new()
         {
             Draft = draft,
@@ -74,7 +71,6 @@ public static class PolicyElevationReplacementDispatcher
             },
             ExpectedStoreToken = expectedStoreToken,
             ValidationReceipt = validationReceipt,
-            WarningsAcknowledged = warningsAcknowledged,
         };
 
     private static int GetBrokerRequestBodyByteCount(PolicyReplacementRequest request) =>

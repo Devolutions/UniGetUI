@@ -34,10 +34,6 @@ public sealed class PolicyElevationRequestMessage
     public string ValidationReceipt { get; set; } = string.Empty;
 
     [JsonRequired]
-    [JsonPropertyName("warningsAcknowledged")]
-    public bool WarningsAcknowledged { get; set; }
-
-    [JsonRequired]
     [JsonPropertyName("draft")]
     public JsonElement Draft { get; set; }
 }

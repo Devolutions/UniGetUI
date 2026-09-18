@@ -751,6 +751,8 @@ public class PolicyEditorStructuredInputGuardTests
     {
         using PolicyEditorSessionViewModel viewModel = CreateViewModel();
         PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
+        draftRule.Enabled = true;
+        draftRule.Match.Operations.Add(ModelOperation.Install);
         using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
         rule.ApplyDecision(ModelDecision.Allow);
         rule.HasConstraints = true;

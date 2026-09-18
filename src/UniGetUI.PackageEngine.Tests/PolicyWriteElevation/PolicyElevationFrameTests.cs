@@ -13,7 +13,7 @@ namespace UniGetUI.PackageEngine.Tests.PolicyWriteElevation;
 public class PolicyElevationFrameTests
 {
     private const string RequestJson =
-        """{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":"Update","conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","warningsAcknowledged":false,"draft":{"policy":1}}""";
+        """{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":"Update","conflictHandling":"Reject","expectedStoreToken":"token","validationReceipt":"receipt","draft":{"policy":1}}""";
 
     private const string CommittedResponseJson =
         """{"protocolVersion":"2.0","requestId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","disposition":"Committed","brokerStatusCode":null,"brokerErrorCode":null,"committedStoreToken":"token","conflictStoreToken":null,"conflictState":null,"conflictPolicyId":null}""";
@@ -33,7 +33,6 @@ public class PolicyElevationFrameTests
             ConflictHandling = PolicyElevationConflictHandling.Reject,
             ExpectedStoreToken = "token",
             ValidationReceipt = "receipt",
-            WarningsAcknowledged = true,
             Draft = JsonDocument.Parse(draftJson).RootElement.Clone(),
         };
 
@@ -63,7 +62,6 @@ public class PolicyElevationFrameTests
         Assert.Equal(sent.ConflictHandling, received.ConflictHandling);
         Assert.Equal(sent.ExpectedStoreToken, received.ExpectedStoreToken);
         Assert.Equal(sent.ValidationReceipt, received.ValidationReceipt);
-        Assert.True(received.WarningsAcknowledged);
         Assert.Equal(sent.Draft.GetRawText(), received.Draft.GetRawText());
     }
 
@@ -203,7 +201,6 @@ public class PolicyElevationFrameTests
     [InlineData("conflictHandling")]
     [InlineData("expectedStoreToken")]
     [InlineData("validationReceipt")]
-    [InlineData("warningsAcknowledged")]
     [InlineData("draft")]
     public async Task HelperRequestDeserialization_RejectsEveryOmittedMandatoryField(
         string propertyName)

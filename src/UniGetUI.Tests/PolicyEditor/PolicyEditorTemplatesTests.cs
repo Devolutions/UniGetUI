@@ -166,6 +166,7 @@ public class PolicyEditorTemplatesTests
     {
         PolicyEditorDraftRule rule = PolicyRuleFactory.CreateBlank("allow-rule");
         rule.Decision = Decision.Allow;
+        rule.Enabled = true;
         rule.Match.Operations.Add(Operation.Install);
         rule.Constraints = new PolicyEditorDraftConstraints
         {
@@ -196,6 +197,13 @@ public class PolicyEditorTemplatesTests
 
         rule.Decision = Decision.Allow;
         rule.Match.Managers.Add(ManagerName.Winget);
+        Assert.Contains(
+            PolicyEditorAdvisories.FieldSpecific(rule),
+            message => message.Contains("arbitrary commands", StringComparison.OrdinalIgnoreCase));
+        rule.Match.SkipHashCheck = TriState.False;
+        Assert.DoesNotContain(
+            PolicyEditorAdvisories.FieldSpecific(rule),
+            message => message.Contains("integrity", StringComparison.OrdinalIgnoreCase));
         rule.Match.PackageIdentifierMode = PackageIdentifierMode.Exact;
         rule.Match.ExactPackageIdentifiers.Add("Contoso.App");
         rule.Constraints.AllowSkipHashCheck = false;

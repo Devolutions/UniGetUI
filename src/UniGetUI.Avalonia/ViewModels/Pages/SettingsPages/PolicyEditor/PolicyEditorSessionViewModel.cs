@@ -24,6 +24,8 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private Task _rawSyntaxAnalysis = Task.CompletedTask;
     private CancellationTokenSource? _structuredDirtyCancellation;
     private Task _structuredDirtyAnalysis = Task.CompletedTask;
+    private CancellationTokenSource? _authoritativeValidationCancellation;
+    private Task _authoritativeValidation = Task.CompletedTask;
     private Task<bool>? _discardConfirmationTask;
     private long _saveGeneration;
     private long _findingNavigationGeneration;
@@ -589,28 +591,6 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                 activePolicyId = Session.OriginManagement.Policy?.Metadata.Id;
             }
 
-            if (validation.HasWarnings && !Session.HasCurrentWarningAcknowledgement)
-            {
-                bool acknowledged = await _confirmationPrompt.ConfirmAsync(
-                    new PolicyEditorConfirmationRequest(
-                        PolicyEditorConfirmationKind.Warnings,
-                        operation,
-                        validation.CanonicalDraft.Metadata.Id,
-                        token,
-                        state,
-                        activePolicyId,
-                        validation.Findings.All,
-                        validation.WarningCount),
-                    cancellationToken);
-                if (!CanApply(cancellationToken)
-                    || saveGeneration != Volatile.Read(ref _saveGeneration))
-                    return;
-                if (Session.MutationGeneration != attemptGeneration) return;
-                if (!acknowledged)
-                    return;
-                Session.AcknowledgeWarnings();
-            }
-
             PolicyEditorDraftDocument canonicalDraft =
                 PolicyEditorMapper.ToDraft(validation.CanonicalDraft);
             bool loadedAuditMode =
@@ -698,8 +678,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                 conflictHandling,
                 token,
                 canonicalDocument.RootElement.Clone(),
-                validation.Receipt,
-                validation.HasWarnings && Session.HasCurrentWarningAcknowledgement);
+                validation.Receipt);
             PolicyWriteOutcome write =
                 await _writeClient.WriteAsync(request, cancellationToken);
             if (!CanApplyDispatchedWrite(saveGeneration)) return;
@@ -945,6 +924,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         Interlocked.Increment(ref _saveGeneration);
         CancelRawSyntaxAnalysis();
         CancelStructuredDirtyAnalysis();
+        CancelAuthoritativeValidation();
         _lifetimeCancellation.Cancel();
         _lifetimeCancellation.Dispose();
         NotifyCommandStates();
@@ -954,9 +934,12 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
 
     internal Task WaitForStructuredDirtyAnalysisAsync() => _structuredDirtyAnalysis;
 
+    internal Task WaitForAuthoritativeValidationAsync() => _authoritativeValidation;
+
     private void OnStructuredDraftChanged()
     {
         RefreshLocalSemanticValidation();
+        ScheduleAuthoritativeValidation();
         ScheduleStructuredDirtyAnalysis();
         OnEditorStateChanged();
     }
@@ -1216,6 +1199,13 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                     finding => finding.Severity == PolicyValidationSeverity.Error);
             }
             SyntaxError = result.Error;
+            if (result.Error is null && !_hasLocalSemanticErrors && result.RawElement is { } element)
+            {
+                ScheduleAuthoritativeValidation(
+                    raw,
+                    element,
+                    mutationGeneration);
+            }
             OnEditorStateChanged();
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -1241,6 +1231,110 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             Interlocked.Exchange(ref _rawSyntaxCancellation, null);
         cancellation?.Cancel();
         cancellation?.Dispose();
+    }
+
+    private void ScheduleAuthoritativeValidation()
+    {
+        if (Session.Mode != PolicyEditorMode.Structured
+            || HasLocalInputErrors
+            || _hasLocalSemanticErrors)
+        {
+            CancelAuthoritativeValidation();
+            return;
+        }
+
+        string raw;
+        try
+        {
+            raw = Session.GetEffectiveRawJson();
+        }
+        catch (JsonException)
+        {
+            return;
+        }
+        if (!TryGetDraftElement(
+                raw,
+                out JsonElement element,
+                out _))
+        {
+            return;
+        }
+
+        ScheduleAuthoritativeValidation(raw, element, Session.MutationGeneration);
+    }
+
+    private void ScheduleAuthoritativeValidation(
+        string raw,
+        JsonElement draft,
+        long mutationGeneration)
+    {
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            _lifetimeCancellation.Token);
+        CancellationTokenSource? previous =
+            Interlocked.Exchange(ref _authoritativeValidationCancellation, cancellation);
+        previous?.Cancel();
+        previous?.Dispose();
+        _authoritativeValidation = ValidateAuthoritativeAsync(
+            raw,
+            draft.Clone(),
+            mutationGeneration,
+            cancellation);
+    }
+
+    private async Task ValidateAuthoritativeAsync(
+        string raw,
+        JsonElement draft,
+        long mutationGeneration,
+        CancellationTokenSource cancellation)
+    {
+        try
+        {
+            await Task.Delay(_structuredDirtyDebounce, cancellation.Token);
+            PolicyEditorValidationOutcome outcome =
+                await _validationClient.ValidateAsync(draft, cancellation.Token);
+            if (cancellation.IsCancellationRequested
+                || Volatile.Read(ref _isDisposed) != 0
+                || mutationGeneration != Session.MutationGeneration
+                || !string.Equals(raw, Session.GetEffectiveRawJson(), StringComparison.Ordinal)
+                || outcome.Validation is null)
+            {
+                return;
+            }
+
+            Session.ApplyValidationResult(
+                raw,
+                outcome.Validation,
+                outcome.BoundedFindings,
+                outcome.OmittedFindingCount);
+            _hasLocalSemanticErrors = Session.Findings.All.Any(
+                finding => finding.Severity == PolicyValidationSeverity.Error);
+            SyntaxError = null;
+            OnEditorStateChanged();
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(
+                    Interlocked.CompareExchange(
+                        ref _authoritativeValidationCancellation,
+                        null,
+                        cancellation),
+                    cancellation))
+            {
+                cancellation.Dispose();
+            }
+        }
+    }
+
+    private void CancelAuthoritativeValidation()
+    {
+        CancellationTokenSource? cancellation =
+            Interlocked.Exchange(ref _authoritativeValidationCancellation, null);
+        cancellation?.Cancel();
+        cancellation?.Dispose();
+        _authoritativeValidation = Task.CompletedTask;
     }
 }
 

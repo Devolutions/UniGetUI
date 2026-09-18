@@ -361,12 +361,19 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
             {
                 Draft.Enforcement.DefaultDecision = PolicyEditorEnumDisplay.Decisions[value];
                 OnPropertyChanged(nameof(IsDefaultAllow));
+                OnPropertyChanged(nameof(HasEnforcementAdvisory));
+                OnPropertyChanged(nameof(EnforcementAdvisoryCountText));
                 MarkDirty();
             }
         }
     }
     public bool IsDefaultAllow =>
         Draft.Enforcement.DefaultDecision == Decision.Allow;
+    public bool HasEnforcementAdvisory =>
+        IsDefaultAllow || IsAuditModeEnabled;
+    public string EnforcementAdvisoryCountText => CoreTools.Translate(
+        "{0} warning(s)",
+        (IsDefaultAllow ? 1 : 0) + (IsAuditModeEnabled ? 1 : 0));
     public IReadOnlyList<PolicyValidationFinding> DefaultDecisionFindings =>
         FindingsFor("/Enforcement/DefaultDecision");
     public bool HasDefaultDecisionErrors => HasErrors(DefaultDecisionFindings);
@@ -380,6 +387,8 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
             {
                 Draft.Enforcement.AuditMode = value == 1;
                 OnPropertyChanged(nameof(IsAuditModeEnabled));
+                OnPropertyChanged(nameof(HasEnforcementAdvisory));
+                OnPropertyChanged(nameof(EnforcementAdvisoryCountText));
                 MarkDirty();
             }
         }
@@ -407,6 +416,8 @@ public sealed class PolicyEditorDocumentUi : ObservableObject
         OnPropertyChanged(nameof(ValidUntilError));
         OnPropertyChanged(nameof(DecisionIndex));
         OnPropertyChanged(nameof(IsDefaultAllow));
+        OnPropertyChanged(nameof(HasEnforcementAdvisory));
+        OnPropertyChanged(nameof(EnforcementAdvisoryCountText));
         OnPropertyChanged(nameof(AuditModeIndex));
         OnPropertyChanged(nameof(IsAuditModeEnabled));
         OnPropertyChanged(nameof(IsIdentityLocked));

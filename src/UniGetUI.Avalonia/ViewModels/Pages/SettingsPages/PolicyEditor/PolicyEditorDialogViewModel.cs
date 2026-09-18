@@ -361,14 +361,15 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         if (Session.HasFindings)
         {
             int errorCount = Session.Findings.Count(finding => finding.Severity == PolicyValidationSeverity.Error);
-            SetStatus(
-                errorCount > 0
-                    ? CoreTools.Translate("Validation found errors")
-                    : CoreTools.Translate("Validation found warnings"),
-                CoreTools.Translate("Correct the selected error or review the warning before saving."),
-                errorCount > 0 ? InfoBarSeverity.Error : InfoBarSeverity.Warning,
-                announce: false);
-            return;
+            if (errorCount > 0)
+            {
+                SetStatus(
+                    CoreTools.Translate("Validation found errors"),
+                    CoreTools.Translate("Correct the selected error before saving."),
+                    InfoBarSeverity.Error,
+                    announce: false);
+                return;
+            }
         }
 
         Status.IsOpen = false;

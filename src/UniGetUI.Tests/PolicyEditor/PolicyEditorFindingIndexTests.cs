@@ -52,6 +52,8 @@ public class PolicyEditorFindingIndexTests
         Assert.Equal("/Metadata/Id", navigated!.Pointer);
         Assert.Equal("1 error(s)", dialog.FindingCountText);
         Assert.False(dialog.HasMultipleFindings);
+        Assert.Equal("Validation found errors", dialog.Status.Title);
+        Assert.Equal("Correct the selected error before saving.", dialog.Status.Message);
         Assert.Contains(announcements, item =>
             item.LiveSetting == AutomationLiveSetting.Assertive);
     }
@@ -103,6 +105,7 @@ public class PolicyEditorFindingIndexTests
             "/Rules/0/Constraints/AllowSkipHashCheck",
             Assert.Single(sessionViewModel.Findings).NavigationPointer);
         Assert.False(dialog.HasFindingSummary);
+        Assert.False(dialog.Status.IsOpen);
 
         await sessionViewModel.SaveCommand.ExecuteAsync(null);
 

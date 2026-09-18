@@ -674,14 +674,14 @@
                                             </StackPanel>
                                         </Grid>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
-                                            <TextBlock Classes="field-label" Text="{t:Translate Package version}"
+                                            <TextBlock Classes="field-label" Text="{t:Translate Package versions}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PackageVersion}"/>
                                             <ComboBox Grid.Column="1"
                                                       ItemsSource="{Binding PackageVersionModeItems}"
                                                       SelectedIndex="{Binding PackageVersionModeIndex}"
                                                       Tag="/Rules/*/Match/Version"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PackageVersion}"
-                                                      automation:AutomationProperties.Name="{t:Translate Package version match mode}"/>
+                                                      automation:AutomationProperties.Name="{t:Translate Package versions match mode}"/>
                                         </Grid>
                                         <StackPanel IsVisible="{Binding IsExactVersionMode}" Spacing="2" Margin="24,0,0,0">
                                             <TextBox Classes="list-field"
@@ -690,7 +690,7 @@
                                                      Tag="/Rules/*/Match/Version/Exact"
                                                      controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ExactVersions}"
                                                      automation:AutomationProperties.Name="{t:Translate Exact package versions}"/>
-                                            <TextBlock Text="{t:Translate Text='Exact versions match any package version text literally, including versions that are not semantic versions.'}"
+                                            <TextBlock Text="{t:Translate Text='Exact versions match any package version value literally, including versions that are not semantic versions.'}"
                                                        TextWrapping="Wrap" Opacity="0.65" FontSize="12"/>
                                             <ItemsControl ItemsSource="{Binding ExactVersionFindings}" ItemTemplate="{StaticResource InlineFindingTemplate}"/>
                                         </StackPanel>

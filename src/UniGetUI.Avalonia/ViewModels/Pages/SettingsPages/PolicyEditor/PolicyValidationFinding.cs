@@ -538,7 +538,7 @@ public static class PolicyFindingPresentation
             "PACKAGEIDENTIFIERS" => CoreTools.Translate("Package identifiers"),
             "EXACT" => CoreTools.Translate("Exact values"),
             "PATTERNS" => CoreTools.Translate("Patterns"),
-            "VERSION" => CoreTools.Translate("Package version"),
+            "VERSION" => CoreTools.Translate("Package versions"),
             "RANGE" => CoreTools.Translate("Semantic version range"),
             "MINVERSION" => CoreTools.Translate("Minimum version"),
             "MAXVERSION" => CoreTools.Translate("Maximum version"),

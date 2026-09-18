@@ -42,7 +42,7 @@ public static class PolicyEditorHelp
     public static string ExactPackageIdentifiers => T("Match complete package identifiers exactly as written. This works for any package identifier and does not interpret wildcard characters.");
     public static string PackageIdentifierPatterns => T("Match package identifiers with wildcard patterns. Patterns may match multiple packages; use * for any characters and ? for one character.");
     public static string PackageVersion => T("Choose whether package versions do not affect matching, must match exact version text, or fall within a semantic-version range.");
-    public static string ExactVersions => T("Match complete package version text exactly as written. Exact matching works for semantic and non-semantic package versions.");
+    public static string ExactVersions => T("Match complete package version values exactly as written. Exact matching works for semantic and non-semantic package versions.");
     public static string VersionRange => T("Limit this rule to a semantic-version range. A request without a valid semantic version will not match; leave the range off to accept other version formats.");
     public static string MinimumVersion => T("Lowest semantic version included by this rule. Leave empty for no lower limit.");
     public static string MaximumVersion => T("Highest semantic version included by this rule. Leave empty for no upper limit.");

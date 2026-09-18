@@ -27,6 +27,12 @@ public sealed class SmoothScrollManager
             defaultValue: true,
             inherits: true);
 
+    public static readonly AttachedProperty<bool> HandlesPrecisionWheelInputProperty =
+        AvaloniaProperty.RegisterAttached<SmoothScrollManager, Control, bool>(
+            "HandlesPrecisionWheelInput",
+            defaultValue: false,
+            inherits: true);
+
     private const double MaximumFrameTime = 1.0 / 30.0;
     private const double StopVelocity = 4.0;
     private const double PrecisionGestureRetention = 0.12;
@@ -71,6 +77,10 @@ public sealed class SmoothScrollManager
 
     public static bool GetIsEnabled(Control control) => control.GetValue(IsEnabledProperty);
     public static void SetIsEnabled(Control control, bool value) => control.SetValue(IsEnabledProperty, value);
+    public static bool GetHandlesPrecisionWheelInput(Control control) =>
+        control.GetValue(HandlesPrecisionWheelInputProperty);
+    public static void SetHandlesPrecisionWheelInput(Control control, bool value) =>
+        control.SetValue(HandlesPrecisionWheelInputProperty, value);
 
     private static void OnTopLevelWheel(TopLevel topLevel, PointerWheelEventArgs e)
     {
@@ -81,30 +91,37 @@ public sealed class SmoothScrollManager
         if (sourceControl is null || !GetIsEnabled(sourceControl)) return;
         bool isPrecisionTouchpadScroll = IsPrecisionTouchpadScroll(topLevel, e.Delta);
 
-        // Carousel owns horizontal page gestures. Let it receive the complete event instead of
-        // consuming a small incidental Y component in an ancestor vertical ScrollViewer.
-        if (isPrecisionTouchpadScroll && Math.Abs(e.Delta.X) > Math.Abs(e.Delta.Y) &&
-            source.FindAncestorOfType<Carousel>(includeSelf: true) is not null)
+        // A control that owns precision-wheel gestures must see the complete 2D delta stream.
+        // It can resolve intent from the accumulated vector and route an unused axis back here.
+        if (isPrecisionTouchpadScroll && GetHandlesPrecisionWheelInput(sourceControl))
             return;
 
+        if (RouteInput(source, e.Delta, isPrecisionTouchpadScroll))
+            e.Handled = true;
+    }
+
+    internal static bool RoutePrecisionInput(Visual source, Vector delta) =>
+        RouteInput(source, delta, isPrecisionTouchpadScroll: true);
+
+    private static bool RouteInput(Visual source, Vector delta, bool isPrecisionTouchpadScroll)
+    {
         // DataGrid implements scrolling itself rather than through an ancestor ScrollViewer.
         // Resolve it first to preserve the package list's virtualization-aware inertia path.
         if (source.FindAncestorOfType<DataGrid>(includeSelf: true) is { } grid)
         {
             _animators.GetValue(grid, static control => new(control))
-                .ApplyInput(e.Delta, isPrecisionTouchpadScroll);
-            e.Handled = true;
-            return;
+                .ApplyInput(delta, isPrecisionTouchpadScroll);
+            return true;
         }
 
-        ScrollViewer? horizontalTarget = FindScrollTarget(source, e.Delta.X, horizontal: true);
-        ScrollViewer? verticalTarget = FindScrollTarget(source, e.Delta.Y, horizontal: false);
+        ScrollViewer? horizontalTarget = FindScrollTarget(source, delta.X, horizontal: true);
+        ScrollViewer? verticalTarget = FindScrollTarget(source, delta.Y, horizontal: false);
         bool handledBoundary = false;
         if (isPrecisionTouchpadScroll)
         {
             Vector boundaryDelta = new(
-                horizontalTarget is null ? e.Delta.X : 0,
-                verticalTarget is null ? e.Delta.Y : 0);
+                horizontalTarget is null ? delta.X : 0,
+                verticalTarget is null ? delta.Y : 0);
             if (boundaryDelta != default)
                 handledBoundary = ApplyPrecisionInputAtBoundary(source, boundaryDelta);
         }
@@ -113,25 +130,25 @@ public sealed class SmoothScrollManager
         {
             // Keep a precision manipulation owned by the current scroll chain at a hard edge.
             // The manager turns only the unconsumed part into a resisted visual overpan.
-            if (handledBoundary) e.Handled = true;
-            return;
+            return handledBoundary;
         }
 
         if (horizontalTarget is not null && ReferenceEquals(horizontalTarget, verticalTarget))
         {
             _animators.GetValue(horizontalTarget, static control => new(control))
-                .ApplyInput(e.Delta, isPrecisionTouchpadScroll);
+                .ApplyInput(delta, isPrecisionTouchpadScroll);
         }
         else
         {
             if (horizontalTarget is not null)
                 _animators.GetValue(horizontalTarget, static control => new(control))
-                    .ApplyInput(new Vector(e.Delta.X, 0), isPrecisionTouchpadScroll);
+                    .ApplyInput(new Vector(delta.X, 0), isPrecisionTouchpadScroll);
             if (verticalTarget is not null)
                 _animators.GetValue(verticalTarget, static control => new(control))
-                    .ApplyInput(new Vector(0, e.Delta.Y), isPrecisionTouchpadScroll);
+                    .ApplyInput(new Vector(0, delta.Y), isPrecisionTouchpadScroll);
         }
-        e.Handled = true;
+
+        return true;
     }
 
     private void ApplyInput(Vector delta, bool isPrecisionTouchpadScroll)
@@ -231,7 +248,7 @@ public sealed class SmoothScrollManager
         return false;
     }
 
-    private static bool IsPrecisionTouchpadScroll(TopLevel topLevel, Vector delta)
+    internal static bool IsPrecisionTouchpadScroll(TopLevel topLevel, Vector delta)
     {
         PrecisionInputState state = _precisionInputStates.GetValue(topLevel, static _ => new());
         long now = Stopwatch.GetTimestamp();

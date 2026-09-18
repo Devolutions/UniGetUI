@@ -1,8 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using Avalonia;
-using Avalonia.Animation;
-using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Controls.Shapes;
@@ -32,12 +30,21 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
 {
     private const double WideThreshold = 950;
     private const double ScreenshotGestureRetention = 0.12;
-    private const double ScreenshotGestureSettleSeconds = 0.18;
     private const double ScreenshotEdgeOverpan = 48.0;
     private const double ScreenshotEdgeResistance = 0.4;
+    private const double ScreenshotIntentDeadZone = 6.0;
+    private const double ScreenshotIntentBias = 1.15;
+    private const double ScreenshotIntentFallback = 18.0;
+    private const double ScreenshotSnapProjectionSeconds = 0.14;
+    private const double ScreenshotSnapSpringStrength = 260.0;
+    private const double ScreenshotSnapSpringDamping = 31.0;
+    private const double ScreenshotSnapStopDistance = 0.35;
+    private const double ScreenshotSnapStopVelocity = 6.0;
+    private const double ScreenshotMaximumFrameTime = 1.0 / 30.0;
     private const string ContributeUrl = "https://github.com/Devolutions/UniGetUI";
 
     private enum LayoutMode { Unset, Normal, Wide }
+    private enum GestureAxis { Undecided, Horizontal, Vertical }
     private LayoutMode _layoutMode = LayoutMode.Unset;
 
     /// <summary>True when the user confirmed the main action (install/update/uninstall) without extras.</summary>
@@ -48,14 +55,19 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     private InstallOptionsViewModel? _installVm;
     private InstallOptions? _installOpts;
     private readonly DispatcherTimer _screenshotGestureTimer;
-    private readonly IPageTransition? _screenshotPageTransition;
-    private readonly TranslateTransform _gestureCurrentTranslate = new();
-    private readonly TranslateTransform _gestureAdjacentTranslate = new();
-    private double _screenshotDragOffset;
-    private int _screenshotGestureStartIndex;
+    private readonly TranslateTransform _screenshotStripTranslate = new();
+    private Vector _screenshotGestureIntent;
+    private GestureAxis _screenshotGestureAxis;
+    private double _screenshotPosition;
+    private double _screenshotVelocity;
+    private double? _screenshotSnapTarget;
+    private double _screenshotPageWidth;
     private long _lastScreenshotGestureInputTimestamp;
-    private bool _screenshotGestureActive;
-    private bool _screenshotGestureSettling;
+    private long _lastScreenshotHorizontalInputTimestamp;
+    private TimeSpan? _screenshotLastFrame;
+    private bool _screenshotFrameRequested;
+    private bool _updatingScreenshotSelection;
+    private int _lastScreenshotPipIndex = -1;
 
     public PackageDetailsWindow(
         IPackage package,
@@ -67,13 +79,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         DataContext = _vm;
         InitializeComponent();
 
-        // Honor the OS "reduce motion" preference: drop the screenshot slide animation.
-        if (MotionPreference.ReducedMotion)
-            ScreenshotsCarousel.PageTransition = null;
-
-        GestureCurrentScreenshot.RenderTransform = _gestureCurrentTranslate;
-        GestureAdjacentScreenshot.RenderTransform = _gestureAdjacentTranslate;
-        _screenshotPageTransition = ScreenshotsCarousel.PageTransition;
+        ScreenshotStrip.RenderTransform = _screenshotStripTranslate;
         _screenshotGestureTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(ScreenshotGestureRetention),
@@ -89,24 +95,18 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         _vm.PropertyChanged += OnVmPropertyChanged;
         _vm.Screenshots.CollectionChanged += (_, _) => Dispatcher.UIThread.Post(() =>
         {
-            UpdatePips();
+            RebuildScreenshotStrip();
             UpdateScreenshotHeight();
+            UpdateScreenshotStripLayout();
+            UpdatePips();
         }, DispatcherPriority.Loaded);
 
         MainActionButton.Click += (_, _) => OnMainAction();
         ActionVariantsButton.Flyout = BuildActionFlyout();
         InstallOptionsSaveButton.Click += (_, _) => _ = SaveInstallOptionsAsync();
         ContributeButton.Click += (_, _) => OpenUrl(ContributeUrl);
-        PrevScreenshotButton.Click += (_, _) =>
-        {
-            if (_vm.SelectedScreenshotIndex > 0)
-                _vm.SelectedScreenshotIndex--;
-        };
-        NextScreenshotButton.Click += (_, _) =>
-        {
-            if (_vm.SelectedScreenshotIndex < _vm.ScreenshotCount - 1)
-                _vm.SelectedScreenshotIndex++;
-        };
+        PrevScreenshotButton.Click += (_, _) => NavigateScreenshot(-1);
+        NextScreenshotButton.Click += (_, _) => NavigateScreenshot(1);
         ScreenshotPips.AddHandler(Button.ClickEvent, OnPipClicked);
         ScreenshotPips.ContainerPrepared += (_, _) =>
             Dispatcher.UIThread.Post(UpdatePips, DispatcherPriority.Loaded);
@@ -119,7 +119,11 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         {
             ApplyLayoutForCurrentSize();
             // Recalculate after the responsive grid has received its new column width.
-            Dispatcher.UIThread.Post(UpdateScreenshotHeight, DispatcherPriority.Loaded);
+            Dispatcher.UIThread.Post(() =>
+            {
+                UpdateScreenshotHeight();
+                UpdateScreenshotStripLayout();
+            }, DispatcherPriority.Loaded);
         };
 
         // Seed inline blocks with loading placeholders.
@@ -163,201 +167,500 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
             || e.PropertyName == nameof(PackageDetailsViewModel.ScreenshotCount))
             Dispatcher.UIThread.Post(() =>
             {
+                if (e.PropertyName == nameof(PackageDetailsViewModel.SelectedScreenshotIndex)
+                    && !_updatingScreenshotSelection
+                    && _screenshotSnapTarget is null
+                    && _screenshotGestureAxis != GestureAxis.Horizontal)
+                {
+                    SetScreenshotPositionToIndex(_vm.SelectedScreenshotIndex);
+                }
+
                 UpdatePips();
                 UpdateScreenshotHeight();
+                UpdateScreenshotStripLayout();
             }, DispatcherPriority.Loaded);
     }
 
     private void OnPipClicked(object? sender, RoutedEventArgs e)
     {
         if (e.Source is not Control src) return;
-        // Walk up to find the pip Button container; ask the ItemsControl for its index.
         Control? cursor = src;
         while (cursor is not null && cursor.Parent is not ItemsControl)
             cursor = cursor.Parent as Control;
         if (cursor is null) return;
+
         int idx = ScreenshotPips.IndexFromContainer(cursor);
         if (idx >= 0 && idx < _vm.ScreenshotCount)
-            _vm.SelectedScreenshotIndex = idx;
+            SnapScreenshotToIndex(idx);
+    }
+
+    private void NavigateScreenshot(int delta)
+    {
+        if (_vm.ScreenshotCount == 0) return;
+        int current = GetScreenshotNavigationIndex();
+        SnapScreenshotToIndex(Math.Clamp(current + delta, 0, _vm.ScreenshotCount - 1));
+    }
+
+    private int GetScreenshotNavigationIndex()
+    {
+        if (_vm.ScreenshotCount == 0) return 0;
+        double width = GetScreenshotPageWidth();
+        double position = _screenshotSnapTarget ?? _screenshotPosition;
+        return Math.Clamp(
+            (int)Math.Round(position / width, MidpointRounding.AwayFromZero),
+            0,
+            _vm.ScreenshotCount - 1);
     }
 
     private void OnScreenshotPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
-        if (_vm.Screenshots.Count < 2 || e.KeyModifiers != KeyModifiers.None ||
-            Math.Abs(e.Delta.X) <= Math.Abs(e.Delta.Y))
+        if (e.Delta == default || e.KeyModifiers != KeyModifiers.None ||
+            e.Source is not Visual source || TopLevel.GetTopLevel(this) is not { } top ||
+            !SmoothScrollManager.IsPrecisionTouchpadScroll(top, e.Delta))
             return;
 
         e.Handled = true;
-        if (_screenshotGestureSettling) return;
-        if (!_screenshotGestureActive) BeginScreenshotGesture();
-
         _screenshotGestureTimer.Stop();
-        _lastScreenshotGestureInputTimestamp = Stopwatch.GetTimestamp();
+
+        long now = Stopwatch.GetTimestamp();
+        _lastScreenshotGestureInputTimestamp = now;
         _screenshotGestureTimer.Interval = TimeSpan.FromSeconds(ScreenshotGestureRetention);
-        double width = Math.Max(1, ScreenshotsBorder.Bounds.Width);
-        double input = e.Delta.X * SmoothScrollPhysics.PrecisionTouchpadDistance;
-        double candidate = _screenshotDragOffset + input;
-        int adjacentIndex = GetAdjacentScreenshotIndex(candidate);
-        if (adjacentIndex == _screenshotGestureStartIndex)
+
+        if (_screenshotGestureAxis == GestureAxis.Undecided)
         {
-            GestureAdjacentScreenshot.Source = null;
-            // Reversing an edge pull follows the fingers one-to-one back toward rest. Resistance
-            // applies only while pulling farther into the unavailable page.
-            _screenshotDragOffset = _screenshotDragOffset != 0 &&
-                                    Math.Sign(_screenshotDragOffset) != Math.Sign(input)
-                ? candidate
-                : AddScreenshotEdgeResistance(_screenshotDragOffset, input);
+            _screenshotGestureIntent += e.Delta;
+            _screenshotGestureAxis = ResolveScreenshotGestureAxis(_screenshotGestureIntent);
+            if (_screenshotGestureAxis == GestureAxis.Undecided)
+            {
+                _screenshotGestureTimer.Start();
+                return;
+            }
+
+            if (_screenshotGestureAxis == GestureAxis.Horizontal && _vm.ScreenshotCount > 0)
+            {
+                ApplyScreenshotPanInput(
+                    _screenshotGestureIntent.X * SmoothScrollPhysics.PrecisionTouchpadDistance,
+                    now);
+            }
+            else
+            {
+                SmoothScrollManager.RoutePrecisionInput(
+                    source,
+                    new Vector(0, _screenshotGestureIntent.Y));
+            }
+
+            _screenshotGestureIntent = default;
+        }
+        else if (_screenshotGestureAxis == GestureAxis.Horizontal && _vm.ScreenshotCount > 0)
+        {
+            ApplyScreenshotPanInput(
+                e.Delta.X * SmoothScrollPhysics.PrecisionTouchpadDistance,
+                now);
         }
         else
         {
-            _screenshotDragOffset = Math.Clamp(candidate, -width, width);
-            GestureAdjacentScreenshot.Source = _vm.Screenshots[adjacentIndex];
+            SmoothScrollManager.RoutePrecisionInput(source, new Vector(0, e.Delta.Y));
         }
 
-        UpdateScreenshotGestureTransforms(width);
         _screenshotGestureTimer.Start();
     }
 
-    private void BeginScreenshotGesture()
+    private static GestureAxis ResolveScreenshotGestureAxis(Vector delta)
     {
-        _screenshotGestureActive = true;
-        _screenshotGestureStartIndex = Math.Clamp(_vm.SelectedScreenshotIndex, 0, _vm.Screenshots.Count - 1);
-        _screenshotDragOffset = 0;
-        GestureCurrentScreenshot.Source = _vm.Screenshots[_screenshotGestureStartIndex];
-        GestureAdjacentScreenshot.Source = null;
-        _gestureCurrentTranslate.X = 0;
-        _gestureAdjacentTranslate.X = 0;
-        ScreenshotsCarousel.Opacity = 0;
-        ScreenshotGestureLayer.IsVisible = true;
+        double x = Math.Abs(delta.X * SmoothScrollPhysics.PrecisionTouchpadDistance);
+        double y = Math.Abs(delta.Y * SmoothScrollPhysics.PrecisionTouchpadDistance);
+        double largest = Math.Max(x, y);
+        if (largest < ScreenshotIntentDeadZone)
+            return GestureAxis.Undecided;
+
+        if (x >= y * ScreenshotIntentBias)
+            return GestureAxis.Horizontal;
+        if (y >= x * ScreenshotIntentBias)
+            return GestureAxis.Vertical;
+
+        if (largest >= ScreenshotIntentFallback)
+            return x >= y ? GestureAxis.Horizontal : GestureAxis.Vertical;
+
+        return GestureAxis.Undecided;
     }
 
-    private int GetAdjacentScreenshotIndex(double offset)
+    private void ApplyScreenshotPanInput(double input, long timestamp)
     {
-        int direction = offset < 0 ? 1 : offset > 0 ? -1 : 0;
-        return Math.Clamp(
-            _screenshotGestureStartIndex + direction,
-            0,
-            _vm.Screenshots.Count - 1);
+        if (input == 0) return;
+
+        if (_screenshotSnapTarget is not null)
+        {
+            // Direct manipulation always takes ownership from the snap at its current position.
+            _screenshotSnapTarget = null;
+            _screenshotVelocity = 0;
+            _screenshotLastFrame = null;
+        }
+
+        double positionDelta = -input;
+        if (_lastScreenshotHorizontalInputTimestamp != 0)
+        {
+            double elapsed = Stopwatch.GetElapsedTime(
+                _lastScreenshotHorizontalInputTimestamp,
+                timestamp).TotalSeconds;
+            if (elapsed is > 0 and < 0.1)
+            {
+                double instantaneousVelocity = positionDelta / elapsed;
+                if (_screenshotVelocity != 0 &&
+                    Math.Sign(_screenshotVelocity) != Math.Sign(instantaneousVelocity))
+                {
+                    _screenshotVelocity = instantaneousVelocity;
+                }
+                else
+                {
+                    _screenshotVelocity =
+                        _screenshotVelocity * 0.55 + instantaneousVelocity * 0.45;
+                }
+            }
+        }
+
+        _lastScreenshotHorizontalInputTimestamp = timestamp;
+        _screenshotPosition = ApplyScreenshotPositionDelta(
+            _screenshotPosition,
+            positionDelta);
+        RequestScreenshotFrame();
     }
 
-    private void UpdateScreenshotGestureTransforms(double width)
+    private double ApplyScreenshotPositionDelta(double position, double delta)
     {
-        _gestureCurrentTranslate.X = _screenshotDragOffset;
-        if (GestureAdjacentScreenshot.Source is null) return;
-        _gestureAdjacentTranslate.X = _screenshotDragOffset < 0
-            ? width + _screenshotDragOffset
-            : -width + _screenshotDragOffset;
+        if (delta == 0) return position;
+
+        double maximum = GetMaximumScreenshotPosition();
+        if (position < 0)
+        {
+            if (delta > 0)
+            {
+                double next = position + delta;
+                if (next <= 0) return next;
+                return ApplyScreenshotPositionDelta(0, next);
+            }
+
+            return -AddScreenshotEdgeResistance(-position, -delta);
+        }
+
+        if (position > maximum)
+        {
+            if (delta < 0)
+            {
+                double next = position + delta;
+                if (next >= maximum) return next;
+                return ApplyScreenshotPositionDelta(maximum, next - maximum);
+            }
+
+            return maximum + AddScreenshotEdgeResistance(
+                position - maximum,
+                delta);
+        }
+
+        double candidate = position + delta;
+        if (candidate < 0)
+            return -AddScreenshotEdgeResistance(0, -candidate);
+        if (candidate > maximum)
+            return maximum + AddScreenshotEdgeResistance(0, candidate - maximum);
+
+        return candidate;
     }
 
     private static double AddScreenshotEdgeResistance(double displacement, double input)
     {
-        double remaining = Math.Max(0, ScreenshotEdgeOverpan - Math.Abs(displacement));
-        if (remaining == 0 || input == 0) return displacement;
+        double remaining = Math.Max(0, ScreenshotEdgeOverpan - displacement);
+        if (remaining == 0 || input <= 0) return displacement;
+
         double added = remaining *
-                       (1.0 - Math.Exp(-Math.Abs(input) * ScreenshotEdgeResistance / ScreenshotEdgeOverpan));
-        return Math.CopySign(Math.Abs(displacement) + added, input);
+                       (1.0 - Math.Exp(-input * ScreenshotEdgeResistance / ScreenshotEdgeOverpan));
+        return displacement + added;
     }
 
     private async void CompleteScreenshotGesture(object? sender, EventArgs e)
     {
         _screenshotGestureTimer.Stop();
-        if (!_screenshotGestureActive || _screenshotGestureSettling) return;
 
-        // A DispatcherTimer tick can already be queued when Stop() is called by a fresh wheel
-        // event. Only settle after a full quiet period so a stale tick can't briefly snap the
-        // overpan back while the touchpad gesture is still active.
         TimeSpan retention = TimeSpan.FromSeconds(ScreenshotGestureRetention);
-        TimeSpan idle = Stopwatch.GetElapsedTime(_lastScreenshotGestureInputTimestamp);
-        if (idle < retention)
+        if (_lastScreenshotGestureInputTimestamp != 0)
         {
-            _screenshotGestureTimer.Interval = retention - idle;
-            _screenshotGestureTimer.Start();
+            TimeSpan idle = Stopwatch.GetElapsedTime(_lastScreenshotGestureInputTimestamp);
+            if (idle < retention)
+            {
+                _screenshotGestureTimer.Interval = retention - idle;
+                _screenshotGestureTimer.Start();
+                return;
+            }
+        }
+
+        if (_screenshotGestureAxis == GestureAxis.Horizontal && _vm.ScreenshotCount > 0)
+            StartScreenshotSnapToRest();
+
+        ResetScreenshotGestureRouting();
+        await Task.CompletedTask;
+    }
+
+    private void StartScreenshotSnapToRest()
+    {
+        double width = GetScreenshotPageWidth();
+        double maximum = GetMaximumScreenshotPosition();
+
+        int targetIndex;
+        if (_screenshotPosition <= 0)
+        {
+            targetIndex = 0;
+        }
+        else if (_screenshotPosition >= maximum)
+        {
+            targetIndex = _vm.ScreenshotCount - 1;
+        }
+        else
+        {
+            double projected = _screenshotPosition +
+                               _screenshotVelocity * ScreenshotSnapProjectionSeconds;
+            targetIndex = Math.Clamp(
+                (int)Math.Round(projected / width, MidpointRounding.AwayFromZero),
+                0,
+                _vm.ScreenshotCount - 1);
+        }
+
+        SnapScreenshotToIndex(targetIndex, preserveVelocity: true);
+    }
+
+    private void SnapScreenshotToIndex(int index, bool preserveVelocity = false)
+    {
+        if (_vm.ScreenshotCount == 0) return;
+
+        index = Math.Clamp(index, 0, _vm.ScreenshotCount - 1);
+        _screenshotGestureTimer.Stop();
+        ResetScreenshotGestureRouting();
+
+        double target = index * GetScreenshotPageWidth();
+        if (MotionPreference.ReducedMotion)
+        {
+            _screenshotPosition = target;
+            _screenshotVelocity = 0;
+            _screenshotSnapTarget = null;
+            RenderScreenshotStrip();
+            SettleScreenshotSelection(index);
             return;
         }
 
-        _screenshotGestureSettling = true;
-        double width = Math.Max(1, ScreenshotsBorder.Bounds.Width);
-        int adjacentIndex = GetAdjacentScreenshotIndex(_screenshotDragOffset);
-        bool commit = adjacentIndex != _screenshotGestureStartIndex &&
-                      Math.Abs(_screenshotDragOffset) >= width * 0.5;
-        double targetOffset = commit ? Math.CopySign(width, _screenshotDragOffset) : 0;
-
-        if (!MotionPreference.ReducedMotion)
+        if (!preserveVelocity)
         {
-            var easing = new SplineEasing(0.1, 0.9, 0.2, 1);
-            Task current = AnimateScreenshotTranslate(
-                _gestureCurrentTranslate, _screenshotDragOffset, targetOffset, easing);
-            Task adjacent = GestureAdjacentScreenshot.Source is null
-                ? Task.CompletedTask
-                : AnimateScreenshotTranslate(
-                    _gestureAdjacentTranslate,
-                    _gestureAdjacentTranslate.X,
-                    commit ? 0 : Math.CopySign(width, -_screenshotDragOffset),
-                    easing);
-            await Task.WhenAll(current, adjacent);
+            double direction = target - _screenshotPosition;
+            if (_screenshotVelocity == 0 ||
+                direction == 0 ||
+                Math.Sign(_screenshotVelocity) != Math.Sign(direction))
+                _screenshotVelocity = 0;
         }
 
-        if (commit)
-        {
-            ScreenshotsCarousel.PageTransition = null;
-            _vm.SelectedScreenshotIndex = adjacentIndex;
-            // Carousel realizes the new page during layout, not when selection is assigned.
-            // Keep transitions disabled until that layout has consumed the selection.
-            ScreenshotsCarousel.UpdateLayout();
-            ScreenshotsCarousel.PageTransition = _screenshotPageTransition;
-        }
-
-        ScreenshotGestureLayer.IsVisible = false;
-        ScreenshotsCarousel.Opacity = 1;
-        GestureCurrentScreenshot.Source = null;
-        GestureAdjacentScreenshot.Source = null;
-        _gestureCurrentTranslate.X = 0;
-        _gestureAdjacentTranslate.X = 0;
-        _screenshotDragOffset = 0;
-        _screenshotGestureActive = false;
-        _screenshotGestureSettling = false;
+        _screenshotSnapTarget = target;
+        _screenshotLastFrame = null;
+        RequestScreenshotFrame();
     }
 
-    private Task AnimateScreenshotTranslate(
-        TranslateTransform transform,
-        double from,
-        double to,
-        Easing easing)
+    private void RequestScreenshotFrame()
     {
-        // Avalonia's transform animator expects a Visual target and redirects setters to its
-        // RenderTransform. Passing a TranslateTransform itself throws during animation setup.
-        // Drive the existing transform on rendering frames instead.
+        if (_screenshotFrameRequested) return;
         if (TopLevel.GetTopLevel(this) is not { } top)
         {
-            transform.X = to;
-            return Task.CompletedTask;
+            RenderScreenshotStrip();
+            return;
         }
 
-        var completion = new TaskCompletionSource();
-        TimeSpan? started = null;
-        void Frame(TimeSpan now)
+        _screenshotFrameRequested = true;
+        top.RequestAnimationFrame(OnScreenshotFrame);
+    }
+
+    private void OnScreenshotFrame(TimeSpan now)
+    {
+        _screenshotFrameRequested = false;
+
+        if (_screenshotSnapTarget is { } target)
         {
-            started ??= now;
-            double progress = Math.Clamp((now - started.Value).TotalSeconds / ScreenshotGestureSettleSeconds, 0, 1);
-            transform.X = from + (to - from) * easing.Ease(progress);
-            if (progress >= 1 || TopLevel.GetTopLevel(this) is null)
-                completion.TrySetResult();
-            else
-                top.RequestAnimationFrame(Frame);
+            double dt = _screenshotLastFrame is { } last
+                ? (now - last).TotalSeconds
+                : 1.0 / 60.0;
+            _screenshotLastFrame = now;
+            if (dt <= 0) dt = 1.0 / 60.0;
+            dt = Math.Min(dt, ScreenshotMaximumFrameTime);
+
+            double acceleration =
+                -ScreenshotSnapSpringStrength * (_screenshotPosition - target) -
+                ScreenshotSnapSpringDamping * _screenshotVelocity;
+            _screenshotVelocity += acceleration * dt;
+            _screenshotPosition += _screenshotVelocity * dt;
+
+            double distance = Math.Abs(_screenshotPosition - target);
+            if (distance <= ScreenshotSnapStopDistance &&
+                Math.Abs(_screenshotVelocity) <= ScreenshotSnapStopVelocity)
+            {
+                _screenshotPosition = target;
+                _screenshotVelocity = 0;
+                _screenshotSnapTarget = null;
+                _screenshotLastFrame = null;
+                RenderScreenshotStrip();
+
+                int index = Math.Clamp(
+                    (int)Math.Round(target / GetScreenshotPageWidth()),
+                    0,
+                    _vm.ScreenshotCount - 1);
+                SettleScreenshotSelection(index);
+                return;
+            }
+
+            RenderScreenshotStrip();
+            RequestScreenshotFrame();
+            return;
         }
-        top.RequestAnimationFrame(Frame);
-        return completion.Task;
+
+        RenderScreenshotStrip();
+    }
+
+    private void RenderScreenshotStrip()
+    {
+        _screenshotStripTranslate.X = -_screenshotPosition;
+        int active = GetVisualScreenshotIndex();
+        if (active != _lastScreenshotPipIndex)
+        {
+            _lastScreenshotPipIndex = active;
+            UpdatePips();
+        }
+    }
+
+    private int GetVisualScreenshotIndex()
+    {
+        if (_vm.ScreenshotCount == 0) return -1;
+        return Math.Clamp(
+            (int)Math.Round(
+                _screenshotPosition / GetScreenshotPageWidth(),
+                MidpointRounding.AwayFromZero),
+            0,
+            _vm.ScreenshotCount - 1);
+    }
+
+    private double GetScreenshotPageWidth()
+    {
+        if (_screenshotPageWidth > 0) return _screenshotPageWidth;
+
+        double width = ScreenshotsBorder.Bounds.Width;
+        if (width > 0) return width;
+
+        double contentWidth = Math.Max(1, Bounds.Width - 48);
+        return _layoutMode == LayoutMode.Wide
+            ? Math.Max(1, (contentWidth - MainGrid.ColumnSpacing) / 2)
+            : contentWidth;
+    }
+
+    private double GetMaximumScreenshotPosition() =>
+        Math.Max(0, (_vm.ScreenshotCount - 1) * GetScreenshotPageWidth());
+
+    private void RebuildScreenshotStrip()
+    {
+        double oldWidth = _screenshotPageWidth;
+        double pagePosition = oldWidth > 0
+            ? _screenshotPosition / oldWidth
+            : Math.Clamp(_vm.SelectedScreenshotIndex, 0, Math.Max(0, _vm.ScreenshotCount - 1));
+        double? targetPage = _screenshotSnapTarget is { } target && oldWidth > 0
+            ? target / oldWidth
+            : null;
+
+        ScreenshotStrip.Children.Clear();
+        foreach (var screenshot in _vm.Screenshots)
+        {
+            ScreenshotStrip.Children.Add(new Image
+            {
+                Source = screenshot,
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
+            });
+        }
+
+        _screenshotPosition = pagePosition * GetScreenshotPageWidth();
+        if (targetPage is { } page)
+            _screenshotSnapTarget = page * GetScreenshotPageWidth();
+
+        UpdateScreenshotStripLayout();
+        RenderScreenshotStrip();
+    }
+
+    private void UpdateScreenshotStripLayout()
+    {
+        double width = ScreenshotsBorder.Bounds.Width;
+        if (width <= 0) return;
+
+        double oldWidth = _screenshotPageWidth;
+        double pagePosition = oldWidth > 0
+            ? _screenshotPosition / oldWidth
+            : Math.Clamp(_vm.SelectedScreenshotIndex, 0, Math.Max(0, _vm.ScreenshotCount - 1));
+        double? targetPage = _screenshotSnapTarget is { } target && oldWidth > 0
+            ? target / oldWidth
+            : null;
+
+        _screenshotPageWidth = width;
+        double height = !double.IsNaN(ScreenshotsBorder.Height) && ScreenshotsBorder.Height > 0
+            ? ScreenshotsBorder.Height
+            : Math.Max(1, ScreenshotsBorder.Bounds.Height);
+
+        foreach (Control child in ScreenshotStrip.Children)
+        {
+            child.Width = width;
+            child.Height = height;
+        }
+
+        _screenshotPosition = pagePosition * width;
+        if (targetPage is { } page)
+            _screenshotSnapTarget = page * width;
+
+        RenderScreenshotStrip();
+    }
+
+    private void SetScreenshotPositionToIndex(int index)
+    {
+        if (_vm.ScreenshotCount == 0)
+        {
+            _screenshotPosition = 0;
+            RenderScreenshotStrip();
+            return;
+        }
+
+        index = Math.Clamp(index, 0, _vm.ScreenshotCount - 1);
+        _screenshotPosition = index * GetScreenshotPageWidth();
+        _screenshotVelocity = 0;
+        _screenshotSnapTarget = null;
+        _screenshotLastFrame = null;
+        RenderScreenshotStrip();
+    }
+
+    private void SettleScreenshotSelection(int index)
+    {
+        index = Math.Clamp(index, 0, Math.Max(0, _vm.ScreenshotCount - 1));
+        if (_vm.ScreenshotCount > 0 && _vm.SelectedScreenshotIndex != index)
+        {
+            _updatingScreenshotSelection = true;
+            _vm.SelectedScreenshotIndex = index;
+            _updatingScreenshotSelection = false;
+        }
+
+        UpdatePips();
+        UpdateScreenshotHeight();
+        Dispatcher.UIThread.Post(UpdateScreenshotStripLayout, DispatcherPriority.Loaded);
+    }
+
+    private void ResetScreenshotGestureRouting()
+    {
+        _screenshotGestureAxis = GestureAxis.Undecided;
+        _screenshotGestureIntent = default;
+        _lastScreenshotGestureInputTimestamp = 0;
+        _lastScreenshotHorizontalInputTimestamp = 0;
     }
 
     private void UpdatePips()
     {
-        int active = _vm.SelectedScreenshotIndex;
+        int active = GetVisualScreenshotIndex();
         foreach (var container in ScreenshotPips.GetRealizedContainers())
         {
             int index = ScreenshotPips.IndexFromContainer(container);
-
-            // ItemsControl may wrap the data template's Button in a ContentPresenter. Resolve the
-            // actual ellipse instead of assuming the realized container is the Button itself.
             Ellipse? ellipse = container is Button { Content: Ellipse direct }
                 ? direct
                 : container.GetVisualDescendants()

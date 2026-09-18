@@ -294,44 +294,24 @@
                                 Spacing="8">
                         <Border CornerRadius="8" ClipToBounds="True"
                                 x:Name="ScreenshotsBorder"
-                                MinHeight="130">
+                                MinHeight="130"
+                                controls:SmoothScrollManager.HandlesPrecisionWheelInput="True">
                             <Panel>
                                 <!-- Neutral WinUI fallback only behind actual screenshots; the empty-state
                                      banner below composites over the themed window background instead. -->
                                 <Border Background="{DynamicResource ScreenshotLetterboxBackground}"
                                         IsVisible="{Binding HasScreenshots}"/>
-                                <Carousel x:Name="ScreenshotsCarousel"
-                                          IsVisible="{Binding HasScreenshots}"
-                                          ItemsSource="{Binding Screenshots}"
-                                          SelectedIndex="{Binding SelectedScreenshotIndex, Mode=TwoWay}">
-                                    <Carousel.PageTransition>
-                                        <infrastructure:DirectionalSlideTransition FollowForwardDirection="True"/>
-                                    </Carousel.PageTransition>
-                                    <Carousel.ItemTemplate>
-                                        <DataTemplate>
-                                            <Image Source="{Binding}"
-                                                   Stretch="Uniform"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"/>
-                                        </DataTemplate>
-                                    </Carousel.ItemTemplate>
-                                </Carousel>
-
-                                <!-- Pointer-wheel touchpad gestures expose normalized deltas rather than
-                                     manipulation coordinates. This two-page layer lets the viewport follow
-                                     those deltas directly before settling at the halfway point. -->
-                                <Grid x:Name="ScreenshotGestureLayer"
-                                      IsVisible="False"
-                                      IsHitTestVisible="False"
+                                <!-- Render screenshots as one continuous horizontal strip. The
+                                     strip itself owns the physical position; touchpad input and
+                                     snap animations both manipulate that same coordinate. -->
+                                <Grid x:Name="ScreenshotViewport"
+                                      IsVisible="{Binding HasScreenshots}"
                                       ClipToBounds="True">
-                                    <Image x:Name="GestureCurrentScreenshot"
-                                           Stretch="Uniform"
-                                           HorizontalAlignment="Stretch"
-                                           VerticalAlignment="Stretch"/>
-                                    <Image x:Name="GestureAdjacentScreenshot"
-                                           Stretch="Uniform"
-                                           HorizontalAlignment="Stretch"
-                                           VerticalAlignment="Stretch"/>
+                                    <StackPanel x:Name="ScreenshotStrip"
+                                                Orientation="Horizontal"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Stretch"
+                                                IsHitTestVisible="True"/>
                                 </Grid>
 
                                 <!-- Contributor banner shown when no screenshots -->

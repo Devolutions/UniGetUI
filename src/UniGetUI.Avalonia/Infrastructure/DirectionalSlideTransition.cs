@@ -68,6 +68,9 @@ public sealed class DirectionalSlideTransition : IPageTransition
                 sv.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         }
 
+        if (cancellationToken.IsCancellationRequested)
+            return;
+
         // Hide before clearing the transform so the outgoing page never snaps back on-screen.
         if (from is not null)
         {

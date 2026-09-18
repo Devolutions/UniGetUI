@@ -46,6 +46,7 @@
                                 <Button x:Name="PreviousTabButton"
                                         Classes="install-options-tab-scroll"
                                         Margin="8,0,3,3"
+                                        IsVisible="False"
                                         Click="PreviousTabButton_Click">
                                     <Path Data="M 5,0 L 0,4 L 5,8 Z"
                                           Width="5" Height="8"
@@ -62,6 +63,7 @@
                                         Grid.Column="2"
                                         Classes="install-options-tab-scroll"
                                         Margin="3,0,8,3"
+                                        IsVisible="False"
                                         Click="NextTabButton_Click">
                                     <Path Data="M 0,0 L 5,4 L 0,8 Z"
                                           Width="5" Height="8"
@@ -236,8 +238,10 @@
                        TextWrapping="Wrap"
                        Margin="4,0"/>
 
-            <TabControl Classes="install-options-tabs"
-                        IsEnabled="{Binding IsCustomMode}">
+            <TabControl x:Name="InstallOptionsTabs"
+                        Classes="install-options-tabs"
+                        IsEnabled="{Binding IsCustomMode}"
+                        LayoutUpdated="InstallOptionsTabs_LayoutUpdated">
 
             <!-- Tab 0: General -->
             <TabItem>

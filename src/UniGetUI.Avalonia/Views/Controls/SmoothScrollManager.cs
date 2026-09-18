@@ -62,6 +62,8 @@ public sealed class SmoothScrollManager
     private TranslateTransform? _overpanTranslation;
     private readonly List<(Visual Visual, ITransform? Original, ITransform Applied)> _overpanRows = new();
     private bool _originalRowsClipToBounds;
+    private bool _overpanRowsClipCaptured;
+    private bool _overpanUsesRows;
 
     private SmoothScrollManager(Control target)
     {
@@ -165,8 +167,10 @@ public sealed class SmoothScrollManager
                 // DataGrid.UpdateScroll assigns (rather than adds to) its pending layout scroll.
                 // Multiple touchpad packets before one layout otherwise overwrite each other.
                 // Preserve every fractional delta and submit one combined step per frame.
-                if (_pendingPrecisionStep.X * step.X < 0 || _pendingPrecisionStep.Y * step.Y < 0)
-                    _pendingPrecisionStep = default;
+                if (_pendingPrecisionStep.X * step.X < 0)
+                    _pendingPrecisionStep = new Vector(0, _pendingPrecisionStep.Y);
+                if (_pendingPrecisionStep.Y * step.Y < 0)
+                    _pendingPrecisionStep = new Vector(_pendingPrecisionStep.X, 0);
                 _pendingPrecisionStep += step;
                 RequestFrame();
             }
@@ -264,7 +268,6 @@ public sealed class SmoothScrollManager
             Stopwatch.GetElapsedTime(state.LastPrecisionTimestamp, now).TotalSeconds > PrecisionGestureRetention)
             return false;
 
-        state.LastPrecisionTimestamp = now;
         return true;
     }
 
@@ -498,6 +501,8 @@ public sealed class SmoothScrollManager
     private void UpdateOverpanTransform()
     {
         if (_overpanVisual is null && !TryAttachOverpanTransform()) return;
+        if (_overpanUsesRows && _overpanVisual is not null)
+            AttachDataGridRows(_overpanVisual);
         _overpanTranslation!.X = _overpan.X;
         _overpanTranslation.Y = _overpan.Y;
     }
@@ -546,22 +551,11 @@ public sealed class SmoothScrollManager
         _overpanTranslation = new TranslateTransform();
         if (_target is DataGrid)
         {
+            _overpanUsesRows = true;
             _originalRowsClipToBounds = visual.ClipToBounds;
+            _overpanRowsClipCaptured = true;
             visual.ClipToBounds = true;
-            foreach (Visual row in visual.GetVisualChildren())
-            {
-                ITransform? original = row.RenderTransform;
-                ITransform applied = _overpanTranslation;
-                if (original is not null)
-                {
-                    var transforms = new TransformGroup();
-                    transforms.Children.Add(original as Transform ?? new MatrixTransform(original.Value));
-                    transforms.Children.Add(_overpanTranslation);
-                    applied = transforms;
-                }
-                _overpanRows.Add((row, original, applied));
-                row.RenderTransform = applied;
-            }
+            AttachDataGridRows(visual);
             return true;
         }
         if (_originalOverpanTransform is null)
@@ -582,6 +576,34 @@ public sealed class SmoothScrollManager
 
         visual.RenderTransform = _appliedOverpanTransform;
         return true;
+    }
+
+    private void AttachDataGridRows(Visual rowsPresenter)
+    {
+        foreach (Visual row in rowsPresenter.GetVisualChildren())
+        {
+            bool alreadyAttached = false;
+            foreach (var existing in _overpanRows)
+            {
+                if (!ReferenceEquals(existing.Visual, row)) continue;
+                alreadyAttached = true;
+                break;
+            }
+            if (alreadyAttached) continue;
+
+            ITransform? original = row.RenderTransform;
+            ITransform applied = _overpanTranslation!;
+            if (original is not null)
+            {
+                var transforms = new TransformGroup();
+                transforms.Children.Add(original as Transform ?? new MatrixTransform(original.Value));
+                transforms.Children.Add(_overpanTranslation!);
+                applied = transforms;
+            }
+
+            _overpanRows.Add((row, original, applied));
+            row.RenderTransform = applied;
+        }
     }
 
     private static (double Position, double Velocity) StepSpring(
@@ -607,11 +629,11 @@ public sealed class SmoothScrollManager
         foreach (var row in _overpanRows)
             if (ReferenceEquals(row.Visual.RenderTransform, row.Applied))
                 row.Visual.RenderTransform = row.Original;
-        if (_overpanRows.Count > 0 && _overpanVisual is not null)
+        if (_overpanRowsClipCaptured && _overpanVisual is not null)
             _overpanVisual.ClipToBounds = _originalRowsClipToBounds;
         _overpanRows.Clear();
 
-        if (_overpanVisual is not null &&
+        if (!_overpanUsesRows && _overpanVisual is not null &&
             ReferenceEquals(_overpanVisual.RenderTransform, _appliedOverpanTransform))
             _overpanVisual.RenderTransform = _originalOverpanTransform;
 
@@ -619,6 +641,8 @@ public sealed class SmoothScrollManager
         _originalOverpanTransform = null;
         _appliedOverpanTransform = null;
         _overpanTranslation = null;
+        _overpanRowsClipCaptured = false;
+        _overpanUsesRows = false;
     }
 
     private void Stop()

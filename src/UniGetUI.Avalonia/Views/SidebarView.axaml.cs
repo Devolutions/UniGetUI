@@ -276,7 +276,8 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             if (progress >= 1d)
                 break;
 
-            await NextAnimationFrameAsync();
+            if (await NextAnimationFrameAsync() is null)
+                return;
         }
 
         if (version != _pillAnimationVersion || cancellationToken.IsCancellationRequested)
@@ -285,13 +286,13 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         SetPillEdges(targetTop, targetBottom);
     }
 
-    private Task<TimeSpan> NextAnimationFrameAsync()
+    private Task<TimeSpan?> NextAnimationFrameAsync()
     {
         if (TopLevel.GetTopLevel(NavigationSelectionPill) is not { } topLevel)
-            return Task.FromResult(TimeSpan.Zero);
+            return Task.FromResult<TimeSpan?>(null);
 
-        var completion = new TaskCompletionSource<TimeSpan>();
-        topLevel.RequestAnimationFrame(completion.SetResult);
+        var completion = new TaskCompletionSource<TimeSpan?>();
+        topLevel.RequestAnimationFrame(time => completion.SetResult(time));
         return completion.Task;
     }
 

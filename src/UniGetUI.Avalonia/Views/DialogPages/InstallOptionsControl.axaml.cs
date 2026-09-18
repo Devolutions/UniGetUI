@@ -30,17 +30,61 @@ public partial class InstallOptionsControl : UserControl
 
     private static void ScrollTabHeaders(Control? source, double delta)
     {
-        ScrollViewer? scrollViewer = source?
-            .FindAncestorOfType<TabControl>()?
-            .GetVisualDescendants()
-            .OfType<ScrollViewer>()
-            .FirstOrDefault(viewer => viewer.Name == "TabHeadersScrollViewer");
-        if (scrollViewer is null) return;
+        TabControl? tabControl = source?.FindAncestorOfType<TabControl>();
+        ScrollViewer? scrollViewer = FindTabHeadersScrollViewer(tabControl);
+        if (tabControl is null || scrollViewer is null) return;
 
         double maximum = Math.Max(0d,
             scrollViewer.Extent.Width - scrollViewer.Viewport.Width);
         double target = Math.Clamp(scrollViewer.Offset.X + delta, 0d, maximum);
         scrollViewer.Offset = new Vector(target, scrollViewer.Offset.Y);
+        UpdateTabScrollButtons(tabControl);
+    }
+
+    private void InstallOptionsTabs_LayoutUpdated(object? sender, EventArgs e)
+    {
+        if (sender is TabControl tabControl)
+            UpdateTabScrollButtons(tabControl);
+    }
+
+    private static ScrollViewer? FindTabHeadersScrollViewer(TabControl? tabControl)
+        => tabControl?
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .FirstOrDefault(viewer => viewer.Name == "TabHeadersScrollViewer");
+
+    private static void UpdateTabScrollButtons(TabControl tabControl)
+    {
+        ScrollViewer? scrollViewer = FindTabHeadersScrollViewer(tabControl);
+        if (scrollViewer?.Parent is not Grid headerGrid) return;
+
+        Button? previous = headerGrid.Children
+            .OfType<Button>()
+            .FirstOrDefault(button => button.Name == "PreviousTabButton");
+        Button? next = headerGrid.Children
+            .OfType<Button>()
+            .FirstOrDefault(button => button.Name == "NextTabButton");
+        if (previous is null || next is null) return;
+
+        // Decide overflow against the full header width, not the reduced viewport while the
+        // chevrons are visible, otherwise the buttons can latch themselves on.
+        bool hasOverflow = scrollViewer.Extent.Width > headerGrid.Bounds.Width + 0.5;
+        previous.IsVisible = hasOverflow;
+        next.IsVisible = hasOverflow;
+
+        if (!hasOverflow)
+        {
+            previous.IsEnabled = false;
+            next.IsEnabled = false;
+            if (scrollViewer.Offset.X != 0)
+                scrollViewer.Offset = new Vector(0, scrollViewer.Offset.Y);
+            return;
+        }
+
+        double maximum = Math.Max(0d,
+            scrollViewer.Extent.Width - scrollViewer.Viewport.Width);
+        previous.IsEnabled = scrollViewer.Offset.X > 0.5;
+        next.IsEnabled = scrollViewer.Offset.X < maximum - 0.5;
     }
 
     private async void SelectDir_Click(object? sender, RoutedEventArgs e)

@@ -165,10 +165,12 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     {
         if (e.PropertyName == nameof(PackageDetailsViewModel.SelectedScreenshotIndex)
             || e.PropertyName == nameof(PackageDetailsViewModel.ScreenshotCount))
+        {
+            bool selectionUpdateWasInternal = _updatingScreenshotSelection;
             Dispatcher.UIThread.Post(() =>
             {
                 if (e.PropertyName == nameof(PackageDetailsViewModel.SelectedScreenshotIndex)
-                    && !_updatingScreenshotSelection
+                    && !selectionUpdateWasInternal
                     && _screenshotSnapTarget is null
                     && _screenshotGestureAxis != GestureAxis.Horizontal)
                 {
@@ -179,6 +181,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
                 UpdateScreenshotHeight();
                 UpdateScreenshotStripLayout();
             }, DispatcherPriority.Loaded);
+        }
     }
 
     private void OnPipClicked(object? sender, RoutedEventArgs e)
@@ -214,7 +217,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
 
     private void OnScreenshotPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
-        if (e.Delta == default || e.KeyModifiers != KeyModifiers.None ||
+        if (MotionPreference.ReducedMotion || e.Delta == default || e.KeyModifiers != KeyModifiers.None ||
             e.Source is not Visual source || TopLevel.GetTopLevel(this) is not { } top ||
             !SmoothScrollManager.IsPrecisionTouchpadScroll(top, e.Delta))
             return;
@@ -375,7 +378,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         return displacement + added;
     }
 
-    private async void CompleteScreenshotGesture(object? sender, EventArgs e)
+    private void CompleteScreenshotGesture(object? sender, EventArgs e)
     {
         _screenshotGestureTimer.Stop();
 
@@ -395,7 +398,6 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
             StartScreenshotSnapToRest();
 
         ResetScreenshotGestureRouting();
-        await Task.CompletedTask;
     }
 
     private void StartScreenshotSnapToRest()
@@ -524,6 +526,8 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         {
             _lastScreenshotPipIndex = active;
             UpdatePips();
+            UpdateScreenshotHeight();
+            Dispatcher.UIThread.Post(UpdateScreenshotStripLayout, DispatcherPriority.Loaded);
         }
     }
 
@@ -703,15 +707,16 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
 
     private void UpdateScreenshotHeight()
     {
+        int screenshotIndex = GetVisualScreenshotIndex();
         if (!_vm.HasScreenshots
-            || _vm.SelectedScreenshotIndex < 0
-            || _vm.SelectedScreenshotIndex >= _vm.Screenshots.Count)
+            || screenshotIndex < 0
+            || screenshotIndex >= _vm.Screenshots.Count)
         {
             ScreenshotsBorder.Height = _layoutMode == LayoutMode.Wide ? 150 : 130;
             return;
         }
 
-        PixelSize pixels = _vm.Screenshots[_vm.SelectedScreenshotIndex].PixelSize;
+        PixelSize pixels = _vm.Screenshots[screenshotIndex].PixelSize;
         if (pixels.Width <= 0 || pixels.Height <= 0)
             return;
 

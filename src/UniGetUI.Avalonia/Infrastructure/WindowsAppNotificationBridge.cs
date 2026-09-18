@@ -263,6 +263,8 @@ internal static class WindowsAppNotificationBridge
         return true;
     }
 
+#if WINDOWS
     private static string BuildLaunchArgument(string action)
         => $"unigetui://{action}";
+#endif
 }

@@ -56,10 +56,12 @@
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="14"/>
         </Style>
         <Style Selector="Button.action-chevron">
-            <Setter Property="Width" Value="34"/>
+            <Setter Property="Width" Value="30"/>
             <Setter Property="Height" Value="40"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0"/>
@@ -99,14 +101,15 @@
 
         <!-- Screenshot prev/next chevrons (overlay on hover) -->
         <Style Selector="Button.carousel-nav">
-            <Setter Property="Width" Value="32"/>
-            <Setter Property="Height" Value="48"/>
+            <!-- Match the WinUI FlipView navigation button used by the former Windows UI. -->
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="38"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Background" Value="#80000000"/>
+            <Setter Property="Background" Value="{DynamicResource CarouselNavigationBackground}"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Foreground" Value="{DynamicResource CarouselNavigationForeground}"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Opacity" Value="0"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -115,6 +118,10 @@
                     <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
                 </Transitions>
             </Setter>
+        </Style>
+        <Style Selector="Button.carousel-nav:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource CarouselNavigationHoverBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource CarouselNavigationHoverForeground}"/>
         </Style>
         <Style Selector="Border#ScreenshotsBorder:pointerover Button.carousel-nav">
             <Setter Property="Opacity" Value="0.9"/>
@@ -201,6 +208,7 @@
 
                     <!-- ── Action button (split: main + chevron dropdown) ── -->
                     <Grid x:Name="ActionsPanel"
+                          Width="250"
                           VerticalAlignment="Top"
                           HorizontalAlignment="Left"
                           ColumnSpacing="0">
@@ -307,9 +315,26 @@
                                     </Carousel.ItemTemplate>
                                 </Carousel>
 
+                                <!-- Pointer-wheel touchpad gestures expose normalized deltas rather than
+                                     manipulation coordinates. This two-page layer lets the viewport follow
+                                     those deltas directly before settling at the halfway point. -->
+                                <Grid x:Name="ScreenshotGestureLayer"
+                                      IsVisible="False"
+                                      IsHitTestVisible="False"
+                                      ClipToBounds="True">
+                                    <Image x:Name="GestureCurrentScreenshot"
+                                           Stretch="Uniform"
+                                           HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Stretch"/>
+                                    <Image x:Name="GestureAdjacentScreenshot"
+                                           Stretch="Uniform"
+                                           HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Stretch"/>
+                                </Grid>
+
                                 <!-- Contributor banner shown when no screenshots -->
                                 <Grid IsVisible="{Binding !HasScreenshots}"
-                                      Background="{DynamicResource AppDialogDarkBackground}"
+                                      Background="{DynamicResource ScreenshotEmptyBackground}"
                                       ColumnDefinitions="*,Auto"
                                       Margin="0"
                                       ColumnSpacing="12">
@@ -331,14 +356,23 @@
                                         Classes="carousel-nav"
                                         HorizontalAlignment="Left"
                                         Margin="6,0,0,0"
-                                        Content="‹"
-                                        IsVisible="{Binding HasScreenshots}"/>
+                                        IsVisible="{Binding HasScreenshots}">
+                                    <!-- WinUI FlipView's EDD9 CaretLeftSolid8, expressed as geometry so it
+                                         stays identical on systems without Segoe Fluent Icons. -->
+                                    <Path Data="M 5,0 L 0,4 L 5,8 Z"
+                                          Width="5" Height="8"
+                                          Fill="{Binding $parent[Button].Foreground}"/>
+                                </Button>
                                 <Button x:Name="NextScreenshotButton"
                                         Classes="carousel-nav"
                                         HorizontalAlignment="Right"
                                         Margin="0,0,6,0"
-                                        Content="›"
-                                        IsVisible="{Binding HasScreenshots}"/>
+                                        IsVisible="{Binding HasScreenshots}">
+                                    <!-- WinUI FlipView's EDDA CaretRightSolid8 glyph. -->
+                                    <Path Data="M 0,0 L 5,4 L 0,8 Z"
+                                          Width="5" Height="8"
+                                          Fill="{Binding $parent[Button].Foreground}"/>
+                                </Button>
                             </Panel>
                         </Border>
 

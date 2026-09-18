@@ -53,6 +53,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     private readonly TranslateTransform _gestureAdjacentTranslate = new();
     private double _screenshotDragOffset;
     private int _screenshotGestureStartIndex;
+    private long _lastScreenshotGestureInputTimestamp;
     private bool _screenshotGestureActive;
     private bool _screenshotGestureSettling;
 
@@ -191,6 +192,8 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         if (!_screenshotGestureActive) BeginScreenshotGesture();
 
         _screenshotGestureTimer.Stop();
+        _lastScreenshotGestureInputTimestamp = Stopwatch.GetTimestamp();
+        _screenshotGestureTimer.Interval = TimeSpan.FromSeconds(ScreenshotGestureRetention);
         double width = Math.Max(1, ScreenshotsBorder.Bounds.Width);
         double input = e.Delta.X * SmoothScrollPhysics.PrecisionTouchpadDistance;
         double candidate = _screenshotDragOffset + input;
@@ -259,6 +262,18 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     {
         _screenshotGestureTimer.Stop();
         if (!_screenshotGestureActive || _screenshotGestureSettling) return;
+
+        // A DispatcherTimer tick can already be queued when Stop() is called by a fresh wheel
+        // event. Only settle after a full quiet period so a stale tick can't briefly snap the
+        // overpan back while the touchpad gesture is still active.
+        TimeSpan retention = TimeSpan.FromSeconds(ScreenshotGestureRetention);
+        TimeSpan idle = Stopwatch.GetElapsedTime(_lastScreenshotGestureInputTimestamp);
+        if (idle < retention)
+        {
+            _screenshotGestureTimer.Interval = retention - idle;
+            _screenshotGestureTimer.Start();
+            return;
+        }
 
         _screenshotGestureSettling = true;
         double width = Math.Max(1, ScreenshotsBorder.Bounds.Width);

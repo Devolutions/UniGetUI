@@ -211,6 +211,82 @@ public class PolicyEditorTemplatesTests
     }
 
     [Fact]
+    public void RiskCoverage_SuppressesOnlyProvablyShadowedSensitiveBehavior()
+    {
+        PolicyEditorDraftRule deny = PolicyRuleFactory.CreateBlank("deny-skip-hash");
+        deny.Enabled = true;
+        deny.Match.Operations.Add(Operation.Update);
+        deny.Match.Managers.Add(ManagerName.Winget);
+        deny.Match.SkipHashCheck = TriState.True;
+        PolicyEditorDraftRule allow = PolicyRuleFactory.CreateBlank("allow-updates");
+        allow.Enabled = true;
+        allow.Decision = Decision.Allow;
+        allow.Match.Operations.Add(Operation.Update);
+        allow.Match.Managers.Add(ManagerName.Winget);
+        allow.Constraints = new PolicyEditorDraftConstraints
+        {
+            AllowSkipHashCheck = true,
+        };
+
+        Assert.True(PolicyEditorAdvisories.PolicyEditorRiskCoverage.IsCovered(
+            [deny, allow],
+            1,
+            PolicyEditorAdvisories.PolicyEditorRisk.SkipHashCheck));
+        Assert.Empty(PolicyEditorAdvisories.SkipHashCheck(allow, [deny, allow], 1));
+        Assert.True(PolicyEditorAdvisories.PolicyEditorRiskCoverage.ShouldSuppressFinding(
+            new PolicyValidationFinding(
+                "/Rules/1/Match/SkipHashCheck",
+                "allow-updates",
+                PolicyValidationSeverity.Warning,
+                "warning",
+                Devolutions.Now.Policy.Api.PolicyFindingCode.SensitiveOptionAllowed,
+                new Dictionary<string, string> { ["option"] = "\"SkipHashCheck\"" }),
+            [deny, allow]));
+
+        deny.Match.HasPrePostCommands = TriState.True;
+        Assert.False(PolicyEditorAdvisories.PolicyEditorRiskCoverage.IsCovered(
+            [deny, allow],
+            1,
+            PolicyEditorAdvisories.PolicyEditorRisk.SkipHashCheck));
+
+        deny.Match.HasPrePostCommands = TriState.Omitted;
+        deny.Match.Operations[0] = Operation.Install;
+        Assert.False(PolicyEditorAdvisories.PolicyEditorRiskCoverage.IsCovered(
+            [deny, allow],
+            1,
+            PolicyEditorAdvisories.PolicyEditorRisk.SkipHashCheck));
+
+        deny.Match.Operations[0] = Operation.Update;
+        deny.Match.Managers[0] = ManagerName.Scoop;
+        Assert.False(PolicyEditorAdvisories.PolicyEditorRiskCoverage.IsCovered(
+            [deny, allow],
+            1,
+            PolicyEditorAdvisories.PolicyEditorRisk.SkipHashCheck));
+
+        deny.Match.Managers[0] = ManagerName.Winget;
+        allow.Match.PackageIdentifierMode = PackageIdentifierMode.Exact;
+        allow.Match.ExactPackageIdentifiers.Add("Contoso.App");
+        deny.Match.PackageIdentifierMode = PackageIdentifierMode.Exact;
+        deny.Match.ExactPackageIdentifiers.Add("Contoso.App");
+        Assert.True(PolicyEditorAdvisories.PolicyEditorRiskCoverage.IsCovered(
+            [deny, allow],
+            1,
+            PolicyEditorAdvisories.PolicyEditorRisk.SkipHashCheck));
+
+        deny.Match.PackageIdentifierMode = PackageIdentifierMode.Patterns;
+        deny.Match.PackageIdentifierPatterns.Add("*");
+        Assert.False(PolicyEditorAdvisories.PolicyEditorRiskCoverage.IsCovered(
+            [deny, allow],
+            1,
+            PolicyEditorAdvisories.PolicyEditorRisk.SkipHashCheck));
+
+        Assert.False(PolicyEditorAdvisories.PolicyEditorRiskCoverage.IsCovered(
+            [allow, deny],
+            0,
+            PolicyEditorAdvisories.PolicyEditorRisk.SkipHashCheck));
+    }
+
+    [Fact]
     public void AddedRule_TriStateSelectorsDisplayDoesNotMatter()
     {
         PolicyEditorSession session = PolicyEditorSession.StartCreate(

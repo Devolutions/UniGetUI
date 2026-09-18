@@ -945,23 +945,41 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         PolicyEditorAdvisories.ForRule(Rule);
     public bool HasRuleSafetyAdvisories => RuleSafetyAdvisories.Count > 0;
     public string SkipHashCheckAdvisory =>
-        PolicyEditorAdvisories.SkipHashCheck(Rule);
+        PolicyEditorAdvisories.SkipHashCheck(
+            Rule,
+            _sessionViewModel.Rules,
+            _ruleIndex);
     public bool HasSkipHashCheckAdvisory =>
         !string.IsNullOrEmpty(SkipHashCheckAdvisory);
     public string CustomParametersAdvisory =>
-        PolicyEditorAdvisories.CustomParameters(Rule);
+        PolicyEditorAdvisories.CustomParameters(
+            Rule,
+            _sessionViewModel.Rules,
+            _ruleIndex);
     public bool HasCustomParametersAdvisory =>
         !string.IsNullOrEmpty(CustomParametersAdvisory);
     public string CustomInstallLocationAdvisory =>
-        PolicyEditorAdvisories.CustomInstallLocation(Rule);
+        PolicyEditorAdvisories.CustomInstallLocation(
+            Rule,
+            _sessionViewModel.Rules,
+            _ruleIndex);
     public bool HasCustomInstallLocationAdvisory =>
         !string.IsNullOrEmpty(CustomInstallLocationAdvisory);
     public string PrePostCommandsAdvisory =>
-        PolicyEditorAdvisories.PrePostCommands(Rule);
+        PolicyEditorAdvisories.PrePostCommands(
+            Rule,
+            _sessionViewModel.Rules,
+            _ruleIndex);
     public bool HasPrePostCommandsAdvisory =>
         !string.IsNullOrEmpty(PrePostCommandsAdvisory);
     public int FieldSafetyAdvisoryCount =>
-        PolicyEditorAdvisories.FieldSpecific(Rule).Count;
+        new[]
+        {
+            SkipHashCheckAdvisory,
+            CustomParametersAdvisory,
+            CustomInstallLocationAdvisory,
+            PrePostCommandsAdvisory,
+        }.Count(message => !string.IsNullOrEmpty(message));
     public bool HasFieldSafetyAdvisories => FieldSafetyAdvisoryCount > 0;
     public string FieldSafetyAdvisoryCountText => CoreTools.Translate(
         "{0} warning(s)",

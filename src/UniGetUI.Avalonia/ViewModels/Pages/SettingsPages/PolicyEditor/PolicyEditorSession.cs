@@ -372,9 +372,10 @@ public sealed class PolicyEditorSession
         ArgumentNullException.ThrowIfNull(submittedRawJson);
         ArgumentNullException.ThrowIfNull(validation);
 
+        IReadOnlyList<PolicyValidationFinding> findings;
         if (boundedFindings is not null)
         {
-            Findings = PolicyEditorFindingIndex.Build(boundedFindings, omittedFindingCount);
+            findings = boundedFindings;
         }
         else
         {
@@ -387,10 +388,19 @@ public sealed class PolicyEditorSession
                 sanitized.Add(PolicyValidationFinding.FromShared(validation.Findings[index]));
             }
 
-            Findings = PolicyEditorFindingIndex.Build(
-                sanitized,
-                validation.Findings.Count - take);
+            findings = sanitized;
+            omittedFindingCount += validation.Findings.Count - take;
         }
+        if (validation.CanonicalDraft is not null)
+        {
+            IReadOnlyList<PolicyEditorDraftRule> rules =
+                PolicyEditorMapper.ToDraft(validation.CanonicalDraft).Rules;
+            findings = findings
+                .Where(finding => !PolicyEditorAdvisories.PolicyEditorRiskCoverage
+                    .ShouldSuppressFinding(finding, rules))
+                .ToArray();
+        }
+        Findings = PolicyEditorFindingIndex.Build(findings, omittedFindingCount);
         if (!validation.IsValid
             || validation.CanonicalDraft is null
             || string.IsNullOrWhiteSpace(validation.ValidationReceipt))

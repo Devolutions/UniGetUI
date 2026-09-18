@@ -107,6 +107,8 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
                 _vm.SelectedScreenshotIndex++;
         };
         ScreenshotPips.AddHandler(Button.ClickEvent, OnPipClicked);
+        ScreenshotPips.ContainerPrepared += (_, _) =>
+            Dispatcher.UIThread.Post(UpdatePips, DispatcherPriority.Loaded);
         ScreenshotsBorder.AddHandler(
             PointerWheelChangedEvent,
             OnScreenshotPointerWheelChanged,
@@ -335,9 +337,10 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     private void UpdatePips()
     {
         int active = _vm.SelectedScreenshotIndex;
-        int i = 0;
         foreach (var container in ScreenshotPips.GetRealizedContainers())
         {
+            int index = ScreenshotPips.IndexFromContainer(container);
+
             // ItemsControl may wrap the data template's Button in a ContentPresenter. Resolve the
             // actual ellipse instead of assuming the realized container is the Button itself.
             Ellipse? ellipse = container is Button { Content: Ellipse direct }
@@ -345,9 +348,7 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
                 : container.GetVisualDescendants()
                     .OfType<Ellipse>()
                     .FirstOrDefault(candidate => candidate.Classes.Contains("pip"));
-            if (ellipse is not null)
-                ellipse.Classes.Set("active", i == active);
-            i++;
+            ellipse?.Classes.Set("active", index == active);
         }
     }
 

@@ -31,6 +31,12 @@ namespace UniGetUI.Core.Tools
         [GeneratedRegex(@"^[0-9]+(?:\.[0-9]+)*$", RegexOptions.CultureInvariant)]
         private static partial Regex PlainReleasePattern();
 
+        [GeneratedRegex(
+            @"^v?(?:[0-9]+!)?(?<release>[0-9]+(?:\.[0-9]+)*)",
+            RegexOptions.CultureInvariant
+        )]
+        private static partial Regex LeadingReleasePattern();
+
         public static bool TryParse(string? text, out PythonVersionSpecifier specifier)
         {
             specifier = default;
@@ -72,7 +78,7 @@ namespace UniGetUI.Core.Tools
             if (wildcard && op is not ("==" or "!="))
                 return false;
 
-            int[]? release = ParseRelease(bareVersion);
+            int[]? release = op is "~=" ? ParseLeadingRelease(bareVersion) : ParseRelease(bareVersion);
 
             if (wildcard && release is null)
                 return false;
@@ -93,11 +99,19 @@ namespace UniGetUI.Core.Tools
             return true;
         }
 
+        private static int[]? ParseLeadingRelease(string value)
+        {
+            Match match = LeadingReleasePattern().Match(value);
+            return match.Success ? ParseReleaseParts(match.Groups["release"].Value) : null;
+        }
+
         private static int[]? ParseRelease(string value)
         {
-            if (!PlainReleasePattern().IsMatch(value))
-                return null;
+            return PlainReleasePattern().IsMatch(value) ? ParseReleaseParts(value) : null;
+        }
 
+        private static int[]? ParseReleaseParts(string value)
+        {
             string[] parts = value.Split('.');
             int[] release = new int[parts.Length];
             for (int i = 0; i < parts.Length; i++)

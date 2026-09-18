@@ -298,6 +298,18 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
         [GeneratedRegex(@"[-_.]+", RegexOptions.CultureInvariant)]
         private static partial Regex ProjectNameSeparatorPattern();
 
+        protected override void _performPreInitializationSteps()
+        {
+            lock (_indexUpdateCheckLock)
+            {
+                _indexUpdateCheckProbed = false;
+                _indexUpdateCheckSupported = false;
+                _interpreterVersion = default;
+            }
+
+            _latestVersionCache.Clear();
+        }
+
         private bool TryGetIndexUpdateCheckInterpreter(out PythonVersion interpreter)
         {
             lock (_indexUpdateCheckLock)
@@ -343,10 +355,38 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             return true;
         }
 
+        private static readonly string[] IndexEnvironmentVariables =
+        [
+            "PIP_INDEX_URL",
+            "PIP_EXTRA_INDEX_URL",
+            "PIP_NO_INDEX",
+            "PIP_FIND_LINKS",
+        ];
+
+        private static readonly string[] IndexConfigurationKeys =
+        [
+            "index-url",
+            "extra-index-url",
+            "no-index",
+            "find-links",
+        ];
+
+        internal static bool IsIndexConfigurationLine(string line)
+        {
+            int separator = line.IndexOf('=');
+            if (separator < 0)
+                return false;
+
+            string key = line[..separator].Trim();
+            int lastDot = key.LastIndexOf('.');
+            string name = lastDot >= 0 ? key[(lastDot + 1)..] : key;
+
+            return IndexConfigurationKeys.Contains(name, StringComparer.OrdinalIgnoreCase);
+        }
+
         private bool HasCustomIndexConfigured()
         {
-            string[] variables = ["PIP_INDEX_URL", "PIP_EXTRA_INDEX_URL"];
-            foreach (string variable in variables)
+            foreach (string variable in IndexEnvironmentVariables)
             {
                 if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(variable)))
                     return true;
@@ -356,7 +396,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             {
                 foreach (string line in RunPipCommand(" config list", LoggableTaskType.OtherTask))
                 {
-                    if (line.Contains("index-url", StringComparison.OrdinalIgnoreCase))
+                    if (IsIndexConfigurationLine(line))
                         return true;
                 }
             }

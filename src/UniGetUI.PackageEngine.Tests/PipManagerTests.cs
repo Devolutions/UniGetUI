@@ -161,6 +161,24 @@ public sealed class PipManagerTests : IDisposable
     }
 
     [Theory]
+    [InlineData("global.index-url='https://mirror.example.test/simple'", true)]
+    [InlineData("global.extra-index-url='https://mirror.example.test/simple'", true)]
+    [InlineData("global.no-index='true'", true)]
+    [InlineData("global.find-links='C:\\\\wheels'", true)]
+    [InlineData("install.no-index='true'", true)]
+    [InlineData(":env:.config-file='./pip.conf'", false)]
+    [InlineData("global.trusted-host='mirror.example.test'", false)]
+    [InlineData("global.timeout='60'", false)]
+    [InlineData("", false)]
+    public void IsIndexConfigurationLineDetectsEverySourceChangingSetting(
+        string line,
+        bool expected
+    )
+    {
+        Assert.Equal(expected, Pip.IsIndexConfigurationLine(line));
+    }
+
+    [Theory]
     [InlineData("zope.interface", "zope-interface")]
     [InlineData("Flask_SQLAlchemy", "flask-sqlalchemy")]
     [InlineData("requests", "requests")]

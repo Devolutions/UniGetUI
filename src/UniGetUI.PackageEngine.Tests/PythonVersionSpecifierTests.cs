@@ -41,6 +41,15 @@ public sealed class PythonVersionSpecifierTests
     [InlineData(">=3.13.2", "3.13.15", true)]
     [InlineData(">= 3.9", "3.9.7", true)]
     [InlineData(">=3.9,", "3.9.7", true)]
+    [InlineData(">=3.13.0rc1", "3.12.0", false)]
+    [InlineData(">=3.13.0rc1", "3.13.0", true)]
+    [InlineData("~=3.11.0rc1", "3.10.2", false)]
+    [InlineData("~=3.11.0rc1", "3.11.0", true)]
+    [InlineData("~=3.11.0rc1", "3.11.2", true)]
+    [InlineData("~=3.11.0rc1", "3.12.0", false)]
+    [InlineData("~=3.11.0.post1", "3.11.0", false)]
+    [InlineData("~=3.11.0.post1", "3.11.2", true)]
+    [InlineData("~=3.11.0.post1", "3.12.0", false)]
     public void SpecifierSetsMatchThePackagingLibrary(
         string specifier,
         string version,

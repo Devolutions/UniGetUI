@@ -4,6 +4,7 @@
         xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:vm="using:UniGetUI.Avalonia.ViewModels"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        xmlns:infrastructure="using:UniGetUI.Avalonia.Infrastructure"
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.PackageDetailsWindow"
         x:DataType="vm:PackageDetailsViewModel"
@@ -89,12 +90,13 @@
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
         <Style Selector="Ellipse.pip">
-            <Setter Property="Width" Value="8"/>
-            <Setter Property="Height" Value="8"/>
+            <!-- WinUI carousel indicators use a compact 2:1 inactive/active diameter ratio. -->
+            <Setter Property="Width" Value="5"/>
+            <Setter Property="Height" Value="5"/>
             <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}"/>
         </Style>
         <Style Selector="Ellipse.pip.active">
-            <Setter Property="Fill" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+            <Setter Property="Fill" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
             <Setter Property="Width" Value="10"/>
             <Setter Property="Height" Value="10"/>
         </Style>
@@ -292,7 +294,7 @@
                                 Spacing="8">
                         <Border CornerRadius="8" ClipToBounds="True"
                                 x:Name="ScreenshotsBorder"
-                                Height="320">
+                                MinHeight="130">
                             <Panel>
                                 <!-- Neutral WinUI fallback only behind actual screenshots; the empty-state
                                      banner below composites over the themed window background instead. -->
@@ -303,7 +305,7 @@
                                           ItemsSource="{Binding Screenshots}"
                                           SelectedIndex="{Binding SelectedScreenshotIndex, Mode=TwoWay}">
                                     <Carousel.PageTransition>
-                                        <PageSlide Duration="0:0:0.25" Orientation="Horizontal"/>
+                                        <infrastructure:DirectionalSlideTransition FollowForwardDirection="True"/>
                                     </Carousel.PageTransition>
                                     <Carousel.ItemTemplate>
                                         <DataTemplate>

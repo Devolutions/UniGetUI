@@ -8,8 +8,8 @@ using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation.Interop;
 namespace UniGetUI.PackageEngine.Tests.PolicyWriteElevation;
 
 /// <summary>
-/// The wire contract between the host and the elevated helper: every shared operation, the exact
-/// credential grammar, the response budget, and lossless relay of the shared response documents.
+/// The wire contract between the host and the elevated helper: UniGetUI's supported operation
+/// subset, the exact credential grammar, the response budget, and lossless relay of shared responses.
 /// </summary>
 public class PolicyElevationContractTests
 {
@@ -129,29 +129,45 @@ public class PolicyElevationContractTests
             await PolicyElevationFrame.WriteResponseAsync(client, answer(request), CancellationToken.None);
         });
 
-    // ---- Correction 6: every shared operation ------------------------------------------------
+    // ---- UniGetUI's private helper operation subset -------------------------------------------
 
     [Fact]
-    public void TheProtocolCarriesExactlyTheSharedOperationSet()
+    public void TheProtocolCarriesOnlyUserReachableOperations()
     {
-        string[] shared = [.. Enum.GetNames<PolicyReplacementOperation>().Order()];
-        string[] wire = [.. Enum.GetNames<PolicyElevationOperation>().Order()];
+        string[] wire = Enum.GetNames<PolicyElevationOperation>();
 
-        Assert.Equal(shared, wire);
+        Assert.Equal(["Update", "ReplaceIdentity", "Create"], wire);
+        Assert.DoesNotContain(nameof(PolicyReplacementOperation.Repair), wire);
+    }
 
-        // The names must match one for one, so a wire value maps onto the shared value by name.
-        foreach (string name in shared)
+    [Fact]
+    public void PrivateHelperProtocolRejectsRepair()
+    {
+        var message = new PolicyElevationRequestMessage
         {
-            Assert.True(Enum.TryParse(name, out PolicyElevationOperation parsed));
-            Assert.Equal(name, parsed.ToString());
-        }
+            RequestId = new string('a', PolicyElevationProtocol.RequestIdCharacters),
+            Operation = PolicyElevationOperation.Update,
+            ExpectedStoreToken = "store-token",
+            ValidationReceipt = "validation-receipt",
+            Draft = JsonDocument.Parse(DraftJson).RootElement.Clone(),
+        };
+        string json = JsonSerializer.Serialize(
+            message,
+            PolicyElevationJsonContext.Default.PolicyElevationRequestMessage);
+        string repair = json.Replace(
+            "\"Update\"",
+            "\"Repair\"",
+            StringComparison.Ordinal);
+
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize(
+            repair,
+            PolicyElevationJsonContext.Default.PolicyElevationRequestMessage));
     }
 
     [Theory]
     [InlineData(PolicyElevationOperation.Update)]
     [InlineData(PolicyElevationOperation.ReplaceIdentity)]
     [InlineData(PolicyElevationOperation.Create)]
-    [InlineData(PolicyElevationOperation.Repair)]
     public async Task EveryOperation_SurvivesTheElevationHopUnchanged(PolicyElevationOperation operation)
     {
         PolicyElevationRequestMessage? observed = null;
@@ -180,7 +196,6 @@ public class PolicyElevationContractTests
     [InlineData(PolicyElevationOperation.Update, "Update")]
     [InlineData(PolicyElevationOperation.ReplaceIdentity, "ReplaceIdentity")]
     [InlineData(PolicyElevationOperation.Create, "Create")]
-    [InlineData(PolicyElevationOperation.Repair, "Repair")]
     public async Task EveryOperation_IsWrittenAsItsExactPascalCaseName(
         PolicyElevationOperation operation,
         string expected)
@@ -213,8 +228,7 @@ public class PolicyElevationContractTests
     [InlineData(PolicyElevationOperation.Update)]
     [InlineData(PolicyElevationOperation.ReplaceIdentity)]
     [InlineData(PolicyElevationOperation.Create)]
-    [InlineData(PolicyElevationOperation.Repair)]
-    public void CredentialsAreRequired_ForEveryOperationIncludingCreateAndRepair(
+    public void CredentialsAreRequired_ForEveryOperation(
         PolicyElevationOperation operation)
     {
         foreach ((string? token, string? receipt) in new (string?, string?)[]
@@ -258,7 +272,7 @@ public class PolicyElevationContractTests
         var message = new PolicyElevationRequestMessage
         {
             RequestId = new string('a', PolicyElevationProtocol.RequestIdCharacters),
-            Operation = PolicyElevationOperation.Repair,
+            Operation = PolicyElevationOperation.Create,
             ExpectedStoreToken = new string('a', tokenLength),
             ValidationReceipt = new string('b', receiptLength),
             Draft = JsonDocument.Parse(DraftJson).RootElement.Clone(),
@@ -459,7 +473,9 @@ public class PolicyElevationContractTests
         await launcher.Completion;
 
         Assert.Equal(PolicyElevationOutcome.WriteResultUnknown, result.Outcome);
+        Assert.Equal("Timeout", result.BrokerErrorCode);
         Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("timed out", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(@"C:\", result.ErrorMessage, StringComparison.Ordinal);
     }
 }

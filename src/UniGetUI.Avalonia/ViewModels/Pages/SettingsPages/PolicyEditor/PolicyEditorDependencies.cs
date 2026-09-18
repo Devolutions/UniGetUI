@@ -50,12 +50,19 @@ public enum PolicyWriteFailureKind
     WriteResultUnknown,
 }
 
+internal static class PolicyWriteDiagnosticCodes
+{
+    internal const string PostCommitRefreshTimeout = nameof(PostCommitRefreshTimeout);
+    internal const string PostCommitRefreshUnavailable = nameof(PostCommitRefreshUnavailable);
+}
+
 public sealed record PolicyWriteOutcome(
     PolicyReplacementResponse? Response,
     ErrorResponse? Error,
     PolicyWriteFailureKind FailureKind = PolicyWriteFailureKind.None,
     PolicyEditorRetryDecision? ConflictDecision = null,
-    bool SavedThenSuperseded = false)
+    bool SavedThenSuperseded = false,
+    string? DiagnosticCode = null)
 {
     public bool Succeeded => Response is not null;
 
@@ -67,8 +74,14 @@ public sealed record PolicyWriteOutcome(
     public static PolicyWriteOutcome Failure(
         PolicyWriteFailureKind kind,
         ErrorResponse? error = null,
-        PolicyEditorRetryDecision? conflictDecision = null) =>
-        new(null, error, kind, conflictDecision);
+        PolicyEditorRetryDecision? conflictDecision = null,
+        string? diagnosticCode = null) =>
+        new(
+            null,
+            error,
+            kind,
+            conflictDecision,
+            DiagnosticCode: diagnosticCode);
 }
 
 public interface IPolicyWriteClient

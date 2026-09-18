@@ -26,7 +26,7 @@ public class PolicyReplacementExecutorTests
         Assert.True(authenticate >= 0 && write > authenticate);
         Assert.Contains("GetNamedPipeServerProcessId", source);
         Assert.Contains("VerifyExecutable(imagePath)", source);
-        Assert.Contains("PolicyElevationSignerBinding.Bind", source);
+        Assert.DoesNotContain("PolicyElevationSignerBinding.Bind", source);
     }
 
     [Fact]

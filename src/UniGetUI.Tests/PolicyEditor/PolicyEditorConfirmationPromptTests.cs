@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Devolutions.Now.Policy.Api;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
 using UniGetUI.Avalonia.Views.DialogPages;
@@ -46,6 +47,52 @@ public class PolicyEditorConfirmationPromptTests
         Assert.Contains("MaxHeight = 240", source);
         Assert.Contains("ScrollBarVisibility.Auto", source);
         Assert.Contains("Content = findingsList", source);
+        Assert.Contains("callout.Classes.Add(\"warning-banner\")", source);
+        Assert.Contains("GetWarningPresentationMessages", source);
+    }
+
+    [Fact]
+    public void WarningPresentation_DeduplicatesAndPreservesRuleFieldOrder()
+    {
+        PolicyValidationFinding first = Warning(
+            "/Rules/0/Constraints/AllowSkipHashCheck",
+            "first-rule",
+            "Rule “first-rule” allows skipping hash verification.",
+            option: "SkipHashCheck");
+        PolicyValidationFinding duplicate = first with { Pointer = "/Rules/0" };
+        PolicyValidationFinding second = Warning(
+            "/Rules/1/Constraints/AllowPrePostCommands",
+            "second-rule",
+            "Rule “second-rule” allows pre/post commands.",
+            option: "AllowPrePostCommands");
+
+        IReadOnlyList<string> messages =
+            PolicyEditorConfirmationPrompt.GetWarningPresentationMessages(
+                [first, duplicate, second]);
+
+        Assert.Equal(
+            [
+                "Rule “first-rule” allows skipping hash verification.",
+                "Rule “second-rule” allows pre/post commands.",
+            ],
+            messages);
+    }
+
+    [Fact]
+    public void WarningPresentation_UnknownWarningIncludesFriendlyLocation()
+    {
+        PolicyValidationFinding warning = Warning(
+            "/Rules/2/Constraints/AllowUpgrade",
+            "allow-updates",
+            "Review this allowed behavior.",
+            PolicyFindingCode.InvalidFieldValue);
+
+        string message = Assert.Single(
+            PolicyEditorConfirmationPrompt.GetWarningPresentationMessages([warning]));
+
+        Assert.Contains("Rule: 'allow-updates'", message);
+        Assert.Contains("Allow upgrade", message, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("Review this allowed behavior.", message);
     }
 
     [Fact]
@@ -95,7 +142,6 @@ public class PolicyEditorConfirmationPromptTests
             PolicyEditorConfirmationKind.RemoveAllowSafetyLimits,
             PolicyEditorConfirmationKind.ReplaceIdentity,
             PolicyEditorConfirmationKind.Create,
-            PolicyEditorConfirmationKind.Repair,
             PolicyEditorConfirmationKind.ConfirmOverwrite,
             PolicyEditorConfirmationKind.DiscardChanges,
             PolicyEditorConfirmationKind.EnableAuditMode,
@@ -144,4 +190,23 @@ public class PolicyEditorConfirmationPromptTests
 
         throw new DirectoryNotFoundException("Repository root was not found.");
     }
+
+    private static PolicyValidationFinding Warning(
+        string pointer,
+        string ruleId,
+        string message,
+        PolicyFindingCode code = PolicyFindingCode.SensitiveOptionAllowed,
+        string? option = null) =>
+        new(
+            pointer,
+            ruleId,
+            PolicyValidationSeverity.Warning,
+            message,
+            code,
+            option is null
+                ? null
+                : new Dictionary<string, string>
+                {
+                    ["option"] = JsonSerializer.Serialize(option),
+                });
 }

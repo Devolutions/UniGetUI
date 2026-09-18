@@ -62,9 +62,6 @@ public class PolicyEditorSessionViewModelTests
             PolicyEditorOperationKind.Create => PolicyEditorSession.StartCreate(
                 PolicyEditorTestFixtures.BuildMissingManagement(),
                 draft),
-            PolicyEditorOperationKind.Repair => PolicyEditorSession.StartRepair(
-                PolicyEditorTestFixtures.BuildInvalidManagement(),
-                draft),
             PolicyEditorOperationKind.ReplaceIdentity => PolicyEditorSession.StartReplaceIdentity(
                 PolicyEditorTestFixtures.BuildActiveManagement(
                     PolicyEditorTestFixtures.BuildDocument(id: "old-id"),
@@ -1038,7 +1035,6 @@ public class PolicyEditorSessionViewModelTests
 
     [Theory]
     [InlineData(PolicyEditorOperationKind.Create)]
-    [InlineData(PolicyEditorOperationKind.Repair)]
     [InlineData(PolicyEditorOperationKind.ReplaceIdentity)]
     public async Task SuccessfulInflightSave_RebasesOperationForNewerDraftAndNextSave(
         PolicyEditorOperationKind originalOperation)

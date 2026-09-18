@@ -82,7 +82,6 @@ public partial class PolicyEditorLocalizationTests
             "Policy management",
             "Edit the active policy",
             "Create a new policy",
-            "Repair the stored policy",
             "Replace the active policy identity",
         ]);
         keys.UnionWith(Enum.GetNames<Devolutions.Now.Policy.Model.Operation>());
@@ -338,11 +337,9 @@ public partial class PolicyEditorLocalizationTests
 
         XElement auditSelector = Assert.Single(views[0].Descendants(),
             element => (string?)element.Attribute("Tag") == "/Enforcement/AuditMode");
-        Assert.Null(auditSelector.Attribute(controls + "PolicyHelp.Text"));
         Assert.Equal(
             "{x:Static pvm:PolicyEditorHelp.AuditMode}",
-            (string?)auditSelector.Attribute(
-                automation + "AutomationProperties.HelpText"));
+            (string?)auditSelector.Attribute(controls + "PolicyHelp.Text"));
     }
 
     [Fact]
@@ -485,7 +482,23 @@ public partial class PolicyEditorLocalizationTests
             StringComparison.Ordinal);
         Assert.Contains("Text=\"{t:Translate Additional safety limits}\"", view);
         Assert.Contains("IsVisible=\"{Binding IsAllowDecision}\"", view);
-        Assert.Contains("IsVisible=\"{Binding HasSafetyAdvisories}\"", view);
+        Assert.Contains("IsVisible=\"{Binding HasRuleSafetyAdvisories}\"", view);
+        Assert.Contains("IsVisible=\"{Binding HasFieldSafetyAdvisories}\"", view);
+        Assert.Contains("IsVisible=\"{Binding HasSkipHashCheckAdvisory}\"", view);
+        Assert.Contains("IsVisible=\"{Binding HasCustomParametersAdvisory}\"", view);
+        Assert.Contains("IsVisible=\"{Binding HasCustomInstallLocationAdvisory}\"", view);
+        Assert.Contains("IsVisible=\"{Binding HasPrePostCommandsAdvisory}\"", view);
+        Assert.Contains("Content=\"{Binding SkipHashCheckAdvisory}\"", view);
+        Assert.Contains("Content=\"{Binding CustomParametersAdvisory}\"", view);
+        Assert.Contains("Content=\"{Binding CustomInstallLocationAdvisory}\"", view);
+        Assert.Contains("Content=\"{Binding PrePostCommandsAdvisory}\"", view);
+        Assert.Contains("Text=\"{Binding FieldSafetyAdvisoryCountText}\"", view);
+        Assert.DoesNotContain("ItemsSource=\"{Binding SafetyAdvisories}\"", view);
+        Assert.Contains("finding-warning-target", view);
+        Assert.Contains("Tag=\"/Rules/*/Constraints/AllowSkipHashCheck\"", view);
+        Assert.Contains("Tag=\"/Rules/*/Constraints/AllowCustomParameters\"", view);
+        Assert.Contains("Tag=\"/Rules/*/Constraints/AllowCustomInstallLocation\"", view);
+        Assert.Contains("Tag=\"/Rules/*/Constraints/AllowPrePostCommands\"", view);
         Assert.Contains("IsVisible=\"{Binding IsAdvisoryVisible}\"", view);
         Assert.DoesNotContain("Command=\"{Binding Session.ValidateCommand}\"", view);
         Assert.DoesNotContain("ItemsSource=\"{Binding Session.Findings}\"", view);
@@ -557,8 +570,7 @@ public partial class PolicyEditorLocalizationTests
             (string?)auditSelector.Attribute("ItemsSource"));
         Assert.Equal(
             "{x:Static pvm:PolicyEditorHelp.AuditMode}",
-            (string?)auditSelector.Attribute(
-                automation + "AutomationProperties.HelpText"));
+            (string?)auditSelector.Attribute(controls + "PolicyHelp.Text"));
         XElement warning = Assert.Single(dialog.Descendants(),
             element => (string?)element.Attribute("IsVisible")
                 == "{Binding Document.IsAuditModeEnabled}");
@@ -569,6 +581,10 @@ public partial class PolicyEditorLocalizationTests
             "{StaticResource PolicyAdvisoryTemplate}",
             (string?)warning.Attribute("ContentTemplate"));
         Assert.Null(warning.Attribute(automation + "AutomationProperties.Name"));
+        Assert.DoesNotContain(dialog.Descendants(),
+            element => element.Name.LocalName == "TextBlock"
+                && (string?)element.Attribute("Text")
+                    == "{x:Static pvm:PolicyEditorHelp.AuditMode}");
         Assert.Equal(["No", "Yes"], PolicyEditorEnumDisplay.AuditModeDisplayItems);
         Assert.Contains("permits requests", PolicyEditorHelp.AuditMode, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("set No to enforce", PolicyEditorHelp.AuditMode, StringComparison.OrdinalIgnoreCase);
@@ -622,6 +638,34 @@ public partial class PolicyEditorLocalizationTests
         Assert.Contains("requests the policy would deny will be permitted", confirmationPrompt);
         Assert.Contains("PolicyEditorConfirmationKind.EnableDefaultAllow", confirmationPrompt);
         Assert.Contains("PolicyEditorConfirmationKind.RemoveAllowSafetyLimits", confirmationPrompt);
+    }
+
+    [Fact]
+    public void PolicyInspector_DoesNotExposeInvalidPolicyRepairAction()
+    {
+        string root = FindRepositoryRoot();
+        string view = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "Views",
+            "Pages",
+            "SettingsPages",
+            "AgentPolicyInspector.axaml"));
+        string viewModel = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "ViewModels",
+            "Pages",
+            "SettingsPages",
+            "AgentPolicyInspectorViewModel.cs"));
+
+        Assert.DoesNotContain("RepairPolicyButton", view);
+        Assert.DoesNotContain("RepairPolicyCommand", view);
+        Assert.DoesNotContain("CanRepair", view);
+        Assert.DoesNotContain("CanRepair", viewModel);
+        Assert.Contains("outside UniGetUI", viewModel);
     }
 
     [Fact]

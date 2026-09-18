@@ -161,7 +161,9 @@ public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
                     refreshCancellation.Cancel();
                     Logger.Warn(
                         "[PolicyEditor] The Agent committed the policy, but the authoritative management refresh timed out.");
-                    return PolicyWriteOutcome.Failure(PolicyWriteFailureKind.WriteResultUnknown);
+                    return PolicyWriteOutcome.Failure(
+                        PolicyWriteFailureKind.WriteResultUnknown,
+                        diagnosticCode: PolicyWriteDiagnosticCodes.PostCommitRefreshTimeout);
                 }
             }
 
@@ -190,13 +192,17 @@ public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
 
             Logger.Warn(
                 "[PolicyEditor] The Agent committed the policy, but management state could not be refreshed.");
-            return PolicyWriteOutcome.Failure(PolicyWriteFailureKind.WriteResultUnknown);
+            return PolicyWriteOutcome.Failure(
+                PolicyWriteFailureKind.WriteResultUnknown,
+                diagnosticCode: PolicyWriteDiagnosticCodes.PostCommitRefreshUnavailable);
         }
 
-        if (result.ErrorMessage is not null)
-        {
-            Logger.Warn($"[PolicyEditor] Elevated policy write did not succeed ({result.Outcome}): {result.ErrorMessage}");
-        }
+        Logger.Warn(
+            "[PolicyEditor] Elevated policy write did not succeed: "
+            + $"outcome={result.Outcome}; operation={request.Operation}; stage=helper-response; "
+            + $"helperExit={result.HelperExitCode?.ToString() ?? "none"}; "
+            + $"brokerStatus={result.BrokerStatusCode?.ToString() ?? "none"}; "
+            + $"brokerError={result.BrokerErrorCode ?? "none"}");
 
         ErrorCode? errorCode = TryParseErrorCode(result.BrokerErrorCode);
         ErrorResponse? error = errorCode is null
@@ -206,7 +212,8 @@ public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
         return PolicyWriteOutcome.Failure(
             MapFailureKind(result.Outcome),
             error,
-            conflict);
+            conflict,
+            result.BrokerErrorCode);
     }
 
     private static PolicyWriteFailureKind MapFailureKind(PolicyElevationOutcome outcome) => outcome switch
@@ -258,6 +265,9 @@ public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
         };
         string draftId = request.Draft.GetProperty("Metadata").GetProperty("Id").GetString()
             ?? throw new InvalidDataException("The validated draft did not carry an identity.");
+        if (state == PolicyManagementState.Invalid)
+            return null;
+
         return PolicyEditorRetryResolver.Resolve(
             draftId,
             state,
@@ -270,7 +280,6 @@ public sealed class WindowsPolicyEditorWriteClient : IPolicyWriteClient
         PolicyReplacementOperation.Update => PolicyElevationOperation.Update,
         PolicyReplacementOperation.ReplaceIdentity => PolicyElevationOperation.ReplaceIdentity,
         PolicyReplacementOperation.Create => PolicyElevationOperation.Create,
-        PolicyReplacementOperation.Repair => PolicyElevationOperation.Repair,
         _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
     };
 

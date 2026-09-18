@@ -930,9 +930,31 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         _sessionViewModel.IsDeferredBlankRule(Rule);
     public bool IsEnabledWithoutMatchConditions =>
         Rule.Enabled && PolicyEditorRuleSemantics.IsCatchAll(Rule.Match);
-    public IReadOnlyList<string> SafetyAdvisories =>
+    public IReadOnlyList<string> RuleSafetyAdvisories =>
         PolicyEditorAdvisories.ForRule(Rule);
-    public bool HasSafetyAdvisories => SafetyAdvisories.Count > 0;
+    public bool HasRuleSafetyAdvisories => RuleSafetyAdvisories.Count > 0;
+    public string SkipHashCheckAdvisory =>
+        PolicyEditorAdvisories.SkipHashCheck(Rule);
+    public bool HasSkipHashCheckAdvisory =>
+        !string.IsNullOrEmpty(SkipHashCheckAdvisory);
+    public string CustomParametersAdvisory =>
+        PolicyEditorAdvisories.CustomParameters(Rule);
+    public bool HasCustomParametersAdvisory =>
+        !string.IsNullOrEmpty(CustomParametersAdvisory);
+    public string CustomInstallLocationAdvisory =>
+        PolicyEditorAdvisories.CustomInstallLocation(Rule);
+    public bool HasCustomInstallLocationAdvisory =>
+        !string.IsNullOrEmpty(CustomInstallLocationAdvisory);
+    public string PrePostCommandsAdvisory =>
+        PolicyEditorAdvisories.PrePostCommands(Rule);
+    public bool HasPrePostCommandsAdvisory =>
+        !string.IsNullOrEmpty(PrePostCommandsAdvisory);
+    public int FieldSafetyAdvisoryCount =>
+        PolicyEditorAdvisories.FieldSpecific(Rule).Count;
+    public bool HasFieldSafetyAdvisories => FieldSafetyAdvisoryCount > 0;
+    public string FieldSafetyAdvisoryCountText => CoreTools.Translate(
+        "{0} warning(s)",
+        FieldSafetyAdvisoryCount);
     public IReadOnlyList<PolicyValidationFinding> MatchFindings =>
         FindingsEndingAt("/Match");
     public bool HasMatchErrors => HasErrors(MatchFindings);
@@ -1143,8 +1165,19 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsEnabledWithoutMatchConditions));
         OnPropertyChanged(nameof(CanUseSourceNames));
         OnPropertyChanged(nameof(IsSourceNamesVisible));
-        OnPropertyChanged(nameof(SafetyAdvisories));
-        OnPropertyChanged(nameof(HasSafetyAdvisories));
+        OnPropertyChanged(nameof(RuleSafetyAdvisories));
+        OnPropertyChanged(nameof(HasRuleSafetyAdvisories));
+        OnPropertyChanged(nameof(SkipHashCheckAdvisory));
+        OnPropertyChanged(nameof(HasSkipHashCheckAdvisory));
+        OnPropertyChanged(nameof(CustomParametersAdvisory));
+        OnPropertyChanged(nameof(HasCustomParametersAdvisory));
+        OnPropertyChanged(nameof(CustomInstallLocationAdvisory));
+        OnPropertyChanged(nameof(HasCustomInstallLocationAdvisory));
+        OnPropertyChanged(nameof(PrePostCommandsAdvisory));
+        OnPropertyChanged(nameof(HasPrePostCommandsAdvisory));
+        OnPropertyChanged(nameof(FieldSafetyAdvisoryCount));
+        OnPropertyChanged(nameof(HasFieldSafetyAdvisories));
+        OnPropertyChanged(nameof(FieldSafetyAdvisoryCountText));
         _sessionViewModel.NotifyDraftChangedCommand.Execute(null);
     }
 

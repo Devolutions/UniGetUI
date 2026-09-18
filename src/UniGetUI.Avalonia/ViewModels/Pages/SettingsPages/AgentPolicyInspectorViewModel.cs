@@ -27,10 +27,10 @@ public sealed record PolicyDetailRow(string Label, string Value, string HelpText
 }
 
 /// <summary>
-/// Raised by <see cref="AgentPolicyInspectorViewModel"/> when the user chooses Edit/Create/Repair/Replace
+/// Raised by <see cref="AgentPolicyInspectorViewModel"/> when the user chooses Edit/Create/Replace
 /// identity. Carries everything the (view-owned) dialog launcher needs to construct a
 /// <c>PolicyEditorSession</c> without the view model itself depending on any Avalonia window/dialog type.
-/// <see cref="SeedDraft"/> is populated for Create/Repair/ReplaceIdentity (there is no existing valid
+/// <see cref="SeedDraft"/> is populated for Create/ReplaceIdentity (there is no existing valid
 /// draft to derive from); Update leaves it null since <c>PolicyEditorSession.StartUpdate</c> derives the
 /// draft from <see cref="Management"/> itself.
 /// </summary>
@@ -101,7 +101,6 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _managementElevationRequiredText = "";
     [ObservableProperty] private bool _canEdit;
     [ObservableProperty] private bool _canCreate;
-    [ObservableProperty] private bool _canRepair;
     [ObservableProperty] private bool _canReplaceIdentity;
     [ObservableProperty] private bool _hasManagementDiagnostics;
 
@@ -274,6 +273,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
                 {
                     Status: BrokerPolicyManagementStatus.Retrieved,
                     Snapshot.WriteCapability: PolicyWriteCapability.Writable,
+                    Snapshot.State: PolicyManagementState.Active or PolicyManagementState.Missing,
                 })
             {
                 writeEligibility = await _writeElevationEligibility
@@ -340,19 +340,6 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         OpenPolicyEditorRequested?.Invoke(
             this,
             new PolicyEditorLaunchRequest(PolicyEditorOperationKind.Create, snapshot, seed));
-    }
-
-    [RelayCommand]
-    private void RepairPolicy()
-    {
-        if (!CanRepair || _managementSnapshot is not { State: PolicyManagementState.Invalid } snapshot) return;
-
-        PolicyEditorDraftDocument seed = PolicyEditorTemplates.CreateNew(
-            "repaired-policy",
-            CoreTools.Translate("Your organization"));
-        OpenPolicyEditorRequested?.Invoke(
-            this,
-            new PolicyEditorLaunchRequest(PolicyEditorOperationKind.Repair, snapshot, seed));
     }
 
     private bool CanApplyManagement(long generation, CancellationTokenSource cancellation)
@@ -703,22 +690,25 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         ManagementElevationRequiredText = FormatBoolean(snapshot.ElevationRequired);
 
         bool agentWritable = snapshot.WriteCapability == PolicyWriteCapability.Writable;
-        bool writable = agentWritable && writeEligibility.IsEligible;
+        bool stateSupportsChanges =
+            snapshot.State is PolicyManagementState.Active or PolicyManagementState.Missing;
+        bool writable = agentWritable && stateSupportsChanges && writeEligibility.IsEligible;
         PolicyChangesFromThisAppText = writable
             ? CoreTools.Translate("Available")
             : CoreTools.Translate("Unavailable");
         HasPolicyChangesReason = !writable;
         PolicyChangesReasonText = writable
             ? CoreTools.Translate("Not applicable")
-            : agentWritable
-                ? GetElevationEligibilityReason(writeEligibility.Status)
-                : snapshot.ReadOnlyReason.HasValue
+            : !agentWritable && snapshot.ReadOnlyReason.HasValue
                     ? GetAgentReadOnlyReason(snapshot.ReadOnlyReason.Value)
-                    : CoreTools.Translate("Devolutions Agent does not allow policy changes.");
+                : !agentWritable
+                    ? CoreTools.Translate("Devolutions Agent does not allow policy changes.")
+                : snapshot.State == PolicyManagementState.Invalid
+                    ? CoreTools.Translate("Invalid policy files cannot be changed from UniGetUI. An administrator must correct or replace the protected policy file outside this app.")
+                    : GetElevationEligibilityReason(writeEligibility.Status);
 
         CanEdit = writable && snapshot.State == PolicyManagementState.Active;
         CanCreate = writable && snapshot.State == PolicyManagementState.Missing;
-        CanRepair = writable && snapshot.State == PolicyManagementState.Invalid;
         CanReplaceIdentity = writable
             && snapshot.State == PolicyManagementState.Active
             && PolicyEditorTemplates.IsValidResourceId(snapshot.Policy?.Metadata.Id);
@@ -757,7 +747,7 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
             case PolicyManagementState.Invalid:
                 SetManagementStatus(
                     CoreTools.Translate("The configured policy file is invalid"),
-                    CoreTools.Translate("Review the diagnostics below and repair the policy file."),
+                    CoreTools.Translate("Review the diagnostics below. An administrator must correct or replace the protected policy file outside UniGetUI."),
                     InfoBarSeverity.Warning);
                 break;
             default:
@@ -850,7 +840,6 @@ public partial class AgentPolicyInspectorViewModel : ViewModelBase, IDisposable
         HasManagementDiagnostics = false;
         CanEdit = false;
         CanCreate = false;
-        CanRepair = false;
         CanReplaceIdentity = false;
     }
 

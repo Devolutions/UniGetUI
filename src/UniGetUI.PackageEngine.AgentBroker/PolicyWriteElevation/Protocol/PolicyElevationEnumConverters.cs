@@ -16,7 +16,6 @@ public sealed class PolicyElevationOperationJsonConverter
                 "Update" => PolicyElevationOperation.Update,
                 "ReplaceIdentity" => PolicyElevationOperation.ReplaceIdentity,
                 "Create" => PolicyElevationOperation.Create,
-                "Repair" => PolicyElevationOperation.Repair,
                 _ => throw new JsonException("Unknown policy replacement operation."),
             }
             : throw new JsonException("Policy replacement operation must be a string.");
@@ -30,7 +29,6 @@ public sealed class PolicyElevationOperationJsonConverter
             PolicyElevationOperation.Update => "Update",
             PolicyElevationOperation.ReplaceIdentity => "ReplaceIdentity",
             PolicyElevationOperation.Create => "Create",
-            PolicyElevationOperation.Repair => "Repair",
             _ => throw new JsonException("Unknown policy replacement operation."),
         });
 }

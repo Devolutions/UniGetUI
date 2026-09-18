@@ -18,10 +18,19 @@ internal sealed class AuthenticatedBrokerTransport : IBrokerTransport
     internal const int MaxPolicyManagementResponseBytes =
         BrokerApi.MaxPolicyManagementBodyBytes * 3 + MaxHeaderBytes;
     private readonly string _pipeName;
+    private readonly Func<NamedPipeClientStream, string, IDisposable> _authenticate;
 
     public AuthenticatedBrokerTransport(string? pipeName = null)
+        : this(pipeName, AuthenticatedBrokerServer.Authenticate)
+    {
+    }
+
+    internal AuthenticatedBrokerTransport(
+        string? pipeName,
+        Func<NamedPipeClientStream, string, IDisposable> authenticate)
     {
         _pipeName = string.IsNullOrWhiteSpace(pipeName) ? DefaultPipeName : pipeName;
+        _authenticate = authenticate;
     }
 
     public Transport Kind => Transport.HttpNamedPipe;
@@ -47,8 +56,7 @@ internal sealed class AuthenticatedBrokerTransport : IBrokerTransport
                 await pipe.ConnectAsync(connectCancellation.Token).ConfigureAwait(false);
             }
 
-            using AuthenticatedBrokerServer server =
-                AuthenticatedBrokerServer.Authenticate(pipe, request.Path);
+            using IDisposable server = _authenticate(pipe, request.Path);
             await WriteRequestAsync(pipe, request, cancellationToken).ConfigureAwait(false);
 
             using CancellationTokenSource readCancellation =
@@ -310,12 +318,9 @@ internal sealed class AuthenticatedBrokerTransport : IBrokerTransport
                         path);
                 }
 
-                string? selfPath = WindowsProcessInspector.TryGetCurrentProcessCanonicalPath();
-                if (selfPath is null
-                    || !PolicyElevationSignerBinding.Bind(
-                        new WindowsAuthenticodeTrustVerifier(),
-                        selfPath,
-                        imagePath).IsBound)
+                PolicyElevationTrustResult trust =
+                    new WindowsAuthenticodeTrustVerifier().VerifyExecutable(imagePath);
+                if (!trust.IsTrusted)
                 {
                     throw BrokerFailure(
                         BrokerClientErrorKind.BrokerUnavailable,

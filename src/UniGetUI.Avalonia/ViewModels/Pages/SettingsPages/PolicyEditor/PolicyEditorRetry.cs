@@ -67,12 +67,8 @@ public static class PolicyEditorRetryResolver
                     token,
                     state,
                     null),
-            PolicyManagementState.Invalid =>
-                new(
-                    PolicyReplacementOperation.Repair,
-                    token,
-                    state,
-                    null),
+            PolicyManagementState.Invalid => throw new InvalidOperationException(
+                "Invalid policy files cannot be retried from UniGetUI."),
             _ => throw new InvalidDataException(
                 "The management snapshot is inconsistent with its policy state."),
         };

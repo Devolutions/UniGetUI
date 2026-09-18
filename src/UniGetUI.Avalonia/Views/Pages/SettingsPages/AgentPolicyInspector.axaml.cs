@@ -68,8 +68,6 @@ public sealed partial class AgentPolicyInspector : UserControl, ISettingsPage, I
                 PolicyEditorSession.StartReplaceIdentity(request.Management, request.SeedDraft!),
             PolicyEditorOperationKind.Create =>
                 PolicyEditorSession.StartCreate(request.Management, request.SeedDraft!),
-            PolicyEditorOperationKind.Repair =>
-                PolicyEditorSession.StartRepair(request.Management, request.SeedDraft!),
             _ => throw new ArgumentOutOfRangeException(nameof(request)),
         };
 

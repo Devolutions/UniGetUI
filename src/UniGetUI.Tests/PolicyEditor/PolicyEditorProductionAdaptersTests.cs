@@ -70,6 +70,9 @@ public class PolicyEditorProductionAdaptersTests
 
         Assert.False(outcome.Succeeded);
         Assert.Equal(PolicyWriteFailureKind.WriteResultUnknown, outcome.FailureKind);
+        Assert.Equal(
+            PolicyWriteDiagnosticCodes.PostCommitRefreshUnavailable,
+            outcome.DiagnosticCode);
     }
 
     [Fact]
@@ -89,14 +92,41 @@ public class PolicyEditorProductionAdaptersTests
             .WaitAsync(TimeSpan.FromSeconds(1));
         Assert.False(outcome.Succeeded);
         Assert.Equal(PolicyWriteFailureKind.WriteResultUnknown, outcome.FailureKind);
+        Assert.Equal(
+            PolicyWriteDiagnosticCodes.PostCommitRefreshTimeout,
+            outcome.DiagnosticCode);
+    }
+
+    [Theory]
+    [InlineData("BrokerUnavailable")]
+    [InlineData("Timeout")]
+    [InlineData("EmptyResponse")]
+    [InlineData("InvalidResponse")]
+    public async Task WriteAsync_UnknownResultPreservesSafeBrokerDiagnostic(
+        string brokerErrorCode)
+    {
+        var client = new WindowsPolicyEditorWriteClient(
+            new FakeElevator(request => new(
+                PolicyElevationOutcome.WriteResultUnknown,
+                request,
+                ErrorMessage: "safe helper detail",
+                HelperExitCode: 0,
+                BrokerStatusCode: null,
+                BrokerErrorCode: brokerErrorCode)),
+            new FakeManagementService(new(BrokerPolicyManagementStatus.AgentUnavailable)));
+
+        PolicyWriteOutcome outcome = await client.WriteAsync(
+            BuildRequest(),
+            CancellationToken.None);
+
         Assert.Equal(PolicyWriteFailureKind.WriteResultUnknown, outcome.FailureKind);
+        Assert.Equal(brokerErrorCode, outcome.DiagnosticCode);
     }
 
     [Theory]
     [InlineData(PolicyElevationManagementState.Active, "policy-id", PolicyReplacementOperation.Update)]
     [InlineData(PolicyElevationManagementState.Active, "different-id", PolicyReplacementOperation.ReplaceIdentity)]
     [InlineData(PolicyElevationManagementState.Missing, null, PolicyReplacementOperation.Create)]
-    [InlineData(PolicyElevationManagementState.Invalid, null, PolicyReplacementOperation.Repair)]
     public async Task WriteAsync_StaleAcknowledgement_ReconstructsExactRetryDecision(
         PolicyElevationManagementState state,
         string? activePolicyId,
@@ -120,6 +150,73 @@ public class PolicyEditorProductionAdaptersTests
         Assert.Equal("conflict-token", outcome.ConflictDecision!.Token);
         Assert.Equal(expectedOperation, outcome.ConflictDecision.Operation);
         Assert.Equal(activePolicyId, outcome.ConflictDecision.ActivePolicyId);
+    }
+
+    [Fact]
+    public async Task WriteAsync_StaleInvalidStateDoesNotCreateRepairRetry()
+    {
+        var client = new WindowsPolicyEditorWriteClient(
+            new FakeElevator(request => new(
+                PolicyElevationOutcome.BrokerRejected,
+                request,
+                BrokerErrorCode: nameof(ErrorCode.StalePolicyStoreToken),
+                ConflictStoreToken: "conflict-token",
+                ConflictState: PolicyElevationManagementState.Invalid)),
+            new FakeManagementService(new(BrokerPolicyManagementStatus.AgentUnavailable)));
+
+        PolicyWriteOutcome outcome = await client.WriteAsync(BuildRequest(), CancellationToken.None);
+
+        Assert.Equal(PolicyWriteFailureKind.BrokerRejected, outcome.FailureKind);
+        Assert.Equal(ErrorCode.StalePolicyStoreToken, outcome.Error!.Code);
+        Assert.Null(outcome.ConflictDecision);
+    }
+
+    [Fact]
+    public async Task WriteAsync_SharedRepairOperationCannotReachElevatedHelper()
+    {
+        int elevatorCalls = 0;
+        var client = new WindowsPolicyEditorWriteClient(
+            new FakeElevator(request =>
+            {
+                elevatorCalls++;
+                return new PolicyElevationResult(
+                    PolicyElevationOutcome.Replaced,
+                    request);
+            }),
+            new FakeManagementService(new(BrokerPolicyManagementStatus.AgentUnavailable)));
+        PolicyEditorWriteRequest request = BuildRequest() with
+        {
+            Operation = PolicyReplacementOperation.Repair,
+        };
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => client.WriteAsync(request, CancellationToken.None));
+
+        Assert.Equal(0, elevatorCalls);
+    }
+
+    [Fact]
+    public void ElevatedWriteFailureLogContainsOnlyStructuredSafeDiagnostics()
+    {
+        string root = FindRepositoryRoot();
+        string source = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "UniGetUI.Avalonia",
+            "ViewModels",
+            "Pages",
+            "SettingsPages",
+            "PolicyEditor",
+            "PolicyEditorProductionAdapters.cs"));
+
+        Assert.Contains("outcome={result.Outcome}", source);
+        Assert.Contains("operation={request.Operation}", source);
+        Assert.Contains("stage=helper-response", source);
+        Assert.Contains("helperExit={result.HelperExitCode", source);
+        Assert.Contains("brokerStatus={result.BrokerStatusCode", source);
+        Assert.Contains("brokerError={result.BrokerErrorCode", source);
+        Assert.DoesNotContain("draft={", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("token={", source, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -174,6 +271,19 @@ public class PolicyEditorProductionAdaptersTests
             document.RootElement.Clone(),
             "validation-receipt",
             WarningsAcknowledged: false);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        for (DirectoryInfo? directory = new(AppContext.BaseDirectory);
+             directory is not null;
+             directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "src", "UniGetUI.Windows.slnx")))
+                return directory.FullName;
+        }
+
+        throw new DirectoryNotFoundException("Repository root was not found.");
     }
 
     private sealed class FakeElevator(

@@ -46,7 +46,6 @@ public enum PolicyEditorOperationKind
     Update,
     ReplaceIdentity,
     Create,
-    Repair,
 }
 
 /// <summary>
@@ -68,7 +67,6 @@ public enum PolicyEditorConfirmationKind
     RemoveAllowSafetyLimits,
     ReplaceIdentity,
     Create,
-    Repair,
     ConfirmOverwrite,
     DiscardChanges,
 }

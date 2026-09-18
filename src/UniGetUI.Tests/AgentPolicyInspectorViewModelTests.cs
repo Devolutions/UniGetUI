@@ -423,6 +423,9 @@ public class AgentPolicyInspectorViewModelTests
         await viewModel.RefreshPageCommand.ExecuteAsync(null);
         Assert.False(viewModel.HasActivePolicyDetails);
         Assert.Equal("Invalid", viewModel.ManagementStateText);
+        Assert.Equal(
+            @"C:\ProgramData\Devolutions\Agent\policy.json",
+            viewModel.ManagementConfiguredPath);
         await viewModel.RefreshPageCommand.ExecuteAsync(null);
         Assert.False(viewModel.HasManagementSnapshot);
         Assert.Equal("Devolutions Agent is unavailable", viewModel.ManagementStatus.Title);
@@ -583,14 +586,12 @@ public class AgentPolicyInspectorViewModelTests
     }
 
     [Theory]
-    [InlineData(PolicyManagementState.Active, true, false, false, true)]
-    [InlineData(PolicyManagementState.Missing, false, true, false, false)]
-    [InlineData(PolicyManagementState.Invalid, false, false, true, false)]
+    [InlineData(PolicyManagementState.Active, true, false, true)]
+    [InlineData(PolicyManagementState.Missing, false, true, false)]
     public async Task WritableAgentAndEligibleApp_EnableOnlyStateAppropriateWriteActions(
         PolicyManagementState state,
         bool canEdit,
         bool canCreate,
-        bool canRepair,
         bool canReplaceIdentity)
     {
         PolicyDocument? policy = state == PolicyManagementState.Active
@@ -605,12 +606,42 @@ public class AgentPolicyInspectorViewModelTests
 
         Assert.Equal(canEdit, viewModel.CanEdit);
         Assert.Equal(canCreate, viewModel.CanCreate);
-        Assert.Equal(canRepair, viewModel.CanRepair);
         Assert.Equal(canReplaceIdentity, viewModel.CanReplaceIdentity);
         Assert.Equal("Writable", viewModel.AgentWriteCapabilityText);
         Assert.Equal("Available", viewModel.PolicyChangesFromThisAppText);
         Assert.Equal("Not applicable", viewModel.PolicyChangesReasonText);
         Assert.False(viewModel.HasPolicyChangesReason);
+    }
+
+    [Fact]
+    public async Task InvalidPolicy_RemainsDiagnosticAndOffersNoWriteAction()
+    {
+        var eligibility = new CountingWriteElevationEligibility(
+            PolicyWriteElevationEligibilityStatus.Eligible);
+        using AgentPolicyInspectorViewModel viewModel = BuildManagementViewModel(
+            PolicyManagementState.Invalid,
+            eligibility,
+            policy: null);
+        int launchCount = 0;
+        viewModel.OpenPolicyEditorRequested += (_, _) => launchCount++;
+
+        await viewModel.LoadManagementAsync();
+        viewModel.EditPolicyCommand.Execute(null);
+        viewModel.CreatePolicyCommand.Execute(null);
+        viewModel.ReplaceIdentityCommand.Execute(null);
+
+        Assert.Equal("Invalid", viewModel.ManagementStateText);
+        Assert.Equal("The configured policy file is invalid", viewModel.ManagementStatus.Title);
+        Assert.Contains("administrator", viewModel.ManagementStatus.Message);
+        Assert.Contains("outside UniGetUI", viewModel.ManagementStatus.Message);
+        Assert.Equal("Unavailable", viewModel.PolicyChangesFromThisAppText);
+        Assert.Contains("outside this app", viewModel.PolicyChangesReasonText);
+        Assert.True(viewModel.HasPolicyChangesReason);
+        Assert.False(viewModel.CanEdit);
+        Assert.False(viewModel.CanCreate);
+        Assert.False(viewModel.CanReplaceIdentity);
+        Assert.Equal(0, eligibility.Invocations);
+        Assert.Equal(0, launchCount);
     }
 
     [Theory]
@@ -625,10 +656,6 @@ public class AgentPolicyInspectorViewModelTests
     [InlineData(
         PolicyWriteElevationEligibilityStatus.ProtectedInstallRequired,
         PolicyManagementState.Missing,
-        "not administrator-protected")]
-    [InlineData(
-        PolicyWriteElevationEligibilityStatus.ProtectedInstallRequired,
-        PolicyManagementState.Invalid,
         "not administrator-protected")]
     [InlineData(
         PolicyWriteElevationEligibilityStatus.InvalidInstallation,
@@ -649,6 +676,7 @@ public class AgentPolicyInspectorViewModelTests
                 new PolicyManagementSnapshot
                 {
                     State = state,
+                    ConfiguredPath = @"C:\ProgramData\Devolutions\PackageBroker\policy.json",
                     StoreToken = "token",
                     Policy = managedPolicy,
                     WriteCapability = PolicyWriteCapability.Writable,
@@ -661,7 +689,6 @@ public class AgentPolicyInspectorViewModelTests
         await viewModel.LoadManagementAsync();
         viewModel.EditPolicyCommand.Execute(null);
         viewModel.CreatePolicyCommand.Execute(null);
-        viewModel.RepairPolicyCommand.Execute(null);
         viewModel.ReplaceIdentityCommand.Execute(null);
 
         Assert.True(viewModel.HasManagementSnapshot);
@@ -673,7 +700,6 @@ public class AgentPolicyInspectorViewModelTests
         Assert.True(viewModel.HasPolicyChangesReason);
         Assert.False(viewModel.CanEdit);
         Assert.False(viewModel.CanCreate);
-        Assert.False(viewModel.CanRepair);
         Assert.False(viewModel.CanReplaceIdentity);
         Assert.Equal(0, launchCount);
     }
@@ -802,7 +828,6 @@ public class AgentPolicyInspectorViewModelTests
         Assert.False(viewModel.HasPolicyChangesReason);
         Assert.False(viewModel.CanCreate);
         Assert.False(viewModel.CanEdit);
-        Assert.False(viewModel.CanRepair);
         Assert.False(viewModel.CanReplaceIdentity);
     }
 

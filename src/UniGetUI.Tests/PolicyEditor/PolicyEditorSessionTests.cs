@@ -133,28 +133,6 @@ public class PolicyEditorSessionTests
             PolicyEditorSession.StartReplaceIdentity(PolicyEditorTestFixtures.BuildMissingManagement(), NewDraft()));
     }
 
-    // ---- StartRepair --------------------------------------------------------------------------
-
-    [Fact]
-    public void StartRepair_RequiresInvalidManagement()
-    {
-        PolicyManagementSnapshot management = PolicyEditorTestFixtures.BuildInvalidManagement("token-invalid");
-
-        PolicyEditorSession session = PolicyEditorSession.StartRepair(management, NewDraft());
-
-        Assert.Equal(PolicyEditorOperationKind.Repair, session.Operation);
-        Assert.Equal("token-invalid", session.OriginManagement.StoreToken);
-    }
-
-    [Fact]
-    public void StartRepair_RejectsNonInvalidManagement()
-    {
-        Assert.Throws<ArgumentException>(() =>
-            PolicyEditorSession.StartRepair(PolicyEditorTestFixtures.BuildMissingManagement(), NewDraft()));
-        Assert.Throws<ArgumentException>(() =>
-            PolicyEditorSession.StartRepair(PolicyEditorTestFixtures.BuildActiveManagement(), NewDraft()));
-    }
-
     // ---- Dirty tracking -------------------------------------------------------------------
 
     [Fact]
@@ -700,21 +678,6 @@ public class PolicyEditorSessionTests
 
         Assert.Equal("new-id", session.Draft.Metadata.Id);
         Assert.Equal("new-id", session.OriginManagement.Policy!.Metadata.Id);
-        Assert.Equal(PolicyEditorOperationKind.Update, session.Operation);
-        Assert.False(session.IsDirty);
-    }
-
-    [Fact]
-    public void MarkSaved_Repair_RebasesFromInvalidToActive()
-    {
-        PolicyEditorSession session = PolicyEditorSession.StartRepair(
-            PolicyEditorTestFixtures.BuildInvalidManagement("token-invalid"), NewDraft("id-1"));
-
-        PolicyDocument authoritative = PolicyEditorTestFixtures.BuildDocument(id: "id-1");
-        session.MarkSaved(PolicyEditorTestFixtures.BuildReplacementResponse(authoritative, "token-repaired"));
-
-        Assert.Equal(PolicyManagementState.Active, session.OriginManagement.State);
-        Assert.Equal("token-repaired", session.OriginManagement.StoreToken);
         Assert.Equal(PolicyEditorOperationKind.Update, session.Operation);
         Assert.False(session.IsDirty);
     }

@@ -40,6 +40,8 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
             : null;
     public bool HasFindingSummary => Session.SyntaxError is not null || SelectedFinding is not null;
     public bool HasMultipleFindings => Session.SyntaxError is null && Session.Findings.Count > 1;
+    public bool CanNavigateFinding =>
+        !(Session.IsRawMode && Session.IsRawSyntaxPending);
     public string FindingCountText
     {
         get
@@ -86,14 +88,16 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         PolicyEditorOperationKind.Update => CoreTools.Translate("Edit policy {0}", Session.Draft.Metadata.Id),
         PolicyEditorOperationKind.ReplaceIdentity => CoreTools.Translate("Replace active policy identity"),
         PolicyEditorOperationKind.Create => CoreTools.Translate("Create a new package broker policy"),
-        PolicyEditorOperationKind.Repair => CoreTools.Translate("Repair the stored package broker policy"),
         _ => CoreTools.Translate("Package broker policy editor"),
     };
 
     public bool HasWriteFailure => Session.LastWriteFailureKind != PolicyWriteFailureKind.None
         || Session.LastErrorCode is not null;
 
-    public string WriteFailureMessage => DescribeWriteFailure(Session.LastWriteFailureKind, Session.LastErrorCode);
+    public string WriteFailureMessage => DescribeWriteFailure(
+        Session.LastWriteFailureKind,
+        Session.LastErrorCode,
+        Session.LastWriteDiagnosticCode);
 
     /// <summary>
     /// Rebuilds every <see cref="PolicyEditorRuleUi"/> wrapper from the current
@@ -186,7 +190,8 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         }
 
         if (e.PropertyName is nameof(PolicyEditorSessionViewModel.LastWriteFailureKind)
-            or nameof(PolicyEditorSessionViewModel.LastErrorCode))
+            or nameof(PolicyEditorSessionViewModel.LastErrorCode)
+            or nameof(PolicyEditorSessionViewModel.LastWriteDiagnosticCode))
         {
             OnPropertyChanged(nameof(HasWriteFailure));
             OnPropertyChanged(nameof(WriteFailureMessage));
@@ -209,6 +214,12 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
             Document.NotifyIdentityLockChanged();
         }
 
+        if (e.PropertyName is nameof(PolicyEditorSessionViewModel.IsRawMode)
+            or nameof(PolicyEditorSessionViewModel.IsRawSyntaxPending))
+        {
+            OnPropertyChanged(nameof(CanNavigateFinding));
+        }
+
         RefreshStatus();
     }
 
@@ -218,7 +229,7 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         _selectedFindingIndex =
             (_selectedFindingIndex - 1 + Session.Findings.Count) % Session.Findings.Count;
         RefreshFindingSummary();
-        FindingNavigationRequested?.Invoke(this, SelectedFinding);
+        RequestFindingNavigation(SelectedFinding);
     }
 
     public void SelectNextFinding()
@@ -227,11 +238,11 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         _selectedFindingIndex =
             (_selectedFindingIndex + 1) % Session.Findings.Count;
         RefreshFindingSummary();
-        FindingNavigationRequested?.Invoke(this, SelectedFinding);
+        RequestFindingNavigation(SelectedFinding);
     }
 
     public void NavigateToSelectedFinding() =>
-        FindingNavigationRequested?.Invoke(this, SelectedFinding);
+        RequestFindingNavigation(SelectedFinding);
 
     private void SelectFirstFinding(bool navigate)
     {
@@ -247,7 +258,13 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
                 .FirstOrDefault();
         RefreshFindingSummary();
         if (navigate && selected is not null)
-            FindingNavigationRequested?.Invoke(this, selected);
+            RequestFindingNavigation(selected);
+    }
+
+    private void RequestFindingNavigation(PolicyValidationFinding? finding)
+    {
+        if (CanNavigateFinding)
+            FindingNavigationRequested?.Invoke(this, finding);
     }
 
     private void RefreshFindingSummary()
@@ -424,7 +441,10 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
                 InfoBarSeverity.Warning),
             _ => (
                 CoreTools.Translate("The policy could not be saved"),
-                DescribeWriteFailure(completion.FailureKind, completion.ErrorCode),
+                DescribeWriteFailure(
+                    completion.FailureKind,
+                    completion.ErrorCode,
+                    completion.DiagnosticCode),
                 InfoBarSeverity.Error),
         };
 
@@ -435,7 +455,10 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
                 : AutomationLiveSetting.Polite);
     }
 
-    private static string DescribeWriteFailure(PolicyWriteFailureKind kind, ErrorCode? errorCode)
+    internal static string DescribeWriteFailure(
+        PolicyWriteFailureKind kind,
+        ErrorCode? errorCode,
+        string? diagnosticCode = null)
     {
         string? reason = kind switch
         {
@@ -452,7 +475,7 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
             PolicyWriteFailureKind.BrokerRejected =>
                 CoreTools.Translate("Devolutions Agent rejected the policy replacement."),
             PolicyWriteFailureKind.WriteResultUnknown =>
-                CoreTools.Translate("The policy write result is unknown. Refresh policy management state before retrying."),
+                DescribeUnknownWriteResult(diagnosticCode),
             _ => null,
         };
 
@@ -465,6 +488,29 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
         }
 
         return reason ?? CoreTools.Translate("The save failed.");
+    }
+
+    private static string DescribeUnknownWriteResult(string? diagnosticCode)
+    {
+        string cause = diagnosticCode switch
+        {
+            nameof(Devolutions.Now.Policy.Client.BrokerClientErrorKind.BrokerUnavailable) =>
+                CoreTools.Translate("Devolutions Agent was unavailable or closed the connection before responding."),
+            nameof(Devolutions.Now.Policy.Client.BrokerClientErrorKind.Timeout) =>
+                CoreTools.Translate("Communication with Devolutions Agent timed out."),
+            nameof(Devolutions.Now.Policy.Client.BrokerClientErrorKind.EmptyResponse) =>
+                CoreTools.Translate("Devolutions Agent closed the connection without a response."),
+            nameof(Devolutions.Now.Policy.Client.BrokerClientErrorKind.InvalidResponse) =>
+                CoreTools.Translate("Devolutions Agent returned an invalid policy response."),
+            PolicyWriteDiagnosticCodes.PostCommitRefreshTimeout =>
+                CoreTools.Translate("The policy was saved, but refreshing the current policy state timed out."),
+            PolicyWriteDiagnosticCodes.PostCommitRefreshUnavailable =>
+                CoreTools.Translate("The policy was saved, but the current policy state could not be refreshed."),
+            _ => CoreTools.Translate("The policy write result could not be confirmed."),
+        };
+        return CoreTools.Translate(
+            "{0} The policy write result is unknown. Refresh policy management state before retrying.",
+            cause);
     }
 
     public void Dispose()

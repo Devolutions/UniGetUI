@@ -60,6 +60,10 @@
             <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorCriticalBrush}"/>
             <Setter Property="BorderThickness" Value="2"/>
         </Style>
+        <Style Selector="TextBox.finding-warning-target, ComboBox.finding-warning-target, CheckBox.finding-warning-target">
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorCautionBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+        </Style>
         <Style Selector="Border.policy-advisory">
             <Setter Property="Background" Value="{DynamicResource WarningBannerBackground}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource WarningBannerBorderBrush}"/>
@@ -164,15 +168,18 @@
                 <Button Grid.Column="2"
                         Content="{t:Translate Previous}"
                         IsVisible="{Binding HasMultipleFindings}"
+                        IsEnabled="{Binding CanNavigateFinding}"
                         Click="PreviousFindingButton_Click"
                         automation:AutomationProperties.Name="{t:Translate Previous validation finding}"/>
                 <Button Grid.Column="3"
                         Content="{t:Translate Next}"
                         IsVisible="{Binding HasMultipleFindings}"
+                        IsEnabled="{Binding CanNavigateFinding}"
                         Click="NextFindingButton_Click"
                         automation:AutomationProperties.Name="{t:Translate Next validation finding}"/>
                 <Button Grid.Column="4"
                         Content="{t:Translate Go to field}"
+                        IsEnabled="{Binding CanNavigateFinding}"
                         Click="TopFindingNavigateButton_Click"
                         controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.GoToFinding}"
                         automation:AutomationProperties.Name="{t:Translate Go to affected policy field}"/>
@@ -386,17 +393,14 @@
                                 <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                     <TextBlock Classes="field-label"
                                                Text="{t:Translate Audit mode}"
-                                               automation:AutomationProperties.HelpText="{x:Static pvm:PolicyEditorHelp.AuditMode}"/>
+                                               controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AuditMode}"/>
                                     <StackPanel Grid.Column="1" Spacing="4">
                                         <ComboBox ItemsSource="{x:Static pvm:PolicyEditorEnumDisplay.AuditModeDisplayItems}"
                                                   SelectedIndex="{Binding Document.AuditModeIndex}"
                                                   Tag="/Enforcement/AuditMode"
                                                   Classes.finding-error="{Binding Document.HasAuditModeErrors}"
-                                                  automation:AutomationProperties.HelpText="{x:Static pvm:PolicyEditorHelp.AuditMode}"
+                                                  controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AuditMode}"
                                                   automation:AutomationProperties.Name="{t:Translate Audit mode}"/>
-                                        <TextBlock Text="{x:Static pvm:PolicyEditorHelp.AuditMode}"
-                                                   TextWrapping="Wrap"
-                                                   Opacity="0.7"/>
                                         <ContentControl Content="{x:Static pvm:PolicyEditorHelp.AuditModeWarning}"
                                                         ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
                                                         IsVisible="{Binding Document.IsAuditModeEnabled}"/>
@@ -551,8 +555,8 @@
                                             <TextBlock Text="{x:Static pvm:PolicyEditorHelp.IncompleteRuleHint}"
                                                        TextWrapping="Wrap"/>
                                         </Border>
-                                        <ItemsControl ItemsSource="{Binding SafetyAdvisories}"
-                                                      IsVisible="{Binding HasSafetyAdvisories}">
+                                        <ItemsControl ItemsSource="{Binding RuleSafetyAdvisories}"
+                                                      IsVisible="{Binding HasRuleSafetyAdvisories}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="x:String">
                                                     <ContentControl Content="{Binding}"
@@ -794,29 +798,49 @@
                                                       automation:AutomationProperties.Name="{t:Translate Uninstall previous version}"/>
                                         </Grid>
 
-                                        <TextBlock Classes="section-heading"
-                                                   Text="{t:Translate Additional safety limits}"
-                                                   IsVisible="{Binding IsAllowDecision}"
-                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Constraints}"
-                                                   automation:AutomationProperties.HeadingLevel="3"/>
-                                        <CheckBox Content="{t:Translate Add safety limits to this Allow rule}"
-                                                  IsChecked="{Binding HasConstraints}"
-                                                  IsVisible="{Binding IsAllowDecision}"
-                                                  Tag="/Rules/*/Constraints"
-                                                  controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Constraints}"/>
-                                        <StackPanel IsVisible="{Binding HasConstraints}" Spacing="6" Margin="24,0,0,0">
+                                        <Expander IsVisible="{Binding IsAllowDecision}"
+                                                  IsExpanded="True"
+                                                  Tag="/Rules/*/ConstraintsSection"
+                                                  controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Constraints}">
+                                            <Expander.Header>
+                                                <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8">
+                                                    <TextBlock Classes="section-heading"
+                                                               Text="{t:Translate Additional safety limits}"
+                                                               controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Constraints}"
+                                                               automation:AutomationProperties.HeadingLevel="3"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               IsVisible="{Binding HasFieldSafetyAdvisories}"
+                                                               Text="{Binding FieldSafetyAdvisoryCountText}"
+                                                               Classes="finding-warning"
+                                                               VerticalAlignment="Center"
+                                                               automation:AutomationProperties.Name="{Binding FieldSafetyAdvisoryCountText}"
+                                                               automation:AutomationProperties.LiveSetting="Polite"/>
+                                                </Grid>
+                                            </Expander.Header>
+                                            <StackPanel Spacing="6" Margin="24,0,0,0">
+                                                <CheckBox Content="{t:Translate Add safety limits to this Allow rule}"
+                                                          IsChecked="{Binding HasConstraints}"
+                                                          Tag="/Rules/*/Constraints"
+                                                          controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Constraints}"/>
+                                                <StackPanel IsVisible="{Binding HasConstraints}" Spacing="6">
                                             <CheckBox Content="{t:Translate Allow interactive installs}" IsChecked="{Binding AllowInteractive}"
                                                       Tag="/Rules/*/Constraints/AllowInteractive"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowInteractive}"/>
                                             <CheckBox Content="{t:Translate Allow skipping the hash check}" IsChecked="{Binding AllowSkipHashCheck}"
                                                       Tag="/Rules/*/Constraints/AllowSkipHashCheck"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowSkipHashCheck}"/>
+                                            <ContentControl Content="{Binding SkipHashCheckAdvisory}"
+                                                            ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                                            IsVisible="{Binding HasSkipHashCheckAdvisory}"/>
                                             <CheckBox Content="{t:Translate Allow prerelease packages}" IsChecked="{Binding AllowPreRelease}"
                                                       Tag="/Rules/*/Constraints/AllowPreRelease"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowPrerelease}"/>
                                             <CheckBox Content="{t:Translate Allow a custom install location}" IsChecked="{Binding AllowCustomInstallLocation}"
                                                       Tag="/Rules/*/Constraints/AllowCustomInstallLocation"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowCustomLocation}"/>
+                                            <ContentControl Content="{Binding CustomInstallLocationAdvisory}"
+                                                            ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                                            IsVisible="{Binding HasCustomInstallLocationAdvisory}"/>
                                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                                 <TextBlock Classes="field-label" Text="{t:Translate Allowed install location patterns}"
                                                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.LocationPatterns}"/>
@@ -828,6 +852,9 @@
                                             <CheckBox Content="{t:Translate Allow custom parameters}" IsChecked="{Binding AllowCustomParameters}"
                                                       Tag="/Rules/*/Constraints/AllowCustomParameters"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowCustomParameters}"/>
+                                            <ContentControl Content="{Binding CustomParametersAdvisory}"
+                                                            ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                                            IsVisible="{Binding HasCustomParametersAdvisory}"/>
                                             <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                                 <TextBlock Classes="field-label" Text="{t:Translate Allowed custom parameters}"
                                                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowedParameters}"/>
@@ -855,6 +882,9 @@
                                             <CheckBox Content="{t:Translate Allow pre/post commands}" IsChecked="{Binding AllowPrePostCommands}"
                                                       Tag="/Rules/*/Constraints/AllowPrePostCommands"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowPrePostCommands}"/>
+                                            <ContentControl Content="{Binding PrePostCommandsAdvisory}"
+                                                            ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                                            IsVisible="{Binding HasPrePostCommandsAdvisory}"/>
                                             <CheckBox Content="{t:Translate Allow kill-before-operation}" IsChecked="{Binding AllowKillBeforeOperation}"
                                                       Tag="/Rules/*/Constraints/AllowKillBeforeOperation"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowKillBefore}"/>
@@ -864,7 +894,9 @@
                                             <CheckBox Content="{t:Translate Allow upgrades}" IsChecked="{Binding AllowUpgrade}"
                                                       Tag="/Rules/*/Constraints/AllowUpgrade"
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AllowUpgrade}"/>
-                                        </StackPanel>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Expander>
                                     </StackPanel>
                                 </Expander>
                             </DataTemplate>

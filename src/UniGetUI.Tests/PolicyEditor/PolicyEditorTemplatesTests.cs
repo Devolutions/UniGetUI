@@ -179,7 +179,8 @@ public class PolicyEditorTemplatesTests
             AllowUninstallPrevious = true,
         };
 
-        IReadOnlyList<string> advisories = PolicyEditorAdvisories.ForRule(rule);
+        IReadOnlyList<string> advisories =
+            PolicyEditorAdvisories.FieldSpecific(rule);
 
         Assert.Equal(advisories.Count, advisories.Distinct(StringComparer.Ordinal).Count());
         Assert.Contains(advisories, message => message.Contains("integrity", StringComparison.OrdinalIgnoreCase));
@@ -191,14 +192,14 @@ public class PolicyEditorTemplatesTests
         Assert.DoesNotContain(advisories, message => message.Contains("removing", StringComparison.OrdinalIgnoreCase));
 
         rule.Decision = Decision.Deny;
-        Assert.Empty(PolicyEditorAdvisories.ForRule(rule));
+        Assert.Empty(PolicyEditorAdvisories.FieldSpecific(rule));
 
         rule.Decision = Decision.Allow;
         rule.Match.Managers.Add(ManagerName.Winget);
         rule.Match.PackageIdentifierMode = PackageIdentifierMode.Exact;
         rule.Match.ExactPackageIdentifiers.Add("Contoso.App");
         rule.Constraints.AllowSkipHashCheck = false;
-        Assert.Empty(PolicyEditorAdvisories.ForRule(rule));
+        Assert.Empty(PolicyEditorAdvisories.FieldSpecific(rule));
     }
 
     [Fact]

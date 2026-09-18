@@ -21,23 +21,41 @@ public sealed record PolicyValidationFinding(
     PolicyFindingCode? Code = null,
     IReadOnlyDictionary<string, string>? Arguments = null)
 {
-    public static PolicyValidationFinding FromShared(PolicyFinding finding) =>
-        CreateBounded(new(
+    public static PolicyValidationFinding FromShared(PolicyFinding finding)
+    {
+        IReadOnlyDictionary<string, string> arguments =
+            PolicyFindingPresentation.CopyArguments(finding.Arguments);
+        return CreateBounded(new(
             finding.Path ?? "",
             finding.RuleId,
             MapSeverity(finding.Severity),
-            PolicyFindingPresentation.Describe(finding.Code, finding.Arguments, finding.Message),
+            PolicyFindingPresentation.Describe(
+                finding.Code,
+                arguments,
+                finding.Message,
+                finding.Path,
+                finding.RuleId),
             finding.Code,
-            PolicyFindingPresentation.CopyArguments(finding.Arguments)));
+            arguments));
+    }
 
-    public static PolicyValidationFinding FromSanitized(BrokerPolicySanitizedFinding finding) =>
-        CreateBounded(new(
+    public static PolicyValidationFinding FromSanitized(BrokerPolicySanitizedFinding finding)
+    {
+        IReadOnlyDictionary<string, string> arguments =
+            PolicyFindingPresentation.CopyArguments(finding.Arguments);
+        return CreateBounded(new(
             finding.Path ?? "",
             finding.RuleId,
             MapSeverity(finding.Severity),
-            PolicyFindingPresentation.Describe(finding.Code, finding.Arguments, finding.Message),
+            PolicyFindingPresentation.Describe(
+                finding.Code,
+                arguments,
+                finding.Message,
+                finding.Path,
+                finding.RuleId),
             finding.Code,
-            PolicyFindingPresentation.CopyArguments(finding.Arguments)));
+            arguments));
+    }
 
     public static PolicyValidationFinding CreateBounded(PolicyValidationFinding finding) => finding with
     {
@@ -63,7 +81,26 @@ public sealed record PolicyValidationFinding(
 
     public bool IsWarning => Severity == PolicyValidationSeverity.Warning;
 
-    public string FriendlyLocation => PolicyFindingPresentation.DescribeLocation(Pointer, RuleId);
+    public string NavigationPointer =>
+        PolicyFindingPresentation.GetStructuredNavigationPointer(
+            Code,
+            Arguments,
+            Pointer);
+
+    public string RawNavigationPointer =>
+        PolicyFindingPresentation.GetRawNavigationPointer(
+            Code,
+            Arguments,
+            Pointer);
+
+    public string FriendlyLocation =>
+        PolicyFindingPresentation.DescribeLocation(NavigationPointer, RuleId);
+
+    public string ConfirmationMessage =>
+        Code == PolicyFindingCode.SensitiveOptionAllowed
+        && PolicyFindingPresentation.HasKnownSensitiveOption(Arguments)
+            ? Message
+            : CoreTools.Translate("{0}: {1}", FriendlyLocation, Message);
 
     public bool HasRawPointer => !string.IsNullOrWhiteSpace(Pointer);
 
@@ -80,10 +117,10 @@ public sealed record PolicyValidationFinding(
         if (string.IsNullOrEmpty(pointer) || string.IsNullOrEmpty(Pointer))
             return false;
 
-        return Pointer.Equals(pointer, StringComparison.OrdinalIgnoreCase)
-            || (Pointer.StartsWith(pointer, StringComparison.OrdinalIgnoreCase)
-                && Pointer.Length > pointer.Length
-                && Pointer[pointer.Length] == '/');
+        return NavigationPointer.Equals(pointer, StringComparison.OrdinalIgnoreCase)
+            || (NavigationPointer.StartsWith(pointer, StringComparison.OrdinalIgnoreCase)
+                && NavigationPointer.Length > pointer.Length
+                && NavigationPointer[pointer.Length] == '/');
     }
 
     private static PolicyValidationSeverity MapSeverity(PolicyFindingSeverity severity) =>
@@ -120,7 +157,9 @@ public static class PolicyFindingPresentation
     public static string Describe(
         PolicyFindingCode code,
         IReadOnlyDictionary<string, string>? arguments,
-        string? fallbackMessage) => code switch
+        string? fallbackMessage,
+        string? pointer = null,
+        string? ruleId = null) => code switch
         {
             PolicyFindingCode.SchemaViolation =>
                 CoreTools.Translate("The policy draft does not match the required JSON schema."),
@@ -165,7 +204,7 @@ public static class PolicyFindingPresentation
             PolicyFindingCode.DefaultAllow =>
                 CoreTools.Translate("The default decision is Allow; requests matching no rule are permitted."),
             PolicyFindingCode.SensitiveOptionAllowed =>
-                DescribeSensitiveOption(arguments),
+                DescribeSensitiveOption(arguments, pointer, ruleId, fallbackMessage),
             _ => SanitizeFallback(fallbackMessage),
         };
 
@@ -273,27 +312,124 @@ public static class PolicyFindingPresentation
         return copied;
     }
 
-    private static string DescribeSensitiveOption(IReadOnlyDictionary<string, string>? arguments)
+    public static string GetStructuredNavigationPointer(
+        PolicyFindingCode? code,
+        IReadOnlyDictionary<string, string>? arguments,
+        string pointer)
     {
-        string? option = ReadJsonString(arguments, "Option");
+        if (code != PolicyFindingCode.SensitiveOptionAllowed)
+            return pointer;
+
+        string? option = ReadJsonString(arguments, "option");
+        string? rulePointer = GetRulePointer(pointer);
+        if (rulePointer is null)
+            return pointer;
+
+        return option switch
+        {
+            "SkipHashCheck" => $"{rulePointer}/Constraints/AllowSkipHashCheck",
+            "PreRelease" => $"{rulePointer}/Constraints/AllowPreRelease",
+            "AllowCustomParameters" when HasRestriction(
+                arguments,
+                "allowedCustomParameters") =>
+                $"{rulePointer}/Constraints/AllowedCustomParameters",
+            "AllowCustomParameters" when HasRestriction(
+                arguments,
+                "allowedCustomParameterPatterns") =>
+                $"{rulePointer}/Constraints/AllowedCustomParameterPatterns",
+            "AllowCustomParameters" => $"{rulePointer}/Constraints/AllowCustomParameters",
+            "AllowCustomInstallLocation" when HasRestriction(
+                arguments,
+                "allowedInstallLocationPatterns") =>
+                $"{rulePointer}/Constraints/AllowedInstallLocationPatterns",
+            "AllowCustomInstallLocation" =>
+                $"{rulePointer}/Constraints/AllowCustomInstallLocation",
+            "AllowPrePostCommands" => $"{rulePointer}/Constraints/AllowPrePostCommands",
+            "AllowKillBeforeOperation" => $"{rulePointer}/Constraints/AllowKillBeforeOperation",
+            "AllowUninstallPrevious" => $"{rulePointer}/Constraints/AllowUninstallPrevious",
+            _ => pointer,
+        };
+    }
+
+    public static string GetRawNavigationPointer(
+        PolicyFindingCode? code,
+        IReadOnlyDictionary<string, string>? arguments,
+        string pointer)
+    {
+        if (code != PolicyFindingCode.SensitiveOptionAllowed
+            || pointer.Split('/', StringSplitOptions.RemoveEmptyEntries).Length > 2)
+        {
+            return pointer;
+        }
+
+        return GetStructuredNavigationPointer(code, arguments, pointer);
+    }
+
+    public static bool HasKnownSensitiveOption(
+        IReadOnlyDictionary<string, string>? arguments) =>
+        ReadJsonString(arguments, "option") is
+            "SkipHashCheck"
+            or "PreRelease"
+            or "AllowCustomParameters"
+            or "AllowCustomInstallLocation"
+            or "AllowPrePostCommands"
+            or "AllowKillBeforeOperation"
+            or "AllowUninstallPrevious";
+
+    private static string DescribeSensitiveOption(
+        IReadOnlyDictionary<string, string>? arguments,
+        string? pointer,
+        string? ruleId,
+        string? fallbackMessage)
+    {
+        string? option = ReadJsonString(arguments, "option");
+        string rule = DescribeRule(pointer, ruleId);
         string description = option switch
         {
-            "SkipHashCheck" => CoreTools.Translate("An enabled Allow rule permits skipping package hash verification."),
-            "PreRelease" => CoreTools.Translate("An enabled Allow rule permits prerelease package versions."),
-            "AllowCustomInstallLocation" => CoreTools.Translate("An enabled Allow rule permits custom install locations."),
-            "AllowCustomParameters" => CoreTools.Translate("An enabled Allow rule permits custom command-line parameters."),
-            "AllowPrePostCommands" => CoreTools.Translate("An enabled Allow rule permits pre-operation or post-operation commands."),
-            "AllowKillBeforeOperation" => CoreTools.Translate("An enabled Allow rule permits killing processes before an operation."),
-            "AllowUninstallPrevious" => CoreTools.Translate("An enabled Allow rule permits uninstalling a previous version."),
-            _ => CoreTools.Translate("An enabled Allow rule permits a sensitive option."),
+            "SkipHashCheck" => CoreTools.Translate(
+                "{0} allows skipping hash verification.",
+                rule),
+            "PreRelease" => CoreTools.Translate(
+                "{0} allows prerelease packages.",
+                rule),
+            "AllowCustomInstallLocation" when HasRestriction(
+                arguments,
+                "allowedInstallLocationPatterns") => CoreTools.Translate(
+                    "{0} allows custom installation locations within configured approved paths.",
+                    rule),
+            "AllowCustomInstallLocation" => CoreTools.Translate(
+                "{0} allows a custom installation location without approved paths.",
+                rule),
+            "AllowCustomParameters" when HasRestriction(
+                arguments,
+                "allowedCustomParameters")
+                || HasRestriction(arguments, "allowedCustomParameterPatterns") =>
+                CoreTools.Translate(
+                    "{0} allows custom parameters subject to configured restrictions.",
+                    rule),
+            "AllowCustomParameters" => CoreTools.Translate(
+                "{0} allows custom parameters without an allowlist.",
+                rule),
+            "AllowPrePostCommands" => CoreTools.Translate(
+                "{0} allows pre/post commands.",
+                rule),
+            "AllowKillBeforeOperation" => CoreTools.Translate(
+                "{0} allows stopping running applications.",
+                rule),
+            "AllowUninstallPrevious" => CoreTools.Translate(
+                "{0} allows uninstalling the previous version.",
+                rule),
+            _ => DescribeWithSpecificDetail(
+                CoreTools.Translate("{0} allows a sensitive option.", rule),
+                fallbackMessage),
         };
 
         string[] restrictions =
         [
-            FormatRestriction(arguments, "AllowedInstallLocationPatterns", "Allowed install location patterns"),
-            FormatRestriction(arguments, "AllowedCustomParameters", "Allowed custom parameters"),
-            FormatRestriction(arguments, "AllowedCustomParameterPatterns", "Allowed custom parameter patterns"),
-            FormatRestriction(arguments, "DeniedCustomParameters", "Denied custom parameters"),
+            FormatRestriction(arguments, "allowedInstallLocationPatterns", "Allowed install location patterns"),
+            FormatRestriction(arguments, "allowedCustomParameters", "Allowed custom parameters"),
+            FormatRestriction(arguments, "allowedCustomParameterPatterns", "Allowed custom parameter patterns"),
+            FormatRestriction(arguments, "deniedCustomParameters", "Denied custom parameters"),
         ];
         string restrictionText = string.Join(
             "; ",
@@ -301,6 +437,62 @@ public static class PolicyFindingPresentation
         return restrictionText.Length == 0
             ? description
             : $"{description} {CoreTools.Translate("Restrictions: {0}", restrictionText)}";
+    }
+
+    private static string DescribeRule(string? pointer, string? ruleId)
+    {
+        string sanitizedRuleId = Sanitize(ruleId ?? "", MaxArgumentLength);
+        if (!string.IsNullOrWhiteSpace(sanitizedRuleId))
+            return CoreTools.Translate("Rule “{0}”", sanitizedRuleId);
+
+        string? rulePointer = GetRulePointer(pointer);
+        string[] segments = rulePointer?.Split(
+            '/',
+            StringSplitOptions.RemoveEmptyEntries) ?? [];
+        return segments.Length == 2
+            && int.TryParse(segments[1], out int index)
+                ? CoreTools.Translate("Rule {0}", index + 1)
+                : CoreTools.Translate("An enabled Allow rule");
+    }
+
+    private static string? GetRulePointer(string? pointer)
+    {
+        string[] segments = (pointer ?? "").Split(
+            '/',
+            StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length >= 2
+            && segments[0].Equals("Rules", StringComparison.Ordinal)
+            && int.TryParse(segments[1], out _)
+                ? $"/Rules/{segments[1]}"
+                : null;
+    }
+
+    private static bool HasRestriction(
+        IReadOnlyDictionary<string, string>? arguments,
+        string key)
+    {
+        if (arguments is null
+            || !arguments.TryGetValue(key, out string? raw)
+            || string.IsNullOrWhiteSpace(raw))
+        {
+            return false;
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(raw);
+            return document.RootElement.ValueKind switch
+            {
+                JsonValueKind.Array => document.RootElement.GetArrayLength() > 0,
+                JsonValueKind.String => !string.IsNullOrWhiteSpace(
+                    document.RootElement.GetString()),
+                _ => false,
+            };
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static string DescribeWithSpecificDetail(string summary, string? fallbackMessage)
@@ -363,6 +555,14 @@ public static class PolicyFindingPresentation
             "HASKILLBEFOREOPERATION" => CoreTools.Translate("Stop running apps before operation"),
             "HASUNINSTALLPREVIOUS" => CoreTools.Translate("Uninstall previous version"),
             "CONSTRAINTS" => CoreTools.Translate("Additional safety limits"),
+            "ALLOWSKIPHASHCHECK" => CoreTools.Translate("Skip hash verification"),
+            "ALLOWPRERELEASE" => CoreTools.Translate("Prerelease packages"),
+            "ALLOWCUSTOMPARAMETERS" => CoreTools.Translate("Allow custom parameters"),
+            "ALLOWCUSTOMINSTALLLOCATION" => CoreTools.Translate("Allow custom installation location"),
+            "ALLOWPREPOSTCOMMANDS" => CoreTools.Translate("Allow pre/post commands"),
+            "ALLOWKILLBEFOREOPERATION" => CoreTools.Translate("Allow stopping running applications"),
+            "ALLOWUNINSTALLPREVIOUS" => CoreTools.Translate("Allow uninstalling the previous version"),
+            "ALLOWUPGRADE" => CoreTools.Translate("Allow upgrade"),
             _ => Humanize(segment),
         };
 

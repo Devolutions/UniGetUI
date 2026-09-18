@@ -160,14 +160,6 @@ public sealed class PolicyEditorSession
         return new(PolicyEditorOperationKind.Create, management, draft);
     }
 
-    public static PolicyEditorSession StartRepair(
-        PolicyManagementSnapshot management,
-        PolicyEditorDraftDocument draft)
-    {
-        RequireState(management, PolicyManagementState.Invalid);
-        return new(PolicyEditorOperationKind.Repair, management, draft);
-    }
-
     public void SwitchToRaw()
     {
         RawBuffer = PolicyEditorRawSyntax.ToCanonicalRaw(Draft);
@@ -596,7 +588,8 @@ public sealed class PolicyEditorSession
                 PolicyEditorOperationKind.Update,
             PolicyManagementState.Active => PolicyEditorOperationKind.ReplaceIdentity,
             PolicyManagementState.Missing => PolicyEditorOperationKind.Create,
-            PolicyManagementState.Invalid => PolicyEditorOperationKind.Repair,
+            PolicyManagementState.Invalid => throw new InvalidOperationException(
+                "Invalid policy files cannot be changed from UniGetUI."),
             _ => throw new InvalidDataException("The policy management state is not supported."),
         };
     }

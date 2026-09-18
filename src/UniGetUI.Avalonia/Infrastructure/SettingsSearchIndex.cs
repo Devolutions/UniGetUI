@@ -132,7 +132,6 @@ public static class SettingsSearchIndex
         new("Policy management", ["policy management", "policy state", "active", "missing", "invalid", "configured path"], typeof(AgentPolicyInspector), "PolicyManagementHeading", WindowsOnly: true),
         new("Edit the active policy", ["edit policy", "policy editor"], typeof(AgentPolicyInspector), "EditPolicyButton", WindowsOnly: true),
         new("Create a new policy", ["create policy", "new policy"], typeof(AgentPolicyInspector), "CreatePolicyButton", WindowsOnly: true),
-        new("Repair the stored policy", ["repair policy", "invalid policy", "fix policy"], typeof(AgentPolicyInspector), "RepairPolicyButton", WindowsOnly: true),
         new("Replace the active policy identity", ["replace identity", "replace policy"], typeof(AgentPolicyInspector), "ReplaceIdentityButton", WindowsOnly: true),
         new("Allow custom command-line arguments", ["command line arguments", "cli arguments"], typeof(Administrator), "AdminRestrictionsOpsCard"),
         new("Ignore custom pre-install and post-install commands when importing packages from a bundle", ["pre-install commands", "post-install commands"], typeof(Administrator), "PrePostCommandCard"),

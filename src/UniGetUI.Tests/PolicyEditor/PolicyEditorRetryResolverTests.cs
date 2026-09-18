@@ -47,15 +47,12 @@ public class PolicyEditorRetryResolverTests
     }
 
     [Fact]
-    public void Resolve_Invalid_ProducesRepairWithExactToken()
+    public void Resolve_Invalid_IsNotRetryableFromUniGetUI()
     {
         PolicyManagementSnapshot management = PolicyEditorTestFixtures.BuildInvalidManagement("etag-broken");
 
-        PolicyEditorRetryDecision decision = PolicyEditorRetryResolver.Resolve("local-id", management);
-
-        Assert.Equal(PolicyReplacementOperation.Repair, decision.Operation);
-        Assert.Equal("etag-broken", decision.Token);
-        Assert.Null(decision.ActivePolicyId);
+        Assert.Throws<InvalidOperationException>(
+            () => PolicyEditorRetryResolver.Resolve("local-id", management));
     }
 
     [Fact]
@@ -133,7 +130,11 @@ public class PolicyEditorRetryResolverTests
             "local-id");
         PolicyEditorConfirmationContext granted = PolicyEditorConfirmationContext.For(firstDecision, "local-id");
 
-        var secondDecision = firstDecision with { Operation = PolicyReplacementOperation.Repair };
+        var secondDecision = firstDecision with
+        {
+            Operation = PolicyReplacementOperation.ReplaceIdentity,
+            ActivePolicyId = "other-id",
+        };
 
         Assert.True(PolicyEditorRetryResolver.RequiresFreshConfirmation(granted, secondDecision, "local-id"));
     }

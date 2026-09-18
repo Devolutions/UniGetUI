@@ -12,7 +12,6 @@ public class PolicyElevationReplacementDispatcherTests
         PolicyElevationOperation.ReplaceIdentity,
         PolicyReplacementOperation.ReplaceIdentity)]
     [InlineData(PolicyElevationOperation.Create, PolicyReplacementOperation.Create)]
-    [InlineData(PolicyElevationOperation.Repair, PolicyReplacementOperation.Repair)]
     public async Task DispatchAsync_MapsEveryOperationExplicitly(
         PolicyElevationOperation wire,
         PolicyReplacementOperation expected)

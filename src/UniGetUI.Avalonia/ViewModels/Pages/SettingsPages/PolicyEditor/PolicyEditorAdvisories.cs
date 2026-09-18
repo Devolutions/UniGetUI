@@ -17,40 +17,69 @@ internal static class PolicyEditorAdvisories
         }
 
         if (rule.Decision == Decision.Allow
-            && ((rule.Match.PackageIdentifierMode == PackageIdentifierMode.Patterns
-                    && rule.Match.PackageIdentifierPatterns.Any(IsUniversalPattern))
-                || rule.Match.SourceNames.Any(IsUniversalPattern)))
+            && rule.Match.PackageIdentifierMode == PackageIdentifierMode.Patterns
+            && rule.Match.PackageIdentifierPatterns.Any(IsUniversalPattern))
         {
             messages.Add(CoreTools.Translate(
                 "This Allow rule uses a universal package or source pattern and may authorize requests far beyond the intended scope."));
         }
 
-        if (rule.Decision != Decision.Allow || rule.Constraints is not { } limits)
-            return [.. messages];
-
-        if (limits.AllowSkipHashCheck)
-            messages.Add(CoreTools.Translate("This rule permits bypassing package integrity checks."));
-        bool broadScope = rule.Match.Managers.Count == 0
-            && rule.Match.SourceNames.Count == 0
-            && rule.Match.PackageIdentifierMode == PackageIdentifierMode.Omitted;
-        if (limits.AllowPrePostCommands && broadScope)
-            messages.Add(CoreTools.Translate("This broadly scoped rule permits arbitrary commands before or after package operations."));
-        if (limits.AllowCustomParameters
-            && limits.AllowedCustomParameters.Count == 0
-            && limits.AllowedCustomParameterPatterns.Count == 0
-            && broadScope)
-        {
-            messages.Add(CoreTools.Translate("This broadly scoped rule permits arbitrary extra package-manager options unless explicitly denied."));
-        }
-        if (limits.AllowCustomInstallLocation
-            && limits.AllowedInstallLocationPatterns.Count == 0
-            && broadScope)
-        {
-            messages.Add(CoreTools.Translate("This broadly scoped rule permits any custom install folder."));
-        }
-
         return [.. messages];
     }
+
+    public static string SkipHashCheck(PolicyEditorDraftRule rule) =>
+        IsAllowWithConstraints(rule, out PolicyEditorDraftConstraints? limits)
+        && limits.AllowSkipHashCheck
+            ? CoreTools.Translate("This rule permits bypassing package integrity checks.")
+            : "";
+
+    public static string CustomParameters(PolicyEditorDraftRule rule) =>
+        IsBroadlyScoped(rule)
+        && IsAllowWithConstraints(rule, out PolicyEditorDraftConstraints? limits)
+        && limits.AllowCustomParameters
+        && limits.AllowedCustomParameters.Count == 0
+        && limits.AllowedCustomParameterPatterns.Count == 0
+            ? CoreTools.Translate("This broadly scoped rule permits arbitrary extra package-manager options unless explicitly denied.")
+            : "";
+
+    public static string CustomInstallLocation(PolicyEditorDraftRule rule) =>
+        IsBroadlyScoped(rule)
+        && IsAllowWithConstraints(rule, out PolicyEditorDraftConstraints? limits)
+        && limits.AllowCustomInstallLocation
+        && limits.AllowedInstallLocationPatterns.Count == 0
+            ? CoreTools.Translate("This broadly scoped rule permits any custom install folder.")
+            : "";
+
+    public static string PrePostCommands(PolicyEditorDraftRule rule) =>
+        IsBroadlyScoped(rule)
+        && IsAllowWithConstraints(rule, out PolicyEditorDraftConstraints? limits)
+        && limits.AllowPrePostCommands
+            ? CoreTools.Translate("This broadly scoped rule permits arbitrary commands before or after package operations.")
+            : "";
+
+    public static IReadOnlyList<string> FieldSpecific(PolicyEditorDraftRule rule) =>
+    [
+        .. new[]
+        {
+            SkipHashCheck(rule),
+            CustomParameters(rule),
+            CustomInstallLocation(rule),
+            PrePostCommands(rule),
+        }.Where(message => !string.IsNullOrEmpty(message)),
+    ];
+
+    private static bool IsAllowWithConstraints(
+        PolicyEditorDraftRule rule,
+        out PolicyEditorDraftConstraints limits)
+    {
+        limits = rule.Constraints!;
+        return rule.Decision == Decision.Allow && limits is not null;
+    }
+
+    private static bool IsBroadlyScoped(PolicyEditorDraftRule rule) =>
+        rule.Match.Managers.Count == 0
+        && rule.Match.SourceNames.Count == 0
+        && rule.Match.PackageIdentifierMode == PackageIdentifierMode.Omitted;
 
     private static bool IsUniversalPattern(string value) =>
         value.Trim() is "*" or "**";

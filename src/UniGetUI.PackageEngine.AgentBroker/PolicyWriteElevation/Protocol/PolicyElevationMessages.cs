@@ -119,7 +119,6 @@ public enum PolicyElevationOperation
     Update = 0,
     ReplaceIdentity = 1,
     Create = 2,
-    Repair = 3,
 }
 
 [JsonConverter(typeof(PolicyElevationConflictHandlingJsonConverter))]

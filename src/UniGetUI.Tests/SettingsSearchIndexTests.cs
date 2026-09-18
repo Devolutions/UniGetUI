@@ -14,7 +14,7 @@ public class SettingsSearchIndexTests
     public void Search_ReturnsPolicyInspectorOnWindows(string query)
     {
         // The base "Inspect active package broker policy" entry (Anchor == null) must remain the
-        // unique unanchored match. Phase 2 policy-management action entries (Edit/Create/Repair/
+        // unique unanchored match. Phase 2 policy-management action entries (Edit/Create/
         // Replace identity, all anchored) intentionally also match the "policy" query, so we only
         // assert uniqueness of the unanchored base entry rather than of the whole result set.
         SettingsSearchResult result = Assert.Single(
@@ -31,5 +31,18 @@ public class SettingsSearchIndexTests
             SettingsSearchIndex.Search("package broker policy", limit: 100, isWindows: false);
 
         Assert.DoesNotContain(results, result => result.PageType == typeof(AgentPolicyInspector));
+    }
+
+    [Fact]
+    public void Search_DoesNotExposePolicyRepairAction()
+    {
+        IReadOnlyList<SettingsSearchResult> results =
+            SettingsSearchIndex.Search("repair policy", limit: 100, isWindows: true);
+
+        Assert.DoesNotContain(results, result =>
+            result.PageType == typeof(AgentPolicyInspector)
+            && result.Anchor == "RepairPolicyButton");
+        Assert.DoesNotContain(results, result =>
+            result.Title.Equals("Repair the stored policy", StringComparison.Ordinal));
     }
 }

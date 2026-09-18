@@ -1,6 +1,8 @@
 using System.ComponentModel;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor;
@@ -195,6 +197,7 @@ public partial class PolicyEditorDialog : ImmersiveDialog
         {
             RawEditor.BringIntoView();
             RawEditor.Focus();
+            RawEditor.TryNavigateToJsonPointer(finding.RawNavigationPointer);
             return;
         }
 
@@ -218,9 +221,19 @@ public partial class PolicyEditorDialog : ImmersiveDialog
             }
         }
 
-        string normalizedPointer = NormalizeRulePointer(finding.Pointer);
+        string normalizedPointer = NormalizeRulePointer(
+            GetVisibleNavigationPointer(
+                finding,
+                ruleIndex,
+                ruleIndex >= 0 && ruleIndex < _viewModel.Rules.Count
+                    ? _viewModel.Rules[ruleIndex]
+                    : null));
         Dispatcher.UIThread.Post(
-            () => FocusBestMatchingControl(searchRoot, normalizedPointer),
+            () => FocusBestMatchingControl(
+                searchRoot,
+                normalizedPointer,
+                finding.IsWarning,
+                finding.AutomationName),
             DispatcherPriority.Loaded);
     }
 
@@ -230,22 +243,37 @@ public partial class PolicyEditorDialog : ImmersiveDialog
         RawEditor.Focus();
     }
 
-    private static void FocusBestMatchingControl(Control root, string pointer)
+    private static void FocusBestMatchingControl(
+        Control root,
+        string pointer,
+        bool highlightWarning = false,
+        string? automationName = null)
     {
-        Control? target = root.GetVisualDescendants()
+        Control? target = root.GetLogicalDescendants()
+            .OfType<Control>()
+            .Where(control => control.Tag is string tag && PointerTargetsTag(pointer, tag))
+            .OrderByDescending(control => ((string)control.Tag!).Length)
+            .FirstOrDefault();
+        target ??= root.GetVisualDescendants()
             .OfType<Control>()
             .Where(control => control.Tag is string tag && PointerTargetsTag(pointer, tag))
             .OrderByDescending(control => ((string)control.Tag!).Length)
             .FirstOrDefault();
         target ??= root;
-        Expander[] collapsedAncestors = target.GetVisualAncestors()
+        Expander[] collapsedAncestors = target.GetLogicalAncestors()
+            .Concat(target.GetVisualAncestors())
             .OfType<Expander>()
             .Where(expander => !expander.IsExpanded)
+            .Distinct()
             .ToArray();
         if (ExpandCollapsedAncestors(collapsedAncestors))
         {
             Dispatcher.UIThread.Post(
-                () => FocusBestMatchingControl(root, pointer),
+                () => FocusBestMatchingControl(
+                    root,
+                    pointer,
+                    highlightWarning,
+                    automationName),
                 DispatcherPriority.Loaded);
             return;
         }
@@ -255,6 +283,8 @@ public partial class PolicyEditorDialog : ImmersiveDialog
         if (focusTarget is not null)
         {
             focusTarget.BringIntoView();
+            if (highlightWarning)
+                HighlightWarningTarget(focusTarget, automationName);
             if (focusTarget.Focus())
                 return;
         }
@@ -262,6 +292,23 @@ public partial class PolicyEditorDialog : ImmersiveDialog
         Control? fallback = FindFocusableTarget(root);
         fallback?.BringIntoView();
         fallback?.Focus();
+    }
+
+    internal static void HighlightWarningTarget(
+        Control target,
+        string? automationName)
+    {
+        target.Classes.Add("finding-warning-target");
+        string? previousHelp = AutomationProperties.GetHelpText(target);
+        if (!string.IsNullOrWhiteSpace(automationName))
+            AutomationProperties.SetHelpText(target, automationName);
+        DispatcherTimer.RunOnce(
+            () =>
+            {
+                target.Classes.Remove("finding-warning-target");
+                AutomationProperties.SetHelpText(target, previousHelp);
+            },
+            TimeSpan.FromSeconds(3));
     }
 
     internal static bool ExpandCollapsedAncestors(IEnumerable<Expander> ancestors)
@@ -293,6 +340,17 @@ public partial class PolicyEditorDialog : ImmersiveDialog
         || (pointer.StartsWith(tag, StringComparison.OrdinalIgnoreCase)
             && pointer.Length > tag.Length
             && pointer[tag.Length] == '/');
+
+    internal static string GetVisibleNavigationPointer(
+        PolicyValidationFinding finding,
+        int ruleIndex,
+        PolicyEditorRuleUi? rule) =>
+        rule is { HasConstraints: false }
+        && finding.NavigationPointer.Contains(
+            $"/Rules/{ruleIndex}/Constraints/",
+            StringComparison.Ordinal)
+            ? $"/Rules/{ruleIndex}/Constraints"
+            : finding.NavigationPointer;
 
     internal static bool TryGetRuleIndex(string pointer, out int index)
     {

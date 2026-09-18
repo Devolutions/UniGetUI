@@ -104,6 +104,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _requiresManagementRefresh;
     [ObservableProperty] private ErrorCode? _lastErrorCode;
     [ObservableProperty] private PolicyWriteFailureKind _lastWriteFailureKind;
+    [ObservableProperty] private string? _lastWriteDiagnosticCode;
     internal PolicyEditorWriteCompletion? LastWriteCompletion { get; private set; }
 
     public PolicyEditorSessionViewModel(
@@ -496,6 +497,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         SavedThenSuperseded = false;
         LastErrorCode = null;
         LastWriteFailureKind = PolicyWriteFailureKind.None;
+        LastWriteDiagnosticCode = null;
         try
         {
             string submitted = Session.GetEffectiveRawJson();
@@ -671,8 +673,6 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                             PolicyEditorConfirmationKind.ReplaceIdentity,
                         PolicyReplacementOperation.Create =>
                             PolicyEditorConfirmationKind.Create,
-                        PolicyReplacementOperation.Repair =>
-                            PolicyEditorConfirmationKind.Repair,
                         _ => null,
                     };
             if (operationConfirmation is { } kind
@@ -712,6 +712,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             {
                 LastWriteFailureKind = write.FailureKind;
                 LastErrorCode = write.Error?.Code;
+                LastWriteDiagnosticCode = write.DiagnosticCode;
                 RequiresManagementRefresh = true;
                 OnEditorStateChanged();
             }
@@ -750,6 +751,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
 
             LastWriteFailureKind = write.FailureKind;
             LastErrorCode = write.Error?.Code;
+            LastWriteDiagnosticCode = write.DiagnosticCode;
             RequiresManagementRefresh =
                 write.FailureKind == PolicyWriteFailureKind.WriteResultUnknown;
             if (write.ConflictDecision is { } conflictDecision)
@@ -850,7 +852,8 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             generation,
             kind,
             write.FailureKind,
-            write.Error?.Code);
+            write.Error?.Code,
+            write.DiagnosticCode);
         OnPropertyChanged(nameof(LastWriteCompletion));
     }
 
@@ -915,7 +918,6 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             PolicyEditorOperationKind.Update => PolicyReplacementOperation.Update,
             PolicyEditorOperationKind.ReplaceIdentity => PolicyReplacementOperation.ReplaceIdentity,
             PolicyEditorOperationKind.Create => PolicyReplacementOperation.Create,
-            PolicyEditorOperationKind.Repair => PolicyReplacementOperation.Repair,
             _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
         };
 
@@ -1255,4 +1257,5 @@ internal sealed record PolicyEditorWriteCompletion(
     long Generation,
     PolicyEditorWriteCompletionKind Kind,
     PolicyWriteFailureKind FailureKind,
-    ErrorCode? ErrorCode);
+    ErrorCode? ErrorCode,
+    string? DiagnosticCode);

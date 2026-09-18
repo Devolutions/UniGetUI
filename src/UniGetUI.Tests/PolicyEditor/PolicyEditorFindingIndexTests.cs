@@ -61,6 +61,54 @@ public class PolicyEditorFindingIndexTests
     }
 
     [Fact]
+    public async Task DeclinedWarningConfirmationReturnsToSelectedFirstWarning()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(
+            PolicyEditorTestFixtures.BuildActiveManagement());
+        var validation = new FakeValidationClient
+        {
+            NextOutcome = new PolicyEditorValidationOutcome(
+                new PolicyValidationResult
+                {
+                    IsValid = true,
+                    CanonicalDraft = PolicyEditorMapper.ToSharedDraft(session.Draft),
+                    ValidationReceipt = "receipt",
+                    Findings =
+                    [
+                        new PolicyFinding
+                        {
+                            Path = "/Rules/0/Match/SkipHashCheck",
+                            RuleId = "allow-tools",
+                            Severity = PolicyFindingSeverity.Warning,
+                            Code = PolicyFindingCode.SensitiveOptionAllowed,
+                            Message = "warning",
+                            Arguments = new Dictionary<string, JsonElement>
+                            {
+                                ["option"] = JsonSerializer.SerializeToElement(
+                                    "SkipHashCheck"),
+                            },
+                        },
+                    ],
+                }),
+        };
+        var prompt = new FakeConfirmationPrompt { NextResult = false };
+        using var sessionViewModel = new PolicyEditorSessionViewModel(
+            session,
+            validation,
+            prompt,
+            new FakeWriteClient());
+        using var dialog = new PolicyEditorDialogViewModel(sessionViewModel, (_, _) => { });
+
+        await sessionViewModel.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(PolicyEditorConfirmationKind.Warnings, prompt.LastRequest!.Kind);
+        Assert.Equal(
+            "/Rules/0/Constraints/AllowSkipHashCheck",
+            dialog.SelectedFinding!.NavigationPointer);
+        Assert.True(dialog.HasFindingSummary);
+    }
+
+    [Fact]
     public void LiveLocalFindingRefreshDoesNotRequestFocusNavigation()
     {
         PolicyEditorSession session = PolicyEditorSession.StartUpdate(
@@ -374,16 +422,149 @@ public class PolicyEditorFindingIndexTests
             Message = "untrusted fallback",
             Arguments = new Dictionary<string, JsonElement>
             {
-                ["Option"] = option.RootElement.Clone(),
-                ["AllowedCustomParameters"] = restrictions.RootElement.Clone(),
+                ["option"] = option.RootElement.Clone(),
+                ["allowedCustomParameters"] = restrictions.RootElement.Clone(),
             },
         };
 
         PolicyValidationFinding finding = PolicyValidationFinding.FromShared(shared);
 
-        Assert.Contains("custom command-line parameters", finding.Message);
+        Assert.Contains("Rule “allow-tools”", finding.Message);
+        Assert.Contains("custom parameters", finding.Message);
         Assert.Contains("--silent", finding.Message);
         Assert.DoesNotContain("untrusted fallback", finding.Message);
+        Assert.Equal(
+            "/Rules/0/Constraints/AllowedCustomParameters",
+            finding.NavigationPointer);
+        Assert.Equal(
+            "/Rules/0/Constraints/AllowCustomParameters",
+            finding.RawNavigationPointer);
+    }
+
+    [Theory]
+    [InlineData("SkipHashCheck", "/Rules/0/Constraints/AllowSkipHashCheck", "skipping hash verification")]
+    [InlineData("PreRelease", "/Rules/0/Constraints/AllowPreRelease", "prerelease packages")]
+    [InlineData("AllowCustomParameters", "/Rules/0/Constraints/AllowCustomParameters", "without an allowlist")]
+    [InlineData("AllowCustomInstallLocation", "/Rules/0/Constraints/AllowCustomInstallLocation", "without approved paths")]
+    [InlineData("AllowPrePostCommands", "/Rules/0/Constraints/AllowPrePostCommands", "pre/post commands")]
+    [InlineData("AllowKillBeforeOperation", "/Rules/0/Constraints/AllowKillBeforeOperation", "stopping running applications")]
+    [InlineData("AllowUninstallPrevious", "/Rules/0/Constraints/AllowUninstallPrevious", "uninstalling the previous version")]
+    public void SensitiveFinding_MapsOfficialOptionToSpecificMessageAndControl(
+        string optionValue,
+        string expectedNavigationPointer,
+        string expectedMessage)
+    {
+        using JsonDocument option = JsonDocument.Parse(
+            JsonSerializer.Serialize(optionValue));
+        var shared = new PolicyFinding
+        {
+            Severity = PolicyFindingSeverity.Warning,
+            Code = PolicyFindingCode.SensitiveOptionAllowed,
+            Path = "/Rules/0",
+            RuleId = "allow-winget-updates",
+            Message = "An enabled Allow rule permits a sensitive option.",
+            Arguments = new Dictionary<string, JsonElement>
+            {
+                ["option"] = option.RootElement.Clone(),
+            },
+        };
+
+        PolicyValidationFinding finding = PolicyValidationFinding.FromShared(shared);
+
+        Assert.Contains("Rule “allow-winget-updates”", finding.Message);
+        Assert.Contains(expectedMessage, finding.Message);
+        Assert.Equal(expectedNavigationPointer, finding.NavigationPointer);
+        Assert.Equal(expectedNavigationPointer, finding.RawNavigationPointer);
+        Assert.Contains("Additional safety limits", finding.FriendlyLocation);
+        Assert.DoesNotContain("An enabled Allow rule permits a sensitive option.", finding.Message);
+    }
+
+    [Fact]
+    public void OfficialSensitiveOptionFixture_PreservesAgentPointerAndTargetsSafetyControl()
+    {
+        const string json =
+            """
+            {
+              "ResponseKind": "PolicyValidationResponse",
+              "ResponseVersion": "1.0",
+              "Server": {
+                "ServerVersion": "2026.8.0",
+                "Transport": "HttpNamedPipe"
+              },
+              "Validation": {
+                "ResultVersion": "1.0",
+                "ValidatorVersion": "gateway-policy-validator/1",
+                "IsValid": true,
+                "CanonicalDraft": {
+                  "PolicyFormatVersion": "1.0.0",
+                  "Metadata": {
+                    "Id": "contoso.package-policy",
+                    "Publisher": "Contoso IT"
+                  },
+                  "Enforcement": {
+                    "DefaultDecision": "Allow",
+                    "AuditMode": true
+                  },
+                  "Rules": [{
+                    "Id": "allow.vscode.skip-hash",
+                    "Enabled": true,
+                    "Priority": 100,
+                    "Decision": "Allow",
+                    "Match": {
+                      "Managers": ["Winget"],
+                      "PackageIdentifiers": {
+                        "Exact": ["Microsoft.VisualStudioCode"]
+                      },
+                      "SkipHashCheck": true
+                    }
+                  }]
+                },
+                "ValidationReceipt": "receipt:sha256:valid-warning-set",
+                "Findings": [{
+                  "FindingVersion": "1.0",
+                  "Severity": "Warning",
+                  "Code": "SensitiveOptionAllowed",
+                  "Path": "/Rules/0/Match/SkipHashCheck",
+                  "RuleId": "allow.vscode.skip-hash",
+                  "Arguments": { "option": "SkipHashCheck" },
+                  "Message": "This allow rule permits an individually identified sensitive option."
+                }]
+              }
+            }
+            """;
+        PolicyValidationResponse response =
+            BrokerSerializer.DeserializeStrict<PolicyValidationResponse>(json)
+            ?? throw new InvalidOperationException("Official validation fixture did not deserialize.");
+        PolicyFinding shared = Assert.Single(response.Validation.Findings);
+
+        PolicyValidationFinding finding = PolicyValidationFinding.FromShared(shared);
+
+        Assert.Equal("/Rules/0/Match/SkipHashCheck", finding.Pointer);
+        Assert.Equal("/Rules/0/Match/SkipHashCheck", finding.RawNavigationPointer);
+        Assert.Equal(
+            "/Rules/0/Constraints/AllowSkipHashCheck",
+            finding.NavigationPointer);
+        Assert.Contains("skipping hash verification", finding.Message);
+    }
+
+    [Fact]
+    public void SensitiveFinding_MissingOptionKeepsCoarseActionableFallback()
+    {
+        var shared = new PolicyFinding
+        {
+            Severity = PolicyFindingSeverity.Warning,
+            Code = PolicyFindingCode.SensitiveOptionAllowed,
+            Path = "/Rules/1",
+            RuleId = "allow-tools",
+            Message = "Review the sensitive behavior.",
+        };
+
+        PolicyValidationFinding finding = PolicyValidationFinding.FromShared(shared);
+
+        Assert.Equal("/Rules/1", finding.NavigationPointer);
+        Assert.Contains("Rule “allow-tools”", finding.Message);
+        Assert.Contains("Review the sensitive behavior.", finding.Message);
+        Assert.Contains(finding.FriendlyLocation, finding.ConfirmationMessage);
     }
 
     [Fact]

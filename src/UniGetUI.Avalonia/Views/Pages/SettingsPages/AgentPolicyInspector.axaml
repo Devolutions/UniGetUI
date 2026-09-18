@@ -140,7 +140,7 @@
                     </StackPanel>
                 </Border>
 
-                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*" Margin="40,12,40,0" ColumnSpacing="8">
+                <Grid ColumnDefinitions="Auto,Auto,Auto,*" Margin="40,12,40,0" ColumnSpacing="8">
                     <Button x:Name="EditPolicyButton"
                             Command="{Binding EditPolicyCommand}"
                             IsVisible="{Binding CanEdit}"
@@ -155,13 +155,6 @@
                             controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CreatePolicy}"
                             automation:AutomationProperties.Name="{t:Translate Create a new policy}"/>
                     <Button Grid.Column="2"
-                            x:Name="RepairPolicyButton"
-                            Command="{Binding RepairPolicyCommand}"
-                            IsVisible="{Binding CanRepair}"
-                            Content="{t:Translate Repair}"
-                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RepairPolicy}"
-                            automation:AutomationProperties.Name="{t:Translate Repair the stored policy}"/>
-                    <Button Grid.Column="3"
                             x:Name="ReplaceIdentityButton"
                             Classes="secondary-action"
                             Command="{Binding ReplaceIdentityCommand}"

@@ -87,9 +87,8 @@ public static class PolicyEditorHelp
     public static string ElevationRequired => T("Whether saving policy changes requires Windows administrator approval.");
     public static string EditPolicy => T("Open the active policy for editing. The policy ID remains locked so this updates the same policy.");
     public static string CreatePolicy => T("Create the first policy for the configured location. New policies start with Deny as the default and no rules.");
-    public static string RepairPolicy => T("Replace an invalid policy with a new valid policy after reviewing the reported problems.");
     public static string ReplaceIdentity => T("Replace the active policy with a different policy ID. Use only when intentionally creating a new policy identity.");
-    public static string ManagementState => T("Current policy state: Active is usable, Missing means no policy file exists, and Invalid means the stored policy needs repair.");
+    public static string ManagementState => T("Current policy state: Active is usable, Missing means no policy file exists, and Invalid means an administrator must correct or replace the protected policy file outside UniGetUI.");
     public static string ConfiguredPath => T("Location where Devolutions Agent reads and writes the policy file. Change this location in Agent configuration, not here.");
     public static string PathSource => T("Shows whether Devolutions Agent is using its default policy location or an explicitly configured location.");
 

@@ -61,7 +61,6 @@ public static class PolicyElevationReplacementDispatcher
                 PolicyElevationOperation.Update => PolicyReplacementOperation.Update,
                 PolicyElevationOperation.ReplaceIdentity => PolicyReplacementOperation.ReplaceIdentity,
                 PolicyElevationOperation.Create => PolicyReplacementOperation.Create,
-                PolicyElevationOperation.Repair => PolicyReplacementOperation.Repair,
                 _ => throw new InvalidDataException(
                     $"Unsupported policy replacement operation '{operation}'."),
             },

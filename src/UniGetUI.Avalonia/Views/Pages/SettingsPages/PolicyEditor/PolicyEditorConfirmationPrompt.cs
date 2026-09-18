@@ -76,8 +76,6 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
             (CoreTools.Translate("Replace the active policy?"), CoreTools.Translate("Replace")),
         PolicyEditorConfirmationKind.Create =>
             (CoreTools.Translate("Create a new policy?"), CoreTools.Translate("Create")),
-        PolicyEditorConfirmationKind.Repair =>
-            (CoreTools.Translate("Repair the stored policy?"), CoreTools.Translate("Repair")),
         PolicyEditorConfirmationKind.ConfirmOverwrite =>
             (CoreTools.Translate("The policy changed since you started editing"), CoreTools.Translate("Overwrite")),
         PolicyEditorConfirmationKind.DiscardChanges =>
@@ -105,21 +103,28 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
         {
             var findingsList = new StackPanel
             {
-                Spacing = 4,
+                Spacing = 6,
                 Margin = new global::Avalonia.Thickness(0, 4, 0, 0),
             };
-            foreach (PolicyValidationFinding finding in request.Findings)
+            foreach (string message in GetWarningPresentationMessages(request.Findings))
             {
-                if (finding.Severity != PolicyValidationSeverity.Warning) continue;
                 var warning = new TextBlock
                 {
-                    Text = $"\u2022 {finding.Message}",
+                    Text = message,
                     TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
-                    Opacity = 0.85,
                     Focusable = true,
                 };
-                AutomationProperties.SetName(warning, finding.AutomationName);
-                findingsList.Children.Add(warning);
+                AutomationProperties.SetName(warning, message);
+                var callout = new Border
+                {
+                    Padding = new global::Avalonia.Thickness(10, 8),
+                    CornerRadius = new global::Avalonia.CornerRadius(6),
+                    Margin = new global::Avalonia.Thickness(0),
+                    Child = warning,
+                };
+                callout.Classes.Add("warning-banner");
+                AutomationProperties.SetName(callout, message);
+                findingsList.Children.Add(callout);
             }
 
             panel.Children.Add(new ScrollViewer
@@ -133,10 +138,24 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
         return panel;
     }
 
+    internal static IReadOnlyList<string> GetWarningPresentationMessages(
+        IReadOnlyList<PolicyValidationFinding> findings)
+    {
+        var presented = new HashSet<string>(StringComparer.Ordinal);
+        var messages = new List<string>();
+        foreach (PolicyValidationFinding finding in findings)
+        {
+            if (!finding.IsWarning || !presented.Add(finding.ConfirmationMessage))
+                continue;
+            messages.Add(finding.ConfirmationMessage);
+        }
+        return messages;
+    }
+
     internal static string DescribeMessage(PolicyEditorConfirmationRequest request) => request.Kind switch
     {
         PolicyEditorConfirmationKind.Warnings => CoreTools.Translate(
-            "Validation reported {0} warning(s) for policy {1}. Do you want to save it anyway?",
+            "Validation reported {0} allowed behavior warning(s) for policy {1}. Review them and choose Save anyway only to acknowledge these behaviors intentionally.",
             request.WarningCount,
             request.DraftId),
         PolicyEditorConfirmationKind.EnableAuditMode => CoreTools.Translate(
@@ -153,9 +172,6 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
         PolicyEditorConfirmationKind.Create => CoreTools.Translate(
             "This will create a new package broker policy {0}.",
             request.DraftId),
-        PolicyEditorConfirmationKind.Repair => CoreTools.Translate(
-            "The stored policy file is invalid and will be replaced with {0}.",
-            request.DraftId),
         PolicyEditorConfirmationKind.ConfirmOverwrite => request.Operation switch
         {
             PolicyReplacementOperation.Update => CoreTools.Translate(
@@ -167,9 +183,6 @@ public sealed class PolicyEditorConfirmationPrompt : IPolicyEditorConfirmationPr
                 request.DraftId),
             PolicyReplacementOperation.Create => CoreTools.Translate(
                 "The policy store is now missing. Create policy {0} against that exact current state?",
-                request.DraftId),
-            PolicyReplacementOperation.Repair => CoreTools.Translate(
-                "The policy store is now invalid. Replace it with repaired policy {0} against that exact current state?",
                 request.DraftId),
             _ => CoreTools.Translate("Do you want to continue?"),
         },

@@ -3,6 +3,7 @@ using System.IO.Pipes;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Devolutions.Now.Policy.Api;
+using Devolutions.Now.Policy.Client;
 using UniGetUI.Core.Logging;
 using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation.Interop;
 
@@ -456,7 +457,9 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
     /// relayed structurally on <see cref="PolicyElevationResult.Error"/> so the UI can localise
     /// them; this text is only the bounded generic fallback.
     /// </summary>
-    private static string DescribeOutcome(PolicyElevationOutcome outcome) => outcome switch
+    private static string DescribeOutcome(
+        PolicyElevationOutcome outcome,
+        string? brokerErrorCode = null) => outcome switch
     {
         PolicyElevationOutcome.Replaced => "The policy was replaced.",
         PolicyElevationOutcome.BrokerRejected => "The agent rejected the policy replacement.",
@@ -464,6 +467,18 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
         PolicyElevationOutcome.BrokerInvalidResponse => "The agent returned a response that could not be understood.",
         PolicyElevationOutcome.PeerAuthenticationFailed =>
             "The elevated helper refused the request because the elevation channel could not be authenticated.",
+        PolicyElevationOutcome.WriteResultUnknown => brokerErrorCode switch
+        {
+            nameof(BrokerClientErrorKind.BrokerUnavailable) =>
+                "The elevated helper could not reach Devolutions Agent or the Agent closed the connection.",
+            nameof(BrokerClientErrorKind.Timeout) =>
+                "The elevated helper timed out while communicating with Devolutions Agent.",
+            nameof(BrokerClientErrorKind.EmptyResponse) =>
+                "Devolutions Agent closed the connection without a response.",
+            nameof(BrokerClientErrorKind.InvalidResponse) =>
+                "Devolutions Agent returned an invalid policy response.",
+            _ => "The elevated write result could not be authenticated.",
+        },
         _ => "The elevated helper returned an invalid policy response.",
     };
 
@@ -482,7 +497,7 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
         return new PolicyElevationResult(
             outcome,
             request,
-            DescribeOutcome(outcome),
+            DescribeOutcome(outcome, response.BrokerErrorCode),
             HelperExitCode: PolicyElevationProtocol.ExitSuccess,
             BrokerStatusCode: response.BrokerStatusCode,
             BrokerErrorCode: response.BrokerErrorCode,

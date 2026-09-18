@@ -747,6 +747,31 @@ public class PolicyEditorStructuredInputGuardTests
     }
 
     [Fact]
+    public void FieldSafetyAdvisory_AppearsAndClearsAtItsCausalControl()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+        rule.ApplyDecision(ModelDecision.Allow);
+        rule.HasConstraints = true;
+
+        rule.AllowSkipHashCheck = true;
+
+        Assert.True(rule.HasSkipHashCheckAdvisory);
+        Assert.Contains("integrity", rule.SkipHashCheckAdvisory);
+        Assert.Equal(1, rule.FieldSafetyAdvisoryCount);
+        Assert.True(rule.HasFieldSafetyAdvisories);
+        Assert.Empty(rule.RuleSafetyAdvisories);
+
+        rule.AllowSkipHashCheck = false;
+
+        Assert.False(rule.HasSkipHashCheckAdvisory);
+        Assert.Equal("", rule.SkipHashCheckAdvisory);
+        Assert.Equal(0, rule.FieldSafetyAdvisoryCount);
+        Assert.False(rule.HasFieldSafetyAdvisories);
+    }
+
+    [Fact]
     public void OptionalDescriptionAndReason_PreserveNullEmptyWhitespaceAndExplicitOmission()
     {
         using PolicyEditorSessionViewModel viewModel = CreateViewModel();
@@ -1121,6 +1146,37 @@ public class PolicyEditorStructuredInputGuardTests
             });
     }
 
+    [Theory]
+    [InlineData("BrokerUnavailable", "unavailable")]
+    [InlineData("Timeout", "timed out")]
+    [InlineData("EmptyResponse", "without a response")]
+    [InlineData("InvalidResponse", "invalid policy response")]
+    [InlineData("PostCommitRefreshTimeout", "saved, but refreshing")]
+    [InlineData("PostCommitRefreshUnavailable", "saved, but the current policy state")]
+    public void UnknownWriteResult_ExplainsStructuredCauseAndRefreshAction(
+        string diagnosticCode,
+        string expectedCause)
+    {
+        string message = PolicyEditorDialogViewModel.DescribeWriteFailure(
+            PolicyWriteFailureKind.WriteResultUnknown,
+            null,
+            diagnosticCode);
+
+        Assert.Contains(expectedCause, message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Refresh policy management state", message);
+    }
+
+    [Fact]
+    public void UnknownWriteResult_WithoutDiagnosticDoesNotClaimAuthenticationFailure()
+    {
+        string message = PolicyEditorDialogViewModel.DescribeWriteFailure(
+            PolicyWriteFailureKind.WriteResultUnknown,
+            null);
+
+        Assert.Contains("could not be confirmed", message);
+        Assert.DoesNotContain("authenticate", message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task CompletedSaveSuccess_IsAnnouncedPolitely()
     {
@@ -1330,6 +1386,28 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.NotNull(viewModel.SyntaxError);
         Assert.Equal("The document is not valid JSON", dialog.Status.Title);
         Assert.Empty(announcements);
+    }
+
+    [Fact]
+    public async Task RawFindingNavigationIsDisabledWhileSyntaxAnalysisIsPending()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        using var dialog = new PolicyEditorDialogViewModel(
+            viewModel,
+            (_, _) => { });
+        int navigationRequests = 0;
+        dialog.FindingNavigationRequested += (_, _) => navigationRequests++;
+        viewModel.SwitchToRawCommand.Execute(null);
+
+        viewModel.RawBuffer = "{";
+
+        Assert.True(viewModel.IsRawSyntaxPending);
+        Assert.False(dialog.CanNavigateFinding);
+        dialog.NavigateToSelectedFinding();
+        Assert.Equal(0, navigationRequests);
+
+        await viewModel.WaitForRawSyntaxAnalysisAsync();
+        Assert.True(dialog.CanNavigateFinding);
     }
 
     [Fact]

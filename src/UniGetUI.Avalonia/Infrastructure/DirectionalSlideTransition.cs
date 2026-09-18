@@ -15,15 +15,18 @@ using Avalonia.VisualTree;
 namespace UniGetUI.Avalonia.Infrastructure;
 
 /// <summary>
-/// Horizontal page slide whose direction is set explicitly via <see cref="Reverse"/>.
+/// WinUI-style horizontal page slide whose direction is set explicitly via <see cref="Reverse"/>.
 /// (TransitioningContentControl always reports forward navigation, so the caller toggles this
-/// before changing content.) Reverse=false slides the incoming page in from the right
-/// (drill-in); Reverse=true slides it in from the left (back navigation).
+/// before changing content.) Reverse=false slides the incoming page in from the right;
+/// Reverse=true slides it in from the left. This mirrors the former WinUI
+/// SlideNavigationTransitionInfo used by SettingsBasePage.
 /// Scrollbars are hidden for the duration so they don't drag across the view.
 /// </summary>
 public sealed class DirectionalSlideTransition : IPageTransition
 {
-    public TimeSpan Duration { get; set; } = TimeSpan.FromMilliseconds(220);
+    public TimeSpan Duration { get; set; } = TimeSpan.FromMilliseconds(300);
+
+    private static readonly SplineEasing SlideEasing = new(0.1d, 0.9d, 0.2d, 1d);
 
     public bool Reverse { get; set; }
 
@@ -40,7 +43,6 @@ public sealed class DirectionalSlideTransition : IPageTransition
         double sign = Reverse ? -1d : 1d;
         double width = (to ?? from)?.GetVisualParent()?.Bounds.Width
                        ?? (to ?? from)?.Bounds.Width ?? 0d;
-
         var hidden = new List<ScrollViewer>();
         HideScrollBars(from, hidden);
         HideScrollBars(to, hidden);
@@ -60,16 +62,14 @@ public sealed class DirectionalSlideTransition : IPageTransition
                 sv.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         }
 
-        if (cancellationToken.IsCancellationRequested)
-            return;
-
         // Hide before clearing the transform so the outgoing page never snaps back on-screen.
         if (from is not null)
         {
             from.IsVisible = false;
             from.RenderTransform = null;
         }
-        to?.RenderTransform = null;
+        if (to is not null)
+            to.RenderTransform = null;
     }
 
     private static void HideScrollBars(Visual? root, List<ScrollViewer> hidden)
@@ -92,7 +92,7 @@ public sealed class DirectionalSlideTransition : IPageTransition
         var anim = new Animation
         {
             Duration = Duration,
-            Easing = new CubicEaseInOut(),
+            Easing = SlideEasing,
             FillMode = FillMode.Forward,
             Children =
             {

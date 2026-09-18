@@ -663,7 +663,7 @@
     <Style Selector="Border.settings-card-clickable:pointerover">
         <Setter Property="Background"   Value="{DynamicResource SettingsCardHoverBackground}"/>
     </Style>
-    <Style Selector="Border.settings-card-focused">
+    <Style Selector="Border.settings-card-keyboard-focused">
         <Setter Property="BorderBrush"     Value="{DynamicResource AccentFillColorDefaultBrush}"/>
         <Setter Property="BorderThickness" Value="2"/>
     </Style>

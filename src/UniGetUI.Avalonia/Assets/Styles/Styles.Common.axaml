@@ -27,6 +27,9 @@
                     <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush"  Color="#06000000"/>
                     <!-- Accent text (darker accents read better on light bg) -->
                     <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush"   Color="{DynamicResource SystemAccentColorDark2}"/>
+                    <!-- These overlay badges retain the legacy base accent in both themes. -->
+                    <SolidColorBrush x:Key="PackageTagBadgeBackgroundBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <SolidColorBrush x:Key="PackageTagBadgeForegroundBrush" Color="#E4000000"/>
                     <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColorDark3}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorDark1}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorDisabledBrush"  Color="#5C000000"/>
@@ -114,6 +117,11 @@
                     <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#EEEEEE"/>
                     <SolidColorBrush x:Key="IgnoredUpdatesListBackground" Color="#F3F3F3"/>
                     <SolidColorBrush x:Key="ScreenshotLetterboxBackground" Color="#202020"/>
+                    <SolidColorBrush x:Key="ScreenshotEmptyBackground" Color="#F3F3F3"/>
+                    <SolidColorBrush x:Key="CarouselNavigationBackground" Color="#CCFFFFFF"/>
+                    <SolidColorBrush x:Key="CarouselNavigationHoverBackground" Color="#F2FFFFFF"/>
+                    <SolidColorBrush x:Key="CarouselNavigationForeground" Color="#9E000000"/>
+                    <SolidColorBrush x:Key="CarouselNavigationHoverForeground" Color="#E4000000"/>
                     <SolidColorBrush x:Key="SmokeFillColorDefaultBrush" Color="#4D000000"/>
                     <!-- Warning banner -->
                     <SolidColorBrush x:Key="WarningBannerBackground"     Color="#FFF4CE"/>
@@ -148,8 +156,14 @@
                     </LinearGradientBrush>
                     <Thickness x:Key="SearchFieldBorderThickness">1</Thickness>
                     <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#F2F2F2"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#E0E0E0"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#E8E8E8"/>
+                    <!-- Former WinUI TabView: SystemChromeAltHigh surface +
+                         SolidBackgroundFillColorTertiary selected tab. -->
+                    <SolidColorBrush x:Key="InstallOptionsTabBackground" Color="#F3F3F3"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#E9E9E9"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabPressedBackground" Color="#E3E3E3"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedHoverBackground" Color="#FCFCFC"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedPressedBackground" Color="#F5F5F5"/>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <!-- Accent fills (lighter accents on dark bg) -->
@@ -172,6 +186,9 @@
                     <SolidColorBrush x:Key="SubtleFillColorTertiaryBrush"  Color="#0AFFFFFF"/>
                     <!-- Accent text -->
                     <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush"   Color="{DynamicResource SystemAccentColorLight3}"/>
+                    <!-- Match the original non-theme-adjusted badge accent. -->
+                    <SolidColorBrush x:Key="PackageTagBadgeBackgroundBrush" Color="{DynamicResource SystemAccentColor}"/>
+                    <SolidColorBrush x:Key="PackageTagBadgeForegroundBrush" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColorLight3}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColorLight2}"/>
                     <SolidColorBrush x:Key="AccentTextFillColorDisabledBrush"  Color="#5CFFFFFF"/>
@@ -191,13 +208,17 @@
                     <Thickness x:Key="SearchFieldBorderThickness">1</Thickness>
                     <!-- Opaque package-details layers remain distinct even when the dialog uses Mica. -->
                     <SolidColorBrush x:Key="InstallOptionsSectionBackground" Color="#393939"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#4A4A4A"/>
-                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#15FFFFFF"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabBackground" Color="#1C1C1C"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedBackground" Color="#2D2D2D"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabHoverBackground" Color="#242424"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabPressedBackground" Color="#202020"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedHoverBackground" Color="#323232"/>
+                    <SolidColorBrush x:Key="InstallOptionsTabSelectedPressedBackground" Color="#292929"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5DFFFFFF"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#E4000000"/>
                     <!-- WinUI's dark flyout surface is an opaque #2C2C2C. -->
                     <SolidColorBrush x:Key="MenuSurfaceBrush"            Color="#FF2C2C2C"/>
-                    <SolidColorBrush x:Key="MenuSurfaceBorderBrush"      Color="#26FFFFFF"/>
+                    <SolidColorBrush x:Key="MenuSurfaceBorderBrush"      Color="#33000000"/>
                     <SolidColorBrush x:Key="MenuDividerBrush"            Color="#15FFFFFF"/>
                     <!-- Text on accent -->
                     <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush"      Color="#000000"/>
@@ -215,7 +236,7 @@
                     <StaticResource x:Key="AccentButtonForegroundDisabled" ResourceKey="TextOnAccentFillColorDisabledBrush"/>
                     <!-- Settings cards -->
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
-                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#393939"/>
+                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#19000000"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#323232"/>
                     <SolidColorBrush x:Key="SecondaryActionBorderBrush"  Color="Transparent"/>
                     <Thickness x:Key="SecondaryActionBorderThickness">0</Thickness>
@@ -247,7 +268,7 @@
                     <SolidColorBrush x:Key="MicaPageBackground"          Color="#202020"/>
                     <SolidColorBrush x:Key="AppSplitterBackground"       Color="#1A1A1A"/>
                     <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#1C1C1C"/>
-                    <SolidColorBrush x:Key="AppBorderBrush"              Color="#353535"/>
+                    <SolidColorBrush x:Key="AppBorderBrush"              Color="#15FFFFFF"/>
                     <SolidColorBrush x:Key="AppBadgeBackground"          Color="#3C3C3C"/>
                     <!-- Dialogs -->
                     <SolidColorBrush x:Key="AppDialogBackground"         Color="#2C2C2C"/>
@@ -256,6 +277,11 @@
                     <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#1A1A1A"/>
                     <SolidColorBrush x:Key="IgnoredUpdatesListBackground" Color="#1A1A1A"/>
                     <SolidColorBrush x:Key="ScreenshotLetterboxBackground" Color="#202020"/>
+                    <SolidColorBrush x:Key="ScreenshotEmptyBackground" Color="#202020"/>
+                    <SolidColorBrush x:Key="CarouselNavigationBackground" Color="#CC2C2C2C"/>
+                    <SolidColorBrush x:Key="CarouselNavigationHoverBackground" Color="#F2393939"/>
+                    <SolidColorBrush x:Key="CarouselNavigationForeground" Color="#9EFFFFFF"/>
+                    <SolidColorBrush x:Key="CarouselNavigationHoverForeground" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="SmokeFillColorDefaultBrush" Color="#4D000000"/>
                     <!-- Warning banner -->
                     <SolidColorBrush x:Key="WarningBannerBackground"     Color="#433519"/>

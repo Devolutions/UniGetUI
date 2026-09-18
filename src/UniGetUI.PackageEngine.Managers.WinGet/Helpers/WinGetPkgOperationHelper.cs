@@ -433,38 +433,8 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     internal static bool ReportedInstallerHashMismatch(int returnCode) =>
         (uint)returnCode is 0x8A150011;
 
-    internal static bool ReportedApplicationCurrentlyRunning(
-        IReadOnlyList<string> processOutput,
-        int returnCode
-    )
-    {
-        if (processOutput.Any(LineReportsApplicationInUse))
-            return true;
-        if (returnCode is not 26)
-            return false;
-        return processOutput.Any(LineReportsInstallerExit26);
-    }
-
-    private static readonly string[] ApplicationInUseMarkers =
-    [
-        "currently running",
-        "already running",
-        "em execução",
-        "en ejecución",
-        "in uso",
-        "package in use",
-        "being used by another process",
-        "processes use",
-    ];
-
-    private static bool LineReportsApplicationInUse(string line) =>
-        ApplicationInUseMarkers.Any(marker =>
-            line.Contains(marker, StringComparison.OrdinalIgnoreCase)
-        );
-
-    private static bool LineReportsInstallerExit26(string line) =>
-        line.Contains("exit code: 26", StringComparison.OrdinalIgnoreCase)
-        || line.Contains("código de saída: 26", StringComparison.OrdinalIgnoreCase);
+    internal static bool ReportedApplicationCurrentlyRunning(int returnCode) =>
+        (uint)returnCode is 0x8A150101 or 0x8A150103 or 0x8A150111;
 
     internal bool ReportedUpdateNotApplicable(
         IReadOnlyList<string> processOutput,

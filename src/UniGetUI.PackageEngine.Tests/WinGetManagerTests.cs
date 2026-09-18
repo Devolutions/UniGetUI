@@ -1,4 +1,5 @@
 #if WINDOWS
+using System.Diagnostics;
 using Devolutions.Pinget.Core;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
@@ -2229,44 +2230,34 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
-    public void WinGetDetectsAnApplicationInUseFromEnglishInstallerOutput()
+    public void WinGetDetectsAnApplicationInUseFromWinGetHresults()
     {
         Assert.True(
             WinGetPkgOperationHelper.ReportedApplicationCurrentlyRunning(
-                [
-                    "Found Spotify [Spotify.Spotify] Version 1.2.74.357.gac2a25ce",
-                    "This application is currently running.",
-                    "Installer failed with exit code: 26",
-                ],
-                26
+                unchecked((int)0x8A150101)
             )
         );
-    }
-
-    [Fact]
-    public void WinGetDetectsAnApplicationInUseFromPortugueseInstallerOutput()
-    {
         Assert.True(
             WinGetPkgOperationHelper.ReportedApplicationCurrentlyRunning(
-                [
-                    "Este aplicativo está em execução.",
-                    "O instalador falhou com código de saída: 26",
-                ],
-                26
+                unchecked((int)0x8A150103)
             )
         );
-    }
-
-    [Fact]
-    public void WinGetDoesNotTreatABareExitCode26AsAnApplicationInUse()
-    {
-        Assert.False(WinGetPkgOperationHelper.ReportedApplicationCurrentlyRunning([], 26));
+        Assert.True(
+            WinGetPkgOperationHelper.ReportedApplicationCurrentlyRunning(
+                unchecked((int)0x8A150111)
+            )
+        );
         Assert.False(
             WinGetPkgOperationHelper.ReportedApplicationCurrentlyRunning(
-                ["An unexpected error occurred"],
-                26
+                unchecked((int)0x8A150102)
             )
         );
+    }
+
+    [Fact]
+    public void WinGetDoesNotTreatRawInstallerExitCode26AsAnApplicationInUse()
+    {
+        Assert.False(WinGetPkgOperationHelper.ReportedApplicationCurrentlyRunning(26));
     }
 
     [Fact]
@@ -2282,7 +2273,7 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
-    public void WinGetGuessesCloseProcessNamesFromTheIdTailWhenTheDisplayNameIsNotAProcess()
+    public void WinGetGuessesCloseProcessNamesFromDisplayNameAndIdTail()
     {
         var package = new PackageBuilder()
             .WithManager(new WinGet())
@@ -2302,6 +2293,21 @@ public sealed class WinGetManagerTests : IDisposable
     }
 
     [Fact]
+    public void WinGetDoesNotGuessTheCurrentProcessAsACloseTarget()
+    {
+        using Process currentProcess = Process.GetCurrentProcess();
+        string current = currentProcess.ProcessName;
+        var package = new PackageBuilder()
+            .WithManager(new WinGet())
+            .WithId($"Vendor.{current}")
+            .WithName(current)
+            .Build();
+
+        Assert.Empty(PackageOperation.GuessCloseProcessNames(package));
+        Assert.Empty(PackageOperation.GetRunningCloseProcessNames(package));
+    }
+
+    [Fact]
     public async Task WinGetApplicationCurrentlyRunningExplainsTheFailureToTheUser()
     {
         var manager = new WinGet();
@@ -2316,11 +2322,10 @@ public sealed class WinGetManagerTests : IDisposable
         string defaultMessage = operation.Metadata.FailureMessage;
 
         var veredict = await operation.ProbeProcessVeredict(
-            26,
+            unchecked((int)0x8A150101),
             [
                 "Found Spotify [Spotify.Spotify] Version 1.2.75.458",
                 "This application is currently running.",
-                "Installer failed with exit code: 26",
             ]
         );
 
@@ -2329,34 +2334,6 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.Contains("currently running", operation.Metadata.FailureMessage);
         Assert.False(operation.Metadata.FailureMessage.EndsWith('.'));
         Assert.True(operation.FailedBecauseApplicationRunning);
-        Assert.True(PackageOperation.CanRetryClosingRunningApp(operation));
-    }
-
-    [Fact]
-    public async Task WinGetApplicationCurrentlyRunningExplainsPortugueseInstallerOutput()
-    {
-        var manager = new WinGet();
-        var package = new PackageBuilder()
-            .WithManager(manager)
-            .WithId("Spotify.Spotify")
-            .WithName("Spotify")
-            .WithVersion("1.2.74.357")
-            .WithNewVersion("1.2.75.458")
-            .Build();
-        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions());
-
-        var veredict = await operation.ProbeProcessVeredict(
-            26,
-            [
-                "Este aplicativo está em execução.",
-                "O instalador falhou com código de saída: 26",
-            ]
-        );
-
-        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
-        Assert.Contains("currently running", operation.Metadata.FailureMessage);
-        Assert.True(operation.FailedBecauseApplicationRunning);
-        Assert.True(PackageOperation.CanRetryClosingRunningApp(operation));
     }
 
     [Fact]

@@ -87,27 +87,13 @@ public partial class OperationFailedDialog : UniGetUI.Avalonia.Views.DialogPages
     private Control BuildRetryButton(AbstractOperation operation)
     {
         var retryOptions = CollectRetryMenuItems(operation);
-        string defaultRetryMode = DefaultRetryMode(operation);
-        string defaultRetryLabel = DefaultRetryLabel(operation);
+        string defaultRetryMode = AbstractOperation.RetryMode.Retry;
+        string defaultRetryLabel = CoreTools.Translate("Retry");
 
         if (retryOptions.Count == 0)
             return SimpleRetryButton(operation, defaultRetryMode, defaultRetryLabel);
 
         return SplitRetryButton(operation, retryOptions, defaultRetryMode, defaultRetryLabel);
-    }
-
-    private static string DefaultRetryMode(AbstractOperation operation)
-    {
-        if (operation is PackageOperation pkgOp && PackageOperation.CanRetryClosingRunningApp(pkgOp))
-            return AbstractOperation.RetryMode.Retry_CloseRunningApp;
-        return AbstractOperation.RetryMode.Retry;
-    }
-
-    private static string DefaultRetryLabel(AbstractOperation operation)
-    {
-        if (operation is PackageOperation pkgOp && PackageOperation.CanRetryClosingRunningApp(pkgOp))
-            return CoreTools.Translate("Retry after closing the running app");
-        return CoreTools.Translate("Retry");
     }
 
     private List<MenuItem> CollectRetryMenuItems(AbstractOperation operation)
@@ -152,8 +138,8 @@ public partial class OperationFailedDialog : UniGetUI.Avalonia.Views.DialogPages
         if (!PackageOperation.CanRetryClosingRunningApp(pkgOp))
             return;
 
-        retryOptions.Add(MenuItem(CoreTools.Translate("Retry without closing"),
-            () => { operation.Retry(AbstractOperation.RetryMode.Retry); Close(); }));
+        retryOptions.Add(MenuItem(CoreTools.Translate("Force-close app and retry"),
+            () => { operation.Retry(AbstractOperation.RetryMode.Retry_CloseRunningApp); Close(); }));
     }
 
     private Control SimpleRetryButton(AbstractOperation operation, string retryMode, string label)

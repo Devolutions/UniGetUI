@@ -50,7 +50,7 @@ public abstract partial class AbstractOperation : IDisposable
         BadgesChanged?.Invoke(this, new BadgeCollection(admin, interactive, skiphash, scope));
     }
 
-    private readonly IReadOnlyList<InnerOperation> PreOperations = [];
+    private readonly List<InnerOperation> PreOperations = [];
     private readonly IReadOnlyList<InnerOperation> PostOperations = [];
 
     public AbstractOperation(
@@ -61,7 +61,7 @@ public abstract partial class AbstractOperation : IDisposable
     {
         QUEUE_ENABLED = queue_enabled;
         if (preOps is not null)
-            PreOperations = preOps;
+            PreOperations.AddRange(preOps);
         if (postOps is not null)
             PostOperations = postOps;
 
@@ -78,6 +78,11 @@ public abstract partial class AbstractOperation : IDisposable
             MAX_OPERATIONS = 1;
             Logger.Debug("Parallel operation limit not set, defaulting to 1");
         }
+    }
+
+    protected void AddPreOperation(InnerOperation operation)
+    {
+        PreOperations.Add(operation);
     }
 
     public void Cancel()

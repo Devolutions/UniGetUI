@@ -76,6 +76,8 @@ namespace UniGetUI.PackageEngine.Operations
         public readonly IPackage Package;
         public readonly InstallOptions Options;
         public readonly OperationType Role;
+        public bool FailedBecauseApplicationRunning { get; private set; }
+        private bool _closeRunningAppRetryQueued;
 
         protected abstract Task HandleSuccess();
         protected abstract Task HandleFailure();
@@ -197,6 +199,9 @@ namespace UniGetUI.PackageEngine.Operations
                     break;
                 case RetryMode.Retry_SkipIntegrity:
                     Options.SkipHashCheck = true;
+                    break;
+                case RetryMode.Retry_CloseRunningApp:
+                    QueueCloseRunningAppPreOperations();
                     break;
                 case RetryMode.Retry:
                     break;
@@ -940,14 +945,84 @@ namespace UniGetUI.PackageEngine.Operations
                 ReturnCode
             );
 
+            FailedBecauseApplicationRunning = false;
             if (veredict is OperationVeredict.Failure)
             {
                 if (Role is OperationType.Update)
                     ExplainNotApplicableUpdate(Output, ReturnCode);
                 ExplainInstallerHashMismatch(ReturnCode);
+                ExplainApplicationCurrentlyRunning(Output, ReturnCode);
             }
 
             return Task.FromResult(veredict);
+        }
+
+        public static bool CanRetryClosingRunningApp(PackageOperation operation)
+        {
+            if (!operation.FailedBecauseApplicationRunning)
+                return false;
+            return GuessCloseProcessNames(operation.Package).Count > 0;
+        }
+
+        internal static IReadOnlyList<string> GuessCloseProcessNames(IPackage package)
+        {
+            var names = new List<string>();
+            AddProcessName(names, package.Name);
+            int separator = package.Id.LastIndexOf('.');
+            string idTail = separator >= 0 ? package.Id[(separator + 1)..] : package.Id;
+            AddProcessName(names, idTail);
+            return names;
+        }
+
+        private static void AddProcessName(List<string> names, string? candidate)
+        {
+            if (string.IsNullOrWhiteSpace(candidate))
+                return;
+            string name = candidate.Trim();
+            if (name.IndexOfAny([' ', '\\', '/', ':']) >= 0)
+                return;
+            if (names.Exists(existing => existing.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                return;
+            names.Add(name);
+        }
+
+        private void QueueCloseRunningAppPreOperations()
+        {
+            if (_closeRunningAppRetryQueued)
+                return;
+            _closeRunningAppRetryQueued = true;
+            foreach (var processName in GuessCloseProcessNames(Package))
+            {
+                if (
+                    !Options.KillBeforeOperation.Exists(existing =>
+                        existing.Equals(processName, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+                    Options.KillBeforeOperation.Add(processName);
+
+                AddPreOperation(
+                    new InnerOperation(
+                        new KillProcessOperation(processName, forceKill: true),
+                        mustSucceed: false
+                    )
+                );
+            }
+        }
+
+        private void ExplainApplicationCurrentlyRunning(List<string> output, int returnCode)
+        {
+#if WINDOWS
+            if (Package.Manager is not WinGet winget)
+                return;
+            if (!winget.ReportedApplicationCurrentlyRunning(output, returnCode))
+                return;
+
+            FailedBecauseApplicationRunning = true;
+            Metadata.FailureMessage = CoreTools.Translate(
+                "{package} is currently running. Close it and try again",
+                new Dictionary<string, object?> { { "package", Package.Name } }
+            );
+#endif
         }
 
         private void ExplainNotApplicableUpdate(List<string> output, int returnCode)

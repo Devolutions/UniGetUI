@@ -277,8 +277,10 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             }
         }
 
-        private static readonly ConcurrentDictionary<string, CachedResolution> _latestVersionCache =
-            new();
+        private static readonly ConcurrentDictionary<
+            (string Interpreter, string PackageId),
+            CachedResolution
+        > _latestVersionCache = new();
 
         private readonly record struct CachedResolution(string ETag, string? Version);
 
@@ -306,8 +308,6 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 _indexUpdateCheckSupported = false;
                 _interpreterVersion = default;
             }
-
-            _latestVersionCache.Clear();
         }
 
         private bool TryGetIndexUpdateCheckInterpreter(out PythonVersion interpreter)
@@ -474,8 +474,9 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 );
                 request.Headers.Accept.ParseAdd("application/vnd.pypi.simple.v1+json");
 
+                var cacheKey = (interpreter.Original, packageId);
                 bool wasCached = _latestVersionCache.TryGetValue(
-                    packageId,
+                    cacheKey,
                     out CachedResolution cached
                 );
                 if (wasCached)
@@ -513,7 +514,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 }
 
                 if (response.Headers.ETag?.Tag is string etag)
-                    _latestVersionCache[packageId] = new CachedResolution(etag, resolved);
+                    _latestVersionCache[cacheKey] = new CachedResolution(etag, resolved);
 
                 return new VersionResolution(resolved, false);
             }
@@ -523,7 +524,12 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                     $"Pip: the latest version of {packageId} could not be resolved: {e.Message}"
                 );
 
-                if (_latestVersionCache.TryGetValue(packageId, out CachedResolution known))
+                if (
+                    _latestVersionCache.TryGetValue(
+                        (interpreter.Original, packageId),
+                        out CachedResolution known
+                    )
+                )
                     return new VersionResolution(known.Version, false);
 
                 return new VersionResolution(null, true);

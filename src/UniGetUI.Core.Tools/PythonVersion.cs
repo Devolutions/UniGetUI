@@ -35,6 +35,8 @@ namespace UniGetUI.Core.Tools
         public bool IsPreRelease =>
             IsValid && (_preCategory is PreCategoryPresent || _dev is not null);
 
+        public IReadOnlyList<int> ReleaseComponents => _release ?? NoRelease;
+
         private PythonVersion(
             string original,
             int epoch,

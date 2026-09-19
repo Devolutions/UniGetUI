@@ -408,7 +408,7 @@ public partial class MainWindow : Window
             return 0;
 
         const double chrome = 42;
-        const double fallbackRow = 68;
+        const double fallbackRow = 58;
 
         double rows = 0;
         int visible = Math.Min(count, 3);

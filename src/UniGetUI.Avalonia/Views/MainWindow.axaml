@@ -87,6 +87,21 @@
         <Style Selector="Button.caption-close:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="#A4262C"/>
         </Style>
+        <!-- Compact operation rows use fill-only controls. The status surface and progress
+             colour provide the semantic emphasis, so adding another outline would be visually
+             heavy in the dark theme. These styles are scoped to this window. -->
+        <Style Selector="Button.operation-output, Button.operation-action">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+        </Style>
+        <Style Selector="Button.operation-output:pointerover, Button.operation-action:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
+        </Style>
+        <Style Selector="Button.operation-output:pressed, Button.operation-action:pressed">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </Style>
     </Window.Styles>
     <Panel>
         <!-- Solid inactive-state fallback, using the same theme resource as the #5111 Mica failure path. -->
@@ -262,61 +277,78 @@
                                   Margin="8,4,8,4">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:OperationViewModel">
-                                <Border Background="{Binding BackgroundBrush}"
-                                        CornerRadius="6"
-                                        Padding="10,6"
+                                <!-- The historical WinUI control was a compact four-part row:
+                                     icon, title, flexible output/progress, and actions. The newer
+                                     badge and overflow capabilities remain available. -->
+                                <Border Background="{DynamicResource SettingsCardBackground}"
+                                        CornerRadius="8"
                                         Margin="0,3,0,3">
-                                    <Grid ColumnDefinitions="*,Auto">
+                                    <Border Background="{Binding BackgroundBrush}"
+                                            CornerRadius="8"
+                                            Padding="8">
+                                        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto"
+                                              ColumnSpacing="8"
+                                              MinHeight="36">
 
-                                        <Border Grid.Column="0"
-                                                Background="Transparent"
-                                                Cursor="Hand"
-                                                Tapped="OperationCard_Tapped">
-                                        <Grid ColumnDefinitions="Auto,*">
-
-                                        <!-- Package icon -->
-                                        <Image Grid.Column="0"
-                                               Source="{Binding PackageIcon}"
-                                               Width="32" Height="24"
-                                               Margin="0,0,10,0"
-                                                 automation:AutomationProperties.AccessibilityView="Raw"
-                                               VerticalAlignment="Center"
-                                               Stretch="Uniform"/>
-
-                                        <!-- Centre: title, live line, progress, badges -->
-                                        <StackPanel Grid.Column="1"
-                                                    Spacing="3"
-                                                    VerticalAlignment="Center"
-                                                    Margin="0,0,8,0">
-
-                                            <TextBlock Text="{Binding Title}"
-                                                       FontWeight="SemiBold"
-                                                       FontSize="14"
-                                                       TextTrimming="CharacterEllipsis"/>
-
-                                            <Button Content="{Binding LiveLine}"
-                                                    Command="{Binding ShowDetailsCommand}"
-                                                    automation:AutomationProperties.HelpText="{Binding Title}"
-                                                    FontSize="11"
-                                                    Opacity="0.65"
-                                                    HorizontalAlignment="Left"
-                                                    Padding="0"
+                                            <Border Grid.Column="0"
+                                                    Width="32" Height="36"
                                                     Background="Transparent"
-                                                    BorderThickness="0"
-                                                    CornerRadius="0"
-                                                    Cursor="Hand"/>
+                                                    Cursor="Hand"
+                                                    Tapped="OperationCard_Tapped">
+                                                <Image Source="{Binding PackageIcon}"
+                                                       Width="32" Height="24"
+                                                       automation:AutomationProperties.AccessibilityView="Raw"
+                                                       VerticalAlignment="Center"
+                                                       Stretch="Uniform"/>
+                                            </Border>
 
-                                            <ProgressBar IsIndeterminate="{Binding ProgressIndeterminate}"
-                                                         Value="{Binding ProgressValue}"
-                                                         automation:AutomationProperties.Name="{Binding Title}"
-                                                         automation:AutomationProperties.ItemStatus="{Binding LiveLine}"
-                                                         Minimum="0" Maximum="100"
-                                                         Height="3"
-                                                         CornerRadius="2"
-                                                         Foreground="{Binding ProgressBrush}"/>
+                                            <Border Grid.Column="1"
+                                                    MinWidth="140" MaxWidth="240"
+                                                    Background="Transparent"
+                                                    Cursor="Hand"
+                                                    Tapped="OperationCard_Tapped">
+                                                <TextBlock Text="{Binding Title}"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="13"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </Border>
 
-                                            <!-- Badge icon-buttons (Admin, Interactive, …) -->
-                                            <ItemsControl ItemsSource="{Binding Badges}">
+                                            <!-- Live output and progress form one WinUI-style
+                                                 control, with the progress strip on its lower edge. -->
+                                            <Grid Grid.Column="2" MinWidth="80" Height="36">
+                                                <Button Classes="operation-output"
+                                                        Command="{Binding ShowDetailsCommand}"
+                                                        automation:AutomationProperties.Name="{Binding Title}"
+                                                        automation:AutomationProperties.HelpText="{Binding LiveLine}"
+                                                        HorizontalAlignment="Stretch"
+                                                        HorizontalContentAlignment="Stretch"
+                                                        VerticalContentAlignment="Center"
+                                                        Padding="12,0,12,3"
+                                                        CornerRadius="6"
+                                                        Cursor="Hand">
+                                                    <TextBlock Text="{Binding LiveLine}"
+                                                               FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
+                                                               FontSize="12"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </Button>
+                                                <ProgressBar IsIndeterminate="{Binding ProgressIndeterminate}"
+                                                             Value="{Binding ProgressValue}"
+                                                             automation:AutomationProperties.AccessibilityView="Raw"
+                                                             Minimum="0" Maximum="100"
+                                                             Height="4"
+                                                             Margin="1,0,1,1"
+                                                             VerticalAlignment="Bottom"
+                                                             CornerRadius="0,0,5,5"
+                                                             Foreground="{Binding ProgressBrush}"
+                                                             IsHitTestVisible="False"/>
+                                            </Grid>
+
+                                            <!-- Icon-only badges preserve their explanation in
+                                                 the tooltip and flyout without increasing height. -->
+                                            <ItemsControl Grid.Column="3"
+                                                          ItemsSource="{Binding Badges}"
+                                                          VerticalAlignment="Center">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
                                                         <StackPanel Orientation="Horizontal" Spacing="4"/>
@@ -324,21 +356,16 @@
                                                 </ItemsControl.ItemsPanel>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:OperationBadgeVm">
-                                                        <Button Background="{DynamicResource AppBadgeBackground}"
-                                                                BorderThickness="0"
-                                                                CornerRadius="4"
-                                                                Padding="5,2"
+                                                        <Button Classes="operation-action"
+                                                                Width="36" Height="36"
+                                                                CornerRadius="6"
+                                                                Padding="9"
                                                                 automation:AutomationProperties.Name="{Binding Label}"
                                                                 automation:AutomationProperties.HelpText="{Binding Primary}"
                                                                 ToolTip.Tip="{Binding Primary}">
-                                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                <controls:SvgIcon Path="{Binding IconPath}"
-                                                                                  Width="12" Height="12"
-                                                                                  Foreground="{DynamicResource AppIconForeground}"/>
-                                                                <TextBlock Text="{Binding Label}"
-                                                                           FontSize="10"
-                                                                           Opacity="0.8"/>
-                                                            </StackPanel>
+                                                            <controls:SvgIcon Path="{Binding IconPath}"
+                                                                              Width="18" Height="18"
+                                                                              Foreground="{DynamicResource AppIconForeground}"/>
                                                             <Button.Flyout>
                                                                 <Flyout>
                                                                     <StackPanel Spacing="6" MaxWidth="240">
@@ -360,47 +387,47 @@
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
 
-                                        </StackPanel>
+                                            <!-- Keep the current commands and menu, presented as
+                                                 the compact split action from the WinUI control. -->
+                                            <Border Grid.Column="4"
+                                                    CornerRadius="6"
+                                                    ClipToBounds="True"
+                                                    VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Height="36">
+                                                    <Button Classes="operation-action"
+                                                            Content="{Binding ButtonText}"
+                                                            Command="{Binding ButtonCommand}"
+                                                            automation:AutomationProperties.Name="{Binding ButtonText}"
+                                                            MinWidth="96"
+                                                            Height="36"
+                                                            Padding="16,0"
+                                                            CornerRadius="0"
+                                                            FontSize="12"
+                                                            VerticalContentAlignment="Center"
+                                                            HorizontalContentAlignment="Center"/>
+                                                    <Border Width="1"
+                                                            VerticalAlignment="Stretch"
+                                                            automation:AutomationProperties.AccessibilityView="Raw"
+                                                            Background="{DynamicResource AppBorderBrush}"/>
+                                                    <Button Classes="operation-action"
+                                                            Width="40"
+                                                            Height="36"
+                                                            Padding="0"
+                                                            CornerRadius="0"
+                                                            VerticalContentAlignment="Center"
+                                                            HorizontalContentAlignment="Center"
+                                                            automation:AutomationProperties.Name="{t:Translate More}"
+                                                            Flyout="{Binding OpMenu}">
+                                                        <TextBlock Text="⋯" FontSize="14"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   automation:AutomationProperties.AccessibilityView="Raw"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Border>
+
                                         </Grid>
-                                        </Border>
-
-                                        <!-- Split-button: Cancel/Close + "…" menu -->
-                                        <Border Grid.Column="1"
-                                                CornerRadius="6"
-                                                ClipToBounds="True"
-                                                VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" Height="30">
-                                                <Button Content="{Binding ButtonText}"
-                                                        Command="{Binding ButtonCommand}"
-                                                        automation:AutomationProperties.Name="{Binding ButtonText}"
-                                                        Height="30"
-                                                        Padding="14,0"
-                                                        CornerRadius="0"
-                                                        FontSize="12"
-                                                        VerticalContentAlignment="Center"
-                                                        HorizontalContentAlignment="Center"/>
-                                                <Border Width="1"
-                                                        VerticalAlignment="Stretch"
-                                                    automation:AutomationProperties.AccessibilityView="Raw"
-                                                        Background="{DynamicResource AppBorderBrush}"
-                                                        Opacity="0.3"/>
-                                                <Button Width="32"
-                                                        Height="30"
-                                                        Padding="0"
-                                                        CornerRadius="0"
-                                                        VerticalContentAlignment="Center"
-                                                        HorizontalContentAlignment="Center"
-                                                    automation:AutomationProperties.Name="{t:Translate More}"
-                                                        Flyout="{Binding OpMenu}">
-                                                    <TextBlock Text="⋯" FontSize="14"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"
-                                                               automation:AutomationProperties.AccessibilityView="Raw"/>
-                                                </Button>
-                                            </StackPanel>
-                                        </Border>
-
-                                    </Grid>
+                                    </Border>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

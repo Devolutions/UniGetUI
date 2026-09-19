@@ -193,7 +193,7 @@ public class PolicyEditorFocusNavigationTests
     }
 
     [Fact]
-    public void MissingConstraintsTargetFallsBackToVisibleAddSafetyLimitsControl()
+    public void OmittedMatchSensitiveWarningTargetsItsMatchSelector()
     {
         PolicyEditorSession session = PolicyEditorSession.StartCreate(
             PolicyEditorTestFixtures.BuildMissingManagement(),
@@ -221,12 +221,12 @@ public class PolicyEditorFocusNavigationTests
             });
 
         Assert.Equal(
-            "/Rules/0/Constraints",
+            "/Rules/0/Match/SkipHashCheck",
             PolicyEditorDialog.GetVisibleNavigationPointer(finding, 0, rule));
 
         draftRule.Constraints = new PolicyEditorDraftConstraints();
         Assert.Equal(
-            "/Rules/0/Constraints/AllowSkipHashCheck",
+            "/Rules/0/Match/SkipHashCheck",
             PolicyEditorDialog.GetVisibleNavigationPointer(finding, 0, rule));
     }
 }

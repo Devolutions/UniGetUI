@@ -748,6 +748,9 @@
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.SkipHashMatch}"
                                                       automation:AutomationProperties.Name="{t:Translate Skip hash check}"/>
                                         </Grid>
+                                        <ContentControl Content="{Binding SkipHashCheckMatchAdvisory}"
+                                                        ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                                        IsVisible="{Binding HasSkipHashCheckMatchAdvisory}"/>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                             <TextBlock Classes="field-label" Text="{t:Translate Prerelease}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PrereleaseMatch}"/>
@@ -766,6 +769,9 @@
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CustomParametersMatch}"
                                                       automation:AutomationProperties.Name="{t:Translate Custom parameters}"/>
                                         </Grid>
+                                        <ContentControl Content="{Binding CustomParametersMatchAdvisory}"
+                                                        ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                                        IsVisible="{Binding HasCustomParametersMatchAdvisory}"/>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                             <TextBlock Classes="field-label" Text="{t:Translate Custom install location}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CustomLocationMatch}"/>
@@ -775,6 +781,9 @@
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CustomLocationMatch}"
                                                       automation:AutomationProperties.Name="{t:Translate Custom install location}"/>
                                         </Grid>
+                                        <ContentControl Content="{Binding CustomInstallLocationMatchAdvisory}"
+                                                        ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                                        IsVisible="{Binding HasCustomInstallLocationMatchAdvisory}"/>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                             <TextBlock Classes="field-label" Text="{t:Translate Pre/post commands}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PrePostCommandsMatch}"/>
@@ -784,6 +793,9 @@
                                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PrePostCommandsMatch}"
                                                       automation:AutomationProperties.Name="{t:Translate Pre/post commands}"/>
                                         </Grid>
+                                        <ContentControl Content="{Binding PrePostCommandsMatchAdvisory}"
+                                                        ContentTemplate="{StaticResource PolicyAdvisoryTemplate}"
+                                                        IsVisible="{Binding HasPrePostCommandsMatchAdvisory}"/>
                                         <Grid ColumnDefinitions="160,*" ColumnSpacing="12">
                                             <TextBlock Classes="field-label" Text="{t:Translate Stop running apps before operation}"
                                                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.KillBeforeMatch}"/>

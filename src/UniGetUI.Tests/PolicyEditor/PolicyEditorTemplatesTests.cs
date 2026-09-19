@@ -168,6 +168,10 @@ public class PolicyEditorTemplatesTests
         rule.Decision = Decision.Allow;
         rule.Enabled = true;
         rule.Match.Operations.Add(Operation.Install);
+        rule.Match.SkipHashCheck = TriState.True;
+        rule.Match.HasCustomParameters = TriState.True;
+        rule.Match.HasCustomInstallLocation = TriState.True;
+        rule.Match.HasPrePostCommands = TriState.True;
         rule.Constraints = new PolicyEditorDraftConstraints
         {
             AllowInteractive = true,
@@ -284,6 +288,37 @@ public class PolicyEditorTemplatesTests
             [allow, deny],
             0,
             PolicyEditorAdvisories.PolicyEditorRisk.SkipHashCheck));
+    }
+
+    [Fact]
+    public void OmittedSensitiveMatchUsesSelectorLocalCausalAdvisory()
+    {
+        PolicyEditorDraftRule allow = PolicyRuleFactory.CreateBlank("allow-rule");
+        allow.Enabled = true;
+        allow.Decision = Decision.Allow;
+        allow.Match.Operations.Add(Operation.Update);
+        allow.Constraints = new PolicyEditorDraftConstraints
+        {
+            AllowSkipHashCheck = true,
+        };
+
+        Assert.Contains(
+            "Does not matter",
+            PolicyEditorAdvisories.SkipHashCheckMatch(allow),
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Set it to No",
+            PolicyEditorAdvisories.SkipHashCheckMatch(allow),
+            StringComparison.Ordinal);
+        Assert.Empty(PolicyEditorAdvisories.SkipHashCheck(allow));
+
+        allow.Match.SkipHashCheck = TriState.True;
+
+        Assert.Empty(PolicyEditorAdvisories.SkipHashCheckMatch(allow));
+        Assert.Contains(
+            "explicitly permits",
+            PolicyEditorAdvisories.SkipHashCheck(allow),
+            StringComparison.Ordinal);
     }
 
     [Fact]

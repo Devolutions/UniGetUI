@@ -74,7 +74,7 @@ public static class PolicyEditorHelp
     public static string AllowKillBefore => T("Permit named processes to be closed before the package operation. Turn off to prevent policy-approved requests from terminating applications.");
     public static string AllowUninstallPrevious => T("Permit removing an installed version before applying an update. Turn off to require updates that do not uninstall first.");
     public static string AllowUpgrade => T("Permit an install request to leave an already installed package unchanged instead of upgrading it. Turn off to reject requests that use this option.");
-    public static string Save => T("Check and save the policy. Warnings require acknowledgement, and Windows may ask for administrator approval.");
+    public static string Save => T("Check and save the policy. Errors must be corrected first, and Windows may ask for administrator approval.");
     public static string Overwrite => T("Replace a policy that changed after editing began. Review the newer policy first because overwriting discards those external changes.");
     public static string GoToFinding => T("Open and focus the setting associated with this finding.");
     public static string GoToRawError => T("Focus the policy JSON so you can correct the reported formatting or structure problem.");

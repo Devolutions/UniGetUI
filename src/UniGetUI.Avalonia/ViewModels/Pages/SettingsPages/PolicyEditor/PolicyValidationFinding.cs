@@ -324,6 +324,12 @@ public static class PolicyFindingPresentation
         string? rulePointer = GetRulePointer(pointer);
         if (rulePointer is null)
             return pointer;
+        if (pointer.StartsWith(
+                $"{rulePointer}/Match/",
+                StringComparison.Ordinal))
+        {
+            return pointer;
+        }
 
         return option switch
         {
@@ -384,6 +390,25 @@ public static class PolicyFindingPresentation
     {
         string? option = ReadJsonString(arguments, "option");
         string rule = DescribeRule(pointer, ruleId);
+        if (pointer?.Contains("/Match/", StringComparison.Ordinal) is true)
+        {
+            return option switch
+            {
+                "SkipHashCheck" => CoreTools.Translate(
+                    "Skip hash check is set to Does not matter, so {0} can match requests that bypass integrity verification. Set it to No to allow only normal verification, or place an earlier Deny rule that covers this rule's scope.",
+                    rule),
+                "AllowCustomParameters" => CoreTools.Translate(
+                    "Custom parameters is set to Does not matter, so {0} can match requests with arbitrary extra options. Set it to No to allow only requests without extra options, or place an earlier Deny rule that covers this rule's scope.",
+                    rule),
+                "AllowCustomInstallLocation" => CoreTools.Translate(
+                    "Custom install location is set to Does not matter, so {0} can match requests for any custom folder. Set it to No to allow only the default location, or place an earlier Deny rule that covers this rule's scope.",
+                    rule),
+                "AllowPrePostCommands" => CoreTools.Translate(
+                    "Pre/post commands is set to Does not matter, so {0} can match requests that run arbitrary commands. Set it to No to allow only requests without pre/post commands, or place an earlier Deny rule that covers this rule's scope.",
+                    rule),
+                _ => null,
+            } ?? SanitizeFallback(fallbackMessage);
+        }
         string description = option switch
         {
             "SkipHashCheck" => CoreTools.Translate(

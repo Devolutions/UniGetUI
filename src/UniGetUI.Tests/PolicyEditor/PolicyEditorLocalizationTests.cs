@@ -201,7 +201,7 @@ public partial class PolicyEditorLocalizationTests
         Assert.Contains("dependency", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("agreement", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("restart", PolicyEditorHelp.Constraints, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("warnings require acknowledgement", PolicyEditorHelp.Save, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Errors must be corrected", PolicyEditorHelp.Save, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not a display name", PolicyEditorHelp.PolicyId, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("contoso-policy", PolicyEditorHelp.PolicyId, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not a display name", PolicyEditorHelp.RuleId, StringComparison.OrdinalIgnoreCase);

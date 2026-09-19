@@ -102,7 +102,7 @@ public class PolicyEditorFindingIndexTests
 
         Assert.Equal(0, prompt.CallCount);
         Assert.Equal(
-            "/Rules/0/Constraints/AllowSkipHashCheck",
+            "/Rules/0/Match/SkipHashCheck",
             Assert.Single(sessionViewModel.Findings).NavigationPointer);
         Assert.False(dialog.HasFindingSummary);
         Assert.False(dialog.Status.IsOpen);
@@ -111,7 +111,7 @@ public class PolicyEditorFindingIndexTests
 
         Assert.Equal(0, prompt.CallCount);
         Assert.Equal(
-            "/Rules/0/Constraints/AllowSkipHashCheck",
+            "/Rules/0/Match/SkipHashCheck",
             Assert.Single(sessionViewModel.Findings).NavigationPointer);
         Assert.False(dialog.HasFindingSummary);
     }
@@ -548,9 +548,10 @@ public class PolicyEditorFindingIndexTests
         Assert.Equal("/Rules/0/Match/SkipHashCheck", finding.Pointer);
         Assert.Equal("/Rules/0/Match/SkipHashCheck", finding.RawNavigationPointer);
         Assert.Equal(
-            "/Rules/0/Constraints/AllowSkipHashCheck",
+            "/Rules/0/Match/SkipHashCheck",
             finding.NavigationPointer);
-        Assert.Contains("skipping hash verification", finding.Message);
+        Assert.Contains("Does not matter", finding.Message);
+        Assert.Contains("Set it to No", finding.Message);
     }
 
     [Fact]

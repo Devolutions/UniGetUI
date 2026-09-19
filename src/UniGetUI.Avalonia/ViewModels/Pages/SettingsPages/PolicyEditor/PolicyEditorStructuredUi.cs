@@ -949,6 +949,13 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             Rule,
             _sessionViewModel.Rules,
             _ruleIndex);
+    public string SkipHashCheckMatchAdvisory =>
+        PolicyEditorAdvisories.SkipHashCheckMatch(
+            Rule,
+            _sessionViewModel.Rules,
+            _ruleIndex);
+    public bool HasSkipHashCheckMatchAdvisory =>
+        !string.IsNullOrEmpty(SkipHashCheckMatchAdvisory);
     public bool HasSkipHashCheckAdvisory =>
         !string.IsNullOrEmpty(SkipHashCheckAdvisory);
     public string CustomParametersAdvisory =>
@@ -956,6 +963,13 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             Rule,
             _sessionViewModel.Rules,
             _ruleIndex);
+    public string CustomParametersMatchAdvisory =>
+        PolicyEditorAdvisories.CustomParametersMatch(
+            Rule,
+            _sessionViewModel.Rules,
+            _ruleIndex);
+    public bool HasCustomParametersMatchAdvisory =>
+        !string.IsNullOrEmpty(CustomParametersMatchAdvisory);
     public bool HasCustomParametersAdvisory =>
         !string.IsNullOrEmpty(CustomParametersAdvisory);
     public string CustomInstallLocationAdvisory =>
@@ -963,6 +977,13 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             Rule,
             _sessionViewModel.Rules,
             _ruleIndex);
+    public string CustomInstallLocationMatchAdvisory =>
+        PolicyEditorAdvisories.CustomInstallLocationMatch(
+            Rule,
+            _sessionViewModel.Rules,
+            _ruleIndex);
+    public bool HasCustomInstallLocationMatchAdvisory =>
+        !string.IsNullOrEmpty(CustomInstallLocationMatchAdvisory);
     public bool HasCustomInstallLocationAdvisory =>
         !string.IsNullOrEmpty(CustomInstallLocationAdvisory);
     public string PrePostCommandsAdvisory =>
@@ -970,15 +991,26 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
             Rule,
             _sessionViewModel.Rules,
             _ruleIndex);
+    public string PrePostCommandsMatchAdvisory =>
+        PolicyEditorAdvisories.PrePostCommandsMatch(
+            Rule,
+            _sessionViewModel.Rules,
+            _ruleIndex);
+    public bool HasPrePostCommandsMatchAdvisory =>
+        !string.IsNullOrEmpty(PrePostCommandsMatchAdvisory);
     public bool HasPrePostCommandsAdvisory =>
         !string.IsNullOrEmpty(PrePostCommandsAdvisory);
     public int FieldSafetyAdvisoryCount =>
         new[]
         {
             SkipHashCheckAdvisory,
+            SkipHashCheckMatchAdvisory,
             CustomParametersAdvisory,
+            CustomParametersMatchAdvisory,
             CustomInstallLocationAdvisory,
+            CustomInstallLocationMatchAdvisory,
             PrePostCommandsAdvisory,
+            PrePostCommandsMatchAdvisory,
         }.Count(message => !string.IsNullOrEmpty(message));
     public bool HasFieldSafetyAdvisories => FieldSafetyAdvisoryCount > 0;
     public string FieldSafetyAdvisoryCountText => CoreTools.Translate(
@@ -1198,12 +1230,20 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         OnPropertyChanged(nameof(HasRuleSafetyAdvisories));
         OnPropertyChanged(nameof(SkipHashCheckAdvisory));
         OnPropertyChanged(nameof(HasSkipHashCheckAdvisory));
+        OnPropertyChanged(nameof(SkipHashCheckMatchAdvisory));
+        OnPropertyChanged(nameof(HasSkipHashCheckMatchAdvisory));
         OnPropertyChanged(nameof(CustomParametersAdvisory));
         OnPropertyChanged(nameof(HasCustomParametersAdvisory));
+        OnPropertyChanged(nameof(CustomParametersMatchAdvisory));
+        OnPropertyChanged(nameof(HasCustomParametersMatchAdvisory));
         OnPropertyChanged(nameof(CustomInstallLocationAdvisory));
         OnPropertyChanged(nameof(HasCustomInstallLocationAdvisory));
+        OnPropertyChanged(nameof(CustomInstallLocationMatchAdvisory));
+        OnPropertyChanged(nameof(HasCustomInstallLocationMatchAdvisory));
         OnPropertyChanged(nameof(PrePostCommandsAdvisory));
         OnPropertyChanged(nameof(HasPrePostCommandsAdvisory));
+        OnPropertyChanged(nameof(PrePostCommandsMatchAdvisory));
+        OnPropertyChanged(nameof(HasPrePostCommandsMatchAdvisory));
         OnPropertyChanged(nameof(FieldSafetyAdvisoryCount));
         OnPropertyChanged(nameof(HasFieldSafetyAdvisories));
         OnPropertyChanged(nameof(FieldSafetyAdvisoryCountText));

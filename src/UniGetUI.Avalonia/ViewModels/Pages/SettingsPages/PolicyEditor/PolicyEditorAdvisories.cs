@@ -34,9 +34,20 @@ internal static class PolicyEditorAdvisories
         int ruleIndex = -1) =>
         IsAllowWithConstraints(rule, out PolicyEditorDraftConstraints? limits)
         && limits.AllowSkipHashCheck
-        && rule.Match.SkipHashCheck != TriState.False
+        && IsExplicitRisk(rule.Match.SkipHashCheck)
         && !PolicyEditorRiskCoverage.IsCovered(rules, ruleIndex, PolicyEditorRisk.SkipHashCheck)
-            ? CoreTools.Translate("This rule permits bypassing package integrity checks.")
+            ? CoreTools.Translate("This Allow rule explicitly permits bypassing package integrity checks.")
+            : "";
+
+    public static string SkipHashCheckMatch(
+        PolicyEditorDraftRule rule,
+        IReadOnlyList<PolicyEditorDraftRule>? rules = null,
+        int ruleIndex = -1) =>
+        IsAllowWithConstraints(rule, out PolicyEditorDraftConstraints? limits)
+        && limits.AllowSkipHashCheck
+        && rule.Match.SkipHashCheck == TriState.Omitted
+        && !PolicyEditorRiskCoverage.IsCovered(rules, ruleIndex, PolicyEditorRisk.SkipHashCheck)
+            ? CoreTools.Translate("Skip hash check is set to Does not matter, so this Allow rule can match requests that bypass integrity verification. Set it to No to allow only normal verification, or place an earlier Deny rule that covers this rule's scope.")
             : "";
 
     public static string CustomParameters(
@@ -46,11 +57,25 @@ internal static class PolicyEditorAdvisories
         IsBroadlyScoped(rule)
         && IsAllowWithConstraints(rule, out PolicyEditorDraftConstraints? limits)
         && limits.AllowCustomParameters
-        && rule.Match.HasCustomParameters != TriState.False
+        && IsExplicitRisk(rule.Match.HasCustomParameters)
         && limits.AllowedCustomParameters.Count == 0
         && limits.AllowedCustomParameterPatterns.Count == 0
         && !PolicyEditorRiskCoverage.IsCovered(rules, ruleIndex, PolicyEditorRisk.CustomParameters)
             ? CoreTools.Translate("This Allow rule can permit arbitrary extra package-manager options because it does not limit package identifiers or sources.")
+            : "";
+
+    public static string CustomParametersMatch(
+        PolicyEditorDraftRule rule,
+        IReadOnlyList<PolicyEditorDraftRule>? rules = null,
+        int ruleIndex = -1) =>
+        IsBroadlyScoped(rule)
+        && IsAllowWithConstraints(rule, out PolicyEditorDraftConstraints? limits)
+        && limits.AllowCustomParameters
+        && rule.Match.HasCustomParameters == TriState.Omitted
+        && limits.AllowedCustomParameters.Count == 0
+        && limits.AllowedCustomParameterPatterns.Count == 0
+        && !PolicyEditorRiskCoverage.IsCovered(rules, ruleIndex, PolicyEditorRisk.CustomParameters)
+            ? CoreTools.Translate("Custom parameters is set to Does not matter, so this Allow rule can match requests with arbitrary extra options. Set it to No to allow only requests without extra options, or place an earlier Deny rule that covers this rule's scope.")
             : "";
 
     public static string CustomInstallLocation(
@@ -60,10 +85,23 @@ internal static class PolicyEditorAdvisories
         IsBroadlyScoped(rule)
         && IsAllowWithConstraints(rule, out PolicyEditorDraftConstraints? limits)
         && limits.AllowCustomInstallLocation
-        && rule.Match.HasCustomInstallLocation != TriState.False
+        && IsExplicitRisk(rule.Match.HasCustomInstallLocation)
         && limits.AllowedInstallLocationPatterns.Count == 0
         && !PolicyEditorRiskCoverage.IsCovered(rules, ruleIndex, PolicyEditorRisk.CustomInstallLocation)
             ? CoreTools.Translate("This Allow rule can permit any custom install folder because it does not limit package identifiers or sources.")
+            : "";
+
+    public static string CustomInstallLocationMatch(
+        PolicyEditorDraftRule rule,
+        IReadOnlyList<PolicyEditorDraftRule>? rules = null,
+        int ruleIndex = -1) =>
+        IsBroadlyScoped(rule)
+        && IsAllowWithConstraints(rule, out PolicyEditorDraftConstraints? limits)
+        && limits.AllowCustomInstallLocation
+        && rule.Match.HasCustomInstallLocation == TriState.Omitted
+        && limits.AllowedInstallLocationPatterns.Count == 0
+        && !PolicyEditorRiskCoverage.IsCovered(rules, ruleIndex, PolicyEditorRisk.CustomInstallLocation)
+            ? CoreTools.Translate("Custom install location is set to Does not matter, so this Allow rule can match requests for any custom folder. Set it to No to allow only the default location, or place an earlier Deny rule that covers this rule's scope.")
             : "";
 
     public static string PrePostCommands(
@@ -73,9 +111,21 @@ internal static class PolicyEditorAdvisories
         IsBroadlyScoped(rule)
         && IsAllowWithConstraints(rule, out PolicyEditorDraftConstraints? limits)
         && limits.AllowPrePostCommands
-        && rule.Match.HasPrePostCommands != TriState.False
+        && IsExplicitRisk(rule.Match.HasPrePostCommands)
         && !PolicyEditorRiskCoverage.IsCovered(rules, ruleIndex, PolicyEditorRisk.PrePostCommands)
             ? CoreTools.Translate("This Allow rule can permit arbitrary commands before or after package operations because it does not limit package identifiers or sources.")
+            : "";
+
+    public static string PrePostCommandsMatch(
+        PolicyEditorDraftRule rule,
+        IReadOnlyList<PolicyEditorDraftRule>? rules = null,
+        int ruleIndex = -1) =>
+        IsBroadlyScoped(rule)
+        && IsAllowWithConstraints(rule, out PolicyEditorDraftConstraints? limits)
+        && limits.AllowPrePostCommands
+        && rule.Match.HasPrePostCommands == TriState.Omitted
+        && !PolicyEditorRiskCoverage.IsCovered(rules, ruleIndex, PolicyEditorRisk.PrePostCommands)
+            ? CoreTools.Translate("Pre/post commands is set to Does not matter, so this Allow rule can match requests that run arbitrary commands. Set it to No to allow only requests without pre/post commands, or place an earlier Deny rule that covers this rule's scope.")
             : "";
 
     public static IReadOnlyList<string> FieldSpecific(PolicyEditorDraftRule rule) =>
@@ -98,6 +148,8 @@ internal static class PolicyEditorAdvisories
             && rule.Decision == Decision.Allow
             && limits is not null;
     }
+
+    private static bool IsExplicitRisk(TriState match) => match == TriState.True;
 
     internal enum PolicyEditorRisk
     {

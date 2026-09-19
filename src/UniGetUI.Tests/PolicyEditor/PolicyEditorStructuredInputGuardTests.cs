@@ -753,6 +753,7 @@ public class PolicyEditorStructuredInputGuardTests
         PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
         draftRule.Enabled = true;
         draftRule.Match.Operations.Add(ModelOperation.Install);
+        draftRule.Match.SkipHashCheck = TriState.True;
         using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
         rule.ApplyDecision(ModelDecision.Allow);
         rule.HasConstraints = true;

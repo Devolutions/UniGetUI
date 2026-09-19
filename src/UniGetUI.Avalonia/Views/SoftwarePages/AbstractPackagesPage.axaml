@@ -98,6 +98,30 @@
          <Setter Property="Background" Value="{DynamicResource SearchBoxFocusedBackground}"/>
          <Setter Property="BorderBrush" Value="{DynamicResource SearchBoxFocusedBorderBrush}"/>
       </Style>
+      <!-- The full splitter track is interactive. Its subtle rounded hover surface sits beneath
+           the persistent grip, matching WinUI's pane-resize affordance. -->
+      <Style Selector="GridSplitter.winui-vertical-splitter">
+         <Setter Property="Background" Value="Transparent"/>
+         <Setter Property="Template">
+            <ControlTemplate>
+               <Border Background="{TemplateBinding Background}"
+                       CornerRadius="6">
+                  <Border Width="4" Height="36"
+                          CornerRadius="2"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Background="{DynamicResource TextFillColorTertiaryBrush}"
+                          IsHitTestVisible="False"/>
+               </Border>
+            </ControlTemplate>
+         </Setter>
+      </Style>
+      <Style Selector="GridSplitter.winui-vertical-splitter:pointerover">
+         <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+      </Style>
+      <Style Selector="GridSplitter.winui-vertical-splitter:pressed">
+         <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+      </Style>
    </UserControl.Styles>
 
    <UserControl.Resources>
@@ -244,7 +268,7 @@
         <Grid x:Name="FilteringPanel"
               Grid.Row="2"
               ClipToBounds="True"
-              ColumnDefinitions="220,4,*">
+              ColumnDefinitions="220,12,*">
 
             <!-- Both presentations use this single content definition. Their containers remain
                  isolated so compact compositor state cannot leak into the inline pane. -->
@@ -478,11 +502,12 @@
             </Border>
             <!-- ===== DRAG SPLITTER ===== -->
             <GridSplitter x:Name="FilterSplitter"
+                          Classes="winui-vertical-splitter"
                           Grid.Column="1"
+                          Margin="1,8"
                           IsVisible="{Binding IsFilterPaneOpen}"
                           HorizontalAlignment="Stretch"
-                          ResizeDirection="Columns"
-                          Background="{DynamicResource MicaPageBackground}"/>
+                          ResizeDirection="Columns"/>
 
             <!-- ===== OVERLAY BACKDROP (overlay mode only, dismisses pane on click) ===== -->
             <Border x:Name="FilterOverlayBackdrop"

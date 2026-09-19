@@ -102,6 +102,30 @@
             <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
         </Style>
+        <!-- WinUI splitter: the complete rounded track is the hit target and receives the
+             hover/press fill; the pill identifies the drag axis within that track. -->
+        <Style Selector="GridSplitter.winui-horizontal-splitter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="6">
+                        <Border Width="36" Height="4"
+                                CornerRadius="2"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Background="{DynamicResource TextFillColorTertiaryBrush}"
+                                IsHitTestVisible="False"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="GridSplitter.winui-horizontal-splitter:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        </Style>
+        <Style Selector="GridSplitter.winui-horizontal-splitter:pressed">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+        </Style>
     </Window.Styles>
     <Panel>
         <!-- Solid inactive-state fallback, using the same theme resource as the #5111 Mica failure path. -->
@@ -166,7 +190,7 @@
             </ContentControl>
 
             <!-- ── Content: banners + page + operations ── -->
-            <Grid x:Name="ContentRoot" Grid.Column="1" RowDefinitions="*,4,Auto">
+            <Grid x:Name="ContentRoot" Grid.Column="1" RowDefinitions="*,0,Auto">
 
             <!-- ── Page content (banners now surface as bottom-right toasts; see ToastHost) ── -->
             <TransitioningContentControl Grid.Row="0"
@@ -184,12 +208,14 @@
 
             <!-- ── GridSplitter (only visible when operations are present) ── -->
             <GridSplitter x:Name="OperationsSplitter"
+                          Classes="winui-horizontal-splitter"
                           Grid.Row="1"
+                          Margin="8,1"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch"
+                          ResizeDirection="Rows"
                           IsVisible="{Binding OperationsSplitterVisible}"
-                          automation:AutomationProperties.AccessibilityView="Raw"
-                          Background="Transparent"/>
+                          automation:AutomationProperties.AccessibilityView="Raw"/>
 
             <!-- ── Operations panel ── -->
             <Border Grid.Row="2"

@@ -383,6 +383,10 @@ public partial class MainWindow : Window
         if (ContentRoot.RowDefinitions.Count < 3)
             return;
 
+        ContentRoot.RowDefinitions[1].Height = ViewModel.OperationsSplitterVisible
+            ? new GridLength(20, GridUnitType.Pixel)
+            : new GridLength(0, GridUnitType.Pixel);
+
         RowDefinition row = ContentRoot.RowDefinitions[2];
         if (ViewModel.OperationsPanelVisible && ViewModel.OperationsPanelExpanded)
         {

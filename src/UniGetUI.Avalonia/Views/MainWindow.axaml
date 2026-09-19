@@ -87,6 +87,40 @@
         <Style Selector="Button.caption-close:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="#A4262C"/>
         </Style>
+        <!-- WinUI-like splitter: the track fills the resize gap while a compact pill
+             marks the drag axis. -->
+        <Style Selector="GridSplitter.winui-horizontal-splitter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <!-- Match the visible splitter track to the operation-card width.
+                         OperationsList uses 8 DIPs of horizontal inset. -->
+                    <Border Background="{TemplateBinding Background}"
+                            Margin="8,0"
+                            CornerRadius="6">
+                        <Border Width="22" Height="4"
+                                CornerRadius="2"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Background="{DynamicResource TextFillColorTertiaryBrush}"
+                                IsHitTestVisible="False"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="GridSplitter.winui-horizontal-splitter:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        </Style>
+        <Style Selector="GridSplitter.winui-horizontal-splitter:pressed">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+        </Style>
+        <Style Selector="Border.operations-panel-border">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+        </Style>
+        <Style Selector="Border.operations-panel-border.splitter-active">
+            <!-- Preserve the one-DIP separator's layout while the splitter surface replaces it. -->
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
     </Window.Styles>
     <Panel>
         <!-- Solid inactive-state fallback, using the same theme resource as the #5111 Mica failure path. -->
@@ -151,7 +185,7 @@
             </ContentControl>
 
             <!-- ── Content: banners + page + operations ── -->
-            <Grid x:Name="ContentRoot" Grid.Column="1" RowDefinitions="*,4,Auto">
+            <Grid x:Name="ContentRoot" Grid.Column="1" RowDefinitions="*,0,Auto">
 
             <!-- ── Page content (banners now surface as bottom-right toasts; see ToastHost) ── -->
             <TransitioningContentControl Grid.Row="0"
@@ -169,18 +203,23 @@
 
             <!-- ── GridSplitter (only visible when operations are present) ── -->
             <GridSplitter x:Name="OperationsSplitter"
+                          Classes="winui-horizontal-splitter"
                           Grid.Row="1"
+                          Margin="0,0,0,2"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch"
+                          ResizeDirection="Rows"
                           IsVisible="{Binding OperationsSplitterVisible}"
-                          automation:AutomationProperties.AccessibilityView="Raw"
-                          Background="Transparent"/>
+                          PointerEntered="OperationsSplitter_PointerEntered"
+                          PointerExited="OperationsSplitter_PointerExited"
+                          automation:AutomationProperties.AccessibilityView="Raw"/>
 
             <!-- ── Operations panel ── -->
-            <Border Grid.Row="2"
+            <Border x:Name="OperationsPanelBorder"
+                    Classes="operations-panel-border"
+                    Grid.Row="2"
                     IsVisible="{Binding OperationsPanelVisible}"
                     BorderThickness="0,1,0,0"
-                    BorderBrush="{DynamicResource AppBorderBrush}"
                     automation:AutomationProperties.AccessibilityView="Control"
                     automation:AutomationProperties.Name="{t:Translate Operations}"
                     automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Region}"
@@ -682,22 +721,43 @@
                               Width="10" Height="2"
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <!-- Maximize / Restore: square outline, geometry swapped in code-behind -->
+                    <!-- Maximize / Restore Down. Windows uses the real ChromeRestore symbol from
+                         its caption-icon font; the path is retained as a portable fallback. -->
                     <Button x:Name="MaximizeButton"
                             Width="46" Height="44"
                             Classes="caption"
-                                                        automation:AutomationProperties.Name="{t:Translate Maximize}"
+                            automation:AutomationProperties.Name="{t:Translate Maximize}"
                             ToolTip.Tip="{t:Translate Maximize}"
                             Click="MaximizeButton_Click">
-                        <Path x:Name="MaximizeIcon"
-                              Stroke="{Binding $parent[Button].Foreground}"
-                              StrokeThickness="1"
-                              StrokeLineCap="Round"
-                                                            automation:AutomationProperties.AccessibilityView="Raw"
-
-                              Data="M0,0 H10 V10 H0 Z"
-                              Width="10" Height="10"
-                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Panel Width="16" Height="16"
+                               automation:AutomationProperties.AccessibilityView="Raw">
+                            <Path x:Name="MaximizeIcon"
+                                  Stroke="{Binding $parent[Button].Foreground}"
+                                  StrokeThickness="1"
+                                  StrokeJoin="Miter"
+                                  Data="M1.5,1.5 H10.5 V10.5 H1.5 Z"
+                                  Width="12" Height="12"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
+                            <TextBlock x:Name="RestoreIcon"
+                                       IsVisible="False"
+                                       Text="&#xE923;"
+                                       FontSize="10"
+                                       TextAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                            <Path x:Name="RestoreFallbackIcon"
+                                  IsVisible="False"
+                                  Stroke="{Binding $parent[Button].Foreground}"
+                                  StrokeThickness="1"
+                                  StrokeLineCap="Round"
+                                  StrokeJoin="Round"
+                                  Data="M5,3 V2.5 A1.5,1.5 0 0 1 6.5,1 H12.5 A1.5,1.5 0 0 1 14,2.5 V8.5 A1.5,1.5 0 0 1 12.5,10 H11 M3.5,4 H9.5 A1.5,1.5 0 0 1 11,5.5 V12.5 A1.5,1.5 0 0 1 9.5,14 H3.5 A1.5,1.5 0 0 1 2,12.5 V5.5 A1.5,1.5 0 0 1 3.5,4 Z"
+                                  Width="10" Height="10"
+                                  Stretch="Uniform"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
+                        </Panel>
                     </Button>
                     <!-- Close: X -->
                     <Button Width="46" Height="44"

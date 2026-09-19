@@ -532,7 +532,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
                 InlineSidePanel.IsVisible = open;
                 SetInlineSidePanelTransformInstant(open ? 0 : -_savedFilterPaneWidth);
                 FilteringPanel.ColumnDefinitions[0].Width = open ? new GridLength(_savedFilterPaneWidth) : new GridLength(0);
-                FilteringPanel.ColumnDefinitions[1].Width = open ? new GridLength(4) : new GridLength(0);
+                FilteringPanel.ColumnDefinitions[1].Width = open ? new GridLength(12) : new GridLength(0);
             }
         }
     }
@@ -670,7 +670,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
         {
             // Reserve the column (one reflow), then slide the pane in from -width to 0.
             col0.Width = new GridLength(_savedFilterPaneWidth);
-            col1.Width = new GridLength(4);
+            col1.Width = new GridLength(12);
             InlineSidePanel.IsVisible = true;
             InlineSidePanel.RenderTransform = TranslateX(0);
         }

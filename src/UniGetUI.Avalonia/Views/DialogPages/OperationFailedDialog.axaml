@@ -4,16 +4,56 @@
         xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.OperationFailedDialog"
-        MaxWidth="800"
+        MaxWidth="850"
         MinWidth="500"
-        MaxHeight="550"
+        MaxHeight="490"
         MinHeight="300"
+        TitleMargin="24,0,0,0"
         Background="{DynamicResource AppDialogBackground}">
 
-    <Grid RowDefinitions="Auto,*,Auto">
+    <dialogs:ImmersiveDialog.Styles>
+        <!-- Scoped to this dialog family: these do not alter global Button resources. -->
+        <Style Selector="Button.operation-dialog-action">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SecondaryActionBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="{DynamicResource SecondaryActionBorderThickness}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.operation-dialog-action:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
+        </Style>
+        <Style Selector="Button.operation-dialog-action:pressed">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </Style>
+        <Style Selector="SplitButton.operation-dialog-action">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SecondaryActionBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="{DynamicResource SecondaryActionBorderThickness}"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style Selector="SplitButton.operation-dialog-action:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
+        </Style>
+        <Style Selector="SplitButton.operation-dialog-action:pressed">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </Style>
+    </dialogs:ImmersiveDialog.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto"
+          Background="{DynamicResource AppDialogBackground}">
 
         <!-- ── Header ── -->
-        <Border Grid.Row="0" Padding="16,14,16,10">
+        <Border Grid.Row="0" Padding="24,8,24,12">
             <TextBlock x:Name="HeaderContent"
                        TextWrapping="WrapWithOverflow"
                        FontSize="14"/>
@@ -21,19 +61,19 @@
 
         <!-- ── Colored output log ── -->
         <Border Grid.Row="1"
-                Margin="8,0,8,8"
+                Margin="24,0,24,24"
                 CornerRadius="6"
                 ClipToBounds="True"
-                Background="{DynamicResource AppDialogDarkBackground}">
+                Background="{DynamicResource AppWindowBackground}">
             <controls:LogTextEditor x:Name="OutputText"
                                     automation:AutomationProperties.AccessibilityView="Raw"/>
         </Border>
 
         <!-- ── Footer buttons ── -->
         <Border Grid.Row="2"
-                BorderThickness="0,1,0,0"
-                Padding="16,10">
+                Background="{DynamicResource AppWindowBackground}">
             <Grid x:Name="ButtonsLayout"
+                  Margin="24"
                   ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

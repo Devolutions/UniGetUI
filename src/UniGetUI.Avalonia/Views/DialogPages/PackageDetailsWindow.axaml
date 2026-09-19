@@ -71,13 +71,6 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
-        <Style Selector="Button.action-main:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource PackageActionHoverBackground}"/>
-        </Style>
-        <Style Selector="Button.action-chevron:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource PackageActionHoverBackground}"/>
-        </Style>
-
         <!-- Screenshot pip dots (Button hosting an Ellipse) -->
         <Style Selector="Button.pip">
             <Setter Property="Background" Value="Transparent"/>

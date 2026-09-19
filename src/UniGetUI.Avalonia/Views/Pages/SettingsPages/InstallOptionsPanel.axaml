@@ -25,6 +25,7 @@
                                TextWrapping="Wrap"/>
                     <Button x:Name="ResetButton"
                             Grid.Column="1"
+                            Classes="secondary-action"
                             Content="{Binding ResetLabel}"
                             automation:AutomationProperties.Name="{Binding ResetLabel}"
                             Command="{Binding ResetOptionsCommand}"
@@ -32,6 +33,7 @@
                             Margin="4,0"/>
                     <Button x:Name="ApplyButton"
                             Grid.Column="2"
+                            Classes="secondary-action"
                             Content="{Binding ApplyLabel}"
                             automation:AutomationProperties.Name="{Binding ApplyLabel}"
                             Command="{Binding SaveOptionsCommand}"
@@ -125,11 +127,13 @@
                                    Opacity="{Binding LocationOpacity}"/>
                         <Button x:Name="SelectDirButton"
                                 Grid.Column="1"
+                                Classes="secondary-action"
                                 Content="{Binding SelectDirLabel}"
                                 automation:AutomationProperties.Name="{Binding SelectDirLabel}"
                                 IsEnabled="{Binding LocationSelectEnabled}"
                                 Margin="4,0"/>
                         <Button Grid.Column="2"
+                                Classes="secondary-action"
                                 Content="{Binding ResetDirLabel}"
                                 automation:AutomationProperties.Name="{Binding ResetDirLabel}"
                                 Command="{Binding ResetLocationCommand}"

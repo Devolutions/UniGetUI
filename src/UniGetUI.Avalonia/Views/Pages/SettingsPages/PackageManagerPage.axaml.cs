@@ -88,7 +88,13 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         Grid.SetColumnSpan(execHint, 2);
         execGrid.Children.Add(execHint);
 
-        var execCombo = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+        var execCombo = new ComboBox
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            MinHeight = 32,
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(10, 4, 8, 5),
+        };
         AutomationProperties.SetName(execCombo, CoreTools.Translate("Select the executable to be used. The following list shows the executables found by UniGetUI"));
         foreach (var path in manager.FindCandidateExecutableFiles())
             AddExecutablePathItem(execCombo, path);
@@ -122,6 +128,8 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             Content = CoreTools.Translate("Browse..."),
             IsEnabled = customPathsAllowed,
             Margin = new Thickness(8, 0, 0, 0),
+            MinWidth = 96,
+            Classes = { "secondary-action" },
         };
         browseExecutableButton.Click += async (_, _) =>
         {
@@ -258,7 +266,13 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             (CoreTools.Translate("Custom..."), "custom"),
         ];
 
-        var ageCombo = new ComboBox { MinWidth = 200 };
+        var ageCombo = new ComboBox
+        {
+            MinWidth = 200,
+            MinHeight = 32,
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(10, 4, 8, 5),
+        };
         AutomationProperties.SetName(ageCombo, CoreTools.Translate("Minimum age for updates"));
         foreach (var (label, _) in ageItems)
             ageCombo.Items.Add(label);
@@ -271,6 +285,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
         var customAgeInput = new TextBox
         {
             MinWidth = 200,
+            Classes = { "search-field-standalone" },
             PlaceholderText = CoreTools.Translate("e.g. 10"),
             [AutomationProperties.NameProperty] = CoreTools.Translate("Custom minimum age (days)"),
             Text = CoreSettings.GetDictionaryItem<string, string>(
@@ -622,6 +637,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             Content = CoreTools.Translate("Reset"),
             IsEnabled = ViewModel.IsCustomVcpkgRootSet,
             Margin = new Thickness(4, 0),
+            Classes = { "secondary-action" },
         };
         AutomationProperties.SetName(resetBtn, CoreTools.Translate("Reset vcpkg root location"));
         var openBtn = new Button
@@ -629,6 +645,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             Content = CoreTools.Translate("Open"),
             IsEnabled = ViewModel.IsCustomVcpkgRootSet,
             Margin = new Thickness(4, 0),
+            Classes = { "secondary-action" },
         };
         AutomationProperties.SetName(openBtn, CoreTools.Translate("Open vcpkg root location"));
 

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -139,6 +140,7 @@ public partial class MainWindow : Window
     private readonly SemaphoreSlim _modalTransitionSemaphore = new(1, 1);
     private readonly List<ImmersiveDialog> _modalStack = new();
     private readonly Dictionary<ImmersiveDialog, Control?> _modalFocusHistory = new();
+    private readonly Dictionary<ImmersiveDialog, (double MinWidth, double MinHeight)> _modalMinimumSizeHistory = new();
     private readonly List<UniGetUiWebView> _webViewsHiddenForModal = new();
     private IDisposable? _modalTitleSubscription;
     private Control? _focusBeforeModal;
@@ -165,6 +167,15 @@ public partial class MainWindow : Window
         Instance = this;
         DataContext = new MainWindowViewModel();
         InitializeComponent();
+        if (OperatingSystem.IsWindows())
+        {
+            // WinUI's caption button uses ChromeRestore (U+E923). Windows 11 supplies it
+            // through Segoe Fluent Icons; Windows 10 exposes the same symbol in MDL2 Assets.
+            RestoreIcon.FontFamily = new FontFamily(
+                OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000)
+                    ? "Segoe Fluent Icons"
+                    : "Segoe MDL2 Assets");
+        }
         SetupTitleBar();
         SetupTitleBarFocusOpacity();
         SetupResponsiveRail();
@@ -383,6 +394,10 @@ public partial class MainWindow : Window
         if (ContentRoot.RowDefinitions.Count < 3)
             return;
 
+        ContentRoot.RowDefinitions[1].Height = ViewModel.OperationsSplitterVisible
+            ? new GridLength(12, GridUnitType.Pixel)
+            : new GridLength(0, GridUnitType.Pixel);
+
         RowDefinition row = ContentRoot.RowDefinitions[2];
         if (ViewModel.OperationsPanelVisible && ViewModel.OperationsPanelExpanded)
         {
@@ -479,6 +494,13 @@ public partial class MainWindow : Window
     // Re-reads the NavMenuMode setting so the layout switch applies live from the settings page.
     public void RefreshNavigationMode()
         => ViewModel.Sidebar.Mode = SidebarViewModel.ParseMode(Settings.GetValue(Settings.K.NavMenuMode));
+
+    // Let the splitter hover surface replace the separator visually without changing its layout thickness.
+    private void OperationsSplitter_PointerEntered(object? sender, PointerEventArgs e)
+        => OperationsPanelBorder.Classes.Set("splitter-active", true);
+
+    private void OperationsSplitter_PointerExited(object? sender, PointerEventArgs e)
+        => OperationsPanelBorder.Classes.Set("splitter-active", false);
 
     // Light-dismiss: clicking outside the open flyout closes it (no darkening — the layer is transparent).
     private void FlyoutDismiss_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -960,13 +982,13 @@ public partial class MainWindow : Window
 
     private void UpdateMaximizeButtonState(bool isMaximized)
     {
-        MaximizeIcon.Data = Geometry.Parse(
-            isMaximized
-                ? "M3,0 H10 V7 H8 V2 H3 Z M0,3 H7 V10 H0 Z"
-                : "M0,0 H10 V10 H0 Z");
-        ToolTip.SetTip(
-            MaximizeButton,
-            CoreTools.Translate(isMaximized ? "Restore" : "Maximize"));
+        MaximizeIcon.IsVisible = !isMaximized;
+        RestoreIcon.IsVisible = isMaximized && OperatingSystem.IsWindows();
+        RestoreFallbackIcon.IsVisible = isMaximized && !OperatingSystem.IsWindows();
+
+        string label = CoreTools.Translate(isMaximized ? "Restore" : "Maximize");
+        ToolTip.SetTip(MaximizeButton, label);
+        AutomationProperties.SetName(MaximizeButton, label);
     }
 
     // True when the WM_NCHITTEST screen point (physical px in lParam) falls within the maximize
@@ -1679,6 +1701,11 @@ public partial class MainWindow : Window
                 if (index >= 0)
                     _modalStack.RemoveAt(index);
                 _modalFocusHistory.Remove(dialog);
+                if (_modalMinimumSizeHistory.Remove(dialog, out var minimumSize))
+                {
+                    dialog.MinWidth = minimumSize.MinWidth;
+                    dialog.MinHeight = minimumSize.MinHeight;
+                }
 
                 if (opened)
                 {
@@ -1725,6 +1752,7 @@ public partial class MainWindow : Window
 
     private void PresentModal(ImmersiveDialog dialog)
     {
+        _modalMinimumSizeHistory.TryAdd(dialog, (dialog.MinWidth, dialog.MinHeight));
         _modalTitleSubscription?.Dispose();
         _modalTitleSubscription = dialog.GetObservable(ImmersiveDialog.TitleProperty)
             .SubscribeValue(title => ModalTitle.Text = title ?? "");
@@ -1803,6 +1831,13 @@ public partial class MainWindow : Window
         ModalSurface.Height = double.IsFinite(dialog.MaxHeight)
             ? Math.Min(dialog.MaxHeight, ModalSurface.MaxHeight)
             : double.NaN;
+
+        if (_modalMinimumSizeHistory.TryGetValue(dialog, out var minimumSize))
+        {
+            dialog.MinWidth = Math.Min(minimumSize.MinWidth, ModalSurface.MaxWidth);
+            double availableContentHeight = Math.Max(0, ModalSurface.MaxHeight - ModalHeader.Height);
+            dialog.MinHeight = Math.Min(minimumSize.MinHeight, availableContentHeight);
+        }
     }
 
     private async Task AnimateModalAsync(bool opening)

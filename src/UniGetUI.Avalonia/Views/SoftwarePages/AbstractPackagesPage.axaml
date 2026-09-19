@@ -98,6 +98,33 @@
          <Setter Property="Background" Value="{DynamicResource SearchBoxFocusedBackground}"/>
          <Setter Property="BorderBrush" Value="{DynamicResource SearchBoxFocusedBorderBrush}"/>
       </Style>
+      <!-- The full splitter track is interactive. Its subtle rounded hover surface sits beneath
+           the persistent grip, matching WinUI's pane-resize affordance. -->
+      <Style Selector="GridSplitter.winui-vertical-splitter">
+         <Setter Property="Background" Value="Transparent"/>
+         <Setter Property="Template">
+            <ControlTemplate>
+               <!-- Match the visible splitter track to the package-list container on the
+                    right, whose outer card is inset 6 DIPs vertically. -->
+               <Border Background="{TemplateBinding Background}"
+                       Margin="0,6"
+                       CornerRadius="6">
+                  <Border Width="4" Height="22"
+                          CornerRadius="2"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Background="{DynamicResource TextFillColorTertiaryBrush}"
+                          IsHitTestVisible="False"/>
+               </Border>
+            </ControlTemplate>
+         </Setter>
+      </Style>
+      <Style Selector="GridSplitter.winui-vertical-splitter:pointerover">
+         <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+      </Style>
+      <Style Selector="GridSplitter.winui-vertical-splitter:pressed">
+         <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+      </Style>
    </UserControl.Styles>
 
    <UserControl.Resources>
@@ -244,7 +271,7 @@
         <Grid x:Name="FilteringPanel"
               Grid.Row="2"
               ClipToBounds="True"
-              ColumnDefinitions="220,4,*">
+              ColumnDefinitions="220,12,*">
 
             <!-- Both presentations use this single content definition. Their containers remain
                  isolated so compact compositor state cannot leak into the inline pane. -->
@@ -478,11 +505,12 @@
             </Border>
             <!-- ===== DRAG SPLITTER ===== -->
             <GridSplitter x:Name="FilterSplitter"
+                          Classes="winui-vertical-splitter"
                           Grid.Column="1"
+                          Margin="0,0,2,0"
                           IsVisible="{Binding IsFilterPaneOpen}"
                           HorizontalAlignment="Stretch"
-                          ResizeDirection="Columns"
-                          Background="{DynamicResource MicaPageBackground}"/>
+                          ResizeDirection="Columns"/>
 
             <!-- ===== OVERLAY BACKDROP (overlay mode only, dismisses pane on click) ===== -->
             <Border x:Name="FilterOverlayBackdrop"
@@ -569,6 +597,7 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <CheckBox IsChecked="{Binding IsChecked}"
+                                                      Classes="package-selector package-list-selector"
                                                       automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                       HorizontalAlignment="Center"
                                                       VerticalAlignment="Center"
@@ -733,6 +762,7 @@
                                 HorizontalAlignment="Left" VerticalAlignment="Top"
                                 Background="Transparent" ZIndex="10">
                             <CheckBox IsChecked="{Binding AllPackagesChecked, Mode=TwoWay}"
+                                      Classes="package-selector package-list-selector"
                                       automation:AutomationProperties.Name="{t:Translate Select all}"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
@@ -803,6 +833,7 @@
                                                      room to stack them without overlap. -->
                                                 <Panel Grid.Column="2">
                                                     <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                              Classes="package-selector"
                                                               automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                               VerticalAlignment="Top"
                                                               HorizontalAlignment="Center"
@@ -847,6 +878,7 @@
                                                 BorderBrush="{DynamicResource SettingsCardBorderBrush}" BorderThickness="1" Padding="4">
                                             <Grid RowDefinitions="30,57,30,15">
                                                 <CheckBox Grid.Row="0"
+                                                          Classes="package-selector"
                                                           IsChecked="{Binding IsChecked, Mode=TwoWay}"
                                                           automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                           HorizontalAlignment="Left"

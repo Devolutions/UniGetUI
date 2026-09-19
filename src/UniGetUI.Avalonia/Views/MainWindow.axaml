@@ -93,8 +93,8 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <!-- Keep the full splitter hit target, but inset the visible hover/pressed
-                         track so it doesn't read as an edge-to-edge bar. -->
+                    <!-- Match the visible splitter track to the operation-card width.
+                         OperationsList uses 8 DIPs of horizontal inset. -->
                     <Border Background="{TemplateBinding Background}"
                             Margin="8,0"
                             CornerRadius="6">

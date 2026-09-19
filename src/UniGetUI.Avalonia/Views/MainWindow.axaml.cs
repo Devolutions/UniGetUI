@@ -486,6 +486,12 @@ public partial class MainWindow : Window
         => ViewModel.Sidebar.Mode = SidebarViewModel.ParseMode(Settings.GetValue(Settings.K.NavMenuMode));
 
     // Light-dismiss: clicking outside the open flyout closes it (no darkening — the layer is transparent).
+    private void OperationsSplitter_PointerEntered(object? sender, PointerEventArgs e)
+        => OperationsPanelBorder.BorderThickness = new Thickness(0);
+
+    private void OperationsSplitter_PointerExited(object? sender, PointerEventArgs e)
+        => OperationsPanelBorder.BorderThickness = new Thickness(0, 1, 0, 0);
+
     private void FlyoutDismiss_PointerPressed(object? sender, PointerPressedEventArgs e)
         => ViewModel.Sidebar.IsPaneOpen = false;
 

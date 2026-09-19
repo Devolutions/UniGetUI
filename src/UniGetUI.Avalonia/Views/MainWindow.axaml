@@ -198,15 +198,18 @@
             <GridSplitter x:Name="OperationsSplitter"
                           Classes="winui-horizontal-splitter"
                           Grid.Row="1"
-                          Margin="0,0.5,0,0.5"
+                          Margin="0,1,0,1"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch"
                           ResizeDirection="Rows"
                           IsVisible="{Binding OperationsSplitterVisible}"
+                          PointerEntered="OperationsSplitter_PointerEntered"
+                          PointerExited="OperationsSplitter_PointerExited"
                           automation:AutomationProperties.AccessibilityView="Raw"/>
 
             <!-- ── Operations panel ── -->
-            <Border Grid.Row="2"
+            <Border x:Name="OperationsPanelBorder"
+                    Grid.Row="2"
                     IsVisible="{Binding OperationsPanelVisible}"
                     BorderThickness="0,1,0,0"
                     BorderBrush="{DynamicResource AppBorderBrush}"

@@ -507,7 +507,7 @@
             <GridSplitter x:Name="FilterSplitter"
                           Classes="winui-vertical-splitter"
                           Grid.Column="1"
-                          Margin="0.5,0,0.5,0"
+                          Margin="1,0,1,0"
                           IsVisible="{Binding IsFilterPaneOpen}"
                           HorizontalAlignment="Stretch"
                           ResizeDirection="Columns"/>

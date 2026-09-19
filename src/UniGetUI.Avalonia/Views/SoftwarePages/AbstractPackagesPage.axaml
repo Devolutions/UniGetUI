@@ -597,8 +597,12 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <CheckBox IsChecked="{Binding IsChecked}"
-                                                      Classes="package-selector package-list-selector"
+                                                      Classes="package-selector"
                                                       automation:AutomationProperties.Name="{Binding Package.AutomationName}"
+                                                      Width="20"
+                                                      Height="20"
+                                                      MinHeight="0"
+                                                      Padding="0"
                                                       HorizontalAlignment="Center"
                                                       VerticalAlignment="Center"
                                                       Margin="5,0,0,0"/>
@@ -762,8 +766,12 @@
                                 HorizontalAlignment="Left" VerticalAlignment="Top"
                                 Background="Transparent" ZIndex="10">
                             <CheckBox IsChecked="{Binding AllPackagesChecked, Mode=TwoWay}"
-                                      Classes="package-selector package-list-selector"
+                                      Classes="package-selector"
                                       automation:AutomationProperties.Name="{t:Translate Select all}"
+                                      Width="20"
+                                      Height="20"
+                                      MinHeight="0"
+                                      Padding="0"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
                                       Margin="9,0,0,0"/>

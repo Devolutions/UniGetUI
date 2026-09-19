@@ -521,24 +521,6 @@
         <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorDisabledBrush}"/>
     </Style>
 
-    <!-- DataGrid check boxes are 20 DIPs visually but retain the theme's 32-DIP input
-         height. Inset the adorner vertically and let it sit two DIPs outside the box so
-         keyboard focus follows the visible selector instead of the layout slot. -->
-    <Style Selector="CheckBox.package-list-selector">
-        <Setter Property="FocusAdorner">
-            <FocusAdornerTemplate>
-                <Border Margin="-2,4"
-                        BorderBrush="{DynamicResource SystemControlFocusVisualPrimaryBrush}"
-                        BorderThickness="2"
-                        CornerRadius="6">
-                    <Border BorderBrush="{DynamicResource SystemControlFocusVisualSecondaryBrush}"
-                            BorderThickness="1"
-                            CornerRadius="4"/>
-                </Border>
-            </FocusAdornerTemplate>
-        </Setter>
-    </Style>
-
     <Style Selector="RadioButton:checked /template/ Ellipse#CheckOuterEllipse">
         <Setter Property="Fill" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
         <Setter Property="Stroke" Value="{DynamicResource AccentFillColorDefaultBrush}"/>

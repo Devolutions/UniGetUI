@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -972,13 +973,12 @@ public partial class MainWindow : Window
 
     private void UpdateMaximizeButtonState(bool isMaximized)
     {
-        MaximizeIcon.Data = Geometry.Parse(
-            isMaximized
-                ? "M3,0 H10 V7 H8 V2 H3 Z M0,3 H7 V10 H0 Z"
-                : "M0,0 H10 V10 H0 Z");
-        ToolTip.SetTip(
-            MaximizeButton,
-            CoreTools.Translate(isMaximized ? "Restore" : "Maximize"));
+        MaximizeIcon.IsVisible = !isMaximized;
+        RestoreIcon.IsVisible = isMaximized;
+
+        string label = CoreTools.Translate(isMaximized ? "Restore" : "Maximize");
+        ToolTip.SetTip(MaximizeButton, label);
+        AutomationProperties.SetName(MaximizeButton, label);
     }
 
     // True when the WM_NCHITTEST screen point (physical px in lParam) falls within the maximize

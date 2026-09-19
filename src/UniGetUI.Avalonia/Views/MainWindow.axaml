@@ -721,22 +721,29 @@
                               Width="10" Height="2"
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <!-- Maximize / Restore: square outline, geometry swapped in code-behind -->
+                    <!-- Maximize / Restore Down: separate WinUI-sized outlines avoid painting the
+                         obscured edges where the two restore windows overlap. -->
                     <Button x:Name="MaximizeButton"
                             Width="46" Height="44"
                             Classes="caption"
-                                                        automation:AutomationProperties.Name="{t:Translate Maximize}"
+                            automation:AutomationProperties.Name="{t:Translate Maximize}"
                             ToolTip.Tip="{t:Translate Maximize}"
                             Click="MaximizeButton_Click">
-                        <Path x:Name="MaximizeIcon"
-                              Stroke="{Binding $parent[Button].Foreground}"
-                              StrokeThickness="1"
-                              StrokeLineCap="Round"
-                                                            automation:AutomationProperties.AccessibilityView="Raw"
-
-                              Data="M0,0 H10 V10 H0 Z"
-                              Width="10" Height="10"
-                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Panel Width="12" Height="12"
+                               automation:AutomationProperties.AccessibilityView="Raw">
+                            <Path x:Name="MaximizeIcon"
+                                  Stroke="{Binding $parent[Button].Foreground}"
+                                  StrokeThickness="1"
+                                  StrokeJoin="Miter"
+                                  Data="M1.5,1.5 H10.5 V10.5 H1.5 Z"/>
+                            <Path x:Name="RestoreIcon"
+                                  IsVisible="False"
+                                  Stroke="{Binding $parent[Button].Foreground}"
+                                  StrokeThickness="1"
+                                  StrokeLineCap="Round"
+                                  StrokeJoin="Round"
+                                  Data="M4,3 V2.5 A1,1 0 0 1 5,1.5 H9.5 A1,1 0 0 1 10.5,2.5 V7 A1,1 0 0 1 9.5,8 H9 M2.5,3.5 H7.5 A1,1 0 0 1 8.5,4.5 V9.5 A1,1 0 0 1 7.5,10.5 H2.5 A1,1 0 0 1 1.5,9.5 V4.5 A1,1 0 0 1 2.5,3.5 Z"/>
+                        </Panel>
                     </Button>
                     <!-- Close: X -->
                     <Button Width="46" Height="44"

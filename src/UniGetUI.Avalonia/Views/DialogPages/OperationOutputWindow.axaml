@@ -6,17 +6,18 @@
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.OperationOutputWindow"
         x:DataType="vm:OperationOutputViewModel"
-        MaxWidth="700"
-        MinWidth="400"
-        MaxHeight="500"
+        MaxWidth="780"
+        MinWidth="460"
+        MaxHeight="520"
         MinHeight="300"
+        TitleMargin="24,0,0,0"
         Background="{DynamicResource AppDialogBackground}"
         Title="{Binding Title}">
 
-    <Border Margin="8"
+    <Border Margin="24,0,24,24"
             CornerRadius="6"
             ClipToBounds="True"
-            Background="{DynamicResource AppDialogDarkBackground}">
+            Background="{DynamicResource AppWindowBackground}">
         <controls:LogTextEditor x:Name="OutputText"
                                 automation:AutomationProperties.Name="{Binding Title}"
                                 automation:AutomationProperties.AccessibilityView="Raw"/>

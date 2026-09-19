@@ -4,6 +4,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
 using UniGetUI.Avalonia.ViewModels.Pages.LogPages;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.Controls;
@@ -21,9 +22,9 @@ internal static class OperationHistoryLogDialog
         if (MainWindow.Instance is not { } owner)
             return;
 
-        bool dark = ThemeHelper.IsDark;
-        var defaultBrush = new SolidColorBrush(dark ? Color.FromRgb(250, 250, 250) : Color.FromRgb(0, 0, 0));
-        var errorBrush = new SolidColorBrush(dark ? Color.FromRgb(255, 80, 80) : Color.FromRgb(205, 0, 0));
+        ThemeVariant theme = ThemeHelper.Variant;
+        IBrush defaultBrush = LookupBrush("TextFillColorPrimaryBrush", theme, Brushes.White);
+        IBrush errorBrush = LookupBrush("StatusErrorForeground", theme, Brushes.Red);
 
         var lines = record.Output
             .Select(l => new LogLineItem(l.Text.Replace("\r", "").Replace("\n", ""),
@@ -45,7 +46,8 @@ internal static class OperationHistoryLogDialog
             MinWidth = 460,
             MinHeight = 300,
             Title = CoreTools.Translate("Operation log") + (target.Length > 0 ? $" — {target}" : ""),
-            Background = Application.Current?.FindResource("AppDialogBackground") as IBrush,
+            TitleMargin = new Thickness(24, 0, 0, 0),
+            Background = LookupBrush("AppDialogBackground", theme, Brushes.Transparent),
         };
 
         var copyButton = CreateDialogButton(CoreTools.Translate("Copy to clipboard"));
@@ -69,6 +71,7 @@ internal static class OperationHistoryLogDialog
         };
 
         var closeButton = CreateDialogButton(CoreTools.Translate("Close"), 100);
+        closeButton.Classes.Remove("secondary-action");
         closeButton.Classes.Add("accent");
         closeButton.Click += (_, _) => dialog.Close();
 
@@ -84,7 +87,7 @@ internal static class OperationHistoryLogDialog
         {
             CornerRadius = new CornerRadius(8),
             ClipToBounds = true,
-            Background = Application.Current?.FindResource("AppDialogDarkBackground") as IBrush,
+            Background = LookupBrush("AppWindowBackground", theme, Brushes.Transparent),
             Child = editor,
         };
         Grid.SetRow(editorBorder, 1);
@@ -96,17 +99,39 @@ internal static class OperationHistoryLogDialog
             HorizontalAlignment = HorizontalAlignment.Right,
             Children = { closeButton },
         };
-        Grid.SetRow(footer, 2);
+
+        var body = new Grid
+        {
+            Margin = new Thickness(24, 0, 24, 24),
+            RowDefinitions = new RowDefinitions("Auto,*"),
+            RowSpacing = 10,
+            Children = { toolbar, editorBorder },
+        };
+        Grid.SetRow(body, 0);
+
+        var footerSurface = new Border
+        {
+            Background = LookupBrush("AppWindowBackground", theme, Brushes.Transparent),
+            Padding = new Thickness(24),
+            Child = footer,
+        };
+        Grid.SetRow(footerSurface, 1);
 
         dialog.Content = new Grid
         {
-            Margin = new Thickness(16),
-            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
-            RowSpacing = 10,
-            Children = { toolbar, editorBorder, footer },
+            RowDefinitions = new RowDefinitions("*,Auto"),
+            Children = { body, footerSurface },
         };
 
         await dialog.ShowDialog(owner);
+    }
+
+    private static IBrush LookupBrush(string key, ThemeVariant theme, IBrush fallback)
+    {
+        if (Application.Current?.TryGetResource(key, theme, out var resource) == true &&
+            resource is IBrush brush)
+            return brush;
+        return fallback;
     }
 
     private static Button CreateDialogButton(string content, double minWidth = 0) => new()
@@ -117,6 +142,7 @@ internal static class OperationHistoryLogDialog
         Padding = new Thickness(11, 5, 11, 6),
         CornerRadius = new CornerRadius(4),
         FontSize = 14,
+        Classes = { "secondary-action" },
         HorizontalContentAlignment = HorizontalAlignment.Center,
         VerticalContentAlignment = VerticalAlignment.Center,
     };

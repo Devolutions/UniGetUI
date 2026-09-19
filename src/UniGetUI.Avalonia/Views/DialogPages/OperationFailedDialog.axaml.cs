@@ -37,6 +37,7 @@ public partial class OperationFailedDialog : UniGetUI.Avalonia.Views.DialogPages
             Content = CoreTools.Translate("Close"),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Center,
+            Classes = { "operation-dialog-action" },
         };
         closeButton.Click += (_, _) => Close();
 
@@ -149,6 +150,7 @@ public partial class OperationFailedDialog : UniGetUI.Avalonia.Views.DialogPages
             Content = label,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Center,
+            Classes = { "operation-dialog-action" },
         };
         button.Click += (_, _) =>
         {
@@ -170,6 +172,7 @@ public partial class OperationFailedDialog : UniGetUI.Avalonia.Views.DialogPages
             Content = label,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Center,
+            Classes = { "operation-dialog-action" },
         };
         splitButton.Click += (_, _) =>
         {

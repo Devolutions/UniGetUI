@@ -184,7 +184,6 @@ public partial class MainWindow : Window
 
         KeyDown += Window_KeyDown;
         ViewModel.CurrentPageChanged += OnCurrentPageChanged;
-        ViewModel.Sidebar.PropertyChanged += OnSidebarPropertyChanged;
         // Title-bar back button: visible whenever there's somewhere to go back to (mirrors WinUI's TitleBar.IsBackButtonVisible).
         ViewModel.CanGoBackChanged += (_, canGoBack) => BackButton.IsVisible = canGoBack;
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -348,44 +347,14 @@ public partial class MainWindow : Window
         if (!ViewModel.Sidebar.Docked)
             ViewModel.Sidebar.IsPaneOpen = false;
 
-        bool focusVisibleSidebarSelection = _focusSidebarSelectionOnNextPageChange;
+        if (!_focusSidebarSelectionOnNextPageChange)
+            return;
+
         _focusSidebarSelectionOnNextPageChange = false;
-
-        if (!focusVisibleSidebarSelection)
-            return;
-
         Dispatcher.UIThread.Post(() =>
         {
-            SidebarView? sidebar = NavRail.IsVisible
-                ? NavRail.GetVisualDescendants().OfType<SidebarView>().FirstOrDefault()
-                : NavDock.IsVisible
-                    ? NavDock.GetVisualDescendants().OfType<SidebarView>().FirstOrDefault()
-                    : null;
-
-            if (sidebar is not null)
-                sidebar.FocusSelectedItem();
-            else
-                SidebarToggleButton.Focus();
-        }, DispatcherPriority.Background);
-    }
-
-    private void OnSidebarPropertyChanged(
-        object? sender,
-        System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName != nameof(SidebarViewModel.OverlayActive)
-            || ViewModel.Sidebar.OverlayActive)
-        {
-            return;
-        }
-
-        // Focus adorners render in their own layer, outside ancestor opacity. Leaving focus in
-        // the zero-opacity flyout therefore paints its full-width ring over the page. This covers
-        // every close path (navigation, light-dismiss, toggle, and responsive layout changes).
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (NavFlyout.IsKeyboardFocusWithin)
-                SidebarToggleButton.Focus();
+            var sidebar = this.GetVisualDescendants().OfType<SidebarView>().FirstOrDefault();
+            sidebar?.FocusSelectedItem();
         }, DispatcherPriority.Background);
     }
 

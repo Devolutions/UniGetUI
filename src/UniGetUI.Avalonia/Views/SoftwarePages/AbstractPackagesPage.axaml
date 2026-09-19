@@ -106,7 +106,7 @@
             <ControlTemplate>
                <Border Background="{TemplateBinding Background}"
                        CornerRadius="6">
-                  <Border Width="4" Height="36"
+                  <Border Width="4" Height="22"
                           CornerRadius="2"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Center"
@@ -504,7 +504,7 @@
             <GridSplitter x:Name="FilterSplitter"
                           Classes="winui-vertical-splitter"
                           Grid.Column="1"
-                          Margin="1,8"
+                          Margin="1,0,0,0"
                           IsVisible="{Binding IsFilterPaneOpen}"
                           HorizontalAlignment="Stretch"
                           ResizeDirection="Columns"/>

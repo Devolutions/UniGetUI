@@ -57,6 +57,8 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         NavigationPillStem.RenderTransform = _pillStemTransform;
         NavigationPillBottomCap.RenderTransform = _pillBottomCapTranslate;
 
+        SidebarLayout.SizeChanged += (_, _) => QueueSelectionPillUpdate(animate: false);
+
         if (FlyoutBase.GetAttachedFlyout(MoreNavBtn) is { } moreFlyout)
         {
             moreFlyout.Opened += (_, _) => _isMoreFlyoutOpen = true;

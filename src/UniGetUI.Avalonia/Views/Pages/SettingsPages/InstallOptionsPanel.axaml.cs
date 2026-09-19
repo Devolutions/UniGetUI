@@ -21,13 +21,9 @@ public sealed partial class InstallOptionsPanel : UserControl
         ViewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(InstallOptionsPanelViewModel.HasChanges))
-            {
-                if (ViewModel.HasChanges)
-                    ApplyButton.Classes.Add("accent");
-                else
-                    ApplyButton.Classes.Remove("accent");
-            }
+                UpdateApplyButtonStyle();
         };
+        UpdateApplyButtonStyle();
 
         // Wire location picker (needs Visual reference for StorageProvider)
         SelectDirButton.Click += (_, _) =>
@@ -37,5 +33,19 @@ public sealed partial class InstallOptionsPanel : UserControl
         CustomInstallBox.TextChanged += (_, _) => ViewModel.MarkChanged();
         CustomUpdateBox.TextChanged += (_, _) => ViewModel.MarkChanged();
         CustomUninstallBox.TextChanged += (_, _) => ViewModel.MarkChanged();
+    }
+
+    private void UpdateApplyButtonStyle()
+    {
+        if (ViewModel.HasChanges)
+        {
+            ApplyButton.Classes.Remove("secondary-action");
+            ApplyButton.Classes.Add("accent");
+        }
+        else
+        {
+            ApplyButton.Classes.Remove("accent");
+            ApplyButton.Classes.Add("secondary-action");
+        }
     }
 }

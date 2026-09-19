@@ -139,6 +139,7 @@ public partial class MainWindow : Window
     private readonly SemaphoreSlim _modalTransitionSemaphore = new(1, 1);
     private readonly List<ImmersiveDialog> _modalStack = new();
     private readonly Dictionary<ImmersiveDialog, Control?> _modalFocusHistory = new();
+    private readonly Dictionary<ImmersiveDialog, (double MinWidth, double MinHeight)> _modalMinimumSizeHistory = new();
     private readonly List<UniGetUiWebView> _webViewsHiddenForModal = new();
     private IDisposable? _modalTitleSubscription;
     private Control? _focusBeforeModal;
@@ -384,7 +385,7 @@ public partial class MainWindow : Window
             return;
 
         ContentRoot.RowDefinitions[1].Height = ViewModel.OperationsSplitterVisible
-            ? new GridLength(20, GridUnitType.Pixel)
+            ? new GridLength(12, GridUnitType.Pixel)
             : new GridLength(0, GridUnitType.Pixel);
 
         RowDefinition row = ContentRoot.RowDefinitions[2];
@@ -412,7 +413,7 @@ public partial class MainWindow : Window
             return 0;
 
         const double chrome = 42;
-        const double fallbackRow = 58;
+        const double fallbackRow = 68;
 
         double rows = 0;
         int visible = Math.Min(count, 3);
@@ -1683,6 +1684,11 @@ public partial class MainWindow : Window
                 if (index >= 0)
                     _modalStack.RemoveAt(index);
                 _modalFocusHistory.Remove(dialog);
+                if (_modalMinimumSizeHistory.Remove(dialog, out var minimumSize))
+                {
+                    dialog.MinWidth = minimumSize.MinWidth;
+                    dialog.MinHeight = minimumSize.MinHeight;
+                }
 
                 if (opened)
                 {
@@ -1729,6 +1735,7 @@ public partial class MainWindow : Window
 
     private void PresentModal(ImmersiveDialog dialog)
     {
+        _modalMinimumSizeHistory.TryAdd(dialog, (dialog.MinWidth, dialog.MinHeight));
         _modalTitleSubscription?.Dispose();
         _modalTitleSubscription = dialog.GetObservable(ImmersiveDialog.TitleProperty)
             .SubscribeValue(title => ModalTitle.Text = title ?? "");
@@ -1807,6 +1814,13 @@ public partial class MainWindow : Window
         ModalSurface.Height = double.IsFinite(dialog.MaxHeight)
             ? Math.Min(dialog.MaxHeight, ModalSurface.MaxHeight)
             : double.NaN;
+
+        if (_modalMinimumSizeHistory.TryGetValue(dialog, out var minimumSize))
+        {
+            dialog.MinWidth = Math.Min(minimumSize.MinWidth, ModalSurface.MaxWidth);
+            double availableContentHeight = Math.Max(0, ModalSurface.MaxHeight - ModalHeader.Height);
+            dialog.MinHeight = Math.Min(minimumSize.MinHeight, availableContentHeight);
+        }
     }
 
     private async Task AnimateModalAsync(bool opening)

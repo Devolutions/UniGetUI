@@ -53,7 +53,37 @@
                         <GradientStop Offset="0" Color="#0F000000"/>
                         <GradientStop Offset="1" Color="#29000000"/>
                     </LinearGradientBrush>
+                    <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="#B3FFFFFF"/>
+                    <SolidColorBrush x:Key="ControlFillColorSecondaryBrush" Color="#80F9F9F9"/>
+                    <SolidColorBrush x:Key="ControlFillColorTertiaryBrush" Color="#4DF9F9F9"/>
+                    <SolidColorBrush x:Key="ControlFillColorDisabledBrush" Color="#4DF9F9F9"/>
+                    <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#0F000000"/>
+                    <SolidColorBrush x:Key="ControlStrokeColorSecondaryBrush" Color="#29000000"/>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5C000000"/>
+                    <StaticResource x:Key="ButtonBackground" ResourceKey="ControlFillColorDefaultBrush"/>
+                    <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="ControlFillColorSecondaryBrush"/>
+                    <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="ControlFillColorTertiaryBrush"/>
+                    <StaticResource x:Key="ButtonBackgroundDisabled" ResourceKey="ControlFillColorDisabledBrush"/>
+                    <StaticResource x:Key="ButtonForeground" ResourceKey="TextFillColorPrimaryBrush"/>
+                    <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="TextFillColorPrimaryBrush"/>
+                    <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="TextFillColorSecondaryBrush"/>
+                    <StaticResource x:Key="ButtonForegroundDisabled" ResourceKey="TextFillColorDisabledBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrushPointerOver" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrushPressed" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrushDisabled" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <StaticResource x:Key="SplitButtonBackground" ResourceKey="ControlFillColorDefaultBrush"/>
+                    <StaticResource x:Key="SplitButtonBackgroundPointerOver" ResourceKey="ControlFillColorSecondaryBrush"/>
+                    <StaticResource x:Key="SplitButtonBackgroundPressed" ResourceKey="ControlFillColorTertiaryBrush"/>
+                    <StaticResource x:Key="SplitButtonBackgroundDisabled" ResourceKey="ControlFillColorDisabledBrush"/>
+                    <StaticResource x:Key="SplitButtonForeground" ResourceKey="TextFillColorPrimaryBrush"/>
+                    <StaticResource x:Key="SplitButtonForegroundPointerOver" ResourceKey="TextFillColorPrimaryBrush"/>
+                    <StaticResource x:Key="SplitButtonForegroundPressed" ResourceKey="TextFillColorSecondaryBrush"/>
+                    <StaticResource x:Key="SplitButtonForegroundDisabled" ResourceKey="TextFillColorDisabledBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushPointerOver" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushPressed" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushDisabled" ResourceKey="ControlStrokeColorDefaultBrush"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#FFFFFFFF"/>
                     <!-- Opaque WinUI menu surface and low-contrast divider. -->
                     <SolidColorBrush x:Key="MenuSurfaceBrush"            Color="#FFFFFFFF"/>
@@ -214,7 +244,42 @@
                     <SolidColorBrush x:Key="InstallOptionsTabPressedBackground" Color="#202020"/>
                     <SolidColorBrush x:Key="InstallOptionsTabSelectedHoverBackground" Color="#323232"/>
                     <SolidColorBrush x:Key="InstallOptionsTabSelectedPressedBackground" Color="#292929"/>
+                    <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="#0FFFFFFF"/>
+                    <SolidColorBrush x:Key="ControlFillColorSecondaryBrush" Color="#15FFFFFF"/>
+                    <SolidColorBrush x:Key="ControlFillColorTertiaryBrush" Color="#08FFFFFF"/>
+                    <SolidColorBrush x:Key="ControlFillColorDisabledBrush" Color="#0BFFFFFF"/>
+                    <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#12FFFFFF"/>
+                    <SolidColorBrush x:Key="ControlStrokeColorSecondaryBrush" Color="#18FFFFFF"/>
+                    <LinearGradientBrush x:Key="ControlElevationBorderBrush"
+                                         StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#18FFFFFF"/>
+                        <GradientStop Offset="1" Color="#12FFFFFF"/>
+                    </LinearGradientBrush>
                     <SolidColorBrush x:Key="TextFillColorDisabledBrush"  Color="#5DFFFFFF"/>
+                    <StaticResource x:Key="ButtonBackground" ResourceKey="ControlFillColorDefaultBrush"/>
+                    <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="ControlFillColorSecondaryBrush"/>
+                    <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="ControlFillColorTertiaryBrush"/>
+                    <StaticResource x:Key="ButtonBackgroundDisabled" ResourceKey="ControlFillColorDisabledBrush"/>
+                    <StaticResource x:Key="ButtonForeground" ResourceKey="TextFillColorPrimaryBrush"/>
+                    <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="TextFillColorPrimaryBrush"/>
+                    <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="TextFillColorSecondaryBrush"/>
+                    <StaticResource x:Key="ButtonForegroundDisabled" ResourceKey="TextFillColorDisabledBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrushPointerOver" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrushPressed" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrushDisabled" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <StaticResource x:Key="SplitButtonBackground" ResourceKey="ControlFillColorDefaultBrush"/>
+                    <StaticResource x:Key="SplitButtonBackgroundPointerOver" ResourceKey="ControlFillColorSecondaryBrush"/>
+                    <StaticResource x:Key="SplitButtonBackgroundPressed" ResourceKey="ControlFillColorTertiaryBrush"/>
+                    <StaticResource x:Key="SplitButtonBackgroundDisabled" ResourceKey="ControlFillColorDisabledBrush"/>
+                    <StaticResource x:Key="SplitButtonForeground" ResourceKey="TextFillColorPrimaryBrush"/>
+                    <StaticResource x:Key="SplitButtonForegroundPointerOver" ResourceKey="TextFillColorPrimaryBrush"/>
+                    <StaticResource x:Key="SplitButtonForegroundPressed" ResourceKey="TextFillColorSecondaryBrush"/>
+                    <StaticResource x:Key="SplitButtonForegroundDisabled" ResourceKey="TextFillColorDisabledBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushPointerOver" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushPressed" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushDisabled" ResourceKey="ControlStrokeColorDefaultBrush"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#E4000000"/>
                     <!-- WinUI's dark flyout surface is an opaque #2C2C2C. -->
                     <SolidColorBrush x:Key="MenuSurfaceBrush"            Color="#FF2C2C2C"/>
@@ -338,7 +403,7 @@
          automatically, making future settings actions consistent by default. -->
     <Style Selector="Button.secondary-action">
         <Setter Property="CornerRadius" Value="4"/>
-        <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource SecondaryActionBorderBrush}"/>
         <Setter Property="BorderThickness" Value="{DynamicResource SecondaryActionBorderThickness}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
@@ -346,10 +411,11 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="Button.secondary-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
     </Style>
     <Style Selector="Button.secondary-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
     </Style>
 
     <!-- Shared trigger used by button-hosted dropdowns. It intentionally does not target
@@ -357,10 +423,17 @@
     <Style Selector="Button.dropdown-trigger">
         <Setter Property="Padding" Value="10,6"/>
         <Setter Property="CornerRadius" Value="4"/>
-        <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SecondaryActionBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.dropdown-trigger:pointerover">
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
+    </Style>
+    <Style Selector="Button.dropdown-trigger:pressed">
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
     </Style>
     <Style Selector="Button.dropdown-trigger.wide">
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -670,11 +743,17 @@
     <Style Selector="ListBoxItem.segment-item:pointerover /template/ ContentPresenter#ContentHost">
         <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
     </Style>
+    <Style Selector="ListBoxItem.segment-item:pressed /template/ ContentPresenter#ContentHost">
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}"/>
+    </Style>
     <Style Selector="ListBoxItem.segment-item:selected /template/ ContentPresenter#ContentHost">
-        <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}"/>
     </Style>
     <Style Selector="ListBoxItem.segment-item:selected:pointerover /template/ ContentPresenter#ContentHost">
-        <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
+    </Style>
+    <Style Selector="ListBoxItem.segment-item:selected:pressed /template/ ContentPresenter#ContentHost">
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}"/>
     </Style>
     <Style Selector="ListBoxItem.segment-item:selected /template/ Border#SelectionPill">
         <Setter Property="Opacity" Value="1"/>
@@ -748,7 +827,7 @@
                     <ResourceDictionary x:Key="Light">
                         <SolidColorBrush x:Key="ToggleButtonBackgroundChecked"             Color="#FBFBFB"/>
                         <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver"  Color="#F6F6F6"/>
-                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed"      Color="#EDEDED"/>
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed"      Color="#F5F5F5"/>
                         <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedDisabled"     Color="#FBFBFB"/>
                         <SolidColorBrush x:Key="ToggleButtonBorderBrushChecked"            Color="#ECECEC"/>
                         <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPointerOver" Color="#ECECEC"/>
@@ -761,7 +840,7 @@
                     <ResourceDictionary x:Key="Dark">
                         <SolidColorBrush x:Key="ToggleButtonBackgroundChecked"             Color="#2D2D2D"/>
                         <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver"  Color="#323232"/>
-                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed"      Color="#3C3C3C"/>
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed"      Color="#282828"/>
                         <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedDisabled"     Color="#2D2D2D"/>
                         <SolidColorBrush x:Key="ToggleButtonBorderBrushChecked"            Color="#393939"/>
                         <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPointerOver" Color="#393939"/>
@@ -783,11 +862,11 @@
                 <ResourceDictionary.ThemeDictionaries>
                     <ResourceDictionary x:Key="Light">
                         <SolidColorBrush x:Key="ToggleButtonBackground"                    Color="Transparent"/>
-                        <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver"         Color="#0F000000"/>
-                        <SolidColorBrush x:Key="ToggleButtonBackgroundPressed"             Color="#1A000000"/>
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver"         Color="#09000000"/>
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundPressed"             Color="#06000000"/>
                         <SolidColorBrush x:Key="ToggleButtonBackgroundChecked"             Color="Transparent"/>
-                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver"  Color="#0F000000"/>
-                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed"      Color="#1A000000"/>
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver"  Color="#09000000"/>
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed"      Color="#06000000"/>
                         <SolidColorBrush x:Key="ToggleButtonBorderBrush"                   Color="Transparent"/>
                         <SolidColorBrush x:Key="ToggleButtonBorderBrushPointerOver"        Color="Transparent"/>
                         <SolidColorBrush x:Key="ToggleButtonBorderBrushPressed"            Color="Transparent"/>
@@ -800,11 +879,11 @@
                     </ResourceDictionary>
                     <ResourceDictionary x:Key="Dark">
                         <SolidColorBrush x:Key="ToggleButtonBackground"                    Color="Transparent"/>
-                        <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver"         Color="#15FFFFFF"/>
-                        <SolidColorBrush x:Key="ToggleButtonBackgroundPressed"             Color="#20FFFFFF"/>
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver"         Color="#0FFFFFFF"/>
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundPressed"             Color="#0AFFFFFF"/>
                         <SolidColorBrush x:Key="ToggleButtonBackgroundChecked"             Color="Transparent"/>
-                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver"  Color="#15FFFFFF"/>
-                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed"      Color="#20FFFFFF"/>
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver"  Color="#0FFFFFFF"/>
+                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed"      Color="#0AFFFFFF"/>
                         <SolidColorBrush x:Key="ToggleButtonBorderBrush"                   Color="Transparent"/>
                         <SolidColorBrush x:Key="ToggleButtonBorderBrushPointerOver"        Color="Transparent"/>
                         <SolidColorBrush x:Key="ToggleButtonBorderBrushPressed"            Color="Transparent"/>

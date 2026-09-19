@@ -99,7 +99,10 @@
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#B3FFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#ECECEC"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#F6F6F6"/>
-                    <StaticResource x:Key="SecondaryActionBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <!-- Secondary actions keep a 1-DIP edge, but use WinUI's low-contrast
+                         control stroke here. The full elevation gradient reads too strongly in
+                         Avalonia on these compact settings buttons. -->
+                    <StaticResource x:Key="SecondaryActionBorderBrush" ResourceKey="ControlStrokeColorDefaultBrush"/>
                     <Thickness x:Key="SecondaryActionBorderThickness">1</Thickness>
                     <!-- WinUI dropdown controls use the same control/card fill as settings actions. -->
                     <StaticResource x:Key="ComboBoxBackground" ResourceKey="SettingsCardBackground"/>
@@ -287,8 +290,8 @@
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
                     <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#19000000"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#323232"/>
-                    <SolidColorBrush x:Key="SecondaryActionBorderBrush"  Color="Transparent"/>
-                    <Thickness x:Key="SecondaryActionBorderThickness">0</Thickness>
+                    <StaticResource x:Key="SecondaryActionBorderBrush" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <Thickness x:Key="SecondaryActionBorderThickness">1</Thickness>
                     <!-- WinUI dropdown controls use the same control/card fill as settings actions. -->
                     <StaticResource x:Key="ComboBoxBackground" ResourceKey="SettingsCardBackground"/>
                     <StaticResource x:Key="ComboBoxBackgroundUnfocused" ResourceKey="SettingsCardBackground"/>

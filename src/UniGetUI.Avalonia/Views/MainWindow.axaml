@@ -93,7 +93,10 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Template">
                 <ControlTemplate>
+                    <!-- Keep the full splitter hit target, but inset the visible hover/pressed
+                         track so it doesn't read as an edge-to-edge bar. -->
                     <Border Background="{TemplateBinding Background}"
+                            Margin="8,0"
                             CornerRadius="6">
                         <Border Width="22" Height="4"
                                 CornerRadius="2"

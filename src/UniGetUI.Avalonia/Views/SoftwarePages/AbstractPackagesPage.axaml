@@ -104,7 +104,10 @@
          <Setter Property="Background" Value="Transparent"/>
          <Setter Property="Template">
             <ControlTemplate>
+               <!-- The drag target still fills the whole gap; only the visible highlight
+                    is inset to line up with the neighboring filter pane. -->
                <Border Background="{TemplateBinding Background}"
+                       Margin="0,8"
                        CornerRadius="6">
                   <Border Width="4" Height="22"
                           CornerRadius="2"

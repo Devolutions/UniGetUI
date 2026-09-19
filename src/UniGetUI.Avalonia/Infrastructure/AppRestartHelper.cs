@@ -8,17 +8,20 @@ internal static class AppRestartHelper
 {
     private const string LauncherExecutableName = "UniGetUI.exe";
 
-    public static void Restart()
+    public static void Restart() => _ = RestartAsync();
+
+    private static async Task RestartAsync()
     {
         string executablePath = ResolveRestartExecutablePath(AppContext.BaseDirectory);
-        CoreTools.ScheduleRelaunchAfterExit(executablePath);
 
         if (MainWindow.Instance is { } mainWindow)
         {
-            mainWindow.QuitApplication();
+            await mainWindow.RequestQuitApplicationAsync(
+                () => CoreTools.ScheduleRelaunchAfterExit(executablePath));
             return;
         }
 
+        CoreTools.ScheduleRelaunchAfterExit(executablePath);
         (global::Avalonia.Application.Current?.ApplicationLifetime
             as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
     }

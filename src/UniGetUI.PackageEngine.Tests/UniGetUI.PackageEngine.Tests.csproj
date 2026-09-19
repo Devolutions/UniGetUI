@@ -56,6 +56,18 @@
 
     <ItemGroup>
         <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
+        <Compile Include="..\UniGetUI.AgentPolicy.ElevatedHelper\PolicyReplacementExecutor.cs"
+                 Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'"
+                 Link="PolicyWriteElevation\PolicyReplacementExecutor.cs" />
+        <Compile Include="..\UniGetUI.AgentPolicy.ElevatedHelper\AuthenticatedBrokerTransport.cs"
+                 Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'"
+                 Link="PolicyWriteElevation\AuthenticatedBrokerTransport.cs" />
+        <Compile Include="..\UniGetUI.AgentPolicy.ElevatedHelper\PolicyElevationHelperStageTimeouts.cs"
+                 Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'"
+                 Link="PolicyWriteElevation\PolicyElevationHelperStageTimeouts.cs" />
+        <Compile Include="..\UniGetUI.AgentPolicy.ElevatedHelper\PolicyElevationHelperSynchronousStageRunner.cs"
+                 Condition="'$(TargetFramework)' == '$(WindowsTargetFramework)'"
+                 Link="PolicyWriteElevation\PolicyElevationHelperSynchronousStageRunner.cs" />
         <None Include="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
         <!-- Mirrors the app layout so the operation launcher resolves in tests exactly as it
              does at runtime, which is what lets the real managers be exercised here. -->

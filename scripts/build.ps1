@@ -96,6 +96,13 @@ if (-not (Test-Path $WindowsAppHostPath)) {
     throw "Windows app host was not produced at $WindowsAppHostPath"
 }
 
+# The elevated policy-write helper is authenticated by exact path at runtime, so a missing or
+# misplaced helper must fail the build rather than silently ship an install that cannot elevate.
+$PolicyElevatorPath = Join-Path $BinDir "Assets\Utilities\UniGetUI.PolicyElevator.exe"
+if (-not (Test-Path $PolicyElevatorPath)) {
+    throw "Elevated policy helper was not staged at $PolicyElevatorPath"
+}
+
 # Keep smaller symbols for useful local crash source information, and prune oversized ones.
 $MaxShippedPdbSizeBytes = 1MB
 

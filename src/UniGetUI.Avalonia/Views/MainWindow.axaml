@@ -721,28 +721,40 @@
                               Width="10" Height="2"
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
-                    <!-- Maximize / Restore Down: separate WinUI-sized outlines avoid painting the
-                         obscured edges where the two restore windows overlap. -->
+                    <!-- Maximize / Restore Down. Windows uses the real ChromeRestore symbol from
+                         its caption-icon font; the path is retained as a portable fallback. -->
                     <Button x:Name="MaximizeButton"
                             Width="46" Height="44"
                             Classes="caption"
                             automation:AutomationProperties.Name="{t:Translate Maximize}"
                             ToolTip.Tip="{t:Translate Maximize}"
                             Click="MaximizeButton_Click">
-                        <Panel Width="12" Height="12"
+                        <Panel Width="16" Height="16"
                                automation:AutomationProperties.AccessibilityView="Raw">
                             <Path x:Name="MaximizeIcon"
                                   Stroke="{Binding $parent[Button].Foreground}"
                                   StrokeThickness="1"
                                   StrokeJoin="Miter"
-                                  Data="M1.5,1.5 H10.5 V10.5 H1.5 Z"/>
-                            <Path x:Name="RestoreIcon"
+                                  Data="M1.5,1.5 H10.5 V10.5 H1.5 Z"
+                                  Width="12" Height="12"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
+                            <TextBlock x:Name="RestoreIcon"
+                                       IsVisible="False"
+                                       Text="&#xE923;"
+                                       FontSize="16"
+                                       LineHeight="16"
+                                       TextAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                            <Path x:Name="RestoreFallbackIcon"
                                   IsVisible="False"
                                   Stroke="{Binding $parent[Button].Foreground}"
                                   StrokeThickness="1"
                                   StrokeLineCap="Round"
                                   StrokeJoin="Round"
-                                  Data="M4,3 V2.5 A1,1 0 0 1 5,1.5 H9.5 A1,1 0 0 1 10.5,2.5 V7 A1,1 0 0 1 9.5,8 H9 M2.5,3.5 H7.5 A1,1 0 0 1 8.5,4.5 V9.5 A1,1 0 0 1 7.5,10.5 H2.5 A1,1 0 0 1 1.5,9.5 V4.5 A1,1 0 0 1 2.5,3.5 Z"/>
+                                  Data="M5,3 V2.5 A1.5,1.5 0 0 1 6.5,1 H12.5 A1.5,1.5 0 0 1 14,2.5 V8.5 A1.5,1.5 0 0 1 12.5,10 H11 M3.5,4 H9.5 A1.5,1.5 0 0 1 11,5.5 V12.5 A1.5,1.5 0 0 1 9.5,14 H3.5 A1.5,1.5 0 0 1 2,12.5 V5.5 A1.5,1.5 0 0 1 3.5,4 Z"
+                                  Width="16" Height="16"/>
                         </Panel>
                     </Button>
                     <!-- Close: X -->

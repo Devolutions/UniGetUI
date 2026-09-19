@@ -167,6 +167,15 @@ public partial class MainWindow : Window
         Instance = this;
         DataContext = new MainWindowViewModel();
         InitializeComponent();
+        if (OperatingSystem.IsWindows())
+        {
+            // WinUI's caption button uses ChromeRestore (U+E923). Windows 11 supplies it
+            // through Segoe Fluent Icons; Windows 10 exposes the same symbol in MDL2 Assets.
+            RestoreIcon.FontFamily = new FontFamily(
+                OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000)
+                    ? "Segoe Fluent Icons"
+                    : "Segoe MDL2 Assets");
+        }
         SetupTitleBar();
         SetupTitleBarFocusOpacity();
         SetupResponsiveRail();
@@ -974,7 +983,8 @@ public partial class MainWindow : Window
     private void UpdateMaximizeButtonState(bool isMaximized)
     {
         MaximizeIcon.IsVisible = !isMaximized;
-        RestoreIcon.IsVisible = isMaximized;
+        RestoreIcon.IsVisible = isMaximized && OperatingSystem.IsWindows();
+        RestoreFallbackIcon.IsVisible = isMaximized && !OperatingSystem.IsWindows();
 
         string label = CoreTools.Translate(isMaximized ? "Restore" : "Maximize");
         ToolTip.SetTip(MaximizeButton, label);

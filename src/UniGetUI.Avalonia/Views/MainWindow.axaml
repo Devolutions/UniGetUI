@@ -742,8 +742,7 @@
                             <TextBlock x:Name="RestoreIcon"
                                        IsVisible="False"
                                        Text="&#xE923;"
-                                       FontSize="16"
-                                       LineHeight="16"
+                                       FontSize="10"
                                        TextAlignment="Center"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
@@ -754,7 +753,10 @@
                                   StrokeLineCap="Round"
                                   StrokeJoin="Round"
                                   Data="M5,3 V2.5 A1.5,1.5 0 0 1 6.5,1 H12.5 A1.5,1.5 0 0 1 14,2.5 V8.5 A1.5,1.5 0 0 1 12.5,10 H11 M3.5,4 H9.5 A1.5,1.5 0 0 1 11,5.5 V12.5 A1.5,1.5 0 0 1 9.5,14 H3.5 A1.5,1.5 0 0 1 2,12.5 V5.5 A1.5,1.5 0 0 1 3.5,4 Z"
-                                  Width="16" Height="16"/>
+                                  Width="10" Height="10"
+                                  Stretch="Uniform"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
                         </Panel>
                     </Button>
                     <!-- Close: X -->

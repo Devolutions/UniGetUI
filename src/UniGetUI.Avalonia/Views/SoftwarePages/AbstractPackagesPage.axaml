@@ -597,6 +597,7 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <CheckBox IsChecked="{Binding IsChecked}"
+                                                      Classes="package-selector package-list-selector"
                                                       automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                       HorizontalAlignment="Center"
                                                       VerticalAlignment="Center"
@@ -761,6 +762,7 @@
                                 HorizontalAlignment="Left" VerticalAlignment="Top"
                                 Background="Transparent" ZIndex="10">
                             <CheckBox IsChecked="{Binding AllPackagesChecked, Mode=TwoWay}"
+                                      Classes="package-selector package-list-selector"
                                       automation:AutomationProperties.Name="{t:Translate Select all}"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
@@ -831,6 +833,7 @@
                                                      room to stack them without overlap. -->
                                                 <Panel Grid.Column="2">
                                                     <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                              Classes="package-selector"
                                                               automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                               VerticalAlignment="Top"
                                                               HorizontalAlignment="Center"
@@ -875,6 +878,7 @@
                                                 BorderBrush="{DynamicResource SettingsCardBorderBrush}" BorderThickness="1" Padding="4">
                                             <Grid RowDefinitions="30,57,30,15">
                                                 <CheckBox Grid.Row="0"
+                                                          Classes="package-selector"
                                                           IsChecked="{Binding IsChecked, Mode=TwoWay}"
                                                           automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                                           HorizontalAlignment="Left"

@@ -1,6 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:controls="using:UniGetUI.Avalonia.Views.Controls">
+        xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        xmlns:primitives="using:Avalonia.Controls.Primitives">
 
     <Styles.Resources>
         <ResourceDictionary>
@@ -366,6 +367,22 @@
 
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
 
+    <!-- Avalonia's Fluent focus adorner is square by default. Keep its theme-aware
+         inner/outer brushes and thicknesses, but match WinUI's rounded focus geometry. -->
+    <Style Selector="primitives|AdornerLayer">
+        <Setter Property="DefaultFocusAdorner">
+            <FocusAdornerTemplate>
+                <Border BorderBrush="{DynamicResource SystemControlFocusVisualPrimaryBrush}"
+                        BorderThickness="2"
+                        CornerRadius="6">
+                    <Border BorderBrush="{DynamicResource SystemControlFocusVisualSecondaryBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"/>
+                </Border>
+            </FocusAdornerTemplate>
+        </Setter>
+    </Style>
+
     <Style Selector="TextBlock">
         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
     </Style>
@@ -502,6 +519,24 @@
     <Style Selector="CheckBox:checked:disabled /template/ Path#CheckGlyph,
                      CheckBox:indeterminate:disabled /template/ Path#CheckGlyph">
         <Setter Property="Fill" Value="{DynamicResource TextOnAccentFillColorDisabledBrush}"/>
+    </Style>
+
+    <!-- DataGrid check boxes are 20 DIPs visually but retain the theme's 32-DIP input
+         height. Inset the adorner vertically and let it sit two DIPs outside the box so
+         keyboard focus follows the visible selector instead of the layout slot. -->
+    <Style Selector="CheckBox.package-list-selector">
+        <Setter Property="FocusAdorner">
+            <FocusAdornerTemplate>
+                <Border Margin="-2,4"
+                        BorderBrush="{DynamicResource SystemControlFocusVisualPrimaryBrush}"
+                        BorderThickness="2"
+                        CornerRadius="6">
+                    <Border BorderBrush="{DynamicResource SystemControlFocusVisualSecondaryBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"/>
+                </Border>
+            </FocusAdornerTemplate>
+        </Setter>
     </Style>
 
     <Style Selector="RadioButton:checked /template/ Ellipse#CheckOuterEllipse">
@@ -670,6 +705,8 @@
          apply. -->
     <Style Selector="ListBoxItem.nav-item">
         <Setter Property="Margin" Value="0,2"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="Template">
             <ControlTemplate>
                 <ContentPresenter Name="ContentHost"

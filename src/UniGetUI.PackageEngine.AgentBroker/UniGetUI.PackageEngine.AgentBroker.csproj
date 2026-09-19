@@ -8,9 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Devolutions.Now.Policy.Model" Version="2026.9.17" />
-        <PackageReference Include="Devolutions.Now.Policy.Api" Version="2026.9.17" />
-        <PackageReference Include="Devolutions.Now.Policy.Client" Version="2026.9.17" />
+        <PackageReference Include="Devolutions.Now.Policy.Model" Version="2026.9.19" />
+        <PackageReference Include="Devolutions.Now.Policy.Api" Version="2026.9.19" />
+        <PackageReference Include="Devolutions.Now.Policy.Client" Version="2026.9.19" />
     </ItemGroup>
 
     <ItemGroup>

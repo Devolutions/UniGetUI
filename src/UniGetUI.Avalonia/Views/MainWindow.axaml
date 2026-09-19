@@ -114,6 +114,13 @@
         <Style Selector="GridSplitter.winui-horizontal-splitter:pressed">
             <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
         </Style>
+        <Style Selector="Border.operations-panel-border">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+        </Style>
+        <Style Selector="Border.operations-panel-border.splitter-active">
+            <!-- Preserve the one-DIP separator's layout while the splitter surface replaces it. -->
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
     </Window.Styles>
     <Panel>
         <!-- Solid inactive-state fallback, using the same theme resource as the #5111 Mica failure path. -->
@@ -198,7 +205,7 @@
             <GridSplitter x:Name="OperationsSplitter"
                           Classes="winui-horizontal-splitter"
                           Grid.Row="1"
-                          Margin="0,1,0,1"
+                          Margin="0,0,0,2"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch"
                           ResizeDirection="Rows"
@@ -209,10 +216,10 @@
 
             <!-- ── Operations panel ── -->
             <Border x:Name="OperationsPanelBorder"
+                    Classes="operations-panel-border"
                     Grid.Row="2"
                     IsVisible="{Binding OperationsPanelVisible}"
                     BorderThickness="0,1,0,0"
-                    BorderBrush="{DynamicResource AppBorderBrush}"
                     automation:AutomationProperties.AccessibilityView="Control"
                     automation:AutomationProperties.Name="{t:Translate Operations}"
                     automation:AutomationProperties.LandmarkType="{x:Static peers:AutomationLandmarkType.Region}"

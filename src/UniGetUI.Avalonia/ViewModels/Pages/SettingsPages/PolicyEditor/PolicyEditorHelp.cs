@@ -33,7 +33,7 @@ public static class PolicyEditorHelp
     public static string DeleteRule => T("Remove this rule from the policy. The removal takes effect when the policy is saved.");
     public static string RuleId => T("Permanent identifier used in decision logs, not a display name. Use 1 to 128 characters starting with a letter or number; then use letters, numbers, '.', '_', ':' or '-', for example allow-winget-updates.");
     public static string Priority => T("Shows this rule's evaluation position. Use Move up or Move down to change it; UniGetUI assigns the underlying priority automatically.");
-    public static string Decision => T("Choose Allow to permit a matching request or Deny to block it. Disabled rules have no effect.");
+    public static string Decision => T("Choose Allow to permit a matching request or Deny to block it. Changing a Deny rule to Allow starts high-impact request characteristics at No, so the rule matches normal verified requests without extra capabilities. Changing those characteristics back to Does not matter broadens what the Allow rule can match. Disabled rules have no effect.");
     public static string RuleReason => T("Optional administrator-facing explanation recorded with the rule's decision. Describe why the request is allowed or denied.");
     public static string Operations => T("Limit this rule to package installs, updates, or removals. Leave all choices clear to include every operation.");
     public static string Managers => T("Limit this rule to selected package managers. Leave all choices clear to include requests from every manager.");

@@ -897,7 +897,10 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
     public int SkipHashCheckIndex
     {
         get => PolicyEditorEnumDisplay.IndexOfTriState(Rule.Match.SkipHashCheck);
-        set => SetTriState(v => Rule.Match.SkipHashCheck = v, value);
+        set => SetTriState(
+            v => Rule.Match.SkipHashCheck = v,
+            value,
+            PolicyEditorAdvisories.PolicyEditorRisk.SkipHashCheck);
     }
 
     public int PreReleaseIndex
@@ -909,19 +912,28 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
     public int HasCustomParametersIndex
     {
         get => PolicyEditorEnumDisplay.IndexOfTriState(Rule.Match.HasCustomParameters);
-        set => SetTriState(v => Rule.Match.HasCustomParameters = v, value);
+        set => SetTriState(
+            v => Rule.Match.HasCustomParameters = v,
+            value,
+            PolicyEditorAdvisories.PolicyEditorRisk.CustomParameters);
     }
 
     public int HasCustomInstallLocationIndex
     {
         get => PolicyEditorEnumDisplay.IndexOfTriState(Rule.Match.HasCustomInstallLocation);
-        set => SetTriState(v => Rule.Match.HasCustomInstallLocation = v, value);
+        set => SetTriState(
+            v => Rule.Match.HasCustomInstallLocation = v,
+            value,
+            PolicyEditorAdvisories.PolicyEditorRisk.CustomInstallLocation);
     }
 
     public int HasPrePostCommandsIndex
     {
         get => PolicyEditorEnumDisplay.IndexOfTriState(Rule.Match.HasPrePostCommands);
-        set => SetTriState(v => Rule.Match.HasPrePostCommands = v, value);
+        set => SetTriState(
+            v => Rule.Match.HasPrePostCommands = v,
+            value,
+            PolicyEditorAdvisories.PolicyEditorRisk.PrePostCommands);
     }
 
     public int HasKillBeforeOperationIndex
@@ -1045,6 +1057,10 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
         OnPropertyChanged(nameof(DecisionIndex));
         OnPropertyChanged(nameof(IsAllowDecision));
         OnPropertyChanged(nameof(HasConstraints));
+        OnPropertyChanged(nameof(SkipHashCheckIndex));
+        OnPropertyChanged(nameof(HasCustomParametersIndex));
+        OnPropertyChanged(nameof(HasCustomInstallLocationIndex));
+        OnPropertyChanged(nameof(HasPrePostCommandsIndex));
         MarkDirty();
     }
 
@@ -1182,10 +1198,15 @@ public sealed class PolicyEditorRuleUi : ObservableObject, IDisposable
     private static bool HasErrors(IEnumerable<PolicyValidationFinding> findings) =>
         findings.Any(finding => finding.IsError);
 
-    private void SetTriState(Action<TriState> assign, int index)
+    private void SetTriState(
+        Action<TriState> assign,
+        int index,
+        PolicyEditorAdvisories.PolicyEditorRisk? risk = null)
     {
         if (index < 0 || index >= PolicyEditorEnumDisplay.TriStates.Length) return;
         assign(PolicyEditorEnumDisplay.TriStates[index]);
+        if (risk is { } configuredRisk)
+            _sessionViewModel.MarkMatchCharacteristicConfigured(Rule, configuredRisk);
         MarkDirty();
     }
 

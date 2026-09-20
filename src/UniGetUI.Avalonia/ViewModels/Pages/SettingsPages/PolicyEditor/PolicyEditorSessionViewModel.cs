@@ -20,6 +20,8 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private readonly Dictionary<object, string> _localInputErrors = [];
     private readonly HashSet<PolicyEditorDraftRule> _deferredBlankRules =
         new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<PolicyEditorDraftRule, HashSet<PolicyEditorAdvisories.PolicyEditorRisk>>
+        _explicitMatchCharacteristics = new(ReferenceEqualityComparer.Instance);
     private CancellationTokenSource? _rawSyntaxCancellation;
     private Task _rawSyntaxAnalysis = Task.CompletedTask;
     private CancellationTokenSource? _structuredDirtyCancellation;
@@ -241,6 +243,12 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             }
         }
 
+        if (ruleUi.Rule.Decision == Devolutions.Now.Policy.Model.Decision.Deny
+            && selected == Devolutions.Now.Policy.Model.Decision.Allow)
+        {
+            ApplySafeAllowMatchDefaults(ruleUi.Rule);
+        }
+
         ruleUi.ApplyDecision(selected);
         OnEditorStateChanged();
     }
@@ -249,6 +257,19 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     {
         Session.NotifyDraftChanged();
         OnStructuredDraftChanged();
+    }
+
+    internal void MarkMatchCharacteristicConfigured(
+        PolicyEditorDraftRule rule,
+        PolicyEditorAdvisories.PolicyEditorRisk risk)
+    {
+        if (!_explicitMatchCharacteristics.TryGetValue(rule, out HashSet<PolicyEditorAdvisories.PolicyEditorRisk>? configured))
+        {
+            configured = [];
+            _explicitMatchCharacteristics.Add(rule, configured);
+        }
+
+        configured.Add(risk);
     }
 
     public void SetLocalInputError(object key, string? message)
@@ -943,6 +964,28 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         ScheduleStructuredDirtyAnalysis();
         OnEditorStateChanged();
     }
+
+    private void ApplySafeAllowMatchDefaults(PolicyEditorDraftRule rule)
+    {
+        if (rule.Match.SkipHashCheck == TriState.Omitted
+            && !IsExplicitlyConfigured(rule, PolicyEditorAdvisories.PolicyEditorRisk.SkipHashCheck))
+            rule.Match.SkipHashCheck = TriState.False;
+        if (rule.Match.HasCustomParameters == TriState.Omitted
+            && !IsExplicitlyConfigured(rule, PolicyEditorAdvisories.PolicyEditorRisk.CustomParameters))
+            rule.Match.HasCustomParameters = TriState.False;
+        if (rule.Match.HasCustomInstallLocation == TriState.Omitted
+            && !IsExplicitlyConfigured(rule, PolicyEditorAdvisories.PolicyEditorRisk.CustomInstallLocation))
+            rule.Match.HasCustomInstallLocation = TriState.False;
+        if (rule.Match.HasPrePostCommands == TriState.Omitted
+            && !IsExplicitlyConfigured(rule, PolicyEditorAdvisories.PolicyEditorRisk.PrePostCommands))
+            rule.Match.HasPrePostCommands = TriState.False;
+    }
+
+    private bool IsExplicitlyConfigured(
+        PolicyEditorDraftRule rule,
+        PolicyEditorAdvisories.PolicyEditorRisk risk) =>
+        _explicitMatchCharacteristics.TryGetValue(rule, out HashSet<PolicyEditorAdvisories.PolicyEditorRisk>? configured)
+        && configured.Contains(risk);
 
     private void RefreshLocalSemanticValidation()
     {

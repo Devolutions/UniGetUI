@@ -775,6 +775,58 @@ public class PolicyEditorStructuredInputGuardTests
     }
 
     [Fact]
+    public async Task DenyToAllow_InitializesOnlyUntouchedHighImpactMatchDefaults()
+    {
+        using PolicyEditorSessionViewModel viewModel = CreateViewModel();
+        PolicyEditorDraftRule draftRule = viewModel.Session.AddRule();
+        draftRule.Match.SkipHashCheck = TriState.True;
+        draftRule.Match.Interactive = TriState.Omitted;
+        draftRule.Match.PreRelease = TriState.Omitted;
+        draftRule.Match.HasKillBeforeOperation = TriState.Omitted;
+        draftRule.Match.HasUninstallPrevious = TriState.Omitted;
+        using var rule = new PolicyEditorRuleUi(draftRule, viewModel);
+
+        await viewModel.ChangeRuleDecisionAsync(
+            rule,
+            PolicyEditorEnumDisplay.IndexOfDecision(ModelDecision.Allow));
+
+        Assert.Equal(ModelDecision.Allow, draftRule.Decision);
+        Assert.Equal(TriState.True, draftRule.Match.SkipHashCheck);
+        Assert.Equal(TriState.False, draftRule.Match.HasCustomParameters);
+        Assert.Equal(TriState.False, draftRule.Match.HasCustomInstallLocation);
+        Assert.Equal(TriState.False, draftRule.Match.HasPrePostCommands);
+        Assert.Equal(TriState.Omitted, draftRule.Match.Interactive);
+        Assert.Equal(TriState.Omitted, draftRule.Match.PreRelease);
+        Assert.Equal(TriState.Omitted, draftRule.Match.HasKillBeforeOperation);
+        Assert.Equal(TriState.Omitted, draftRule.Match.HasUninstallPrevious);
+
+        draftRule.Match.SkipHashCheck = TriState.False;
+        draftRule.Enabled = true;
+        draftRule.Constraints = new PolicyEditorDraftConstraints
+        {
+            AllowSkipHashCheck = true,
+        };
+        Assert.Empty(rule.SkipHashCheckMatchAdvisory);
+        Assert.Empty(rule.SkipHashCheckAdvisory);
+
+        rule.SkipHashCheckIndex = PolicyEditorEnumDisplay.IndexOfTriState(TriState.Omitted);
+        Assert.Contains(
+            "Does not matter",
+            rule.SkipHashCheckMatchAdvisory,
+            StringComparison.Ordinal);
+
+        await viewModel.ChangeRuleDecisionAsync(
+            rule,
+            PolicyEditorEnumDisplay.IndexOfDecision(ModelDecision.Deny));
+        await viewModel.ChangeRuleDecisionAsync(
+            rule,
+            PolicyEditorEnumDisplay.IndexOfDecision(ModelDecision.Allow));
+
+        Assert.Equal(TriState.Omitted, draftRule.Match.SkipHashCheck);
+        Assert.Equal(TriState.False, draftRule.Match.HasCustomParameters);
+    }
+
+    [Fact]
     public void OptionalDescriptionAndReason_PreserveNullEmptyWhitespaceAndExplicitOmission()
     {
         using PolicyEditorSessionViewModel viewModel = CreateViewModel();

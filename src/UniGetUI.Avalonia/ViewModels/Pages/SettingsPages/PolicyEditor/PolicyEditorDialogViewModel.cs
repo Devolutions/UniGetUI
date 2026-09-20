@@ -464,6 +464,9 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
                 CoreTools.Translate("Communication with the elevated helper failed."),
             PolicyWriteFailureKind.HelperFailed =>
                 CoreTools.Translate("The elevated helper stopped unexpectedly."),
+            PolicyWriteFailureKind.BrokerRejected
+                when errorCode == ErrorCode.MalformedDraft =>
+                CoreTools.Translate("Devolutions Agent rejected the policy draft as malformed. Refresh policy management state, then review the policy before retrying."),
             PolicyWriteFailureKind.BrokerRejected =>
                 CoreTools.Translate("Devolutions Agent rejected the policy replacement."),
             PolicyWriteFailureKind.WriteResultUnknown =>

@@ -1233,6 +1233,17 @@ public class PolicyEditorStructuredInputGuardTests
     }
 
     [Fact]
+    public void MalformedDraftRejection_ExplainsSafeRecovery()
+    {
+        string message = PolicyEditorDialogViewModel.DescribeWriteFailure(
+            PolicyWriteFailureKind.BrokerRejected,
+            ErrorCode.MalformedDraft);
+
+        Assert.Contains("malformed", message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Refresh policy management state", message);
+    }
+
+    [Fact]
     public async Task CompletedSaveSuccess_IsAnnouncedPolitely()
     {
         PolicyDocument active = PolicyEditorTestFixtures.BuildDocument(id: "test-policy");

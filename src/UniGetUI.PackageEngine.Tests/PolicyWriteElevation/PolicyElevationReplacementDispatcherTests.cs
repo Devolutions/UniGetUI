@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Devolutions.Now.Policy.Api;
+using Devolutions.Now.Policy.Model;
 using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 
 namespace UniGetUI.PackageEngine.Tests.PolicyWriteElevation;
@@ -51,6 +52,52 @@ public class PolicyElevationReplacementDispatcherTests
             CancellationToken.None);
 
         Assert.Equal(expected, observed!.ConflictHandling);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_ProducesStrict2026_9_19ReplacementEnvelope()
+    {
+        using JsonDocument draft = JsonDocument.Parse(
+            PolicySerializer.Serialize(new PolicyDraftDocument
+            {
+                PolicyFormatVersion = PolicyFormatVersion.Current,
+                Metadata = new PolicyDraftMetadata
+                {
+                    Id = "policy-id",
+                    Publisher = "publisher",
+                },
+                Enforcement = new PolicyEnforcement
+                {
+                    DefaultDecision = Devolutions.Now.Policy.Model.Decision.Deny,
+                },
+                Rules = [],
+            }));
+        PolicyReplacementRequest? observed = null;
+
+        await PolicyElevationReplacementDispatcher.DispatchAsync(
+            Request(draft.RootElement.GetRawText()),
+            (request, _) =>
+            {
+                observed = request;
+                return Task.FromResult(Response());
+            },
+            CancellationToken.None);
+
+        string body = BrokerSerializer.Serialize(observed!);
+        PolicyReplacementRequest parsed =
+            BrokerSerializer.DeserializeStrict<PolicyReplacementRequest>(body)
+            ?? throw new InvalidOperationException("The replacement body was empty.");
+
+        Assert.Equal("PolicyReplacementRequest", parsed.RequestKind);
+        Assert.Equal("1.0", parsed.RequestVersion);
+        Assert.Equal("token", parsed.ExpectedStoreToken);
+        Assert.Equal("receipt", parsed.ValidationReceipt);
+        Assert.Equal(
+            1,
+            JsonDocument.Parse(body)
+                .RootElement
+                .EnumerateObject()
+                .Count(property => property.NameEquals("Draft")));
     }
 
     [Fact]

@@ -1260,6 +1260,7 @@
   "The elevated helper could not be authenticated.": "The elevated helper could not be authenticated.",
   "Communication with the elevated helper failed.": "Communication with the elevated helper failed.",
   "The elevated helper stopped unexpectedly.": "The elevated helper stopped unexpectedly.",
+  "Devolutions Agent rejected the policy draft as malformed. Refresh policy management state, then review the policy before retrying.": "Devolutions Agent rejected the policy draft as malformed. Refresh policy management state, then review the policy before retrying.",
   "Devolutions Agent rejected the policy replacement.": "Devolutions Agent rejected the policy replacement.",
   "The save failed ({0}).": "The save failed ({0}).",
   "The save failed.": "The save failed.",

@@ -190,6 +190,81 @@ public sealed class PackageLoaderPipelineTests
     }
 
     [Fact]
+    public async Task ReloadPackages_KeepsTheCheckedStateOfPackagesAlreadyOnTheList()
+    {
+        var manager = new PackageManagerBuilder()
+            .WithInstalledPackages(testManager =>
+            [
+                new PackageBuilder()
+                    .WithManager(testManager)
+                    .WithId("Contoso.Kept")
+                    .WithVersion("1.0.0")
+                    .Build(),
+                new PackageBuilder()
+                    .WithManager(testManager)
+                    .WithId("Contoso.Untouched")
+                    .WithVersion("1.0.0")
+                    .Build(),
+            ])
+            .Build();
+        var loader = new TestPackageLoader([manager], checkedByDefault: true);
+
+        await loader.ReloadPackages();
+        loader.GetPackageForId("Contoso.Kept")!.IsChecked = false;
+        await loader.ReloadPackages();
+
+        Assert.False(loader.GetPackageForId("Contoso.Kept")!.IsChecked);
+        Assert.True(loader.GetPackageForId("Contoso.Untouched")!.IsChecked);
+    }
+
+    [Fact]
+    public async Task ReloadPackages_AppliesTheDefaultCheckedState_ToPackagesThatWereNotOnTheList()
+    {
+        var ids = new List<string> { "Contoso.First" };
+        var manager = new PackageManagerBuilder()
+            .WithInstalledPackages(testManager => ids
+                .Select(id => new PackageBuilder()
+                    .WithManager(testManager)
+                    .WithId(id)
+                    .WithVersion("1.0.0")
+                    .Build())
+                .ToArray())
+            .Build();
+        var loader = new TestPackageLoader([manager], checkedByDefault: true);
+
+        await loader.ReloadPackages();
+        loader.GetPackageForId("Contoso.First")!.IsChecked = false;
+        ids.Add("Contoso.Second");
+        await loader.ReloadPackages();
+
+        Assert.False(loader.GetPackageForId("Contoso.First")!.IsChecked);
+        Assert.True(loader.GetPackageForId("Contoso.Second")!.IsChecked);
+    }
+
+    [Fact]
+    public async Task ClearPackages_ForgetsTheRememberedCheckedState()
+    {
+        var manager = new PackageManagerBuilder()
+            .WithInstalledPackages(testManager =>
+            [
+                new PackageBuilder()
+                    .WithManager(testManager)
+                    .WithId("Contoso.Tool")
+                    .WithVersion("1.0.0")
+                    .Build(),
+            ])
+            .Build();
+        var loader = new TestPackageLoader([manager], checkedByDefault: true);
+
+        await loader.ReloadPackages();
+        loader.GetPackageForId("Contoso.Tool")!.IsChecked = false;
+        loader.ClearPackages();
+        await loader.ReloadPackages();
+
+        Assert.True(loader.GetPackageForId("Contoso.Tool")!.IsChecked);
+    }
+
+    [Fact]
     public async Task ReloadPackages_ReportsSettledLoadState_WhenFinishedLoadingIsRaised()
     {
         var manager = new PackageManagerBuilder().Build();

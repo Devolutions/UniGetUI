@@ -28,14 +28,7 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
             Dependencies =
             [
                 // GIT is required for vcpkg updates to work
-                new ManagerDependency(
-                    "Git",
-                    CoreData.PowerShell5,
-                    "-ExecutionPolicy Bypass -NoLogo -NoProfile -Command \"& {winget install --id Git.Git --exact "
-                        + "--source winget --accept-source-agreements --accept-package-agreements --force}\"",
-                    "winget install --id Git.Git --exact --source winget",
-                    async () => (await CoreTools.WhichAsync("git.exe")).Item1
-                ),
+                VcpkgGitDependency.Create(),
             ];
 
             Capabilities = new ManagerCapabilities

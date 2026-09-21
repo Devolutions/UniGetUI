@@ -171,6 +171,26 @@ public class PolicyElevationTrustPolicyTests
 
 #if WINDOWS
     [Fact]
+    [Trait("Category", "ReleaseArtifact")]
+    public void ReleaseArtifacts_AreAuthenticodeBound_WhenProvidedByReleaseWorkflow()
+    {
+        string? host = Environment.GetEnvironmentVariable("UNIGETUI_RELEASE_POLICY_ELEVATION_HOST_PATH");
+        string? helper = Environment.GetEnvironmentVariable("UNIGETUI_RELEASE_POLICY_ELEVATION_HELPER_PATH");
+        if (string.IsNullOrWhiteSpace(host) && string.IsNullOrWhiteSpace(helper))
+            return;
+        Assert.False(string.IsNullOrWhiteSpace(host), "The release host path must be supplied with the release helper path.");
+        Assert.False(string.IsNullOrWhiteSpace(helper), "The release helper path must be supplied with the release host path.");
+        Assert.Equal(PolicyElevationProtocol.HostFileName, Path.GetFileName(host));
+        Assert.Equal(PolicyElevationProtocol.HelperFileName, Path.GetFileName(helper));
+        Assert.True(File.Exists(host), "The staged release host executable is missing.");
+        Assert.True(File.Exists(helper), "The staged release helper executable is missing.");
+        PolicyElevationSignerBindingResult binding = PolicyElevationSignerBinding.Bind(
+            new WindowsAuthenticodeTrustVerifier(), host, helper);
+        Assert.True(binding.IsBound, binding.FailureReason
+            ?? "The staged release host and helper did not pass Authenticode signer binding.");
+    }
+
+    [Fact]
     public void ProductionVerifier_ReportsTheSignerOfAValidlySignedBinary()
     {
         var verifier = new WindowsAuthenticodeTrustVerifier();

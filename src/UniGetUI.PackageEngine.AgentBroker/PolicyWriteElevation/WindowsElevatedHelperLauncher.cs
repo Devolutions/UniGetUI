@@ -52,6 +52,9 @@ public interface IElevatedHelperLauncher
 /// <summary>
 /// Starts the helper through <c>ShellExecuteEx</c> with the <c>runas</c> verb, which is what
 /// raises the consent prompt. The command line carries routing arguments only.
+/// UniGetUI Elevator is deliberately not used because the authenticated exchange requires a handle
+/// to the exact helper process. Keeping elevation in this separate, minimal one-shot executable
+/// also prevents the full UniGetUI application from receiving an elevated token.
 /// </summary>
 public sealed class WindowsElevatedHelperLauncher : IElevatedHelperLauncher
 {

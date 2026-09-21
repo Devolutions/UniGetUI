@@ -265,6 +265,43 @@ jobs:
             throw "Elevated policy helper is not validly signed (status: $($HelperSignature.Status))."
           }
 
+      - name: Validate staged policy signer binding (${{ matrix.platform }})
+        if: ${{ fromJSON(needs.preflight.outputs.dry-run) == false }}
+        shell: pwsh
+        run: |
+          $Platform = '${{ matrix.platform }}'
+          $HostPath = Join-Path $PWD "unigetui_bin/UniGetUI.exe"
+          $HelperPath = Join-Path $PWD "unigetui_bin/Assets/Utilities/UniGetUI.PolicyElevator.exe"
+          if (-not (Test-Path -LiteralPath $HostPath -PathType Leaf)) { throw "Windows app host was not staged at $HostPath" }
+          if (-not (Test-Path -LiteralPath $HelperPath -PathType Leaf)) { throw "Elevated policy helper was not staged at $HelperPath" }
+          # WinVerifyTrust validates PE files without executing them, so the x64 test host can inspect arm64.
+          $env:UNIGETUI_RELEASE_POLICY_ELEVATION_HOST_PATH = $HostPath
+          $env:UNIGETUI_RELEASE_POLICY_ELEVATION_HELPER_PATH = $HelperPath
+          Write-Host "Authenticode/SPKI binding validation for win-$Platform staged artifacts."
+          $ResultsDirectory = Join-Path $env:RUNNER_TEMP "policy-signer-binding-$Platform"
+          if (Test-Path -LiteralPath $ResultsDirectory) {
+            Remove-Item -LiteralPath $ResultsDirectory -Recurse -Force
+          }
+
+          dotnet test src/UniGetUI.PackageEngine.Tests/UniGetUI.PackageEngine.Tests.csproj `
+            --no-build --no-restore --verbosity q --nologo /p:Platform=x64 `
+            --framework net10.0-windows10.0.26100.0 `
+            --filter "FullyQualifiedName=UniGetUI.PackageEngine.Tests.PolicyWriteElevation.PolicyElevationTrustPolicyTests.ReleaseArtifacts_AreAuthenticodeBound_WhenProvidedByReleaseWorkflow" `
+            --results-directory $ResultsDirectory `
+            --logger "trx;LogFileName=policy-signer-binding.trx"
+          if ($LASTEXITCODE -ne 0) { throw "Staged policy elevation signer binding validation failed for win-$Platform." }
+
+          $TrxPath = Join-Path $ResultsDirectory "policy-signer-binding.trx"
+          if (-not (Test-Path -LiteralPath $TrxPath -PathType Leaf)) {
+            throw "Policy signer-binding test did not produce $TrxPath."
+          }
+
+          [xml]$Trx = Get-Content -LiteralPath $TrxPath -Raw
+          $ExecutedTests = @($Trx.SelectNodes("//*[local-name()='UnitTestResult']"))
+          if ($ExecutedTests.Count -ne 1 -or $ExecutedTests[0].outcome -ne "Passed") {
+            throw "Expected exactly one passing policy signer-binding test; observed $($ExecutedTests.Count)."
+          }
+
       - name: Build installer
         shell: pwsh
         run: |

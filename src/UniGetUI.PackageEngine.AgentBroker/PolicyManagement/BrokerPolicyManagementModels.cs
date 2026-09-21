@@ -46,7 +46,7 @@ public enum BrokerPolicyValidationStatus
 }
 
 /// <summary>
-/// Shared constants for the Phase 2 policy management/validation surface.
+/// Shared constants for policy management and validation.
 /// </summary>
 public static class BrokerPolicyManagementLimits
 {
@@ -112,7 +112,7 @@ public sealed record BrokerPolicyDiagnosticsView(
 
 /// <summary>
 /// Result of <see cref="IBrokerPolicyManagementService.GetManagementAsync"/>. <see cref="Snapshot"/> exposes
-/// the package's own contract type directly (mirroring the Phase 1 <c>BrokerPolicyInspectionResult</c>
+/// the package's own contract type directly (matching the existing <c>BrokerPolicyInspectionResult</c>
 /// pattern) so callers retain full fidelity (state, write capability/reason, configured path, store token,
 /// and - when Active - the policy document). <see cref="Diagnostics"/> additionally provides a sanitized,
 /// bounded view of Invalid-state findings suitable for direct UI rendering.

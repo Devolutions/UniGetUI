@@ -195,6 +195,81 @@ public class PolicyEditorSessionViewModelTests
         Assert.True(vm.LastSaveSucceeded);
     }
 
+    [Fact]
+    public async Task SuccessfulSave_RejectsPreSaveAutomaticValidation()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(PolicyEditorTestFixtures.BuildActiveManagement(PolicyEditorTestFixtures.BuildDocument(id: "id-1"), "token-1"));
+        var validation = new GatedValidationClient();
+        var writer = new FakeWriteClient();
+        using var vm = new PolicyEditorSessionViewModel(session, validation, new FakeConfirmationPrompt(), writer, structuredDirtyDebounce: TimeSpan.Zero);
+        GatedValidationCall stale = validation.QueueCall();
+        vm.Draft.Metadata.Description = "draft";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        await stale.Started.Task;
+        GatedValidationCall save = validation.QueueCall();
+        PolicyDocument authoritative = PolicyEditorTestFixtures.BuildDocument(id: "id-1");
+        authoritative.Metadata.Description = "draft";
+        writer.NextOutcome = PolicyWriteOutcome.Success(PolicyEditorTestFixtures.BuildReplacementResponse(authoritative, "token-2"));
+        Task saveTask = vm.SaveCommand.ExecuteAsync(null);
+        await save.Started.Task;
+        save.Completion.SetResult(new PolicyEditorValidationOutcome(ValidResultFor(vm, "save")));
+        await saveTask;
+        stale.Completion.SetResult(new PolicyEditorValidationOutcome(ValidResultFor(vm, "stale", [new PolicyFinding { Path = "/Rules", Severity = PolicyFindingSeverity.Error, Message = "stale" }])));
+        Assert.Null(vm.Session.Validation);
+        Assert.Empty(vm.Findings);
+        Assert.False(vm.Session.IsValidationCurrent);
+    }
+
+    [Fact]
+    public async Task SuccessfulSaveWithNewerDraft_ReschedulesValidationForPreservedDraft()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(PolicyEditorTestFixtures.BuildActiveManagement(PolicyEditorTestFixtures.BuildDocument(id: "id-1"), "token-1"));
+        var validation = new GatedValidationClient();
+        var writer = new FakeWriteClient { Started = new TaskCompletionSource(), Gate = new TaskCompletionSource() };
+        using var vm = new PolicyEditorSessionViewModel(session, validation, new FakeConfirmationPrompt(), writer, structuredDirtyDebounce: TimeSpan.Zero);
+        GatedValidationCall save = validation.QueueCall();
+        PolicyDocument authoritative = PolicyEditorTestFixtures.BuildDocument(id: "id-1");
+        writer.NextOutcome = PolicyWriteOutcome.Success(PolicyEditorTestFixtures.BuildReplacementResponse(authoritative, "token-2"));
+        Task saveTask = vm.SaveCommand.ExecuteAsync(null);
+        await save.Started.Task;
+        save.Completion.SetResult(new PolicyEditorValidationOutcome(ValidResultFor(vm, "save")));
+        await writer.Started.Task;
+        GatedValidationCall stale = validation.QueueCall();
+        vm.Draft.Metadata.Description = "newer";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        await stale.Started.Task;
+        GatedValidationCall fresh = validation.QueueCall();
+        writer.Gate.SetResult();
+        await saveTask;
+        await fresh.Started.Task;
+        stale.Completion.SetResult(new PolicyEditorValidationOutcome(ValidResultFor(vm, "stale")));
+        fresh.Completion.SetResult(new PolicyEditorValidationOutcome(ValidResultFor(vm, "fresh")));
+        await vm.WaitForAuthoritativeValidationAsync();
+        Assert.True(vm.SavedWithNewerChanges);
+        Assert.True(vm.Session.IsValidationCurrent);
+        Assert.Equal("fresh", vm.Session.Validation!.Receipt);
+        Assert.Equal("newer", vm.Draft.Metadata.Description);
+    }
+
+    [Fact]
+    public async Task OriginTokenChange_RejectsStaleAutomaticValidationReceipt()
+    {
+        PolicyEditorSession session = PolicyEditorSession.StartUpdate(PolicyEditorTestFixtures.BuildActiveManagement(PolicyEditorTestFixtures.BuildDocument(id: "id-1"), "token-1"));
+        var validation = new GatedValidationClient();
+        using var vm = new PolicyEditorSessionViewModel(session, validation, new FakeConfirmationPrompt(), new FakeWriteClient(), structuredDirtyDebounce: TimeSpan.Zero);
+        GatedValidationCall stale = validation.QueueCall();
+        vm.Draft.Metadata.Description = "draft";
+        vm.NotifyDraftChangedCommand.Execute(null);
+        await stale.Started.Task;
+        PolicyDocument authoritative = PolicyEditorTestFixtures.BuildDocument(id: "id-1");
+        authoritative.Metadata.Description = "draft";
+        session.MarkSaved(PolicyEditorTestFixtures.BuildReplacementResponse(authoritative, "token-2"));
+        stale.Completion.SetResult(new PolicyEditorValidationOutcome(ValidResultFor(vm, "stale")));
+        Assert.Equal("token-2", session.OriginManagement.StoreToken);
+        Assert.Null(session.Validation);
+        Assert.False(session.IsValidationCurrent);
+    }
+
     // ---- Raw/structured mode switching (correction #3) ---------------------------------------
 
     [Fact]

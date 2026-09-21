@@ -525,6 +525,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         {
             string submitted = Session.GetEffectiveRawJson();
             long attemptGeneration = Session.MutationGeneration;
+            long validationEpoch = Session.ValidationEpoch;
             ReconcileDirtyAtBoundary(submitted);
 
             // Correction #14: reuse the exact current validation (same receipt/CanonicalDraft) when
@@ -552,7 +553,8 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                     await _validationClient.ValidateAsync(submittedElement, cancellationToken);
                 if (!CanApply(cancellationToken)
                     || saveGeneration != Volatile.Read(ref _saveGeneration)
-                    || Session.MutationGeneration != attemptGeneration)
+                    || Session.MutationGeneration != attemptGeneration
+                    || Session.ValidationEpoch != validationEpoch)
                     return;
                 if (validationOutcome.Validation is null)
                 {
@@ -560,11 +562,13 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
                     return;
                 }
 
-                Session.ApplyValidationResult(
+                if (!Session.TryApplyValidationResult(
                     submitted,
                     validationOutcome.Validation,
+                    validationEpoch,
                     validationOutcome.BoundedFindings,
-                    validationOutcome.OmittedFindingCount);
+                    validationOutcome.OmittedFindingCount))
+                    return;
                 OnEditorStateChanged();
                 validation = Session.Validation;
                 if (validation is null)
@@ -721,10 +725,13 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             {
                 if (write.Response is not null)
                 {
+                    CancelAuthoritativeValidation();
                     Session.MarkSavedPreservingCurrentDraft(write.Response, attemptGeneration);
                     SavedWithNewerChanges = true;
                     LastSaveSucceeded = true;
                     ScheduleCurrentModeDirtyAnalysis();
+                    if (Session.IsDirty)
+                        ScheduleAuthoritativeValidation();
                     OnEditorStateChanged();
                 }
 
@@ -740,6 +747,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
 
             if (write.Response is not null)
             {
+                CancelAuthoritativeValidation();
                 Session.MarkSaved(write.Response);
                 SavedWithNewerChanges = false;
                 SavedThenSuperseded = write.SavedThenSuperseded;
@@ -1309,7 +1317,14 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
     private void ScheduleAuthoritativeValidation(
         string raw,
         JsonElement draft,
-        long mutationGeneration)
+        long mutationGeneration) =>
+        ScheduleAuthoritativeValidation(raw, draft, mutationGeneration, Session.ValidationEpoch);
+
+    private void ScheduleAuthoritativeValidation(
+        string raw,
+        JsonElement draft,
+        long mutationGeneration,
+        long validationEpoch)
     {
         var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
             _lifetimeCancellation.Token);
@@ -1321,6 +1336,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             raw,
             draft.Clone(),
             mutationGeneration,
+            validationEpoch,
             cancellation);
     }
 
@@ -1328,6 +1344,7 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
         string raw,
         JsonElement draft,
         long mutationGeneration,
+        long validationEpoch,
         CancellationTokenSource cancellation)
     {
         try
@@ -1338,17 +1355,22 @@ public partial class PolicyEditorSessionViewModel : ViewModelBase, IDisposable
             if (cancellation.IsCancellationRequested
                 || Volatile.Read(ref _isDisposed) != 0
                 || mutationGeneration != Session.MutationGeneration
+                || validationEpoch != Session.ValidationEpoch
                 || !string.Equals(raw, Session.GetEffectiveRawJson(), StringComparison.Ordinal)
                 || outcome.Validation is null)
             {
                 return;
             }
 
-            Session.ApplyValidationResult(
+            if (!Session.TryApplyValidationResult(
                 raw,
                 outcome.Validation,
+                validationEpoch,
                 outcome.BoundedFindings,
-                outcome.OmittedFindingCount);
+                outcome.OmittedFindingCount))
+            {
+                return;
+            }
             _hasLocalSemanticErrors = Session.Findings.All.Any(
                 finding => finding.Severity == PolicyValidationSeverity.Error);
             SyntaxError = null;

@@ -12,9 +12,9 @@ using ApiElevation = Devolutions.Now.Policy.Api.Elevation;
 namespace UniGetUI.PackageEngine.AgentBroker.PolicyManagement;
 
 /// <summary>
-/// Read-only adapter over the Phase 2 Agent policy management/validation endpoints
+/// Read-only adapter over the Agent policy management and validation endpoints
 /// (GET /v1/policy/management, POST /v1/policy/validate). This is independent of the
-/// Phase 1 <c>IBrokerPolicyInspector</c> (GET /v1/policy) and does not read the
+/// <c>IBrokerPolicyInspector</c> snapshot endpoint (GET /v1/policy) and does not read the
 /// UseAgentBroker setting: callers decide when to invoke it.
 /// </summary>
 public interface IBrokerPolicyManagementService
@@ -117,7 +117,7 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
     // invariants (violations throw JsonException, surfaced by BrokerClient as
     // BrokerClientException(Kind = InvalidResponse) before ever reaching this adapter). What is *not*
     // enforced by the package - and is therefore checked here - is the envelope's ResponseVersion format
-    // and ServerVersion bound (mirroring the Phase 1 BrokerPolicyInspector checks for the sibling GET
+    // and ServerVersion bound (matching the BrokerPolicyInspector checks for the sibling GET
     // /v1/policy endpoint), plus defensive Enum.IsDefined checks for forward-compatibility.
     private static bool HasRequiredManagementData(PolicyManagementResponse response)
     {
@@ -173,9 +173,9 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
 
     // Keeps 404/NotFound/UnsupportedEndpoint mapped as "older unsupported Agent", and the three
     // policy-path/format/filesystem error codes distinct from each other and from every other outcome,
-    // per the Phase 2 contract. Mirrors the Phase 1 BrokerPolicyInspector.MapFailure
-    // precedent: BrokerClientErrorKind.BrokerError collapses every structured broker error into one kind,
-    // so disambiguation must happen via StatusCode/BrokerError.Code first.
+    // per the policy management contract. This follows the BrokerPolicyInspector.MapFailure precedent:
+    // BrokerClientErrorKind.BrokerError collapses every structured broker error into one kind, so
+    // disambiguation must happen via StatusCode/BrokerError.Code first.
     private static BrokerPolicyManagementStatus MapManagementFailure(BrokerClientException ex)
     {
         if (ex.StatusCode == 404

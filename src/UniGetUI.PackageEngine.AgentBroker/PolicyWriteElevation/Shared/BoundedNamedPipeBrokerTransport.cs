@@ -230,6 +230,20 @@ internal sealed class BoundedNamedPipeBrokerTransport : IBrokerTransport
                 bodyRead += read;
             }
 
+            // Requests explicitly require Connection: close, so EOF is part of the single-response
+            // frame. Probe one byte past Content-Length to make excess-data rejection independent
+            // of how the pipe happened to chunk its reads.
+            byte[] trailing = new byte[1];
+            int trailingRead = await pipe.ReadAsync(trailing, cancellationToken).ConfigureAwait(false);
+            if (trailingRead != 0)
+            {
+                throw BrokerFailure(
+                    BrokerClientErrorKind.InvalidResponse,
+                    $"The package broker returned more response data than declared for {path}.",
+                    path,
+                    statusCode: statusCode);
+            }
+
             return new BrokerTransportResponse
             {
                 StatusCode = statusCode,

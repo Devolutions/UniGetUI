@@ -186,7 +186,22 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        PolicyElevationRequestMessage preflightRequest = CreateRequestMessage(request, string.Empty);
+        PolicyElevationRequestMessage preflightRequest = CreateRequestMessage(
+            request,
+            new string('0', PolicyElevationProtocol.RequestIdCharacters));
+        try
+        {
+            // Init-only request members can be changed after the constructor has validated its
+            // default operation. Validate the complete wire request before creating a pipe or
+            // launching the privileged helper, so an internal malformed request is deterministic.
+            PolicyElevationFrame.ValidateRequest(preflightRequest);
+        }
+        catch (PolicyElevationFrameException)
+        {
+            return Fail(request, PolicyElevationOutcome.MalformedResponse,
+                "The policy elevation request is malformed.");
+        }
+
         if (!PolicyElevationReplacementDispatcher.IsBrokerRequestWithinLimit(preflightRequest))
         {
             return Fail(

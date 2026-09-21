@@ -287,21 +287,36 @@ public class PolicyElevationContractTests
     }
 
     [Theory]
-    // The shared grammar: printable ASCII, first character an ASCII alphanumeric.
+    // The shared grammar: ASCII alphanumerics plus . _ ~ : -, first character ASCII alphanumeric.
     [InlineData("a", true)]
     [InlineData("0", true)]
     [InlineData("Z", true)]
     [InlineData("tok-1.2:3_4~5", true)]
+    [InlineData("a._~:-Z9", true)]
     [InlineData("-leading", false)]
     [InlineData("_leading", false)]
     [InlineData(".leading", false)]
     [InlineData("~leading", false)]
+    [InlineData(":leading", false)]
     [InlineData(" leading", false)]
     [InlineData("tok en", false)]
     [InlineData("tok\ten", false)]
     [InlineData("tok\nen", false)]
     [InlineData("tokén", false)]
     [InlineData("token ", false)]
+    [InlineData("token!bang", false)]
+    [InlineData("token\"quote", false)]
+    [InlineData(@"tokenackslash", false)]
+    [InlineData("token/slash", false)]
+    [InlineData("token+plus", false)]
+    [InlineData("token=equals", false)]
+    [InlineData("token[bracket", false)]
+    [InlineData("token{brace", false)]
+    [InlineData("token,comma", false)]
+    [InlineData("token#hash", false)]
+    [InlineData("token@at", false)]
+    [InlineData("token$dollar", false)]
+    [InlineData("token%percent", false)]
     public void CredentialGrammar_MirrorsTheSharedConverters(string credential, bool accepted)
     {
         static void Validate(string token, string receipt) => PolicyElevationFrame.ValidateRequest(
@@ -314,6 +329,28 @@ public class PolicyElevationContractTests
                 Draft = JsonDocument.Parse(DraftJson).RootElement.Clone(),
             });
 
+        static bool SharedConvertersAccept(string value)
+        {
+            try
+            {
+                _ = BrokerSerializer.Serialize(new PolicyReplacementRequest
+                {
+                    ExpectedStoreToken = value,
+                    ValidationReceipt = value,
+                    Operation = PolicyReplacementOperation.Update,
+                    ConflictHandling = PolicyConflictHandling.Reject,
+                    Draft = JsonDocument.Parse("{}").RootElement.Clone(),
+                });
+                return true;
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+        }
+
+        Assert.Equal(accepted, SharedConvertersAccept(credential));
+
         if (accepted)
         {
             Validate(credential, credential);
@@ -324,11 +361,33 @@ public class PolicyElevationContractTests
         Assert.Throws<PolicyElevationFrameException>(() => Validate("token", credential));
     }
 
+    [Fact]
+    public async Task MalformedInternalRequest_IsRejectedBeforeHelperLaunch()
+    {
+        FakeHelperLauncher launcher = FakeHelperLauncher.Failing(
+            ElevatedHelperLaunchResult.Failed(
+                PolicyElevationOutcome.LaunchFailed,
+                "The test launcher must not run."));
+        PolicyElevationWriteRequest request = Request() with
+        {
+            Operation = (PolicyElevationOperation)99,
+        };
+        PolicyElevationResult result = await Build(launcher)
+            .ReplacePolicyAsync(request, CancellationToken.None);
+        Assert.Equal(PolicyElevationOutcome.MalformedResponse, result.Outcome);
+        Assert.NotEqual(PolicyElevationOutcome.WriteResultUnknown, result.Outcome);
+        Assert.Null(launcher.LaunchedPath);
+        Assert.Null(launcher.LaunchedArguments);
+    }
+
     // ---- Protocol v2: bounded post-commit acknowledgement ------------------------------------
 
     [Fact]
     public async Task AMaximumStaleAcknowledgementExactlyFitsTheResponseBudget()
     {
+        static string WorstCaseCredential(int length) =>
+            "a" + new string('Z', length - 1);
+
         static string WorstCaseSafeAscii(int length) =>
             "a" + new string('"', length - 1);
 
@@ -338,7 +397,7 @@ public class PolicyElevationContractTests
             Disposition = PolicyElevationDisposition.Rejected,
             BrokerStatusCode = int.MinValue,
             BrokerErrorCode = ErrorCode.StalePolicyStoreToken.ToString(),
-            ConflictStoreToken = WorstCaseSafeAscii(
+            ConflictStoreToken = WorstCaseCredential(
                 PolicyElevationProtocol.MaxStoreTokenCharacters),
             ConflictState = PolicyElevationManagementState.Active,
             ConflictPolicyId = WorstCaseSafeAscii(

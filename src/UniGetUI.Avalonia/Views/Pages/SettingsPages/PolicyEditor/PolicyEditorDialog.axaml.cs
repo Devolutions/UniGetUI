@@ -12,7 +12,7 @@ namespace UniGetUI.Avalonia.Views.Pages.SettingsPages.PolicyEditor;
 
 /// <summary>
 /// Modal structured/raw editor for a package broker policy draft. Hosted as an
-/// <see cref="ImmersiveDialog"/> (not a settings page) so this Phase 2 surface never touches
+/// <see cref="ImmersiveDialog"/> (not a settings page) so the policy editor never touches
 /// <c>SettingsBasePage</c>'s page-navigation switch. <see cref="DataContext"/> must be a
 /// <see cref="PolicyEditorDialogViewModel"/>.
 /// </summary>

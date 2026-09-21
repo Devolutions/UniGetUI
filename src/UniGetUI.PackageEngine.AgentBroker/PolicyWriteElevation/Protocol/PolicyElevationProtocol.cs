@@ -99,9 +99,8 @@ public static class PolicyElevationProtocol
     // System.Text.Json's default encoder emits HTML-sensitive safe-ASCII characters such as
     // quotation marks as six-byte \uXXXX escapes.
     private const int MaxSafeAsciiJsonBytesPerCharacter = 6;
-    private const int MaxSafeAsciiStoreTokenValueBytes =
-        QuoteBytes + 1
-        + ((MaxStoreTokenCharacters - 1) * MaxSafeAsciiJsonBytesPerCharacter);
+    private const int MaxCredentialStoreTokenValueBytes =
+        QuoteBytes + MaxStoreTokenCharacters;
     private const int MaxSafeAsciiConflictPolicyIdValueBytes =
         QuoteBytes + 1
         + ((MaxConflictPolicyIdCharacters - 1) * MaxSafeAsciiJsonBytesPerCharacter);
@@ -157,7 +156,7 @@ public static class PolicyElevationProtocol
         + MaxInt32Bytes // brokerStatusCode
         + StaleErrorCodeValueBytes
         + 4 // committedStoreToken is null in a stale response
-        + MaxSafeAsciiStoreTokenValueBytes
+        + MaxCredentialStoreTokenValueBytes
         + ActiveManagementStateBytes
         + MaxSafeAsciiConflictPolicyIdValueBytes;
 

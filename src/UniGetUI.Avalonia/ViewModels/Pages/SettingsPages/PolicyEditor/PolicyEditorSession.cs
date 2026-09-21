@@ -8,7 +8,8 @@ public sealed record PolicyEditorValidationState(
     string SubmittedRawJson,
     PolicyDraftDocument CanonicalDraft,
     string Receipt,
-    PolicyEditorFindingIndex Findings);
+    PolicyEditorFindingIndex Findings,
+    long Epoch);
 
 public sealed record PolicyEditorConflictSnapshot(
     string SubmittedCanonicalRawJson,
@@ -35,6 +36,7 @@ public sealed class PolicyEditorSession
     private long _mutationGeneration;
     private long _cleanMutationGeneration;
     private long _baselineVersion;
+    private long _validationEpoch;
     private bool _isDirty;
 
     public PolicyEditorOperationKind Operation { get; private set; }
@@ -56,6 +58,8 @@ public sealed class PolicyEditorSession
 
     public long MutationGeneration => _mutationGeneration;
 
+    internal long ValidationEpoch => _validationEpoch;
+
     public bool IsRawAnalysisPending { get; private set; }
     internal bool LastRawAnalysisWasFormattingOnly { get; private set; }
 
@@ -65,6 +69,7 @@ public sealed class PolicyEditorSession
 
     public bool IsValidationCurrent =>
         Validation is not null
+        && Validation.Epoch == _validationEpoch
         && !IsRawAnalysisPending
         && string.Equals(
             Validation.SubmittedRawJson,
@@ -367,10 +372,21 @@ public sealed class PolicyEditorSession
         string submittedRawJson,
         PolicyValidationResult validation,
         IReadOnlyList<PolicyValidationFinding>? boundedFindings = null,
+        int omittedFindingCount = 0) =>
+        TryApplyValidationResult(submittedRawJson, validation, _validationEpoch,
+            boundedFindings, omittedFindingCount);
+
+    internal bool TryApplyValidationResult(
+        string submittedRawJson,
+        PolicyValidationResult validation,
+        long validationEpoch,
+        IReadOnlyList<PolicyValidationFinding>? boundedFindings = null,
         int omittedFindingCount = 0)
     {
         ArgumentNullException.ThrowIfNull(submittedRawJson);
         ArgumentNullException.ThrowIfNull(validation);
+        if (validationEpoch != _validationEpoch)
+            return false;
 
         IReadOnlyList<PolicyValidationFinding> findings;
         if (boundedFindings is not null)
@@ -406,15 +422,17 @@ public sealed class PolicyEditorSession
             || string.IsNullOrWhiteSpace(validation.ValidationReceipt))
         {
             Validation = null;
-            return;
+            return true;
         }
 
         Validation = new PolicyEditorValidationState(
             submittedRawJson,
             PolicyEditorMapper.CloneDraftDocument(validation.CanonicalDraft),
             validation.ValidationReceipt,
-            Findings);
+            Findings,
+            _validationEpoch);
         Operation = ResolveOperationForDraftId(validation.CanonicalDraft.Metadata.Id);
+        return true;
     }
 
     public void CaptureConflict(
@@ -588,6 +606,7 @@ public sealed class PolicyEditorSession
         _baselineRawJson = baselineRawJson;
         _cleanMutationGeneration = mutationGeneration;
         _baselineVersion++;
+        _validationEpoch++;
     }
 
     private void ClearContentState()
@@ -623,6 +642,7 @@ public sealed class PolicyEditorSession
 
         string effectiveRawJson = GetEffectiveRawJson();
         if (Validation is not null
+            && Validation.Epoch == _validationEpoch
             && string.Equals(
                 Validation.SubmittedRawJson,
                 effectiveRawJson,

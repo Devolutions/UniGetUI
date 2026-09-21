@@ -125,6 +125,24 @@ public class BrokerPolicyTransportTests
     }
 
     [Fact]
+    public async Task PolicyManagementFraming_RejectsChunkedBodyBeyondDeclaredLength()
+    {
+        using var stream = new ChunkedReadStream(
+            Encoding.UTF8.GetBytes("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}"),
+            Encoding.UTF8.GetBytes("x"));
+
+        BrokerClientException exception = await Assert.ThrowsAsync<BrokerClientException>(() =>
+            BoundedNamedPipeBrokerTransport.ReadResponseAsync(
+                stream,
+                "/v1/policy/management",
+                BrokerPolicyManagementLimits.MaxResponseBodyBytes,
+                BrokerClientErrorKind.InvalidResponse,
+                CancellationToken.None));
+
+        Assert.Equal(BrokerClientErrorKind.InvalidResponse, exception.Kind);
+    }
+
+    [Fact]
     public void PolicyManagementResponseBudget_AllowsDuplicatedReplacementContent()
     {
         Assert.True(
@@ -198,5 +216,42 @@ public class BrokerPolicyTransportTests
 
             server.Disconnect();
         }
+    }
+
+    private sealed class ChunkedReadStream(params byte[][] chunks) : Stream
+    {
+        private readonly Queue<byte[]> _chunks = new(chunks);
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_chunks.Count == 0)
+                return ValueTask.FromResult(0);
+
+            byte[] chunk = _chunks.Dequeue();
+            Assert.True(chunk.Length <= buffer.Length);
+            chunk.CopyTo(buffer);
+            return ValueTask.FromResult(chunk.Length);
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException();
+        public override void Flush() => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException();
     }
 }

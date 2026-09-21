@@ -14,9 +14,9 @@ public class SettingsSearchIndexTests
     public void Search_ReturnsPolicyInspectorOnWindows(string query)
     {
         // The base "Inspect active package broker policy" entry (Anchor == null) must remain the
-        // unique unanchored match. Phase 2 policy-management action entries (Edit/Create/
-        // Replace identity, all anchored) intentionally also match the "policy" query, so we only
-        // assert uniqueness of the unanchored base entry rather than of the whole result set.
+        // unique unanchored match. The anchored policy-management action entries (Edit/Create/
+        // Replace identity) intentionally also match the "policy" query, so we only assert
+        // uniqueness of the unanchored base entry rather than of the whole result set.
         SettingsSearchResult result = Assert.Single(
             SettingsSearchIndex.Search(query, limit: 100, isWindows: true),
             result => result.PageType == typeof(AgentPolicyInspector) && result.Anchor is null);

@@ -168,12 +168,12 @@ public static class PolicyElevationFrame
             throw Malformed("Policy elevation request carried an undefined enumeration value.");
         }
 
-        RequireRequiredSafeAscii(
+        RequireRequiredCredential(
             request.ExpectedStoreToken,
             PolicyElevationProtocol.MaxStoreTokenCharacters,
             "expectedStoreToken");
 
-        RequireRequiredSafeAscii(
+        RequireRequiredCredential(
             request.ValidationReceipt,
             PolicyElevationProtocol.MaxValidationReceiptCharacters,
             "validationReceipt");
@@ -205,7 +205,7 @@ public static class PolicyElevationFrame
         switch (response.Disposition)
         {
             case PolicyElevationDisposition.Committed:
-                RequireRequiredSafeAscii(
+                RequireRequiredCredential(
                     response.CommittedStoreToken,
                     PolicyElevationProtocol.MaxStoreTokenCharacters,
                     "committedStoreToken");
@@ -317,7 +317,7 @@ public static class PolicyElevationFrame
             return;
         }
 
-        RequireRequiredSafeAscii(
+        RequireRequiredCredential(
             response.ConflictStoreToken,
             PolicyElevationProtocol.MaxStoreTokenCharacters,
             "conflictStoreToken");
@@ -337,16 +337,9 @@ public static class PolicyElevationFrame
     }
 
     /// <summary>
-    /// Mirrors the shared policy store-token / validation-receipt grammar exactly: one or more
-    /// characters, every one of them printable ASCII, and the first one an ASCII alphanumeric.
+    /// Requires a generic bounded printable-ASCII protocol field with an ASCII alphanumeric first
+    /// character.
     /// </summary>
-    /// <remarks>
-    /// The shared converters that enforce this on the broker side
-    /// (<c>PolicyStoreTokenJsonConverter</c> and <c>PolicyValidationReceiptJsonConverter</c>) are
-    /// internal to the policy API package and cannot be referenced from here, so the rule is
-    /// mirrored rather than reused. It is verified against the real converters by the round-trip
-    /// tests, which reject anything this method accepts but the broker would not.
-    /// </remarks>
     private static void RequireRequiredSafeAscii(
         string? value,
         int maxCharacters,
@@ -362,6 +355,33 @@ public static class PolicyElevationFrame
         {
             if (character is < (char)0x21 or > (char)0x7e)
                 throw Malformed($"Policy elevation frame carried an invalid {field}.");
+        }
+    }
+
+    /// <summary>
+    /// Mirrors the shared policy store-token / validation-receipt grammar exactly: one or more
+    /// ASCII alphanumeric characters or <c>.</c>, <c>_</c>, <c>~</c>, <c>:</c> and <c>-</c>, with
+    /// an ASCII alphanumeric first character.
+    /// </summary>
+    /// <remarks>
+    /// The package's <c>PolicyStoreTokenJsonConverter</c> and
+    /// <c>PolicyValidationReceiptJsonConverter</c> are internal, so this protocol boundary mirrors
+    /// their published grammar. The contract tests exercise both implementations against the same
+    /// boundary values.
+    /// </remarks>
+    private static void RequireRequiredCredential(string? value, int maxCharacters, string field)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length > maxCharacters)
+            throw Malformed($"Policy elevation frame carried an invalid {field}.");
+        if (!char.IsAsciiLetterOrDigit(value[0]))
+            throw Malformed($"Policy elevation frame carried an invalid {field}.");
+        foreach (char character in value)
+        {
+            if (!char.IsAsciiLetterOrDigit(character)
+                && character is not ('.' or '_' or '~' or ':' or '-'))
+            {
+                throw Malformed($"Policy elevation frame carried an invalid {field}.");
+            }
         }
     }
 

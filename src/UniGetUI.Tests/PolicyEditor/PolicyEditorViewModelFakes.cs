@@ -71,6 +71,7 @@ internal sealed class FakeWriteClient : IPolicyWriteClient
 
     public int CallCount { get; private set; }
     public PolicyEditorWriteRequest? LastRequest { get; private set; }
+    public TaskCompletionSource? Started { get; set; }
     public TaskCompletionSource? Gate { get; set; }
 
     public async Task<PolicyWriteOutcome> WriteAsync(
@@ -79,8 +80,27 @@ internal sealed class FakeWriteClient : IPolicyWriteClient
     {
         CallCount++;
         LastRequest = request;
+        Started?.TrySetResult();
         if (Gate is not null)
             await Gate.Task;
         return NextOutcome;
     }
+}
+
+internal sealed class GatedValidationClient : IPolicyValidationClient
+{
+    private readonly Queue<GatedValidationCall> _calls = [];
+    public GatedValidationCall QueueCall() { var call = new GatedValidationCall(); _calls.Enqueue(call); return call; }
+    public async Task<PolicyEditorValidationOutcome> ValidateAsync(JsonElement draft, CancellationToken cancellationToken)
+    {
+        GatedValidationCall call = _calls.Dequeue();
+        call.Started.SetResult();
+        return await call.Completion.Task;
+    }
+}
+
+internal sealed class GatedValidationCall
+{
+    public TaskCompletionSource Started { get; } = new();
+    public TaskCompletionSource<PolicyEditorValidationOutcome> Completion { get; } = new();
 }

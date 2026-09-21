@@ -92,7 +92,7 @@ public class PolicyElevationProtocolTests
             BrokerStatusCode = int.MinValue,
             BrokerErrorCode = ErrorCode.StalePolicyStoreToken.ToString(),
             CommittedStoreToken = null,
-            ConflictStoreToken = WorstCaseSafeAscii(
+            ConflictStoreToken = WorstCaseCredential(
                 PolicyElevationProtocol.MaxStoreTokenCharacters),
             ConflictState = PolicyElevationManagementState.Active,
             ConflictPolicyId = WorstCaseSafeAscii(
@@ -185,6 +185,9 @@ public class PolicyElevationProtocolTests
 
         return total;
     }
+
+    private static string WorstCaseCredential(int length) =>
+        "a" + new string('Z', length - 1);
 
     private static string WorstCaseSafeAscii(int length) =>
         "a" + new string('"', length - 1);

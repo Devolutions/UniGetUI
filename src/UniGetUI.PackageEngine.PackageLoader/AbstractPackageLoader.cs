@@ -281,7 +281,6 @@ namespace UniGetUI.PackageEngine.PackageLoader
         {
             StopLoading(emitFinishSignal);
             PackageReference.Clear();
-            _rememberedSelection.Clear();
             IsLoaded = false;
             IsLoading = false;
             InvokePackagesChangedEvent(false, [], []);

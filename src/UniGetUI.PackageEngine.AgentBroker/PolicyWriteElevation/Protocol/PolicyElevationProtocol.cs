@@ -177,6 +177,9 @@ public static class PolicyElevationProtocol
 
     // ---- Timeouts --------------------------------------------------------------------------
 
+    /// <summary>Maximum time allowed for non-elevated helper location and trust preflight.</summary>
+    public static readonly TimeSpan PreflightTimeout = TimeSpan.FromSeconds(45);
+
     /// <summary>How long the host waits for the elevated helper to connect after consent was granted.</summary>
     public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(45);
 

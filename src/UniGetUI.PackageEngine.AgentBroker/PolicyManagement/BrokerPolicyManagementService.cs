@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Client;
 using UniGetUI.Core.Logging;
+using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 using ApiElevation = Devolutions.Now.Policy.Api.Elevation;
 
 namespace UniGetUI.PackageEngine.AgentBroker.PolicyManagement;
@@ -36,7 +37,9 @@ public sealed partial class BrokerPolicyManagementService : IBrokerPolicyManagem
     }
 
     private static BrokerClient CreateStandardClient() =>
-        BrokerClientFactory.Create(ApiElevation.Standard);
+        BrokerClientFactory.Create(
+            ApiElevation.Standard,
+            new BoundedNamedPipeBrokerTransport(BrokerPolicyManagementLimits.MaxResponseBodyBytes));
 
     public BrokerPolicyManagementService(Func<BrokerClient> clientFactory, Func<bool>? isWindows = null)
     {

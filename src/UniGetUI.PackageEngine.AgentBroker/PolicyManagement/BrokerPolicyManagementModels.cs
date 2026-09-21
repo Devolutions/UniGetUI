@@ -1,4 +1,5 @@
 using Devolutions.Now.Policy.Api;
+using UniGetUI.PackageEngine.AgentBroker.PolicyWriteElevation;
 
 namespace UniGetUI.PackageEngine.AgentBroker.PolicyManagement;
 
@@ -57,6 +58,14 @@ public static class BrokerPolicyManagementLimits
     /// unbounded GET /v1/policy/management or validate response bodies - the package does not cap those).
     /// </summary>
     public const int MaxRequestBodyBytes = BrokerApi.MaxPolicyManagementBodyBytes;
+
+    /// <summary>
+    /// Maximum UTF-8 response body accepted for any policy-management call. A successful replacement
+    /// can contain three copies of policy content (parsed policy, canonical draft, and management
+    /// snapshot), plus a fourth full contract budget for the response envelope, findings, and metadata.
+    /// </summary>
+    public const int MaxResponseBodyBytes =
+        BoundedNamedPipeBrokerTransport.MaxPolicyManagementResponseBodyBytes;
 
     /// <summary>Maximum length (in Unicode scalar values) kept for the sanitized configured-path diagnostic field.</summary>
     public const int MaxSanitizedPathLength = 4096;

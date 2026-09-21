@@ -297,6 +297,57 @@ public class WindowsPolicyWriteElevatorTests
     }
 
     [Fact]
+    public async Task PreflightDeadline_MapsTimeoutAndDisposesLeaseAfterLateCompletion()
+    {
+        string leasePath = Path.GetTempFileName();
+        SafeFileHandle leaseHandle = File.OpenHandle(
+            leasePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite);
+        PolicyElevationLocationVerification verification =
+            PolicyElevationLocationVerification.Protected(
+                [leaseHandle],
+                FakeHelperLocator.PackagedRoot,
+                FakeHelperLocator.PackagedHelperPath,
+                FakeHelperLocator.PackagedHostPath);
+        var location = new PolicyElevationHelperLocation(
+            true,
+            FakeHelperLocator.PackagedHelperPath,
+            FakeHelperLocator.PackagedHostPath,
+            FakeHelperLocator.PackagedRoot,
+            Verification: verification);
+        using var preflight = new BlockingPreflight(
+            () => PolicyElevationPreflightResult.Success(location),
+            honorCancellation: false);
+        FakeHelperLauncher launcher =
+            FakeHelperLauncher.Running((_, _) => Task.CompletedTask);
+        WindowsPolicyWriteElevator elevator = Build(
+            launcher,
+            preflight: preflight,
+            timeouts: FastTimeouts with { Preflight = TimeSpan.FromMilliseconds(100) });
+
+        try
+        {
+            PolicyElevationResult result = await elevator
+                .ReplacePolicyAsync(BuildRequest(), CancellationToken.None)
+                .WaitAsync(TimeSpan.FromSeconds(2));
+
+            Assert.Equal(PolicyElevationOutcome.TimedOut, result.Outcome);
+            Assert.False(leaseHandle.IsClosed);
+            Assert.Null(launcher.LaunchedPath);
+        }
+        finally
+        {
+            preflight.Release();
+        }
+
+        await preflight.Completed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.True(SpinWait.SpinUntil(() => leaseHandle.IsClosed, TimeSpan.FromSeconds(2)));
+        File.Delete(leasePath);
+    }
+
+    [Fact]
     public async Task PreflightException_IsPropagatedWithoutLaunchingHelper()
     {
         using var preflight = new BlockingPreflight(

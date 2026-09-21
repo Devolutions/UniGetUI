@@ -46,6 +46,8 @@
                  Link="Shared\Protocol\%(Filename)%(Extension)" />
         <Compile Include="..\UniGetUI.PackageEngine.AgentBroker\PolicyWriteElevation\Interop\*.cs"
                  Link="Shared\Interop\%(Filename)%(Extension)" />
+        <Compile Include="..\UniGetUI.PackageEngine.AgentBroker\PolicyWriteElevation\Shared\*.cs"
+                 Link="Shared\Transport\%(Filename)%(Extension)" />
         <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
     </ItemGroup>
 

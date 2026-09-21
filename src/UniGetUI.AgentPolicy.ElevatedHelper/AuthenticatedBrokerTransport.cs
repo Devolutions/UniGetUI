@@ -1,6 +1,5 @@
 using System.IO.Pipes;
 using System.Security.Principal;
-using System.Text;
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Client;
 using Microsoft.Win32.SafeHandles;
@@ -11,12 +10,10 @@ namespace UniGetUI.AgentPolicy.ElevatedHelper;
 
 internal sealed class AuthenticatedBrokerTransport : IBrokerTransport
 {
-    private const string DefaultPipeName = "Devolutions.Now.PackageBroker.v1";
     private const int ConnectTimeoutMilliseconds = 5000;
     private const int ReadTimeoutMilliseconds = 30000;
-    private const int MaxHeaderBytes = 65536;
     internal const int MaxPolicyManagementResponseBytes =
-        BrokerApi.MaxPolicyManagementBodyBytes * 3 + MaxHeaderBytes;
+        BoundedNamedPipeBrokerTransport.MaxPolicyManagementResponseBodyBytes;
     private readonly string _pipeName;
     private readonly Func<NamedPipeClientStream, string, IDisposable> _authenticate;
 
@@ -29,7 +26,7 @@ internal sealed class AuthenticatedBrokerTransport : IBrokerTransport
         string? pipeName,
         Func<NamedPipeClientStream, string, IDisposable> authenticate)
     {
-        _pipeName = string.IsNullOrWhiteSpace(pipeName) ? DefaultPipeName : pipeName;
+        _pipeName = string.IsNullOrWhiteSpace(pipeName) ? BrokerApi.DefaultPipeName : pipeName;
         _authenticate = authenticate;
     }
 
@@ -40,15 +37,15 @@ internal sealed class AuthenticatedBrokerTransport : IBrokerTransport
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-
+        var pipe = new NamedPipeClientStream(
+            ".",
+            _pipeName,
+            PipeDirection.InOut,
+            PipeOptions.Asynchronous,
+            TokenImpersonationLevel.Identification);
+        bool cleanupTransferred = false;
         try
         {
-            using var pipe = new NamedPipeClientStream(
-                ".",
-                _pipeName,
-                PipeDirection.InOut,
-                PipeOptions.Asynchronous,
-                TokenImpersonationLevel.Identification);
             using (CancellationTokenSource connectCancellation =
                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
             {
@@ -56,15 +53,36 @@ internal sealed class AuthenticatedBrokerTransport : IBrokerTransport
                 await pipe.ConnectAsync(connectCancellation.Token).ConfigureAwait(false);
             }
 
-            using IDisposable server = _authenticate(pipe, request.Path);
-            await WriteRequestAsync(pipe, request, cancellationToken).ConfigureAwait(false);
+            PolicyElevationHelperSynchronousStageResult<IDisposable> authentication =
+                await PolicyElevationHelperSynchronousStageRunner.RunAsync(
+                    () => _authenticate(pipe, request.Path),
+                    cancellationToken,
+                    static abandoned => abandoned.Dispose(),
+                    pipe.Dispose).ConfigureAwait(false);
+            if (!authentication.Completed)
+            {
+                // Authentication may still hold the pipe handle. Its continuation now owns both the
+                // eventual authentication result and the pipe, so the helper can stop waiting safely.
+                cleanupTransferred = true;
+                cancellationToken.ThrowIfCancellationRequested();
+                throw BrokerFailure(
+                    BrokerClientErrorKind.Timeout,
+                    $"Timed out authenticating the package broker at {request.Path}.",
+                    request.Path);
+            }
 
+            using IDisposable server = authentication.Value;
+            await BoundedNamedPipeBrokerTransport
+                .WriteRequestAsync(pipe, request, cancellationToken)
+                .ConfigureAwait(false);
             using CancellationTokenSource readCancellation =
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             readCancellation.CancelAfter(ReadTimeoutMilliseconds);
-            return await ReadResponseAsync(
+            return await BoundedNamedPipeBrokerTransport.ReadResponseAsync(
                 pipe,
                 request.Path,
+                MaxPolicyManagementResponseBytes,
+                BrokerClientErrorKind.BrokerUnavailable,
                 readCancellation.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
@@ -91,147 +109,15 @@ internal sealed class AuthenticatedBrokerTransport : IBrokerTransport
                 request.Path,
                 ex);
         }
+        finally
+        {
+            if (!cleanupTransferred)
+                pipe.Dispose();
+        }
     }
 
     public void Dispose()
     {
-    }
-
-    private static async Task WriteRequestAsync(
-        Stream pipe,
-        BrokerTransportRequest request,
-        CancellationToken cancellationToken)
-    {
-        var headers = new StringBuilder()
-            .Append(request.Method)
-            .Append(' ')
-            .Append(request.Path)
-            .Append(" HTTP/1.1\r\n")
-            .Append("Host: now-package-broker\r\n")
-            .Append("Connection: close\r\n");
-        foreach ((string name, string value) in request.Headers)
-        {
-            if (!name.Equals("Host", StringComparison.OrdinalIgnoreCase))
-            {
-                headers.Append(name).Append(": ").Append(value).Append("\r\n");
-            }
-        }
-
-        byte[]? body = request.Body is null ? null : Encoding.UTF8.GetBytes(request.Body);
-        headers.Append("Content-Length: ").Append(body?.Length ?? 0).Append("\r\n\r\n");
-        await pipe.WriteAsync(
-            Encoding.ASCII.GetBytes(headers.ToString()),
-            cancellationToken).ConfigureAwait(false);
-        if (body is not null)
-        {
-            await pipe.WriteAsync(body, cancellationToken).ConfigureAwait(false);
-        }
-
-        await pipe.FlushAsync(cancellationToken).ConfigureAwait(false);
-    }
-
-    private static async Task<BrokerTransportResponse> ReadResponseAsync(
-        Stream pipe,
-        string path,
-        CancellationToken cancellationToken)
-    {
-        byte[] buffer = new byte[MaxHeaderBytes];
-        int totalRead = 0;
-        while (totalRead < MaxHeaderBytes)
-        {
-            int read = await pipe.ReadAsync(
-                buffer.AsMemory(totalRead, MaxHeaderBytes - totalRead),
-                cancellationToken).ConfigureAwait(false);
-            if (read == 0)
-            {
-                throw BrokerFailure(
-                    BrokerClientErrorKind.BrokerUnavailable,
-                    $"The package broker disconnected before sending a complete response for {path}.",
-                    path);
-            }
-
-            totalRead += read;
-            string received = Encoding.ASCII.GetString(buffer, 0, totalRead);
-            int headerEnd = received.IndexOf("\r\n\r\n", StringComparison.Ordinal);
-            if (headerEnd < 0)
-            {
-                continue;
-            }
-
-            string[] lines = received[..headerEnd].Split("\r\n");
-            string[] status = lines[0].Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
-            if (status.Length < 2 || !int.TryParse(status[1], out int statusCode))
-            {
-                throw BrokerFailure(
-                    BrokerClientErrorKind.InvalidResponse,
-                    $"The package broker returned an invalid HTTP status line for {path}.",
-                    path);
-            }
-
-            int? contentLength = null;
-            for (int index = 1; index < lines.Length; index++)
-            {
-                int separator = lines[index].IndexOf(':');
-                if (separator <= 0)
-                {
-                    continue;
-                }
-
-                string name = lines[index][..separator].Trim();
-                if (!name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                if (contentLength is not null
-                    || !int.TryParse(lines[index][(separator + 1)..].Trim(), out int parsed)
-                    || parsed < 0
-                    || parsed > MaxPolicyManagementResponseBytes)
-                {
-                    throw BrokerFailure(
-                        BrokerClientErrorKind.InvalidResponse,
-                        $"The package broker returned an invalid Content-Length for {path}.",
-                        path);
-                }
-
-                contentLength = parsed;
-            }
-
-            int bodyLength = contentLength ?? 0;
-            int bodyStart = headerEnd + 4;
-            if (bodyStart + bodyLength > buffer.Length)
-            {
-                Array.Resize(ref buffer, bodyStart + bodyLength);
-            }
-
-            int bodyRead = totalRead - bodyStart;
-            while (bodyRead < bodyLength)
-            {
-                read = await pipe.ReadAsync(
-                    buffer.AsMemory(bodyStart + bodyRead, bodyLength - bodyRead),
-                    cancellationToken).ConfigureAwait(false);
-                if (read == 0)
-                {
-                    throw BrokerFailure(
-                        BrokerClientErrorKind.BrokerUnavailable,
-                        $"The package broker disconnected before sending the complete response body for {path}.",
-                        path);
-                }
-
-                bodyRead += read;
-            }
-
-            return new BrokerTransportResponse
-            {
-                StatusCode = statusCode,
-                Body = Encoding.UTF8.GetString(buffer, bodyStart, bodyLength),
-            };
-        }
-
-        throw BrokerFailure(
-            BrokerClientErrorKind.InvalidResponse,
-            $"The package broker returned response headers that are too large for {path}.",
-            path);
     }
 
     private static BrokerClientException BrokerFailure(

@@ -103,6 +103,8 @@ public sealed class WindowsPipePeerAuthenticator : IPolicyElevationPipePeerAuthe
 /// </summary>
 public sealed record PolicyElevationTimeouts(TimeSpan Connect, TimeSpan Exchange, TimeSpan Exit)
 {
+    public TimeSpan Preflight { get; init; } = PolicyElevationProtocol.PreflightTimeout;
+
     public static PolicyElevationTimeouts Default { get; } = new(
         PolicyElevationProtocol.ConnectTimeout,
         PolicyElevationProtocol.ExchangeTimeout,
@@ -201,7 +203,7 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
 
         using PolicyElevationPreflightResult preflight =
             await PolicyElevationPreflightRunner
-                .VerifyAsync(_preflight, cancellationToken)
+                .VerifyAsync(_preflight, _timeouts.Preflight, cancellationToken)
                 .ConfigureAwait(false);
         if (!preflight.Succeeded)
         {
@@ -210,10 +212,14 @@ public sealed class WindowsPolicyWriteElevator : IPolicyWriteElevator
                 Logger.Warn($"[PolicyElevation] Preflight failed: {preflight.Detail}");
             }
 
-            PolicyElevationOutcome outcome =
-                preflight.Failure == PolicyElevationPreflightFailureKind.HelperUnavailable
-                    ? PolicyElevationOutcome.HelperUnavailable
-                    : PolicyElevationOutcome.HelperUntrusted;
+            PolicyElevationOutcome outcome = preflight.Failure switch
+            {
+                PolicyElevationPreflightFailureKind.HelperUnavailable =>
+                    PolicyElevationOutcome.HelperUnavailable,
+                PolicyElevationPreflightFailureKind.TimedOut =>
+                    PolicyElevationOutcome.TimedOut,
+                _ => PolicyElevationOutcome.HelperUntrusted,
+            };
             return Fail(
                 request,
                 outcome,

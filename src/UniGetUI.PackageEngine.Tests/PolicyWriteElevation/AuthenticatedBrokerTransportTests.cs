@@ -112,6 +112,55 @@ public class AuthenticatedBrokerTransportTests
         Assert.Equal(BrokerClientErrorKind.BrokerUnavailable, exception.Kind);
     }
 
+    [Fact]
+    public async Task BlockingAuthentication_CancellationReturnsAndDisposesLateResult()
+    {
+        string pipeName = $"unigetui-policy-broker-{Guid.NewGuid():N}";
+        using var release = new ManualResetEventSlim();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cancellation = new CancellationTokenSource();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var disposed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task server = RunServerAsync(
+            pipeName,
+            async _ => await disposed.Task.WaitAsync(timeout.Token),
+            timeout.Token);
+        using var transport = new AuthenticatedBrokerTransport(
+            pipeName,
+            (_, _) =>
+            {
+                started.TrySetResult();
+                release.Wait(CancellationToken.None);
+                return new CallbackDisposable(() => disposed.TrySetResult());
+            });
+
+        Task<BrokerTransportResponse> pending = transport.Send(
+            new BrokerTransportRequest
+            {
+                Method = "PUT",
+                Path = "/v1/policy",
+                Headers = new Dictionary<string, string>(),
+                Body = "{}",
+            },
+            cancellation.Token);
+        await started.Task.WaitAsync(timeout.Token);
+        cancellation.Cancel();
+
+        try
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+                await pending.WaitAsync(TimeSpan.FromSeconds(2)));
+            Assert.False(disposed.Task.IsCompleted);
+        }
+        finally
+        {
+            release.Set();
+        }
+
+        await disposed.Task.WaitAsync(timeout.Token);
+        await server;
+    }
+
     private static AuthenticatedBrokerTransport TestTransport(string pipeName) =>
         new(pipeName, (_, _) => new NoopDisposable());
 
@@ -246,6 +295,11 @@ public class AuthenticatedBrokerTransportTests
         await stream.WriteAsync(headers, cancellationToken);
         await stream.WriteAsync(bodyBytes, cancellationToken);
         await stream.FlushAsync(cancellationToken);
+    }
+
+    private sealed class CallbackDisposable(Action dispose) : IDisposable
+    {
+        public void Dispose() => dispose();
     }
 
     private sealed class NoopDisposable : IDisposable

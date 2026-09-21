@@ -9,6 +9,7 @@ public enum PolicyElevationPreflightFailureKind
     HelperUnavailable,
     RunningHostMismatch,
     SignerBindingFailed,
+    TimedOut,
 }
 
 public sealed class PolicyElevationPreflightResult : IDisposable

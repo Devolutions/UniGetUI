@@ -364,6 +364,45 @@ public class PolicyElevationHelperLocatorTests
     }
 
     [Fact]
+    public async Task PreflightDeadline_BoundsQueuedCallersAndPreservesSingleFlight()
+    {
+        using var preflight = new NonCooperativeBlockingPreflight();
+        try
+        {
+            Task<PolicyElevationPreflightResult> first = PolicyElevationPreflightRunner.VerifyAsync(
+                preflight,
+                TimeSpan.FromMilliseconds(100),
+                CancellationToken.None);
+            await preflight.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            using PolicyElevationPreflightResult firstResult =
+                await first.WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.Equal(PolicyElevationPreflightFailureKind.TimedOut, firstResult.Failure);
+
+            using PolicyElevationPreflightResult queued =
+                await PolicyElevationPreflightRunner.VerifyAsync(
+                    preflight,
+                    TimeSpan.FromMilliseconds(100),
+                    CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.Equal(PolicyElevationPreflightFailureKind.TimedOut, queued.Failure);
+            Assert.Equal(1, preflight.InvocationCount);
+        }
+        finally
+        {
+            preflight.Release();
+        }
+
+        await preflight.Completed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        using PolicyElevationPreflightResult recovered =
+            await PolicyElevationPreflightRunner.VerifyAsync(
+                preflight,
+                TimeSpan.FromSeconds(2),
+                CancellationToken.None);
+        Assert.True(recovered.Succeeded);
+        Assert.Equal(2, preflight.InvocationCount);
+    }
+
+    [Fact]
     public void EmptyInstallRoot_FailsClosed()
     {
         PolicyElevationHelperLocation location = Build("   ").Locate();

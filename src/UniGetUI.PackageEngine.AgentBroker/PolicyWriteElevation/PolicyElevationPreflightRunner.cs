@@ -5,19 +5,41 @@ internal static class PolicyElevationPreflightRunner
 {
     private static readonly SemaphoreSlim WorkerGate = new(1, 1);
 
+    public static Task<PolicyElevationPreflightResult> VerifyAsync(
+        IPolicyElevationPreflight preflight,
+        CancellationToken cancellationToken) =>
+        VerifyAsync(preflight, PolicyElevationProtocol.PreflightTimeout, cancellationToken);
+
     public static async Task<PolicyElevationPreflightResult> VerifyAsync(
         IPolicyElevationPreflight preflight,
+        TimeSpan timeout,
         CancellationToken cancellationToken)
     {
-        await WorkerGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(preflight);
+        if (timeout <= TimeSpan.Zero || timeout == Timeout.InfiniteTimeSpan)
+            throw new ArgumentOutOfRangeException(nameof(timeout));
+
+        using var deadline = new CancellationTokenSource(timeout);
+        using CancellationTokenSource boundedCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
+        try
+        {
+            await WorkerGate.WaitAsync(boundedCancellation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (
+            !cancellationToken.IsCancellationRequested && deadline.IsCancellationRequested)
+        {
+            return TimedOut();
+        }
+
         Task<PolicyElevationPreflightResult> worker;
         try
         {
             worker = Task.Run(
                 () =>
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    return preflight.Verify(cancellationToken);
+                    boundedCancellation.Token.ThrowIfCancellationRequested();
+                    return preflight.Verify(boundedCancellation.Token);
                 },
                 CancellationToken.None);
         }
@@ -30,37 +52,57 @@ internal static class PolicyElevationPreflightRunner
         try
         {
             PolicyElevationPreflightResult result =
-                await worker.WaitAsync(cancellationToken).ConfigureAwait(false);
+                await worker.WaitAsync(boundedCancellation.Token).ConfigureAwait(false);
             WorkerGate.Release();
             return result;
         }
+        catch (OperationCanceledException) when (
+            !cancellationToken.IsCancellationRequested && deadline.IsCancellationRequested)
+        {
+            ReleaseGateAfterWorker(worker);
+            return TimedOut();
+        }
         catch
         {
-            Task release = worker.ContinueWith(
-                static completed =>
-                {
-                    try
-                    {
-                        if (completed.Status == TaskStatus.RanToCompletion)
-                            completed.Result.Dispose();
-                        else
-                            _ = completed.Exception;
-                    }
-                    finally
-                    {
-                        WorkerGate.Release();
-                    }
-                },
-                CancellationToken.None,
-                TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
-            _ = release.ContinueWith(
-                static faulted => _ = faulted.Exception,
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
+            ReleaseGateAfterWorker(worker);
             throw;
         }
+    }
+
+    private static PolicyElevationPreflightResult TimedOut()
+    {
+        const string reason = "Security verification of the packaged policy write helper timed out.";
+        return PolicyElevationPreflightResult.Rejected(
+            PolicyElevationHelperLocation.NotFound(reason),
+            PolicyElevationPreflightFailureKind.TimedOut,
+            reason);
+    }
+
+    private static void ReleaseGateAfterWorker(Task<PolicyElevationPreflightResult> worker)
+    {
+        Task release = worker.ContinueWith(
+            static completed =>
+            {
+                try
+                {
+                    if (completed.Status == TaskStatus.RanToCompletion)
+                        completed.Result.Dispose();
+                    else
+                        _ = completed.Exception;
+                }
+                finally
+                {
+                    WorkerGate.Release();
+                }
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+        _ = release.ContinueWith(
+            static faulted => _ = faulted.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 }
 #endif

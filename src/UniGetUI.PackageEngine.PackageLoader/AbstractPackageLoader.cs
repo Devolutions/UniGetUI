@@ -235,7 +235,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                                     }
 
                                     toAdd.Add(package);
-                                    await AddPackage(package);
+                                    await AddPackage(package, restoreSelection: true);
                                 }
 
                                 InvokePackagesChangedEvent(true, toAdd, []);
@@ -335,13 +335,14 @@ namespace UniGetUI.PackageEngine.PackageLoader
             }
         }
 
-        protected async Task AddPackage(IPackage package)
+        protected async Task AddPackage(IPackage package, bool restoreSelection = false)
         {
             if (Contains(package))
                 return;
 
             package.IsChecked =
-                _rememberedSelection.TryGetValue(HashPackage(package), out bool wasChecked)
+                restoreSelection
+                && _rememberedSelection.TryGetValue(HashPackage(package), out bool wasChecked)
                     ? wasChecked
                     : PACKAGES_CHECKED_BY_DEFAULT;
             await WhenAddingPackage(package);

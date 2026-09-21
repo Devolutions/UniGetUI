@@ -242,26 +242,33 @@ public sealed class PackageLoaderPipelineTests
     }
 
     [Fact]
-    public async Task ClearPackages_ForgetsTheRememberedCheckedState()
+    public async Task AddForeign_AppliesTheDefaultCheckedState_WhenAPreviousStateIsStillRemembered()
     {
+        var ids = new List<string> { "Contoso.Tool" };
         var manager = new PackageManagerBuilder()
-            .WithInstalledPackages(testManager =>
-            [
-                new PackageBuilder()
+            .WithInstalledPackages(testManager => ids
+                .Select(id => new PackageBuilder()
                     .WithManager(testManager)
-                    .WithId("Contoso.Tool")
+                    .WithId(id)
                     .WithVersion("1.0.0")
-                    .Build(),
-            ])
+                    .Build())
+                .ToArray())
             .Build();
         var loader = new TestPackageLoader([manager], checkedByDefault: true);
 
         await loader.ReloadPackages();
         loader.GetPackageForId("Contoso.Tool")!.IsChecked = false;
-        loader.ClearPackages();
+        ids.Clear();
         await loader.ReloadPackages();
 
-        Assert.True(loader.GetPackageForId("Contoso.Tool")!.IsChecked);
+        var readded = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.0.0")
+            .Build();
+        await loader.AddForeign(readded);
+
+        Assert.True(readded.IsChecked);
     }
 
     [Fact]

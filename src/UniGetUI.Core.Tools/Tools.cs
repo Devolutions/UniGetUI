@@ -165,20 +165,82 @@ namespace UniGetUI.Core.Tools
         public static void ScheduleRelaunchAfterExit(string? executablePath = null)
         {
             executablePath ??= CoreData.UniGetUIExecutableFile;
-            int currentProcessId = Environment.ProcessId;
-            string escapedExecutablePath = executablePath.Replace("'", "''");
-            string command =
-                $"Wait-Process -Id {currentProcessId}; Start-Process -FilePath '{escapedExecutablePath}'";
+            ProcessStartInfo startInfo = CreateRelaunchStartInfo(Environment.ProcessId, executablePath);
+            Logger.Debug($"Scheduling a relaunch of {executablePath} through {startInfo.FileName}");
+            using var process = Process.Start(startInfo);
+        }
 
-            using var process = Process.Start(
-                new ProcessStartInfo
+        /// <summary>
+        /// Builds the detached process that waits for <paramref name="currentProcessId"/> to exit and
+        /// then starts <paramref name="executablePath"/>: PowerShell on Windows, a /bin/sh helper
+        /// elsewhere (the same shape the self-updater uses), which opens the .app bundle on macOS.
+        /// </summary>
+        internal static ProcessStartInfo CreateRelaunchStartInfo(int currentProcessId, string executablePath)
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                string escapedExecutablePath = executablePath.Replace("'", "''");
+                string command =
+                    $"Wait-Process -Id {currentProcessId}; Start-Process -FilePath '{escapedExecutablePath}'";
+
+                return new ProcessStartInfo
                 {
                     FileName = "powershell.exe",
                     Arguments = $"-NoProfile -WindowStyle Hidden -Command \"{command}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                }
+                };
+            }
+
+            // Positional arguments ($1=pid, $2=executable, $3=bundle or empty) keep the paths out of
+            // the script text. The wait gives up after 30 seconds, like the self-updater's helper.
+            const string script = """
+                pid="$1"; exe="$2"; bundle="$3"
+                i=0
+                while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
+                if [ -n "$bundle" ]; then
+                  /usr/bin/open -na "$bundle"
+                else
+                  "$exe" >/dev/null 2>&1 &
+                fi
+                """;
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "/bin/sh",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            startInfo.ArgumentList.Add("-c");
+            startInfo.ArgumentList.Add(script);
+            startInfo.ArgumentList.Add("sh");
+            startInfo.ArgumentList.Add(currentProcessId.ToString(CultureInfo.InvariantCulture));
+            startInfo.ArgumentList.Add(executablePath);
+            startInfo.ArgumentList.Add(
+                OperatingSystem.IsMacOS() ? FindAppBundle(executablePath) ?? "" : ""
             );
+            return startInfo;
+        }
+
+        /// <summary>
+        /// Returns the .app bundle that contains <paramref name="executablePath"/>, or null when the
+        /// executable is not inside one.
+        /// </summary>
+        internal static string? FindAppBundle(string executablePath)
+        {
+            for (
+                string? directory = Path.GetDirectoryName(executablePath);
+                directory is not null;
+                directory = Path.GetDirectoryName(directory)
+            )
+            {
+                if (Path.GetFileName(directory).EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+                {
+                    return directory;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>

@@ -50,9 +50,13 @@ public partial class MissingDependencyDialog : UniGetUI.Avalonia.Views.DialogPag
             "UniGetUI requires {0} to operate, but it was not found on your system.", dep.Name);
         InfoBlock.Text = CoreTools.Translate(
             "Click on Install to begin the installation process. If you skip the installation, UniGetUI may not work as expected.");
-        CommandInfoBlock.Text = CoreTools.Translate(
-            "Alternatively, you can also install {0} by running the following command in a Windows PowerShell prompt:",
-            dep.Name);
+        CommandInfoBlock.Text = OperatingSystem.IsWindows()
+            ? CoreTools.Translate(
+                "Alternatively, you can also install {0} by running the following command in a Windows PowerShell prompt:",
+                dep.Name)
+            : CoreTools.Translate(
+                "Alternatively, you can also install {0} by running the following command in a terminal:",
+                dep.Name);
         CommandBlock.Text = dep.FancyInstallCommand;
         SetButtonLabel(InstallButton, CoreTools.Translate("Install {0}", dep.Name));
         SetButtonLabel(SkipButton, CoreTools.Translate("Not right now"));

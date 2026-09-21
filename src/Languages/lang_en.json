@@ -394,6 +394,7 @@
   "UniGetUI requires {0} to operate, but it was not found on your system.": "UniGetUI requires {0} to operate, but it was not found on your system.",
   "Click on Install to begin the installation process. If you skip the installation, UniGetUI may not work as expected.": "Click on Install to begin the installation process. If you skip the installation, UniGetUI may not work as expected.",
   "Alternatively, you can also install {0} by running the following command in a Windows PowerShell prompt:": "Alternatively, you can also install {0} by running the following command in a Windows PowerShell prompt:",
+  "Alternatively, you can also install {0} by running the following command in a terminal:": "Alternatively, you can also install {0} by running the following command in a terminal:",
   "No supported package manager was found. Please install {0} manually and restart UniGetUI.": "No supported package manager was found. Please install {0} manually and restart UniGetUI.",
   "Install {0}": "Install {0}",
   "Do not show this dialog again for {0}": "Do not show this dialog again for {0}",

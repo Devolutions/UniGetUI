@@ -1,0 +1,22 @@
+{
+  "meta": { "api-version": "1.1" },
+  "name": "zope-interface",
+  "versions": ["5.4.0", "6.0"],
+  "files": [
+    {
+      "filename": "zope.interface-5.4.0.tar.gz",
+      "requires-python": ">=2.7",
+      "yanked": false
+    },
+    {
+      "filename": "zope_interface-6.0-cp311-cp311-win_amd64.whl",
+      "requires-python": ">=3.7",
+      "yanked": false
+    },
+    {
+      "filename": "zope_interface-6.0.tar.gz",
+      "requires-python": ">=3.7",
+      "yanked": false
+    }
+  ]
+}

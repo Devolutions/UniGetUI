@@ -86,65 +86,101 @@ public partial class OperationFailedDialog : UniGetUI.Avalonia.Views.DialogPages
 
     private Control BuildRetryButton(AbstractOperation operation)
     {
-        var retryOptions = new List<MenuItem>();
+        var retryOptions = CollectRetryMenuItems(operation);
+        string defaultRetryMode = AbstractOperation.RetryMode.Retry;
+        string defaultRetryLabel = CoreTools.Translate("Retry");
 
+        if (retryOptions.Count == 0)
+            return SimpleRetryButton(operation, defaultRetryMode, defaultRetryLabel);
+
+        return SplitRetryButton(operation, retryOptions, defaultRetryMode, defaultRetryLabel);
+    }
+
+    private List<MenuItem> CollectRetryMenuItems(AbstractOperation operation)
+    {
+        var retryOptions = new List<MenuItem>();
         if (operation is PackageOperation pkgOp)
         {
-            var caps = pkgOp.Package.Manager.Capabilities;
-
-            if (OperatingSystem.IsWindows() && !pkgOp.Options.RunAsAdministrator && caps.CanRunAsAdmin)
-                retryOptions.Add(MenuItem(CoreTools.Translate("Retry as administrator"),
-                    () => { operation.Retry(AbstractOperation.RetryMode.Retry_AsAdmin); Close(); }));
-
-            if (!pkgOp.Options.InteractiveInstallation && caps.CanRunInteractively)
-                retryOptions.Add(MenuItem(CoreTools.Translate("Retry interactively"),
-                    () => { operation.Retry(AbstractOperation.RetryMode.Retry_Interactive); Close(); }));
-
-            if (PackageOperation.CanRetrySkippingIntegrityChecks(
-                    pkgOp.Package.Manager, pkgOp.Options, pkgOp.Role, pkgOp.WillRunElevated))
-                retryOptions.Add(MenuItem(CoreTools.Translate("Retry skipping integrity checks"),
-                    () => { operation.Retry(AbstractOperation.RetryMode.Retry_SkipIntegrity); Close(); }));
+            AddPackageRetryOptions(retryOptions, operation, pkgOp);
+            return retryOptions;
         }
-        else if (OperatingSystem.IsWindows() && operation is SourceOperation srcOp && !srcOp.ForceAsAdministrator)
+
+        if (OperatingSystem.IsWindows() && operation is SourceOperation srcOp && !srcOp.ForceAsAdministrator)
         {
             retryOptions.Add(MenuItem(CoreTools.Translate("Retry as administrator"),
                 () => { operation.Retry(AbstractOperation.RetryMode.Retry_AsAdmin); Close(); }));
         }
 
-        if (retryOptions.Count > 0)
+        return retryOptions;
+    }
+
+    private void AddPackageRetryOptions(
+        List<MenuItem> retryOptions,
+        AbstractOperation operation,
+        PackageOperation pkgOp
+    )
+    {
+        var caps = pkgOp.Package.Manager.Capabilities;
+
+        if (OperatingSystem.IsWindows() && !pkgOp.Options.RunAsAdministrator && caps.CanRunAsAdmin)
+            retryOptions.Add(MenuItem(CoreTools.Translate("Retry as administrator"),
+                () => { operation.Retry(AbstractOperation.RetryMode.Retry_AsAdmin); Close(); }));
+
+        if (!pkgOp.Options.InteractiveInstallation && caps.CanRunInteractively)
+            retryOptions.Add(MenuItem(CoreTools.Translate("Retry interactively"),
+                () => { operation.Retry(AbstractOperation.RetryMode.Retry_Interactive); Close(); }));
+
+        if (PackageOperation.CanRetrySkippingIntegrityChecks(
+                pkgOp.Package.Manager, pkgOp.Options, pkgOp.Role, pkgOp.WillRunElevated))
+            retryOptions.Add(MenuItem(CoreTools.Translate("Retry skipping integrity checks"),
+                () => { operation.Retry(AbstractOperation.RetryMode.Retry_SkipIntegrity); Close(); }));
+
+        if (!PackageOperation.CanRetryClosingRunningApp(pkgOp))
+            return;
+
+        retryOptions.Add(MenuItem(CoreTools.Translate("Force-close app and retry"),
+            () => { operation.Retry(AbstractOperation.RetryMode.Retry_CloseRunningApp); Close(); }));
+    }
+
+    private Control SimpleRetryButton(AbstractOperation operation, string retryMode, string label)
+    {
+        var button = new Button
         {
-            var splitButton = new SplitButton
-            {
-                Content = CoreTools.Translate("Retry"),
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Center,
-            };
-            splitButton.Click += (_, _) =>
-            {
-                operation.Retry(AbstractOperation.RetryMode.Retry);
-                Close();
-            };
-            var flyout = new MenuFlyout();
-            foreach (var item in retryOptions)
-                flyout.Items.Add(item);
-            splitButton.Flyout = flyout;
-            return splitButton;
-        }
-        else
+            Content = label,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+        };
+        button.Click += (_, _) =>
         {
-            var button = new Button
-            {
-                Content = CoreTools.Translate("Retry"),
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Center,
-            };
-            button.Click += (_, _) =>
-            {
-                operation.Retry(AbstractOperation.RetryMode.Retry);
-                Close();
-            };
-            return button;
-        }
+            operation.Retry(retryMode);
+            Close();
+        };
+        return button;
+    }
+
+    private Control SplitRetryButton(
+        AbstractOperation operation,
+        List<MenuItem> retryOptions,
+        string retryMode,
+        string label
+    )
+    {
+        var splitButton = new SplitButton
+        {
+            Content = label,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+        };
+        splitButton.Click += (_, _) =>
+        {
+            operation.Retry(retryMode);
+            Close();
+        };
+        var flyout = new MenuFlyout();
+        foreach (var item in retryOptions)
+            flyout.Items.Add(item);
+        splitButton.Flyout = flyout;
+        return splitButton;
     }
 
     private static MenuItem MenuItem(string header, Action action)

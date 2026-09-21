@@ -1,4 +1,8 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net;
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using UniGetUI.Core.Data;
@@ -15,7 +19,7 @@ using UniGetUI.PackageEngine.PackageClasses;
 
 namespace UniGetUI.PackageEngine.Managers.PipManager
 {
-    public class Pip : PackageManager
+    public partial class Pip : PackageManager
     {
         public static string[] FALSE_PACKAGE_IDS =
         [
@@ -273,50 +277,528 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             }
         }
 
-        protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
+        private static readonly ConcurrentDictionary<
+            (string Interpreter, string PackageId),
+            CachedResolution
+        > _latestVersionCache = new();
+
+        private readonly record struct CachedResolution(string ETag, string? Version);
+
+        private readonly record struct VersionResolution(string? Version, bool Failed);
+
+        private readonly object _indexUpdateCheckLock = new();
+        private bool _indexUpdateCheckProbed;
+        private bool _indexUpdateCheckSupported;
+        private PythonVersion _interpreterVersion;
+
+        [GeneratedRegex(
+            @"\(python (?<version>[0-9]+(?:\.[0-9]+)*)\)",
+            RegexOptions.CultureInvariant
+        )]
+        private static partial Regex InterpreterVersionPattern();
+
+        [GeneratedRegex(@"[-_.]+", RegexOptions.CultureInvariant)]
+        private static partial Regex ProjectNameSeparatorPattern();
+
+        protected override void _performPreInitializationSteps()
         {
-            using Process p = new()
+            lock (_indexUpdateCheckLock)
             {
-                StartInfo = new ProcessStartInfo
+                _indexUpdateCheckProbed = false;
+                _indexUpdateCheckSupported = false;
+                _interpreterVersion = default;
+            }
+        }
+
+        private bool TryGetIndexUpdateCheckInterpreter(out PythonVersion interpreter)
+        {
+            lock (_indexUpdateCheckLock)
+            {
+                if (!_indexUpdateCheckProbed)
                 {
-                    FileName = Status.ExecutablePath,
-                    Arguments =
-                        Status.ExecutableCallArgs + " list --outdated " + GetProxyArgument(),
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
-                },
-            };
+                    _indexUpdateCheckProbed = true;
+                    _indexUpdateCheckSupported = ProbeIndexUpdateCheckSupport(
+                        out _interpreterVersion
+                    );
+                }
 
-            IProcessTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates, p);
+                interpreter = _interpreterVersion;
+                return _indexUpdateCheckSupported
+                    && !Settings.Get(Settings.K.DisablePipHttpUpdateCheck);
+            }
+        }
 
-            p.Start();
+        private bool ProbeIndexUpdateCheckSupport(out PythonVersion interpreter)
+        {
+            interpreter = default;
 
-            string? line;
-            List<string> outputLines = [];
-            while ((line = p.StandardOutput.ReadLine()) is not null)
+            if (HasCustomIndexConfigured())
             {
-                logger.AddToStdOut(line);
-                outputLines.Add(line);
+                Logger.Info(
+                    "Pip: a custom package index is configured, available updates will keep "
+                        + "being listed through the pip CLI"
+                );
+                return false;
             }
 
-            logger.AddToStdErr(p.StandardError.ReadToEnd());
-            p.WaitForExit();
-            logger.Close(p.ExitCode);
+            string? detected = DetectInterpreterVersion();
+            if (detected is null || !PythonVersion.TryParse(detected, out interpreter))
+            {
+                Logger.Warn(
+                    "Pip: the Python version could not be determined, available updates will "
+                        + "keep being listed through the pip CLI"
+                );
+                return false;
+            }
 
-            return ParseAvailableUpdates(outputLines, DefaultSource, this);
+            Logger.Info($"Pip: listing available updates against {DefaultSource.Url} over HTTP");
+            return true;
+        }
+
+        private static readonly string[] IndexEnvironmentVariables =
+        [
+            "PIP_INDEX_URL",
+            "PIP_EXTRA_INDEX_URL",
+            "PIP_NO_INDEX",
+            "PIP_FIND_LINKS",
+        ];
+
+        private static readonly string[] IndexConfigurationKeys =
+        [
+            "index-url",
+            "extra-index-url",
+            "no-index",
+            "find-links",
+        ];
+
+        internal static bool IsIndexConfigurationLine(string line)
+        {
+            int separator = line.IndexOf('=');
+            if (separator < 0)
+                return false;
+
+            string key = line[..separator].Trim();
+            int lastDot = key.LastIndexOf('.');
+            string name = lastDot >= 0 ? key[(lastDot + 1)..] : key;
+
+            return IndexConfigurationKeys.Contains(name, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private bool HasCustomIndexConfigured()
+        {
+            foreach (string variable in IndexEnvironmentVariables)
+            {
+                if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(variable)))
+                    return true;
+            }
+
+            try
+            {
+                foreach (string line in RunPipCommand(" config list", LoggableTaskType.OtherTask))
+                {
+                    if (IsIndexConfigurationLine(line))
+                        return true;
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Warn($"Pip: the pip configuration could not be read ({e.Message})");
+            }
+
+            return false;
+        }
+
+        private string? DetectInterpreterVersion()
+        {
+            if (Status.ExecutableCallArgs.Contains("-m pip", StringComparison.Ordinal))
+            {
+                try
+                {
+                    using Process p = new()
+                    {
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = Status.ExecutablePath,
+                            Arguments =
+                                "-c \"import sys; print('%d.%d.%d' % sys.version_info[:3])\"",
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true,
+                            StandardOutputEncoding = System.Text.Encoding.UTF8,
+                        },
+                    };
+
+                    p.Start();
+                    RegisterListingProcess(p);
+                    string output = p.StandardOutput.ReadToEnd().Trim();
+                    p.WaitForExit();
+
+                    if (p.ExitCode is 0 && output.Length > 0)
+                        return output;
+                }
+                catch (Exception e)
+                {
+                    Logger.Warn($"Pip: the Python version could not be queried ({e.Message})");
+                }
+            }
+
+            return ParseInterpreterVersion(Status.Version);
+        }
+
+        internal static string? ParseInterpreterVersion(string? pipVersionOutput)
+        {
+            if (pipVersionOutput is null)
+                return null;
+
+            Match match = InterpreterVersionPattern().Match(pipVersionOutput);
+            return match.Success ? match.Groups["version"].Value : null;
+        }
+
+        private static readonly SemaphoreSlim _updateFetchSemaphore = new(6, 6);
+        private static readonly TimeSpan UpdateResolutionBudget = TimeSpan.FromSeconds(45);
+
+        private static async Task<VersionResolution> ResolveLatestVersionAsync(
+            HttpClient client,
+            string packageId,
+            PythonVersion interpreter,
+            CancellationToken token
+        )
+        {
+            await _updateFetchSemaphore.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    $"https://pypi.org/simple/{NormalizeProjectNameForUrl(packageId)}/"
+                );
+                request.Headers.Accept.ParseAdd("application/vnd.pypi.simple.v1+json");
+
+                var cacheKey = (interpreter.Original, packageId);
+                bool wasCached = _latestVersionCache.TryGetValue(
+                    cacheKey,
+                    out CachedResolution cached
+                );
+                if (wasCached)
+                    request.Headers.TryAddWithoutValidation("If-None-Match", cached.ETag);
+
+                using HttpResponseMessage response = await client
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token)
+                    .ConfigureAwait(false);
+
+                if (wasCached && response.StatusCode is HttpStatusCode.NotModified)
+                    return new VersionResolution(cached.Version, false);
+
+                if (response.StatusCode is HttpStatusCode.NotFound)
+                    return new VersionResolution(null, false);
+
+                response.EnsureSuccessStatusCode();
+
+                string? resolved;
+                using (
+                    Stream stream = await response
+                        .Content.ReadAsStreamAsync(token)
+                        .ConfigureAwait(false)
+                )
+                using (
+                    JsonDocument document = await JsonDocument
+                        .ParseAsync(stream, cancellationToken: token)
+                        .ConfigureAwait(false)
+                )
+                {
+                    resolved = ResolveLatestCompatibleVersion(
+                        packageId,
+                        document.RootElement,
+                        interpreter
+                    );
+                }
+
+                if (response.Headers.ETag?.Tag is string etag)
+                    _latestVersionCache[cacheKey] = new CachedResolution(etag, resolved);
+
+                return new VersionResolution(resolved, false);
+            }
+            catch (Exception e)
+            {
+                Logger.Debug(
+                    $"Pip: the latest version of {packageId} could not be resolved: {e.Message}"
+                );
+
+                if (
+                    _latestVersionCache.TryGetValue(
+                        (interpreter.Original, packageId),
+                        out CachedResolution known
+                    )
+                )
+                    return new VersionResolution(known.Version, false);
+
+                return new VersionResolution(null, true);
+            }
+            finally
+            {
+                _updateFetchSemaphore.Release();
+            }
+        }
+
+        internal static string NormalizeProjectNameForUrl(string name) =>
+            Uri.EscapeDataString(
+                ProjectNameSeparatorPattern().Replace(name, "-").ToLowerInvariant()
+            );
+
+        internal static string NormalizeForFileMatch(string value)
+        {
+            StringBuilder builder = new(value.Length);
+            bool lastWasSeparator = false;
+
+            foreach (char character in value)
+            {
+                if (character is '-' or '_' or '.')
+                {
+                    if (!lastWasSeparator)
+                        builder.Append('_');
+                    lastWasSeparator = true;
+                    continue;
+                }
+
+                builder.Append(char.ToLowerInvariant(character));
+                lastWasSeparator = false;
+            }
+
+            return builder.ToString();
+        }
+
+        internal static bool IsInterpreterAllowed(string? requiresPython, PythonVersion interpreter)
+        {
+            if (string.IsNullOrWhiteSpace(requiresPython))
+                return true;
+
+            if (!PythonVersionSpecifier.TryParse(requiresPython, out PythonVersionSpecifier spec))
+                return false;
+
+            return spec.IsSatisfiedBy(interpreter);
+        }
+
+        private static bool IsYanked(JsonElement file) =>
+            file.TryGetProperty("yanked", out JsonElement yanked)
+            && yanked.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.String => !string.IsNullOrEmpty(yanked.GetString()),
+                _ => false,
+            };
+
+        private static string? ReadString(JsonElement owner, string property) =>
+            owner.TryGetProperty(property, out JsonElement value)
+            && value.ValueKind is JsonValueKind.String
+                ? value.GetString()
+                : null;
+
+        internal static string? ResolveLatestCompatibleVersion(
+            string projectName,
+            string json,
+            PythonVersion interpreter
+        )
+        {
+            using JsonDocument document = JsonDocument.Parse(json);
+            return ResolveLatestCompatibleVersion(projectName, document.RootElement, interpreter);
+        }
+
+        private static string? ResolveLatestCompatibleVersion(
+            string projectName,
+            JsonElement root,
+            PythonVersion interpreter
+        )
+        {
+            if (
+                root.ValueKind is not JsonValueKind.Object
+                || !root.TryGetProperty("files", out JsonElement files)
+                || files.ValueKind is not JsonValueKind.Array
+            )
+                throw new InvalidDataException(
+                    "The package index response does not contain a file list"
+                );
+
+            if (
+                !root.TryGetProperty("versions", out JsonElement versions)
+                || versions.ValueKind is not JsonValueKind.Array
+            )
+                throw new InvalidDataException(
+                    "The package index response does not contain a version list"
+                );
+
+            List<(PythonVersion Parsed, string Raw)> candidates = [];
+            foreach (JsonElement node in versions.EnumerateArray())
+            {
+                if (node.ValueKind is not JsonValueKind.String)
+                    continue;
+
+                string raw = node.GetString()!;
+                if (!PythonVersion.TryParse(raw, out PythonVersion parsed) || parsed.IsPreRelease)
+                    continue;
+
+                candidates.Add((parsed, raw));
+            }
+
+            candidates.Sort((a, b) => b.Parsed.CompareTo(a.Parsed));
+
+            List<(string Normalized, JsonElement File)> normalizedFiles = [];
+            foreach (JsonElement file in files.EnumerateArray())
+            {
+                if (file.ValueKind is not JsonValueKind.Object)
+                    continue;
+
+                if (ReadString(file, "filename") is not string filename)
+                    continue;
+
+                normalizedFiles.Add((NormalizeForFileMatch(filename), file));
+            }
+
+            string normalizedName = NormalizeForFileMatch(projectName);
+            foreach ((PythonVersion _, string raw) in candidates)
+            {
+                string prefix = $"{normalizedName}_{NormalizeForFileMatch(raw)}";
+                foreach ((string normalizedFile, JsonElement file) in normalizedFiles)
+                {
+                    if (!normalizedFile.StartsWith(prefix, StringComparison.Ordinal))
+                        continue;
+
+                    if (
+                        normalizedFile.Length > prefix.Length
+                        && normalizedFile[prefix.Length] is not '_'
+                    )
+                        continue;
+
+                    if (IsYanked(file))
+                        continue;
+
+                    if (!IsInterpreterAllowed(ReadString(file, "requires-python"), interpreter))
+                        continue;
+
+                    return raw;
+                }
+            }
+
+            return null;
+        }
+
+        protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
+        {
+            if (TryGetIndexUpdateCheckInterpreter(out PythonVersion interpreter))
+                return GetAvailableUpdatesFromIndex(interpreter);
+
+            return GetAvailableUpdatesFromCli();
+        }
+
+        private IReadOnlyList<Package> GetAvailableUpdatesFromCli()
+        {
+            return ParseAvailableUpdates(
+                RunPipCommand(" list --outdated " + GetProxyArgument(), LoggableTaskType.ListUpdates),
+                DefaultSource,
+                this
+            );
+        }
+
+        private IReadOnlyList<Package> GetAvailableUpdatesFromIndex(PythonVersion interpreter)
+        {
+            INativeTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates);
+            try
+            {
+                IReadOnlyList<Package> installed = ParseInstalledPackages(
+                    RunPipCommand(" list " + GetProxyArgument(), LoggableTaskType.ListInstalledPackages),
+                    DefaultSource,
+                    this
+                );
+
+                logger.Log(
+                    $"Resolving the newest version compatible with Python {interpreter.Original} "
+                        + $"for {installed.Count} installed packages"
+                );
+
+                using HttpClient client = new(CoreTools.GenericHttpClientParameters)
+                {
+                    Timeout = TimeSpan.FromSeconds(20),
+                };
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(CoreData.UserAgentString);
+
+                using CancellationTokenSource budget = new(UpdateResolutionBudget);
+
+                var resolutions = installed
+                    .Select(package =>
+                        ResolveLatestVersionAsync(
+                            client,
+                            package.Id,
+                            interpreter,
+                            budget.Token
+                        )
+                    )
+                    .ToArray();
+                Task.WhenAll(resolutions).GetAwaiter().GetResult();
+
+                int failures = 0;
+                List<Package> packages = [];
+                for (int i = 0; i < installed.Count; i++)
+                {
+                    VersionResolution resolution = resolutions[i].Result;
+                    if (resolution.Failed)
+                    {
+                        failures++;
+                        continue;
+                    }
+
+                    if (resolution.Version is null)
+                        continue;
+
+                    if (CompareVersions(installed[i].VersionString, resolution.Version) is null or >= 0)
+                        continue;
+
+                    packages.Add(
+                        new Package(
+                            installed[i].Name,
+                            installed[i].Id,
+                            installed[i].VersionString,
+                            resolution.Version,
+                            DefaultSource,
+                            this,
+                            new(PackageScope.Global)
+                        )
+                    );
+                }
+
+                if (failures > installed.Count / 4)
+                    throw new HttpRequestException(
+                        $"{failures} of {installed.Count} version lookups against "
+                            + $"{DefaultSource.Url} failed, the update list would be incomplete"
+                    );
+
+                logger.Log($"Found {packages.Count} updates, {failures} lookups failed");
+                logger.Close(0);
+                return packages;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e);
+                logger.Close(1);
+                throw;
+            }
         }
 
         protected override IReadOnlyList<Package> GetInstalledPackages_UnSafe()
         {
+            return ParseInstalledPackages(
+                RunPipCommand(" list " + GetProxyArgument(), LoggableTaskType.ListInstalledPackages),
+                DefaultSource,
+                this
+            );
+        }
+
+        private IReadOnlyList<string> RunPipCommand(string arguments, LoggableTaskType taskType)
+        {
             using Process p = new()
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = Status.ExecutablePath,
-                    Arguments = Status.ExecutableCallArgs + " list " + GetProxyArgument(),
+                    Arguments = Status.ExecutableCallArgs + arguments,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -325,12 +807,10 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
                 },
             };
 
-            IProcessTaskLogger logger = TaskLogger.CreateNew(
-                LoggableTaskType.ListInstalledPackages,
-                p
-            );
+            IProcessTaskLogger logger = TaskLogger.CreateNew(taskType, p);
 
             p.Start();
+            RegisterListingProcess(p);
 
             string? line;
             List<string> outputLines = [];
@@ -344,7 +824,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             p.WaitForExit();
             logger.Close(p.ExitCode);
 
-            return ParseInstalledPackages(outputLines, DefaultSource, this);
+            return outputLines;
         }
 
         internal static IReadOnlyList<Package> ParseAvailableUpdates(
@@ -537,6 +1017,12 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             Environment.SetEnvironmentVariable(
                 "PIP_REQUIRE_VIRTUALENV",
                 "false",
+                EnvironmentVariableTarget.Process
+            );
+
+            Environment.SetEnvironmentVariable(
+                "PIP_DISABLE_PIP_VERSION_CHECK",
+                "1",
                 EnvironmentVariableTarget.Process
             );
 

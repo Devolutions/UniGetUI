@@ -433,6 +433,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
     internal static bool ReportedInstallerHashMismatch(int returnCode) =>
         (uint)returnCode is 0x8A150011;
 
+    internal static bool ReportedApplicationCurrentlyRunning(int returnCode) =>
+        (uint)returnCode is 0x8A150101 or 0x8A150103 or 0x8A150111;
+
     internal bool ReportedUpdateNotApplicable(
         IReadOnlyList<string> processOutput,
         int returnCode

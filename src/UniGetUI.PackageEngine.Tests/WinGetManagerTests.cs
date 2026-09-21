@@ -1,4 +1,5 @@
 #if WINDOWS
+using System.Diagnostics;
 using Devolutions.Pinget.Core;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
@@ -2226,6 +2227,135 @@ public sealed class WinGetManagerTests : IDisposable
 
         OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
         Assert.Equal(defaultMessage, operation.Metadata.FailureMessage);
+    }
+
+    [Fact]
+    public void WinGetDetectsAnApplicationInUseFromWinGetHresults()
+    {
+        Assert.True(
+            WinGetPkgOperationHelper.ReportedApplicationCurrentlyRunning(
+                unchecked((int)0x8A150101)
+            )
+        );
+        Assert.True(
+            WinGetPkgOperationHelper.ReportedApplicationCurrentlyRunning(
+                unchecked((int)0x8A150103)
+            )
+        );
+        Assert.True(
+            WinGetPkgOperationHelper.ReportedApplicationCurrentlyRunning(
+                unchecked((int)0x8A150111)
+            )
+        );
+        Assert.False(
+            WinGetPkgOperationHelper.ReportedApplicationCurrentlyRunning(
+                unchecked((int)0x8A150102)
+            )
+        );
+    }
+
+    [Fact]
+    public void WinGetDoesNotTreatRawInstallerExitCode26AsAnApplicationInUse()
+    {
+        Assert.False(WinGetPkgOperationHelper.ReportedApplicationCurrentlyRunning(26));
+    }
+
+    [Fact]
+    public void WinGetGuessesASingleCloseProcessNameWhenTheDisplayNameMatchesTheIdTail()
+    {
+        var package = new PackageBuilder()
+            .WithManager(new WinGet())
+            .WithId("Spotify.Spotify")
+            .WithName("Spotify")
+            .Build();
+
+        Assert.Equal(["Spotify"], PackageOperation.GuessCloseProcessNames(package));
+    }
+
+    [Fact]
+    public void WinGetGuessesCloseProcessNamesFromDisplayNameAndIdTail()
+    {
+        var package = new PackageBuilder()
+            .WithManager(new WinGet())
+            .WithId("Git.Git")
+            .WithName("Git")
+            .Build();
+
+        Assert.Equal(["Git"], PackageOperation.GuessCloseProcessNames(package));
+
+        var spaced = new PackageBuilder()
+            .WithManager(new WinGet())
+            .WithId("SomeVendor.ToolName")
+            .WithName("Some Vendor Tool")
+            .Build();
+
+        Assert.Equal(["ToolName"], PackageOperation.GuessCloseProcessNames(spaced));
+    }
+
+    [Fact]
+    public void WinGetDoesNotGuessTheCurrentProcessAsACloseTarget()
+    {
+        using Process currentProcess = Process.GetCurrentProcess();
+        string current = currentProcess.ProcessName;
+        var package = new PackageBuilder()
+            .WithManager(new WinGet())
+            .WithId($"Vendor.{current}")
+            .WithName(current)
+            .Build();
+
+        Assert.Empty(PackageOperation.GuessCloseProcessNames(package));
+        Assert.Empty(PackageOperation.GetRunningCloseProcessNames(package));
+    }
+
+    [Fact]
+    public async Task WinGetApplicationCurrentlyRunningExplainsTheFailureToTheUser()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Spotify.Spotify")
+            .WithName("Spotify")
+            .WithVersion("1.2.74.357")
+            .WithNewVersion("1.2.75.458")
+            .Build();
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions());
+        string defaultMessage = operation.Metadata.FailureMessage;
+
+        var veredict = await operation.ProbeProcessVeredict(
+            unchecked((int)0x8A150101),
+            [
+                "Found Spotify [Spotify.Spotify] Version 1.2.75.458",
+                "This application is currently running.",
+            ]
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.NotEqual(defaultMessage, operation.Metadata.FailureMessage);
+        Assert.Contains("currently running", operation.Metadata.FailureMessage);
+        Assert.False(operation.Metadata.FailureMessage.EndsWith('.'));
+        Assert.True(operation.FailedBecauseApplicationRunning);
+    }
+
+    [Fact]
+    public async Task WinGetFailureWithBareExitCode26KeepsTheDefaultMessage()
+    {
+        var manager = new WinGet();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Spotify.Spotify")
+            .WithName("Spotify")
+            .WithVersion("1.2.74.357")
+            .WithNewVersion("1.2.75.458")
+            .Build();
+        using var operation = new VeredictProbingUpdateOperation(package, new InstallOptions());
+        string defaultMessage = operation.Metadata.FailureMessage;
+
+        var veredict = await operation.ProbeProcessVeredict(26, []);
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.Equal(defaultMessage, operation.Metadata.FailureMessage);
+        Assert.False(operation.FailedBecauseApplicationRunning);
+        Assert.False(PackageOperation.CanRetryClosingRunningApp(operation));
     }
 
     [Fact]

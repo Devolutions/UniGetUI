@@ -1,0 +1,299 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SettingsPages.AgentPolicyInspector"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages"
+             xmlns:pvm="using:UniGetUI.Avalonia.ViewModels.Pages.SettingsPages.PolicyEditor"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:DataType="vm:AgentPolicyInspectorViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Border.policy-section">
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="Margin" Value="40,0"/>
+        </Style>
+        <Style Selector="TextBlock.field-label">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="TextBlock.policy-section-heading">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="40,24,40,8"/>
+        </Style>
+    </UserControl.Styles>
+
+    <UserControl.DataTemplates>
+        <DataTemplate DataType="vm:PolicyDetailRow" x:DataType="vm:PolicyDetailRow">
+            <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                <TextBlock Classes="field-label"
+                           Text="{Binding Label}"
+                           controls:PolicyHelp.Text="{Binding HelpText}"/>
+                <SelectableTextBlock Grid.Column="1"
+                                     Text="{Binding Value}"
+                                     TextWrapping="Wrap"
+                                     controls:PolicyHelp.Text="{Binding HelpText}"
+                                     automation:AutomationProperties.Name="{Binding AutomationName}"/>
+            </Grid>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical" Margin="0,8,0,24">
+            <Grid x:Name="PolicyPageHeader"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12"
+                  Margin="40,0,40,12">
+                <TextBlock x:Name="PolicyManagementHeading"
+                           Text="{t:Translate Package broker policy}"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           automation:AutomationProperties.HeadingLevel="2"/>
+                <Button Grid.Column="1"
+                        Command="{Binding RefreshPageCommand}"
+                        Content="{t:Translate Refresh}"
+                        VerticalAlignment="Center"
+                        controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RefreshPolicy}"
+                        automation:AutomationProperties.Name="{t:Translate Refresh policy information}"/>
+            </Grid>
+
+            <ProgressBar IsIndeterminate="{Binding IsPageRefreshActive}"
+                         IsVisible="{Binding IsPageRefreshActive}"
+                         Margin="40,0,40,12"
+                         automation:AutomationProperties.Name="{t:Translate Loading policy information}"/>
+
+            <controls:InfoBar DataContext="{Binding ManagementStatus}"
+                              Margin="40,0,40,12"/>
+
+            <StackPanel IsVisible="{Binding HasManagementSnapshot}">
+                <Border Classes="settings-card policy-section">
+                    <StackPanel>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate State}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ManagementState}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ManagementStateText}"
+                                       automation:AutomationProperties.Name="{t:Translate Policy management state}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ManagementState}"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate Configured path}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ConfiguredPath}"/>
+                            <SelectableTextBlock Grid.Column="1"
+                                                 Text="{Binding ManagementConfiguredPath}"
+                                                 TextWrapping="Wrap"
+                                                 automation:AutomationProperties.Name="{t:Translate Configured policy path}"
+                                                 controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ConfiguredPath}"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate Path source}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PathSource}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ManagementSourceText}"
+                                       automation:AutomationProperties.Name="{t:Translate Policy path source}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.PathSource}"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate Agent write capability}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AgentWriteCapability}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding AgentWriteCapabilityText}"
+                                       automation:AutomationProperties.Name="{t:Translate Agent write capability}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AgentWriteCapability}"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate Policy changes from this app}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteAvailability}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding PolicyChangesFromThisAppText}"
+                                       automation:AutomationProperties.Name="{t:Translate Policy changes from this app}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteAvailability}"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="180,*"
+                              ColumnSpacing="12"
+                              Margin="0,3"
+                              IsVisible="{Binding HasPolicyChangesReason}">
+                            <TextBlock Classes="field-label" Text="{t:Translate Reason}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteReason}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding PolicyChangesReasonText}"
+                                       TextWrapping="Wrap"
+                                       automation:AutomationProperties.Name="{t:Translate Policy change availability reason}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.AppWriteReason}"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                            <TextBlock Classes="field-label" Text="{t:Translate Elevation required}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ElevationRequired}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ManagementElevationRequiredText}"
+                                       automation:AutomationProperties.Name="{t:Translate Policy write elevation requirement}"
+                                       controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ElevationRequired}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Grid ColumnDefinitions="Auto,Auto,Auto,*" Margin="40,12,40,0" ColumnSpacing="8">
+                    <Button x:Name="EditPolicyButton"
+                            Command="{Binding EditPolicyCommand}"
+                            IsVisible="{Binding CanEdit}"
+                            Content="{t:Translate Edit}"
+                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.EditPolicy}"
+                            automation:AutomationProperties.Name="{t:Translate Edit the active policy}"/>
+                    <Button Grid.Column="1"
+                            x:Name="CreatePolicyButton"
+                            Command="{Binding CreatePolicyCommand}"
+                            IsVisible="{Binding CanCreate}"
+                            Content="{t:Translate Create}"
+                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CreatePolicy}"
+                            automation:AutomationProperties.Name="{t:Translate Create a new policy}"/>
+                    <Button Grid.Column="2"
+                            x:Name="ReplaceIdentityButton"
+                            Classes="secondary-action"
+                            Command="{Binding ReplaceIdentityCommand}"
+                            IsVisible="{Binding CanReplaceIdentity}"
+                            Content="{t:Translate Replace identity}"
+                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.ReplaceIdentity}"
+                            automation:AutomationProperties.Name="{t:Translate Replace the active policy identity}"/>
+                </Grid>
+
+                <TextBlock Classes="policy-section-heading"
+                           Text="{t:Translate Diagnostics}"
+                           IsVisible="{Binding HasManagementDiagnostics}"
+                           automation:AutomationProperties.HeadingLevel="3"/>
+                <Border Classes="settings-card policy-section" IsVisible="{Binding HasManagementDiagnostics}">
+                    <ItemsControl ItemsSource="{Binding ManagementDiagnosticsRows}"/>
+                </Border>
+            </StackPanel>
+
+            <StackPanel x:Name="ActivePolicyDetailsSection"
+                        IsVisible="{Binding HasActivePolicyDetails}">
+                <StackPanel IsVisible="{Binding HasPolicy}">
+                <TextBlock Classes="policy-section-heading"
+                           Text="{t:Translate Policy metadata}"
+                           automation:AutomationProperties.HeadingLevel="2"/>
+                <Border Classes="settings-card policy-section">
+                    <ItemsControl ItemsSource="{Binding MetadataRows}"/>
+                </Border>
+
+                <TextBlock Classes="policy-section-heading"
+                           Text="{t:Translate Enforcement}"
+                           automation:AutomationProperties.HeadingLevel="2"/>
+                <Border Classes="settings-card policy-section">
+                    <ItemsControl ItemsSource="{Binding EnforcementRows}"/>
+                </Border>
+
+                <TextBlock Classes="policy-section-heading"
+                           Text="{t:Translate Rules}"
+                           automation:AutomationProperties.HeadingLevel="2"/>
+                <Border Classes="settings-card policy-section" IsVisible="{Binding HasNoRules}">
+                    <TextBlock Text="{t:Translate The active policy contains no rules.}"
+                               TextWrapping="Wrap"/>
+                </Border>
+                <ItemsControl ItemsSource="{Binding Rules}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PolicyRuleViewModel">
+                            <Expander Margin="40,0,40,8"
+                                      HorizontalAlignment="Stretch"
+                                      HorizontalContentAlignment="Stretch"
+                                      automation:AutomationProperties.Name="{Binding AutomationName}">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <TextBlock Text="{Binding AutomationName}"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Decision}"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Expander.Header>
+                                <StackPanel Margin="12,8,4,12">
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                                        <TextBlock Classes="field-label" Text="{t:Translate Rule ID}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleId}"/>
+                                        <SelectableTextBlock Grid.Column="1" Text="{Binding Id}" TextWrapping="Wrap"
+                                                             controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleId}"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                                        <TextBlock Classes="field-label" Text="{t:Translate Enabled}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleEnabled}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Enabled}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleEnabled}"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                                        <TextBlock Classes="field-label" Text="{t:Translate Evaluation order}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Priority}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Priority}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Priority}"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                                        <TextBlock Classes="field-label" Text="{t:Translate Decision}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Decision}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Decision}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.Decision}"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="180,*" ColumnSpacing="12" Margin="0,3">
+                                        <TextBlock Classes="field-label" Text="{t:Translate Reason}"
+                                                   controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleReason}"/>
+                                        <SelectableTextBlock Grid.Column="1" Text="{Binding Reason}" TextWrapping="Wrap"
+                                                             controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.RuleReason}"/>
+                                    </Grid>
+
+                                    <TextBlock Text="{t:Translate Match criteria}"
+                                               FontWeight="SemiBold"
+                                               FontSize="14"
+                                               Margin="0,16,0,4"
+                                               automation:AutomationProperties.HeadingLevel="3"/>
+                                    <ItemsControl ItemsSource="{Binding MatchRows}"/>
+
+                                    <StackPanel IsVisible="{Binding HasConstraints}">
+                                        <TextBlock Text="{t:Translate Constraints}"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="14"
+                                                   Margin="0,16,0,4"
+                                                   automation:AutomationProperties.HeadingLevel="3"/>
+                                        <ItemsControl ItemsSource="{Binding ConstraintRows}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Expander>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="40,24,40,8">
+                    <TextBlock Text="{t:Translate Canonical policy JSON}"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               automation:AutomationProperties.HeadingLevel="2"/>
+                    <Button Grid.Column="1"
+                            Command="{Binding CopyRawJsonCommand}"
+                            Content="{t:Translate Copy to clipboard}"
+                            controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CopyCanonicalJson}"
+                            automation:AutomationProperties.Name="{t:Translate Copy canonical policy JSON to clipboard}"/>
+                </Grid>
+                <Border Classes="settings-card policy-section">
+                    <TextBox Text="{Binding RawJson}"
+                             IsReadOnly="True"
+                             AcceptsReturn="True"
+                             TextWrapping="NoWrap"
+                             MinHeight="260"
+                             MaxHeight="520"
+                             FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             controls:PolicyHelp.Text="{x:Static pvm:PolicyEditorHelp.CanonicalJson}"
+                             automation:AutomationProperties.Name="{t:Translate Canonical policy JSON}"/>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

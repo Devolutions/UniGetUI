@@ -18,6 +18,7 @@ public abstract partial class AbstractOperation
         public const string Retry_AsAdmin = "RetryAsAdmin";
         public const string Retry_Interactive = "RetryInteractive";
         public const string Retry_SkipIntegrity = "RetryNoHashCheck";
+        public const string Retry_CloseRunningApp = "RetryCloseRunningApp";
     }
 
     public class OperationMetadata

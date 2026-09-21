@@ -262,6 +262,9 @@ namespace UniGetUI.PackageEngine.Managers.WingetManager
         public bool ReportedInstallerHashMismatch(int returnCode) =>
             WinGetPkgOperationHelper.ReportedInstallerHashMismatch(returnCode);
 
+        public bool ReportedApplicationCurrentlyRunning(int returnCode) =>
+            WinGetPkgOperationHelper.ReportedApplicationCurrentlyRunning(returnCode);
+
         public bool HonorsIntegrityCheckSkipWhenElevated =>
             SelectedCliToolKind is WinGetCliToolKind.BundledPinget;
 

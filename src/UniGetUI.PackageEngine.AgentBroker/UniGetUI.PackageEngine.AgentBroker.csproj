@@ -3,14 +3,18 @@
     <PropertyGroup>
         <TargetFrameworks>$(SharedTargetFrameworks)</TargetFrameworks>
         <RootNamespace>UniGetUI.PackageEngine.AgentBroker</RootNamespace>
+        <!-- Required by the source-generated LibraryImport P/Invokes in PolicyWriteElevation\Interop. -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Devolutions.Now.Policy.Api" Version="2026.8.13" />
-        <PackageReference Include="Devolutions.Now.Policy.Client" Version="2026.8.13" />
+        <PackageReference Include="Devolutions.Now.Policy.Model" Version="2026.9.19" />
+        <PackageReference Include="Devolutions.Now.Policy.Api" Version="2026.9.19" />
+        <PackageReference Include="Devolutions.Now.Policy.Client" Version="2026.9.19" />
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\UniGetUI.Core.Data\UniGetUI.Core.Data.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Logger\UniGetUI.Core.Logging.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Settings\UniGetUI.Core.Settings.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Enums\UniGetUI.PackageEngine.Structs.csproj" />

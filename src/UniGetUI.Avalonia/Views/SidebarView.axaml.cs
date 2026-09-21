@@ -20,15 +20,18 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     private CancellationTokenSource? _pillAnimationCancellation;
     private int _pillAnimationVersion;
 
-    private readonly ScaleTransform _pillScale = new() { ScaleX = 1d, ScaleY = 1d };
-    private readonly TranslateTransform _pillTranslate = new();
+    private readonly TranslateTransform _pillTopCapTranslate = new();
+    private readonly TransformGroup _pillStemTransform = new();
+    private readonly ScaleTransform _pillStemScale = new() { ScaleX = 1d, ScaleY = 1d };
+    private readonly TranslateTransform _pillStemTranslate = new();
+    private readonly TranslateTransform _pillBottomCapTranslate = new();
+    private double _pillTop;
+    private double _pillBottom = PillHeight;
     private ListBoxItem? _pendingPillItem;
     private bool _pendingPillAnimate;
 
     private const double PillHeight = 16d;
-    private const double MaxPillStretch = 1.0d;
-    private const double PillStretchReferenceDistance = 120d;
-    private static readonly TimeSpan PillAnimationDuration = TimeSpan.FromMilliseconds(180);
+    private static readonly TimeSpan PillAnimationDuration = TimeSpan.FromMilliseconds(300);
 
     /// <summary>
     /// Whether the nav item text labels are shown. False renders an icon-only rail; true renders the
@@ -48,11 +51,11 @@ public partial class SidebarView : BaseView<SidebarViewModel>
     {
         InitializeComponent();
 
-        NavigationSelectionPill.RenderTransformOrigin = new RelativePoint(0d, 0d, RelativeUnit.Relative);
-        NavigationSelectionPill.RenderTransform = new TransformGroup
-        {
-            Children = { _pillScale, _pillTranslate },
-        };
+        NavigationPillTopCap.RenderTransform = _pillTopCapTranslate;
+        _pillStemTransform.Children.Add(_pillStemScale);
+        _pillStemTransform.Children.Add(_pillStemTranslate);
+        NavigationPillStem.RenderTransform = _pillStemTransform;
+        NavigationPillBottomCap.RenderTransform = _pillBottomCapTranslate;
 
         if (FlyoutBase.GetAttachedFlyout(MoreNavBtn) is { } moreFlyout)
         {
@@ -197,23 +200,29 @@ public partial class SidebarView : BaseView<SidebarViewModel>
 
         if (!NavigationSelectionPill.IsVisible || !animate || MotionPreference.ReducedMotion)
         {
-            _pillScale.ScaleY = 1d;
-            _pillTranslate.Y = targetTop;
+            SetPillEdges(targetTop, targetTop + PillHeight);
             NavigationSelectionPill.IsVisible = true;
             return;
         }
 
-        double currentCenter = _pillTranslate.Y + ((PillHeight / 2d) * _pillScale.ScaleY);
-        if (Math.Abs(currentCenter - targetCenter) < 0.5)
+        double currentTop = _pillTop;
+        double currentBottom = _pillBottom;
+        if (Math.Abs(currentTop - targetTop) < 0.5)
         {
-            _pillScale.ScaleY = 1d;
-            _pillTranslate.Y = targetTop;
+            SetPillEdges(targetTop, targetTop + PillHeight);
             return;
         }
 
         _pillAnimationCancellation = new CancellationTokenSource();
         int version = ++_pillAnimationVersion;
-        _ = AnimatePillAsync(currentCenter, targetCenter, version, _pillAnimationCancellation.Token);
+        _ = AnimatePillEdgesAsync(
+            currentTop,
+            currentBottom,
+            targetTop,
+            targetTop + PillHeight,
+            targetCenter > currentTop + ((currentBottom - currentTop) / 2d),
+            version,
+            _pillAnimationCancellation.Token);
     }
 
     private void ClearPendingPillLayout()
@@ -231,14 +240,15 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             MoveSelectionPill(item, _pendingPillAnimate);
     }
 
-    private async Task AnimatePillAsync(
-        double startCenter,
-        double targetCenter,
+    private async Task AnimatePillEdgesAsync(
+        double startTop,
+        double startBottom,
+        double targetTop,
+        double targetBottom,
+        bool movingDown,
         int version,
         CancellationToken cancellationToken)
     {
-        double distance = Math.Abs(targetCenter - startCenter);
-        double stretch = MaxPillStretch * Math.Clamp(distance / PillStretchReferenceDistance, 0d, 1d);
         long started = Stopwatch.GetTimestamp();
         double durationMs = PillAnimationDuration.TotalMilliseconds;
 
@@ -252,31 +262,51 @@ public partial class SidebarView : BaseView<SidebarViewModel>
                 0d,
                 1d);
 
-            double eased = EvaluateBezier(progress, 0.33d, 0d, 0.1d, 1d);
-            double center = Lerp(startCenter, targetCenter, eased);
-            double scaleY = 1d + (stretch * Math.Sin(Math.PI * progress));
-
-            _pillScale.ScaleY = scaleY;
-            _pillTranslate.Y = center - ((PillHeight / 2d) * scaleY);
+            // Preserve the original WinUI-like edge motion: the leading edge arrives quickly
+            // while the trailing edge catches up. Fixed caps retain the original radius while
+            // the stem stretches using render transforms, avoiding layout invalidation.
+            double lead = EvaluateBezier(progress, 0d, 0d, 0d, 1d);
+            double trail = EvaluateBezier(progress, 0.5d, 0d, 0.2d, 1d);
+            double topProgress = movingDown ? trail : lead;
+            double bottomProgress = movingDown ? lead : trail;
+            double top = Lerp(startTop, targetTop, topProgress);
+            double bottom = Lerp(startBottom, targetBottom, bottomProgress);
+            SetPillEdges(top, bottom);
 
             if (progress >= 1d)
                 break;
 
-            try
-            {
-                await Task.Delay(16, cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
+            if (await NextAnimationFrameAsync() is null)
                 return;
-            }
         }
 
         if (version != _pillAnimationVersion || cancellationToken.IsCancellationRequested)
             return;
 
-        _pillScale.ScaleY = 1d;
-        _pillTranslate.Y = targetCenter - (PillHeight / 2d);
+        SetPillEdges(targetTop, targetBottom);
+    }
+
+    private Task<TimeSpan?> NextAnimationFrameAsync()
+    {
+        if (TopLevel.GetTopLevel(NavigationSelectionPill) is not { } topLevel)
+            return Task.FromResult<TimeSpan?>(null);
+
+        var completion = new TaskCompletionSource<TimeSpan?>();
+        topLevel.RequestAnimationFrame(time => completion.SetResult(time));
+        return completion.Task;
+    }
+
+    private void SetPillEdges(double top, double bottom)
+    {
+        const double capDiameter = 3d;
+        double stemHeight = Math.Max(0d, bottom - top - capDiameter);
+
+        _pillTop = top;
+        _pillBottom = bottom;
+        _pillTopCapTranslate.Y = top;
+        _pillStemScale.ScaleY = stemHeight;
+        _pillStemTranslate.Y = top + (capDiameter / 2d);
+        _pillBottomCapTranslate.Y = bottom - capDiameter;
     }
 
     private static double Lerp(double start, double end, double progress)

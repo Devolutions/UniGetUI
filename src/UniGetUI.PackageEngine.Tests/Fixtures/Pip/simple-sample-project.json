@@ -1,0 +1,45 @@
+{
+  "meta": { "api-version": "1.4" },
+  "name": "sample-project",
+  "versions": ["1.0.0", "2.0.0", "2.1.0", "2.1.1", "2.2.0", "3.0.0rc1"],
+  "files": [
+    {
+      "filename": "sample-project-1.0.0.tar.gz",
+      "yanked": false
+    },
+    {
+      "filename": "sample_project-1.0.0-py3-none-any.whl",
+      "yanked": false
+    },
+    {
+      "filename": "sample_project-2.0.0-py3-none-any.whl",
+      "requires-python": ">=3.7",
+      "yanked": false
+    },
+    {
+      "filename": "sample_project-2.1.0-py3-none-any.whl",
+      "requires-python": ">=3.8",
+      "yanked": false
+    },
+    {
+      "filename": "sample_project-2.1.1-py3-none-any.whl",
+      "requires-python": ">=3.8",
+      "yanked": "Broken wheel, use 2.1.0"
+    },
+    {
+      "filename": "sample_project-2.2.0-py3-none-any.whl",
+      "requires-python": ">=3.12",
+      "yanked": false
+    },
+    {
+      "filename": "sample_project-2.2.0.tar.gz",
+      "requires-python": ">=3.12",
+      "yanked": false
+    },
+    {
+      "filename": "sample_project-3.0.0rc1-py3-none-any.whl",
+      "requires-python": ">=3.8",
+      "yanked": false
+    }
+  ]
+}

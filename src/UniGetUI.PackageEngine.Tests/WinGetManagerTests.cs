@@ -47,6 +47,7 @@ public sealed class WinGetManagerTests : IDisposable
     public void Dispose()
     {
         SetNoPackagesHaveBeenLoaded(false);
+        NativePackageHandler.Clear();
         WinGetHelper.Instance = null!;
         CoreData.TEST_DataDirectoryOverride = null;
         if (Directory.Exists(_testRoot))
@@ -1586,6 +1587,192 @@ public sealed class WinGetManagerTests : IDisposable
 
         OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
         Assert.False(package.OverridenOptions.WinGet_DropArchAndScope);
+    }
+
+    private const string NodeJsLocalIdentifier =
+        @"ARP\Machine\X64\{9292CBD9-B395-42D4-8847-C0E8004C6F25}";
+
+    private static Package BuildNodeJsPackage(WinGet manager, string id) =>
+        new PackageBuilder()
+            .WithManager(manager)
+            .WithId(id)
+            .WithVersion("24.12.0")
+            .WithNewVersion("26.7.0")
+            .Build();
+
+    [Fact]
+    public void WinGetUpdateRetriesWithTheLocalIdentifierWhenNoInstalledPackageMatches()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = BuildNodeJsPackage(manager, "OpenJS.NodeJS");
+        NativePackageHandler.AddLocalIdentifier(package, NodeJsLocalIdentifier);
+
+        var firstAttempt = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Update
+        );
+        Assert.Contains("\"OpenJS.NodeJS\"", firstAttempt);
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A150014)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.AutoRetry);
+        Assert.True(package.OverridenOptions.WinGet_UseLocalIdentifier);
+
+        var retryAttempt = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Update
+        );
+        Assert.Contains($"\"{NodeJsLocalIdentifier}\"", retryAttempt);
+        Assert.DoesNotContain("\"OpenJS.NodeJS\"", retryAttempt);
+        Assert.Contains("--exact", retryAttempt);
+    }
+
+    [Fact]
+    public void WinGetUninstallRetriesWithTheLocalIdentifierWhenNoInstalledPackageMatches()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = BuildNodeJsPackage(manager, "OpenJS.NodeJS.Uninstall");
+        NativePackageHandler.AddLocalIdentifier(package, NodeJsLocalIdentifier);
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Uninstall,
+            [],
+            unchecked((int)0x8A150014)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.AutoRetry);
+
+        var retryAttempt = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Uninstall
+        );
+        Assert.Contains($"\"{NodeJsLocalIdentifier}\"", retryAttempt);
+    }
+
+    [Fact]
+    public void WinGetUpdateDoesNotRetryWithTheLocalIdentifierASecondTime()
+    {
+        var manager = new WinGet();
+        var package = BuildNodeJsPackage(manager, "OpenJS.NodeJS.Twice");
+        NativePackageHandler.AddLocalIdentifier(package, NodeJsLocalIdentifier);
+        package.OverridenOptions.WinGet_UseLocalIdentifier = true;
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A150014)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+    }
+
+    [Fact]
+    public void WinGetUpdateDoesNotRetryWhenTheLocalIdentifierIsUnknown()
+    {
+        var manager = new WinGet();
+        var package = BuildNodeJsPackage(manager, "OpenJS.NodeJS.Unknown");
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A150014)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.False(package.OverridenOptions.WinGet_UseLocalIdentifier);
+    }
+
+    [Fact]
+    public void WinGetUpdateDoesNotRetryWhenThePackageIsAlreadyIdentifiedLocally()
+    {
+        var manager = new WinGet();
+        var package = BuildNodeJsPackage(manager, NodeJsLocalIdentifier);
+        NativePackageHandler.AddLocalIdentifier(package, NodeJsLocalIdentifier);
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A150014)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.False(package.OverridenOptions.WinGet_UseLocalIdentifier);
+    }
+
+    [Fact]
+    public void WinGetUpdateDoesNotRetryWhenTheLocalIdentifierWouldBeReadAsAnOption()
+    {
+        var manager = new WinGet();
+        var package = BuildNodeJsPackage(manager, "OpenJS.NodeJS.Unsafe");
+        NativePackageHandler.AddLocalIdentifier(package, "--source");
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            [],
+            unchecked((int)0x8A150014)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.False(package.OverridenOptions.WinGet_UseLocalIdentifier);
+    }
+
+    [Fact]
+    public void WinGetUpdateUsesTheLocalIdentifierFromTheLatestListing()
+    {
+        var manager = new WinGet();
+        SetCliToolKind(manager, WinGetCliToolKind.SystemWinGet);
+        var package = BuildNodeJsPackage(manager, "OpenJS.NodeJS.Relisted");
+        NativePackageHandler.AddLocalIdentifier(
+            package,
+            @"ARP\Machine\X64\{00000000-0000-0000-0000-000000000000}"
+        );
+        NativePackageHandler.AddLocalIdentifier(package, NodeJsLocalIdentifier);
+        package.OverridenOptions.WinGet_UseLocalIdentifier = true;
+
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Update
+        );
+
+        Assert.Contains($"\"{NodeJsLocalIdentifier}\"", parameters);
+        Assert.DoesNotContain(
+            "\"ARP\\Machine\\X64\\{00000000-0000-0000-0000-000000000000}\"",
+            parameters
+        );
+    }
+
+    [Fact]
+    public void WinGetInstallDoesNotRetryWithTheLocalIdentifier()
+    {
+        var manager = new WinGet();
+        var package = BuildNodeJsPackage(manager, "OpenJS.NodeJS.Install");
+        NativePackageHandler.AddLocalIdentifier(package, NodeJsLocalIdentifier);
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Install,
+            [],
+            unchecked((int)0x8A150014)
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.False(package.OverridenOptions.WinGet_UseLocalIdentifier);
     }
 
     [Fact]

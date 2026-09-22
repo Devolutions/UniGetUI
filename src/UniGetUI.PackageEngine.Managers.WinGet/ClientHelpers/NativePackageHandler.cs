@@ -16,6 +16,7 @@ public static class NativePackageHandler
         new();
     private static ConcurrentDictionary<long, PackageInstallerInfo> __nativeInstallers_Uninstall =
         new();
+    private static readonly ConcurrentDictionary<long, string> __localIdentifiers = new();
 
     /// <summary>
     /// Get (cache or load) the native package for the given package, if any;
@@ -48,6 +49,42 @@ public static class NativePackageHandler
     public static void AddPackage(IPackage package, CatalogPackage catalogPackage)
     {
         __nativePackages[package.GetHash()] = catalogPackage;
+    }
+
+    internal static void AddLocalIdentifier(IPackage package, string? localIdentifier)
+    {
+        if (string.IsNullOrWhiteSpace(localIdentifier))
+        {
+            __localIdentifiers.TryRemove(package.GetHash(), out _);
+            return;
+        }
+
+        __localIdentifiers[package.GetHash()] = localIdentifier;
+    }
+
+    internal static string? GetLocalIdentifier(IPackage package)
+    {
+        if (__localIdentifiers.TryGetValue(package.GetHash(), out string? cached))
+            return cached;
+
+        string? localIdentifier;
+        try
+        {
+            localIdentifier = GetPackage(package)?.InstalledVersion?.Id;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(
+                $"Could not read the local identifier of package {package.Id}: {ex.GetType().Name}: {ex.Message}"
+            );
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(localIdentifier))
+            return null;
+
+        AddLocalIdentifier(package, localIdentifier);
+        return localIdentifier;
     }
 
     /// <summary>
@@ -128,6 +165,7 @@ public static class NativePackageHandler
     public static void Clear()
     {
         __nativePackages.Clear();
+        __localIdentifiers.Clear();
         __nativeDetails.Clear();
         __nativeInstallers_Install.Clear();
         __nativeInstallers_Uninstall.Clear();

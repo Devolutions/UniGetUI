@@ -25,6 +25,28 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         return $"--id {Selector(package.Id.TrimEnd('…'), "identifier")}";
     }
 
+    private static string GetSelectorPiece(IPackage package)
+    {
+        if (
+            package.OverridenOptions.WinGet_UseLocalIdentifier
+            && GetFallbackIdentifier(package) is { } localIdentifier
+        )
+            return $"--id {Selector(localIdentifier, "local identifier")} --exact";
+
+        return GetIdNamePiece(package);
+    }
+
+    private static string? GetFallbackIdentifier(IPackage package)
+    {
+        string? localIdentifier = NativePackageHandler.GetLocalIdentifier(package);
+        if (localIdentifier is null || localIdentifier == package.Id)
+            return null;
+
+        return CoreTools.IsOptionSafeIdentifier(localIdentifier, quotedByTheSink: true)
+            ? localIdentifier
+            : null;
+    }
+
     private static string Selector(string value, string description)
     {
         if (!CoreTools.IsOptionSafeIdentifier(value, quotedByTheSink: true))
@@ -61,7 +83,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             },
         ];
 
-        parameters.AddRange(GetIdNamePiece(package).Split(" "));
+        parameters.AddRange(GetSelectorPiece(package).Split(" "));
         if (!package.Source.IsVirtualManager)
         {
             parameters.AddRange(["--source", package.Source.Name]);
@@ -373,6 +395,21 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         )
         { // Sometimes, when uninstalling, error code 0x8A150030 can be caused by missing permissions.
             package.OverridenOptions.RunAsAdministrator = true;
+            return OperationVeredict.AutoRetry;
+        }
+
+        if (
+            uintCode is 0x8A150014
+            && operation is OperationType.Update or OperationType.Uninstall
+            && !package.OverridenOptions.WinGet_UseLocalIdentifier
+            && GetFallbackIdentifier(package) is { } localIdentifier
+        )
+        {
+            Logger.Warn(
+                $"WinGet found no installed package matching {package.Id}; retrying the {operation} "
+                + $"against the local identifier {localIdentifier} (issue #5413)"
+            );
+            package.OverridenOptions.WinGet_UseLocalIdentifier = true;
             return OperationVeredict.AutoRetry;
         }
 

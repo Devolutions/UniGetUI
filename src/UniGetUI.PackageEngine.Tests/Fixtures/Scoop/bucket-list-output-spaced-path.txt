@@ -1,0 +1,4 @@
+Name   Source                                       Updated               Manifests
+----   ------                                       -------               ---------
+main   ~\AppData\Local\Temp\My Scoop\buckets\main   2026-09-22 3:46:27 PM         2
+extras ~\AppData\Local\Temp\My Scoop\buckets\extras 2026-09-22 3:46:27 PM         3

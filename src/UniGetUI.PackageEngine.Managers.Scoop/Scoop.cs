@@ -255,11 +255,11 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             IReadOnlyList<int>? columns = null;
             foreach (string rawLine in lines)
             {
-                string line = StripAnsiSequences(rawLine);
+                string line = ScoopTable.StripAnsiSequences(rawLine);
 
                 if (columns is null)
                 {
-                    columns = ReadColumnStarts(line);
+                    columns = ScoopTable.ReadColumnStarts(line);
                     continue;
                 }
 
@@ -268,9 +268,9 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                     continue;
                 }
 
-                string id = ReadColumn(line, columns, 0);
-                string version = ReadColumn(line, columns, 1);
-                string newVersion = ReadColumn(line, columns, 2);
+                string id = ScoopTable.ReadColumn(line, columns, 0);
+                string version = ScoopTable.ReadColumn(line, columns, 1);
+                string newVersion = ScoopTable.ReadColumn(line, columns, 2);
 
                 if (id.Length is 0 || version.Length is 0 || newVersion.Length is 0)
                 {
@@ -309,52 +309,6 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             }
 
             return packages;
-        }
-
-        private static readonly Regex AnsiSequence = new(
-            @"\x1b\[[0-9;]*m",
-            RegexOptions.Compiled
-        );
-
-        private static string StripAnsiSequences(string line) =>
-            line.Contains('\x1b') ? AnsiSequence.Replace(line, "") : line;
-
-        private static IReadOnlyList<int>? ReadColumnStarts(string line)
-        {
-            if (!line.Contains("---"))
-            {
-                return null;
-            }
-
-            List<int> starts = [];
-            for (int i = 0; i < line.Length; i++)
-            {
-                if (line[i] is not '-')
-                {
-                    continue;
-                }
-
-                starts.Add(i);
-                while (i < line.Length && line[i] is '-')
-                {
-                    i++;
-                }
-            }
-
-            return starts;
-        }
-
-        private static string ReadColumn(string line, IReadOnlyList<int> starts, int index)
-        {
-            int start = starts[index];
-            if (start >= line.Length)
-            {
-                return "";
-            }
-
-            int end =
-                index + 1 < starts.Count ? Math.Min(starts[index + 1], line.Length) : line.Length;
-            return line[start..end].Trim();
         }
 
         internal IReadOnlyList<Package> ParseInstalledPackages(IEnumerable<string> lines)

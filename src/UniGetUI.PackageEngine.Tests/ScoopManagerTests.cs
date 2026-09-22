@@ -140,6 +140,31 @@ public sealed class ScoopManagerTests : IDisposable
     }
 
     [Fact]
+    public void ParseSourcesKeepsLocalBucketsWhosePathContainsSpaces()
+    {
+        var manager = new Scoop();
+        var helper = Assert.IsType<ScoopSourceHelper>(manager.SourcesHelper);
+
+        var sources = helper.ParseSources(ReadFixtureLines(@"Scoop\bucket-list-output-spaced-path.txt"));
+
+        Assert.Collection(
+            sources,
+            source =>
+            {
+                Assert.Equal("main", source.Name);
+                Assert.Equal(2, source.PackageCount);
+                Assert.Equal("2026-09-22 3:46:27", source.UpdateDate);
+            },
+            source =>
+            {
+                Assert.Equal("extras", source.Name);
+                Assert.Equal(3, source.PackageCount);
+                Assert.Equal("2026-09-22 3:46:27", source.UpdateDate);
+            }
+        );
+    }
+
+    [Fact]
     public void ParseSourcesNormalizesGitUrlsAndLocalBuckets()
     {
         var manager = new Scoop();

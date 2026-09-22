@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
@@ -12,12 +13,19 @@ namespace UniGetUI.Avalonia.Views.DialogPages;
 public partial class InstallOptionsControl : UserControl
 {
     private const double TabScrollStep = 160d;
+    private bool _tabHeaderLayoutUpdateQueued;
 
     private InstallOptionsViewModel ViewModel => (InstallOptionsViewModel)DataContext!;
 
     public InstallOptionsControl()
     {
         InitializeComponent();
+
+        // The tab-header ScrollViewer's Extent is not reliable during the first synchronous
+        // layout pass while the immersive flyout is being attached. Re-evaluate once render
+        // layout settles so the overflow chevrons reflect the final header extent.
+        AttachedToVisualTree += (_, _) => QueueTabHeaderLayoutUpdate(InstallOptionsTabs);
+        InstallOptionsTabs.SizeChanged += (_, _) => QueueTabHeaderLayoutUpdate(InstallOptionsTabs);
     }
 
     public void FocusProfileSelector() => ProfileSelectorComboBox.Focus();
@@ -44,7 +52,22 @@ public partial class InstallOptionsControl : UserControl
     private void InstallOptionsTabs_LayoutUpdated(object? sender, EventArgs e)
     {
         if (sender is TabControl tabControl)
-            UpdateTabScrollButtons(tabControl);
+            QueueTabHeaderLayoutUpdate(tabControl);
+    }
+
+    private void QueueTabHeaderLayoutUpdate(TabControl tabControl)
+    {
+        if (_tabHeaderLayoutUpdateQueued)
+            return;
+
+        _tabHeaderLayoutUpdateQueued = true;
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                _tabHeaderLayoutUpdateQueued = false;
+                UpdateTabScrollButtons(tabControl);
+            },
+            DispatcherPriority.Render);
     }
 
     private static ScrollViewer? FindTabHeadersScrollViewer(TabControl? tabControl)

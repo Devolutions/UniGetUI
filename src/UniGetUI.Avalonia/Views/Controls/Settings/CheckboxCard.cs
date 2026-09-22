@@ -142,14 +142,9 @@ public partial class CheckboxCard : SettingsCard
         _checkbox.IsCheckedChanged += _checkbox_Toggled;
         ApplyAutomationMetadata(_checkbox, _textblock.Text);
 
-        // The SettingsCard measures the Header with infinite width, so TextWrapping
-        // alone won't constrain the warning block. Fix it by updating MaxWidth after
-        // every layout pass, leaving room for the Content (toggle) area.
-        SizeChanged += (_, e) =>
-        {
-            var contentWidth = (Content as Control)?.Bounds.Width ?? 0;
-            _warningBlock.MaxWidth = Math.Max(100, e.NewSize.Width - contentWidth - 48);
-        };
+        // Header width is constrained by SettingsCard's responsive grid, so both the title
+        // and warning text wrap naturally around the right-side toggle.
+        RightAlignWrappedContent = true;
     }
 
     protected void UpdateStateLabel()

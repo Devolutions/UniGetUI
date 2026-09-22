@@ -12,40 +12,21 @@
         Background="{DynamicResource AppDialogBackground}">
 
     <dialogs:ImmersiveDialog.Styles>
-        <!-- Scoped to this dialog family: these do not alter global Button resources. -->
+        <!-- Keep the old dialog geometry, but let the standard WinUI-like Button/SplitButton
+             resources own normal, hover, pressed and border states. -->
         <Style Selector="Button.operation-dialog-action">
             <Setter Property="Height" Value="32"/>
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource SecondaryActionBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="{DynamicResource SecondaryActionBorderThickness}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-        <Style Selector="Button.operation-dialog-action:pointerover">
-            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
-        </Style>
-        <Style Selector="Button.operation-dialog-action:pressed">
-            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
         </Style>
         <Style Selector="SplitButton.operation-dialog-action">
             <Setter Property="Height" Value="32"/>
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource SecondaryActionBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="{DynamicResource SecondaryActionBorderThickness}"/>
             <Setter Property="FontSize" Value="14"/>
-        </Style>
-        <Style Selector="SplitButton.operation-dialog-action:pointerover">
-            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
-        </Style>
-        <Style Selector="SplitButton.operation-dialog-action:pressed">
-            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
         </Style>
     </dialogs:ImmersiveDialog.Styles>
 

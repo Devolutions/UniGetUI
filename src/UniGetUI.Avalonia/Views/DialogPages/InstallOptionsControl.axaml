@@ -19,10 +19,6 @@
             <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ComboBoxBorderBrushPointerOver}"/>
         </Style>
-        <Style Selector="ComboBox.install-option-input:focus-within">
-            <Setter Property="Background" Value="{DynamicResource InstallOptionsTabSelectedBackground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ComboBoxBorderBrushPressed}"/>
-        </Style>
 
         <!-- WinUI-style rich tabs: roomy headers that hold an icon + two text lines. -->
         <Style Selector="TabControl.install-options-tabs">
@@ -55,9 +51,11 @@
                                 <ScrollViewer x:Name="TabHeadersScrollViewer"
                                               Grid.Column="1"
                                               HorizontalScrollBarVisibility="Hidden"
-                                              VerticalScrollBarVisibility="Disabled">
+                                              VerticalScrollBarVisibility="Disabled"
+                                              HorizontalContentAlignment="Center">
                                     <ItemsPresenter Name="PART_ItemsPresenter"
-                                                    ItemsPanel="{TemplateBinding ItemsPanel}"/>
+                                                    ItemsPanel="{TemplateBinding ItemsPanel}"
+                                                    HorizontalAlignment="Center"/>
                                 </ScrollViewer>
                                 <Button x:Name="NextTabButton"
                                         Grid.Column="2"
@@ -147,7 +145,7 @@
             <Setter Property="IsVisible" Value="False"/>
         </Style>
         <!-- Blur the locked options themselves; the overlay remains sharp above them. -->
-        <Style Selector="StackPanel.lockable-options.locked">
+        <Style Selector="Border.lockable-options.locked">
             <Setter Property="Effect">
                 <BlurEffect Radius="6"/>
             </Setter>
@@ -228,9 +226,11 @@
 
         <!-- ── Options area + lock overlay ── -->
         <Grid>
-          <StackPanel Spacing="12"
-                      Classes="lockable-options"
-                      Classes.locked="{Binding FollowGlobal}">
+          <Border Margin="-6"
+                  Padding="6"
+                  Classes="lockable-options"
+                  Classes.locked="{Binding FollowGlobal}">
+          <StackPanel Spacing="12">
 
             <!-- Explainer (applies to every tab, like WinUI) -->
             <TextBlock Text="{Binding GeneralInfoLabel}"
@@ -693,6 +693,7 @@
             </TabControl>
 
           </StackPanel>
+          </Border>
 
           <!-- Lock overlay shown while following the default options. The options content
                beneath it is Gaussian-blurred by the conditional style above. -->

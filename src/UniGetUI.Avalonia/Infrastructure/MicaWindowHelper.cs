@@ -21,9 +21,7 @@ namespace UniGetUI.Avalonia.Infrastructure;
 internal static class MicaWindowHelper
 {
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
-    private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
     private const int DWMWCP_ROUND = 2;
-    private const int DWMSBT_TRANSIENTWINDOW = 3; // Acrylic — for transient surfaces (menus/flyouts); Mica won't paint on these
 
     private static bool _acrylicPopupsHooked;
     private static bool _micaConfirmedUnavailable;
@@ -49,9 +47,10 @@ internal static class MicaWindowHelper
         };
     }
 
-    // Applies the Windows 11 transient-surface treatment to popup hosts. Menus use an
-    // opaque WinUI surface; combo dropdowns, tooltips, and ordinary flyouts use acrylic.
-    // Registered once at startup when Mica is enabled.
+    // Applies the Windows 11 transient-surface treatment to popup hosts. WinUI menu
+    // flyouts/context menus use desktop acrylic just like the other transient surfaces.
+    // The native tray popup is intentionally excluded. Registered once at startup when
+    // Mica is enabled; otherwise the existing opaque surfaces remain as the fallback.
     public static void EnableAcrylicPopups()
     {
         if (!IsMicaEnabled() || _acrylicPopupsHooked)
@@ -61,10 +60,9 @@ internal static class MicaWindowHelper
         // In-app menus, flyouts, tooltips, and combo popups are hosted in a PopupRoot.
         Control.LoadedEvent.AddClassHandler<PopupRoot>((root, _) => ApplyAcrylicToPopup(root));
 
-        // The system-tray context menu is NOT a PopupRoot — Avalonia hosts it in its own Window
-        // (Avalonia.Win32.TrayIconImpl.TrayPopupRoot), so it misses the handler above and would
-        // render with no surface over the desktop. Catch it by type name and apply the opaque
-        // menu treatment. The other Windows (MainWindow/dialogs) are handled via Apply().
+        // The system-tray context menu is not an app flyout and must keep its existing
+        // opaque/native-looking surface. Catch Avalonia's dedicated tray popup host here.
+        // The other Windows (MainWindow/dialogs) are handled via Apply().
         Control.LoadedEvent.AddClassHandler<Window>((win, _) =>
         {
             if (win.GetType().Name == "TrayPopupRoot")
@@ -77,39 +75,54 @@ internal static class MicaWindowHelper
         if (!IsMicaEnabled())
             return;
 
-        // Menus use WinUI's opaque flyout surface. Other transient controls (combo boxes,
-        // tooltips and ordinary flyouts) retain acrylic.
-        bool isMenu = root.GetType().Name == "TrayPopupRoot"
-                      || root.GetVisualDescendants()
-                          .Any(control => control is MenuFlyoutPresenter or ContextMenu);
-        if (isMenu)
-        {
-            root.TransparencyLevelHint = new[] { WindowTransparencyLevel.None };
-            if (root.TryFindResource("MenuSurfaceBrush", root.ActualThemeVariant, out object? resource)
-                && resource is IBrush brush)
-            {
-                root.Background = brush;
-            }
+        bool isTrayMenu = root.GetType().Name == "TrayPopupRoot";
+        bool isAppMenu = !isTrayMenu
+                         && root.GetVisualDescendants()
+                             .Any(control => control is MenuFlyoutPresenter or ContextMenu);
 
-            ApplyRoundedCorners(root);
+        if (isTrayMenu)
+        {
+            ApplyOpaqueMenuFallback(root);
             return;
         }
 
-        // Request acrylic (not Transparent): the Transparent level makes a layered window, and DWM
-        // system backdrops never paint on those — so the popup ended up fully see-through with only
-        // the presenter tint and make its contents unreadable. AcrylicBlur gives a composited window
-        // DWM can actually fill. This path only runs when Mica is enabled
-        // (Win11 + transparency effects), so acrylic is always available here.
+        // Avalonia's AcrylicBlur is already a real Win32 composition acrylic path:
+        // it enables the host-backdrop brush and installs Avalonia's backdrop blur/saturation
+        // effect. Keep one acrylic path for menus, flyouts, tooltips and combo popups instead
+        // of stacking a second DWM transient backdrop on ordinary Flyout surfaces.
         root.TransparencyLevelHint = new[] { WindowTransparencyLevel.AcrylicBlur, WindowTransparencyLevel.Blur };
         root.Background = Brushes.Transparent;
 
         if (root.TryGetPlatformHandle()?.Handle is not { } handle || handle == 0)
+        {
+            if (isAppMenu)
+                ApplyOpaqueMenuFallback(root);
             return;
+        }
 
         int corner = DWMWCP_ROUND;
         NativeMethods.DwmSetWindowAttribute(handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, sizeof(int));
-        int backdrop = DWMSBT_TRANSIENTWINDOW;
-        NativeMethods.DwmSetWindowAttribute(handle, DWMWA_SYSTEMBACKDROP_TYPE, ref backdrop, sizeof(int));
+    }
+
+    private static void ApplyOpaqueMenuFallback(TopLevel root)
+    {
+        root.TransparencyLevelHint = new[] { WindowTransparencyLevel.None };
+
+        if (root.TryFindResource("MenuSurfaceFallbackBrush", root.ActualThemeVariant, out object? resource)
+            && resource is IBrush brush)
+        {
+            // A local resource wins over the Windows-Mica transparent menu resource, so the
+            // presenter and root both return to the current solid menu appearance.
+            root.Resources["MenuSurfaceBrush"] = brush;
+            root.Background = brush;
+        }
+        else if (root.TryFindResource("MenuSurfaceBrush", root.ActualThemeVariant, out resource)
+                 && resource is IBrush existingBrush)
+        {
+            root.Background = existingBrush;
+        }
+
+        ApplyRoundedCorners(root);
     }
 
     private static void ApplyRoundedCorners(TopLevel root)

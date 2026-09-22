@@ -49,6 +49,27 @@
       <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
          <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
       </Style>
+       <!-- The old WinUI source actions were HyperlinkButtons. Keep their border transparent
+            in every state and use subtle hover/pressed fills instead of generic Button chrome. -->
+       <Style Selector="Button.filter-hyperlink">
+          <Setter Property="Background" Value="Transparent"/>
+          <Setter Property="BorderBrush" Value="Transparent"/>
+          <Setter Property="BorderThickness" Value="1"/>
+          <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+       </Style>
+       <Style Selector="Button.filter-hyperlink:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+          <Setter Property="BorderBrush" Value="Transparent"/>
+          <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorSecondaryBrush}"/>
+       </Style>
+       <Style Selector="Button.filter-hyperlink:pressed">
+          <Setter Property="RenderTransform" Value="none"/>
+       </Style>
+       <Style Selector="Button.filter-hyperlink:pressed /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+          <Setter Property="BorderBrush" Value="Transparent"/>
+          <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorTertiaryBrush}"/>
+       </Style>
       <!-- Toolbar buttons: flat, no background/border in normal state (WinUI AppBarButton style) -->
       <Style Selector="#ToolbarRow Button">
          <Setter Property="Background" Value="Transparent"/>
@@ -58,14 +79,15 @@
          <Setter Property="Background" Value="Transparent"/>
          <Setter Property="BorderThickness" Value="0"/>
       </Style>
-      <!-- Main action button: card background with border -->
+      <!-- Main package action: filled but intentionally borderless, matching the old
+           WinUI toolbar treatment. The two halves still read as one fused control. -->
       <Style Selector="Button#MainToolbarButton">
          <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
-         <Setter Property="BorderThickness" Value="1"/>
+         <Setter Property="BorderThickness" Value="0"/>
       </Style>
       <Style Selector="Button#MainToolbarButtonDropdown">
          <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
-         <Setter Property="BorderThickness" Value="1"/>
+         <Setter Property="BorderThickness" Value="0"/>
       </Style>
       <!-- Render the three-state "Select all" checkbox's indeterminate glyph as a dash instead of a square -->
       <Style Selector="CheckBox:indeterminate /template/ Path#CheckGlyph">
@@ -102,6 +124,11 @@
            the persistent grip, matching WinUI's pane-resize affordance. -->
       <Style Selector="GridSplitter.winui-vertical-splitter">
          <Setter Property="Background" Value="Transparent"/>
+         <Setter Property="Transitions">
+            <Transitions>
+               <BrushTransition Property="Background" Duration="0:0:0.083"/>
+            </Transitions>
+         </Setter>
          <Setter Property="Template">
             <ControlTemplate>
                <!-- Match the visible splitter track to the package-list container on the
@@ -128,19 +155,50 @@
    </UserControl.Styles>
 
    <UserControl.Resources>
-      <ResourceDictionary>
-         <!-- Do not introduce a separate outline around a hovered/pressed filter header. -->
-         <StaticResource x:Key="ExpanderHeaderBorderBrushPointerOver" ResourceKey="ExpanderHeaderBorderBrush"/>
-         <StaticResource x:Key="ExpanderHeaderBorderBrushPressed" ResourceKey="ExpanderHeaderBorderBrush"/>
-         <!-- Only the outer compact pane keeps the pre-alpha outline. -->
-         <ResourceDictionary.ThemeDictionaries>
-            <ResourceDictionary x:Key="Light">
-               <SolidColorBrush x:Key="FilterPaneOutlineBrush" Color="#ECECEC"/>
-            </ResourceDictionary>
-            <ResourceDictionary x:Key="Dark">
-               <SolidColorBrush x:Key="FilterPaneOutlineBrush" Color="#393939"/>
-            </ResourceDictionary>
-         </ResourceDictionary.ThemeDictionaries>
+       <ResourceDictionary>
+          <!-- Match WinUI Expander interaction states inside the filter pane.
+               The card/header stays visually stable; only the chevron button reacts. -->
+          <SolidColorBrush x:Key="ExpanderChevronBackground" Color="Transparent"/>
+          <SolidColorBrush x:Key="ExpanderChevronBackgroundDisabled" Color="Transparent"/>
+          <SolidColorBrush x:Key="ExpanderChevronBorderBrush" Color="Transparent"/>
+          <SolidColorBrush x:Key="ExpanderChevronBorderBrushPointerOver" Color="Transparent"/>
+          <SolidColorBrush x:Key="ExpanderChevronBorderBrushPressed" Color="Transparent"/>
+          <SolidColorBrush x:Key="ExpanderChevronBorderBrushDisabled" Color="Transparent"/>
+
+          <!-- The slide-in pane shell keeps its original outline; these are only the
+               equivalent controls hosted inside the pane. -->
+          <ResourceDictionary.ThemeDictionaries>
+             <ResourceDictionary x:Key="Light">
+                <SolidColorBrush x:Key="FilterPaneOutlineBrush" Color="#ECECEC"/>
+                <SolidColorBrush x:Key="FilterExpanderContentBackground" Color="#06000000"/>
+                <!-- CardBackgroundFillColorDefaultBrush / CardStrokeColorDefaultBrush -->
+                <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#B3FFFFFF"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#B3FFFFFF"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBackgroundDisabled" Color="#B3FFFFFF"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#0F000000"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="#0F000000"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="#0F000000"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBorderBrushDisabled" Color="#0F000000"/>
+                <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#0F000000"/>
+                <!-- SubtleFillColorSecondaryBrush / SubtleFillColorTertiaryBrush -->
+                <SolidColorBrush x:Key="ExpanderChevronBackgroundPointerOver" Color="#09000000"/>
+                <SolidColorBrush x:Key="ExpanderChevronBackgroundPressed" Color="#06000000"/>
+             </ResourceDictionary>
+             <ResourceDictionary x:Key="Dark">
+                <SolidColorBrush x:Key="FilterPaneOutlineBrush" Color="#393939"/>
+                <SolidColorBrush x:Key="FilterExpanderContentBackground" Color="#08FFFFFF"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#0DFFFFFF"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#0DFFFFFF"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBackgroundDisabled" Color="#0DFFFFFF"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#19000000"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="#19000000"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="#19000000"/>
+                <SolidColorBrush x:Key="ExpanderHeaderBorderBrushDisabled" Color="#19000000"/>
+                <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#19000000"/>
+                <SolidColorBrush x:Key="ExpanderChevronBackgroundPointerOver" Color="#0FFFFFFF"/>
+                <SolidColorBrush x:Key="ExpanderChevronBackgroundPressed" Color="#0AFFFFFF"/>
+             </ResourceDictionary>
+          </ResourceDictionary.ThemeDictionaries>
          <conv:ScaleClampConverter x:Key="ScaleClampConverter"/>
       </ResourceDictionary>
    </UserControl.Resources>
@@ -293,7 +351,7 @@
                                   IsExpanded="True"
                                   CornerRadius="8"
                                   Padding="16,8,16,8"
-                                  Background="{DynamicResource SettingsCardBackground}">
+                                  Background="{DynamicResource FilterExpanderContentBackground}">
                             <Expander.Header>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/Sources.svg" Width="16" Height="16" VerticalAlignment="Center"/>
@@ -318,28 +376,24 @@
                                       RowSpacing="4"
                                       ColumnSpacing="4">
                                     <Button x:Name="SelectAllSourcesButton"
+                                            Classes="filter-hyperlink"
                                             Grid.Column="0"
                                             HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Center"
                                             Command="{Binding SelectAllSources_CmdCommand}"
                                             automation:AutomationProperties.Name="{t:Translate Select all}"
-                                            Padding="2"
-                                            Background="Transparent"
-                                            BorderThickness="0">
-                                        <TextBlock Text="{t:Translate Select all}" FontSize="12" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+                                            Padding="2">
+                                        <TextBlock Text="{t:Translate Select all}" FontSize="12" FontWeight="SemiBold"/>
                                     </Button>
                                     <Button x:Name="ClearSourceSelectionButton"
+                                            Classes="filter-hyperlink"
                                             Grid.Column="1"
                                             HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Center"
                                             Command="{Binding ClearSourceSelection_CmdCommand}"
                                             automation:AutomationProperties.Name="{t:Translate Clear selection}"
-                                            Padding="2"
-                                            Background="Transparent"
-                                            BorderThickness="0">
-                                        <TextBlock Text="{t:Translate Clear selection}" FontSize="12" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+                                            Padding="2">
+                                        <TextBlock Text="{t:Translate Clear selection}" FontSize="12" FontWeight="SemiBold"/>
                                     </Button>
                                     <ItemsControl x:Name="SourcesTreeView"
                                               Grid.Row="1"
@@ -412,7 +466,7 @@
                                   IsExpanded="False"
                                   CornerRadius="8"
                                   Padding="16,8,16,8"
-                                  Background="{DynamicResource SettingsCardBackground}">
+                                  Background="{DynamicResource FilterExpanderContentBackground}">
                             <Expander.Header>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/Filter.svg" Width="16" Height="16" VerticalAlignment="Center"/>
@@ -444,7 +498,7 @@
                                   IsExpanded="True"
                                   CornerRadius="8"
                                   Padding="16,8,16,8"
-                                  Background="{DynamicResource SettingsCardBackground}">
+                                  Background="{DynamicResource FilterExpanderContentBackground}">
                             <Expander.Header>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/search_filled.svg" Width="16" Height="16" VerticalAlignment="Center"/>
@@ -560,14 +614,14 @@
                 <Border Margin="0,6,0,6"
                         IsVisible="{Binding !MegaQueryVisible}"
                         CornerRadius="8"
-                        BorderThickness="0"
+                        BorderBrush="{DynamicResource PackageListBorderBrush}"
+                        BorderThickness="1"
                         Background="{DynamicResource PackageListBackground}">
                 <Grid RowDefinitions="Auto,*">
                     <!-- Header bar for grid/icons views (select-all) — hidden in list mode, which has its own DataGrid header -->
                     <Border Grid.Row="0"
                             IsVisible="{Binding !IsListViewMode}"
-                            BorderBrush="{DynamicResource AppBorderBrush}"
-                            BorderThickness="0,0,0,1"
+                            BorderThickness="0"
                             Padding="10,0">
                         <CheckBox IsChecked="{Binding AllPackagesChecked, Mode=TwoWay}"
                                   Content="{t:Translate Select all}"
@@ -785,8 +839,8 @@
                                             HorizontalAlignment="Stretch"
                                             automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
-                                                Background="{DynamicResource SettingsCardBackground}"
-                                                BorderBrush="{DynamicResource SettingsCardBorderBrush}" BorderThickness="1" Padding="4">
+                                                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                                BorderBrush="Transparent" BorderThickness="1" Padding="4">
                                             <Grid ColumnDefinitions="48,*,28" ColumnSpacing="4">
                                                 <Panel Grid.Column="0" Width="44" Height="44"
                                                        VerticalAlignment="Center" HorizontalAlignment="Center"
@@ -874,8 +928,8 @@
                                             HorizontalAlignment="Stretch"
                                             automation:AutomationProperties.Name="{Binding Package.AutomationName}"
                                             automation:AutomationProperties.ItemType="{t:Translate Package}"
-                                                Background="{DynamicResource SettingsCardBackground}"
-                                                BorderBrush="{DynamicResource SettingsCardBorderBrush}" BorderThickness="1" Padding="4">
+                                                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                                BorderBrush="Transparent" BorderThickness="1" Padding="4">
                                             <Grid RowDefinitions="30,57,30,15">
                                                 <CheckBox Grid.Row="0"
                                                           Classes="package-selector"
@@ -1097,7 +1151,7 @@
                          SelectedIndex="{Binding ViewModeIndex, Mode=TwoWay}"
                          Background="Transparent"
                          BorderThickness="1"
-                         BorderBrush="{DynamicResource AppBorderBrush}"
+                         BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                          CornerRadius="4"
                          Padding="0">
                     <ListBox.ItemsPanel>

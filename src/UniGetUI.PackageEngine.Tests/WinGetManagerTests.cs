@@ -42,6 +42,7 @@ public sealed class WinGetManagerTests : IDisposable
         Settings.SetValue(Settings.K.ProxyURL, "");
         Settings.SetValue(Settings.K.WinGetCliToolPreference, "");
         Settings.SetValue(Settings.K.WinGetComApiPolicy, "");
+        Settings.Set(Settings.K.UseAgentBroker, false);
     }
 
     public void Dispose()
@@ -1711,6 +1712,33 @@ public sealed class WinGetManagerTests : IDisposable
 
         OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
         Assert.False(package.OverridenOptions.WinGet_UseLocalIdentifier);
+    }
+
+    [Fact]
+    public void WinGetBrokeredUpdateIsNotRetriedBecauseTheRequestWouldBeIdentical()
+    {
+        var manager = new WinGet();
+        var package = BuildNodeJsPackage(manager, "OpenJS.NodeJS.Brokered");
+        NativePackageHandler.AddLocalIdentifier(package, NodeJsLocalIdentifier);
+
+        bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
+        Settings.Set(Settings.K.UseAgentBroker, true);
+        try
+        {
+            var veredict = manager.OperationHelper.GetResult(
+                package,
+                OperationType.Update,
+                [],
+                unchecked((int)0x8A150014)
+            );
+
+            OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+            Assert.False(package.OverridenOptions.WinGet_UseLocalIdentifier);
+        }
+        finally
+        {
+            Settings.Set(Settings.K.UseAgentBroker, originalSetting);
+        }
     }
 
     [Fact]

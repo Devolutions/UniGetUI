@@ -36,6 +36,9 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         return GetIdNamePiece(package);
     }
 
+    private static bool OperationIsBrokered(IPackage package) =>
+        Settings.Get(Settings.K.UseAgentBroker) && !package.Source.IsVirtualManager;
+
     private static string? GetFallbackIdentifier(IPackage package)
     {
         string? localIdentifier = NativePackageHandler.GetLocalIdentifier(package);
@@ -402,6 +405,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             uintCode is 0x8A150014
             && operation is OperationType.Update or OperationType.Uninstall
             && !package.OverridenOptions.WinGet_UseLocalIdentifier
+            && !OperationIsBrokered(package)
             && GetFallbackIdentifier(package) is { } localIdentifier
         )
         {

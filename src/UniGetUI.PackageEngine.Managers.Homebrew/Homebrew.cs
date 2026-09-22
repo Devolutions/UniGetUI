@@ -69,17 +69,26 @@ public partial class Homebrew : PackageManager
             InstallVerb = "install",
             UpdateVerb = "upgrade",
             UninstallVerb = "uninstall",
-            KnownSources =
-            [
-                new HomebrewSource(this, "Homebrew", new Uri("https://github.com/Homebrew/homebrew-core")),
-                new HomebrewSource(this, "Homebrew Cask", new Uri("https://github.com/Homebrew/homebrew-cask")),
-            ],
+            KnownSources = CreateBuiltInSources(this, OperatingSystem.IsMacOS()),
             DefaultSource = new HomebrewSource(this, "Homebrew", new Uri("https://github.com/Homebrew/homebrew-core")),
         };
 
         SourcesHelper = new HomebrewSourceHelper(this);
         DetailsHelper = new HomebrewPkgDetailsHelper(this);
         OperationHelper = new HomebrewPkgOperationHelper(this);
+    }
+
+    /// <summary>
+    /// The sources Homebrew serves from its API without a tap: formulae everywhere, casks on macOS
+    /// only (Homebrew on Linux has no casks).
+    /// </summary>
+    internal static IManagerSource[] CreateBuiltInSources(Homebrew manager, bool isMacOS)
+    {
+        var formulae = new HomebrewSource(manager, "Homebrew", new Uri("https://github.com/Homebrew/homebrew-core"));
+        if (!isMacOS)
+            return [formulae];
+
+        return [formulae, new HomebrewSource(manager, "Homebrew Cask", new Uri("https://github.com/Homebrew/homebrew-cask"))];
     }
 
     // ── Executable discovery ───────────────────────────────────────────────

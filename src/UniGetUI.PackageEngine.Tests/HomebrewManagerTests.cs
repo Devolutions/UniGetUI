@@ -1,5 +1,6 @@
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.HomebrewManager;
 using UniGetUI.PackageEngine.PackageClasses;
@@ -101,6 +102,73 @@ public sealed class HomebrewManagerTests : IDisposable
                 PackageAssert.BelongsTo(package, manager, caskSource);
             }
         );
+    }
+
+    // Issue #5219: on Homebrew 4 and later `brew tap` prints nothing for homebrew/core, so the
+    // sources page was empty and the default "Homebrew" source was reported as not configured.
+    [Fact]
+    public void SourcesListTheBuiltInSourcesWhenBrewTapPrintsNothing()
+    {
+        var manager = new Homebrew();
+        var helper = (HomebrewSourceHelper)manager.SourcesHelper;
+
+        IReadOnlyList<IManagerSource> sources = helper.BuildSourceList([]);
+
+        Assert.Equal(manager.Properties.KnownSources, sources);
+        Assert.Contains(sources, source => source.Name == "Homebrew");
+    }
+
+    [Fact]
+    public void SourcesListOtherTapsOnceAndSkipTheBuiltInTaps()
+    {
+        var manager = new Homebrew();
+        var helper = (HomebrewSourceHelper)manager.SourcesHelper;
+
+        IReadOnlyList<IManagerSource> sources = helper.BuildSourceList(
+            ["homebrew/core", "hashicorp/tap", "", "  ", "Homebrew/cask"]
+        );
+
+        Assert.Equal(manager.Properties.KnownSources.Length + 1, sources.Count);
+        Assert.Equal(manager.Properties.KnownSources, sources.Take(manager.Properties.KnownSources.Length));
+        IManagerSource tap = sources[^1];
+        Assert.Equal("hashicorp/tap", tap.Name);
+        Assert.Equal(new Uri("https://github.com/hashicorp/homebrew-tap"), tap.Url);
+    }
+
+    [Fact]
+    public void CasksAreABuiltInSourceOnMacOsOnly()
+    {
+        var manager = new Homebrew();
+
+        Assert.Equal(["Homebrew"], Homebrew.CreateBuiltInSources(manager, isMacOS: false).Select(s => s.Name));
+        Assert.Equal(
+            ["Homebrew", "Homebrew Cask"],
+            Homebrew.CreateBuiltInSources(manager, isMacOS: true).Select(s => s.Name)
+        );
+        Assert.Equal(
+            OperatingSystem.IsMacOS() ? 2 : 1,
+            manager.Properties.KnownSources.Length
+        );
+    }
+
+    // brew rejects "Homebrew" and "Homebrew Cask" ("Error: Invalid tap name: 'Homebrew'"); the
+    // parameters must name the tap.
+    [Theory]
+    [InlineData("Homebrew", "https://github.com/Homebrew/homebrew-core", "tap homebrew/core", "untap homebrew/core")]
+    [InlineData("Homebrew Cask", "https://github.com/Homebrew/homebrew-cask", "tap homebrew/cask", "untap homebrew/cask")]
+    [InlineData(
+        "hashicorp/tap",
+        "https://github.com/hashicorp/homebrew-tap",
+        "tap hashicorp/tap https://github.com/hashicorp/homebrew-tap",
+        "untap hashicorp/tap"
+    )]
+    public void AddAndRemoveParametersUseTheTapName(string name, string url, string add, string remove)
+    {
+        var manager = new Homebrew();
+        var source = new ManagerSource(manager, name, new Uri(url));
+
+        Assert.Equal(add, string.Join(' ', manager.SourcesHelper.GetAddSourceParameters(source)));
+        Assert.Equal(remove, string.Join(' ', manager.SourcesHelper.GetRemoveSourceParameters(source)));
     }
 
     private static string[] ReadFixtureLines(string relativePath)

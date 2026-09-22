@@ -1,18 +1,14 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Core.Tools.Tests;
 
 public class RelaunchTests
 {
-    [Fact]
+    [WindowsFact]
     public void CreateRelaunchStartInfo_OnWindows_WaitsAndStartsThroughPowerShell()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         ProcessStartInfo startInfo = CoreTools.CreateRelaunchStartInfo(
             4242,
             @"C:\Users\O'Brien\UniGetUI\UniGetUI.exe"
@@ -29,14 +25,9 @@ public class RelaunchTests
         Assert.True(startInfo.CreateNoWindow);
     }
 
-    [Fact]
+    [UnixFact]
     public void CreateRelaunchStartInfo_OffWindows_WaitsForThePidInAShellHelper()
     {
-        if (OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         ProcessStartInfo startInfo = CoreTools.CreateRelaunchStartInfo(4242, "/opt/unigetui/UniGetUI");
 
         Assert.Equal("/bin/sh", startInfo.FileName);
@@ -45,7 +36,7 @@ public class RelaunchTests
         Assert.Equal("-c", startInfo.ArgumentList[0]);
         Assert.Contains("kill -0 \"$pid\"", startInfo.ArgumentList[1]);
         Assert.Contains("\"$exe\" >/dev/null 2>&1 &", startInfo.ArgumentList[1]);
-        Assert.Contains("/usr/bin/open -na \"$bundle\"", startInfo.ArgumentList[1]);
+        Assert.Contains("/usr/bin/open -na \"$bundle\" || \"$exe\" >/dev/null 2>&1 &", startInfo.ArgumentList[1]);
         Assert.Equal("sh", startInfo.ArgumentList[2]);
         Assert.Equal("4242", startInfo.ArgumentList[3]);
         Assert.Equal("/opt/unigetui/UniGetUI", startInfo.ArgumentList[4]);
@@ -53,14 +44,9 @@ public class RelaunchTests
         Assert.False(startInfo.UseShellExecute);
     }
 
-    [Fact]
+    [MacOSFact]
     public void CreateRelaunchStartInfo_OnMacOs_PassesTheBundleToTheHelper()
     {
-        if (!OperatingSystem.IsMacOS())
-        {
-            return;
-        }
-
         ProcessStartInfo startInfo = CoreTools.CreateRelaunchStartInfo(
             4242,
             "/Applications/UniGetUI.app/Contents/MacOS/UniGetUI"
@@ -90,16 +76,38 @@ public class RelaunchTests
         Assert.Null(CoreTools.FindAppBundle(executable));
     }
 
+    [Fact]
+    public void TryStartRelaunchHelper_ReturnsFalseWhenTheHelperCannotStart()
+    {
+        var startInfo = new ProcessStartInfo(
+            Path.Combine(Path.GetTempPath(), "unigetui-missing-" + Path.GetRandomFileName())
+        )
+        {
+            UseShellExecute = false,
+        };
+
+        Assert.False(CoreTools.TryStartRelaunchHelper(startInfo));
+    }
+
     // The real helper: a sleeping child stands in for the exiting UniGetUI, and the "executable" is
     // a script that leaves a marker. The marker must not appear while the child is alive.
-    [Fact]
-    public async Task RelaunchHelper_StartsTheExecutableOnlyAfterTheProcessExits()
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            return;
-        }
+    [UnixFact]
+    [UnsupportedOSPlatform("windows")]
+    public Task RelaunchHelper_StartsTheExecutableOnlyAfterTheProcessExits() =>
+        AssertHelperRelaunchesAfterExitAsync(bundle: null);
 
+    // A bundle open refuses (here one that does not exist; on Linux there is no /usr/bin/open at
+    // all) must fall back to starting the executable instead of leaving nothing running.
+    [UnixFact]
+    [UnsupportedOSPlatform("windows")]
+    public Task RelaunchHelper_StartsTheExecutableWhenOpenRejectsTheBundle() =>
+        AssertHelperRelaunchesAfterExitAsync(
+            bundle: Path.Combine(Path.GetTempPath(), "unigetui-missing-" + Path.GetRandomFileName(), "UniGetUI.app")
+        );
+
+    [UnsupportedOSPlatform("windows")]
+    private static async Task AssertHelperRelaunchesAfterExitAsync(string? bundle)
+    {
         string directory = Path.Combine(Path.GetTempPath(), "unigetui-relaunch-" + Path.GetRandomFileName());
         Directory.CreateDirectory(directory);
         string marker = Path.Combine(directory, "relaunched");
@@ -110,7 +118,13 @@ public class RelaunchTests
         using var standIn = Process.Start(new ProcessStartInfo("sleep", "1.5") { UseShellExecute = false })!;
         try
         {
-            using var helper = Process.Start(CoreTools.CreateRelaunchStartInfo(standIn.Id, target));
+            ProcessStartInfo startInfo = CoreTools.CreateRelaunchStartInfo(standIn.Id, target);
+            if (bundle is not null)
+            {
+                startInfo.ArgumentList[5] = bundle;
+            }
+
+            using var helper = Process.Start(startInfo);
             Assert.NotNull(helper);
 
             await Task.Delay(500);

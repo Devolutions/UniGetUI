@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Collections;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
@@ -157,17 +158,40 @@ namespace UniGetUI.Core.Tools
         public static void RelaunchProcess()
         {
             Logger.Debug("Launching process: " + CoreData.UniGetUIExecutableFile);
-            ScheduleRelaunchAfterExit();
+            if (!TryScheduleRelaunchAfterExit())
+            {
+                return;
+            }
+
             Logger.Warn("About to kill process");
             Environment.Exit(0);
         }
 
-        public static void ScheduleRelaunchAfterExit(string? executablePath = null)
+        /// <summary>
+        /// Starts the helper that relaunches UniGetUI once this process exits. Returns false, and
+        /// logs why, when the helper could not be started; the caller should then keep running.
+        /// </summary>
+        public static bool TryScheduleRelaunchAfterExit(string? executablePath = null)
         {
             executablePath ??= CoreData.UniGetUIExecutableFile;
             ProcessStartInfo startInfo = CreateRelaunchStartInfo(Environment.ProcessId, executablePath);
             Logger.Debug($"Scheduling a relaunch of {executablePath} through {startInfo.FileName}");
-            using var process = Process.Start(startInfo);
+            return TryStartRelaunchHelper(startInfo);
+        }
+
+        internal static bool TryStartRelaunchHelper(ProcessStartInfo startInfo)
+        {
+            try
+            {
+                using var process = Process.Start(startInfo);
+                return process is not null;
+            }
+            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or PlatformNotSupportedException)
+            {
+                Logger.Error($"Could not start the relaunch helper {startInfo.FileName}:");
+                Logger.Error(ex);
+                return false;
+            }
         }
 
         /// <summary>
@@ -193,13 +217,14 @@ namespace UniGetUI.Core.Tools
             }
 
             // Positional arguments ($1=pid, $2=executable, $3=bundle or empty) keep the paths out of
-            // the script text. The wait gives up after 30 seconds, like the self-updater's helper.
+            // the script text. The wait has no cap, like Wait-Process on Windows: launching while the
+            // old process is alive would hand off to it through the single-instance guard and exit.
+            // If open rejects the bundle, the executable is started directly.
             const string script = """
                 pid="$1"; exe="$2"; bundle="$3"
-                i=0
-                while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done
+                while kill -0 "$pid" 2>/dev/null; do sleep 0.2; done
                 if [ -n "$bundle" ]; then
-                  /usr/bin/open -na "$bundle"
+                  /usr/bin/open -na "$bundle" || "$exe" >/dev/null 2>&1 &
                 else
                   "$exe" >/dev/null 2>&1 &
                 fi

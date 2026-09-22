@@ -106,19 +106,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 
                 try
                 {
-                    Uri url =
-                        source.Contains("https://") || source.Contains("http://")
-                            ? new Uri(Regex.Replace(source, @"^(.*)\.git$", "$1"))
-                            : new Uri(
-                                Path.Join(
-                                    Environment.GetFolderPath(
-                                        Environment.SpecialFolder.UserProfile
-                                    ),
-                                    "scoop",
-                                    "buckets",
-                                    name
-                                )
-                            );
+                    Uri url = BuildSourceUrl(name, source);
 
                     sources.Add(
                         int.TryParse(manifests, out int packageCount)
@@ -139,6 +127,26 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             }
 
             return sources;
+        }
+
+        private static Uri BuildSourceUrl(string name, string source)
+        {
+            if (source.Contains("https://") || source.Contains("http://"))
+            {
+                return new Uri(Regex.Replace(source, @"^(.*)\.git$", "$1"));
+            }
+
+            string userProfile = Environment.GetFolderPath(
+                Environment.SpecialFolder.UserProfile
+            );
+            string path =
+                source.StartsWith("~/") || source.StartsWith(@"~\")
+                    ? Path.Join(userProfile, source[2..])
+                    : source;
+
+            return Path.IsPathFullyQualified(path)
+                ? new Uri(path)
+                : new Uri(Path.Join(userProfile, "scoop", "buckets", name));
         }
     }
 }

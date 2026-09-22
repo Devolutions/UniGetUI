@@ -2,15 +2,13 @@ using System.Text.RegularExpressions;
 
 namespace UniGetUI.PackageEngine.Managers.ScoopManager
 {
-    internal static class ScoopTable
+    internal static partial class ScoopTable
     {
-        private static readonly Regex AnsiSequence = new(
-            @"\x1b\[[0-9;]*m",
-            RegexOptions.Compiled
-        );
+        [GeneratedRegex(@"\x1b\[[0-9;]*m")]
+        private static partial Regex AnsiSequence();
 
         public static string StripAnsiSequences(string line) =>
-            line.Contains('\x1b') ? AnsiSequence.Replace(line, "") : line;
+            line.Contains('\x1b') ? AnsiSequence().Replace(line, "") : line;
 
         public static IReadOnlyList<int>? ReadColumnStarts(string line)
         {

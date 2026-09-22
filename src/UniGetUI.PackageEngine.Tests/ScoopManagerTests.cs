@@ -152,12 +152,14 @@ public sealed class ScoopManagerTests : IDisposable
             source =>
             {
                 Assert.Equal("main", source.Name);
+                Assert.Equal(SpacedBucketUrl("main"), source.Url);
                 Assert.Equal(2, source.PackageCount);
                 Assert.Equal("2026-09-22 3:46:27", source.UpdateDate);
             },
             source =>
             {
                 Assert.Equal("extras", source.Name);
+                Assert.Equal(SpacedBucketUrl("extras"), source.Url);
                 Assert.Equal(3, source.PackageCount);
                 Assert.Equal("2026-09-22 3:46:27", source.UpdateDate);
             }
@@ -184,17 +186,7 @@ public sealed class ScoopManagerTests : IDisposable
             source =>
             {
                 Assert.Equal("extras", source.Name);
-                Assert.Equal(
-                    new Uri(
-                        Path.Join(
-                            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                            "scoop",
-                            "buckets",
-                            "extras"
-                        )
-                    ),
-                    source.Url
-                );
+                Assert.Equal(new Uri(@"C:\Users\fixture\scoop\buckets\extras"), source.Url);
                 Assert.Equal(321, source.PackageCount);
                 Assert.Equal("2024-02-02 09:08:07", source.UpdateDate);
             }
@@ -400,6 +392,23 @@ public sealed class ScoopManagerTests : IDisposable
     }
 
     [Fact]
+    public void ParseAvailableUpdatesReadsColumnsThroughAnsiColourCodes()
+    {
+        var manager = CreateManagerWithKnownSources("main");
+        var installedPackages = manager.ParseInstalledPackages(
+            ReadFixtureLines(@"Scoop\list-output-not-outdated.txt")
+        );
+
+        var packages = manager.ParseAvailableUpdates(
+            ReadFixtureLines(@"Scoop\status-output-ansi.txt"),
+            installedPackages
+        );
+
+        var package = Assert.Single(packages);
+        PackageAssert.Matches(package, "Outdated App", "outdated-app", "1.0.0", "2.0.0");
+    }
+
+    [Fact]
     public void ParseAvailableUpdatesSkipsRowsListedWithoutANewerVersion()
     {
         var manager = CreateManagerWithKnownSources("main");
@@ -466,6 +475,15 @@ public sealed class ScoopManagerTests : IDisposable
         p.Start();
         return [.. ScoopProcess.ReadLines(p, new TestProcessTaskLogger())];
     }
+
+    private static Uri SpacedBucketUrl(string bucket) =>
+        new(
+            Path.Join(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                @"AppData\Local\Temp\My Scoop\buckets",
+                bucket
+            )
+        );
 
     private static Scoop CreateManagerWithKnownSources(params string[] sourceNames)
     {

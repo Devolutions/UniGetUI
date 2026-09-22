@@ -1,0 +1,7 @@
+[32;1mName           [0m[32;1m Installed Version[0m[32;1m Latest Version[0m[32;1m Missing Dependencies[0m[32;1m Info[0m
+[32;1m----           [0m [32;1m-----------------[0m [32;1m--------------[0m [32;1m--------------------[0m [32;1m----[0m
+outdated-app    1.0.0             2.0.0
+missingdeps-app 1.2.3                            somedep | otherdep
+deprecated-app  4.5.6                                                 Dep.
+held-app        7.8.9                                                 Hel.
+failed-app      1.1.1                                                 Ins.

@@ -392,6 +392,38 @@ public sealed class ScoopManagerTests : IDisposable
     }
 
     [Fact]
+    public void ParseInstalledPackagesReadsSourcesThatAreEmptyOrContainSpaces()
+    {
+        var manager = CreateManagerWithKnownSources("main");
+
+        var packages = manager.ParseInstalledPackages(
+            ReadFixtureLines(@"Scoop\list-output-edge-cases.txt")
+        );
+
+        Assert.Collection(
+            packages,
+            package =>
+            {
+                PackageAssert.Matches(package, "Normal App", "normal-app", "3.0.0");
+                Assert.Equal("main", package.Source.Name);
+            },
+            package =>
+            {
+                PackageAssert.Matches(package, "Orphan App", "orphan-app", "1.0.0");
+                Assert.Same(manager.DefaultSource, package.Source);
+            },
+            package =>
+            {
+                PackageAssert.Matches(package, "Spaced App", "spaced-app", "2.0.0");
+                Assert.Equal(
+                    @"C:\Users\Jane Doe\git\Extras\bucket\spaced-app.json",
+                    package.Source.Name
+                );
+            }
+        );
+    }
+
+    [Fact]
     public void ParseAvailableUpdatesReadsColumnsThroughAnsiColourCodes()
     {
         var manager = CreateManagerWithKnownSources("main");

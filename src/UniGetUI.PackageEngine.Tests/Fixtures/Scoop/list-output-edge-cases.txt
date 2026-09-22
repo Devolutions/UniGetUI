@@ -1,0 +1,7 @@
+Installed apps:
+WARN  error: Could not find a part of the path 'C:\Users\Jane Doe\git\Extras\bucket\spaced-app.json'.
+Name       Version Source                                              Updated             Info
+----       ------- ------                                              -------             ----
+normal-app 3.0.0   main                                                2026-09-22 16:26:39
+orphan-app 1.0.0                                                       2026-09-22 16:26:39
+spaced-app 2.0.0   C:\Users\Jane Doe\git\Extras\bucket\spaced-app.json 2026-09-22 16:26:39

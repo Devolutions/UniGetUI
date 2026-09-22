@@ -1,6 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
         xmlns:primitives="using:Avalonia.Controls.Primitives">
 
     <Styles.Resources>
@@ -146,7 +147,7 @@
                     <!-- Window/page surface; overridden to Transparent by Styles.WindowsMica when Mica is active -->
                     <SolidColorBrush x:Key="MicaPageBackground"          Color="#F3F3F3"/>
                     <SolidColorBrush x:Key="AppSplitterBackground"       Color="#E5E5E5"/>
-                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#EEEEEE"/>
+                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="Transparent"/>
                     <SolidColorBrush x:Key="AppBorderBrush"              Color="#E5E5E5"/>
                     <SolidColorBrush x:Key="AppBadgeBackground"          Color="#EDEDED"/>
                     <!-- Dialogs -->
@@ -317,7 +318,7 @@
                     <StaticResource x:Key="AccentButtonForegroundDisabled" ResourceKey="TextOnAccentFillColorDisabledBrush"/>
                     <!-- Settings cards -->
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#0DFFFFFF"/>
-                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="Transparent"/>
+                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#19000000"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#323232"/>
                     <StaticResource x:Key="SecondaryActionBorderBrush" ResourceKey="ControlStrokeColorDefaultBrush"/>
                     <Thickness x:Key="SecondaryActionBorderThickness">1</Thickness>
@@ -349,7 +350,7 @@
                     <!-- Window/page surface; overridden to Transparent by Styles.WindowsMica when Mica is active -->
                     <SolidColorBrush x:Key="MicaPageBackground"          Color="#202020"/>
                     <SolidColorBrush x:Key="AppSplitterBackground"       Color="#1A1A1A"/>
-                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#1C1C1C"/>
+                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="Transparent"/>
                     <SolidColorBrush x:Key="AppBorderBrush"              Color="#15FFFFFF"/>
                     <SolidColorBrush x:Key="AppBadgeBackground"          Color="#3C3C3C"/>
                     <!-- Dialogs -->
@@ -407,6 +408,22 @@
         <Setter Property="DefaultFocusAdorner">
             <FocusAdornerTemplate>
                 <Border BorderBrush="{DynamicResource SystemControlFocusVisualPrimaryBrush}"
+                        BorderThickness="2"
+                        CornerRadius="6">
+                    <Border BorderBrush="{DynamicResource SystemControlFocusVisualSecondaryBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"/>
+                </Border>
+            </FocusAdornerTemplate>
+        </Setter>
+    </Style>
+
+    <Style Selector=".settings-card-control"
+           x:SetterTargetType="settings:SettingsCard">
+        <Setter Property="FocusAdorner">
+            <FocusAdornerTemplate>
+                <Border Margin="40,0"
+                        BorderBrush="{DynamicResource SystemControlFocusVisualPrimaryBrush}"
                         BorderThickness="2"
                         CornerRadius="6">
                     <Border BorderBrush="{DynamicResource SystemControlFocusVisualSecondaryBrush}"
@@ -849,7 +866,8 @@
         <Setter Property="Margin"       Value="40,0"/>
     </Style>
     <Style Selector="Border.settings-card-clickable:pointerover">
-        <Setter Property="Background"   Value="{DynamicResource SettingsCardHoverBackground}"/>
+        <Setter Property="Background"  Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}"/>
     </Style>
     <!-- Setting warning subtext (amber, both themes) -->
     <Style Selector="TextBlock.setting-warning-text">

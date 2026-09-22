@@ -32,6 +32,7 @@ public class SettingsCard : UserControl
     // the layout is unchanged; below these widths the content drops below the header,
     // and at the narrowest width the header icon is hidden.
     private const double ContentWrapThreshold = 476;
+    private const double ContentUnwrapThreshold = 488;
     private const double HideHeaderIconThreshold = 286;
     private bool _contentWrapped;
 
@@ -119,6 +120,7 @@ public class SettingsCard : UserControl
         {
             _isClickEnabled = value;
             Focusable = value;
+            _border.Focusable = false;
             Cursor = value ? new Cursor(StandardCursorType.Hand) : Cursor.Default;
             _chevron.IsVisible = value;
             if (value)
@@ -231,14 +233,15 @@ public class SettingsCard : UserControl
             Child = _layoutGrid,
         };
         _border.Classes.Add("settings-card");
+        Classes.Add("settings-card-control");
 
         base.Content = _border;
 
         PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
         SizeChanged += (_, e) => UpdateResponsiveLayout(e.NewSize.Width);
-        // Keyboard focus is rendered by the app-wide Avalonia FocusAdorner. Do not also
-        // recolor/thicken the card border; the double outline is not WinUI-like.
+        // Keyboard focus keeps the SettingsCard itself as the focus target. A card-specific
+        // adorner style in Styles.Common only insets the visual ring to the visible card bounds.
         SyncAutomationProperties();
     }
 
@@ -252,8 +255,12 @@ public class SettingsCard : UserControl
             return;
         }
 
-        bool wrapContent = _rightContent is not null && width <= ContentWrapThreshold;
-        bool hideHeaderIcon = width <= HideHeaderIconThreshold;
+        double cardWidth = Math.Max(0, width - _border.Margin.Left - _border.Margin.Right);
+        bool wrapContent = _rightContent is not null
+            && (_contentWrapped
+                ? cardWidth <= ContentUnwrapThreshold
+                : cardWidth <= ContentWrapThreshold);
+        bool hideHeaderIcon = cardWidth <= HideHeaderIconThreshold;
 
         _iconPresenter.IsVisible = _headerIcon is not null && !hideHeaderIcon;
 
@@ -379,7 +386,7 @@ public class SettingsCard : UserControl
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (!_isClickEnabled) return;
-        if (e.Source != this) return;   // only when the card itself has focus, not a child
+        if (e.Source != this) return;   // only when the card itself has focus, not a child control
         if (e.Key is not (Key.Enter or Key.Space)) return;
 
         InvokeClick();

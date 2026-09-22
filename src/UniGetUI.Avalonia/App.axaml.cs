@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Markup.Xaml.Styling;
@@ -173,6 +174,8 @@ public partial class App : Application
     private static void CreateAndShowMainWindow(
         IClassicDesktopStyleApplicationLifetime desktop, SplashWindow? splash)
     {
+        desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
         PEInterface.LoadLoaders();
         var mainWindow = new MainWindow();
         desktop.MainWindow = mainWindow;

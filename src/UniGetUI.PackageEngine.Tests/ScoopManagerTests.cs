@@ -1,4 +1,5 @@
 #if WINDOWS
+using System.Diagnostics;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.PackageEngine.Enums;
@@ -8,6 +9,7 @@ using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
+using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Helpers;
 using Architecture = UniGetUI.PackageEngine.Enums.Architecture;
 
@@ -22,6 +24,11 @@ public sealed class ScoopManagerTestCollection
 [Collection(ScoopManagerTestCollection.Name)]
 public sealed class ScoopManagerTests : IDisposable
 {
+    private const string LongId =
+        "a-scoop-package-whose-manifest-name-is-long-enough-to-overflow-the-default-console-width-by-far";
+    private const string LongVersion = "20260727133500-nightly";
+    private const string LongNewVersion = "20260820144900-nightly";
+
     private readonly string _testRoot = Path.Combine(
         AppContext.BaseDirectory,
         nameof(ScoopManagerTests),
@@ -365,6 +372,57 @@ public sealed class ScoopManagerTests : IDisposable
 
         OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
         Assert.False(package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void ParseAvailableUpdatesKeepsRowsThatOverflowTheDefaultConsoleWidth()
+    {
+        var manager = CreateManagerWithKnownSources("main");
+
+        var installedPackages = manager.ParseInstalledPackages(
+            RunPowerShellTable(
+                $"@(@('{LongId}','{LongVersion}'),@('7zip','26.03')) "
+                    + "| ForEach-Object { [PSCustomObject][ordered]@{ Name = $_[0]; "
+                    + "Version = $_[1]; Source = 'main' } }"
+            )
+        );
+
+        var packages = manager.ParseAvailableUpdates(
+            RunPowerShellTable(
+                $"@(@('{LongId}','{LongVersion}','{LongNewVersion}'),@('7zip','26.03','26.04')) "
+                    + "| ForEach-Object { [PSCustomObject][ordered]@{ Name = $_[0]; "
+                    + "'Installed Version' = $_[1]; 'Latest Version' = $_[2] } }"
+            ),
+            installedPackages
+        );
+
+        var package = Assert.Single(packages, package => package.Id == LongId);
+        Assert.Equal(LongVersion, package.VersionString);
+        Assert.Equal(LongNewVersion, package.NewVersionString);
+    }
+
+    private static string[] RunPowerShellTable(string script)
+    {
+        using Process p = new()
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments =
+                    "-NoProfile -ExecutionPolicy Bypass -Command \""
+                    + script
+                    + Scoop.UntruncatedTableOutput
+                    + "\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = System.Text.Encoding.UTF8,
+            },
+        };
+
+        p.Start();
+        return [.. ScoopProcess.ReadLines(p, new TestProcessTaskLogger())];
     }
 
     private static Scoop CreateManagerWithKnownSources(params string[] sourceNames)

@@ -50,6 +50,9 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             "removed,",
         ];
 
+        internal const string UntruncatedTableOutput =
+            " | Format-Table -AutoSize | Out-String -Width 4096";
+
         private const int VersionProbeTimeout = 20_000;
         private const int StreamDrainTimeout = 5_000;
 
@@ -446,7 +449,8 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = Status.ExecutablePath,
-                    Arguments = Status.ExecutableCallArgs + " status -l",
+                    Arguments =
+                        Status.ExecutableCallArgs + " status -l" + UntruncatedTableOutput,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -472,7 +476,8 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = Status.ExecutablePath,
-                    Arguments = Status.ExecutableCallArgs + " list",
+                    Arguments =
+                        Status.ExecutableCallArgs + " list" + UntruncatedTableOutput,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,

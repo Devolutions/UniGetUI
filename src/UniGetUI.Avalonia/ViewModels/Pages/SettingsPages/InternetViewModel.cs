@@ -45,6 +45,7 @@ public partial class InternetViewModel : ViewModelBase
             MinWidth = 200,
             Margin = new Thickness(0, 0, 0, 4),
         };
+        _usernameBox.Classes.Add("search-field-standalone");
 
         _passwordBox = new TextBox
         {
@@ -52,6 +53,7 @@ public partial class InternetViewModel : ViewModelBase
             MinWidth = 200,
             PasswordChar = '●',
         };
+        _passwordBox.Classes.Add("search-field-standalone");
 
         var creds = CoreSettings.GetProxyCredentials();
         if (creds is not null)

@@ -29,7 +29,10 @@ public sealed record OperationBadgeVm(
     string IconPath,
     string Primary,
     string Secondary
-);
+)
+{
+    public bool HasSecondary => !string.IsNullOrEmpty(Secondary);
+}
 
 public sealed partial class OperationViewModel : ViewModelBase
 {
@@ -50,9 +53,14 @@ public sealed partial class OperationViewModel : ViewModelBase
     [ObservableProperty] private string _buttonText;
     [ObservableProperty] private bool _progressIndeterminate;
     [ObservableProperty] private double _progressValue;
-    [ObservableProperty] private IBrush _progressBrush;
-    [ObservableProperty] private IBrush _backgroundBrush;
     [ObservableProperty] private IImage? _packageIcon;
+
+    private OperationStatus _visualStatus;
+    public bool IsInQueue => _visualStatus is OperationStatus.InQueue;
+    public bool IsRunning => _visualStatus is OperationStatus.Running;
+    public bool IsSucceeded => _visualStatus is OperationStatus.Succeeded;
+    public bool IsFailed => _visualStatus is OperationStatus.Failed;
+    public bool IsCanceled => _visualStatus is OperationStatus.Canceled;
 
     private static readonly Uri _fallbackIconUri =
         new("avares://UniGetUI/Assets/package_color.png");
@@ -75,8 +83,7 @@ public sealed partial class OperationViewModel : ViewModelBase
             ? operation.GetOutput()[^1].Item1
             : CoreTools.Translate("Please wait...");
         _buttonText = CoreTools.Translate("Cancel");
-        _progressBrush = new SolidColorBrush(Color.Parse("#888888"));
-        _backgroundBrush = Brushes.Transparent;
+        _visualStatus = operation.Status;
 
         _ = LoadIconAsync();
 
@@ -198,35 +205,32 @@ public sealed partial class OperationViewModel : ViewModelBase
 
     private void ApplyStatusVisuals(OperationStatus status)
     {
+        _visualStatus = status;
+        OnPropertyChanged(nameof(IsInQueue));
+        OnPropertyChanged(nameof(IsRunning));
+        OnPropertyChanged(nameof(IsSucceeded));
+        OnPropertyChanged(nameof(IsFailed));
+        OnPropertyChanged(nameof(IsCanceled));
+
         switch (status)
         {
             case OperationStatus.InQueue:
-                ProgressBrush = new SolidColorBrush(Color.Parse("#888888"));
-                BackgroundBrush = Brushes.Transparent;
                 ButtonText = CoreTools.Translate("Cancel");
                 break;
 
             case OperationStatus.Running:
-                ProgressBrush = new SolidColorBrush(Color.Parse("#F0A500"));
-                BackgroundBrush = new SolidColorBrush(Color.FromArgb(30, 240, 165, 0));
                 ButtonText = CoreTools.Translate("Cancel");
                 break;
 
             case OperationStatus.Succeeded:
-                ProgressBrush = new SolidColorBrush(Color.Parse("#0F7B0F"));
-                BackgroundBrush = new SolidColorBrush(Color.FromArgb(30, 15, 123, 15));
                 ButtonText = CoreTools.Translate("Close");
                 break;
 
             case OperationStatus.Failed:
-                ProgressBrush = new SolidColorBrush(Color.Parse("#BC0000"));
-                BackgroundBrush = new SolidColorBrush(Color.FromArgb(40, 188, 0, 0));
                 ButtonText = CoreTools.Translate("Close");
                 break;
 
             case OperationStatus.Canceled:
-                ProgressBrush = new SolidColorBrush(Color.Parse("#9D5D00"));
-                BackgroundBrush = Brushes.Transparent;
                 ButtonText = CoreTools.Translate("Close");
                 break;
         }

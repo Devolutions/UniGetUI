@@ -122,6 +122,7 @@
                       automation:AutomationProperties.Name="{t:Translate Known sources}"/>
             <Grid ColumnDefinitions="*,2*" ColumnSpacing="8">
                 <TextBox Grid.Column="0"
+                         Classes="search-field-standalone"
                          PlaceholderText="{Binding NameHint}"
                          Text="{Binding NewSourceName}"
                          IsEnabled="{Binding NameUrlEditable}"
@@ -129,6 +130,7 @@
                          FontSize="14"
                          automation:AutomationProperties.Name="{Binding NameHint}"/>
                 <TextBox Grid.Column="1"
+                         Classes="search-field-standalone"
                          PlaceholderText="{Binding UrlHint}"
                          Text="{Binding NewSourceUrl}"
                          IsEnabled="{Binding NameUrlEditable}"

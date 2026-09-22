@@ -41,8 +41,6 @@
                         Padding="11,5,11,6"
                         CornerRadius="4"
                         FontSize="14"
-                        Background="{DynamicResource AppDialogBackground}"
-                        BorderThickness="0"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"/>

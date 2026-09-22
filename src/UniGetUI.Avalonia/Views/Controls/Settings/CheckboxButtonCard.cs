@@ -98,6 +98,7 @@ public sealed partial class CheckboxButtonCard : SettingsCard
         IS_INVERTED = false;
         AutomationProperties.SetAccessibilityView(Button, AccessibilityView.Control);
 
+        RightAlignWrappedContent = true;
         Content = new StackPanel
         {
             Orientation = Orientation.Horizontal,

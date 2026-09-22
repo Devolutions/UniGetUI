@@ -84,16 +84,15 @@ public static class AvaloniaOperationRegistry
             Dispatcher.UIThread.Post(UpdateTrayStatus);
         };
 
-        // Cancellation drives Status = Canceled from several code paths, so StatusChanged(Canceled)
-        // can fire more than once for a single operation. Handle the terminal cancel exactly once.
+        // Cancellation can report Canceled from several code paths. Remove its progress
+        // notification once, but keep the finished card visible until the user closes it,
+        // matching the removed WinUI operation-control behavior.
         int cancelHandled = 0;
         op.StatusChanged += (_, status) =>
         {
             if (status is OperationStatus.Canceled && Interlocked.Exchange(ref cancelHandled, 1) == 0)
-            {
                 WindowsAppNotificationBridge.RemoveProgress(op);
-                _ = RemoveAfterDelayAsync(op, milliseconds: 2500);
-            }
+
             Dispatcher.UIThread.Post(UpdateTrayStatus);
         };
 

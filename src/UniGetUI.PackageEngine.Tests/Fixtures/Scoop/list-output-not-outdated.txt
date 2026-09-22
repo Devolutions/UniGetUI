@@ -1,0 +1,7 @@
+Name            Version Source Updated             Info
+----            ------- ------ -------             ----
+outdated-app    1.0.0   main   2026-09-22 14:00:00
+missingdeps-app 1.2.3   main   2026-09-22 14:00:00
+deprecated-app  4.5.6   main   2026-09-22 14:00:00
+held-app        7.8.9   main   2026-09-22 14:00:00 Global install
+failed-app      1.1.1   main   2026-09-22 14:00:00

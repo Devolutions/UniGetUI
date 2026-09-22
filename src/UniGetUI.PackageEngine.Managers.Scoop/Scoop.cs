@@ -252,42 +252,35 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             }
 
             List<Package> packages = [];
-            bool dashesPassed = false;
-            foreach (string line in lines)
+            IReadOnlyList<int>? columns = null;
+            foreach (string rawLine in lines)
             {
-                if (!dashesPassed)
-                {
-                    if (line.Contains("---"))
-                    {
-                        dashesPassed = true;
-                    }
+                string line = StripAnsiSequences(rawLine);
 
+                if (columns is null)
+                {
+                    columns = ReadColumnStarts(line);
                     continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    continue;
-                }
-
-                string[] elements = Regex
-                    .Replace(line, " {2,}", " ")
-                    .Trim()
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (elements.Length < 3)
+                if (columns.Count < 3 || string.IsNullOrWhiteSpace(line))
                 {
                     continue;
                 }
 
-                for (int i = 0; i < elements.Length; i++)
+                string id = ReadColumn(line, columns, 0);
+                string version = ReadColumn(line, columns, 1);
+                string newVersion = ReadColumn(line, columns, 2);
+
+                if (id.Length is 0 || version.Length is 0 || newVersion.Length is 0)
                 {
-                    elements[i] = elements[i].Trim();
+                    continue;
                 }
 
                 if (
-                    FALSE_PACKAGE_IDS.Contains(elements[0])
-                    || FALSE_PACKAGE_VERSIONS.Contains(elements[1])
-                    || FALSE_PACKAGE_VERSIONS.Contains(elements[2])
+                    FALSE_PACKAGE_IDS.Contains(id)
+                    || FALSE_PACKAGE_VERSIONS.Contains(version)
+                    || FALSE_PACKAGE_VERSIONS.Contains(newVersion)
                 )
                 {
                     continue;
@@ -295,7 +288,7 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
 
                 if (
                     installedPackageMap.TryGetValue(
-                        elements[0] + "." + elements[1],
+                        id + "." + version,
                         out IPackage? installedPackage
                     )
                 )
@@ -303,10 +296,10 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                     OverridenInstallationOptions options = new(installedPackage.OverridenOptions.Scope);
                     packages.Add(
                         new Package(
-                            CoreTools.FormatAsName(elements[0]),
-                            elements[0],
-                            elements[1],
-                            elements[2],
+                            CoreTools.FormatAsName(id),
+                            id,
+                            version,
+                            newVersion,
                             installedPackage.Source,
                             this,
                             options
@@ -316,6 +309,52 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
             }
 
             return packages;
+        }
+
+        private static readonly Regex AnsiSequence = new(
+            @"\x1b\[[0-9;]*m",
+            RegexOptions.Compiled
+        );
+
+        private static string StripAnsiSequences(string line) =>
+            line.Contains('\x1b') ? AnsiSequence.Replace(line, "") : line;
+
+        private static IReadOnlyList<int>? ReadColumnStarts(string line)
+        {
+            if (!line.Contains("---"))
+            {
+                return null;
+            }
+
+            List<int> starts = [];
+            for (int i = 0; i < line.Length; i++)
+            {
+                if (line[i] is not '-')
+                {
+                    continue;
+                }
+
+                starts.Add(i);
+                while (i < line.Length && line[i] is '-')
+                {
+                    i++;
+                }
+            }
+
+            return starts;
+        }
+
+        private static string ReadColumn(string line, IReadOnlyList<int> starts, int index)
+        {
+            int start = starts[index];
+            if (start >= line.Length)
+            {
+                return "";
+            }
+
+            int end =
+                index + 1 < starts.Count ? Math.Min(starts[index + 1], line.Length) : line.Length;
+            return line[start..end].Trim();
         }
 
         internal IReadOnlyList<Package> ParseInstalledPackages(IEnumerable<string> lines)

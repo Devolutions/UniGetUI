@@ -375,6 +375,23 @@ public sealed class ScoopManagerTests : IDisposable
     }
 
     [Fact]
+    public void ParseAvailableUpdatesSkipsRowsListedWithoutANewerVersion()
+    {
+        var manager = CreateManagerWithKnownSources("main");
+        var installedPackages = manager.ParseInstalledPackages(
+            ReadFixtureLines(@"Scoop\list-output-not-outdated.txt")
+        );
+
+        var packages = manager.ParseAvailableUpdates(
+            ReadFixtureLines(@"Scoop\status-output-not-outdated.txt"),
+            installedPackages
+        );
+
+        var package = Assert.Single(packages);
+        PackageAssert.Matches(package, "Outdated App", "outdated-app", "1.0.0", "2.0.0");
+    }
+
+    [Fact]
     public void ParseAvailableUpdatesKeepsRowsThatOverflowTheDefaultConsoleWidth()
     {
         var manager = CreateManagerWithKnownSources("main");

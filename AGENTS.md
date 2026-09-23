@@ -43,11 +43,21 @@ The constructor sets `Capabilities`, `Properties`, and wires the helpers. See `s
 These four managers share `BaseNuGet` / `BaseNuGetDetailsHelper`, which talk to a NuGet feed
 over HTTP. Each source picks its protocol independently, in `NuGetV3ServiceIndex.GetServiceIndexUrl`:
 
+- A source URL with the `file` scheme - what `new Uri()` produces for a local folder or a UNC
+  share such as `C:\packages` or `\\server\share` - is a **local folder feed**, served by
+  `NuGetLocalFeed`. There is no HTTP endpoint to call, so search, details, icons, versions and
+  updates read the `.nupkg` files and their embedded `.nuspec` straight from disk. This check
+  runs before the V3 one, everywhere.
 - A source URL whose path ends in `index.json`, or whose last path segment is `v3`, is a
   **NuGet V3** feed. Its service index is fetched once per session and cached.
 - Every other source URL is treated as a **V2/OData** feed and keeps the legacy code path.
 
 Detection is purely by URL shape, so it costs no probe request and no V2 feed changes behaviour.
+
+A local folder feed is scanned at most three directories deep, which covers both the flat layout
+and the `<id>/<version>/<id>.<version>.nupkg` layout, and each parsed manifest is cached against
+its file's size and write time. Installers on such a feed are copied from disk instead of being
+downloaded (`DownloadOperation`).
 
 ### V3 resources used
 

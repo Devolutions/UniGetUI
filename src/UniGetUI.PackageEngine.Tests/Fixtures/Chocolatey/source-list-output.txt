@@ -2,4 +2,7 @@ Chocolatey v2.4.3
 community - https://community.chocolatey.org/api/v2/ | Priority 0|Bypass Proxy - false|Self-Service - false|Admin Only - false
 legacy community - https://chocolatey.org/api/v2/ | Priority 0|Bypass Proxy - false|Self-Service - false|Admin Only - false
 internal repo - https://packages.example.test/api/v2/ | Priority 10|Bypass Proxy - false|Self-Service - false|Admin Only - false
+local folder - C:\Shared Packages | Priority 0|Bypass Proxy - false|Self-Service - false|Admin Only - false.
+network share - \\files\nuget\server | Priority 0|Bypass Proxy - false|Self-Service - false|Admin Only - false.
+private feed - https://packages.example.test/private/api/v2/ (Authenticated)| Priority 0|Bypass Proxy - false|Self-Service - false|Admin Only - false.
 invalid source line

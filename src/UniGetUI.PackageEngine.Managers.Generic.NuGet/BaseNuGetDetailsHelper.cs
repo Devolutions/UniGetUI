@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.IconEngine;
@@ -21,6 +22,12 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             var logger = Manager.TaskLogger.CreateNew(LoggableTaskType.LoadPackageDetails);
             try
             {
+                if (NuGetLocalFeed.TryGetDirectory(details.Package.Source, out string directory))
+                {
+                    logger.Close(GetDetailsLocal(details, directory, logger) ? 0 : 1);
+                    return;
+                }
+
                 if (NuGetV3ServiceIndex.IsV3Source(details.Package.Source))
                 {
                     logger.Close(GetDetailsV3(details, logger) ? 0 : 1);
@@ -230,6 +237,72 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             }
         }
 
+        private static bool GetDetailsLocal(
+            IPackageDetails details,
+            string directory,
+            INativeTaskLogger logger
+        )
+        {
+            IPackage package = details.Package;
+            LocalNuGetPackage? local = NuGetLocalFeed.Find(
+                directory,
+                package.Id,
+                package.VersionString
+            );
+
+            if (local is null)
+            {
+                logger.Error(
+                    $"No package file for {package.Id} version {package.VersionString} was found "
+                        + $"on source {package.Source.Name} at Directory={directory}"
+                );
+                return false;
+            }
+
+            Uri packageFile = new(local.FilePath);
+            details.ManifestUrl = packageFile;
+            details.InstallerUrl = packageFile;
+            details.InstallerSize = local.Size;
+            details.InstallerType = CoreTools.Translate("NuPkg (zipped manifest)");
+            details.Description = FirstNonEmpty(local.Description, local.Summary);
+            details.ReleaseNotes = local.ReleaseNotes;
+            details.License = local.License;
+            details.UpdateDate = local.LastWriteTimeUtc.ToString("u", CultureInfo.InvariantCulture);
+            details.Tags =
+                local.Tags?.Split(
+                    [' ', ',', ';', '\t', '\n', '\r'],
+                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+                ) ?? [];
+
+            string? authors = FirstNonEmpty(local.Authors, local.Owners);
+            if (authors is not null)
+            {
+                details.Author = authors;
+                details.Publisher = authors;
+            }
+
+            if (Uri.TryCreate(local.ProjectUrl, UriKind.Absolute, out Uri? projectUrl))
+                details.HomepageUrl = projectUrl;
+
+            if (Uri.TryCreate(local.LicenseUrl, UriKind.Absolute, out Uri? licenseUrl))
+                details.LicenseUrl = licenseUrl;
+
+            details.Dependencies.Clear();
+            foreach (LocalNuGetDependency dependency in local.Dependencies)
+            {
+                details.Dependencies.Add(
+                    new()
+                    {
+                        Name = dependency.Id,
+                        Version = FormatDependencyRange(dependency.Range),
+                        Mandatory = true,
+                    }
+                );
+            }
+
+            return true;
+        }
+
         private static bool GetDetailsV3(IPackageDetails details, INativeTaskLogger logger)
         {
             IPackage package = details.Package;
@@ -369,6 +442,9 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
         protected override CacheableIcon? GetIcon_UnSafe(IPackage package)
         {
+            if (NuGetLocalFeed.TryGetDirectory(package.Source, out string directory))
+                return GetIconLocal(package, directory);
+
             if (NuGetV3ServiceIndex.IsV3Source(package.Source))
                 return GetIconV3(package);
 
@@ -397,6 +473,22 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 new Uri(possibleIconUrl.Groups[1].Value),
                 package.VersionString
             );
+        }
+
+        private static CacheableIcon? GetIconLocal(IPackage package, string directory)
+        {
+            LocalNuGetPackage? local = NuGetLocalFeed.Find(
+                directory,
+                package.Id,
+                package.VersionString
+            );
+
+            if (local is null)
+                return null;
+
+            return Uri.TryCreate(local.IconUrl, UriKind.Absolute, out Uri? iconUrl)
+                ? new CacheableIcon(iconUrl, package.VersionString)
+                : null;
         }
 
         private static CacheableIcon? GetIconV3(IPackage package)
@@ -447,6 +539,23 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
         protected override IReadOnlyList<string> GetInstallableVersions_UnSafe(IPackage package)
         {
+            if (NuGetLocalFeed.TryGetDirectory(package.Source, out string directory))
+            {
+                try
+                {
+                    return NuGetLocalFeed.GetVersionsDescending(directory, package.Id);
+                }
+                catch (Exception e)
+                {
+                    Logger.Warn(
+                        $"Could not list the versions of package {package.Id} on the local "
+                            + $"folder feed at Directory={directory}"
+                    );
+                    Logger.Warn(e);
+                    return [];
+                }
+            }
+
             if (NuGetV3ServiceIndex.IsV3Source(package.Source))
             {
                 NuGetV3ServiceIndex? index = NuGetV3ServiceIndex.Resolve(package.Source);

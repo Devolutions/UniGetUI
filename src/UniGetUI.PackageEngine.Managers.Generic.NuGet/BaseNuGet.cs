@@ -116,6 +116,14 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             {
                 try
                 {
+                    if (NuGetLocalFeed.TryGetDirectory(source, out string localDirectory))
+                    {
+                        Packages.AddRange(
+                            FindPackagesLocal(source, localDirectory, query, canPrerelease, logger)
+                        );
+                        continue;
+                    }
+
                     if (NuGetV3ServiceIndex.IsV3Source(source))
                     {
                         Packages.AddRange(FindPackagesV3(source, query, canPrerelease, logger));
@@ -244,6 +252,130 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             return Packages;
         }
 
+        internal IReadOnlyList<Package> FindPackagesLocal(
+            IManagerSource source,
+            string directory,
+            string query,
+            bool canPrerelease,
+            INativeTaskLogger logger
+        )
+        {
+            logger.Log(
+                $"Begin local folder package search for query={query} on source {source.Name} "
+                    + $"at Directory={directory} of manager {Name}"
+            );
+
+            Dictionary<string, LocalNuGetPackage> latest = new(StringComparer.OrdinalIgnoreCase);
+            foreach (LocalNuGetPackage candidate in NuGetLocalFeed.Enumerate(directory))
+            {
+                if (candidate.IsPreRelease && !canPrerelease)
+                    continue;
+
+                if (!NuGetLocalFeed.MatchesQuery(candidate, query, UseSubstringSearch))
+                    continue;
+
+                if (
+                    latest.TryGetValue(candidate.Id, out LocalNuGetPackage? current)
+                    && !IsNewerVersion(candidate.Version, current.Version)
+                )
+                    continue;
+
+                latest[candidate.Id] = candidate;
+            }
+
+            List<Package> packages = [];
+            foreach (LocalNuGetPackage found in latest.Values)
+            {
+                logger.Log(
+                    $"Found package {found.Id} version {found.Version} on source {source.Name}"
+                );
+
+                packages.Add(
+                    new Package(
+                        CoreTools.FormatAsName(found.Id),
+                        found.Id,
+                        found.Version,
+                        source,
+                        this
+                    )
+                );
+            }
+
+            return packages;
+        }
+
+        internal IReadOnlyList<Package> GetAvailableUpdatesLocal(
+            IManagerSource source,
+            string directory,
+            IReadOnlyList<IPackage> installedPackages,
+            bool canPrerelease,
+            INativeTaskLogger logger
+        )
+        {
+            Dictionary<string, List<LocalNuGetPackage>> availableById = new(
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            foreach (LocalNuGetPackage candidate in NuGetLocalFeed.Enumerate(directory))
+            {
+                if (candidate.IsPreRelease && !canPrerelease)
+                    continue;
+
+                if (!availableById.TryGetValue(candidate.Id, out List<LocalNuGetPackage>? entries))
+                    availableById[candidate.Id] = entries = [];
+
+                entries.Add(candidate);
+            }
+
+            var installed = new Dictionary<string, (string Id, string Version)>();
+            foreach (IPackage package in installedPackages)
+                installed[package.Id.ToLower()] = (package.Id, package.VersionString);
+
+            var scopeMap = BuildInstalledScopeMap(installedPackages);
+            List<Package> packages = [];
+
+            foreach ((string id, string installedVersion) in installed.Values)
+            {
+                if (!availableById.TryGetValue(id, out List<LocalNuGetPackage>? entries))
+                    continue;
+
+                string? newest = null;
+                foreach (LocalNuGetPackage candidate in entries)
+                {
+                    if (!IsNewerVersion(candidate.Version, installedVersion))
+                        continue;
+
+                    if (newest is null || IsNewerVersion(candidate.Version, newest))
+                        newest = candidate.Version;
+                }
+
+                if (newest is null)
+                    continue;
+
+                logger.Log($"Found package {id} version {newest} on source {source.Name}");
+
+                packages.Add(
+                    new Package(
+                        CoreTools.FormatAsName(id),
+                        id,
+                        installedVersion,
+                        newest,
+                        source,
+                        this,
+                        new OverridenInstallationOptions(scopeMap.GetValueOrDefault(id.ToLower()))
+                    )
+                );
+            }
+
+            return packages;
+        }
+
+        private bool IsNewerVersion(string candidate, string current) =>
+            CompareVersions(candidate, current) is { } comparison
+                ? comparison > 0
+                : CoreTools.VersionStringToStruct(candidate)
+                    > CoreTools.VersionStringToStruct(current);
+
         internal IReadOnlyList<Package> FindPackagesV3(
             IManagerSource source,
             string query,
@@ -324,6 +456,20 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             {
                 try
                 {
+                    if (NuGetLocalFeed.TryGetDirectory(pair.Key, out string localDirectory))
+                    {
+                        Packages.AddRange(
+                            GetAvailableUpdatesLocal(
+                                pair.Key,
+                                localDirectory,
+                                pair.Value,
+                                canPrerelease,
+                                logger
+                            )
+                        );
+                        continue;
+                    }
+
                     if (NuGetV3ServiceIndex.IsV3Source(pair.Key))
                     {
                         var v3Updates = GetAvailableUpdatesV3(

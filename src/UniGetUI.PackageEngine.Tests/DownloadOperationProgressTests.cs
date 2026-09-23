@@ -223,4 +223,115 @@ public sealed class DownloadOperationProgressTests
                 File.Delete(downloadPath);
         }
     }
+
+    [Fact]
+    public async Task LocalFeedInstallers_AreCopiedFromDiskWithoutHttp()
+    {
+        byte[] payload = new byte[64 * 1024];
+        new Random(23).NextBytes(payload);
+
+        string sourcePath = Path.Join(
+            Path.GetTempPath(),
+            $"unigetui-local-source-{Guid.NewGuid():N}.nupkg"
+        );
+        string downloadPath = Path.Join(
+            Path.GetTempPath(),
+            $"unigetui-local-copy-{Guid.NewGuid():N}.nupkg"
+        );
+        File.WriteAllBytes(sourcePath, payload);
+
+        var manager = new PackageManagerBuilder()
+            .ConfigureDetails(helper =>
+            {
+                helper.PopulateDetails = details =>
+                {
+                    details.InstallerUrl = new Uri(sourcePath);
+                    details.InstallerType = "nupkg";
+                };
+            })
+            .Build();
+        IPackage package = new PackageBuilder().WithManager(manager).Build();
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(
+                package,
+                downloadPath,
+                new UnreachableHandler()
+            );
+
+            Assert.Equal(
+                OperationVeredict.Success,
+                await operation.InvokePerformOperationForTests()
+            );
+            Assert.Equal(payload, File.ReadAllBytes(downloadPath));
+            Assert.Equal(100, Math.Round(operation.CurrentProgress.Percentage!.Value));
+        }
+        finally
+        {
+            File.Delete(sourcePath);
+            if (File.Exists(downloadPath))
+                File.Delete(downloadPath);
+        }
+    }
+
+    [Fact]
+    public async Task LocalFeedInstallers_RefuseToOverwriteTheSourceFile()
+    {
+        byte[] payload = new byte[2048];
+        new Random(31).NextBytes(payload);
+
+        string sourcePath = Path.Join(
+            Path.GetTempPath(),
+            $"unigetui-same-file-{Guid.NewGuid():N}.nupkg"
+        );
+        File.WriteAllBytes(sourcePath, payload);
+
+        var manager = new PackageManagerBuilder()
+            .ConfigureDetails(helper =>
+            {
+                helper.PopulateDetails = details =>
+                {
+                    details.InstallerUrl = new Uri(sourcePath);
+                    details.InstallerType = "nupkg";
+                };
+            })
+            .Build();
+        IPackage package = new PackageBuilder().WithManager(manager).Build();
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(
+                package,
+                sourcePath,
+                new UnreachableHandler()
+            );
+
+            Assert.Equal(
+                OperationVeredict.Failure,
+                await operation.InvokePerformOperationForTests()
+            );
+            Assert.Equal(payload, File.ReadAllBytes(sourcePath));
+            Assert.Contains(
+                operation.GetOutput(),
+                line => line.Item1.Contains("is the package file itself")
+            );
+            Assert.DoesNotContain(
+                operation.GetOutput(),
+                line => line.Item1.Contains("System.IO.IOException")
+            );
+        }
+        finally
+        {
+            File.Delete(sourcePath);
+        }
+    }
+
+    private sealed class UnreachableHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        ) => throw new InvalidOperationException("No HTTP request was expected");
+    }
 }

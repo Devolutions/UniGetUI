@@ -9,6 +9,8 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
 {
     internal sealed class ChocolateySourceHelper : BaseSourceHelper
     {
+        private const string AuthenticatedMarker = "(Authenticated)";
+
         public ChocolateySourceHelper(Chocolatey manager)
             : base(manager) { }
 
@@ -106,10 +108,11 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
 
                     if (line.Contains(" - ") && line.Contains("| "))
                     {
-                        string[] parts = line.Trim().Split('|')[0].Trim().Split(" - ");
+                        string[] parts = line.Trim().Split('|')[0].Trim().Split(" - ", 2);
+                        string url = ExtractSourceUrl(parts[1]);
                         if (
-                            parts[1].Trim() == "https://community.chocolatey.org/api/v2/"
-                            || parts[1].Trim() == "https://chocolatey.org/api/v2/"
+                            url == "https://community.chocolatey.org/api/v2/"
+                            || url == "https://chocolatey.org/api/v2/"
                         )
                         {
                             sources.Add(
@@ -123,11 +126,7 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
                         else
                         {
                             sources.Add(
-                                new ManagerSource(
-                                    Manager,
-                                    parts[0].Trim(),
-                                    new Uri(parts[1].Split(" ")[0].Trim())
-                                )
+                                new ManagerSource(Manager, parts[0].Trim(), new Uri(url))
                             );
                         }
                     }
@@ -139,6 +138,15 @@ namespace UniGetUI.PackageEngine.Managers.ChocolateyManager
             }
 
             return sources;
+        }
+
+        private static string ExtractSourceUrl(string value)
+        {
+            string url = value.Trim();
+            if (url.EndsWith(AuthenticatedMarker, StringComparison.Ordinal))
+                url = url[..^AuthenticatedMarker.Length].TrimEnd();
+
+            return url;
         }
     }
 }

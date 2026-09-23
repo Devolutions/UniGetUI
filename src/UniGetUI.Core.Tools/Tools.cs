@@ -376,6 +376,9 @@ namespace UniGetUI.Core.Tools
 
             try
             {
+                if (url.IsFile)
+                    return new FileInfo(url.LocalPath).Length;
+
                 using HttpClient client = new(CoreTools.GenericHttpClientParameters);
                 using var request = new HttpRequestMessage(HttpMethod.Head, url);
                 using HttpResponseMessage response = client.Send(request);
@@ -394,6 +397,9 @@ namespace UniGetUI.Core.Tools
         {
             try
             {
+                if (url.IsFile)
+                    return Path.GetFileName(url.LocalPath);
+
                 var handler = CoreTools.GenericHttpClientParameters;
                 handler.AllowAutoRedirect = false;
                 using HttpClient client = new(handler);

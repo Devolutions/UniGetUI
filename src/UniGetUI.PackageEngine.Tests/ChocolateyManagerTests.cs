@@ -4,6 +4,9 @@ using UniGetUI.Core.SettingsEngine;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Managers.Choco;
 using UniGetUI.PackageEngine.Managers.ChocolateyManager;
+using UniGetUI.PackageEngine.Classes.Manager.Providers;
+using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Structs;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Assertions;
@@ -135,6 +138,26 @@ public sealed class ChocolateyManagerTests : IDisposable
             {
                 Assert.Equal("internal repo", source.Name);
                 Assert.Equal(new Uri("https://packages.example.test/api/v2/"), source.Url);
+            },
+            source =>
+            {
+                Assert.Equal("local folder", source.Name);
+                Assert.True(source.Url.IsFile);
+                Assert.Equal(@"C:\Shared Packages", source.Url.LocalPath);
+            },
+            source =>
+            {
+                Assert.Equal("network share", source.Name);
+                Assert.True(source.Url.IsUnc);
+                Assert.Equal(@"\\files\nuget\server", source.Url.LocalPath);
+            },
+            source =>
+            {
+                Assert.Equal("private feed", source.Name);
+                Assert.Equal(
+                    new Uri("https://packages.example.test/private/api/v2/"),
+                    source.Url
+                );
             }
         );
     }
@@ -539,6 +562,71 @@ public sealed class ChocolateyManagerTests : IDisposable
                 EnvironmentVariableTarget.Process
             );
         }
+    }
+
+    [Fact]
+    public void SearchesALocalFolderSourceReportedByChocoSourceList()
+    {
+        using var feed = new LocalNuGetFeedBuilder();
+        feed.WritePackage("Contoso.Internal", "1.0.0");
+        feed.WritePackage("Contoso.Internal", "2.0.0");
+
+        var helper = Assert.IsType<ChocolateySourceHelper>(new Chocolatey().SourcesHelper);
+        var source = Assert.Single(
+            helper.ParseSources(
+                [
+                    $"internal feed - {feed.Directory} | Priority 0|Bypass Proxy - false|"
+                        + "Self-Service - false|Admin Only - false.",
+                ]
+            )
+        );
+
+        Assert.True(source.Url.IsFile);
+        Assert.Equal(feed.Directory, source.Url.LocalPath);
+
+        var manager = new LocalSourceChocolatey([source]);
+        var found = manager.FindLocalPackages("contoso");
+
+        Assert.Equal("Contoso.Internal", Assert.Single(found).Id);
+        Assert.Equal("2.0.0", found[0].VersionString);
+        Assert.Same(source, found[0].Source);
+    }
+
+    private sealed class LocalSourceChocolatey : Chocolatey
+    {
+        public LocalSourceChocolatey(IReadOnlyList<IManagerSource> sources)
+        {
+            SourcesHelper = new StubSourceHelper(this, sources);
+        }
+
+        public IReadOnlyList<Package> FindLocalPackages(string query) =>
+            FindPackages_UnSafe(query);
+    }
+
+    private sealed class StubSourceHelper(
+        IPackageManager manager,
+        IReadOnlyList<IManagerSource> sources
+    ) : BaseSourceHelper(manager)
+    {
+        public override IReadOnlyList<IManagerSource> GetSources() => sources;
+
+        public override string[] GetAddSourceParameters(IManagerSource source) => [];
+
+        public override string[] GetRemoveSourceParameters(IManagerSource source) => [];
+
+        protected override OperationVeredict _getAddSourceOperationVeredict(
+            IManagerSource source,
+            int ReturnCode,
+            string[] Output
+        ) => OperationVeredict.Success;
+
+        protected override OperationVeredict _getRemoveSourceOperationVeredict(
+            IManagerSource source,
+            int ReturnCode,
+            string[] Output
+        ) => OperationVeredict.Success;
+
+        protected override IReadOnlyList<IManagerSource> GetSources_UnSafe() => sources;
     }
 
     private static string[] ReadFixtureLines(string relativePath)

@@ -39,6 +39,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\_unigetui_spikes\Consolonia\src\Consolonia\Consolonia.csproj" />
         <ProjectReference Include="..\..\..\_unigetui_spikes\Consolonia\src\Consolonia.Fonts\Consolonia.Fonts.csproj" />
+        <ProjectReference Include="..\..\..\_unigetui_spikes\Consolonia\src\Consolonia.Controls.DataGrid\Consolonia.Controls.DataGrid.csproj" />
         <ProjectReference Include="..\..\..\_unigetui_spikes\Consolonia\src\Consolonia.ManagedWindows\Consolonia.ManagedWindows.csproj" />
     </ItemGroup>
 

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Templates;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -32,32 +32,34 @@ internal enum PackagePageKind
 
 /// <summary>
 /// A live, read-only package list backed by one of the engine's package loaders
-/// (Installed / Updates / Discover). Columns are rendered as fixed-width monospace strings,
-/// exploiting the terminal's character grid for alignment. The page subscribes to its loader on
-/// attach and unsubscribes on detach; loader events (which arrive on background threads) are
-/// marshalled to the UI thread and coalesced into a single refresh.
+/// (Installed / Updates / Discover). Package rows are rendered by Consolonia's DataGrid so column
+/// layout, scrolling, and sorting stay in control templates rather than fixed-width strings. The page
+/// subscribes to its loader on attach and unsubscribes on detach; loader events (which arrive on
+/// background threads) are marshalled to the UI thread and coalesced into a single refresh.
 /// </summary>
 internal sealed class PackageListPage : UserControl, IFocusablePage
 {
-    private sealed record PackageRow(string Text, IPackage Package)
+    private sealed record PackageRow(
+        IPackage Package,
+        long Hash,
+        string Name,
+        string Id,
+        string Version,
+        string Installed,
+        string Available,
+        string Source,
+        string Manager)
     {
-        public override string ToString() => Text;
+        public override string ToString() => Name;
     }
 
     private readonly PackagePageKind _kind;
     private readonly Func<AbstractPackageLoader?> _loaderFn;
-    private readonly (string Title, int Width)[] _schema;
+    private readonly (string Title, string Property, int Width)[] _schema;
 
-    // Rows live inside a ListBox → ListBoxItem chain whose Consolonia theme adds a 1-char ListBox
-    // border plus 1-char ListBoxItem padding on the left. The column-header TextBlock is a sibling
-    // with no such indent, so it must be nudged right by the same amount to line the titles up with
-    // the row columns.
-    private const int ListRowLeftIndent = 2; // ListBox border (1) + ListBoxItem padding (1)
-
-    private readonly TextBox _search;
+    private readonly AutoCompleteBox _search;
     private readonly TextBlock _status;
-    private readonly TextBlock _columnHeader;
-    private readonly ListBox _list;
+    private readonly DataGrid _grid;
     private readonly StackPanel _details;
 
     private List<PackageRow> _rows = new();
@@ -66,7 +68,7 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
     private volatile bool _dirty;
     private bool _startingOp;
 
-    // Non-Discover pages filter the in-memory list on every keystroke. A full filter/sort/ListBox
+    // Non-Discover pages filter the in-memory list on every keystroke. A full filter/sort/DataGrid
     // rebuild on the dispatcher per keypress starves keyboard input on large lists, so coalesce
     // typing through a short debounce window before scheduling a refresh.
     private readonly DispatcherTimer? _filterDebounceTimer;
@@ -75,20 +77,39 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
     {
         _kind = kind;
         Func<AbstractPackageLoader?> loaderFn;
-        (string Title, int Width)[] schema;
+        (string Title, string Property, int Width)[] schema;
         switch (kind)
         {
             case PackagePageKind.Installed:
                 loaderFn = () => InstalledPackagesLoader.Instance;
-                schema = new[] { ("Name", 26), ("Id", 30), ("Version", 16), ("Source", 18) };
+                schema =
+                [
+                    ("Name", nameof(PackageRow.Name), 26),
+                    ("Id", nameof(PackageRow.Id), 30),
+                    ("Version", nameof(PackageRow.Version), 16),
+                    ("Source", nameof(PackageRow.Source), 18),
+                ];
                 break;
             case PackagePageKind.Updates:
                 loaderFn = () => UpgradablePackagesLoader.Instance;
-                schema = new[] { ("Name", 24), ("Id", 26), ("Installed", 13), ("Available", 13), ("Source", 14) };
+                schema =
+                [
+                    ("Name", nameof(PackageRow.Name), 24),
+                    ("Id", nameof(PackageRow.Id), 26),
+                    ("Installed", nameof(PackageRow.Installed), 13),
+                    ("Available", nameof(PackageRow.Available), 13),
+                    ("Source", nameof(PackageRow.Source), 14),
+                ];
                 break;
             default:
                 loaderFn = () => DiscoverablePackagesLoader.Instance;
-                schema = new[] { ("Name", 28), ("Id", 32), ("Version", 14), ("Source", 16) };
+                schema =
+                [
+                    ("Name", nameof(PackageRow.Name), 28),
+                    ("Id", nameof(PackageRow.Id), 32),
+                    ("Version", nameof(PackageRow.Version), 14),
+                    ("Source", nameof(PackageRow.Source), 16),
+                ];
                 break;
         }
 
@@ -102,9 +123,12 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
             _ => "Discover Packages",
         };
 
-        _search = new TextBox
+        _search = new AutoCompleteBox
         {
-            Watermark = kind == PackagePageKind.Discover
+            FilterMode = AutoCompleteFilterMode.Contains,
+            IsTextCompletionEnabled = true,
+            MinimumPrefixLength = 1,
+            PlaceholderText = kind == PackagePageKind.Discover
                 ? "package name…  (press Enter to search)"
                 : "type to filter the list",
         };
@@ -114,27 +138,12 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
             Foreground = new SolidColorBrush(Color.Parse("#C0C0C0")), Margin = new Thickness(0, 0, 0, 1),
         };
 
-        _columnHeader = new TextBlock
-        {
-            Text = HeaderText(),
-            Foreground = DevolutionsPalette.BrandBrush,
-            FontWeight = FontWeight.Bold,
-            Margin = new Thickness(ListRowLeftIndent, 0, 0, 0),
-        };
-
-        _list = new ListBox
-        {
-            Background = Brushes.Transparent,
-            ItemTemplate = new FuncDataTemplate<PackageRow>(
-                (row, _) => new TextBlock { Text = row?.Text ?? string.Empty },
-                supportsRecycling: true),
-        };
-        _list.SelectionChanged += (_, _) => UpdateDetails();
-        _list.KeyDown += OnListKeyDown;
-        // Single-letter action keys (i/u) would otherwise trigger the ListBox's built-in type-ahead
-        // search, which runs off TextInput. Intercept those characters on the list's TextInput tunnel
-        // so they drive operations instead of moving the selection.
-        _list.AddHandler(TextInputEvent, OnListTextInput, RoutingStrategies.Tunnel);
+        _grid = BuildGrid();
+        _grid.SelectionChanged += (_, _) => UpdateDetails();
+        _grid.KeyDown += OnGridKeyDown;
+        // Single-letter action keys (i/u) would otherwise feed DataGrid text search/editing paths.
+        // Intercept those characters on the tunnel so they drive operations instead.
+        _grid.AddHandler(TextInputEvent, OnGridTextInput, RoutingStrategies.Tunnel);
 
         _details = new StackPanel { Spacing = 0 };
         ClearDetails();
@@ -142,6 +151,7 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
         Content = BuildLayout(title);
 
         _search.KeyDown += OnSearchKeyDown;
+        _search.AddHandler(TextInputEvent, OnSearchTextInput, RoutingStrategies.Tunnel);
         if (kind != PackagePageKind.Discover)
         {
             _filterDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
@@ -164,6 +174,9 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
         ScheduleRefresh();
     }
 
+    private void OnSearchTextInput(object? sender, TextInputEventArgs e)
+        => TuiInputGuard.HandleTextInput(_search, e, "package search");
+
     private Control BuildLayout(string title)
     {
         var searchRow = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 0, 0, 1) };
@@ -178,16 +191,10 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
         searchRow.Children.Add(_search);
 
         var header = new StackPanel { Spacing = 0 };
-        header.Children.Add(new TextBlock
-        {
-            Text = title,
-            Foreground = DevolutionsPalette.BrandBrush,
-            FontWeight = FontWeight.Bold,
-            Margin = new Thickness(0, 0, 0, 1),
-        });
+        header.Children.Add(TuiChrome.PageTitle(PageMarker(), title));
+        header.Children.Add(TuiChrome.Separator());
         header.Children.Add(searchRow);
         header.Children.Add(_status);
-        header.Children.Add(_columnHeader);
 
         var detailsBorder = new Border
         {
@@ -203,8 +210,42 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
         DockPanel.SetDock(detailsBorder, Dock.Bottom);
         root.Children.Add(header);
         root.Children.Add(detailsBorder);
-        root.Children.Add(_list);
+        root.Children.Add(_grid);
         return root;
+    }
+
+    private string PageMarker() => _kind switch
+    {
+        PackagePageKind.Discover => "?",
+        PackagePageKind.Updates => "^",
+        PackagePageKind.Installed => "#",
+        _ => "*",
+    };
+
+    private DataGrid BuildGrid()
+    {
+        var grid = new DataGrid
+        {
+            AutoGenerateColumns = false,
+            Background = Brushes.Transparent,
+            CanUserSortColumns = true,
+            HeadersVisibility = DataGridHeadersVisibility.Column,
+            IsReadOnly = true,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+        };
+
+        foreach ((string title, string property, int width) in _schema)
+        {
+            grid.Columns.Add(new DataGridTextColumn
+            {
+                Header = title,
+                Binding = new Binding(property),
+                Width = new DataGridLength(width, DataGridLengthUnitType.Pixel),
+            });
+        }
+
+        return grid;
     }
 
     /// <summary>Moves keyboard focus to this page's primary input (the search box).</summary>
@@ -242,7 +283,7 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
     private void FocusList()
     {
         if (_rows.Count == 0) return;
-        TuiFocus.SeatListFocus(_list);
+        TuiFocus.SeatDataGridFocus(_grid);
     }
 
     // The action this page's "act" key (i/u) performs on the selected package, or null if none.
@@ -254,8 +295,15 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
         _ => null,
     };
 
-    private void OnListKeyDown(object? sender, KeyEventArgs e)
+    private void OnGridKeyDown(object? sender, KeyEventArgs e)
     {
+        if (e.Key == Key.C && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            e.Handled = true;
+            _ = CopySelectedAsync();
+            return;
+        }
+
         if (e.Key == Key.B)
         {
             e.Handled = true;
@@ -270,7 +318,7 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
         }
     }
 
-    private void OnListTextInput(object? sender, TextInputEventArgs e)
+    private void OnGridTextInput(object? sender, TextInputEventArgs e)
     {
         // Suppress type-ahead for the characters we bind as action keys so they don't move selection.
         if (e.Text is "b" or "B") e.Handled = true;
@@ -281,15 +329,17 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
 
     private async void AddSelectedToBundle()
     {
-        if ((_list.SelectedItem as PackageRow)?.Package is not { } package) return;
+        if ((_grid.SelectedItem as PackageRow)?.Package is not { } package) return;
         try
         {
             await PackageBundlesLoader.Instance.AddPackagesAsync(new[] { package });
             _status.Text = $"Added {package.Name} to the bundle.";
+            TuiNotifications.Success("Added to bundle", package.Name);
         }
         catch (Exception ex)
         {
             _status.Text = $"Could not add to bundle: {ex.Message}";
+            TuiNotifications.Error("Bundle add failed", ex.Message);
             Logger.Error(ex);
         }
     }
@@ -310,6 +360,7 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
     }
 
     internal void MenuAddToBundle() => AddSelectedToBundle();
+    internal void MenuCopySelected() => _ = CopySelectedAsync();
 
     internal void MenuReload()
     {
@@ -323,14 +374,46 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
         if (_loaderFn() is { } loader) _ = loader.ReloadPackages();
     }
 
+    private async Task CopySelectedAsync()
+    {
+        if ((_grid.SelectedItem as PackageRow) is not { } row)
+        {
+            _status.Text = "No package selected to copy.";
+            TuiNotifications.Warning("Nothing to copy", "Select a package first.");
+            return;
+        }
+
+        string text = string.Join(Environment.NewLine,
+            $"Name: {row.Name}",
+            $"Id: {row.Id}",
+            $"Version: {row.Version}",
+            $"Installed: {row.Installed}",
+            $"Available: {row.Available}",
+            $"Source: {row.Source}",
+            $"Manager: {row.Manager}");
+
+        if (await TuiClipboard.CopyAsync(this, row.Name, text))
+            _status.Text = $"Copied {row.Name} to the clipboard.";
+    }
+
     private async Task StartOperationAsync(OperationType type)
     {
         if (_startingOp) return;
-        if ((_list.SelectedItem as PackageRow)?.Package is not { } package) return;
+        if ((_grid.SelectedItem as PackageRow)?.Package is not { } package) return;
 
         try
         {
             _startingOp = true;
+            if (type == OperationType.Uninstall
+                && !await TuiDialogs.ConfirmAsync(
+                    this,
+                    "Uninstall package",
+                    $"Uninstall {package.Name}?\n\nThis will remove the selected package from this system."))
+            {
+                _status.Text = "Uninstall canceled.";
+                return;
+            }
+
             _status.Text = $"Preparing to {type.ToString().ToLowerInvariant()} {package.Name}…";
 
             // Simulation mode (UNIGETUI_TUI_SIMULATE=1): never touch the system — enqueue a fake op
@@ -338,6 +421,7 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
             if (SimulatedOperation.IsEnabled)
             {
                 TuiOperationRegistry.Start(new SimulatedOperation(type.ToString(), package.Name));
+                TuiNotifications.Info("Operation enqueued", $"{type} {package.Name}");
                 TuiShell.Navigate("operations");
                 return;
             }
@@ -356,11 +440,13 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
             };
 
             TuiOperationRegistry.Start(op);
+            TuiNotifications.Info("Operation enqueued", $"{type} {package.Name}");
             TuiShell.Navigate("operations");
         }
         catch (Exception ex)
         {
             _status.Text = $"Could not start operation: {ex.Message}";
+            TuiNotifications.Error("Operation start failed", ex.Message);
             Logger.Error(ex);
         }
         finally
@@ -441,18 +527,19 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
 
         var rows = query
             .OrderBy(p => p.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-            .Select(p => new PackageRow(RowText(p), p))
+            .Select(BuildRow)
             .ToList();
 
-        long? selectedHash = (_list.SelectedItem as PackageRow) is { } prev ? SafeHash(prev.Package) : null;
+        long? selectedHash = (_grid.SelectedItem as PackageRow)?.Hash;
 
         _rows = rows;
-        _list.ItemsSource = _rows;
+        _grid.ItemsSource = _rows;
+        _search.ItemsSource = BuildSuggestions(_rows);
 
         if (selectedHash is long hash)
         {
-            PackageRow? match = _rows.FirstOrDefault(r => SafeHash(r.Package) == hash);
-            if (match is not null) _list.SelectedItem = match;
+            PackageRow? match = _rows.FirstOrDefault(r => r.Hash == hash);
+            if (match is not null) _grid.SelectedItem = match;
         }
 
         UpdateStatus(loader, filter);
@@ -505,14 +592,13 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
 
     private void UpdateDetails()
     {
-        int index = _list.SelectedIndex;
-        if (index < 0 || index >= _rows.Count)
+        if (_grid.SelectedItem is not PackageRow row)
         {
             ClearDetails();
             return;
         }
 
-        IPackage p = _rows[index].Package;
+        IPackage p = row.Package;
         _details.Children.Clear();
 
         void Line(string label, string value)
@@ -543,26 +629,43 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
         Line("Manager", Safe(() => p.Manager.DisplayName));
     }
 
-    private string RowText(IPackage p)
+    private PackageRow BuildRow(IPackage p)
     {
-        string[] values = _kind switch
+        return _kind switch
         {
-            PackagePageKind.Updates => new[]
-            {
-                Safe(() => p.Name), Safe(() => p.Id), Safe(() => p.VersionString), Safe(() => p.NewVersionString),
+            PackagePageKind.Updates => new PackageRow(
+                p,
+                SafeHash(p),
+                Safe(() => p.Name),
+                Safe(() => p.Id),
+                string.Empty,
+                Safe(() => p.VersionString),
+                Safe(() => p.NewVersionString),
                 Safe(() => p.Source.Name),
-            },
-            _ => new[]
-            {
-                Safe(() => p.Name), Safe(() => p.Id), Safe(() => p.VersionString), Safe(() => p.Source.Name),
-            },
+                Safe(() => p.Manager.DisplayName)),
+            _ => new PackageRow(
+                p,
+                SafeHash(p),
+                Safe(() => p.Name),
+                Safe(() => p.Id),
+                Safe(() => p.VersionString),
+                string.Empty,
+                string.Empty,
+                Safe(() => p.Source.Name),
+                Safe(() => p.Manager.DisplayName)),
         };
-
-        return string.Join(" ", values.Select((v, i) => PadFit(v, _schema[i].Width)));
     }
 
-    private string HeaderText()
-        => string.Join(" ", _schema.Select(s => PadFit(s.Title, s.Width)));
+    private static IReadOnlyList<string> BuildSuggestions(IEnumerable<PackageRow> rows)
+    {
+        return rows
+            .SelectMany(r => new[] { r.Name, r.Id, r.Source, r.Manager })
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+            .Take(150)
+            .ToArray();
+    }
 
     private static bool ContainsCI(string? haystack, string needle)
         => haystack is not null && haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
@@ -601,13 +704,5 @@ internal sealed class PackageListPage : UserControl, IFocusablePage
         {
             return string.Empty;
         }
-    }
-
-    private static string PadFit(string value, int width)
-    {
-        value ??= string.Empty;
-        if (value.Length > width)
-            value = width <= 1 ? value[..width] : value[..(width - 1)] + "…";
-        return value.PadRight(width);
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -24,9 +25,9 @@ namespace UniGetUI.Tui.Views.Pages;
 /// </summary>
 internal sealed class OperationsPage : UserControl, IFocusablePage
 {
-    private sealed record QueueRow(string Text, AbstractOperation Operation)
+    private sealed record QueueRow(AbstractOperation Operation, string State, string Title, string Status)
     {
-        public override string ToString() => Text;
+        public override string ToString() => Title;
     }
 
     private sealed record LogRow(string Text, AbstractOperation.LineType Type)
@@ -34,7 +35,7 @@ internal sealed class OperationsPage : UserControl, IFocusablePage
         public override string ToString() => Text;
     }
 
-    private readonly ListBox _queue;
+    private readonly DataGrid _queue;
     private readonly ListBox _log;
     private readonly TextBlock _status;
     private readonly TextBlock _logHeader;
@@ -46,22 +47,14 @@ internal sealed class OperationsPage : UserControl, IFocusablePage
     {
         _status = new TextBlock
         {
-            Foreground = new SolidColorBrush(Color.Parse("#C0C0C0")),
-            Margin = new Thickness(0, 0, 0, 1),
+            Foreground = new SolidColorBrush(Color.Parse("#C0C0C0")), Margin = new Thickness(0, 0, 0, 1),
         };
 
-        _queue = new ListBox
-        {
-            Background = Brushes.Transparent,
-            Width = 34,
-            ItemTemplate = new FuncDataTemplate<QueueRow>(
-                (row, _) => new TextBlock { Text = row?.Text ?? string.Empty },
-                supportsRecycling: true),
-        };
+        _queue = BuildQueueGrid();
         _queue.SelectionChanged += OnQueueSelectionChanged;
         _queue.KeyDown += OnQueueKeyDown;
-        // Action letters (c/x) would otherwise trigger the ListBox's built-in type-ahead search (which
-        // runs off TextInput). Suppress them on the tunnel so they only drive operations.
+        // Action letters (c/x) would otherwise feed DataGrid text search/editing paths. Suppress them
+        // on the tunnel so they only drive operations.
         _queue.AddHandler(TextInputEvent, OnQueueTextInput, RoutingStrategies.Tunnel);
 
         _logHeader = new TextBlock
@@ -92,16 +85,11 @@ internal sealed class OperationsPage : UserControl, IFocusablePage
     private Control BuildLayout()
     {
         var header = new StackPanel { Spacing = 0 };
-        header.Children.Add(new TextBlock
-        {
-            Text = "Operations",
-            Foreground = DevolutionsPalette.BrandBrush,
-            FontWeight = FontWeight.Bold,
-            Margin = new Thickness(0, 0, 0, 1),
-        });
+        header.Children.Add(TuiChrome.PageTitle(">", "Operations"));
+        header.Children.Add(TuiChrome.Separator());
         header.Children.Add(_status);
 
-        var queuePane = new DockPanel { LastChildFill = true, Width = 34 };
+        var queuePane = new DockPanel { LastChildFill = true, Width = 44 };
         var queueHeader = new TextBlock
         {
             Text = "Queue",
@@ -139,7 +127,42 @@ internal sealed class OperationsPage : UserControl, IFocusablePage
         return root;
     }
 
-    public bool FocusPrimary() => TuiFocus.SeatListFocus(_queue);
+    public bool FocusPrimary() => TuiFocus.SeatDataGridFocus(_queue);
+
+    private static DataGrid BuildQueueGrid()
+    {
+        var grid = new DataGrid
+        {
+            AutoGenerateColumns = false,
+            Background = Brushes.Transparent,
+            CanUserSortColumns = true,
+            HeadersVisibility = DataGridHeadersVisibility.Column,
+            IsReadOnly = true,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+        };
+
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "State",
+            Binding = new Binding(nameof(QueueRow.State)),
+            Width = new DataGridLength(7, DataGridLengthUnitType.Pixel),
+        });
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "Operation",
+            Binding = new Binding(nameof(QueueRow.Title)),
+            Width = new DataGridLength(23, DataGridLengthUnitType.Pixel),
+        });
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "Status",
+            Binding = new Binding(nameof(QueueRow.Status)),
+            Width = new DataGridLength(10, DataGridLengthUnitType.Pixel),
+        });
+
+        return grid;
+    }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
@@ -164,7 +187,7 @@ internal sealed class OperationsPage : UserControl, IFocusablePage
         // Preserve the current selection across rebuilds by operation reference.
         var previouslySelected = (_queue.SelectedItem as QueueRow)?.Operation ?? _selected;
 
-        var rows = ops.Select(op => new QueueRow(QueueRowText(op), op)).ToList();
+        var rows = ops.Select(BuildQueueRow).ToList();
         _queue.ItemsSource = rows;
 
         int running = ops.Count(o => o.Status is OperationStatus.Running);
@@ -253,8 +276,11 @@ internal sealed class OperationsPage : UserControl, IFocusablePage
             _log.ScrollIntoView(rows[^1]);
     }
 
-    // Menu-bar entry point: cancel the currently selected operation (same as the 'c' hotkey).
-    internal void MenuCancelSelected() => _selected?.Cancel();
+    // Menu-bar entry points: same actions as the queue hotkeys, with managed confirmation dialogs.
+    internal void MenuCancelSelected() => _ = CancelSelectedAsync();
+    internal void MenuClearFinished() => _ = ClearFinishedAsync();
+    internal void MenuCancelAll() => _ = CancelAllAsync();
+    internal void MenuCopyOutput() => _ = CopySelectedOutputAsync();
 
     // GetOutput() exposes the operation's live log list, which background producers append to while
     // the UI renders; copy it defensively and retry the rare torn enumeration instead of crashing.
@@ -262,23 +288,40 @@ internal sealed class OperationsPage : UserControl, IFocusablePage
     {
         for (int attempt = 0; attempt < 3; attempt++)
         {
-            try { return op.GetOutput().ToList(); }
-            catch (ArgumentException) { /* list resized mid-copy */ }
-            catch (InvalidOperationException) { /* collection modified during enumeration */ }
+            try
+            {
+                return op.GetOutput().ToList();
+            }
+            catch (ArgumentException)
+            {
+                /* list resized mid-copy */
+            }
+            catch (InvalidOperationException)
+            {
+                /* collection modified during enumeration */
+            }
         }
+
         return new();
     }
 
     private void OnQueueKeyDown(object? sender, KeyEventArgs e)
     {
+        if (e.Key == Key.C && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            _ = CopySelectedOutputAsync();
+            e.Handled = true;
+            return;
+        }
+
         switch (e.Key)
         {
             case Key.C:
-                _selected?.Cancel();
+                _ = CancelSelectedAsync();
                 e.Handled = true;
                 break;
             case Key.X:
-                TuiOperationRegistry.ClearFinished();
+                _ = ClearFinishedAsync();
                 e.Handled = true;
                 break;
         }
@@ -289,9 +332,87 @@ internal sealed class OperationsPage : UserControl, IFocusablePage
         if (e.Text is "c" or "C" or "x" or "X") e.Handled = true;
     }
 
-    private static string QueueRowText(AbstractOperation op)
+    private async Task CancelSelectedAsync()
     {
-        string glyph = op.Status switch
+        if (_selected is null)
+        {
+            _status.Text = "No operation selected.";
+            return;
+        }
+
+        string title = _selected.Metadata.Title.Length > 0 ? _selected.Metadata.Title : "selected operation";
+        if (!await TuiDialogs.ConfirmAsync(this, "Cancel operation", $"Cancel {title}?"))
+        {
+            _status.Text = "Cancel operation aborted.";
+            return;
+        }
+
+        _selected.Cancel();
+        TuiNotifications.Warning("Cancel requested", title);
+    }
+
+    private async Task CopySelectedOutputAsync()
+    {
+        if (_selected is null)
+        {
+            _status.Text = "No operation selected to copy.";
+            TuiNotifications.Warning("Nothing to copy", "Select an operation first.");
+            return;
+        }
+
+        var lines = SnapshotOutput(_selected)
+            .Where(l => l.Item2 is not AbstractOperation.LineType.ProgressIndicator)
+            .Select(l => l.Item1)
+            .ToArray();
+        string title = _selected.Metadata.Title.Length > 0 ? _selected.Metadata.Title : "operation output";
+        if (await TuiClipboard.CopyAsync(this, title, string.Join(Environment.NewLine, lines)))
+            _status.Text = $"Copied output for {title}.";
+    }
+
+    private async Task ClearFinishedAsync()
+    {
+        if (!TuiOperationRegistry.Snapshot()
+                .Any(op => op.Status is not OperationStatus.Running and not OperationStatus.InQueue))
+        {
+            _status.Text = "No finished operations to clear.";
+            return;
+        }
+
+        if (!await TuiDialogs.ConfirmAsync(this, "Clear finished operations",
+                "Remove all finished operations from the queue?"))
+        {
+            _status.Text = "Clear finished operations canceled.";
+            return;
+        }
+
+        TuiOperationRegistry.ClearFinished();
+        TuiNotifications.Success("Finished operations cleared", "Queue now only contains active operations.");
+    }
+
+    private async Task CancelAllAsync()
+    {
+        int active = TuiOperationRegistry.Snapshot()
+            .Count(op => op.Status is OperationStatus.Running or OperationStatus.InQueue);
+        if (active == 0)
+        {
+            _status.Text = "No running or queued operations to cancel.";
+            return;
+        }
+
+        if (!await TuiDialogs.ConfirmAsync(this, "Cancel all operations",
+                $"Cancel {active} running/queued operation(s)?"))
+        {
+            _status.Text = "Cancel all operations aborted.";
+            return;
+        }
+
+        TuiOperationRegistry.CancelAll();
+        TuiNotifications.Warning("Cancel requested", $"{active} operation(s)");
+    }
+
+    private static QueueRow BuildQueueRow(AbstractOperation op)
+    {
+        string state = op.Status switch
         {
             OperationStatus.Running => "▶",
             OperationStatus.InQueue => "…",
@@ -302,9 +423,9 @@ internal sealed class OperationsPage : UserControl, IFocusablePage
         };
 
         string title = op.Metadata.Title.Length > 0 ? op.Metadata.Title : "Operation";
-        if (title.Length > 30)
-            title = title[..29] + "…";
+        if (title.Length > 28)
+            title = title[..27] + "…";
 
-        return $"{glyph} {title}";
+        return new QueueRow(op, state, title, op.Status.ToString());
     }
 }

@@ -39,30 +39,21 @@ internal sealed class SettingsPage : UserControl, IFocusablePage
     // Curated, high-signal subset mirroring the desktop General/Interface/Updates/Notifications/Backup pages.
     private static readonly Row[] Definitions =
     {
-        new("General", null),
-        new("Disable telemetry", Settings.K.DisableTelemetry),
+        new("General", null), new("Disable telemetry", Settings.K.DisableTelemetry),
         new("Keep successful operations in the list", Settings.K.MaintainSuccessfulInstalls),
         new("Cache administrator rights for the session", Settings.K.DoCacheAdminRights),
-        new("Disable the system tray icon", Settings.K.DisableSystemTray),
-
-        new("Interface", null),
+        new("Disable the system tray icon", Settings.K.DisableSystemTray), new("Interface", null),
         new("Disable icons on package lists", Settings.K.DisableIconsOnPackageLists),
         new("Show the version number on the title bar", Settings.K.ShowVersionNumberOnTitlebar),
-        new("Disable instant (as-you-type) search", Settings.K.DisableInstantSearch),
-
-        new("Updates", null),
+        new("Disable instant (as-you-type) search", Settings.K.DisableInstantSearch), new("Updates", null),
         new("Disable automatic update checks", Settings.K.DisableAutoCheckforUpdates),
         new("Automatically install available updates", Settings.K.AutomaticallyUpdatePackages),
         new("Do not select updates by default", Settings.K.DisableSelectingUpdatesByDefault),
         new("Ignore updates that are not applicable", Settings.K.IgnoreUpdatesNotApplicable),
-
-        new("Notifications", null),
-        new("Disable all notifications", Settings.K.DisableNotifications),
+        new("Notifications", null), new("Disable all notifications", Settings.K.DisableNotifications),
         new("Disable update notifications", Settings.K.DisableUpdatesNotifications),
         new("Disable error notifications", Settings.K.DisableErrorNotifications),
-        new("Disable success notifications", Settings.K.DisableSuccessNotifications),
-
-        new("Backup", null),
+        new("Disable success notifications", Settings.K.DisableSuccessNotifications), new("Backup", null),
         new("Enable local package backup", Settings.K.EnablePackageBackup_LOCAL),
         new("Timestamp backup files", Settings.K.EnableBackupTimestamping),
     };
@@ -87,7 +78,10 @@ internal sealed class SettingsPage : UserControl, IFocusablePage
                 {
                     Text = row?.Render() ?? string.Empty,
                     FontWeight = row?.IsHeader == true ? FontWeight.Bold : FontWeight.Normal,
-                    Foreground = row?.IsHeader == true ? DevolutionsPalette.BrandBrush : new SolidColorBrush(Color.Parse("#BBBBBB")),
+                    Foreground =
+                        row?.IsHeader == true
+                            ? DevolutionsPalette.BrandBrush
+                            : new SolidColorBrush(Color.Parse("#BBBBBB")),
                     Margin = row?.IsHeader == true ? new Thickness(0, 1, 0, 0) : new Thickness(0),
                 },
                 supportsRecycling: true),
@@ -98,13 +92,8 @@ internal sealed class SettingsPage : UserControl, IFocusablePage
 
         var root = new DockPanel { LastChildFill = true, Margin = new Thickness(2, 1, 2, 1) };
         var header = new StackPanel { Spacing = 0 };
-        header.Children.Add(new TextBlock
-        {
-            Text = "Settings",
-            Foreground = DevolutionsPalette.BrandBrush,
-            FontWeight = FontWeight.Bold,
-            Margin = new Thickness(0, 0, 0, 1),
-        });
+        header.Children.Add(TuiChrome.PageTitle("*", "Settings"));
+        header.Children.Add(TuiChrome.Separator());
         header.Children.Add(_status);
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);

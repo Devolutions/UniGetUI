@@ -1,3 +1,4 @@
+using System.Collections;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
@@ -46,5 +47,42 @@ internal static class TuiFocus
         }, DispatcherPriority.Background);
 
         return ok;
+    }
+
+    /// <summary>
+    /// Seat keyboard focus on a terminal DataGrid. Consolonia's DataGrid handles row navigation when the
+    /// grid owns focus; this ensures a selected item exists first so Down/Up start from a real row.
+    /// </summary>
+    public static bool SeatDataGridFocus(DataGrid grid)
+    {
+        if (grid.SelectedItem is null)
+        {
+            object? first = FirstItem(grid.ItemsSource);
+            if (first is null) return false;
+            grid.SelectedItem = first;
+        }
+
+        bool ok = grid.Focus();
+        Dispatcher.UIThread.Post(() =>
+        {
+            var top = TopLevel.GetTopLevel(grid);
+            if (top is null) return;
+            if (top.FocusManager?.GetFocusedElement() is not Visual focused) return;
+            if (!ReferenceEquals(focused, grid) && !grid.IsVisualAncestorOf(focused)) return;
+            grid.Focus();
+        }, DispatcherPriority.Background);
+
+        return ok;
+    }
+
+    private static object? FirstItem(IEnumerable? items)
+    {
+        if (items is null) return null;
+        foreach (object? item in items)
+        {
+            if (item is not null) return item;
+        }
+
+        return null;
     }
 }

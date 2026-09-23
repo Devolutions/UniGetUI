@@ -50,6 +50,9 @@ internal sealed class MainWindow : Window
     private readonly StackPanel _menuBar;
     private readonly Border _menuDropDown;
     private readonly StackPanel _menuDropDownItems;
+    private readonly Border _notificationHost;
+    private readonly TextBlock _notificationText;
+    private readonly DispatcherTimer _notificationTimer;
     private readonly List<Border> _menuHeaderBorders = new();
     private readonly List<Border> _menuActionBorders = new();
     private readonly Dictionary<string, Control> _pageCache = new();
@@ -89,6 +92,10 @@ internal sealed class MainWindow : Window
         _menuDropDownItems = new StackPanel { Spacing = 0 };
         _menuDropDown = BuildMenuDropDown(_menuDropDownItems);
         var menuBar = WrapMenu(_menuBar);
+        _notificationText = new TextBlock { TextWrapping = TextWrapping.NoWrap };
+        _notificationHost = BuildNotificationHost(_notificationText);
+        _notificationTimer = new DispatcherTimer();
+        _notificationTimer.Tick += (_, _) => HideNotification();
 
         var root = new DockPanel { LastChildFill = true };
 
@@ -96,12 +103,14 @@ internal sealed class MainWindow : Window
         DockPanel.SetDock(menuBar, Dock.Top);
         DockPanel.SetDock(_menuDropDown, Dock.Top);
         DockPanel.SetDock(footer, Dock.Bottom);
+        DockPanel.SetDock(_notificationHost, Dock.Bottom);
         DockPanel.SetDock(sidebar, Dock.Left);
 
         root.Children.Add(header);
         root.Children.Add(menuBar);
         root.Children.Add(_menuDropDown);
         root.Children.Add(footer);
+        root.Children.Add(_notificationHost);
         root.Children.Add(sidebar);
         root.Children.Add(_contentHost);
 
@@ -174,6 +183,13 @@ internal sealed class MainWindow : Window
         // Pages don't hold a window reference; they request navigation through the decoupled shell bus
         // (e.g. PackageListPage jumps here to "operations" after enqueueing an operation).
         TuiShell.NavigationRequested += OnNavigationRequested;
+        TuiNotifications.NotificationRaised += OnNotificationRaised;
+        Closed += (_, _) =>
+        {
+            TuiShell.NavigationRequested -= OnNavigationRequested;
+            TuiNotifications.NotificationRaised -= OnNotificationRaised;
+            _notificationTimer.Stop();
+        };
     }
 
     private void OnNavigationRequested(string pageId)
@@ -274,7 +290,7 @@ internal sealed class MainWindow : Window
     {
         if (_activePane == ActivePane.Content) return true;
         var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
-        return focused is TextBox;
+        return focused is TextBox or AutoCompleteBox;
     }
 
     private void FocusSidebar()
@@ -553,26 +569,25 @@ internal sealed class MainWindow : Window
         FocusSidebar();
     }
 
-    private void OpenBundlePrompt()
+    private void OpenBundlePicker()
     {
         TuiShell.Navigate("bundles");
         Dispatcher.UIThread.Post(() =>
         {
-            // The prompt focuses a TextBox in the content pane; flip the pane mode to match so that
-            // when the prompt closes (focus lands on the bundle list) arrows keep routing to the list
-            // instead of the sidebar. Navigate() resets the mode to Sidebar, hence after the post.
+            // The picker is launched from the Bundles page; keep content mode so focus returns to the
+            // bundle grid/filter instead of the sidebar once the managed picker closes.
             _activePane = ActivePane.Content;
-            (_contentHost.Content as BundlesPage)?.BeginOpenPrompt();
+            (_contentHost.Content as BundlesPage)?.OpenBundlePicker();
         }, DispatcherPriority.Background);
     }
 
-    private void SaveBundlePrompt()
+    private void SaveBundlePicker()
     {
         TuiShell.Navigate("bundles");
         Dispatcher.UIThread.Post(() =>
         {
             _activePane = ActivePane.Content;
-            (_contentHost.Content as BundlesPage)?.BeginSavePrompt();
+            (_contentHost.Content as BundlesPage)?.SaveBundlePicker();
         }, DispatcherPriority.Background);
     }
 
@@ -592,8 +607,8 @@ internal sealed class MainWindow : Window
         [
             new MenuDefinition("File",
             [
-                new("Open bundle...", OpenBundlePrompt),
-                new("Save bundle...", SaveBundlePrompt),
+                new("Open bundle...", OpenBundlePicker),
+                new("Save bundle...", SaveBundlePicker),
                 new(string.Empty, null),
                 new("Exit  (Ctrl+Q)", Quit),
             ]),
@@ -604,14 +619,16 @@ internal sealed class MainWindow : Window
                 new("Uninstall selected", () => CurrentPackageList?.MenuOperation(OperationType.Uninstall)),
                 new(string.Empty, null),
                 new("Add to bundle  (b)", () => CurrentPackageList?.MenuAddToBundle()),
+                new("Copy selected  (Ctrl+C)", () => CurrentPackageList?.MenuCopySelected()),
                 new("Reload", () => CurrentPackageList?.MenuReload()),
             ]),
             new MenuDefinition("View", view),
             new MenuDefinition("Tools",
             [
                 new("Cancel current op  (c)", () => CurrentOperations?.MenuCancelSelected()),
-                new("Clear finished  (x)", TuiOperationRegistry.ClearFinished),
-                new("Cancel all operations", TuiOperationRegistry.CancelAll),
+                new("Clear finished  (x)", () => CurrentOperations?.MenuClearFinished()),
+                new("Cancel all operations", () => CurrentOperations?.MenuCancelAll()),
+                new("Copy output  (Ctrl+C)", () => CurrentOperations?.MenuCopyOutput()),
             ]),
             new MenuDefinition("Help",
             [
@@ -653,6 +670,66 @@ internal sealed class MainWindow : Window
             Child = child,
         };
     }
+
+    private static Border BuildNotificationHost(TextBlock text)
+    {
+        return new Border
+        {
+            IsVisible = false,
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            BorderBrush = new SolidColorBrush(Color.Parse("#3A3A3A")),
+            Padding = new Thickness(1, 0, 1, 0),
+            Child = text,
+        };
+    }
+
+    private void OnNotificationRaised(TuiNotification notification)
+    {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => OnNotificationRaised(notification), DispatcherPriority.Background);
+            return;
+        }
+
+        _notificationTimer.Stop();
+        _notificationText.Text =
+            $"{NotificationPrefix(notification.Severity)} {notification.Title}: {notification.Message}";
+        _notificationText.Foreground = NotificationForeground(notification.Severity);
+        _notificationHost.Background = NotificationBackground(notification.Severity);
+        _notificationHost.IsVisible = true;
+        _notificationTimer.Interval = notification.Duration;
+        _notificationTimer.Start();
+    }
+
+    private void HideNotification()
+    {
+        _notificationTimer.Stop();
+        _notificationHost.IsVisible = false;
+    }
+
+    private static string NotificationPrefix(TuiNotificationSeverity severity) => severity switch
+    {
+        TuiNotificationSeverity.Success => "[OK]",
+        TuiNotificationSeverity.Warning => "[WARN]",
+        TuiNotificationSeverity.Error => "[ERROR]",
+        _ => "[INFO]",
+    };
+
+    private static IBrush NotificationForeground(TuiNotificationSeverity severity) => severity switch
+    {
+        TuiNotificationSeverity.Success => DevolutionsPalette.SuccessTextBrush,
+        TuiNotificationSeverity.Warning => new SolidColorBrush(Color.Parse("#FFE19A")),
+        TuiNotificationSeverity.Error => DevolutionsPalette.ErrorTextBrush,
+        _ => DevolutionsPalette.BrandBrush,
+    };
+
+    private static IBrush NotificationBackground(TuiNotificationSeverity severity) => severity switch
+    {
+        TuiNotificationSeverity.Success => new SolidColorBrush(Color.Parse("#102A17")),
+        TuiNotificationSeverity.Warning => new SolidColorBrush(Color.Parse("#332600")),
+        TuiNotificationSeverity.Error => new SolidColorBrush(Color.Parse("#3A1010")),
+        _ => new SolidColorBrush(Color.Parse("#0C2040")),
+    };
 
     private void RenderMenu()
     {

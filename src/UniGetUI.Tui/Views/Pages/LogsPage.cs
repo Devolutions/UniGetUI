@@ -29,7 +29,7 @@ internal sealed class LogsPage : UserControl, IFocusablePage
 
     private readonly ListBox _list;
     private readonly TextBlock _status;
-    private readonly TextBox _filter;
+    private readonly AutoCompleteBox _filter;
     private readonly DispatcherTimer _timer;
 
     private int _lastCount = -1;
@@ -49,9 +49,16 @@ internal sealed class LogsPage : UserControl, IFocusablePage
             Foreground = new SolidColorBrush(Color.Parse("#C0C0C0")), Margin = new Thickness(0, 0, 0, 1),
         };
 
-        _filter = new TextBox { Watermark = "type to filter log lines  (Enter/↓ to list)" };
+        _filter = new AutoCompleteBox
+        {
+            FilterMode = AutoCompleteFilterMode.Contains,
+            IsTextCompletionEnabled = true,
+            MinimumPrefixLength = 1,
+            PlaceholderText = "type to filter log lines  (Enter/↓ to list)",
+        };
         _filter.TextChanged += (_, _) => RequestRefresh(force: true);
         _filter.KeyDown += OnFilterKeyDown;
+        _filter.AddHandler(TextInputEvent, OnFilterTextInput, RoutingStrategies.Tunnel);
 
         _list = new ListBox
         {
@@ -70,13 +77,8 @@ internal sealed class LogsPage : UserControl, IFocusablePage
 
         var root = new DockPanel { LastChildFill = true, Margin = new Thickness(2, 1, 2, 1) };
         var header = new StackPanel { Spacing = 0 };
-        header.Children.Add(new TextBlock
-        {
-            Text = "Logs",
-            Foreground = DevolutionsPalette.BrandBrush,
-            FontWeight = FontWeight.Bold,
-            Margin = new Thickness(0, 0, 0, 1),
-        });
+        header.Children.Add(TuiChrome.PageTitle("!", "Logs"));
+        header.Children.Add(TuiChrome.Separator());
         var filterRow = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 0, 0, 1) };
         var filterLabel = new TextBlock
         {
@@ -119,6 +121,9 @@ internal sealed class LogsPage : UserControl, IFocusablePage
         }
     }
 
+    private void OnFilterTextInput(object? sender, TextInputEventArgs e)
+        => TuiInputGuard.HandleTextInput(_filter, e, "log filter");
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
@@ -137,6 +142,13 @@ internal sealed class LogsPage : UserControl, IFocusablePage
 
     private void OnListKeyDown(object? sender, KeyEventArgs e)
     {
+        if (e.Key == Key.C && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            _ = CopySelectedLineAsync();
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.D)
         {
             _showDebug = !_showDebug;
@@ -148,6 +160,19 @@ internal sealed class LogsPage : UserControl, IFocusablePage
     private void OnListTextInput(object? sender, TextInputEventArgs e)
     {
         if (e.Text is "d" or "D") e.Handled = true;
+    }
+
+    private async Task CopySelectedLineAsync()
+    {
+        if (_list.SelectedItem is not LogRow row)
+        {
+            _status.Text = "No log line selected to copy.";
+            TuiNotifications.Warning("Nothing to copy", "Select a log line first.");
+            return;
+        }
+
+        if (await TuiClipboard.CopyAsync(this, "log line", row.Text))
+            _status.Text = "Copied selected log line to the clipboard.";
     }
 
     // UI thread. Records a refresh request; if a fetch is already running, mark it queued (preserving
@@ -212,6 +237,7 @@ internal sealed class LogsPage : UserControl, IFocusablePage
         _lastCount = logs.Length;
 
         string filter = (_filter.Text ?? string.Empty).Trim();
+        _filter.ItemsSource = BuildSuggestions(logs);
         var rows = logs
             .Where(l => _showDebug || l.Severity != LogEntry.SeverityLevel.Debug)
             .Where(l => filter.Length == 0
@@ -237,4 +263,17 @@ internal sealed class LogsPage : UserControl, IFocusablePage
         LogEntry.SeverityLevel.Debug => new SolidColorBrush(Color.Parse("#BBBBBB")),
         _ => new SolidColorBrush(Color.Parse("#BBBBBB")),
     };
+
+    private static IReadOnlyList<string> BuildSuggestions(IEnumerable<LogEntry> logs)
+    {
+        char[] separators = [' ', '\t', ':', ';', ',', '.', '/', '\\', '[', ']', '(', ')', '{', '}', '"', '\''];
+        return logs
+            .SelectMany(l => new[] { l.Severity.ToString() }
+                .Concat((l.Content ?? string.Empty).Split(separators, StringSplitOptions.RemoveEmptyEntries)))
+            .Where(s => s.Length >= 3)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+            .Take(150)
+            .ToArray();
+    }
 }

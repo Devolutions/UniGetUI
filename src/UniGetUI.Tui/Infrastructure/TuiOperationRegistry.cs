@@ -98,7 +98,31 @@ internal static class TuiOperationRegistry
     }
 
     private static void OnOpStatusChanged(object? sender, OperationStatus status) => RaiseChanged();
-    private static void OnOpFinished(object? sender, EventArgs e) => RaiseChanged();
+
+    private static void OnOpFinished(object? sender, EventArgs e)
+    {
+        if (sender is AbstractOperation op)
+            NotifyOperationFinished(op);
+
+        RaiseChanged();
+    }
+
+    private static void NotifyOperationFinished(AbstractOperation op)
+    {
+        string title = string.IsNullOrWhiteSpace(op.Metadata.Title) ? "Operation" : op.Metadata.Title;
+        switch (op.Status)
+        {
+            case OperationStatus.Succeeded:
+                TuiNotifications.Success("Operation completed", title);
+                break;
+            case OperationStatus.Failed:
+                TuiNotifications.Error("Operation failed", title);
+                break;
+            case OperationStatus.Canceled:
+                TuiNotifications.Warning("Operation canceled", title);
+                break;
+        }
+    }
 
     private static async Task RunObservedAsync(AbstractOperation op)
     {

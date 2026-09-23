@@ -3,6 +3,8 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Styling;
 using Consolonia;
+using Consolonia.Controls.DataGrid;
+using Consolonia.ManagedWindows;
 using Consolonia.Themes;
 using UniGetUI.Tui.Theme;
 using UniGetUI.Tui.Views;
@@ -29,6 +31,8 @@ internal sealed class App : Application
         // TurboVisionTheme). The *Dark variants ship no precompiled XAML in the fork and throw at
         // construction. ModernTheme is the truecolor base; TurboVision is the 16-colour fallback.
         Styles.Add(rgb ? new ModernTheme() : new TurboVisionTheme());
+        Styles.Add(new AutoDataGridStyles());
+        Styles.Add(new AutoManagedWindowStyles());
 
         // The Modern theme carries Light/Dark ThemeDictionaries; pin Dark for the Devolutions look.
         RequestedThemeVariant = ThemeVariant.Dark;

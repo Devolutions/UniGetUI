@@ -62,8 +62,11 @@ downloaded (`DownloadOperation`), which refuses a destination that is the packag
 Every `.nupkg` in the folder is opened during a search, so its contents are treated as untrusted:
 a manifest is rejected above 4 MiB (checked against the declared size *and* while decompressing,
 since the declared one can lie) and parsed with DTD processing prohibited, and an embedded
-`<icon>` is extracted under the same bounds into the package's icon cache directory, named only
-from the package version plus an allow-listed extension so a crafted entry path cannot escape it.
+`<icon>` is extracted under the same bounds into the package's icon cache directory, named from
+the package version, a digest of the archive's path, write time and size, and an allow-listed
+extension - never from the entry path, so a crafted entry name cannot escape that directory, two
+feeds carrying the same id and version keep their own icons, and a replaced package is re-read
+however its timestamp moves.
 
 ### V3 resources used
 

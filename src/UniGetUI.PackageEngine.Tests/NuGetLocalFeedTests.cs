@@ -1,3 +1,4 @@
+using UniGetUI.Core.Data;
 using UniGetUI.Core.IconEngine;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
@@ -11,8 +12,27 @@ using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
 
 namespace UniGetUI.PackageEngine.Tests;
 
-public sealed class NuGetLocalFeedTests
+public sealed class NuGetLocalFeedTests : IDisposable
 {
+    private readonly string _testRoot = Path.Combine(
+        AppContext.BaseDirectory,
+        nameof(NuGetLocalFeedTests),
+        Guid.NewGuid().ToString("N")
+    );
+
+    public NuGetLocalFeedTests()
+    {
+        Directory.CreateDirectory(_testRoot);
+        CoreData.TEST_DataDirectoryOverride = Path.Combine(_testRoot, "Data");
+    }
+
+    public void Dispose()
+    {
+        CoreData.TEST_DataDirectoryOverride = null;
+        if (Directory.Exists(_testRoot))
+            Directory.Delete(_testRoot, recursive: true);
+    }
+
     [Theory]
     [InlineData("https://community.chocolatey.org/api/v2/", false)]
     [InlineData("https://packages.example.test/api/v3/index.json", false)]
@@ -436,6 +456,75 @@ public sealed class NuGetLocalFeedTests
                     .Build()
             )
         );
+    }
+
+    [Fact]
+    public void GetIconKeepsTheIconsOfTwoFeedsCarryingTheSameIdAndVersionApart()
+    {
+        byte[] first = [137, 80, 78, 71, 1, 1, 1, 1];
+        byte[] second = [137, 80, 78, 71, 2, 2, 2, 2];
+
+        using var feedA = new LocalFeed();
+        using var feedB = new LocalFeed();
+        feedA.WritePackage("Contoso.Tool", "2.0.0", iconFile: "icon.png", iconBytes: first);
+        feedB.WritePackage("Contoso.Tool", "2.0.0", iconFile: "icon.png", iconBytes: second);
+
+        string? iconA = LoadIconPath(feedA);
+        string? iconB = LoadIconPath(feedB);
+
+        Assert.NotNull(iconA);
+        Assert.NotNull(iconB);
+        Assert.NotEqual(iconA, iconB);
+        Assert.Equal(first, File.ReadAllBytes(iconA));
+        Assert.Equal(second, File.ReadAllBytes(iconB));
+    }
+
+    [Fact]
+    public void GetIconRereadsAPackageThatWasReplacedWithAnOlderOne()
+    {
+        byte[] original = [137, 80, 78, 71, 3, 3, 3, 3];
+        byte[] restored = [137, 80, 78, 71, 4, 4, 4, 4];
+
+        using var feed = new LocalFeed();
+        string file = feed.WritePackage(
+            "Contoso.Tool",
+            "2.0.0",
+            iconFile: "icon.png",
+            iconBytes: original
+        );
+
+        string? before = LoadIconPath(feed);
+        Assert.NotNull(before);
+        Assert.Equal(original, File.ReadAllBytes(before));
+
+        File.Delete(file);
+        string replaced = feed.WritePackage(
+            "Contoso.Tool",
+            "2.0.0",
+            iconFile: "icon.png",
+            iconBytes: restored
+        );
+        File.SetLastWriteTimeUtc(replaced, new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        NuGetLocalFeed.ClearCache();
+
+        string? after = LoadIconPath(feed);
+        Assert.NotNull(after);
+        Assert.Equal(restored, File.ReadAllBytes(after));
+    }
+
+    private static string? LoadIconPath(LocalFeed feed)
+    {
+        var manager = feed.CreateManager();
+        CacheableIcon? icon = manager.ExposedDetailsHelper.LoadIcon(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithSource(manager.Properties.DefaultSource)
+                .WithId("Contoso.Tool")
+                .WithVersion("2.0.0")
+                .Build()
+        );
+
+        return icon?.LocalPath;
     }
 
     [Fact]

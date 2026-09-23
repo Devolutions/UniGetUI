@@ -1,5 +1,8 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using UniGetUI.Core.Logging;
@@ -185,6 +188,22 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             ".svg",
         ];
 
+        private static string SourceIdentity(LocalNuGetPackage package)
+        {
+            byte[] digest = SHA256.HashData(
+                Encoding.UTF8.GetBytes(
+                    string.Join(
+                        '\u0000',
+                        package.FilePath,
+                        package.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture),
+                        package.Size.ToString(CultureInfo.InvariantCulture)
+                    )
+                )
+            );
+
+            return Convert.ToHexString(digest.AsSpan(0, 8)).ToLowerInvariant();
+        }
+
         public static string? ExtractIcon(LocalNuGetPackage package, string targetDirectory)
         {
             if (package.IconFile is not { Length: > 0 } iconFile)
@@ -196,15 +215,13 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
 
             string target = Path.Join(
                 targetDirectory,
-                $"localfeed-{CoreTools.MakeValidFileName(package.Version)}{extension}"
+                $"localfeed-{CoreTools.MakeValidFileName(package.Version)}"
+                    + $"-{SourceIdentity(package)}{extension}"
             );
 
             try
             {
-                if (
-                    File.Exists(target)
-                    && File.GetLastWriteTimeUtc(target) >= package.LastWriteTimeUtc
-                )
+                if (File.Exists(target))
                     return target;
 
                 string wanted = iconFile.Replace('\\', '/').TrimStart('/');

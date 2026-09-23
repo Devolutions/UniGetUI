@@ -126,14 +126,8 @@ public partial class SecureCheckboxCard : SettingsCard
         this.GetObservable(IsEnabledProperty)
             .SubscribeValue(enabled => _warningBlock.Opacity = enabled ? 1 : 0.2);
 
-        // The Devolutions SettingsCard measures the Header with infinite width, so
-        // TextWrapping alone won't constrain the warning block. We fix it by updating
-        // MaxWidth after every layout pass, leaving room for the Content (toggle) area.
-        SizeChanged += (_, e) =>
-        {
-            var contentWidth = (Content as Control)?.Bounds.Width ?? 0;
-            _warningBlock.MaxWidth = Math.Max(100, e.NewSize.Width - contentWidth - 48);
-        };
+        // Keep the toggle group on the right when the SettingsCard enters its wrapped layout.
+        RightAlignWrappedContent = true;
     }
 
     protected virtual async Task _checkbox_Toggled()

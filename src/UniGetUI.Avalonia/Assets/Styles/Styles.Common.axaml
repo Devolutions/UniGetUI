@@ -1,6 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+        xmlns:settings="using:UniGetUI.Avalonia.Views.Controls.Settings"
         xmlns:primitives="using:Avalonia.Controls.Primitives">
 
     <Styles.Resources>
@@ -69,6 +70,10 @@
                     <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="TextFillColorPrimaryBrush"/>
                     <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="TextFillColorSecondaryBrush"/>
                     <StaticResource x:Key="ButtonForegroundDisabled" ResourceKey="TextFillColorDisabledBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrushPointerOver" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrushPressed" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrushDisabled" ResourceKey="ControlStrokeColorDefaultBrush"/>
                     <StaticResource x:Key="SplitButtonBackground" ResourceKey="ControlFillColorDefaultBrush"/>
                     <StaticResource x:Key="SplitButtonBackgroundPointerOver" ResourceKey="ControlFillColorSecondaryBrush"/>
                     <StaticResource x:Key="SplitButtonBackgroundPressed" ResourceKey="ControlFillColorTertiaryBrush"/>
@@ -77,10 +82,18 @@
                     <StaticResource x:Key="SplitButtonForegroundPointerOver" ResourceKey="TextFillColorPrimaryBrush"/>
                     <StaticResource x:Key="SplitButtonForegroundPressed" ResourceKey="TextFillColorSecondaryBrush"/>
                     <StaticResource x:Key="SplitButtonForegroundDisabled" ResourceKey="TextFillColorDisabledBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushPointerOver" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushPressed" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushDisabled" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushDivider" ResourceKey="ControlStrokeColorDefaultBrush"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#FFFFFFFF"/>
                     <!-- Opaque WinUI menu surface and low-contrast divider. -->
                     <SolidColorBrush x:Key="MenuSurfaceBrush"            Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="MenuSurfaceBorderBrush"      Color="#0F000000"/>
+                    <!-- TrayIcon's Windows popup is created by Avalonia.Win32 and can consume the
+                         ControlTheme resource directly instead of our MenuFlyoutPresenter style. -->
+                    <StaticResource x:Key="MenuFlyoutPresenterBorderBrush" ResourceKey="MenuSurfaceBorderBrush"/>
                     <SolidColorBrush x:Key="MenuDividerBrush"            Color="#0F000000"/>
                     <!-- Text on accent -->
                     <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush"      Color="#FFFFFFFF"/>
@@ -98,7 +111,7 @@
                     <StaticResource x:Key="AccentButtonForegroundDisabled" ResourceKey="TextOnAccentFillColorDisabledBrush"/>
                     <!-- Settings cards -->
                     <SolidColorBrush x:Key="SettingsCardBackground"      Color="#B3FFFFFF"/>
-                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#ECECEC"/>
+                    <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#0F000000"/>
                     <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#F6F6F6"/>
                     <!-- Secondary actions keep a 1-DIP edge, but use WinUI's low-contrast
                          control stroke here. The full elevation gradient reads too strongly in
@@ -113,7 +126,7 @@
                     <StaticResource x:Key="ComboBoxBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
                     <StaticResource x:Key="ComboBoxBackgroundBorderBrushUnfocused" ResourceKey="ControlElevationBorderBrush"/>
                     <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="ControlElevationBorderBrush"/>
-                    <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="ControlStrokeColorDefaultBrush"/>
                     <Thickness x:Key="ComboBoxOutlineThickness">1</Thickness>
                     <!-- Shared WinUI dropdown surface and neutral item states. ComboBox popups
                          use the same visual language as MenuFlyout-based pickers. -->
@@ -121,6 +134,7 @@
                     <StaticResource x:Key="ComboBoxDropDownBorderBrush" ResourceKey="MenuSurfaceBorderBrush"/>
                     <!-- Package list container; near-transparent over Mica (see Styles.WindowsMica) -->
                     <SolidColorBrush x:Key="PackageListBackground"       Color="#FBFBFB"/>
+                    <SolidColorBrush x:Key="PackageListBorderBrush"      Color="#0F000000"/>
                     <!-- Column header: WinUI default button (ControlFillColorDefault fill + ControlStrokeColorDefault border) -->
                     <SolidColorBrush x:Key="PackageListHeaderBackground" Color="#B3FFFFFF"/>
                     <SolidColorBrush x:Key="PackageListHeaderBorderBrush" Color="#0F000000"/>
@@ -133,7 +147,7 @@
                     <!-- Window/page surface; overridden to Transparent by Styles.WindowsMica when Mica is active -->
                     <SolidColorBrush x:Key="MicaPageBackground"          Color="#F3F3F3"/>
                     <SolidColorBrush x:Key="AppSplitterBackground"       Color="#E5E5E5"/>
-                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#EEEEEE"/>
+                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="Transparent"/>
                     <SolidColorBrush x:Key="AppBorderBrush"              Color="#E5E5E5"/>
                     <SolidColorBrush x:Key="AppBadgeBackground"          Color="#EDEDED"/>
                     <!-- Dialogs -->
@@ -155,6 +169,11 @@
                     <SolidColorBrush x:Key="WarningBannerIconBackground" Color="#9D5D00"/>
                     <SolidColorBrush x:Key="WarningBannerIconForeground" Color="#FFFFFF"/>
                     <SolidColorBrush x:Key="WarningBannerSubtext"        Color="#9D5D00"/>
+                    <!-- Operation status resources matching WinUI SystemFillColor brushes. -->
+                    <SolidColorBrush x:Key="OperationNeutralForegroundBrush" Color="#72000000"/>
+                    <SolidColorBrush x:Key="OperationNeutralBackgroundBrush" Color="#06000000"/>
+                    <SolidColorBrush x:Key="OperationAttentionBackgroundBrush" Color="#80F6F6F6"/>
+                    <SolidColorBrush x:Key="OperationCardBorderBrush" Color="#0F000000"/>
                     <!-- Status banners (success / error / info) -->
                     <SolidColorBrush x:Key="StatusSuccessBackground"     Color="#DFF6DD"/>
                     <SolidColorBrush x:Key="StatusSuccessBorderBrush"    Color="#0F7B0F"/>
@@ -260,6 +279,10 @@
                     <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="TextFillColorPrimaryBrush"/>
                     <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="TextFillColorSecondaryBrush"/>
                     <StaticResource x:Key="ButtonForegroundDisabled" ResourceKey="TextFillColorDisabledBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrushPointerOver" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrushPressed" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <StaticResource x:Key="ButtonBorderBrushDisabled" ResourceKey="ControlStrokeColorDefaultBrush"/>
                     <StaticResource x:Key="SplitButtonBackground" ResourceKey="ControlFillColorDefaultBrush"/>
                     <StaticResource x:Key="SplitButtonBackgroundPointerOver" ResourceKey="ControlFillColorSecondaryBrush"/>
                     <StaticResource x:Key="SplitButtonBackgroundPressed" ResourceKey="ControlFillColorTertiaryBrush"/>
@@ -268,10 +291,16 @@
                     <StaticResource x:Key="SplitButtonForegroundPointerOver" ResourceKey="TextFillColorPrimaryBrush"/>
                     <StaticResource x:Key="SplitButtonForegroundPressed" ResourceKey="TextFillColorSecondaryBrush"/>
                     <StaticResource x:Key="SplitButtonForegroundDisabled" ResourceKey="TextFillColorDisabledBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushPointerOver" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushPressed" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushDisabled" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <StaticResource x:Key="SplitButtonBorderBrushDivider" ResourceKey="ControlStrokeColorDefaultBrush"/>
                     <SolidColorBrush x:Key="TextFillColorInverseBrush"   Color="#E4000000"/>
                     <!-- WinUI's dark flyout surface is an opaque #2C2C2C. -->
                     <SolidColorBrush x:Key="MenuSurfaceBrush"            Color="#FF2C2C2C"/>
                     <SolidColorBrush x:Key="MenuSurfaceBorderBrush"      Color="#33000000"/>
+                    <StaticResource x:Key="MenuFlyoutPresenterBorderBrush" ResourceKey="MenuSurfaceBorderBrush"/>
                     <SolidColorBrush x:Key="MenuDividerBrush"            Color="#15FFFFFF"/>
                     <!-- Text on accent -->
                     <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush"      Color="#000000"/>
@@ -298,16 +327,17 @@
                     <StaticResource x:Key="ComboBoxBackgroundUnfocused" ResourceKey="SettingsCardBackground"/>
                     <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="SettingsCardHoverBackground"/>
                     <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="SettingsCardHoverBackground"/>
-                    <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="Transparent"/>
-                    <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushUnfocused" Color="Transparent"/>
-                    <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="Transparent"/>
-                    <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="Transparent"/>
-                    <Thickness x:Key="ComboBoxOutlineThickness">0</Thickness>
+                    <StaticResource x:Key="ComboBoxBorderBrush" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ComboBoxBackgroundBorderBrushUnfocused" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="ControlElevationBorderBrush"/>
+                    <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="ControlStrokeColorDefaultBrush"/>
+                    <Thickness x:Key="ComboBoxOutlineThickness">1</Thickness>
                     <!-- Shared WinUI dropdown surface and neutral item states. -->
                     <StaticResource x:Key="ComboBoxDropDownBackground" ResourceKey="MenuSurfaceBrush"/>
                     <StaticResource x:Key="ComboBoxDropDownBorderBrush" ResourceKey="MenuSurfaceBorderBrush"/>
                     <!-- Package list container; near-transparent over Mica (see Styles.WindowsMica) -->
                     <SolidColorBrush x:Key="PackageListBackground"       Color="#2D2D2D"/>
+                    <SolidColorBrush x:Key="PackageListBorderBrush"      Color="#19000000"/>
                     <!-- Column header: WinUI default button (ControlFillColorDefault fill + ControlStrokeColorDefault border) -->
                     <SolidColorBrush x:Key="PackageListHeaderBackground" Color="#0FFFFFFF"/>
                     <SolidColorBrush x:Key="PackageListHeaderBorderBrush" Color="#12FFFFFF"/>
@@ -320,7 +350,7 @@
                     <!-- Window/page surface; overridden to Transparent by Styles.WindowsMica when Mica is active -->
                     <SolidColorBrush x:Key="MicaPageBackground"          Color="#202020"/>
                     <SolidColorBrush x:Key="AppSplitterBackground"       Color="#1A1A1A"/>
-                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="#1C1C1C"/>
+                    <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="Transparent"/>
                     <SolidColorBrush x:Key="AppBorderBrush"              Color="#15FFFFFF"/>
                     <SolidColorBrush x:Key="AppBadgeBackground"          Color="#3C3C3C"/>
                     <!-- Dialogs -->
@@ -342,6 +372,11 @@
                     <SolidColorBrush x:Key="WarningBannerIconBackground" Color="#FCE100"/>
                     <SolidColorBrush x:Key="WarningBannerIconForeground" Color="#1a1000"/>
                     <SolidColorBrush x:Key="WarningBannerSubtext"        Color="#FCE100"/>
+                    <!-- Operation status resources matching WinUI SystemFillColor brushes. -->
+                    <SolidColorBrush x:Key="OperationNeutralForegroundBrush" Color="#8BFFFFFF"/>
+                    <SolidColorBrush x:Key="OperationNeutralBackgroundBrush" Color="#08FFFFFF"/>
+                    <SolidColorBrush x:Key="OperationAttentionBackgroundBrush" Color="#08FFFFFF"/>
+                    <SolidColorBrush x:Key="OperationCardBorderBrush" Color="#19000000"/>
                     <!-- Status banners (success / error / info) -->
                     <SolidColorBrush x:Key="StatusSuccessBackground"     Color="#393D1B"/>
                     <SolidColorBrush x:Key="StatusSuccessBorderBrush"    Color="#4F7B27"/>
@@ -383,8 +418,44 @@
         </Setter>
     </Style>
 
+    <Style Selector=".settings-card-control"
+           x:SetterTargetType="settings:SettingsCard">
+        <Setter Property="FocusAdorner">
+            <FocusAdornerTemplate>
+                <Border Margin="40,0"
+                        BorderBrush="{DynamicResource SystemControlFocusVisualPrimaryBrush}"
+                        BorderThickness="2"
+                        CornerRadius="6">
+                    <Border BorderBrush="{DynamicResource SystemControlFocusVisualSecondaryBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"/>
+                </Border>
+            </FocusAdornerTemplate>
+        </Setter>
+    </Style>
+
     <Style Selector="TextBlock">
         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- Match WinUI conservatively: standard Button/ToggleButton surfaces and
+         CommunityToolkit SettingsCard use the 83 ms background transition. Controls
+         such as menus, list rows, ComboBox, tabs, checks/toggles and DataGrid remain
+         discrete, which is what their WinUI templates do. -->
+    <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter,
+                     ToggleButton /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.083"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Border.settings-card">
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.083"/>
+            </Transitions>
+        </Setter>
     </Style>
 
     <!-- Avalonia's Fluent controls still consume UWP-era accent resources, whose dark-theme
@@ -737,6 +808,8 @@
     <!-- View-mode segmented selector (List / Grid / Icons): WinUI Segmented-style selection — subtle
          fill plus an accent underline under the selected segment, not Fluent's full-accent fill. -->
     <Style Selector="ListBoxItem.segment-item">
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Template">
             <ControlTemplate>
                 <Panel>
@@ -770,6 +843,9 @@
     <Style Selector="ListBoxItem.segment-item:pressed /template/ ContentPresenter#ContentHost">
         <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}"/>
     </Style>
+    <Style Selector="ListBoxItem.segment-item:selected">
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}"/>
+    </Style>
     <Style Selector="ListBoxItem.segment-item:selected /template/ ContentPresenter#ContentHost">
         <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}"/>
     </Style>
@@ -790,13 +866,9 @@
         <Setter Property="Margin"       Value="40,0"/>
     </Style>
     <Style Selector="Border.settings-card-clickable:pointerover">
-        <Setter Property="Background"   Value="{DynamicResource SettingsCardHoverBackground}"/>
+        <Setter Property="Background"  Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}"/>
     </Style>
-    <Style Selector="Border.settings-card-keyboard-focused">
-        <Setter Property="BorderBrush"     Value="{DynamicResource AccentFillColorDefaultBrush}"/>
-        <Setter Property="BorderThickness" Value="2"/>
-    </Style>
-
     <!-- Setting warning subtext (amber, both themes) -->
     <Style Selector="TextBlock.setting-warning-text">
         <Setter Property="Foreground" Value="{DynamicResource SettingWarningTextForeground}"/>

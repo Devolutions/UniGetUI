@@ -84,16 +84,17 @@ public static class AvaloniaOperationRegistry
             Dispatcher.UIThread.Post(UpdateTrayStatus);
         };
 
-        // Cancellation drives Status = Canceled from several code paths, so StatusChanged(Canceled)
-        // can fire more than once for a single operation. Handle the terminal cancel exactly once.
+        // Keep the canceled card visible, matching the removed WinUI control, but retain the
+        // old short IPC lifetime so canceled operations do not stay tracked indefinitely.
         int cancelHandled = 0;
         op.StatusChanged += (_, status) =>
         {
             if (status is OperationStatus.Canceled && Interlocked.Exchange(ref cancelHandled, 1) == 0)
             {
                 WindowsAppNotificationBridge.RemoveProgress(op);
-                _ = RemoveAfterDelayAsync(op, milliseconds: 2500);
+                _ = ForgetTrackingAfterDelayAsync(op, milliseconds: 2500);
             }
+
             Dispatcher.UIThread.Post(UpdateTrayStatus);
         };
 
@@ -163,6 +164,13 @@ public static class AvaloniaOperationRegistry
         {
             IpcOperationApi.ForgetTracking(vm.Operation.Metadata.Identifier);
         }
+    }
+
+    private static async Task ForgetTrackingAfterDelayAsync(AbstractOperation op, int milliseconds)
+    {
+        await Task.Delay(milliseconds);
+        if (op.Status is not (OperationStatus.InQueue or OperationStatus.Running))
+            IpcOperationApi.ForgetTracking(op.Metadata.Identifier);
     }
 
     private static async Task RemoveAfterDelayAsync(AbstractOperation op, int milliseconds)

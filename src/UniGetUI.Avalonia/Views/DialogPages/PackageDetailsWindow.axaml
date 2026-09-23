@@ -15,23 +15,55 @@
         Background="{DynamicResource AppDialogBackground}"
         Title="{t:Translate Package details}">
 
+    <dialogs:ImmersiveDialog.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="PackageDetailsExpanderBorderBrush" Color="#0F000000"/>
+                    <SolidColorBrush x:Key="PackageDetailsExpanderChevronHoverBackground" Color="#09000000"/>
+                    <SolidColorBrush x:Key="PackageDetailsExpanderChevronPressedBackground" Color="#06000000"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="PackageDetailsExpanderBorderBrush" Color="#19000000"/>
+                    <SolidColorBrush x:Key="PackageDetailsExpanderChevronHoverBackground" Color="#0FFFFFFF"/>
+                    <SolidColorBrush x:Key="PackageDetailsExpanderChevronPressedBackground" Color="#0AFFFFFF"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </dialogs:ImmersiveDialog.Resources>
+
     <dialogs:ImmersiveDialog.Styles>
+        <!-- The WinUI package-details page used an ordinary Expander here. Recreate its
+             standard card surfaces while preserving this port's existing geometry. -->
         <Style Selector="Expander#InstallOptionsExpander /template/ ToggleButton#ExpanderHeader">
             <Setter Property="Background" Value="{DynamicResource InstallOptionsSectionBackground}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-        <!-- Fluent's Expander template applies direction-specific content borders to its own
-             template borders.  Clear every border owned by this Expander template; borders in
-             the hosted installation-options control are outside this template scope. -->
-        <Style Selector="Expander#InstallOptionsExpander /template/ Border">
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PackageDetailsExpanderBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
         </Style>
         <Style Selector="Expander#InstallOptionsExpander /template/ ToggleButton#ExpanderHeader:pointerover /template/ Border#ToggleButtonBackground">
             <Setter Property="Background" Value="{DynamicResource InstallOptionsSectionBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PackageDetailsExpanderBorderBrush}"/>
+        </Style>
+        <Style Selector="Expander#InstallOptionsExpander /template/ ToggleButton#ExpanderHeader:pressed /template/ Border#ToggleButtonBackground">
+            <Setter Property="Background" Value="{DynamicResource InstallOptionsSectionBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PackageDetailsExpanderBorderBrush}"/>
+        </Style>
+        <Style Selector="Expander#InstallOptionsExpander /template/ Border#ExpanderContent">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PackageDetailsExpanderBorderBrush}"/>
+        </Style>
+        <Style Selector="Expander#InstallOptionsExpander /template/ Border#ExpandCollapseChevronBorder">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
         </Style>
         <Style Selector="Expander#InstallOptionsExpander /template/ ToggleButton#ExpanderHeader:pointerover /template/ Border#ExpandCollapseChevronBorder">
-            <Setter Property="Background" Value="{DynamicResource SettingsCardHoverBackground}"/>
+            <Setter Property="Background" Value="{DynamicResource PackageDetailsExpanderChevronHoverBackground}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="Expander#InstallOptionsExpander /template/ ToggleButton#ExpanderHeader:pressed /template/ Border#ExpandCollapseChevronBorder">
+            <Setter Property="Background" Value="{DynamicResource PackageDetailsExpanderChevronPressedBackground}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
         </Style>
 
         <!-- Tag pill -->
@@ -247,7 +279,6 @@
                                   IsExpanded="False"
                                   CornerRadius="8"
                                   Padding="0"
-                                  BorderThickness="0"
                                   Background="Transparent">
                             <Expander.Header>
                                 <Grid ColumnDefinitions="Auto,*,Auto"

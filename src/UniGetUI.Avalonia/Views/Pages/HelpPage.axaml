@@ -79,7 +79,6 @@
             </StackPanel>
 
             <Button Grid.Column="2"
-                    Classes="flat"
                     Height="35"
                     Command="{Binding OpenInBrowserCommand}"
                     automation:AutomationProperties.Name="{t:Translate View page on browser}">

@@ -82,6 +82,7 @@ public sealed partial class TextboxCard : SettingsCard
         };
 
         _textbox = new TextBox { MinWidth = 200, MaxWidth = 300 };
+        _textbox.Classes.Add("search-field-standalone");
 
         var s = new StackPanel { Orientation = Orientation.Horizontal };
         s.Children.Add(_helpbutton);

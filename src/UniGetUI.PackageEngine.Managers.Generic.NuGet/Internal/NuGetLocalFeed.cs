@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.IO.Compression;
+using System.Xml;
 using System.Xml.Linq;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
@@ -26,6 +27,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         public string? LicenseUrl { get; init; }
         public string? License { get; init; }
         public string? IconUrl { get; init; }
+        public string? IconFile { get; init; }
         public string? ReleaseNotes { get; init; }
         public string? Tags { get; init; }
         public IReadOnlyList<LocalNuGetDependency> Dependencies { get; init; } = [];
@@ -34,6 +36,8 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
     internal static class NuGetLocalFeed
     {
         private const int MaxRecursionDepth = 3;
+        private const int MaxNuspecBytes = 4 * 1024 * 1024;
+        private const long MaxIconBytes = 8 * 1024 * 1024;
 
         private readonly record struct CacheEntry(
             long Size,
@@ -169,6 +173,114 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         private static bool Contains(string? value, string term) =>
             value is not null && value.Contains(term, StringComparison.OrdinalIgnoreCase);
 
+        private static readonly string[] IconExtensions =
+        [
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".bmp",
+            ".webp",
+            ".ico",
+            ".svg",
+        ];
+
+        public static string? ExtractIcon(LocalNuGetPackage package, string targetDirectory)
+        {
+            if (package.IconFile is not { Length: > 0 } iconFile)
+                return null;
+
+            string extension = Path.GetExtension(iconFile);
+            if (!IconExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+                extension = ".png";
+
+            string target = Path.Join(
+                targetDirectory,
+                $"localfeed-{CoreTools.MakeValidFileName(package.Version)}{extension}"
+            );
+
+            try
+            {
+                if (
+                    File.Exists(target)
+                    && File.GetLastWriteTimeUtc(target) >= package.LastWriteTimeUtc
+                )
+                    return target;
+
+                string wanted = iconFile.Replace('\\', '/').TrimStart('/');
+                using FileStream stream = File.OpenRead(package.FilePath);
+                using ZipArchive archive = new(stream, ZipArchiveMode.Read);
+
+                ZipArchiveEntry? entry = archive.Entries.FirstOrDefault(candidate =>
+                    candidate.FullName.Replace('\\', '/')
+                        .Equals(wanted, StringComparison.OrdinalIgnoreCase)
+                );
+
+                if (entry is null)
+                {
+                    Logger.Warn(
+                        $"The NuGet package at {package.FilePath} declares the icon {iconFile}, "
+                            + "which the archive does not contain"
+                    );
+                    return null;
+                }
+
+                if (entry.Length > MaxIconBytes)
+                {
+                    Logger.Warn(
+                        $"The icon of the NuGet package at {package.FilePath} declares "
+                            + $"{entry.Length} bytes, over the {MaxIconBytes} byte limit"
+                    );
+                    return null;
+                }
+
+                using Stream compressed = entry.Open();
+                using MemoryStream? icon = ReadBounded(compressed, MaxIconBytes);
+
+                if (icon is null)
+                {
+                    Logger.Warn(
+                        $"The icon of the NuGet package at {package.FilePath} expands past "
+                            + $"the {MaxIconBytes} byte limit"
+                    );
+                    return null;
+                }
+
+                Directory.CreateDirectory(targetDirectory);
+                File.WriteAllBytes(target, icon.ToArray());
+                return target;
+            }
+            catch (Exception e)
+            {
+                Logger.Warn($"Could not extract the icon of the NuGet package at {package.FilePath}");
+                Logger.Warn(e);
+                return null;
+            }
+        }
+
+        private static MemoryStream? ReadBounded(Stream source, long limit)
+        {
+            MemoryStream buffer = new();
+            byte[] chunk = new byte[81920];
+            long total = 0;
+            int read;
+
+            while ((read = source.Read(chunk, 0, chunk.Length)) > 0)
+            {
+                total += read;
+                if (total > limit)
+                {
+                    buffer.Dispose();
+                    return null;
+                }
+
+                buffer.Write(chunk, 0, read);
+            }
+
+            buffer.Position = 0;
+            return buffer;
+        }
+
         private static LocalNuGetPackage? Load(string file)
         {
             long size;
@@ -218,7 +330,27 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                     return null;
                 }
 
-                using Stream manifest = nuspec.Open();
+                if (nuspec.Length > MaxNuspecBytes)
+                {
+                    Logger.Warn(
+                        $"The .nuspec manifest of the NuGet package at {file} declares "
+                            + $"{nuspec.Length} bytes, over the {MaxNuspecBytes} byte limit"
+                    );
+                    return null;
+                }
+
+                using Stream compressed = nuspec.Open();
+                using MemoryStream? manifest = ReadBounded(compressed, MaxNuspecBytes);
+
+                if (manifest is null)
+                {
+                    Logger.Warn(
+                        $"The .nuspec manifest of the NuGet package at {file} expands past "
+                            + $"the {MaxNuspecBytes} byte limit"
+                    );
+                    return null;
+                }
+
                 LocalNuGetPackage? package = ParseNuspec(manifest, file, size, lastWriteTimeUtc);
 
                 if (package is null)
@@ -247,8 +379,19 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             DateTime lastWriteTimeUtc
         )
         {
+            XmlReaderSettings settings = new()
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null,
+                MaxCharactersInDocument = MaxNuspecBytes,
+                IgnoreComments = true,
+                IgnoreProcessingInstructions = true,
+                CloseInput = false,
+            };
+
+            using XmlReader reader = XmlReader.Create(manifest, settings);
             XElement? metadata = XDocument
-                .Load(manifest)
+                .Load(reader)
                 .Root?.Elements()
                 .FirstOrDefault(element => element.Name.LocalName is "metadata");
 
@@ -283,6 +426,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                 LicenseUrl = Value(metadata, "licenseUrl"),
                 License = ReadLicenseExpression(metadata),
                 IconUrl = Value(metadata, "iconUrl"),
+                IconFile = Value(metadata, "icon"),
                 ReleaseNotes = Value(metadata, "releaseNotes"),
                 Tags = Value(metadata, "tags"),
                 Dependencies = ReadDependencies(metadata),

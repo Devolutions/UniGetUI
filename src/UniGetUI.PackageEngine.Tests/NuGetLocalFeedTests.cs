@@ -315,6 +315,130 @@ public sealed class NuGetLocalFeedTests
     }
 
     [Fact]
+    public void FindPackagesSkipsAManifestThatExpandsPastTheSizeLimit()
+    {
+        using var feed = new LocalFeed();
+        feed.WritePackage("Contoso.Tool", "1.0.0");
+        feed.WriteRawPackage(
+            "bomb.1.0.0.nupkg",
+            $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <package>
+              <metadata>
+                <id>Contoso.Bomb</id>
+                <version>1.0.0</version>
+                <description>{new string('A', 5 * 1024 * 1024)}</description>
+              </metadata>
+            </package>
+            """
+        );
+
+        var packages = feed.Find(feed.CreateManager(), "contoso", canPrerelease: false);
+
+        Assert.Equal("Contoso.Tool", Assert.Single(packages).Id);
+    }
+
+    [Fact]
+    public void FindPackagesRejectsAManifestThatDeclaresADocumentTypeDefinition()
+    {
+        using var feed = new LocalFeed();
+        feed.WriteRawPackage(
+            "entities.1.0.0.nupkg",
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <!DOCTYPE package [
+              <!ENTITY lol "lol">
+              <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+            ]>
+            <package>
+              <metadata>
+                <id>Contoso.Entities</id>
+                <version>1.0.0</version>
+                <description>&lol2;</description>
+              </metadata>
+            </package>
+            """
+        );
+
+        Assert.Empty(feed.Find(feed.CreateManager(), "contoso", canPrerelease: false));
+    }
+
+    [Fact]
+    public void GetIconExtractsAnIconEmbeddedInThePackage()
+    {
+        byte[] iconBytes = [137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3, 4];
+
+        using var feed = new LocalFeed();
+        feed.WritePackage(
+            "Contoso.Tool",
+            "2.0.0",
+            iconFile: "images/icon.png",
+            iconBytes: iconBytes
+        );
+
+        var manager = feed.CreateManager();
+        CacheableIcon? icon = manager.ExposedDetailsHelper.LoadIcon(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithSource(manager.Properties.DefaultSource)
+                .WithId("Contoso.Tool")
+                .WithVersion("2.0.0")
+                .Build()
+        );
+
+        Assert.NotNull(icon);
+        Assert.True(icon.Value.IsLocalPath);
+        Assert.Equal(iconBytes, File.ReadAllBytes(icon.Value.LocalPath));
+        Assert.Equal(".png", Path.GetExtension(icon.Value.LocalPath));
+    }
+
+    [Fact]
+    public void GetIconPrefersTheIconUrlOverAnEmbeddedIcon()
+    {
+        using var feed = new LocalFeed();
+        feed.WritePackage(
+            "Contoso.Tool",
+            "2.0.0",
+            iconUrl: "https://example.test/icon.png",
+            iconFile: "images/icon.png",
+            iconBytes: [1, 2, 3]
+        );
+
+        var manager = feed.CreateManager();
+        CacheableIcon? icon = manager.ExposedDetailsHelper.LoadIcon(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithSource(manager.Properties.DefaultSource)
+                .WithId("Contoso.Tool")
+                .WithVersion("2.0.0")
+                .Build()
+        );
+
+        Assert.False(icon?.IsLocalPath);
+        Assert.Equal("https://example.test/icon.png", icon?.Url.AbsoluteUri);
+    }
+
+    [Fact]
+    public void GetIconIgnoresAnEmbeddedIconThatIsNotInTheArchive()
+    {
+        using var feed = new LocalFeed();
+        feed.WritePackage("Contoso.Tool", "2.0.0", iconFile: "images/missing.png");
+
+        var manager = feed.CreateManager();
+
+        Assert.Null(
+            manager.ExposedDetailsHelper.LoadIcon(
+                new PackageBuilder()
+                    .WithManager(manager)
+                    .WithSource(manager.Properties.DefaultSource)
+                    .WithId("Contoso.Tool")
+                    .WithVersion("2.0.0")
+                    .Build()
+            )
+        );
+    }
+
+    [Fact]
     public void GetInstallableVersionsListsTheFolderContentsNewestFirst()
     {
         using var feed = new LocalFeed();
@@ -389,7 +513,9 @@ public sealed class NuGetLocalFeedTests
             string authors = "Example Ltd",
             string tags = "tooling",
             string? iconUrl = null,
-            string? dependencyId = null
+            string? dependencyId = null,
+            string? iconFile = null,
+            byte[]? iconBytes = null
         ) =>
             _feed.WritePackage(
                 id,
@@ -399,8 +525,13 @@ public sealed class NuGetLocalFeedTests
                 authors,
                 tags,
                 iconUrl,
-                dependencyId
+                dependencyId,
+                iconFile,
+                iconBytes
             );
+
+        public string WriteRawPackage(string fileName, string nuspec) =>
+            _feed.WriteRawPackage(fileName, nuspec);
 
         public void Dispose() => _feed.Dispose();
     }

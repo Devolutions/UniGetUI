@@ -275,6 +275,58 @@ public sealed class DownloadOperationProgressTests
         }
     }
 
+    [Fact]
+    public async Task LocalFeedInstallers_RefuseToOverwriteTheSourceFile()
+    {
+        byte[] payload = new byte[2048];
+        new Random(31).NextBytes(payload);
+
+        string sourcePath = Path.Join(
+            Path.GetTempPath(),
+            $"unigetui-same-file-{Guid.NewGuid():N}.nupkg"
+        );
+        File.WriteAllBytes(sourcePath, payload);
+
+        var manager = new PackageManagerBuilder()
+            .ConfigureDetails(helper =>
+            {
+                helper.PopulateDetails = details =>
+                {
+                    details.InstallerUrl = new Uri(sourcePath);
+                    details.InstallerType = "nupkg";
+                };
+            })
+            .Build();
+        IPackage package = new PackageBuilder().WithManager(manager).Build();
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(
+                package,
+                sourcePath,
+                new UnreachableHandler()
+            );
+
+            Assert.Equal(
+                OperationVeredict.Failure,
+                await operation.InvokePerformOperationForTests()
+            );
+            Assert.Equal(payload, File.ReadAllBytes(sourcePath));
+            Assert.Contains(
+                operation.GetOutput(),
+                line => line.Item1.Contains("is the package file itself")
+            );
+            Assert.DoesNotContain(
+                operation.GetOutput(),
+                line => line.Item1.Contains("System.IO.IOException")
+            );
+        }
+        finally
+        {
+            File.Delete(sourcePath);
+        }
+    }
+
     private sealed class UnreachableHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(

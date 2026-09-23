@@ -23,7 +23,9 @@ public sealed class LocalNuGetFeedBuilder : IDisposable
         string authors = "Example Ltd",
         string tags = "tooling",
         string? iconUrl = null,
-        string? dependencyId = null
+        string? dependencyId = null,
+        string? iconFile = null,
+        byte[]? iconBytes = null
     )
     {
         string target = folder is null ? Directory : Path.Join(Directory, folder);
@@ -43,6 +45,7 @@ public sealed class LocalNuGetFeedBuilder : IDisposable
                 <projectUrl>https://example.test/package</projectUrl>
                 <license type="expression">MIT</license>
                 {(iconUrl is null ? string.Empty : $"<iconUrl>{iconUrl}</iconUrl>")}
+                {(iconFile is null ? string.Empty : $"<icon>{iconFile}</icon>")}
                 {(
                 dependencyId is null
                     ? string.Empty
@@ -61,7 +64,28 @@ public sealed class LocalNuGetFeedBuilder : IDisposable
         using (FileStream stream = File.Create(file))
         using (ZipArchive archive = new(stream, ZipArchiveMode.Create))
         {
-            using Stream entry = archive.CreateEntry($"{id}.nuspec").Open();
+            using (Stream entry = archive.CreateEntry($"{id}.nuspec").Open())
+                entry.Write(Encoding.UTF8.GetBytes(nuspec));
+
+            if (iconFile is not null && iconBytes is not null)
+            {
+                using Stream icon = archive.CreateEntry(iconFile).Open();
+                icon.Write(iconBytes);
+            }
+        }
+
+        NuGetLocalFeed.ClearCache();
+        return file;
+    }
+
+    public string WriteRawPackage(string fileName, string nuspec)
+    {
+        string file = Path.Join(Directory, fileName);
+
+        using (FileStream stream = File.Create(file))
+        using (ZipArchive archive = new(stream, ZipArchiveMode.Create))
+        {
+            using Stream entry = archive.CreateEntry("package.nuspec").Open();
             entry.Write(Encoding.UTF8.GetBytes(nuspec));
         }
 

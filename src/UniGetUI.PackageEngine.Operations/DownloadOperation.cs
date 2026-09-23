@@ -54,6 +54,22 @@ public class DownloadOperation : AbstractOperation
     protected virtual HttpClient CreateHttpClient() =>
         new(CoreTools.GenericHttpClientParameters);
 
+    internal static bool IsSameFile(string source, string destination)
+    {
+        try
+        {
+            return string.Equals(
+                Path.GetFullPath(source),
+                Path.GetFullPath(destination),
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal
+            );
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     protected override async Task<OperationVeredict> PerformOperation()
     {
         bool downloadFileCreated = false;
@@ -91,6 +107,16 @@ public class DownloadOperation : AbstractOperation
                     fileName = CoreTools.MakeValidFileName(_package.Name);
                 }
                 downloadLocation = Path.Join(downloadLocation, fileName);
+            }
+
+            if (downloadUrl.IsFile && IsSameFile(downloadUrl.LocalPath, downloadLocation))
+            {
+                Line(
+                    $"The chosen location {downloadLocation} is the package file itself, "
+                        + "please choose a different destination",
+                    LineType.Error
+                );
+                return OperationVeredict.Failure;
             }
 
             Line($"Download URL found at {downloadUrl} ", LineType.Information);

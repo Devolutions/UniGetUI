@@ -57,7 +57,13 @@ Detection is purely by URL shape, so it costs no probe request and no V2 feed ch
 A local folder feed is scanned at most three directories deep, which covers both the flat layout
 and the `<id>/<version>/<id>.<version>.nupkg` layout, and each parsed manifest is cached against
 its file's size and write time. Installers on such a feed are copied from disk instead of being
-downloaded (`DownloadOperation`).
+downloaded (`DownloadOperation`), which refuses a destination that is the package file itself.
+
+Every `.nupkg` in the folder is opened during a search, so its contents are treated as untrusted:
+a manifest is rejected above 4 MiB (checked against the declared size *and* while decompressing,
+since the declared one can lie) and parsed with DTD processing prohibited, and an embedded
+`<icon>` is extracted under the same bounds into the package's icon cache directory, named only
+from the package version plus an allow-listed extension so a crafted entry path cannot escape it.
 
 ### V3 resources used
 

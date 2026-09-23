@@ -475,7 +475,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             );
         }
 
-        private static CacheableIcon? GetIconLocal(IPackage package, string directory)
+        private CacheableIcon? GetIconLocal(IPackage package, string directory)
         {
             LocalNuGetPackage? local = NuGetLocalFeed.Find(
                 directory,
@@ -486,9 +486,15 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             if (local is null)
                 return null;
 
-            return Uri.TryCreate(local.IconUrl, UriKind.Absolute, out Uri? iconUrl)
-                ? new CacheableIcon(iconUrl, package.VersionString)
-                : null;
+            if (Uri.TryCreate(local.IconUrl, UriKind.Absolute, out Uri? iconUrl))
+                return new CacheableIcon(iconUrl, package.VersionString);
+
+            string? extracted = NuGetLocalFeed.ExtractIcon(
+                local,
+                IconCacheEngine.GetIconCacheDirectory(Manager.Name, package.Id)
+            );
+
+            return extracted is null ? null : new CacheableIcon(extracted);
         }
 
         private static CacheableIcon? GetIconV3(IPackage package)

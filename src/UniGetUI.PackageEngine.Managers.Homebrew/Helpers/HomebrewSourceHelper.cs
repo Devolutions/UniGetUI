@@ -19,7 +19,7 @@ internal sealed class HomebrewSourceHelper : BaseSourceHelper
 
     protected override IReadOnlyList<IManagerSource> GetSources_UnSafe()
     {
-        var sources = new List<ManagerSource>();
+        var tapLines = new List<string>();
 
         using var p = new Process
         {
@@ -32,8 +32,31 @@ internal sealed class HomebrewSourceHelper : BaseSourceHelper
         while ((line = p.StandardOutput.ReadLine()) is not null)
         {
             logger.AddToStdOut(line);
-            var name = line.Trim();
+            tapLines.Add(line);
+        }
+
+        logger.AddToStdErr(p.StandardError.ReadToEnd());
+        p.WaitForExit();
+        logger.Close(p.ExitCode);
+        return BuildSourceList(tapLines);
+    }
+
+    /// <summary>
+    /// Homebrew 4 and later serve homebrew/core and homebrew/cask from the API, so `brew tap` does not
+    /// print them and `brew tap homebrew/core` is refused. The built-in sources are therefore always
+    /// listed, followed by every other tap.
+    /// </summary>
+    internal IReadOnlyList<IManagerSource> BuildSourceList(IEnumerable<string> tapLines)
+    {
+        var sources = new List<IManagerSource>(Manager.Properties.KnownSources);
+
+        foreach (string rawLine in tapLines)
+        {
+            var name = rawLine.Trim();
             if (name.Length == 0) continue;
+            if (name.Equals(CoreTap, StringComparison.OrdinalIgnoreCase)
+                || name.Equals(CaskTap, StringComparison.OrdinalIgnoreCase))
+                continue;
 
             // Build a best-effort URL: "org/repo" → "https://github.com/org/homebrew-repo"
             Uri url;
@@ -60,19 +83,33 @@ internal sealed class HomebrewSourceHelper : BaseSourceHelper
             }
         }
 
-        logger.AddToStdErr(p.StandardError.ReadToEnd());
-        p.WaitForExit();
-        logger.Close(p.ExitCode);
         return sources;
     }
 
     // ── Add / remove ───────────────────────────────────────────────────────
 
+    internal const string CoreTap = "homebrew/core";
+    internal const string CaskTap = "homebrew/cask";
+
+    /// <summary>
+    /// The tap name brew expects for a source: the built-in "Homebrew" and "Homebrew Cask" sources map to
+    /// homebrew/core and homebrew/cask; any other source is named after its tap already.
+    /// </summary>
+    internal static string GetTapName(IManagerSource source) => source.Name switch
+    {
+        "Homebrew" => CoreTap,
+        "Homebrew Cask" => CaskTap,
+        _ => source.Name,
+    };
+
     public override string[] GetAddSourceParameters(IManagerSource source)
-        => ["tap", source.Name, source.Url.ToString()];
+    {
+        string tap = GetTapName(source);
+        return tap == source.Name ? ["tap", tap, source.Url.ToString()] : ["tap", tap];
+    }
 
     public override string[] GetRemoveSourceParameters(IManagerSource source)
-        => ["untap", source.Name];
+        => ["untap", GetTapName(source)];
 
     protected override OperationVeredict _getAddSourceOperationVeredict(
         IManagerSource source, int ReturnCode, string[] Output)

@@ -613,11 +613,29 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void OnAnnouncementRequested(object? _, AccessibilityAnnouncement announcement)
     {
-        AnnouncementLiveSetting = announcement.LiveSetting;
-        AnnouncementText = string.Empty;
-        Dispatcher.UIThread.Post(
-            () => AnnouncementText = announcement.Message,
-            DispatcherPriority.Background);
+        ApplyAnnouncement(
+            announcement,
+            liveSetting => AnnouncementLiveSetting = liveSetting,
+            text => AnnouncementText = text,
+            update => Dispatcher.UIThread.Post(update, DispatcherPriority.Background));
+    }
+
+    // The live region is silenced while it is cleared: on macOS, Avalonia.Native turns an empty
+    // live-region name into a nil NSDictionary value and throws NSInvalidArgumentException,
+    // which crashes the app.
+    internal static void ApplyAnnouncement(
+        AccessibilityAnnouncement announcement,
+        Action<AutomationLiveSetting> setLiveSetting,
+        Action<string> setText,
+        Action<Action> post)
+    {
+        setLiveSetting(AutomationLiveSetting.Off);
+        setText(string.Empty);
+        post(() =>
+        {
+            setLiveSetting(announcement.LiveSetting);
+            setText(announcement.Message);
+        });
     }
 
     // ─── Navigation ──────────────────────────────────────────────────────────

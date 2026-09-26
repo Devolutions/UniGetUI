@@ -431,6 +431,9 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         /// </summary>
         public IReadOnlyList<IPackage> FindPackages(string query) => _findPackages(query, false);
 
+        public virtual IReadOnlyList<IManagerSource> GetBrowsableSources() =>
+            Capabilities.CanListAllPackages ? SourcesHelper.Factory.GetAvailableSources() : [];
+
         private IReadOnlyList<IPackage> _findPackages(string query, bool SecondAttempt)
         {
             if (!IsReady())

@@ -75,6 +75,10 @@ public class SourceTreeNode : INotifyPropertyChanged
     public string? PackageID { get; init; }
     public string? Version { get; init; }
     public string? Source { get; init; }
+
+    /// <summary>Identifies the manager or source across rebuilds of the tree, to keep its selection.</summary>
+    public string? SelectionKey { get; init; }
+
     public AvaloniaList<SourceTreeNode> Children { get; }
 
     public bool HasChildren => Children.Count > 0;
@@ -174,6 +178,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private bool _sourcesPlaceholderVisible = true;
     [ObservableProperty] private bool _sourcesTreeVisible;
     [ObservableProperty] private bool _megaQueryVisible;
+    [ObservableProperty] private bool _browseAllVisible;
     [ObservableProperty] private string _megaQueryText = "";
     [ObservableProperty] private string _globalQueryText = "";
     [ObservableProperty] private bool _newVersionHeaderVisible;
@@ -219,6 +224,12 @@ public partial class PackagesPageViewModel : ViewModelBase
     protected ConcurrentDictionary<IManagerSource, SourceTreeNode> NodesForSources = new();
     private readonly SourceTreeNode _localPackagesNode = new() { PackageName = "local" };
     private bool _isSynchronizingSourceSelection;
+
+    // Discover browses (an empty search) the managers that can list all their packages. It keeps the
+    // sources picked across searches, so they can be picked before searching or browsing.
+    private bool _browsing;
+    private IReadOnlyList<IPackageManager> _browseCandidates = [];
+    private readonly Dictionary<string, bool> _rememberedSourceSelection = new(StringComparer.Ordinal);
 
     // ─── Events (replace abstract methods) ───────────────────────────────────
     public event Action<ReloadReason>? PackagesLoaded;
@@ -474,6 +485,10 @@ public partial class PackagesPageViewModel : ViewModelBase
                 _wrappedPackages.Add(new PackageWrapper(pkg, this));
                 AddPackageToSourcesList(pkg);
             }
+
+            // Back to the Discover search box: the browsable sources can be picked again
+            if (MegaQueryBoxEnabled && MegaQueryVisible && _wrappedPackages.Count == 0)
+                ShowBrowsableSources();
         }
         FilterPackages();
     }
@@ -588,6 +603,7 @@ public partial class PackagesPageViewModel : ViewModelBase
             {
                 MegaQueryText = "";
                 MegaQueryVisible = true;
+                _browsing = false;
                 Loader?.ClearPackages(emitFinishSignal: false);
             }
             else
@@ -612,7 +628,16 @@ public partial class PackagesPageViewModel : ViewModelBase
     [RelayCommand]
     public void SubmitSearch()
     {
-        string query = _searchQuery = GlobalQueryText = MegaQueryText.Trim();
+        string query = MegaQueryText.Trim();
+
+        // On Discover, an empty search browses the managers that can list all their packages, and
+        // does nothing when none can
+        bool browse = Loader is DiscoverablePackagesLoader && query.Length == 0;
+        if (browse && !BrowseAllVisible)
+            return;
+
+        _browsing = browse;
+        _searchQuery = GlobalQueryText = query;
         MegaQueryVisible = false;
 
         if (Loader is DiscoverablePackagesLoader discoverLoader)
@@ -624,6 +649,43 @@ public partial class PackagesPageViewModel : ViewModelBase
         {
             FilterPackages(fromQuery: true);
         }
+    }
+
+    /// <summary>Lists every package of the managers that can list them all: an empty search.</summary>
+    [RelayCommand]
+    private void BrowseAll()
+    {
+        MegaQueryText = "";
+        SubmitSearch();
+    }
+
+    /// <summary>
+    /// Before a search on the Discover page, lists the sources of the managers that can list all
+    /// their packages, so that sources can be picked before browsing them with an empty search.
+    /// </summary>
+    /// <param name="managers">The managers to consider, of which those ready and able to list
+    /// all their packages are browsed</param>
+    public void ShowBrowsableSources(IReadOnlyList<IPackageManager> managers)
+    {
+        _browseCandidates = managers;
+        ShowBrowsableSources();
+    }
+
+    private void ShowBrowsableSources()
+    {
+        var browsable = _browseCandidates
+            .Where(manager => manager.IsReady() && manager.Capabilities.CanListAllPackages)
+            .SelectMany(manager => manager.GetBrowsableSources())
+            .ToList();
+        BrowseAllVisible = browsable.Count > 0;
+
+        // Once a search shows packages, the sources are those of the results
+        if (!MegaQueryBoxEnabled || !MegaQueryVisible || Loader.IsLoading || _wrappedPackages.Count > 0)
+            return;
+
+        ClearSourcesList();
+        foreach (var source in browsable)
+            AddSourceToSourcesList(source);
     }
 
     public void FilterPackages(bool fromQuery = false)
@@ -677,7 +739,8 @@ public partial class PackagesPageViewModel : ViewModelBase
         }
         else if (FilteredPackages.Count == 0)
         {
-            bool noQuery = string.IsNullOrWhiteSpace(query);
+            // Browsing counts as a search, which found nothing
+            bool noQuery = string.IsNullOrWhiteSpace(query) && !_browsing;
             BackgroundText = noQuery ? NoPackagesText : NoMatchesText;
             BackgroundTextVisible = !MegaQueryBoxEnabled || !noQuery;
             LoadingImageVisible = false;
@@ -777,23 +840,32 @@ public partial class PackagesPageViewModel : ViewModelBase
     }
 
     // ─── Sources ──────────────────────────────────────────────────────────────
-    public void AddPackageToSourcesList(IPackage package)
+    public void AddPackageToSourcesList(IPackage package) => AddSourceToSourcesList(package.Source, package);
+
+    private void AddSourceToSourcesList(IManagerSource source, IPackage? package = null)
     {
-        IManagerSource source = package.Source;
         if (!UsedManagers.Contains(source.Manager))
         {
             UsedManagers.Add(source.Manager);
             var node = new SourceTreeNode
             {
                 PackageName = source.Manager.DisplayName,
-                PackageID = package.Id,
-                Version = package.VersionString,
-                Source = package.Source.Name
+                PackageID = package?.Id,
+                Version = package?.VersionString,
+                Source = source.Name,
+                SelectionKey = source.Manager.Name,
             };
 
-            var existing = GetAllSourceNodes();
-            if (existing.Count == 0 || existing.Count(n => n.IsSelected) >= existing.Count / 2)
-                node.IsSelected = true;
+            if (RememberedSelection(node.SelectionKey) is { } remembered)
+            {
+                node.IsSelected = remembered;
+            }
+            else
+            {
+                var existing = GetAllSourceNodes();
+                if (existing.Count == 0 || existing.Count(n => n.IsSelected) >= existing.Count / 2)
+                    node.IsSelected = true;
+            }
 
             AddRootSourceNode(node);
             RootNodeForManager.TryAdd(source.Manager, node);
@@ -810,15 +882,16 @@ public partial class PackagesPageViewModel : ViewModelBase
             var item = new SourceTreeNode
             {
                 PackageName = source.Name,
-                PackageID = package.Id,
-                Version = package.VersionString,
-                Source = package.Source.Name
+                PackageID = package?.Id,
+                Version = package?.VersionString,
+                Source = source.Name,
+                SelectionKey = $"{source.Manager.Name}\n{source.Name}",
             };
             NodesForSources.TryAdd(source, item);
 
             if (source.IsVirtualManager)
             {
-                item.IsSelected = _localPackagesNode.IsSelected;
+                item.IsSelected = RememberedSelection(item.SelectionKey) ?? _localPackagesNode.IsSelected;
                 item.PropertyChanged += OnRootSourceNodePropertyChanged;
                 _localPackagesNode.Children.Add(item);
                 if (!GetAllSourceNodes().Contains(_localPackagesNode))
@@ -830,12 +903,16 @@ public partial class PackagesPageViewModel : ViewModelBase
             else
             {
                 var rootNode = RootNodeForManager[source.Manager];
-                item.IsSelected = rootNode.IsSelected;
+                item.IsSelected = RememberedSelection(item.SelectionKey) ?? rootNode.IsSelected;
                 item.PropertyChanged += OnRootSourceNodePropertyChanged;
                 rootNode.Children.Add(item);
             }
         }
     }
+
+    // Only Discover remembers: a search there rebuilds the tree from its results
+    private bool? RememberedSelection(string key) =>
+        MegaQueryBoxEnabled && _rememberedSourceSelection.TryGetValue(key, out bool selected) ? selected : null;
 
     public void ClearSourcesList()
     {
@@ -851,6 +928,14 @@ public partial class PackagesPageViewModel : ViewModelBase
         RootNodeForManager.Clear();
         NodesForSources.Clear();
         _localPackagesNode.Children.Clear();
+
+        // Discover shows its placeholder again until sources are added, as a search that found
+        // nothing, or a browse with no source to list, leaves none
+        if (MegaQueryBoxEnabled)
+        {
+            SourcesPlaceholderVisible = true;
+            SourcesTreeVisible = false;
+        }
     }
 
     private void AddRootSourceNode(SourceTreeNode node)
@@ -863,6 +948,9 @@ public partial class PackagesPageViewModel : ViewModelBase
     {
         if (e.PropertyName == nameof(SourceTreeNode.IsSelected))
         {
+            if (MegaQueryBoxEnabled && sender is SourceTreeNode { SelectionKey: { } key } changed)
+                _rememberedSourceSelection[key] = changed.IsSelected;
+
             if (sender is SourceTreeNode node && SourceNodes.Contains(node))
             {
                 _isSynchronizingSourceSelection = true;

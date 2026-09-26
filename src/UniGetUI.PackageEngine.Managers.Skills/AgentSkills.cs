@@ -66,6 +66,7 @@ public sealed class AgentSkills : PackageManager
         Capabilities = new ManagerCapabilities
         {
             RunsInProcess = true,
+            CanListAllPackages = true,
             SupportsCustomSources = true,
             SupportsProxy = ProxySupport.No,
             SupportsProxyAuth = false,
@@ -265,6 +266,10 @@ public sealed class AgentSkills : PackageManager
             {
                 if (source.Kind is SkillSourceKind.Catalog)
                 {
+                    // An empty query browses, and the catalog is too large to list in full
+                    if (query.Length == 0)
+                        continue;
+
                     var results = Backend.Search(query, SearchLimit, CancellationToken.None);
                     foreach (var result in results)
                     {
@@ -441,6 +446,13 @@ public sealed class AgentSkills : PackageManager
     }
 
     public override IReadOnlyList<string> FindCandidateExecutableFiles() => [];
+
+    /// <summary>The configured repositories and indexes: the skills.sh catalog is too large to list.</summary>
+    public override IReadOnlyList<IManagerSource> GetBrowsableSources() =>
+        GetConfiguredSources()
+            .Where(source => source.Kind is not SkillSourceKind.Catalog)
+            .Select(SourceFactory.GetOrCreate)
+            .ToArray();
 
     /// <summary>Forwards the library's progress lines to a task log.</summary>
     private sealed class LoggerProgress(INativeTaskLogger logger) : IProgress<string>

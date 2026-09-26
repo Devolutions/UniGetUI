@@ -53,6 +53,10 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         // Whether package and source operations run inside UniGetUI, through the manager's
         // IInProcessPackageOperationHelper and IInProcessSourceHelper, instead of an executable
         public bool RunsInProcess = false;
+
+        // Whether a search with an empty query lists every package the manager's sources offer,
+        // so that Discover can browse them. Managers with vast catalogs leave this off.
+        public bool CanListAllPackages = false;
         public SourceCapabilities Sources { get; set; }
 
         public ManagerCapabilities()

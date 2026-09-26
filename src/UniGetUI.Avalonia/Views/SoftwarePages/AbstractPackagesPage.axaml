@@ -1178,6 +1178,25 @@
                                     IsHitTestVisible="False"/>
                         </Panel>
                     </Border>
+                    <!-- Browsing is an empty search: it lists everything the sources picked in the
+                         filter pane offer, for the managers that can list all their packages -->
+                    <Button x:Name="MegaBrowseButton"
+                            Grid.Row="2"
+                            Grid.Column="1"
+                            Grid.ColumnSpan="2"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Top"
+                            Margin="0,12,0,0"
+                            Padding="4"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            IsVisible="{Binding BrowseAllVisible}"
+                            Command="{Binding BrowseAllCommand}"
+                            automation:AutomationProperties.Name="{t:Translate Or browse everything in the selected sources}">
+                        <TextBlock Text="{t:Translate Or browse everything in the selected sources}"
+                                   FontSize="14"
+                                   Classes="hyperlink"/>
+                    </Button>
                 </Grid>
 
             </Grid>

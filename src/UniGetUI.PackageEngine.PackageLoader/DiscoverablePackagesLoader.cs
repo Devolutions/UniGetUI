@@ -12,7 +12,8 @@ namespace UniGetUI.PackageEngine.PackageLoader
         // tags and renders thousands of packages, freezing the UI and spiking RAM.
         private const int MAX_RESULTS_PER_MANAGER = 100;
 
-        private string QUERY_TEXT = string.Empty;
+        // Null until a search is made. An empty query browses: see LoadPackagesFromManager.
+        private string? QUERY_TEXT;
         private volatile bool _pendingReload;
 
         public DiscoverablePackagesLoader(IReadOnlyList<IPackageManager> managers)
@@ -46,7 +47,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         public override async Task ReloadPackages()
         {
-            if (QUERY_TEXT == "")
+            if (QUERY_TEXT is null)
             {
                 return;
             }
@@ -67,8 +68,15 @@ namespace UniGetUI.PackageEngine.PackageLoader
 
         protected override IReadOnlyList<IPackage> LoadPackagesFromManager(IPackageManager manager)
         {
-            string text = QUERY_TEXT;
-            text = CoreTools.EnsureSafeQueryString(text);
+            string query = QUERY_TEXT ?? string.Empty;
+            if (query.Length == 0)
+            {
+                // Browsing: the managers that can list every package list them all, past the cap,
+                // which guards against broad queries across vast catalogs
+                return manager.Capabilities.CanListAllPackages ? manager.FindPackages(query) : [];
+            }
+
+            string text = CoreTools.EnsureSafeQueryString(query);
             if (text == string.Empty)
             {
                 return [];

@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views;
@@ -8,6 +9,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.Interface.Telemetry;
+using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -45,7 +47,22 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         MainSubtitle_StillLoading = CoreTools.Translate("Loading packages"),
         NoMatches_BackgroundText = CoreTools.Translate("No results were found matching the input criteria"),
     })
-    { }
+    {
+        // Managers finish loading after the page is created, so the sources that can be browsed
+        // are listed again once they have
+        if (InstalledPackagesLoader.Instance is { } installedLoader)
+        {
+            installedLoader.FinishedLoading += (_, _) =>
+                Dispatcher.UIThread.Post(() => ViewModel.ShowBrowsableSources(PEInterface.Managers));
+        }
+    }
+
+    public override void OnEnter()
+    {
+        base.OnEnter();
+        // Sources may have been added or removed since the page was last shown
+        ViewModel.ShowBrowsableSources(PEInterface.Managers);
+    }
 
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {

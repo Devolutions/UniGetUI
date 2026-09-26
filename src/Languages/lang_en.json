@@ -1046,6 +1046,7 @@
   "{0} is not a skill source. Enter a GitHub repository (owner/repo), a git repository URL, or the address of a website that publishes skills, using HTTPS and without a user name or password.": "{0} is not a skill source. Enter a GitHub repository (owner/repo), a git repository URL, or the address of a website that publishes skills, using HTTPS and without a user name or password.",
   "No coding agent was found on this computer. Skills are installed to the shared .agents/skills folder.": "No coding agent was found on this computer. Skills are installed to the shared .agents/skills folder.",
   "Install skills for these coding agents": "Install skills for these coding agents",
+  "Or browse everything in the selected sources": "Or browse everything in the selected sources",
   "This operation requires administrator privileges, but the elevation tool could not be found. The operation cannot continue.": "This operation requires administrator privileges, but the elevation tool could not be found. The operation cannot continue.",
   "{package} installer and manifest download": "{package} installer and manifest download",
   "{0} installer and manifest are being downloaded": "{0} installer and manifest are being downloaded",

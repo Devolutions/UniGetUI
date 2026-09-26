@@ -86,6 +86,27 @@ public sealed class AgentSkillsManagerTests : IDisposable
     }
 
     [Fact]
+    public void BrowsingListsEverySkillOfTheListedSourcesButNotTheCatalog()
+    {
+        AddSourceSetting("https://skills.contoso.com");
+        _backend.SourceSkills["https://skills.contoso.com"] =
+        [
+            new AvailableSkill("code-review", "Reviews pull requests", null),
+            new AvailableSkill("release-notes", "Writes release notes", null),
+        ];
+        _backend.SearchResults.Add(new SkillSearchResult("deploy", "vercel-labs/agent-skills/deploy", "vercel-labs/agent-skills", 900));
+        var manager = CreateManager();
+
+        // An empty query browses, and the catalog is too large to list in full
+        var packages = manager.FindPackages("");
+
+        Assert.True(manager.Capabilities.CanListAllPackages);
+        Assert.Equal(["code-review", "release-notes"], packages.Select(package => package.Id).Order());
+        Assert.Equal(0, _backend.SearchCalls);
+        Assert.Equal(["skills.contoso.com"], manager.GetBrowsableSources().Select(source => source.Name));
+    }
+
+    [Fact]
     public void SearchSkipsTheCatalogWhenItIsDisabled()
     {
         Settings.Set(Settings.K.DisableSkillsPublicCatalog, true);

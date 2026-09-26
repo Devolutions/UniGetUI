@@ -103,6 +103,8 @@ namespace UniGetUI.PackageEngine.Classes.Manager
         public IReadOnlyList<IPackage> FindPackages(string query) =>
             throw new NotImplementedException();
 
+        public IReadOnlyList<IManagerSource> GetBrowsableSources() => [];
+
         public IReadOnlyList<IPackage> GetAvailableUpdates() => throw new NotImplementedException();
 
         public IReadOnlyList<IPackage> GetInstalledPackages() =>

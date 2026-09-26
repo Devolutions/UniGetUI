@@ -68,165 +68,17 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             _ = ViewModel.ReloadManagerCommand.ExecuteAsync(null);
         };
 
-        // ── Executable picker card
-        bool customPathsAllowed = SecureSettings.Get(SecureSettings.K.AllowCustomManagerPaths);
-        var execGrid = new Grid
+        if (manager.Capabilities.RunsInProcess)
         {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            RowDefinitions = new RowDefinitions("Auto,Auto,Auto"),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-        };
-
-        var execHint = new TextBlock
-        {
-            Text = CoreTools.Translate("Not finding the file you are looking for? Browse to it or make sure it has been added to PATH."),
-            FontSize = 12,
-            FontWeight = FontWeight.SemiBold,
-            Opacity = 0.7,
-            TextWrapping = TextWrapping.Wrap,
-        };
-        Grid.SetColumnSpan(execHint, 2);
-        execGrid.Children.Add(execHint);
-
-        var execCombo = new ComboBox
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            MinHeight = 32,
-            CornerRadius = new CornerRadius(4),
-            Padding = new Thickness(10, 4, 8, 5),
-        };
-        AutomationProperties.SetName(execCombo, CoreTools.Translate("Select the executable to be used. The following list shows the executables found by UniGetUI"));
-        foreach (var path in manager.FindCandidateExecutableFiles())
-            AddExecutablePathItem(execCombo, path);
-
-        string savedPath = CoreSettings.GetDictionaryItem<string, string>(CoreSettings.K.ManagerPaths, manager.Name) ?? "";
-        if (!string.IsNullOrEmpty(savedPath) && File.Exists(savedPath))
-            AddExecutablePathItem(execCombo, savedPath);
-        if (string.IsNullOrEmpty(savedPath))
-        {
-            var (found, path) = manager.GetExecutableFile();
-            savedPath = found ? path : "";
+            // Managers that run inside UniGetUI have no executable to choose or show
+            ExecutableHolder.IsVisible = false;
+            PathHolder.IsVisible = false;
+            StatusBar.CornerRadius = new CornerRadius(8);
         }
-        else if (!File.Exists(savedPath))
+        else
         {
-            var (found, path) = manager.GetExecutableFile();
-            savedPath = found ? path : "";
+            BuildExecutableCards(manager);
         }
-        execCombo.SelectedItem = savedPath;
-        execCombo.IsEnabled = customPathsAllowed;
-        execCombo.SelectionChanged += (s, _) =>
-        {
-            if (s is ComboBox combo && combo.SelectedItem?.ToString() is { Length: > 0 } selected)
-                ViewModel.OnExecutableSelected(selected);
-        };
-        Grid.SetRow(execCombo, 1);
-        Grid.SetColumn(execCombo, 0);
-        execGrid.Children.Add(execCombo);
-
-        var browseExecutableButton = new Button
-        {
-            Content = CoreTools.Translate("Browse..."),
-            IsEnabled = customPathsAllowed,
-            Margin = new Thickness(8, 0, 0, 0),
-            MinWidth = 96,
-            Classes = { "secondary-action" },
-        };
-        browseExecutableButton.Click += async (_, _) =>
-        {
-            if (TopLevel.GetTopLevel(this) is not { } topLevel) return;
-            var files = await topLevel.StorageProvider.OpenFilePickerAsync(
-                new FilePickerOpenOptions
-                {
-                    AllowMultiple = false,
-                    Title = CoreTools.Translate("Select executable"),
-                    FileTypeFilter = GetExecutableFileTypeFilter(),
-                });
-            if (files is not [{ } file]) return;
-
-            string? path = file.TryGetLocalPath();
-            if (string.IsNullOrWhiteSpace(path)) return;
-
-            AddExecutablePathItem(execCombo, path);
-            execCombo.SelectedItem = path;
-        };
-        Grid.SetRow(browseExecutableButton, 1);
-        Grid.SetColumn(browseExecutableButton, 1);
-        execGrid.Children.Add(browseExecutableButton);
-
-        if (!customPathsAllowed)
-        {
-            var securityWarning = new TextBlock
-            {
-                Text = CoreTools.Translate("For security reasons, changing the executable file is disabled by default"),
-                FontSize = 12,
-                FontWeight = FontWeight.SemiBold,
-                Opacity = 0.7,
-                TextWrapping = TextWrapping.Wrap,
-                Classes = { "setting-warning-text" },
-            };
-            Grid.SetRow(securityWarning, 2);
-            execGrid.Children.Add(securityWarning);
-
-            var goToSecureBtn = new Button
-            {
-                Content = new TextBlock { Text = CoreTools.Translate("Change this"), FontSize = 12, Classes = { "hyperlink" } },
-                Background = Brushes.Transparent,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(0),
-            };
-            goToSecureBtn.Click += (_, _) => ViewModel.NavigateToAdministratorCommand.Execute(null);
-            Grid.SetRow(goToSecureBtn, 2);
-            Grid.SetColumn(goToSecureBtn, 1);
-            execGrid.Children.Add(goToSecureBtn);
-        }
-
-        ExecutableHolder.Content = new SettingsCard
-        {
-            BorderThickness = new Thickness(1, 0, 1, 0),
-            CornerRadius = new CornerRadius(0),
-            Header = CoreTools.Translate("Select the executable to be used. The following list shows the executables found by UniGetUI"),
-            Description = execGrid,
-            Margin = new Thickness(0, 2, 0, 2),
-        };
-
-        // ── Current path card
-        var copyIcon = new SvgIcon
-        {
-            Path = "avares://UniGetUI/Assets/Symbols/copy.svg",
-            Width = 24,
-            Height = 24,
-        };
-        var copyBtn = new Button
-        {
-            Content = copyIcon,
-            Padding = new Thickness(8),
-            VerticalAlignment = VerticalAlignment.Center,
-            Background = Brushes.Transparent,
-            BorderThickness = new Thickness(0),
-        };
-        AutomationProperties.SetName(copyBtn, CoreTools.Translate("Copy path"));
-        var pathCard = new SettingsCard
-        {
-            BorderThickness = new Thickness(1, 0, 1, 1),
-            CornerRadius = new CornerRadius(0, 0, 8, 8),
-            Header = CoreTools.Translate("Current executable file:"),
-            Content = copyBtn,
-        };
-        var pathLabel = new TextBlock
-        {
-            FontFamily = new FontFamily("Consolas,Cascadia Mono,Menlo,monospace"),
-            FontSize = 14,
-            TextWrapping = TextWrapping.Wrap,
-        };
-        pathLabel.Text = ViewModel.PathLabelText;
-        ViewModel.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(PackageManagerViewModel.PathLabelText))
-                pathLabel.Text = ViewModel.PathLabelText;
-        };
-        pathCard.Description = pathLabel;
-        copyBtn.Click += (_, _) => _ = CopyPathAndFlashIcon(pathLabel.Text, copyBtn, copyIcon);
-        PathHolder.Content = pathCard;
 
         // ── Install options panel
         var installOptions = new InstallOptionsPanel(manager);
@@ -391,6 +243,169 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 "If Python cannot be found or is not listing packages but is installed on the system, " +
                 "you may need to disable the \"python.exe\" App Execution Alias in the settings.");
         }
+    }
+
+    private void BuildExecutableCards(IPackageManager manager)
+    {
+        // ── Executable picker card
+        bool customPathsAllowed = SecureSettings.Get(SecureSettings.K.AllowCustomManagerPaths);
+        var execGrid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            RowDefinitions = new RowDefinitions("Auto,Auto,Auto"),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+
+        var execHint = new TextBlock
+        {
+            Text = CoreTools.Translate("Not finding the file you are looking for? Browse to it or make sure it has been added to PATH."),
+            FontSize = 12,
+            FontWeight = FontWeight.SemiBold,
+            Opacity = 0.7,
+            TextWrapping = TextWrapping.Wrap,
+        };
+        Grid.SetColumnSpan(execHint, 2);
+        execGrid.Children.Add(execHint);
+
+        var execCombo = new ComboBox
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            MinHeight = 32,
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(10, 4, 8, 5),
+        };
+        AutomationProperties.SetName(execCombo, CoreTools.Translate("Select the executable to be used. The following list shows the executables found by UniGetUI"));
+        foreach (var path in manager.FindCandidateExecutableFiles())
+            AddExecutablePathItem(execCombo, path);
+
+        string savedPath = CoreSettings.GetDictionaryItem<string, string>(CoreSettings.K.ManagerPaths, manager.Name) ?? "";
+        if (!string.IsNullOrEmpty(savedPath) && File.Exists(savedPath))
+            AddExecutablePathItem(execCombo, savedPath);
+        if (string.IsNullOrEmpty(savedPath))
+        {
+            var (found, path) = manager.GetExecutableFile();
+            savedPath = found ? path : "";
+        }
+        else if (!File.Exists(savedPath))
+        {
+            var (found, path) = manager.GetExecutableFile();
+            savedPath = found ? path : "";
+        }
+        execCombo.SelectedItem = savedPath;
+        execCombo.IsEnabled = customPathsAllowed;
+        execCombo.SelectionChanged += (s, _) =>
+        {
+            if (s is ComboBox combo && combo.SelectedItem?.ToString() is { Length: > 0 } selected)
+                ViewModel.OnExecutableSelected(selected);
+        };
+        Grid.SetRow(execCombo, 1);
+        Grid.SetColumn(execCombo, 0);
+        execGrid.Children.Add(execCombo);
+
+        var browseExecutableButton = new Button
+        {
+            Content = CoreTools.Translate("Browse..."),
+            IsEnabled = customPathsAllowed,
+            Margin = new Thickness(8, 0, 0, 0),
+            MinWidth = 96,
+            Classes = { "secondary-action" },
+        };
+        browseExecutableButton.Click += async (_, _) =>
+        {
+            if (TopLevel.GetTopLevel(this) is not { } topLevel) return;
+            var files = await topLevel.StorageProvider.OpenFilePickerAsync(
+                new FilePickerOpenOptions
+                {
+                    AllowMultiple = false,
+                    Title = CoreTools.Translate("Select executable"),
+                    FileTypeFilter = GetExecutableFileTypeFilter(),
+                });
+            if (files is not [{ } file]) return;
+
+            string? path = file.TryGetLocalPath();
+            if (string.IsNullOrWhiteSpace(path)) return;
+
+            AddExecutablePathItem(execCombo, path);
+            execCombo.SelectedItem = path;
+        };
+        Grid.SetRow(browseExecutableButton, 1);
+        Grid.SetColumn(browseExecutableButton, 1);
+        execGrid.Children.Add(browseExecutableButton);
+
+        if (!customPathsAllowed)
+        {
+            var securityWarning = new TextBlock
+            {
+                Text = CoreTools.Translate("For security reasons, changing the executable file is disabled by default"),
+                FontSize = 12,
+                FontWeight = FontWeight.SemiBold,
+                Opacity = 0.7,
+                TextWrapping = TextWrapping.Wrap,
+                Classes = { "setting-warning-text" },
+            };
+            Grid.SetRow(securityWarning, 2);
+            execGrid.Children.Add(securityWarning);
+
+            var goToSecureBtn = new Button
+            {
+                Content = new TextBlock { Text = CoreTools.Translate("Change this"), FontSize = 12, Classes = { "hyperlink" } },
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0),
+            };
+            goToSecureBtn.Click += (_, _) => ViewModel.NavigateToAdministratorCommand.Execute(null);
+            Grid.SetRow(goToSecureBtn, 2);
+            Grid.SetColumn(goToSecureBtn, 1);
+            execGrid.Children.Add(goToSecureBtn);
+        }
+
+        ExecutableHolder.Content = new SettingsCard
+        {
+            BorderThickness = new Thickness(1, 0, 1, 0),
+            CornerRadius = new CornerRadius(0),
+            Header = CoreTools.Translate("Select the executable to be used. The following list shows the executables found by UniGetUI"),
+            Description = execGrid,
+            Margin = new Thickness(0, 2, 0, 2),
+        };
+
+        // ── Current path card
+        var copyIcon = new SvgIcon
+        {
+            Path = "avares://UniGetUI/Assets/Symbols/copy.svg",
+            Width = 24,
+            Height = 24,
+        };
+        var copyBtn = new Button
+        {
+            Content = copyIcon,
+            Padding = new Thickness(8),
+            VerticalAlignment = VerticalAlignment.Center,
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+        };
+        AutomationProperties.SetName(copyBtn, CoreTools.Translate("Copy path"));
+        var pathCard = new SettingsCard
+        {
+            BorderThickness = new Thickness(1, 0, 1, 1),
+            CornerRadius = new CornerRadius(0, 0, 8, 8),
+            Header = CoreTools.Translate("Current executable file:"),
+            Content = copyBtn,
+        };
+        var pathLabel = new TextBlock
+        {
+            FontFamily = new FontFamily("Consolas,Cascadia Mono,Menlo,monospace"),
+            FontSize = 14,
+            TextWrapping = TextWrapping.Wrap,
+        };
+        pathLabel.Text = ViewModel.PathLabelText;
+        ViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(PackageManagerViewModel.PathLabelText))
+                pathLabel.Text = ViewModel.PathLabelText;
+        };
+        pathCard.Description = pathLabel;
+        copyBtn.Click += (_, _) => _ = CopyPathAndFlashIcon(pathLabel.Text, copyBtn, copyIcon);
+        PathHolder.Content = pathCard;
     }
 
     private static IReadOnlyList<FilePickerFileType> GetExecutableFileTypeFilter()

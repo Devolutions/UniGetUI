@@ -180,6 +180,19 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
                 Throw(
                     $"Manager {Name} has been declared as SupportsCustomSources but has no helper associated with it"
                 );
+
+            if (Capabilities.RunsInProcess && OperationHelper is not IInProcessPackageOperationHelper)
+                Throw(
+                    $"Manager {Name} has been declared as RunsInProcess but its OperationHelper does not implement IInProcessPackageOperationHelper"
+                );
+            if (
+                Capabilities.RunsInProcess
+                && Capabilities.SupportsCustomSources
+                && SourcesHelper is not IInProcessSourceHelper
+            )
+                Throw(
+                    $"Manager {Name} has been declared as RunsInProcess but its SourcesHelper does not implement IInProcessSourceHelper"
+                );
         }
 
         /// <summary>

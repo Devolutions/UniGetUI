@@ -1,0 +1,589 @@
+using Devolutions.AgentSkills;
+using UniGetUI.Core.Data;
+using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Core.SettingsEngine.SecureSettings;
+using UniGetUI.PackageEngine.Classes.Manager;
+using UniGetUI.PackageEngine.Enums;
+using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
+using UniGetUI.PackageEngine.Managers.SkillsManager;
+using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.Serializable;
+using UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
+
+namespace UniGetUI.PackageEngine.Tests;
+
+public sealed class AgentSkillsManagerTests : IDisposable
+{
+    private readonly string _testRoot = Path.Combine(
+        Path.GetTempPath(),
+        nameof(AgentSkillsManagerTests),
+        Guid.NewGuid().ToString("N")
+    );
+
+    private readonly FakeSkillsBackend _backend = new();
+
+    public AgentSkillsManagerTests()
+    {
+        CoreData.TEST_DataDirectoryOverride = Path.Combine(_testRoot, "Data");
+        SecureSettings.TEST_SecureSettingsRootOverride = Path.Combine(_testRoot, "SecureSettings");
+        Directory.CreateDirectory(CoreData.UniGetUIUserConfigurationDirectory);
+        Settings.ResetSettings();
+    }
+
+    public void Dispose()
+    {
+        Settings.ResetSettings();
+        CoreData.TEST_DataDirectoryOverride = null;
+        SecureSettings.TEST_SecureSettingsRootOverride = null;
+        if (Directory.Exists(_testRoot))
+            Directory.Delete(_testRoot, recursive: true);
+    }
+
+    private AgentSkills CreateManager()
+    {
+        var manager = new AgentSkills(_backend);
+        manager.Initialize();
+        Assert.True(manager.IsReady());
+        return manager;
+    }
+
+    private static void AddSourceSetting(string source) =>
+        Settings.AddToList(AgentSkills.SourcesListKey, source);
+
+    [Fact]
+    public void SearchMapsCatalogResultsToTheirGitHubRepositories()
+    {
+        _backend.SearchResults.Add(new SkillSearchResult("deploy", "vercel-labs/agent-skills/deploy", "vercel-labs/agent-skills", 900));
+        _backend.SearchResults.Add(new SkillSearchResult("elsewhere", "x", "https://example.com/skills", 5));
+        var manager = CreateManager();
+
+        var packages = manager.FindPackages("deploy");
+
+        var package = Assert.Single(packages);
+        Assert.Equal("deploy", package.Id);
+        Assert.Equal("Deploy", package.Name);
+        Assert.Equal("vercel-labs/agent-skills", package.Source.Name);
+        Assert.Equal(AgentSkills.LatestVersion, package.VersionString);
+    }
+
+    [Fact]
+    public void SearchFiltersTheSkillsOfAddedSources()
+    {
+        AddSourceSetting("https://skills.contoso.com");
+        _backend.SourceSkills["https://skills.contoso.com"] =
+        [
+            new AvailableSkill("code-review", "Reviews pull requests", null),
+            new AvailableSkill("release-notes", "Writes release notes", null),
+        ];
+        var manager = CreateManager();
+
+        var packages = manager.FindPackages("review");
+
+        var package = Assert.Single(packages);
+        Assert.Equal("code-review", package.Id);
+        Assert.Equal("skills.contoso.com", package.Source.Name);
+    }
+
+    [Fact]
+    public void SearchSkipsTheCatalogWhenItIsDisabled()
+    {
+        Settings.Set(Settings.K.DisableSkillsPublicCatalog, true);
+        var manager = CreateManager();
+
+        Assert.Empty(manager.FindPackages("anything"));
+        Assert.Equal(0, _backend.SearchCalls);
+    }
+
+    [Fact]
+    public void InstalledSkillsShowTheirSourceAndShortHash()
+    {
+        _backend.Installed.Add(FakeSkillsBackend.TrackedSkill("deploy", "vercel-labs/agent-skills", "0123456789abcdef0123"));
+        _backend.Installed.Add(
+            new InstalledSkillInfo
+            {
+                Name = "handmade",
+                Description = "",
+                Path = "/home/test/.claude/skills/handmade",
+                Scope = SkillScope.Global,
+                Agents = ["claude-code"],
+            }
+        );
+        var manager = CreateManager();
+
+        var packages = manager.GetInstalledPackages();
+
+        var tracked = Assert.Single(packages, p => p.Id == "deploy");
+        Assert.Equal("0123456", tracked.VersionString);
+        Assert.Equal("vercel-labs/agent-skills", tracked.Source.Name);
+        var untracked = Assert.Single(packages, p => p.Id == "handmade");
+        Assert.Equal(AgentSkills.UntrackedVersion, untracked.VersionString);
+        Assert.True(untracked.Source.IsVirtualManager);
+    }
+
+    [Fact]
+    public void ASearchResultIsRecognizedOnceItIsInstalled()
+    {
+        _backend.SearchResults.Add(new SkillSearchResult("deploy", "vercel-labs/agent-skills/deploy", "vercel-labs/agent-skills", 900));
+        _backend.Installed.Add(FakeSkillsBackend.TrackedSkill("deploy", "Vercel-Labs/Agent-Skills", "abcdef1234"));
+        var manager = CreateManager();
+
+        var found = Assert.Single(manager.FindPackages("deploy"));
+        var installed = Assert.Single(manager.GetInstalledPackages());
+
+        Assert.True(found.IsEquivalentTo(installed));
+        Assert.Same(found.Source, installed.Source);
+    }
+
+    [Fact]
+    public void UpdatesAreOfferedOnlyForAllowedSources()
+    {
+        Settings.Set(Settings.K.DisableSkillsPublicCatalog, true);
+        AddSourceSetting("contoso/agent-skills");
+        _backend.Installed.Add(FakeSkillsBackend.TrackedSkill("allowed", "contoso/agent-skills", "1111111aaaa"));
+        _backend.Installed.Add(FakeSkillsBackend.TrackedSkill("stranger", "someone/else", "2222222bbbb"));
+        _backend.UpdateCheck = new SkillUpdateCheckResult(
+            [
+                new SkillUpdate { Name = "allowed", Scope = SkillScope.Global, Source = "contoso/agent-skills", CurrentHash = "1111111aaaa", LatestHash = "3333333cccc" },
+                new SkillUpdate { Name = "stranger", Scope = SkillScope.Global, Source = "someone/else", CurrentHash = "2222222bbbb", LatestHash = "4444444dddd" },
+            ],
+            []
+        );
+        var manager = CreateManager();
+
+        var update = Assert.Single(manager.GetAvailableUpdates());
+
+        Assert.Equal("allowed", update.Id);
+        Assert.Equal("1111111", update.VersionString);
+        Assert.Equal("3333333", update.NewVersionString);
+        Assert.True(update.IsUpgradable);
+    }
+
+    [Fact]
+    public void HashVersionsAreEqualOrIncomparable()
+    {
+        var manager = CreateManager();
+
+        Assert.Equal(0, manager.CompareVersions("abc1234", "ABC1234"));
+        Assert.Null(manager.CompareVersions("abc1234", "0000000"));
+        Assert.Null(manager.CompareVersions("fffffff", "0000001"));
+    }
+
+    [Fact]
+    public void SourceFactoryResolvesOnlySourcesSkillsMayComeFrom()
+    {
+        AddSourceSetting("https://skills.contoso.com");
+        var manager = CreateManager();
+        var factory = manager.SourcesHelper.Factory;
+
+        Assert.NotNull(factory.GetSourceIfExists("vercel-labs/agent-skills"));
+        Assert.NotNull(factory.GetSourceIfExists("skills.contoso.com"));
+        Assert.Null(factory.GetSourceIfExists("skills.fabrikam.com"));
+
+        Settings.Set(Settings.K.DisableSkillsPublicCatalog, true);
+        Assert.Null(factory.GetSourceIfExists("vercel-labs/agent-skills"));
+        Assert.NotNull(factory.GetSourceIfExists("skills.contoso.com"));
+    }
+
+    [Fact]
+    public async Task InstallPassesTheSourceSkillAndTargetAgentsToTheLibrary()
+    {
+        Settings.SetList(AgentSkills.TargetAgentsListKey, ["claude-code", "codex"]);
+        var manager = CreateManager();
+        var package = new Package(
+            "Deploy",
+            "deploy",
+            AgentSkills.LatestVersion,
+            manager.SourcesHelper.Factory.GetSourceOrDefault("vercel-labs/agent-skills"),
+            manager
+        );
+        var output = new RecordingOutput();
+
+        var veredict = await Perform(manager, package, OperationType.Install, output);
+
+        Assert.Equal(OperationVeredict.Success, veredict);
+        var install = Assert.Single(_backend.Installs);
+        // A full github.com address, which GH_HOST cannot point at a GitHub Enterprise server
+        Assert.Equal("https://github.com/vercel-labs/agent-skills", install.Source);
+        Assert.Equal("deploy", install.Skill);
+        Assert.Equal(["claude-code", "codex"], install.Agents);
+        Assert.Contains("Installing deploy", output.Info);
+    }
+
+    [Fact]
+    public async Task InstallFromASourceThatIsNotAllowedIsRefused()
+    {
+        Settings.Set(Settings.K.DisableSkillsPublicCatalog, true);
+        var manager = CreateManager();
+        var package = new Package(
+            "Deploy",
+            "deploy",
+            AgentSkills.LatestVersion,
+            new ManagerSource(manager, "vercel-labs/agent-skills", new Uri("https://github.com/vercel-labs/agent-skills")),
+            manager
+        );
+        var output = new RecordingOutput();
+
+        var veredict = await Perform(manager, package, OperationType.Install, output);
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+        Assert.Empty(_backend.Installs);
+        Assert.Contains("Add this source first", output.FailureMessage);
+    }
+
+    [Fact]
+    public async Task FailedInstallReportsTheLibraryError()
+    {
+        _backend.InstallStatus = SkillOperationStatus.Failed;
+        var manager = CreateManager();
+        var package = new Package(
+            "Deploy",
+            "deploy",
+            AgentSkills.LatestVersion,
+            manager.SourcesHelper.Factory.GetSourceOrDefault("vercel-labs/agent-skills"),
+            manager
+        );
+        var output = new RecordingOutput();
+
+        var veredict = await Perform(manager, package, OperationType.Install, output);
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+        Assert.Equal("The install failed", output.FailureMessage);
+    }
+
+    [Fact]
+    public async Task UpdateAppliesTheUpdateFoundByTheLastCheck()
+    {
+        _backend.Installed.Add(FakeSkillsBackend.TrackedSkill("deploy", "vercel-labs/agent-skills", "1111111aaaa"));
+        var found = new SkillUpdate
+        {
+            Name = "deploy",
+            Scope = SkillScope.Global,
+            Source = "vercel-labs/agent-skills",
+            CurrentHash = "1111111aaaa",
+            LatestHash = "2222222bbbb",
+        };
+        _backend.UpdateCheck = new SkillUpdateCheckResult([found], []);
+        var manager = CreateManager();
+        var update = Assert.Single(manager.GetAvailableUpdates());
+
+        // The first update applies what the check found, without checking again
+        Assert.Equal(OperationVeredict.Success, await Perform(manager, update, OperationType.Update, new RecordingOutput()));
+        Assert.Same(found, Assert.Single(Assert.Single(_backend.AppliedUpdates)));
+        Assert.Null(Assert.Single(_backend.CheckedSkills));
+
+        // A later one checks the skill again
+        Assert.Equal(OperationVeredict.Success, await Perform(manager, update, OperationType.Update, new RecordingOutput()));
+        Assert.Equal(2, _backend.AppliedUpdates.Count);
+        Assert.Equal(["deploy"], _backend.CheckedSkills[^1]);
+    }
+
+    [Fact]
+    public async Task AnUpdateIsHeldToTheSourceTheSkillCameFromWhateverSourceThePackageNames()
+    {
+        // The library updates a skill from the source it was installed from, so naming an added
+        // source for the package must not let an update from another source through
+        Settings.Set(Settings.K.DisableSkillsPublicCatalog, true);
+        AddSourceSetting("contoso/agent-skills");
+        _backend.Installed.Add(FakeSkillsBackend.TrackedSkill("stranger", "someone/else", "2222222bbbb"));
+        _backend.UpdateCheck = new SkillUpdateCheckResult(
+            [
+                new SkillUpdate { Name = "stranger", Scope = SkillScope.Global, Source = "someone/else", CurrentHash = "2222222bbbb", LatestHash = "4444444dddd" },
+            ],
+            []
+        );
+        var manager = CreateManager();
+        var package = new Package(
+            "Stranger",
+            "stranger",
+            "2222222",
+            manager.SourcesHelper.Factory.GetSourceOrDefault("contoso/agent-skills"),
+            manager
+        );
+        var output = new RecordingOutput();
+
+        var veredict = await Perform(manager, package, OperationType.Update, output);
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+        Assert.Empty(_backend.AppliedUpdates);
+        Assert.Contains("someone/else", output.FailureMessage);
+    }
+
+    [Fact]
+    public async Task AnUpdateFoundBeforeItsSourceWasRemovedIsNotApplied()
+    {
+        Settings.Set(Settings.K.DisableSkillsPublicCatalog, true);
+        AddSourceSetting("contoso/agent-skills");
+        _backend.Installed.Add(FakeSkillsBackend.TrackedSkill("allowed", "contoso/agent-skills", "1111111aaaa"));
+        _backend.UpdateCheck = new SkillUpdateCheckResult(
+            [
+                new SkillUpdate { Name = "allowed", Scope = SkillScope.Global, Source = "contoso/agent-skills", CurrentHash = "1111111aaaa", LatestHash = "3333333cccc" },
+            ],
+            []
+        );
+        var manager = CreateManager();
+        var update = Assert.Single(manager.GetAvailableUpdates());
+
+        Settings.SetList(AgentSkills.SourcesListKey, new List<string>());
+        var veredict = await Perform(manager, update, OperationType.Update, new RecordingOutput());
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+        Assert.Empty(_backend.AppliedUpdates);
+    }
+
+    [Fact]
+    public void AnIndexUpdateIsCheckedAgainstTheIndexItComesFromNotTheAddressOfItsFile()
+    {
+        Settings.Set(Settings.K.DisableSkillsPublicCatalog, true);
+        AddSourceSetting("https://skills.contoso.com");
+        // Installed from another index whose skill file sits on the added host: an index picks where
+        // its files live, so that address says nothing about where the update comes from
+        _backend.Installed.Add(
+            WellKnownSkill("helper", "skills.fabrikam.com", "https://skills.contoso.com/.well-known/agent-skills/helper/SKILL.md")
+        );
+        _backend.UpdateCheck = new SkillUpdateCheckResult(
+            [
+                new SkillUpdate { Name = "helper", Scope = SkillScope.Global, Source = "https://skills.fabrikam.com", CurrentHash = "sha256:1111111aaaa" },
+            ],
+            []
+        );
+        var manager = CreateManager();
+
+        Assert.Empty(manager.GetAvailableUpdates());
+    }
+
+    [Fact]
+    public void AnIndexUpdateIsOfferedOnlyFromWithinTheAddedIndexAddress()
+    {
+        Settings.Set(Settings.K.DisableSkillsPublicCatalog, true);
+        AddSourceSetting("https://storage.contoso.com/team");
+        _backend.Installed.Add(WellKnownSkill("helper", "storage.contoso.com", "https://cdn.contoso.net/helper/SKILL.md"));
+        _backend.Installed.Add(WellKnownSkill("other", "storage.contoso.com", "https://storage.contoso.com/other-team/other/SKILL.md"));
+        _backend.UpdateCheck = new SkillUpdateCheckResult(
+            [
+                new SkillUpdate { Name = "helper", Scope = SkillScope.Global, Source = "https://storage.contoso.com/team", CurrentHash = "sha256:1111111aaaa" },
+                new SkillUpdate { Name = "other", Scope = SkillScope.Global, Source = "https://storage.contoso.com/other-team", CurrentHash = "sha256:2222222bbbb" },
+            ],
+            []
+        );
+        var manager = CreateManager();
+
+        var update = Assert.Single(manager.GetAvailableUpdates());
+
+        Assert.Equal("helper", update.Id);
+        Assert.Equal("storage.contoso.com", update.Source.Name);
+    }
+
+    [Fact]
+    public async Task ASourceNameResolvesToTheAddedSourceItFallsWithin()
+    {
+        Settings.Set(Settings.K.DisableSkillsPublicCatalog, true);
+        AddSourceSetting("https://storage.contoso.com/team");
+        var manager = CreateManager();
+        var factory = manager.SourcesHelper.Factory;
+
+        Assert.Null(factory.GetSourceIfExists("https://storage.contoso.com/elsewhere"));
+        var source = factory.GetSourceIfExists("https://storage.contoso.com/team/archive");
+        Assert.NotNull(source);
+
+        // Installed from the index as it was added, not from the address the name brought along
+        var package = new Package("Review", "review", AgentSkills.LatestVersion, source!, manager);
+        Assert.Equal(OperationVeredict.Success, await Perform(manager, package, OperationType.Install, new RecordingOutput()));
+        Assert.Equal("https://storage.contoso.com/team", Assert.Single(_backend.Installs).Source);
+    }
+
+    [Fact]
+    public async Task SourcesWithoutAnAddressOfTheirOwnAreNotInstalledFrom()
+    {
+        // The local source and placeholder sources carry a stand-in address, which must not be taken
+        // for an index, even when that address was added as one
+        AddSourceSetting("https://agentskills.io");
+        var manager = CreateManager();
+        IManagerSource[] sources = [manager.LocalSource, manager.SourcesHelper.Factory.GetSourceOrDefault("No such source")];
+
+        foreach (var source in sources)
+        {
+            var package = new Package("Review", "review", "1111111", source, manager);
+            Assert.Equal(OperationVeredict.Failure, await Perform(manager, package, OperationType.Install, new RecordingOutput()));
+        }
+
+        Assert.Empty(_backend.Installs);
+    }
+
+    [Fact]
+    public async Task UninstallingASkillThatIsAlreadyGoneSucceeds()
+    {
+        _backend.RemoveStatus = SkillOperationStatus.NotFound;
+        var manager = CreateManager();
+        var package = new Package("Deploy", "deploy", "1111111", manager.LocalSource, manager);
+
+        var veredict = await Perform(manager, package, OperationType.Uninstall, new RecordingOutput());
+
+        Assert.Equal(OperationVeredict.Success, veredict);
+        Assert.Equal(["deploy"], _backend.Removed);
+    }
+
+    [Fact]
+    public async Task AddingASourceChecksItOffersSkillsAndRemembersIt()
+    {
+        _backend.SourceSkills["https://skills.contoso.com"] = [new AvailableSkill("code-review", "Reviews code", null)];
+        var manager = CreateManager();
+        var helper = (IInProcessSourceHelper)manager.SourcesHelper;
+        var source = new ManagerSource(manager, "Contoso", new Uri("https://skills.contoso.com"));
+
+        var veredict = await helper.AddSourceAsync(source, new RecordingOutput(), CancellationToken.None);
+
+        Assert.Equal(OperationVeredict.Success, veredict);
+        Assert.Equal(["https://skills.contoso.com"], Settings.GetList<string>(AgentSkills.SourcesListKey));
+        Assert.Contains(manager.SourcesHelper.GetSources(), s => s.Name == "skills.contoso.com");
+        // The listing fetched to validate the source serves the next search
+        Assert.Single(manager.FindPackages("review"));
+        Assert.Single(_backend.ListedSources);
+
+        veredict = await helper.RemoveSourceAsync(
+            manager.SourcesHelper.Factory.GetSourceOrDefault("skills.contoso.com"),
+            new RecordingOutput(),
+            CancellationToken.None
+        );
+
+        Assert.Equal(OperationVeredict.Success, veredict);
+        Assert.Empty(Settings.GetList<string>(AgentSkills.SourcesListKey) ?? []);
+    }
+
+    [Fact]
+    public async Task AddingASourceWithoutSkillsFails()
+    {
+        var manager = CreateManager();
+        var helper = (IInProcessSourceHelper)manager.SourcesHelper;
+        var output = new RecordingOutput();
+
+        var veredict = await helper.AddSourceAsync(
+            new ManagerSource(manager, "Typo", new Uri("https://github.com/owner/no-such-repo")),
+            output,
+            CancellationToken.None
+        );
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+        Assert.Equal("No valid skills found.", output.FailureMessage);
+        Assert.Empty(Settings.GetList<string>(AgentSkills.SourcesListKey) ?? []);
+    }
+
+    [Fact]
+    public async Task RemovingAndAddingSkillsShTurnsTheCatalogOffAndOn()
+    {
+        var manager = CreateManager();
+        var helper = (IInProcessSourceHelper)manager.SourcesHelper;
+        var catalog = manager.Properties.DefaultSource;
+
+        await helper.RemoveSourceAsync(catalog, new RecordingOutput(), CancellationToken.None);
+        Assert.True(Settings.Get(Settings.K.DisableSkillsPublicCatalog));
+        Assert.DoesNotContain(manager.SourcesHelper.GetSources(), s => s.Name == "skills.sh");
+
+        await helper.AddSourceAsync(catalog, new RecordingOutput(), CancellationToken.None);
+        Assert.False(Settings.Get(Settings.K.DisableSkillsPublicCatalog));
+        Assert.Contains(manager.SourcesHelper.GetSources(), s => s.Name == "skills.sh");
+    }
+
+    [Fact]
+    public void AddedSourcesAndTargetAgentsSurviveASettingsExportAndImport()
+    {
+        // Importing settings clears them and only restores the names Settings.K knows
+        AddSourceSetting("https://skills.contoso.com");
+        AgentSkills.TargetAgents = ["claude-code"];
+
+        Settings.ImportFromString_JSON(Settings.ExportToString_JSON());
+
+        Assert.Contains(AgentSkills.GetConfiguredSources(), source => source.Name == "skills.contoso.com");
+        Assert.Equal(["claude-code"], AgentSkills.TargetAgents);
+    }
+
+    [Fact]
+    public void ManagerIsDisabledByDefaultWhenNoAgentIsFound()
+    {
+        _backend.Agents.Clear();
+        var manager = new AgentSkills(_backend);
+
+        manager.Initialize();
+
+        Assert.False(manager.IsEnabled());
+        Assert.True(Settings.Get(Settings.K.SkillsDefaultEnablementApplied));
+    }
+
+    [Fact]
+    public void DefaultEnablementNeverOverridesTheUser()
+    {
+        _backend.Agents.Clear();
+        Settings.SetDictionaryItem(Settings.K.DisabledManagers, "Skills", false);
+        var manager = new AgentSkills(_backend);
+
+        manager.Initialize();
+
+        Assert.True(manager.IsEnabled());
+    }
+
+    [Fact]
+    public void GitIsOnlyADependencyWithARepositorySource()
+    {
+        var manager = CreateManager();
+        Assert.Empty(manager.Dependencies);
+
+        _backend.SourceSkills["owner/repo"] = [];
+        AddSourceSetting("owner/repo");
+        manager.Initialize();
+
+        Assert.Equal("Git", Assert.Single(manager.Dependencies).Name);
+    }
+
+    [Fact]
+    public void TheLibraryNeverReportsTelemetryOfItsOwn()
+    {
+        // Even with UniGetUI's telemetry on: skill operations reach Devolutions through it, like those
+        // of every other manager, and the library's reports to skills.sh stay off
+        Assert.False(Settings.Get(Settings.K.DisableTelemetry));
+
+        Assert.False(new AgentSkillsBackend().CreateOptions(useGitHubToken: false).EnableTelemetry);
+    }
+
+    private static InstalledSkillInfo WellKnownSkill(string name, string host, string skillFileUrl) =>
+        new()
+        {
+            Name = name,
+            Description = "",
+            Path = $"/home/test/.agents/skills/{name}",
+            Scope = SkillScope.Global,
+            Agents = ["claude-code"],
+            Source = host,
+            SourceType = "well-known",
+            SourceUrl = skillFileUrl,
+            Hash = "sha256:1111111aaaa",
+        };
+
+    private static Task<OperationVeredict> Perform(
+        AgentSkills manager,
+        IPackage package,
+        OperationType operation,
+        RecordingOutput output
+    ) =>
+        ((IInProcessPackageOperationHelper)manager.OperationHelper).PerformAsync(
+            package,
+            new InstallOptions(),
+            operation,
+            output,
+            CancellationToken.None
+        );
+
+    private sealed class RecordingOutput : IOperationOutput
+    {
+        public List<string> Info { get; } = [];
+        public List<string> Errors { get; } = [];
+        public string FailureMessage { get; private set; } = "";
+
+        void IOperationOutput.Info(string line) => Info.Add(line);
+
+        public void Error(string line) => Errors.Add(line);
+
+        public void Verbose(string line) { }
+
+        public void SetFailureMessage(string message) => FailureMessage = message;
+    }
+}

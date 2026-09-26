@@ -7,6 +7,7 @@ using UniGetUI.PackageEngine.Managers.DotNetManager;
 using UniGetUI.PackageEngine.Managers.NpmManager;
 using UniGetUI.PackageEngine.Managers.PipManager;
 using UniGetUI.PackageEngine.Managers.PowerShell7Manager;
+using UniGetUI.PackageEngine.Managers.SkillsManager;
 using UniGetUI.PackageEngine.Managers.VcpkgManager;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
@@ -47,6 +48,7 @@ namespace UniGetUI.PackageEngine
 #endif
         public static readonly Cargo? Cargo = Create(() => new Cargo());
         public static readonly Vcpkg? Vcpkg = Create(() => new Vcpkg());
+        public static readonly AgentSkills? AgentSkills = Create(() => new AgentSkills());
 #if !WINDOWS
         public static readonly Apt? Apt = Create(() => new Apt());
         public static readonly Dnf? Dnf = Create(() => new Dnf());
@@ -108,6 +110,7 @@ namespace UniGetUI.PackageEngine
                 }
             }
 #endif
+            candidates.Add(AgentSkills);
             List<IPackageManager> managers = [];
             foreach (IPackageManager? manager in candidates)
                 if (manager is not null)

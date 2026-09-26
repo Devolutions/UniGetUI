@@ -14,14 +14,15 @@ public sealed class TestInProcessOperationHelper(TestPackageManager manager)
     : BasePkgOperationHelper(manager),
         IInProcessPackageOperationHelper
 {
-    public Func<
-        IPackage,
-        InstallOptions,
-        OperationType,
-        IOperationOutput,
-        CancellationToken,
-        Task<OperationVeredict>
-    > PerformFactory { get; set; } =
+    public delegate Task<OperationVeredict> PerformHandler(
+        IPackage package,
+        InstallOptions options,
+        OperationType operation,
+        IOperationOutput output,
+        CancellationToken cancellationToken
+    );
+
+    public PerformHandler PerformFactory { get; set; } =
         static (_, _, _, _, _) => Task.FromResult(OperationVeredict.Success);
 
     public int PerformCalls { get; private set; }

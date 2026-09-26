@@ -55,7 +55,7 @@ Related environment variables:
   - `--name` maps to `--key` on `backup cloud download` and `backup cloud restore`
 - Boolean options use explicit values such as `--enabled true` or `--wait false`.
 - `--detach` is shorthand for asynchronous package operations (`--wait false`).
-- `--manager` uses stable manager ids, not GUI labels. Current ids: `apt`, `bun`, `cargo`, `chocolatey`, `dnf`, `dotnet-tool`, `flatpak`, `homebrew`, `npm`, `pacman`, `pip`, `pwsh`, `scoop`, `snap`, `vcpkg`, `winget`, and `winps`.
+- `--manager` uses stable manager ids, not GUI labels. Current ids: `apt`, `bun`, `cargo`, `chocolatey`, `dnf`, `dotnet-tool`, `flatpak`, `homebrew`, `npm`, `pacman`, `pip`, `pwsh`, `scoop`, `skills`, `snap`, `vcpkg`, `winget`, and `winps`.
 
 ## Command reference
 

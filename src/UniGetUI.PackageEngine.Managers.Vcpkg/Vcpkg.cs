@@ -28,7 +28,7 @@ namespace UniGetUI.PackageEngine.Managers.VcpkgManager
             Dependencies =
             [
                 // GIT is required for vcpkg updates to work
-                VcpkgGitDependency.Create(),
+                GitDependency.Create(),
             ];
 
             Capabilities = new ManagerCapabilities

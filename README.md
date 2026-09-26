@@ -176,6 +176,8 @@ UniGetUI has a built-in autoupdater. On Windows, it can also be updated like any
 
 UniGetUI loads package managers based on the current platform. Windows builds include WinGet, Scoop, Chocolatey, Windows PowerShell, PowerShell 7, npm, Bun, pip, Cargo, .NET Tool, and vcpkg. macOS and Linux builds include Homebrew, PowerShell 7, npm, Bun, pip, Cargo, .NET Tool, and vcpkg; Linux builds also include distro-aware support for APT, DNF, Pacman, Snap, and Flatpak where applicable.
 
+Every platform also includes **Agent Skills**: skills for AI coding agents such as Claude Code, GitHub Copilot, Cursor and Codex (folders with a `SKILL.md` file). UniGetUI installs them for the user, into the skills folder of each agent it finds, from the sources you choose: the [skills.sh](https://skills.sh) catalog, git repositories, and websites that publish a well-known skills index. It uses the Devolutions.AgentSkills library in process, so it needs no other tool (git only for repository sources), and skills installed with `npx skills` or `gh skill` show up too. Agent Skills is enabled by default only when a coding agent is found.
+
 ![image](media/supported-managers.svg)
 
 ✅: Supported on UniGetUI<br>

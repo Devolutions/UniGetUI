@@ -91,6 +91,7 @@ namespace UniGetUI.Interface.Enums
         Snap = '\uE947',
         Flatpak = '\uE948',
         Bun = '\uE949',
+        Skills = '\uE94A',
     }
 
     public class NotificationArguments

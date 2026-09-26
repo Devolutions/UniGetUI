@@ -12,6 +12,7 @@ namespace UniGetUI.Core.Data
             { "Windows App Sdk", "MIT" },
             { "PhotoSauce.MagicScaler", "MIT" },
             { "YamlDotNet", "MIT" },
+            { "Devolutions.AgentSkills", "MIT" },
             { "InnoDependencyInstaller", "CPOL 1.02" },
             // Package managers and related
             { "WinGet", "MIT" },
@@ -57,6 +58,10 @@ namespace UniGetUI.Core.Data
             {
                 "YamlDotNet",
                 new Uri("https://github.com/aaubry/YamlDotNet/blob/master/LICENSE.txt")
+            },
+            {
+                "Devolutions.AgentSkills",
+                new Uri("https://github.com/mamoreau-devolutions/skills-manager/blob/master/LICENSE")
             },
             {
                 "InnoDependencyInstaller",
@@ -108,6 +113,10 @@ namespace UniGetUI.Core.Data
             { "Windows App Sdk", new Uri("https://github.com/microsoft/WindowsAppSDK/") },
             { "PhotoSauce.MagicScaler", new Uri("https://github.com/saucecontrol/PhotoSauce/") },
             { "YamlDotNet", new Uri("https://github.com/aaubry/YamlDotNet/") },
+            {
+                "Devolutions.AgentSkills",
+                new Uri("https://github.com/mamoreau-devolutions/skills-manager")
+            },
             {
                 "InnoDependencyInstaller",
                 new Uri("https://github.com/DomGries/InnoDependencyInstaller")

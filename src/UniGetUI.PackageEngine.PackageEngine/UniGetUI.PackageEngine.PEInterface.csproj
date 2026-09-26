@@ -18,6 +18,7 @@
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Npm\UniGetUI.PackageEngine.Managers.Npm.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Pip\UniGetUI.PackageEngine.Managers.Pip.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.PowerShell7\UniGetUI.PackageEngine.Managers.PowerShell7.csproj" />
+        <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Skills\UniGetUI.PackageEngine.Managers.Skills.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Managers.Vcpkg\UniGetUI.PackageEngine.Managers.Vcpkg.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.Operations\UniGetUI.PackageEngine.Operations.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.PackageLoader\UniGetUI.PackageEngine.PackageLoaders.csproj" />

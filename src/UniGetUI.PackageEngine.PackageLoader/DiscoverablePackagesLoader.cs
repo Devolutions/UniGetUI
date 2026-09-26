@@ -14,6 +14,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
         // tags and renders thousands of packages, freezing the UI and spiking RAM.
         private const int MAX_RESULTS_PER_MANAGER = 100;
 
+        // Null until a search is made. An empty query browses: see LoadPackagesFromManager.
         private string? QUERY_TEXT;
         private volatile bool _pendingReload;
 
@@ -90,7 +91,9 @@ namespace UniGetUI.PackageEngine.PackageLoader
         }
 
         private static bool CanSearch(IPackageManager manager, string? query)
-            => query != string.Empty || manager.Capabilities.SupportsEmptySearchQuery;
+            => query != string.Empty
+                || manager.Capabilities.SupportsEmptySearchQuery
+                || manager.Capabilities.CanListAllPackages;
 
         protected override IReadOnlyList<IPackage> LoadPackagesFromManager(IPackageManager manager)
         {
@@ -107,6 +110,9 @@ namespace UniGetUI.PackageEngine.PackageLoader
             }
 
             IReadOnlyList<IPackage> found = manager.FindPackages(text);
+            if (text.Length == 0 && manager.Capabilities.CanListAllPackages)
+                return found;
+
             if (text.Length == 0)
             {
                 return found

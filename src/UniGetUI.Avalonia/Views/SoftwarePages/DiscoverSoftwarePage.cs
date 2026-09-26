@@ -3,6 +3,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
+using Avalonia.Threading;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages;
@@ -13,6 +14,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.Interface.Telemetry;
+using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Classes.Manager.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -53,6 +55,11 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     }, vm => AddCatalogToolbar(vm, catalogEditor))
     {
         _catalogEditor = catalogEditor;
+        if (InstalledPackagesLoader.Instance is { } installedLoader)
+        {
+            installedLoader.FinishedLoading += (_, _) =>
+                Dispatcher.UIThread.Post(() => ViewModel.ShowBrowsableSources(PEInterface.Managers));
+        }
     }
 
     private readonly CatalogEditorViewModel? _catalogEditor;
@@ -83,6 +90,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     public override async void OnEnter()
     {
         base.OnEnter();
+        ViewModel.ShowBrowsableSources(PEInterface.Managers);
         // Use the document handed in at construction: when Discover is the startup page it is entered
         // before the main window is registered, so looking it up through the window would find nothing.
         if (_catalogEditor is { } document)

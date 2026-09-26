@@ -70,6 +70,12 @@ namespace UniGetUI.PackageEngine.Interfaces
         public IReadOnlyList<IPackage> FindPackages(string query);
 
         /// <summary>
+        /// Returns the sources whose packages a search with an empty query lists, which Discover offers
+        /// to browse. Empty for managers that cannot list all their packages.
+        /// </summary>
+        public IReadOnlyList<IManagerSource> GetBrowsableSources();
+
+        /// <summary>
         /// Returns an array of UpgradablePackage objects that represent the available updates reported by the manager.
         /// This method is fail-safe and will return an empty array if an error occurs.
         /// </summary>

@@ -142,6 +142,10 @@ public static partial class Settings
         // NOTE: Set this to true to delegate package operations to Devolutions Agent broker
         // instead of using local UAC elevation. Change default here when ready for production.
         UseAgentBroker,
+        DisableSkillsPublicCatalog,
+        SkillsDefaultEnablementApplied,
+        SkillsSources,
+        SkillsTargetAgents,
 
         Test1,
         Test2,
@@ -293,6 +297,10 @@ public static partial class Settings
             K.NavigationPageOrder => "NavigationPageOrder",
             K.QuitAfterAutomaticUpdates => "QuitAfterAutomaticUpdates",
             K.UseAgentBroker => "UseAgentBroker",
+            K.DisableSkillsPublicCatalog => "DisableSkillsPublicCatalog",
+            K.SkillsDefaultEnablementApplied => "SkillsDefaultEnablementApplied",
+            K.SkillsSources => "SkillsSources",
+            K.SkillsTargetAgents => "SkillsTargetAgents",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

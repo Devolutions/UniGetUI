@@ -14,6 +14,7 @@ using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
+using UniGetUI.PackageEngine.Managers.SkillsManager;
 using UniGetUI.PackageEngine.Managers.VcpkgManager;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 using CornerRadius = global::Avalonia.CornerRadius;
@@ -605,6 +606,15 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 });
                 break;
 
+            case "Skills":
+                disableNotifsCard.CornerRadius = new CornerRadius(8);
+                disableNotifsCard.BorderThickness = new Thickness(1);
+                ExtraControls.Children.Add(disableNotifsCard);
+
+                if (manager is AgentSkills agentSkills)
+                    ExtraControls.Children.Add(BuildSkillsAgentsCard(agentSkills));
+                break;
+
             case "vcpkg":
                 disableNotifsCard.CornerRadius = new CornerRadius(8, 8, 0, 0);
                 disableNotifsCard.BorderThickness = new Thickness(1, 1, 1, 0);
@@ -630,6 +640,65 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 ExtraControls.Children.Add(disableNotifsCard);
                 break;
         }
+    }
+
+    /// <summary>
+    /// A checkbox per coding agent found on this computer. Selecting them all keeps the default,
+    /// which also reaches the agents that read the shared .agents/skills folder.
+    /// </summary>
+    private static SettingsCard BuildSkillsAgentsCard(AgentSkills skills)
+    {
+        var agents = skills.GetDetectedAgents();
+        var selected = AgentSkills.TargetAgents;
+        var panel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 4, 0, 0) };
+        List<CheckBox> checkboxes = [];
+
+        if (agents.Count == 0)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = CoreTools.Translate("No coding agent was found on this computer. Skills are installed to the shared .agents/skills folder."),
+                Opacity = 0.7,
+                TextWrapping = TextWrapping.Wrap,
+            });
+        }
+
+        foreach (var (id, displayName) in agents)
+        {
+            var checkbox = new CheckBox
+            {
+                Content = displayName,
+                Tag = id,
+                IsChecked = selected.Count == 0 || selected.Contains(id),
+            };
+            AutomationProperties.SetName(checkbox, displayName);
+            checkbox.IsCheckedChanged += (_, _) =>
+            {
+                var chosen = checkboxes
+                    .Where(c => c.IsChecked == true)
+                    .Select(c => (string)c.Tag!)
+                    .ToList();
+                if (chosen.Count == 0)
+                {
+                    // Skills need at least one agent
+                    checkbox.IsChecked = true;
+                    return;
+                }
+
+                AgentSkills.TargetAgents = chosen.Count == checkboxes.Count ? [] : chosen;
+            };
+            checkboxes.Add(checkbox);
+            panel.Children.Add(checkbox);
+        }
+
+        return new SettingsCard
+        {
+            CornerRadius = new CornerRadius(8),
+            BorderThickness = new Thickness(1),
+            Margin = new Thickness(0, 16, 0, 0),
+            Header = CoreTools.Translate("Install skills for these coding agents"),
+            Description = panel,
+        };
     }
 
     private ButtonCard BuildVcpkgRootCard()

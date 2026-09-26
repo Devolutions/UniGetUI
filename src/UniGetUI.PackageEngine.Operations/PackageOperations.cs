@@ -10,6 +10,7 @@ using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Serializable;
@@ -118,12 +119,19 @@ namespace UniGetUI.PackageEngine.Operations
 
             Enqueued += (_, _) =>
             {
-                ApplyCapabilities(
-                    RequiresAdminRights(),
-                    Options.InteractiveInstallation,
-                    (Options.SkipHashCheck && Role is not OperationType.Uninstall),
-                    Package.OverridenOptions.Scope ?? Options.InstallationScope
-                );
+                if (InProcessHelper is not null)
+                {
+                    ApplyInProcessCapabilities();
+                }
+                else
+                {
+                    ApplyCapabilities(
+                        RequiresAdminRights(),
+                        Options.InteractiveInstallation,
+                        (Options.SkipHashCheck && Role is not OperationType.Uninstall),
+                        Package.OverridenOptions.Scope ?? Options.InstallationScope
+                    );
+                }
 
                 Package.SetTag(PackageTag.OnQueue);
             };
@@ -151,6 +159,25 @@ namespace UniGetUI.PackageEngine.Operations
             !Settings.Get(Settings.K.ProhibitElevation)
             && (Package.OverridenOptions.RunAsAdministrator is true || Options.RunAsAdministrator);
 
+        /// <summary>
+        /// The manager's in-process helper when it performs package operations inside UniGetUI
+        /// instead of launching an executable, or null for executable-based managers.
+        /// </summary>
+        private IInProcessPackageOperationHelper? InProcessHelper =>
+            Package.Manager.OperationHelper as IInProcessPackageOperationHelper;
+
+        /// <summary>
+        /// An in-process operation runs with UniGetUI's own privileges (a requested elevation is
+        /// ignored), and can be neither interactive nor skip integrity checks.
+        /// </summary>
+        private void ApplyInProcessCapabilities() =>
+            ApplyCapabilities(
+                CoreTools.IsAdministrator(),
+                false,
+                false,
+                Package.OverridenOptions.Scope ?? Options.InstallationScope
+            );
+
         private volatile int _ranElevated = -1;
 
         public virtual bool WillRunElevated =>
@@ -158,7 +185,7 @@ namespace UniGetUI.PackageEngine.Operations
             {
                 1 => true,
                 0 => false,
-                _ => CoreTools.IsAdministrator() || RequiresAdminRights(),
+                _ => CoreTools.IsAdministrator() || (InProcessHelper is null && RequiresAdminRights()),
             };
 
         public static bool CanRetrySkippingIntegrityChecks(
@@ -225,6 +252,15 @@ namespace UniGetUI.PackageEngine.Operations
 
         protected sealed override void PrepareProcessStartInfo()
         {
+            if (InProcessHelper is not null)
+            {
+                // The manager performs this operation inside UniGetUI: there is no process to prepare.
+                Package.SetTag(PackageTag.OnQueue);
+                _ranElevated = CoreTools.IsAdministrator() ? 1 : 0;
+                ApplyInProcessCapabilities();
+                return;
+            }
+
             bool IsAdmin = CoreTools.IsAdministrator();
             Package.SetTag(PackageTag.OnQueue);
             var operationParameters = Package.Manager.OperationHelper.GetParameters(
@@ -323,12 +359,71 @@ namespace UniGetUI.PackageEngine.Operations
                 }
             );
 
+            if (InProcessHelper is { } inProcessHelper)
+            {
+                return await PerformInProcessOperation(inProcessHelper);
+            }
+
             if (!ShouldUseAgentBroker())
             {
                 return await base.PerformOperation();
             }
 
             return await PerformBrokerOperation();
+        }
+
+        /// <summary>
+        /// Performs the operation inside UniGetUI through the manager's in-process helper. The
+        /// Devolutions Agent broker only runs package manager executables, so these operations are
+        /// never brokered, even when the UseAgentBroker setting is enabled.
+        /// </summary>
+        private async Task<OperationVeredict> PerformInProcessOperation(
+            IInProcessPackageOperationHelper helper
+        )
+        {
+            if (Settings.Get(Settings.K.UseAgentBroker))
+            {
+                Line(
+                    $"{Package.Manager.DisplayName} runs inside UniGetUI and is not supported by the Devolutions Agent broker, so this operation was not checked against the package policy.",
+                    LineType.Information
+                );
+            }
+
+            Line(
+                $"Performing the operation inside UniGetUI with {Package.Manager.DisplayName}",
+                LineType.VerboseDetails
+            );
+            Line($"Start Time: \"{DateTime.Now}\"", LineType.VerboseDetails);
+            try
+            {
+                OperationVeredict veredict = await helper.PerformAsync(
+                    Package,
+                    Options,
+                    Role,
+                    new InProcessOperationOutput(Line, Metadata),
+                    CancellationToken
+                );
+                return CancellationToken.IsCancellationRequested
+                    ? OperationVeredict.Canceled
+                    : veredict;
+            }
+            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+            {
+                return OperationVeredict.Canceled;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(
+                    $"{Package.Manager.Name} could not perform the {Role} operation on {Package.Id}"
+                );
+                Logger.Error(ex);
+                Line(ex.Message, LineType.Error);
+                return OperationVeredict.Failure;
+            }
+            finally
+            {
+                Line($"End Time: \"{DateTime.Now}\"", LineType.VerboseDetails);
+            }
         }
 
         /// <summary>

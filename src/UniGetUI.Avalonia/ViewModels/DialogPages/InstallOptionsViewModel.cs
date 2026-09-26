@@ -236,6 +236,9 @@ public partial class InstallOptionsViewModel : ObservableObject
     // ── Command preview ───────────────────────────────────────────────────────
     [ObservableProperty] private string _commandPreview = "";
 
+    // Managers that run inside UniGetUI have no command line to preview or run by hand
+    public bool CommandPreviewVisible => !_package.Manager.Capabilities.RunsInProcess;
+
     // ── Constructor ───────────────────────────────────────────────────────────
     public InstallOptionsViewModel(IPackage package, OperationType operation, InstallOptions options)
     {

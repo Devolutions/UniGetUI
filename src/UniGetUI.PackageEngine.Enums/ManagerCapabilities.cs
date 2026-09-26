@@ -49,6 +49,10 @@ namespace UniGetUI.PackageEngine.ManagerClasses.Manager
         public ProxySupport SupportsProxy = ProxySupport.No;
         public bool SupportsProxyAuth = false;
         public PackageReleaseDateSupport KnowsPackageReleaseDate = PackageReleaseDateSupport.No;
+
+        // Whether package and source operations run inside UniGetUI, through the manager's
+        // IInProcessPackageOperationHelper and IInProcessSourceHelper, instead of an executable
+        public bool RunsInProcess = false;
         public SourceCapabilities Sources { get; set; }
 
         public ManagerCapabilities()

@@ -28,6 +28,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     private MenuItem? _menuSkipHash;
     private MenuItem? _menuDownloadInstaller;
     private MenuItem? _menuOpenInstallLocation;
+    private MenuItem? _menuManual;
 
     public SoftwareUpdatesPage() : base(new PackagesPageData
     {
@@ -129,8 +130,8 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         };
         menuUpdateOptions.Click += (_, _) => _ = ShowInstallationOptionsForPackage(SelectedItem);
 
-        var menuManual = new MenuItem { Header = CoreTools.Translate("Manual update"), Icon = LoadMenuIcon("console") };
-        menuManual.Click += (_, _) => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Update);
+        _menuManual = new MenuItem { Header = CoreTools.Translate("Manual update"), Icon = LoadMenuIcon("console") };
+        _menuManual.Click += (_, _) => _ = ManualInstallHelper.LaunchManualAsync(SelectedItem, OperationType.Update);
 
         _menuOpenInstallLocation = new MenuItem
         {
@@ -253,7 +254,7 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
         menu.Items.Add(menuUpdate);
         menu.Items.Add(new Separator());
         menu.Items.Add(menuUpdateOptions);
-        menu.Items.Add(menuManual);
+        menu.Items.Add(_menuManual);
         menu.Items.Add(_menuOpenInstallLocation);
         menu.Items.Add(new Separator());
         menu.Items.Add(_menuAsAdmin);
@@ -276,13 +277,15 @@ public class SoftwareUpdatesPage : AbstractPackagesPage
     protected override void WhenShowingContextMenu(IPackage package)
     {
         if (_menuAsAdmin is null || _menuInteractive is null || _menuSkipHash is null
-            || _menuDownloadInstaller is null || _menuOpenInstallLocation is null)
+            || _menuDownloadInstaller is null || _menuOpenInstallLocation is null
+            || _menuManual is null)
         {
             Logger.Warn("Context menu items are null on SoftwareUpdatesPage");
             return;
         }
 
         var caps = package.Manager.Capabilities;
+        _menuManual.IsEnabled = !caps.RunsInProcess;
         _menuAsAdmin.IsEnabled = caps.CanRunAsAdmin;
         _menuInteractive.IsEnabled = caps.CanRunInteractively;
         _menuSkipHash.IsEnabled = caps.CanSkipIntegrityChecks;

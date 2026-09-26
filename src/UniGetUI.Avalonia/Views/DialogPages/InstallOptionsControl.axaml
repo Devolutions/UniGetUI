@@ -714,7 +714,8 @@
         </Grid>
 
         <!-- ── Command-line preview ── -->
-        <Border Background="{DynamicResource InstallOptionsTabBackground}" CornerRadius="8" Padding="12">
+        <Border Background="{DynamicResource InstallOptionsTabBackground}" CornerRadius="8" Padding="12"
+                IsVisible="{Binding CommandPreviewVisible}">
             <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <TextBlock Grid.Column="0" Text="{Binding CommandPreviewLabel}" Opacity="0.7"

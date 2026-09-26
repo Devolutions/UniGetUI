@@ -141,6 +141,22 @@ public sealed class TestPackageManager : PackageManager
         _candidateExecutableFiles = candidateExecutableFiles;
     }
 
+    /// <summary>
+    /// Makes the manager perform its package and source operations inside UniGetUI through the
+    /// given helpers, instead of an executable.
+    /// </summary>
+    public void UseInProcessOperations(
+        TestInProcessOperationHelper operationHelper,
+        TestInProcessSourceHelper sourcesHelper
+    )
+    {
+        OperationHelper = operationHelper;
+        SourcesHelper = sourcesHelper;
+        var capabilities = Capabilities;
+        capabilities.RunsInProcess = true;
+        Capabilities = capabilities;
+    }
+
     public void SetKnownSources(IEnumerable<IManagerSource> sources)
     {
         var sourceArray = sources.ToArray();

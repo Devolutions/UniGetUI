@@ -60,7 +60,11 @@ public static class AvaloniaOperationRegistry
 
         op.OperationStarting += (_, _) =>
         {
-            Dispatcher.UIThread.Post(() => ShowOperationProgressNotification(op));
+            Dispatcher.UIThread.Post(() =>
+            {
+                _elevationCleanupDone = false;
+                ShowOperationProgressNotification(op);
+            });
         };
 
         op.OperationSucceeded += (_, _) =>

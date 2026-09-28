@@ -134,15 +134,11 @@ namespace UniGetUI.Core.Language
         {
             try
             {
-                string BundledLangFileToLoad = Path.Join(
-                    CoreData.UniGetUIExecutableDirectory,
-                    "Assets",
-                    "Languages",
-                    "lang_" + LangKey + ".json"
-                );
+                string BundledLangAsset = "Languages/lang_" + LangKey + ".json";
+                string BundledLangFileToLoad = BundledAssets.DiskPath(BundledLangAsset);
                 Dictionary<string, string> LangDict = [];
 
-                if (!File.Exists(BundledLangFileToLoad))
+                if (!BundledAssets.Exists(BundledLangAsset))
                 {
                     Logger.Error(
                         $"Tried to access a non-existing bundled language file! file={BundledLangFileToLoad}"
@@ -153,7 +149,7 @@ namespace UniGetUI.Core.Language
                     try
                     {
                         LangDict = ParseLanguageEntries(
-                            File.ReadAllText(BundledLangFileToLoad),
+                            BundledAssets.ReadAllText(BundledLangAsset),
                             BundledLangFileToLoad
                         );
                     }

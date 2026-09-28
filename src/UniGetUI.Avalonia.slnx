@@ -255,6 +255,16 @@
       <Platform Solution="*|x64" Project="x64" />
     </Project>
   </Folder>
+  <Folder Name="/UniGetUI.Tui/">
+    <Project Path="UniGetUI.Tui/UniGetUI.Tui.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.Tui.Tests/UniGetUI.Tui.Tests.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
   <Folder Name="/UniGetUI.PackageEngine.Tests/">
     <Project Path="UniGetUI.PackageEngine.Tests/UniGetUI.PackageEngine.Tests.csproj">
       <Platform Solution="*|arm64" Project="arm64" />

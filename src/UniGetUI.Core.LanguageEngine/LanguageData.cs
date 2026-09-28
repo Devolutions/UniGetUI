@@ -58,14 +58,7 @@ namespace UniGetUI.Core.Language
             {
                 if (
                     JsonNode.Parse(
-                        File.ReadAllText(
-                            Path.Join(
-                                CoreData.UniGetUIExecutableDirectory,
-                                "Assets",
-                                "Data",
-                                "TranslatedPercentages.json"
-                            )
-                        )
+                        BundledAssets.ReadAllText("Data/TranslatedPercentages.json")
                     )
                     is JsonObject val
                 )
@@ -91,14 +84,7 @@ namespace UniGetUI.Core.Language
             {
                 if (
                     JsonNode.Parse(
-                        File.ReadAllText(
-                            Path.Join(
-                                CoreData.UniGetUIExecutableDirectory,
-                                "Assets",
-                                "Data",
-                                "LanguagesReference.json"
-                            )
-                        )
+                        BundledAssets.ReadAllText("Data/LanguagesReference.json")
                     )
                     is JsonObject val
                 )
@@ -125,14 +111,7 @@ namespace UniGetUI.Core.Language
         {
             try
             {
-                string JsonContents = File.ReadAllText(
-                    Path.Join(
-                        CoreData.UniGetUIExecutableDirectory,
-                        "Assets",
-                        "Data",
-                        "Translators.json"
-                    )
-                );
+                string JsonContents = BundledAssets.ReadAllText("Data/Translators.json");
 
                 if (JsonNode.Parse(JsonContents) is not JsonObject TranslatorsInfo)
                 {

@@ -25,6 +25,9 @@
 
     <ItemGroup>
         <PackageReference Include="Devolutions.Pinget.Core" Version="0.12.0" />
+        <!-- Pinget.Core 0.12.0 brings Microsoft.Data.Sqlite 10.0.7 and with it SQLitePCLRaw 2.1.11, whose bundled SQLite is
+             affected by GHSA-2m69-gcr7-jv3q (CVE-2025-6965, NU1903). Pin the patched 2.1.13 until Pinget.Core moves up. -->
+        <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
         <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
     </ItemGroup>
 </Project>

@@ -49,7 +49,11 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         );
 
         private static readonly ConcurrentDictionary<string, CacheEntry> ParsedPackages =
-            new(StringComparer.OrdinalIgnoreCase);
+            new(
+                OperatingSystem.IsWindows()
+                    ? StringComparer.OrdinalIgnoreCase
+                    : StringComparer.Ordinal
+            );
 
         public static bool IsLocalSource(IManagerSource? source) => TryGetDirectory(source, out _);
 

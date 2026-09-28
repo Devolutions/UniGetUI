@@ -250,7 +250,15 @@ public sealed class DownloadOperationProgressTests
                 };
             })
             .Build();
-        IPackage package = new PackageBuilder().WithManager(manager).Build();
+        IPackage package = new PackageBuilder()
+            .WithManager(manager)
+            .WithSource(
+                new SourceBuilder()
+                    .WithManager(manager)
+                    .WithUrl(new Uri(Path.GetDirectoryName(sourcePath)!).AbsoluteUri)
+                    .Build()
+            )
+            .Build();
 
         try
         {
@@ -297,7 +305,15 @@ public sealed class DownloadOperationProgressTests
                 };
             })
             .Build();
-        IPackage package = new PackageBuilder().WithManager(manager).Build();
+        IPackage package = new PackageBuilder()
+            .WithManager(manager)
+            .WithSource(
+                new SourceBuilder()
+                    .WithManager(manager)
+                    .WithUrl(new Uri(Path.GetDirectoryName(sourcePath)!).AbsoluteUri)
+                    .Build()
+            )
+            .Build();
 
         try
         {
@@ -324,6 +340,64 @@ public sealed class DownloadOperationProgressTests
         finally
         {
             File.Delete(sourcePath);
+        }
+    }
+
+    [Fact]
+    public async Task AFileInstallerUrlIsRefusedWhenTheSourceIsNotTheFolderHoldingIt()
+    {
+        string secretPath = Path.Join(
+            Path.GetTempPath(),
+            $"unigetui-secret-{Guid.NewGuid():N}.bin"
+        );
+        string downloadPath = Path.Join(
+            Path.GetTempPath(),
+            $"unigetui-stolen-{Guid.NewGuid():N}.bin"
+        );
+        File.WriteAllBytes(secretPath, [1, 2, 3, 4]);
+
+        var manager = new PackageManagerBuilder()
+            .ConfigureDetails(helper =>
+            {
+                helper.PopulateDetails = details =>
+                {
+                    details.InstallerUrl = new Uri(secretPath);
+                    details.InstallerType = "exe";
+                };
+            })
+            .Build();
+        var remoteSource = new SourceBuilder()
+            .WithManager(manager)
+            .WithUrl("https://packages.example.test/api/v2/")
+            .Build();
+        IPackage package = new PackageBuilder()
+            .WithManager(manager)
+            .WithSource(remoteSource)
+            .Build();
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(
+                package,
+                downloadPath,
+                new UnreachableHandler()
+            );
+
+            Assert.Equal(
+                OperationVeredict.Failure,
+                await operation.InvokePerformOperationForTests()
+            );
+            Assert.False(File.Exists(downloadPath));
+            Assert.Contains(
+                operation.GetOutput(),
+                line => line.Item1.Contains("is not a local folder holding it")
+            );
+        }
+        finally
+        {
+            File.Delete(secretPath);
+            if (File.Exists(downloadPath))
+                File.Delete(downloadPath);
         }
     }
 

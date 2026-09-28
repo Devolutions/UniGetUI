@@ -54,6 +54,31 @@ public class DownloadOperation : AbstractOperation
     protected virtual HttpClient CreateHttpClient() =>
         new(CoreTools.GenericHttpClientParameters);
 
+    internal static bool ComesFromTheSourceFolder(Uri installerUrl, IManagerSource source)
+    {
+        if (source.Url is not { IsAbsoluteUri: true, IsFile: true } sourceUrl)
+            return false;
+
+        try
+        {
+            string root = Path.GetFullPath(sourceUrl.LocalPath);
+            if (!root.EndsWith(Path.DirectorySeparatorChar))
+                root += Path.DirectorySeparatorChar;
+
+            return Path.GetFullPath(installerUrl.LocalPath)
+                .StartsWith(
+                    root,
+                    OperatingSystem.IsWindows()
+                        ? StringComparison.OrdinalIgnoreCase
+                        : StringComparison.Ordinal
+                );
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     internal static bool IsSameFile(string source, string destination)
     {
         try
@@ -107,6 +132,17 @@ public class DownloadOperation : AbstractOperation
                     fileName = CoreTools.MakeValidFileName(_package.Name);
                 }
                 downloadLocation = Path.Join(downloadLocation, fileName);
+            }
+
+            if (downloadUrl.IsFile && !ComesFromTheSourceFolder(downloadUrl, _package.Source))
+            {
+                Line(
+                    $"The installer address {downloadUrl} points at the file system, but the "
+                        + $"source {_package.Source.Name} is not a local folder holding it. "
+                        + "Refusing to read it",
+                    LineType.Error
+                );
+                return OperationVeredict.Failure;
             }
 
             if (downloadUrl.IsFile && IsSameFile(downloadUrl.LocalPath, downloadLocation))

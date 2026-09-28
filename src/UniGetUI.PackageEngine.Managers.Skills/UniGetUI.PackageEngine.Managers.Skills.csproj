@@ -23,7 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Devolutions.AgentSkills" Version="0.1.0-local.7896d9c" />
+        <PackageReference Include="Devolutions.AgentSkills" Version="0.1.0-local.c510d72" />
         <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
     </ItemGroup>
 </Project>

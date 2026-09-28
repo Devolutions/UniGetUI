@@ -20,7 +20,8 @@ internal sealed class AgentSkillsBackend(string? homeDirectory = null) : ISkills
     /// <summary>
     /// The library's options. Its own telemetry, which reports installs to skills.sh, stays off:
     /// skill operations are reported through UniGetUI's telemetry, to Devolutions only, like those of
-    /// every other manager.
+    /// every other manager. The Notion CLI is passed by path, since one that UniGetUI just installed
+    /// is not on this process's PATH yet.
     /// </summary>
     internal SkillsManagerOptions CreateOptions(bool useGitHubToken) =>
         new()
@@ -28,6 +29,7 @@ internal sealed class AgentSkillsBackend(string? homeDirectory = null) : ISkills
             HomeDirectory = homeDirectory,
             GitHubToken = useGitHubToken ? GetGitHubToken() : null,
             EnableTelemetry = false,
+            NotionCliPath = NotionCliTool.FindExecutable(),
         };
 
     /// <summary>
@@ -101,4 +103,16 @@ internal sealed class AgentSkillsBackend(string? homeDirectory = null) : ISkills
         IProgress<string>? progress,
         CancellationToken cancellationToken
     ) => CreateClient().Remove([skill], SkillScope.Global, null, progress, cancellationToken);
+
+    public NotionStatus GetNotionStatus(CancellationToken cancellationToken) =>
+        CreateClient().GetNotionStatus(cancellationToken);
+
+    public NotionSignIn BeginNotionSignIn(CancellationToken cancellationToken) =>
+        CreateClient().BeginNotionSignIn(cancellationToken);
+
+    public void CompleteNotionSignIn(CancellationToken cancellationToken) =>
+        CreateClient().CompleteNotionSignIn(cancellationToken);
+
+    public void SignOutOfNotion(CancellationToken cancellationToken) =>
+        CreateClient().SignOutOfNotion(cancellationToken);
 }

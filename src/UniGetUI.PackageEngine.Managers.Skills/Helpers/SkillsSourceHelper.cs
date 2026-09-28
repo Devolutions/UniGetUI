@@ -47,7 +47,7 @@ internal sealed class SkillsSourceHelper : BaseSourceHelper, IInProcessSourceHel
         if (locator is null)
         {
             string message = CoreTools.Translate(
-                "{0} is not a skill source. Enter a GitHub repository (owner/repo), a git repository URL, or the address of a website that publishes skills, using HTTPS and without a user name or password.",
+                "{0} is not a skill source. Enter a GitHub repository (owner/repo), a git repository URL, the address of a website that publishes skills, or the address of a Notion skills database, using HTTPS and without a user name or password.",
                 WithoutCredentials(source.Url)
             );
             output.Error(message);
@@ -79,6 +79,22 @@ internal sealed class SkillsSourceHelper : BaseSourceHelper, IInProcessSourceHel
                 new OutputProgress(output),
                 cancellationToken
             );
+        }
+        catch (SkillsException ex)
+            when (locator.Kind is SkillSourceKind.Notion
+                && ex.Failure is SkillsFailure.NotionCliMissing or SkillsFailure.NotionSignedOut)
+        {
+            // Its skills show once the Notion CLI is installed and signed in, in the Agent Skills settings
+            output.Info(ex.Message);
+            output.Info(
+                CoreTools.Translate(
+                    "Sign in to Notion in the Agent Skills settings to see the skills of this source."
+                )
+            );
+            Settings.AddToList(AgentSkills.SourcesListKey, locator.InstallSource);
+            _skills.Listings.Forget(locator);
+            InvalidateSourcesCache();
+            return OperationVeredict.Success;
         }
         catch (SkillsException ex)
         {

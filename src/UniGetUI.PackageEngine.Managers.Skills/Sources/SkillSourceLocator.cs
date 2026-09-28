@@ -13,6 +13,9 @@ internal enum SkillSourceKind
 
     /// <summary>A git repository: GitHub, GitLab, Azure DevOps or any git URL.</summary>
     Repository,
+
+    /// <summary>A Notion skills database (or one skill page), read through the Notion CLI.</summary>
+    Notion,
 }
 
 /// <summary>
@@ -23,7 +26,8 @@ internal enum SkillSourceKind
 /// <param name="Kind">The kind of source</param>
 /// <param name="Name">
 /// The source name UniGetUI shows and compares: owner/repo for a GitHub repository, host and path
-/// for other repositories, the host for an index, and skills.sh for the catalog. It matches what the
+/// for other repositories, the host for an index, app.notion.com/p/ and the id for a Notion
+/// database, and skills.sh for the catalog. It matches what the
 /// skills lock file records, so a skill found in a source and the same skill once installed get the
 /// same source.
 /// </param>
@@ -52,6 +56,13 @@ internal sealed partial record SkillSourceLocator(
     )]
     private static partial Regex SshGitUrl();
 
+    // The page or database id that ends a Notion address's last path segment
+    [GeneratedRegex(
+        "(?:^|-)([0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+        RegexOptions.IgnoreCase
+    )]
+    private static partial Regex NotionId();
+
     public bool IsGitHub =>
         Kind is SkillSourceKind.Repository
         && Url.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase);
@@ -72,7 +83,8 @@ internal sealed partial record SkillSourceLocator(
 
     /// <summary>
     /// Parses a source as the skills CLI accepts it: owner/repo, a GitHub, GitLab, Azure DevOps or
-    /// git URL, or the address of a website that publishes a well-known skills index. Returns null
+    /// git URL, the address of a website that publishes a well-known skills index, or the address
+    /// of a Notion skills database or skill page. Returns null
     /// for anything else, including local paths, which UniGetUI does not offer as sources, web
     /// addresses that are not encrypted or that carry a user name or password, and GitHub addresses
     /// other than a repository or a folder of one.
@@ -112,6 +124,9 @@ internal sealed partial record SkillSourceLocator(
 
         if (host is "github.com" or "www.github.com")
             return ParseGitHubUrl(uri, segments);
+
+        if (IsNotionHost(host))
+            return ParseNotion(segments);
 
         bool isRepository =
             host == "gitlab.com"
@@ -192,6 +207,8 @@ internal sealed partial record SkillSourceLocator(
             // The lock file names an index after its host; the URL it records is the skill file's,
             // which the index picks and may put on any host
             "well-known" => string.IsNullOrEmpty(skill.Source) ? null : Parse($"https://{skill.Source}"),
+            // The source is the database the skill is listed in; the URL is the skill's own page
+            "notion" => Parse(skill.Source),
             _ => Parse(skill.SourceUrl) ?? Parse(skill.Source),
         };
 
@@ -252,6 +269,27 @@ internal sealed partial record SkillSourceLocator(
 
         var tree = new Uri($"https://github.com{uri.AbsolutePath.TrimEnd('/')}");
         return repository with { InstallSource = tree.AbsoluteUri, Url = tree };
+    }
+
+    private static bool IsNotionHost(string host) =>
+        host is "notion.so" or "notion.com" or "notion.site"
+        || host.EndsWith(".notion.so", StringComparison.Ordinal)
+        || host.EndsWith(".notion.com", StringComparison.Ordinal)
+        || host.EndsWith(".notion.site", StringComparison.Ordinal);
+
+    /// <summary>
+    /// A Notion page or database: app.notion.com/p/id, notion.so/workspace/Title-id, or a
+    /// notion.site page. It is kept as its app.notion.com address, which the library records as the
+    /// source of the skills installed from it.
+    /// </summary>
+    private static SkillSourceLocator? ParseNotion(string[] segments)
+    {
+        if (segments.Length == 0 || NotionId().Match(Uri.UnescapeDataString(segments[^1])) is not { Success: true } id)
+            return null;
+
+        string raw = id.Groups[1].Value.Replace("-", "", StringComparison.Ordinal).ToLowerInvariant();
+        var address = new Uri($"https://app.notion.com/p/{raw}");
+        return new(SkillSourceKind.Notion, $"app.notion.com/p/{raw}", address.AbsoluteUri, address);
     }
 
     // Skills are instructions, and sometimes scripts, that coding agents act on, so they are only

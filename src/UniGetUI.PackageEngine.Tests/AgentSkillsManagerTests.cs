@@ -555,6 +555,171 @@ public sealed class AgentSkillsManagerTests : IDisposable
         Assert.Equal("Git", Assert.Single(manager.Dependencies).Name);
     }
 
+    private const string NotionDatabase = "https://app.notion.com/p/1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d";
+
+    [Fact]
+    public async Task ANotionDatabaseCanBeAddedBeforeSigningIn()
+    {
+        _backend.SourceFailures[NotionDatabase] = new SkillsException(
+            "Sign in to Notion to use Notion sources.",
+            SkillsFailure.NotionSignedOut
+        );
+        var manager = CreateManager();
+        var helper = (IInProcessSourceHelper)manager.SourcesHelper;
+        var output = new RecordingOutput();
+
+        var veredict = await helper.AddSourceAsync(
+            new ManagerSource(
+                manager,
+                "Team skills",
+                new Uri("https://app.notion.com/p/1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d?v=6f7a8b9c0d1e4f2a8b3c4d5e6f7a8b9c&source=copy_link")
+            ),
+            output,
+            CancellationToken.None
+        );
+
+        Assert.Equal(OperationVeredict.Success, veredict);
+        Assert.Equal([NotionDatabase], Settings.GetList<string>(AgentSkills.SourcesListKey));
+        Assert.Contains("Sign in to Notion to use Notion sources.", output.Info);
+        Assert.True(manager.HasNotionSources);
+    }
+
+    [Fact]
+    public async Task ANotionDatabaseThatIsNotSharedIsNotAdded()
+    {
+        _backend.SourceFailures[NotionDatabase] = new SkillsException(
+            "Notion could not find the Notion database",
+            SkillsFailure.NotionNotFound
+        );
+        var manager = CreateManager();
+        var helper = (IInProcessSourceHelper)manager.SourcesHelper;
+
+        var veredict = await helper.AddSourceAsync(
+            new ManagerSource(manager, "Team skills", new Uri(NotionDatabase)),
+            new RecordingOutput(),
+            CancellationToken.None
+        );
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+        Assert.Empty(Settings.GetList<string>(AgentSkills.SourcesListKey) ?? []);
+    }
+
+    [Fact]
+    public void NotionSkillsAreListedAndInstalledFromTheirDatabase()
+    {
+        _backend.SourceSkills[NotionDatabase] = [new AvailableSkill("proofreader-copyeditor", "Proofreads marketing copy", null)];
+        AddSourceSetting(NotionDatabase);
+        var manager = CreateManager();
+
+        var found = Assert.Single(manager.FindPackages(""));
+        Assert.Equal("proofreader-copyeditor", found.Id);
+        Assert.Equal("app.notion.com/p/1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d", found.Source.Name);
+        Assert.Equal(NotionDatabase, manager.GetInstallSource(found.Source)?.InstallSource);
+    }
+
+    [Fact]
+    public void UpdatesOfNotionSkillsComeFromTheirDatabase()
+    {
+        AddSourceSetting(NotionDatabase);
+        _backend.SourceSkills[NotionDatabase] = [];
+        _backend.Installed.Add(NotionSkill("tone-reviewer", "v1-aaaaaaaa"));
+        _backend.UpdateCheck = new(
+            [
+                new SkillUpdate
+                {
+                    Name = "tone-reviewer",
+                    Scope = SkillScope.Global,
+                    Source = NotionDatabase,
+                    CurrentHash = "v1-aaaaaaaa",
+                    LatestHash = "v2-bbbbbbbb",
+                },
+            ],
+            []
+        );
+        var manager = CreateManager();
+
+        var update = Assert.Single(manager.GetAvailableUpdates());
+        Assert.Equal("app.notion.com/p/1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d", update.Source.Name);
+        Assert.Equal("v2-bbbb", update.NewVersionString);
+
+        // Not offered once the database is no longer a source
+        Settings.SetList(AgentSkills.SourcesListKey, new List<string>());
+        Assert.Empty(manager.GetAvailableUpdates());
+    }
+
+    [Fact]
+    public void TheNotionCliIsOnlyADependencyWithANotionSource()
+    {
+        var manager = CreateManager();
+        Assert.DoesNotContain(manager.Dependencies, d => d.Name == NotionCliTool.Name);
+
+        _backend.SourceSkills[NotionDatabase] = [];
+        AddSourceSetting(NotionDatabase);
+        manager.Initialize();
+
+        Assert.Equal(NotionCliTool.Name, Assert.Single(manager.Dependencies).Name);
+    }
+
+    [Theory]
+    [InlineData("0.23.10", true)]
+    [InlineData(" 0.23.9 ", true)]
+    [InlineData("1.0.0-beta.2", true)]
+    [InlineData("", true)]
+    [InlineData("latest", false)]
+    [InlineData("0.23.10; calc", false)]
+    [InlineData("0.23.10}\" & calc & \"{", false)]
+    public void OnlyPlainVersionsOfTheNotionCliCanBePinned(string version, bool accepted)
+    {
+        Assert.Equal(accepted, NotionCliTool.TrySetPinnedVersion(version));
+        Assert.Equal(accepted && version.Trim().Length > 0 ? version.Trim() : null, NotionCliTool.PinnedVersion);
+    }
+
+    [Fact]
+    public void APinnedNotionCliIsInstalledAtThatVersionAndNotUpdated()
+    {
+        Assert.True(NotionCliTool.TrySetPinnedVersion("0.23.9"));
+
+        Assert.Contains("--version 0.23.9", NotionCliTool.CreateDependency().FancyInstallCommand);
+        Assert.True(UniGetUI.PackageEngine.Classes.Packages.Classes.IgnoredUpdatesDatabase.HasUpdatesIgnored("winget\\Notion.ntn"));
+
+        Assert.True(NotionCliTool.TrySetPinnedVersion(""));
+        Assert.DoesNotContain("--version", NotionCliTool.CreateDependency().FancyInstallCommand);
+        Assert.False(UniGetUI.PackageEngine.Classes.Packages.Classes.IgnoredUpdatesDatabase.HasUpdatesIgnored("winget\\Notion.ntn"));
+    }
+
+    [Fact]
+    public async Task SigningInToNotionListsTheNotionSourcesAgain()
+    {
+        _backend.NotionStatus = new(NotionCliState.SignedOut, "0.23.10", null, null);
+        _backend.SourceSkills[NotionDatabase] = [];
+        AddSourceSetting(NotionDatabase);
+        var manager = CreateManager();
+        // The listing started when the manager loaded
+        await manager.Listings.Refresh(SkillSourceLocator.Parse(NotionDatabase)!);
+        int listed = _backend.ListedSources.Count;
+
+        var signIn = await manager.BeginNotionSignInAsync(CancellationToken.None);
+        await manager.CompleteNotionSignInAsync(CancellationToken.None);
+
+        Assert.Equal("K7Q-2MX", signIn.VerificationCode);
+        Assert.Equal(NotionCliState.SignedIn, (await manager.GetNotionStatusAsync()).State);
+        Assert.True(SpinWait.SpinUntil(() => _backend.ListedSources.Count > listed, TimeSpan.FromSeconds(10)));
+    }
+
+    private static InstalledSkillInfo NotionSkill(string name, string version) =>
+        new()
+        {
+            Name = name,
+            Description = "",
+            Path = $"/home/test/.agents/skills/{name}",
+            Scope = SkillScope.Global,
+            Agents = ["claude-code"],
+            Source = NotionDatabase,
+            SourceType = "notion",
+            SourceUrl = "https://app.notion.com/p/4d5e6f7a8b9c4d0e9f1a3b4c5d6e7f80",
+            Hash = version,
+        };
+
     [Fact]
     public void TheLibraryNeverReportsTelemetryOfItsOwn()
     {

@@ -1,0 +1,45 @@
+<dialogs:ImmersiveDialog xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="using:UniGetUI.Avalonia.Views.DialogPages"
+        x:Class="UniGetUI.Avalonia.Views.DialogPages.NotionSignInDialog"
+        MaxWidth="520"
+        MinHeight="200"
+
+        Background="{DynamicResource AppDialogBackground}">
+
+    <Grid Margin="20"
+          RowDefinitions="Auto,Auto"
+          RowSpacing="12">
+
+        <StackPanel Grid.Row="0" Spacing="8">
+            <TextBlock x:Name="DescBlock"
+                       TextWrapping="Wrap"/>
+            <SelectableTextBlock x:Name="CodeBlock"
+                                 IsVisible="False"
+                                 HorizontalAlignment="Center"
+                                 Margin="0,8"
+                                 FontFamily="Consolas"
+                                 FontSize="28"
+                                 FontWeight="SemiBold"/>
+            <TextBlock x:Name="InfoBlock"
+                       TextWrapping="Wrap"
+                       FontStyle="Italic"
+                       Opacity="0.7"/>
+            <ProgressBar x:Name="ProgressBar"
+                         IsIndeterminate="True"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8">
+            <Button x:Name="OpenButton"
+                    IsVisible="False"
+                    MinWidth="140"/>
+            <Button x:Name="CloseButton"
+                    MinWidth="110"/>
+        </StackPanel>
+
+    </Grid>
+
+</dialogs:ImmersiveDialog>

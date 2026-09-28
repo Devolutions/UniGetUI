@@ -351,6 +351,22 @@ namespace UniGetUI.Core.Tools.Tests
             }
         }
 
+        [Fact]
+        public void TestFileSizeLoaderRefusesFileSystemAddresses()
+        {
+            string file = Path.Join(Path.GetTempPath(), $"unigetui-size-{Guid.NewGuid():N}.bin");
+            File.WriteAllBytes(file, new byte[2048]);
+
+            try
+            {
+                Assert.Equal(0, CoreTools.GetFileSizeAsLong(new Uri(file)));
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
         [Theory]
         [InlineData("", 0)]
         [InlineData(

@@ -374,11 +374,18 @@ namespace UniGetUI.Core.Tools
             if (url is null)
                 return 0;
 
+            if (url.IsFile)
+            {
+                Logger.Warn(
+                    $"Refusing to measure the file system address {url}: this helper answers "
+                        + "for network addresses only, and its callers take the address from "
+                        + "package metadata"
+                );
+                return 0;
+            }
+
             try
             {
-                if (url.IsFile)
-                    return new FileInfo(url.LocalPath).Length;
-
                 using HttpClient client = new(CoreTools.GenericHttpClientParameters);
                 using var request = new HttpRequestMessage(HttpMethod.Head, url);
                 using HttpResponseMessage response = client.Send(request);

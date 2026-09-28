@@ -64,9 +64,11 @@ a manifest is rejected above 4 MiB (checked against the declared size *and* whil
 since the declared one can lie) and parsed with DTD processing prohibited, and an embedded
 `<icon>` is extracted under the same bounds into the package's icon cache directory, named from
 the package version, a digest of the archive's path, write time and size, and an allow-listed
-extension - never from the entry path, so a crafted entry name cannot escape that directory, two
-feeds carrying the same id and version keep their own icons, and a replaced package is re-read
-however its timestamp moves.
+extension - never from the entry path, so a crafted entry name cannot escape that directory, and
+two feeds carrying the same id and version keep their own icons. Note that `GetIconLocal` re-reads
+a replaced archive whichever way its timestamp moved, but `Package.GetIconUrlIfAny` caches the
+resolved address for the process against the package's versioned hash, so a package replaced in
+place under the same version keeps showing the icon it had until a restart.
 
 ### V3 resources used
 

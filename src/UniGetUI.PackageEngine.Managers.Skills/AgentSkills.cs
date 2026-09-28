@@ -48,6 +48,9 @@ public sealed class AgentSkills : PackageManager
         (SkillUpdate Update, SkillSourceLocator Source)
     > _pendingUpdates = new(StringComparer.OrdinalIgnoreCase);
 
+    // The skills.sh page of each skill a catalog search returned, by source and skill
+    private readonly ConcurrentDictionary<string, Uri> _catalogPages = new(StringComparer.OrdinalIgnoreCase);
+
     internal ISkillsBackend Backend { get; }
     internal SkillsSourceFactory SourceFactory { get; }
     internal SkillSourceListings Listings { get; }
@@ -251,6 +254,14 @@ public sealed class AgentSkills : PackageManager
             ? pending.Update
             : null;
 
+    /// <summary>
+    /// The skill's page on skills.sh, when a catalog search returned it; null otherwise. Skills from
+    /// a private repository or a repository skills.sh does not list have no page there, and their
+    /// names are not sent to skills.sh to find out.
+    /// </summary>
+    internal Uri? GetCatalogPage(SkillSourceLocator source, string skill) =>
+        _catalogPages.TryGetValue($"{source.Name}\\{skill}", out Uri? page) ? page : null;
+
     /// <summary>The source object an installed skill came from.</summary>
     internal IManagerSource SourceFor(InstalledSkillInfo skill) =>
         SkillSourceLocator.ForInstalled(skill) is { } source
@@ -308,8 +319,12 @@ public sealed class AgentSkills : PackageManager
                     var results = Backend.Search(query, SearchLimit, CancellationToken.None);
                     foreach (var result in results)
                     {
-                        if (SkillSourceLocator.ForSearchResult(result) is { } origin)
-                            Add(result.Name, origin);
+                        if (SkillSourceLocator.ForSearchResult(result) is not { } origin)
+                            continue;
+
+                        Add(result.Name, origin);
+                        if (Uri.TryCreate(result.Url, UriKind.Absolute, out Uri? page))
+                            _catalogPages[$"{origin.Name}\\{result.Name}"] = page;
                     }
 
                     logger.Log($"skills.sh returned {results.Count} skills for \"{query}\"");

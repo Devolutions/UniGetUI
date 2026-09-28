@@ -555,6 +555,29 @@ public sealed class AgentSkillsManagerTests : IDisposable
         Assert.Equal("Git", Assert.Single(manager.Dependencies).Name);
     }
 
+    [Fact]
+    public void OnlySkillsTheCatalogListsLinkToSkillsSh()
+    {
+        // A private repository is not on skills.sh, so its skills get no page there
+        _backend.SearchResults.Add(new SkillSearchResult("deploy", "vercel-labs/agent-skills/deploy", "vercel-labs/agent-skills", 900));
+        _backend.SourceSkills["https://github.com/contoso/private-skills"] =
+        [
+            new AvailableSkill("review-ui-content", "Reviews UI content", null),
+        ];
+        AddSourceSetting("https://github.com/contoso/private-skills");
+        var manager = CreateManager();
+        var found = manager.FindPackages("e");
+
+        var catalogDetails = new PackageDetails(found.Single(package => package.Id == "deploy"));
+        manager.DetailsHelper.GetDetails(catalogDetails);
+        var repositoryDetails = new PackageDetails(found.Single(package => package.Id == "review-ui-content"));
+        manager.DetailsHelper.GetDetails(repositoryDetails);
+
+        Assert.Equal("https://skills.sh/vercel-labs/agent-skills/deploy", catalogDetails.ManifestUrl?.ToString());
+        Assert.Null(repositoryDetails.ManifestUrl);
+        Assert.Equal("contoso", repositoryDetails.Publisher);
+    }
+
     private const string NotionDatabase = "https://app.notion.com/p/1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d";
 
     [Fact]

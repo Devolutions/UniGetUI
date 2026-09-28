@@ -19,6 +19,7 @@ using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.ManagerClasses.Manager;
 using UniGetUI.PackageEngine.Managers.SkillsManager;
 using UniGetUI.PackageEngine.Managers.VcpkgManager;
+using SkillsPackageManager = global::UniGetUI.PackageEngine.Managers.SkillsManager.AgentSkills;
 using CoreSettings = UniGetUI.Core.SettingsEngine.Settings;
 using CornerRadius = global::Avalonia.CornerRadius;
 using Thickness = global::Avalonia.Thickness;
@@ -614,7 +615,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 disableNotifsCard.BorderThickness = new Thickness(1);
                 ExtraControls.Children.Add(disableNotifsCard);
 
-                if (manager is AgentSkills agentSkills)
+                if (manager is SkillsPackageManager agentSkills)
                 {
                     ExtraControls.Children.Add(BuildSkillsAgentsCard(agentSkills));
                     ExtraControls.Children.Add(BuildSkillsNotionCard(agentSkills));
@@ -652,10 +653,10 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
     /// A checkbox per coding agent found on this computer. Selecting them all keeps the default,
     /// which also reaches the agents that read the shared .agents/skills folder.
     /// </summary>
-    private static SettingsCard BuildSkillsAgentsCard(AgentSkills skills)
+    private static SettingsCard BuildSkillsAgentsCard(SkillsPackageManager skills)
     {
         var agents = skills.GetDetectedAgents();
-        var selected = AgentSkills.TargetAgents;
+        var selected = SkillsPackageManager.TargetAgents;
         var panel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 4, 0, 0) };
         List<CheckBox> checkboxes = [];
 
@@ -691,7 +692,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                     return;
                 }
 
-                AgentSkills.TargetAgents = chosen.Count == checkboxes.Count ? [] : chosen;
+                SkillsPackageManager.TargetAgents = chosen.Count == checkboxes.Count ? [] : chosen;
             };
             checkboxes.Add(checkbox);
             panel.Children.Add(checkbox);
@@ -711,7 +712,7 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
     /// Notion skill sources go through the Notion CLI (ntn): this card installs it (at the version
     /// the user pins, if any) and signs it in to a Notion workspace, which it does in the browser.
     /// </summary>
-    private static SettingsCard BuildSkillsNotionCard(AgentSkills skills)
+    private static SettingsCard BuildSkillsNotionCard(SkillsPackageManager skills)
     {
         var statusText = new TextBlock { TextWrapping = TextWrapping.Wrap, Opacity = 0.7 };
         var installButton = new Button { Content = CoreTools.Translate("Install the Notion CLI"), IsVisible = false };

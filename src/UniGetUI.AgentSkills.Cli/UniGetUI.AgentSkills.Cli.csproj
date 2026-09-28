@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>$(SharedTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UniGetUI.AgentSkills.Cli</AssemblyName>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <RootNamespace>Skills</RootNamespace>
+    <!-- Must equal Program.Version in Main.cs (unit-tested; also checked against
+         the reference CLI's package.json when SKILLS_REFERENCE is set). -->
+    <Version>1.7.0</Version>
+    <Description>The open agent skills ecosystem (C# port of the skills CLI)</Description>
+    <IsPackable>false</IsPackable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Run the trim, AOT and single-file analyzers on every build. With
+         warnings as errors, code that would break under NativeAOT or trimming
+         fails `dotnet build`; ILLink and ILC inherit this on publish. -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- `dotnet publish -c Release -r <rid>` produces one self-contained executable. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <!-- Default: a trimmed ReadyToRun single file. Cross-publishes to any RID and
+       needs no native toolchain. About 130 ms startup instead of about 320 ms
+       with plain JIT on win-x64. -p:EnableCompressionInSingleFile=false trades
+       about 10 MB for about 30 ms less. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' and '$(PublishAot)' != 'true'">
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+
+  <!-- -p:PublishAot=true: a NativeAOT executable (about 9 MB, about 60 ms
+       startup). This needs the platform C/C++ toolchain (MSVC on Windows,
+       clang or gcc on Linux, Xcode on macOS) and builds only for the host OS. -->
+
+  <ItemGroup>
+    <!-- The CLI adds terminal UI and command flows on the library's internal core. -->
+    <ProjectReference Include="..\UniGetUI.AgentSkills\UniGetUI.AgentSkills.csproj" />
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+
+</Project>

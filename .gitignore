@@ -20,8 +20,6 @@ pr_body.md
 *.log
 UniGetUI/wingettest.py
 *.nupkg
-# Local package feed for the agent-skills branch (see nuget.config)
-/.local-packages/
 
 wui-1.7.0-console.zip
 wui1.7.0-debug2.zip

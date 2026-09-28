@@ -3,6 +3,16 @@
     <Platform Name="x64" />
     <Platform Name="arm64" />
   </Configurations>
+  <Folder Name="/UniGetUI.AgentSkills/">
+    <Project Path="UniGetUI.AgentSkills/UniGetUI.AgentSkills.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+    </Project>
+    <Project Path="UniGetUI.AgentSkills.Cli/UniGetUI.AgentSkills.Cli.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+    </Project>
+  </Folder>
   <Folder Name="/UniGetUI.Avalonia/">
     <Project Path="UniGetUI.Avalonia/UniGetUI.Avalonia.csproj">
       <Platform Solution="*|x64" Project="x64" />

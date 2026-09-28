@@ -42,6 +42,10 @@ internal sealed class SkillsPkgDetailsHelper : BasePkgDetailsHelper
         if (FindInstalled(details.Package) is { } installed)
         {
             details.Description = installed.Description;
+
+            // A Notion skill has a page of its own in the database it came from
+            if (installed.SourceType == "notion" && Uri.TryCreate(installed.SourceUrl, UriKind.Absolute, out Uri? page))
+                details.HomepageUrl = page;
             details.UpdateDate = installed.UpdatedAt?.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
 
             // The agents the skill is installed for

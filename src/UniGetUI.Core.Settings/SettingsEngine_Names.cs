@@ -136,6 +136,7 @@ public static partial class Settings
         SkillsDefaultEnablementApplied,
         SkillsSources,
         SkillsTargetAgents,
+        SkillsNotionCliVersion,
 
         Test1,
         Test2,
@@ -281,6 +282,7 @@ public static partial class Settings
             K.SkillsDefaultEnablementApplied => "SkillsDefaultEnablementApplied",
             K.SkillsSources => "SkillsSources",
             K.SkillsTargetAgents => "SkillsTargetAgents",
+            K.SkillsNotionCliVersion => "SkillsNotionCliVersion",
 
             K.Test1 => "TestSetting1",
             K.Test2 => "TestSetting2",

@@ -4,11 +4,14 @@ using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Devolutions.AgentSkills;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Avalonia.Views.Controls.Settings;
+using UniGetUI.Avalonia.Views.DialogPages;
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
@@ -612,7 +615,10 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
                 ExtraControls.Children.Add(disableNotifsCard);
 
                 if (manager is AgentSkills agentSkills)
+                {
                     ExtraControls.Children.Add(BuildSkillsAgentsCard(agentSkills));
+                    ExtraControls.Children.Add(BuildSkillsNotionCard(agentSkills));
+                }
                 break;
 
             case "vcpkg":
@@ -698,6 +704,158 @@ public sealed partial class PackageManagerPage : UserControl, ISettingsPage
             Margin = new Thickness(0, 16, 0, 0),
             Header = CoreTools.Translate("Install skills for these coding agents"),
             Description = panel,
+        };
+    }
+
+    /// <summary>
+    /// Notion skill sources go through the Notion CLI (ntn): this card installs it (at the version
+    /// the user pins, if any) and signs it in to a Notion workspace, which it does in the browser.
+    /// </summary>
+    private static SettingsCard BuildSkillsNotionCard(AgentSkills skills)
+    {
+        var statusText = new TextBlock { TextWrapping = TextWrapping.Wrap, Opacity = 0.7 };
+        var installButton = new Button { Content = CoreTools.Translate("Install the Notion CLI"), IsVisible = false };
+        var signInButton = new Button { Content = CoreTools.Translate("Sign in"), IsVisible = false, Classes = { "accent" } };
+        var signOutButton = new Button { Content = CoreTools.Translate("Sign out"), IsVisible = false };
+        foreach (var button in new[] { installButton, signInButton, signOutButton })
+            AutomationProperties.SetName(button, (string)button.Content!);
+
+        var versionBox = new TextBox
+        {
+            Text = CoreSettings.GetValue(CoreSettings.K.SkillsNotionCliVersion),
+            PlaceholderText = CoreTools.Translate("Latest"),
+            Width = 140,
+        };
+        AutomationProperties.SetName(versionBox, CoreTools.Translate("Notion CLI version to install"));
+        var versionHint = new TextBlock
+        {
+            Text = CoreTools.Translate("Leave it empty for the latest version. While a version is set, UniGetUI installs that one and does not offer updates of it."),
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.7,
+        };
+
+        void SaveVersion()
+        {
+            bool valid = NotionCliTool.TrySetPinnedVersion(versionBox.Text ?? "");
+            versionHint.Text = valid
+                ? CoreTools.Translate("Leave it empty for the latest version. While a version is set, UniGetUI installs that one and does not offer updates of it.")
+                : CoreTools.Translate("Enter a version number, or leave it empty for the latest version.");
+            versionHint.Opacity = valid ? 0.7 : 1;
+        }
+        versionBox.LostFocus += (_, _) => SaveVersion();
+        versionBox.KeyDown += (_, e) =>
+        {
+            if (e.Key == global::Avalonia.Input.Key.Enter)
+                SaveVersion();
+        };
+
+        async Task RefreshAsync()
+        {
+            installButton.IsVisible = signInButton.IsVisible = signOutButton.IsVisible = false;
+            statusText.Text = CoreTools.Translate("Checking the Notion CLI…");
+            NotionStatus status;
+            try
+            {
+                status = await skills.GetNotionStatusAsync();
+            }
+            catch (Exception ex)
+            {
+                status = new NotionStatus(NotionCliState.Unknown, null, null, ex.Message);
+            }
+
+            switch (status.State)
+            {
+                case NotionCliState.NotInstalled:
+                    statusText.Text = CoreTools.Translate("The Notion CLI is not installed. Notion sources need it.");
+                    installButton.IsVisible = true;
+                    break;
+                case NotionCliState.SignedOut:
+                    statusText.Text = CoreTools.Translate("The Notion CLI {0} is installed, but not signed in.", status.CliVersion ?? "");
+                    signInButton.IsVisible = true;
+                    break;
+                case NotionCliState.SignedIn:
+                    statusText.Text = status.WorkspaceName is { } workspace
+                        ? CoreTools.Translate("Signed in to the Notion workspace {0}, with the Notion CLI {1}.", workspace, status.CliVersion ?? "")
+                        : CoreTools.Translate("Signed in to Notion, with the Notion CLI {0}.", status.CliVersion ?? "");
+                    signOutButton.IsVisible = true;
+                    break;
+                default:
+                    statusText.Text = CoreTools.Translate("Could not check the Notion sign-in: {0}", status.Message ?? "");
+                    signInButton.IsVisible = true;
+                    break;
+            }
+        }
+
+        installButton.Click += async (_, _) =>
+        {
+            if (MainWindow.Instance is not { } owner)
+                return;
+
+            SaveVersion();
+            await owner.ShowDialogAndRestoreVisibilityAsync(new MissingDependencyDialog(NotionCliTool.CreateDependency(), 1, 1));
+            skills.RefreshNotionSources();
+            await RefreshAsync();
+        };
+        signInButton.Click += async (_, _) =>
+        {
+            if (MainWindow.Instance is not { } owner)
+                return;
+
+            await owner.ShowDialogAndRestoreVisibilityAsync(new NotionSignInDialog(skills));
+            await RefreshAsync();
+        };
+        signOutButton.Click += async (_, _) =>
+        {
+            signOutButton.IsEnabled = false;
+            try
+            {
+                await skills.SignOutOfNotionAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("Could not sign out of Notion");
+                Logger.Warn(ex);
+            }
+
+            signOutButton.IsEnabled = true;
+            await RefreshAsync();
+        };
+
+        _ = RefreshAsync();
+
+        return new SettingsCard
+        {
+            CornerRadius = new CornerRadius(8),
+            BorderThickness = new Thickness(1),
+            Margin = new Thickness(0, 16, 0, 0),
+            Header = CoreTools.Translate("Notion"),
+            Description = new StackPanel
+            {
+                Spacing = 8,
+                Margin = new Thickness(0, 4, 0, 0),
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = CoreTools.Translate("Notion skills databases can be sources. They are read through the Notion CLI (ntn), which signs in to Notion in your browser and keeps the sign-in; UniGetUI never sees it."),
+                        TextWrapping = TextWrapping.Wrap,
+                        Opacity = 0.7,
+                    },
+                    statusText,
+                    new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { installButton, signInButton, signOutButton } },
+                    new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        Spacing = 8,
+                        Children =
+                        {
+                            new TextBlock { Text = CoreTools.Translate("Notion CLI version to install"), VerticalAlignment = VerticalAlignment.Center },
+                            versionBox,
+                        },
+                    },
+                    versionHint,
+                },
+            },
         };
     }
 

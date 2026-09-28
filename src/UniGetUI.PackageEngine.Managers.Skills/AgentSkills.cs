@@ -207,6 +207,41 @@ public sealed class AgentSkills : PackageManager
         }
     }
 
+    /// <summary>Whether one of the sources is a Notion database, which needs the Notion CLI.</summary>
+    public bool HasNotionSources => GetConfiguredSources().Any(source => source.Kind is SkillSourceKind.Notion);
+
+    /// <summary>Whether the Notion CLI is installed and signed in, and to which workspace.</summary>
+    public Task<NotionStatus> GetNotionStatusAsync() =>
+        Task.Run(() => Backend.GetNotionStatus(CancellationToken.None));
+
+    /// <summary>
+    /// Starts signing in to Notion: the Notion page to open in the browser and the code it shows.
+    /// The Notion CLI keeps the sign-in in the OS credential store; UniGetUI never sees the token.
+    /// </summary>
+    public Task<NotionSignIn> BeginNotionSignInAsync(CancellationToken cancellationToken) =>
+        Task.Run(() => Backend.BeginNotionSignIn(cancellationToken), cancellationToken);
+
+    /// <summary>Waits for the user to approve the sign-in, then lists the Notion sources again.</summary>
+    public async Task CompleteNotionSignInAsync(CancellationToken cancellationToken)
+    {
+        await Task.Run(() => Backend.CompleteNotionSignIn(cancellationToken), cancellationToken);
+        RefreshNotionSources();
+    }
+
+    public async Task SignOutOfNotionAsync()
+    {
+        await Task.Run(() => Backend.SignOutOfNotion(CancellationToken.None));
+        RefreshNotionSources();
+    }
+
+    /// <summary>Lists the Notion sources again, as after signing in or installing the Notion CLI.</summary>
+    public void RefreshNotionSources()
+    {
+        NotionCliTool.Forget();
+        foreach (var source in GetConfiguredSources().Where(source => source.Kind is SkillSourceKind.Notion))
+            _ = Listings.Refresh(source);
+    }
+
     /// <summary>
     /// The update found for the skill by the last update check, removing it; null when there is
     /// none, or when its source was removed since.
@@ -435,11 +470,14 @@ public sealed class AgentSkills : PackageManager
     {
         var sources = GetConfiguredSources();
 
-        // Only repository sources need git, so people who only use the catalog or indexes are not
-        // asked to install it
-        Dependencies = sources.Any(source => source.Kind is SkillSourceKind.Repository)
-            ? [GitDependency.Create()]
-            : [];
+        // Only repository sources need git, and only Notion sources the Notion CLI, so people who
+        // use neither are not asked to install them
+        List<ManagerDependency> dependencies = [];
+        if (sources.Any(source => source.Kind is SkillSourceKind.Repository))
+            dependencies.Add(GitDependency.Create());
+        if (sources.Any(source => source.Kind is SkillSourceKind.Notion))
+            dependencies.Add(NotionCliTool.CreateDependency());
+        Dependencies = dependencies;
 
         foreach (var source in sources.Where(source => source.Kind is not SkillSourceKind.Catalog))
             _ = Listings.Refresh(source);

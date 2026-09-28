@@ -147,7 +147,8 @@
                             <Panel Grid.Column="1" Width="24" Height="24" VerticalAlignment="Center"
                                    controls:PackageIconLoader.Track="True">
                                 <Image Source="{Binding IconBitmap}" Width="24" Height="24"
-                                       Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
+                                       Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"
+                                       RenderOptions.BitmapInterpolationMode="HighQuality"/>
                                 <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
                                                   Width="24" Height="24" IsVisible="{Binding !HasCustomIcon}"/>
                             </Panel>

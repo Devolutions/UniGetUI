@@ -162,7 +162,8 @@
             <Image Source="{Binding PackageIcon}"
                    Width="32" Height="32"
                    automation:AutomationProperties.AccessibilityView="Raw"
-                   VerticalAlignment="Center"/>
+                   VerticalAlignment="Center"
+                   RenderOptions.BitmapInterpolationMode="HighQuality"/>
 
             <TextBlock Grid.Column="1"
                        automation:AutomationProperties.Name="{Binding DialogTitle}"

@@ -373,7 +373,8 @@
                                                    Margin="0"
                                                    automation:AutomationProperties.AccessibilityView="Raw"
                                                    VerticalAlignment="Center"
-                                                   Stretch="Uniform"/>
+                                                   Stretch="Uniform"
+                                                   RenderOptions.BitmapInterpolationMode="HighQuality"/>
 
                                             <!-- Preserve WinUI's Auto + * behavior inside the flexible region:
                                                  short titles use only their natural width, while long titles

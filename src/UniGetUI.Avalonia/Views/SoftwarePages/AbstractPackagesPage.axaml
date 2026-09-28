@@ -754,7 +754,8 @@
                                                 <Panel Grid.Column="0" Width="24" Height="24" VerticalAlignment="Center"
                                                        controls:PackageIconLoader.Track="True">
                                                     <Image Source="{Binding IconBitmap}" Width="24" Height="24"
-                                                           Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
+                                                           Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"
+                                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
                                                                       Width="24" Height="24" IsVisible="{Binding !HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="{Binding TagBackdropIconPath}"
@@ -930,7 +931,8 @@
                                                        VerticalAlignment="Center" HorizontalAlignment="Center"
                                                        controls:PackageIconLoader.Track="True">
                                                     <Image Source="{Binding IconBitmap}" Width="44" Height="44"
-                                                           Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
+                                                           Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"
+                                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
                                                                       Width="44" Height="44" IsVisible="{Binding !HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="{Binding TagBackdropIconPath}"
@@ -1043,7 +1045,8 @@
                                                        VerticalAlignment="Center" HorizontalAlignment="Center"
                                                        controls:PackageIconLoader.Track="True">
                                                     <Image Source="{Binding IconBitmap}" Width="64" Height="64"
-                                                           Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"/>
+                                                           Stretch="Uniform" IsVisible="{Binding HasCustomIcon}"
+                                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
                                                     <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
                                                                       Width="64" Height="64" IsVisible="{Binding !HasCustomIcon}"/>
                                                     <controls:SvgIcon Path="{Binding TagBackdropIconPath}"
@@ -1097,12 +1100,14 @@
                                    MaxHeight="{Binding #PackageListHost.Bounds.Height, Converter={StaticResource ScaleClampConverter}, ConverterParameter=0.4|180}"
                                    Stretch="Uniform"
                                    HorizontalAlignment="Center"
+                                   RenderOptions.BitmapInterpolationMode="HighQuality"
                                    IsVisible="{Binding LoadingImageVisible}"/>
                             <Image Source="{Binding NoPackagesImage}"
                                    MaxWidth="{Binding #PackageListHost.Bounds.Width, Converter={StaticResource ScaleClampConverter}, ConverterParameter=0.4|180}"
                                    MaxHeight="{Binding #PackageListHost.Bounds.Height, Converter={StaticResource ScaleClampConverter}, ConverterParameter=0.4|180}"
                                    Stretch="Uniform"
                                    HorizontalAlignment="Center"
+                                   RenderOptions.BitmapInterpolationMode="HighQuality"
                                    IsVisible="{Binding NoPackagesImageVisible}"/>
                             <TextBlock x:Name="BackgroundText"
                                        HorizontalAlignment="Center"

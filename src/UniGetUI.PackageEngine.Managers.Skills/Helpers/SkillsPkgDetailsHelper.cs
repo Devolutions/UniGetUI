@@ -35,8 +35,10 @@ internal sealed class SkillsPkgDetailsHelper : BasePkgDetailsHelper
             {
                 details.Publisher = owner;
                 details.Author = owner;
-                details.ManifestUrl = new Uri($"https://skills.sh/{source.Name}/{details.Package.Id}");
             }
+
+            if (_skills.GetCatalogPage(source, details.Package.Id) is { } catalogPage)
+                details.ManifestUrl = catalogPage;
         }
 
         if (FindInstalled(details.Package) is { } installed)

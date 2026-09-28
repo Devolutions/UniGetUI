@@ -976,6 +976,24 @@ namespace UniGetUI.Core.Tools
         }
 
         /// <summary>
+        /// Forgets that an elevation cache is held, without releasing it. The next operation
+        /// that needs elevation will ask the elevator again; that request is free and silent
+        /// when the session is still alive, and re-establishes it when it is not.
+        /// </summary>
+        public static async Task InvalidateUACCacheState()
+        {
+            await _uacCacheLock.WaitAsync();
+            try
+            {
+                _uacCacheHeld = false;
+            }
+            finally
+            {
+                _uacCacheLock.Release();
+            }
+        }
+
+        /// <summary>
         /// Reset UAC cache for the current process
         /// </summary>
         public static async Task ResetUACForCurrentProcess()

@@ -298,10 +298,17 @@ public static class AvaloniaOperationRegistry
             o => o.Status is OperationStatus.Running or OperationStatus.InQueue);
 
         // Clear UAC cache after the last operation in a batch finishes
-        if (!anyStillRunning && Settings.Get(Settings.K.DoCacheAdminRightsForBatches))
+        if (!anyStillRunning)
         {
-            Logger.Info("Clearing UAC prompt since there are no remaining operations");
-            await CoreTools.ResetUACForCurrentProcess();
+            if (Settings.Get(Settings.K.DoCacheAdminRightsForBatches))
+            {
+                Logger.Info("Clearing UAC prompt since there are no remaining operations");
+                await CoreTools.ResetUACForCurrentProcess();
+            }
+            else
+            {
+                await CoreTools.InvalidateUACCacheState();
+            }
         }
 
         if (!anyStillRunning)

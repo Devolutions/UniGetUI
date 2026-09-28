@@ -8,6 +8,46 @@ namespace UniGetUI.PackageEngine.Tests;
 public sealed class PowerShellManagerTests
 {
     [Fact]
+    public void ParseSources_KeepsLocalAndUncRepositoryLocations()
+    {
+        var manager = new PowerShell();
+        var helper = Assert.IsType<PowerShellSourceHelper>(manager.SourcesHelper);
+
+        var sources = helper.ParseSources(
+            [
+                "",
+                "Name".PadRight(25) + "SourceLocation",
+                "----".PadRight(25) + "--------------",
+                "PSGallery".PadRight(25) + "https://www.powershellgallery.com/api/v2",
+                "Internal Modules".PadRight(25) + @"\\files\ps\modules",
+                "Local Drop".PadRight(25) + @"C:\Shared Packages\PowerShell",
+                "",
+            ]
+        );
+
+        Assert.Collection(
+            sources,
+            source =>
+            {
+                Assert.Equal("PSGallery", source.Name);
+                Assert.Equal("https://www.powershellgallery.com/api/v2", source.Url.ToString());
+            },
+            source =>
+            {
+                Assert.Equal("Internal Modules", source.Name);
+                Assert.True(source.Url.IsUnc);
+                Assert.Equal(@"\\files\ps\modules", source.Url.LocalPath);
+            },
+            source =>
+            {
+                Assert.Equal("Local Drop", source.Name);
+                Assert.True(source.Url.IsFile);
+                Assert.Equal(@"C:\Shared Packages\PowerShell", source.Url.LocalPath);
+            }
+        );
+    }
+
+    [Fact]
     public void ParseInstalledPackages_BuildsPackagesFromModuleTable()
     {
         var manager = new PowerShell();

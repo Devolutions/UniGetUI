@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.RegularExpressions;
 using UniGetUI.Core.Logging;
 using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Classes.Manager.Providers;
@@ -56,14 +55,16 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
         protected override IReadOnlyList<IManagerSource> GetSources_UnSafe()
         {
-            List<ManagerSource> sources = [];
-
             using Process p = new()
             {
                 StartInfo = new()
                 {
                     FileName = Manager.Status.ExecutablePath,
-                    Arguments = Manager.Status.ExecutableCallArgs + " Get-PSRepository",
+                    Arguments =
+                        Manager.Status.ExecutableCallArgs
+                        + " \"Get-PSRepository | Format-Table -Property Name,SourceLocation"
+                        + ManagerTable.UntruncatedTableTail
+                        + "\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     RedirectStandardInput = true,
@@ -80,48 +81,58 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
             p.Start();
 
-            bool dashesPassed = false;
             string? line;
+            List<string> lines = [];
             while ((line = p.StandardOutput.ReadLine()) is not null)
             {
                 logger.AddToStdOut(line);
-                try
-                {
-                    if (string.IsNullOrEmpty(line))
-                    {
-                        continue;
-                    }
-
-                    if (!dashesPassed)
-                    {
-                        if (line.Contains("---"))
-                        {
-                            dashesPassed = true;
-                        }
-                    }
-                    else
-                    {
-                        string[] parts = Regex.Replace(line.Trim(), " {2,}", " ").Split(' ');
-                        if (parts.Length >= 3)
-                        {
-                            sources.Add(
-                                new ManagerSource(
-                                    Manager,
-                                    parts[0].Trim(),
-                                    new Uri(parts[2].Trim())
-                                )
-                            );
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    Logger.Warn(e);
-                }
+                lines.Add(line);
             }
+
             logger.AddToStdErr(p.StandardError.ReadToEnd());
             p.WaitForExit();
             logger.Close(p.ExitCode);
+
+            return ParseSources(lines);
+        }
+
+        internal IReadOnlyList<IManagerSource> ParseSources(IEnumerable<string> lines)
+        {
+            List<IManagerSource> sources = [];
+            IReadOnlyList<int>? columns = null;
+
+            foreach (string line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                if (columns is null)
+                {
+                    columns = ManagerTable.ReadColumnStarts(line);
+                    continue;
+                }
+
+                string name = ManagerTable.ReadColumn(line, columns, 0);
+                string location = ManagerTable.ReadColumn(line, columns, 1);
+
+                if (name.Length is 0 || location.Length is 0)
+                {
+                    continue;
+                }
+
+                if (!Uri.TryCreate(location, UriKind.Absolute, out Uri? url))
+                {
+                    Logger.Warn(
+                        $"Could not read the location \"{location}\" of the "
+                            + $"{Manager.Name} repository {name}"
+                    );
+                    continue;
+                }
+
+                sources.Add(new ManagerSource(Manager, name, url));
+            }
 
             return sources;
         }

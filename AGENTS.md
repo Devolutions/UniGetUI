@@ -93,11 +93,15 @@ retried against a fabricated V2 endpoint. V2-only feeds never enter the V3 path 
 - **.NET Tool** — `https://api.nuget.org/v3/index.json`. Safe to repoint because the manager
   does not support custom sources and never passes the source URL to the `dotnet` CLI. Also
   filters search on `packageType=DotnetTool`.
-- **PowerShell / PowerShell 7** — sources are enumerated from `Get-PSRepository`, so the URL is
-  CLI-owned identity (`PowerShellSourceHelper` compares it literally to choose
-  `Register-PSRepository -Default`) and must not be rewritten. The PowerShell Gallery serves no
-  V3 service index, so it stays on V2; a V3-capable custom repository (Azure Artifacts, GitHub
-  Packages, JFrog, MyGet) is picked up automatically.
+- **PowerShell / PowerShell 7** — sources are enumerated from `Get-PSRepository` (or
+  `Get-PSResourceRepository` on PowerShell 7), so the URL is CLI-owned identity
+  (`PowerShellSourceHelper` compares it literally to choose `Register-PSRepository -Default`)
+  and must not be rewritten. Both helpers ask for an untruncated two-column table and read it by
+  column position (`ManagerTable`), because a repository name or path containing a space breaks
+  whitespace splitting and a long location is otherwise cut by `Format-Table`; a location that
+  is not an http URL - a folder or a UNC share - is kept rather than discarded. The PowerShell
+  Gallery serves no V3 service index, so it stays on V2; a V3-capable custom repository (Azure
+  Artifacts, GitHub Packages, JFrog, MyGet) is picked up automatically.
 - **Chocolatey** — sources come from `choco source list` and `community.chocolatey.org` serves no
   `index.json`, so it stays on V2. Note that only its updates and version listing are CLI-driven;
   its search, details and icons run through the shared `BaseNuGet` HTTP path.

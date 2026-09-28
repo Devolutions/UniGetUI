@@ -9,6 +9,46 @@ namespace UniGetUI.PackageEngine.Tests;
 public sealed class PowerShell7ManagerTests
 {
     [Fact]
+    public void ParseSources_KeepsRepositoriesThatAreNotHttpUrls()
+    {
+        var manager = new PowerShell7();
+        var helper = Assert.IsType<PowerShell7SourceHelper>(manager.SourcesHelper);
+
+        var sources = helper.ParseSources(
+            [
+                "",
+                "Name".PadRight(14) + "Uri",
+                "----".PadRight(14) + "---",
+                "PSGallery".PadRight(14) + "https://www.powershellgallery.com/api/v2",
+                "LocalRepo".PadRight(14) + "file:///C:/Shared Packages/PSRepo/",
+                "UncRepo".PadRight(14) + @"\\files\ps\modules",
+                "",
+            ]
+        );
+
+        Assert.Collection(
+            sources,
+            source =>
+            {
+                Assert.Equal("PSGallery", source.Name);
+                Assert.Equal("https://www.powershellgallery.com/api/v2", source.Url.ToString());
+            },
+            source =>
+            {
+                Assert.Equal("LocalRepo", source.Name);
+                Assert.True(source.Url.IsFile);
+                Assert.Equal(@"C:\Shared Packages\PSRepo\", source.Url.LocalPath);
+            },
+            source =>
+            {
+                Assert.Equal("UncRepo", source.Name);
+                Assert.True(source.Url.IsUnc);
+                Assert.Equal(@"\\files\ps\modules", source.Url.LocalPath);
+            }
+        );
+    }
+
+    [Fact]
     public void ParseInstalledPackages_BuildsPackagesFromTabDelimitedOutput()
     {
         var manager = new PowerShell7();

@@ -31,6 +31,7 @@ The commands below assume PowerShell is in the installation directory on Windows
 .\uniget.exe package search --manager dotnet-tool --query dotnetsay
 .\uniget.exe package install --manager dotnet-tool --id dotnetsay --version 2.1.4 --scope Global
 .\uniget.exe operation wait --id 123 --timeout 300
+.\uniget.exe skills --help
 ```
 
 For a silent Windows installation, include `ADDTOPATH=0` to opt out, or `ADDTOPATH=1` to
@@ -60,6 +61,14 @@ Use `uniget tui --help` for its options, or `uniget tui --fake-data` to try it w
 calling real package managers. See [TUI.md](TUI.md) for keyboard controls and more options.
 This command runs locally, independently of the desktop window or an IPC daemon, and is
 included in the same application package; no separate TUI executable is installed.
+## Agent Skills
+
+`unigetui skills [args...]` runs the bundled Agent Skills CLI in the current directory without
+starting the GUI or connecting to the UniGetUI IPC API. For example, `unigetui skills list`
+lists installed agent skills, and `unigetui skills add <source>` installs skills from a source.
+On Windows PowerShell, use `.\uniget.exe skills [args...]` to wait for completion and return its exit code.
+Arguments and exit codes after `skills` belong to that CLI, not to the UniGetUI automation
+commands documented below.
 
 ## Global transport options
 

@@ -21,6 +21,16 @@
     <File Path="Directory.Build.props" />
     <File Path="SharedAssemblyInfo.cs" />
   </Folder>
+  <Folder Name="/UniGetUI.AgentSkills/">
+    <Project Path="UniGetUI.AgentSkills/UniGetUI.AgentSkills.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="UniGetUI.AgentSkills.Cli/UniGetUI.AgentSkills.Cli.csproj">
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+  </Folder>
   <Folder Name="/UniGetUI.AgentPolicy/">
     <Project Path="UniGetUI.AgentPolicy.ElevatedHelper/UniGetUI.AgentPolicy.ElevatedHelper.csproj">
       <Platform Solution="*|arm64" Project="arm64" />

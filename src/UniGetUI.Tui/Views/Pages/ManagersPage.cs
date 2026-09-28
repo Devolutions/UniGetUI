@@ -89,6 +89,9 @@ internal sealed class ManagersPage : UserControl, ITuiPage
 /// </summary>
 internal sealed class ManagerSettingsDialog : FormDialog
 {
+    /// <summary>Managers built on the NuGet base, which accept a local folder or network share as a source.</summary>
+    private static readonly string[] FolderFeedManagers = ["Chocolatey", "PowerShell", "PowerShell7", ".NET Tool"];
+
     private readonly IPackageManager _manager;
     private IReadOnlyList<IManagerSource> _sources = [];
 
@@ -310,8 +313,14 @@ internal sealed class ManagerSettingsDialog : FormDialog
         {
             string? name = await TuiPrompts.AskTextAsync(CoreTools.Translate("Add source"), CoreTools.Translate("Source name:"));
             if (string.IsNullOrWhiteSpace(name)) return;
-            string? url = await TuiPrompts.AskTextAsync(CoreTools.Translate("Add source"), CoreTools.Translate("Source URL:"), "https://",
-                u => Uri.TryCreate(u.Trim(), UriKind.Absolute, out _) ? null : CoreTools.Translate("Please enter a valid URL"));
+            // The NuGet-based managers also serve feeds that are a local folder or a network share. The address is
+            // parsed the same way as in the desktop app, where a path such as C:\feeds becomes a file:// source.
+            bool folders = FolderFeedManagers.Contains(_manager.Name);
+            string? url = await TuiPrompts.AskTextAsync(CoreTools.Translate("Add source"),
+                folders ? CoreTools.Translate("Source URL or folder (a local path or \\\\server\\share):") : CoreTools.Translate("Source URL:"),
+                folders ? "" : "https://",
+                u => Uri.TryCreate(u.Trim(), UriKind.Absolute, out _) ? null
+                    : folders ? CoreTools.Translate("Please enter a valid URL or folder path") : CoreTools.Translate("Please enter a valid URL"));
             if (string.IsNullOrWhiteSpace(url)) return;
             source = new ManagerSource(_manager, name.Trim(), new Uri(url.Trim()));
         }

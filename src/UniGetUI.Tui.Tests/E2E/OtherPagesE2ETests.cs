@@ -102,12 +102,27 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
         await OnUi(() => Window.NavigateTo(TuiPageIds.Operations));
         await WaitForTextAsync("Tailspin Slow Sync");
         await EnterPage();
-        await Type("c");
-        await WaitForDialogAsync("Cancel");
-        await Key(K.Enter);
-        await WaitForOperationsToFinishAsync();
-        await WaitForTextAsync("Canceled");
-        NAssert.That(InstalledVersion("Winget", "Tailspin.SlowSync"), Is.EqualTo("3.2.0"));
+        int canceledNotifications = 0;
+        void CountCanceled(TuiNotification n) { if (n.Title == "Operation canceled") Interlocked.Increment(ref canceledNotifications); }
+        TuiNotifications.NotificationRaised += CountCanceled;
+        try
+        {
+            await Type("c");
+            await WaitForDialogAsync("Cancel");
+            await Key(K.Enter);
+            await WaitForOperationsToFinishAsync();
+            await WaitForTextAsync("Canceled");
+            NAssert.That(InstalledVersion("Winget", "Tailspin.SlowSync"), Is.EqualTo("3.2.0"));
+
+            // Cancel() reports Canceled, then the run reports it again when it winds down: still one notification.
+            await Task.Delay(500);
+            await OnUi(() => { });
+            NAssert.That(canceledNotifications, Is.EqualTo(1), "one \"Operation canceled\" notification per run");
+        }
+        finally
+        {
+            TuiNotifications.NotificationRaised -= CountCanceled;
+        }
 
         await Type("r");
         await WaitForOperationsToFinishAsync();
@@ -276,6 +291,30 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
         await Key(K.Enter);
         await WaitForOperationsToFinishAsync();
         await WaitUntilAsync(() => State.Sources.All(s => s.Name != "contoso-private"), "the source to be removed");
+        await Key(K.Escape);
+    }
+
+    [Test]
+    public async Task Managers_NuGetBasedManager_AcceptsAFolderSource()
+    {
+        await ResetAsync(TuiPageIds.Managers);
+        await EnterPage();
+        await FocusFieldAsync("Chocolatey settings");
+        await Key(K.Enter);
+        await WaitForDialogAsync("Chocolatey settings");
+        await WaitForTextAsync("Manage sources", "community");
+        await FocusFieldAsync("Add source");
+        await Key(K.Enter);
+        await ChooseAsync("Other");
+        await WaitForDialogAsync("Add source");
+        await Type("local-feed");
+        await Key(K.Enter);
+        await WaitForDialogAsync("Add source");
+        await WaitForTextAsync("Source URL or folder");
+        await ReplaceTextAsync(@"C:\feeds\nuget");
+        await Key(K.Enter);
+        await WaitForOperationsToFinishAsync();
+        await WaitUntilAsync(() => State.Sources.Any(s => s.Manager == "Chocolatey" && s.Name == "local-feed"), "the folder source");
         await Key(K.Escape);
     }
 

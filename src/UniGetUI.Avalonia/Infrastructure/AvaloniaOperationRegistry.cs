@@ -58,6 +58,7 @@ public static class AvaloniaOperationRegistry
 
         op.OperationStarting += (_, _) =>
         {
+            Interlocked.Exchange(ref _elevationCleanupDone, 0);
             Dispatcher.UIThread.Post(() => ShowOperationProgressNotification(op));
         };
 
@@ -104,6 +105,8 @@ public static class AvaloniaOperationRegistry
         // concurrently with the writer). MainThread() returns the still-running run task here.
         op.OperationFinished += (_, _) =>
         {
+            _ = RunElevationCleanupAsync();
+
             op.MainThread().ContinueWith(
                 _ => RecordOperationHistory(op, StatusStringFor(op.Status)),
                 TaskScheduler.Default);
@@ -289,6 +292,30 @@ public static class AvaloniaOperationRegistry
         }
     }
 
+    private static int _elevationCleanupDone = 1;
+
+    private static async Task RunElevationCleanupAsync()
+    {
+        // Let all remaining operations settle before making decisions
+        await Task.Delay(500);
+
+        if (Operations.Any(o => o.Status is OperationStatus.Running or OperationStatus.InQueue))
+            return;
+
+        if (Interlocked.Exchange(ref _elevationCleanupDone, 1) == 1)
+            return;
+
+        if (Settings.Get(Settings.K.DoCacheAdminRightsForBatches))
+        {
+            Logger.Info("Clearing UAC prompt since there are no remaining operations");
+            await CoreTools.ResetUACForCurrentProcess();
+        }
+        else
+        {
+            await CoreTools.InvalidateUACCacheState();
+        }
+    }
+
     private static async Task RunPostOperationChecksAsync()
     {
         // Let all remaining operations settle before making decisions
@@ -296,20 +323,6 @@ public static class AvaloniaOperationRegistry
 
         bool anyStillRunning = Operations.Any(
             o => o.Status is OperationStatus.Running or OperationStatus.InQueue);
-
-        // Clear UAC cache after the last operation in a batch finishes
-        if (!anyStillRunning)
-        {
-            if (Settings.Get(Settings.K.DoCacheAdminRightsForBatches))
-            {
-                Logger.Info("Clearing UAC prompt since there are no remaining operations");
-                await CoreTools.ResetUACForCurrentProcess();
-            }
-            else
-            {
-                await CoreTools.InvalidateUACCacheState();
-            }
-        }
 
         if (!anyStillRunning)
         {

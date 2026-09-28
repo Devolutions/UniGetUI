@@ -299,10 +299,10 @@ public static class AvaloniaOperationRegistry
         // Let all remaining operations settle before making decisions
         await Task.Delay(500);
 
-bool anyStillRunning = await Dispatcher.UIThread.InvokeAsync(() =>
-    Operations.Any(o => o.Status is OperationStatus.Running or OperationStatus.InQueue));
-if (anyStillRunning)
-    return;
+        bool anyStillRunning = await Dispatcher.UIThread.InvokeAsync(() =>
+            Operations.Any(o => o.Status is OperationStatus.Running or OperationStatus.InQueue));
+        if (anyStillRunning)
+            return;
 
         if (Interlocked.Exchange(ref _elevationCleanupDone, 1) == 1)
             return;

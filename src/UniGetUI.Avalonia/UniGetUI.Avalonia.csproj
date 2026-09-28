@@ -255,6 +255,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\UniGetUI.AgentSkills.Cli\UniGetUI.AgentSkills.Cli.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Data\UniGetUI.Core.Data.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.LanguageEngine\UniGetUI.Core.LanguageEngine.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Logger\UniGetUI.Core.Logging.csproj" />

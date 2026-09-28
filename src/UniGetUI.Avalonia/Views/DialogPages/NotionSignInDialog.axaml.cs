@@ -5,6 +5,7 @@ using Devolutions.AgentSkills;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Managers.SkillsManager;
+using SkillsPackageManager = global::UniGetUI.PackageEngine.Managers.SkillsManager.AgentSkills;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
 
@@ -15,12 +16,12 @@ namespace UniGetUI.Avalonia.Views.DialogPages;
 /// </summary>
 public partial class NotionSignInDialog : ImmersiveDialog
 {
-    private readonly AgentSkills _skills;
+    private readonly SkillsPackageManager _skills;
     private readonly CancellationTokenSource _cancel = new();
     private Uri? _signInPage;
     private bool _waiting;
 
-    public NotionSignInDialog(AgentSkills skills)
+    public NotionSignInDialog(SkillsPackageManager skills)
     {
         _skills = skills;
         InitializeComponent();

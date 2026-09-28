@@ -14,7 +14,14 @@ unigetui app status
 unigetui package search --manager dotnet-tool --query dotnetsay
 unigetui package install --manager dotnet-tool --id dotnetsay --version 2.1.4 --scope Global
 unigetui operation wait --id 123 --timeout 300
+unigetui skills --help
 ```
+
+`unigetui skills [args...]` runs the bundled Agent Skills CLI in the current directory without
+starting the GUI or connecting to the UniGetUI IPC API. For example, `unigetui skills list`
+lists installed agent skills, and `unigetui skills add <source>` installs skills from a source.
+Arguments and exit codes after `skills` belong to that CLI, not to the UniGetUI automation
+commands documented below.
 
 ## Global transport options
 

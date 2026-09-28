@@ -22,6 +22,10 @@ namespace UniGetUI.Tui.Infrastructure;
 internal static class TuiOperationRegistry
 {
     private static readonly List<AbstractOperation> _ops = [];
+
+    // Cancellation sets Status = Canceled from several code paths, so StatusChanged(Canceled) can fire more than once
+    // per run. The operations whose current run already showed its "Operation canceled" notification (UI thread only).
+    private static readonly HashSet<AbstractOperation> _cancelNotified = [];
     private static int _changePosted;
 
     /// <summary>How long a succeeded operation stays listed (Avalonia uses the same 4 s).</summary>
@@ -95,6 +99,7 @@ internal static class TuiOperationRegistry
         op.OperationFinished -= OnOpFinished;
         op.LogLineAdded -= OnOpLogLine;
         _ops.Remove(op);
+        _cancelNotified.Remove(op);
         while (AbstractOperation.OperationQueue.Remove(op)) { }
         RaiseChanged();
     }
@@ -145,6 +150,7 @@ internal static class TuiOperationRegistry
         {
             Dispatcher.UIThread.Post(() =>
             {
+                if (!_cancelNotified.Add(op)) return;
                 if (!Settings.AreErrorNotificationsDisabled() && !Settings.Get(Settings.K.DisableNotifications))
                     TuiNotifications.Warning(CoreTools.Translate("Operation canceled"), TitleOf(op));
             });
@@ -156,6 +162,8 @@ internal static class TuiOperationRegistry
     private static void OnOpStarting(object? sender, EventArgs e)
     {
         if (sender is not AbstractOperation op) return;
+        // A new run (a retry) may be canceled and notified again.
+        Dispatcher.UIThread.Post(() => _cancelNotified.Remove(op));
         if (Settings.AreProgressNotificationsDisabled()) return;
         Dispatcher.UIThread.Post(() => TuiNotifications.Info(TitleOf(op),
             op.Metadata.Status.Length > 0 ? op.Metadata.Status : CoreTools.Translate("Please wait...")));

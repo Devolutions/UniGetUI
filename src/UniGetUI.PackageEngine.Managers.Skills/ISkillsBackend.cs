@@ -50,4 +50,15 @@ internal interface ISkillsBackend
     );
 
     SkillRemoveResult Remove(string skill, IProgress<string>? progress, CancellationToken cancellationToken);
+
+    /// <summary>Whether the Notion CLI, which Notion sources go through, is installed and signed in.</summary>
+    NotionStatus GetNotionStatus(CancellationToken cancellationToken);
+
+    /// <summary>Starts a Notion sign-in: the page to open in the browser, and the code it shows.</summary>
+    NotionSignIn BeginNotionSignIn(CancellationToken cancellationToken);
+
+    /// <summary>Waits for the user to approve the sign-in in the browser.</summary>
+    void CompleteNotionSignIn(CancellationToken cancellationToken);
+
+    void SignOutOfNotion(CancellationToken cancellationToken);
 }

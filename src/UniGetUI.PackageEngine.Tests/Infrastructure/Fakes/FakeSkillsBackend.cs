@@ -65,10 +65,16 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
     )
     {
         ListedSources.Add(source);
+        if (SourceFailures.TryGetValue(source, out var failure))
+            throw failure;
+
         return SourceSkills.TryGetValue(source, out var skills)
             ? skills
             : throw new SkillsException("No valid skills found.");
     }
+
+    /// <summary>Sources whose listing fails, and how.</summary>
+    public Dictionary<string, SkillsException> SourceFailures { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public SkillInstallResult Install(
         string source,
@@ -131,6 +137,24 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
         Removed.Add(skill);
         return new SkillRemoveResult([new SkillRemoveOutcome(skill, RemoveStatus)]);
     }
+
+    public NotionStatus NotionStatus { get; set; } = new(NotionCliState.SignedIn, "0.23.10", "Contoso", null);
+
+    public int NotionSignIns { get; private set; }
+
+    public NotionStatus GetNotionStatus(CancellationToken cancellationToken) => NotionStatus;
+
+    public NotionSignIn BeginNotionSignIn(CancellationToken cancellationToken) =>
+        new(new Uri("https://app.notion.com/workers/cli-login?verificationCode=K7Q-2MX"), "K7Q-2MX");
+
+    public void CompleteNotionSignIn(CancellationToken cancellationToken)
+    {
+        NotionSignIns++;
+        NotionStatus = new(NotionCliState.SignedIn, "0.23.10", "Contoso", null);
+    }
+
+    public void SignOutOfNotion(CancellationToken cancellationToken) =>
+        NotionStatus = new(NotionCliState.SignedOut, "0.23.10", null, null);
 
     public static InstalledSkillInfo TrackedSkill(string name, string source, string hash) =>
         new()

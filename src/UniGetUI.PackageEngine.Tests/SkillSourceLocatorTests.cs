@@ -80,6 +80,49 @@ public sealed class SkillSourceLocatorTests
     }
 
     [Theory]
+    [InlineData("https://app.notion.com/p/1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d?v=6f7a8b9c0d1e4f2a8b3c4d5e6f7a8b9c&source=copy_link")]
+    [InlineData("https://www.notion.so/contoso/Team-skills-1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d?v=1")]
+    [InlineData("https://notion.so/1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d")]
+    [InlineData("https://contoso.notion.site/Team-skills-1A2B3C4D5E6F4A7B8C9D0E1F2A3B4C5D")]
+    public void NotionDatabasesAreKeptAsTheirAppAddress(string input)
+    {
+        var source = SkillSourceLocator.Parse(input)!;
+
+        Assert.Equal(SkillSourceKind.Notion, source.Kind);
+        Assert.Equal("app.notion.com/p/1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d", source.Name);
+        Assert.Equal("https://app.notion.com/p/1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d", source.InstallSource);
+        Assert.Equal(source, SkillSourceLocator.Parse(source.InstallSource));
+    }
+
+    [Theory]
+    [InlineData("http://app.notion.com/p/1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d")]
+    [InlineData("https://user@app.notion.com/p/1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d")]
+    [InlineData("https://app.notion.com/p/not-a-page")]
+    [InlineData("https://www.notion.so/")]
+    public void NotionAddressesNeedHttpsAndAPageId(string input)
+    {
+        Assert.Null(SkillSourceLocator.Parse(input));
+    }
+
+    [Fact]
+    public void ANotionSkillComesFromItsDatabase()
+    {
+        var installed = new InstalledSkillInfo
+        {
+            Name = "tone-reviewer",
+            Description = "",
+            Path = "/home/test/.agents/skills/tone-reviewer",
+            Scope = SkillScope.Global,
+            Agents = [],
+            Source = "https://app.notion.com/p/1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d",
+            SourceType = "notion",
+            SourceUrl = "https://app.notion.com/p/4d5e6f7a8b9c4d0e9f1a3b4c5d6e7f80",
+        };
+
+        Assert.Equal("app.notion.com/p/1a2b3c4d5e6f4a7b8c9d0e1f2a3b4c5d", SkillSourceLocator.ForInstalled(installed)?.Name);
+    }
+
+    [Theory]
     [InlineData("skills.sh")]
     [InlineData("https://skills.sh/")]
     public void SkillsShIsTheCatalog(string input)

@@ -49,8 +49,6 @@ public static class AvaloniaOperationRegistry
 
         Dispatcher.UIThread.Post(() =>
         {
-            _elevationCleanupDone = false;
-
             if (!Operations.Contains(op))
             {
                 Operations.Add(op);
@@ -60,11 +58,7 @@ public static class AvaloniaOperationRegistry
 
         op.OperationStarting += (_, _) =>
         {
-            Dispatcher.UIThread.Post(() =>
-            {
-                _elevationCleanupDone = false;
-                ShowOperationProgressNotification(op);
-            });
+            Dispatcher.UIThread.Post(() => ShowOperationProgressNotification(op));
         };
 
         op.OperationSucceeded += (_, _) =>
@@ -297,36 +291,27 @@ public static class AvaloniaOperationRegistry
         }
     }
 
-    private static bool _elevationCleanupDone = true;
-
     private static async Task RunElevationCleanupAsync()
     {
         // Let all remaining operations settle before making decisions
         await Task.Delay(500);
 
-        bool claimed = await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            if (_elevationCleanupDone)
-                return false;
+        long generation = await Dispatcher.UIThread.InvokeAsync(() =>
+            Operations.Any(o => o.Status is OperationStatus.Running or OperationStatus.InQueue)
+                ? -1L
+                : CoreTools.UACCacheGeneration);
 
-            if (Operations.Any(o => o.Status is OperationStatus.Running or OperationStatus.InQueue))
-                return false;
-
-            _elevationCleanupDone = true;
-            return true;
-        });
-
-        if (!claimed)
+        if (generation < 0)
             return;
 
         if (Settings.Get(Settings.K.DoCacheAdminRightsForBatches))
         {
-            Logger.Info("Clearing UAC prompt since there are no remaining operations");
-            await CoreTools.ResetUACForCurrentProcess();
+            if (await CoreTools.ResetUACForCurrentProcess(generation))
+                Logger.Info("Clearing UAC prompt since there are no remaining operations");
         }
         else
         {
-            await CoreTools.InvalidateUACCacheState();
+            await CoreTools.InvalidateUACCacheState(generation);
         }
     }
 

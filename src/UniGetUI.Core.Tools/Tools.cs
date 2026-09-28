@@ -1,4 +1,4 @@
-using System.Buffers;
+﻿using System.Buffers;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.ComponentModel;
@@ -874,6 +874,10 @@ namespace UniGetUI.Core.Tools
 
         private static bool _uacCacheHeld;
 
+        private static long _uacCacheGeneration;
+
+        public static long UACCacheGeneration => Interlocked.Read(ref _uacCacheGeneration);
+
         public static async Task CacheUACForCurrentProcess()
         {
             if (Settings.Get(Settings.K.ProhibitElevation))
@@ -945,8 +949,8 @@ namespace UniGetUI.Core.Tools
 
                 if (p.ExitCode == 0)
                 {
-                    if (isSessionCache)
-                        _uacCacheHeld = true;
+                    _uacCacheHeld = true;
+                    Interlocked.Increment(ref _uacCacheGeneration);
 
                     Logger.Info(
                         $"The elevator cached administrator rights for process id {Environment.ProcessId}"
@@ -980,12 +984,18 @@ namespace UniGetUI.Core.Tools
         /// that needs elevation will ask the elevator again; that request is free and silent
         /// when the session is still alive, and re-establishes it when it is not.
         /// </summary>
-        public static async Task InvalidateUACCacheState()
+        public static async Task<bool> InvalidateUACCacheState(long? expectedGeneration = null)
         {
             await _uacCacheLock.WaitAsync();
             try
             {
+                if (expectedGeneration is long expected
+                    && (expected != _uacCacheGeneration || !_uacCacheHeld))
+                    return false;
+
                 _uacCacheHeld = false;
+                Interlocked.Increment(ref _uacCacheGeneration);
+                return true;
             }
             finally
             {
@@ -996,26 +1006,22 @@ namespace UniGetUI.Core.Tools
         /// <summary>
         /// Reset UAC cache for the current process
         /// </summary>
-        public static async Task ResetUACForCurrentProcess()
+        public static async Task<bool> ResetUACForCurrentProcess(long? expectedGeneration = null)
         {
             if (Settings.Get(Settings.K.ProhibitElevation))
             {
                 Logger.Error(
                     "Elevation is prohibited, ResetUACForCurrentProcess() call will be ignored"
                 );
-                return;
+                return false;
             }
-
-            Logger.Info(
-                "Resetting administrator rights cache for process id " + Environment.ProcessId
-            );
 
             var elevatorName = Path.GetFileName(CoreData.ElevatorPath);
 
             // pkexec prompts on every invocation and has no caching protocol.
             if (elevatorName == "pkexec")
             {
-                return;
+                return false;
             }
 
             // sudo: -K removes all cached timestamps.
@@ -1027,7 +1033,16 @@ namespace UniGetUI.Core.Tools
             await _uacCacheLock.WaitAsync();
             try
             {
+                if (expectedGeneration is long expected
+                    && (expected != _uacCacheGeneration || !_uacCacheHeld))
+                    return false;
+
                 _uacCacheHeld = false;
+                Interlocked.Increment(ref _uacCacheGeneration);
+
+                Logger.Info(
+                    "Resetting administrator rights cache for process id " + Environment.ProcessId
+                );
 
                 using Process p = new()
                 {
@@ -1068,11 +1083,14 @@ namespace UniGetUI.Core.Tools
                     if (output.Length > 0)
                         Logger.Warn(output);
                 }
+
+                return true;
             }
             catch (Exception ex)
             {
                 Logger.Error("Failed to release the administrator rights cache");
                 Logger.Error(ex);
+                return true;
             }
             finally
             {

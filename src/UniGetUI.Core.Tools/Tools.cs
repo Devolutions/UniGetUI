@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.ComponentModel;

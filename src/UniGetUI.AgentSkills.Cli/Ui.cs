@@ -1,4 +1,4 @@
-// A port of the subset of @clack/prompts used by the CLI: intro/outro, cancel,
+// Terminal prompts used by the CLI: intro/outro, cancel,
 // log.*, note, spinner, select, confirm and multiselect.
 //
 // Output formatting follows clack 1.x. Interactive prompts read keys with
@@ -91,7 +91,7 @@ internal static partial class Ui
         || (code >= 0xfe10 && code <= 0xfe19) || (code >= 0xfe30 && code <= 0xfe6f) || (code >= 0xff00 && code <= 0xff60)
         || (code >= 0xffe0 && code <= 0xffe6) || (code >= 0x1f000 && code <= 0x1f9ff);
 
-    /// Approximate display width of plain text (same table as search-multiselect.ts).
+    /// Approximate display width of plain text.
     public static int ApproxStringWidth(string plain)
     {
         var w = 0;

@@ -4,7 +4,7 @@ using UniGetUI.PackageEngine.Managers.SkillsManager;
 namespace UniGetUI.PackageEngine.Tests.Infrastructure.Fakes;
 
 /// <summary>
-/// Stands in for the Devolutions.AgentSkills library in the Agent Skills manager tests, recording
+/// Stands in for the bundled Agent Skills library in the manager tests, recording
 /// what the manager asks of it.
 /// </summary>
 internal sealed class FakeSkillsBackend : ISkillsBackend
@@ -19,8 +19,6 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
 
     public List<InstalledSkillInfo> Installed { get; } = [];
 
-    public List<SkillSearchResult> SearchResults { get; } = [];
-
     public Dictionary<string, IReadOnlyList<AvailableSkill>> SourceSkills { get; } =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -29,8 +27,6 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
     public SkillOperationStatus InstallStatus { get; set; } = SkillOperationStatus.Succeeded;
 
     public SkillOperationStatus RemoveStatus { get; set; } = SkillOperationStatus.Succeeded;
-
-    public int SearchCalls { get; private set; }
 
     public List<string> ListedSources { get; } = [];
 
@@ -47,16 +43,6 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
 
     public IReadOnlyList<InstalledSkillInfo> GetInstalledSkills(CancellationToken cancellationToken) =>
         Installed;
-
-    public IReadOnlyList<SkillSearchResult> Search(
-        string query,
-        int limit,
-        CancellationToken cancellationToken
-    )
-    {
-        SearchCalls++;
-        return SearchResults;
-    }
 
     public IReadOnlyList<AvailableSkill> GetAvailableSkills(
         string source,

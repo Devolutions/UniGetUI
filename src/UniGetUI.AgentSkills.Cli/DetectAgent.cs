@@ -1,5 +1,4 @@
-// Detect whether the CLI runs inside an AI agent (port of detect-agent.ts,
-// including the @vercel/detect-agent 1.2.3 heuristics it wraps).
+// Detect whether the CLI runs inside an AI agent.
 
 namespace Skills;
 
@@ -11,7 +10,7 @@ internal sealed record AgentResult(string? Agent)
 
 internal static class DetectAgent
 {
-    /// `determineAgent()` from @vercel/detect-agent.
+    /// Determine the current agent from environment signals.
     private static string? DetermineAgent()
     {
         if (Sys.Env("AI_AGENT") is { } raw)
@@ -39,11 +38,10 @@ internal static class DetectAgent
     {
         var agent = DetermineAgent();
         if (agent is "cursor" or "cursor-cli") agent = StrongCursorSignal() ? "cursor-cli" : null;
-        if (agent != null) Telemetry.SetDetectedAgent(agent);
         return new AgentResult(agent);
     });
 
-    /// Cached detection; also records the agent name for telemetry.
+    /// Cached detection.
     public static AgentResult Detect() => Cached.Value;
 
     public static bool IsRunningInAgent() => Detect().IsAgent;

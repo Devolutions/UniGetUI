@@ -1,4 +1,4 @@
-// Skill discovery and SKILL.md parsing (port of skills.ts).
+// Skill discovery and SKILL.md parsing.
 
 using System.Text;
 using System.Text.Json.Nodes;

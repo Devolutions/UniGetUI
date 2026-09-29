@@ -1,5 +1,5 @@
 // `skills use` — generate a prompt for one skill, or launch an agent with it
-// (port of use.ts).
+// from a source.
 
 using System.Text;
 
@@ -103,7 +103,7 @@ internal static class UseCommand
     private static string SupportedList => string.Join(", ", SupportedUseAgents.Select(x => x.Agent));
 
     private static string Help() =>
-        $"Usage: skills use <source>[@<skill>] [options]\n\nGenerate a prompt for using one skill without installing it.\n\nOptions:\n  -s, --skill <skill>   Select the skill to use\n  -a, --agent <agent>   Start one supported agent interactively ({SupportedList})\n  --full-depth          Search nested directories like skills add --full-depth\n  -h, --help            Show this help message\n\nExamples:\n  skills use vercel-labs/agent-skills@web-design-guidelines | claude\n  skills use vercel-labs/agent-skills --skill web-design-guidelines --agent claude-code\n  skills use vercel-labs/agent-skills@web-design-guidelines --agent codex";
+        $"Usage: skills use <source>[@<skill>] [options]\n\nGenerate a prompt for using one skill without installing it.\n\nOptions:\n  -s, --skill <skill>   Select the skill to use\n  -a, --agent <agent>   Start one supported agent interactively ({SupportedList})\n  --full-depth          Search nested directories like skills add --full-depth\n  -h, --help            Show this help message\n\nExamples:\n  skills use ./my-skills@sample-skill | claude\n  skills use ./my-skills --skill sample-skill --agent claude-code\n  skills use ./my-skills@sample-skill --agent codex";
 
     private static string UnsupportedAgentError(string a) =>
         $"Running {Agents.Get(a).DisplayName} is not supported yet.\nSupported agents for skills use --agent: {SupportedList}";
@@ -314,7 +314,7 @@ internal static class UseCommand
                 {
                     BlobInstallResult? blob = null;
                     if (parsed.Kind == "github" && !fullDepth && SourceParser.GetOwnerRepo(parsed) is { } or
-                        && InstallRecords.BlobAllowedOwners.Contains(or.Split('/')[0].ToLowerInvariant()))
+                        && InstallRecords.IsBlobEligible(or))
                         blob = Blob.TryBlobInstall(or, new BlobOptions(parsed.Subpath, selector, parsed.Ref, true, includeInternal));
                     if (blob != null)
                     {

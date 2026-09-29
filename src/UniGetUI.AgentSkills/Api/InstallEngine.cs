@@ -1,5 +1,5 @@
 // Non-interactive install pipeline behind the public API: the `skills add`
-// flow (add.ts) without prompts, terminal output or process exit. Source
+// flow without prompts, terminal output or process exit. Source
 // resolution, installation and lock-file records reuse the CLI's core, so a
 // skill installed here is indistinguishable from `skills add -y`.
 
@@ -274,7 +274,6 @@ internal static class InstallEngine
 
         var okNames = attempts.Where(a => a.R.Success).Select(a => a.Skill).ToHashSet();
         var skillFiles = InstallRecords.ComputeSkillFiles(selected, src.Blob, src.TempDir);
-        TrackInstall(parsed, src.DirectDownload, selected, targetAgents, global, skillFiles);
         var eveSubagents = targetAgents.Contains("eve") ? eveTargets.Select(s => s ?? "").ToList() : null;
         var hashes = InstallRecords.RecordInstalledSkills(parsed, src.DirectDownload, src.Blob, src.TempDir, selected, skillFiles, okNames,
             global, true, eveSubagents, cwd);
@@ -328,7 +327,6 @@ internal static class InstallEngine
         foreach (var a in attempts.Where(a => a.R.Success))
             if (!installedDirs.ContainsKey(a.Skill)) installedDirs[a.Skill] = !string.IsNullOrEmpty(a.R.CanonicalPath) ? a.R.CanonicalPath : a.R.Path;
         InstallRecords.RecordWellKnownSkills(url, selected.Where(s => okNames.Contains(s.InstallName)), installedDirs, global, cwd);
-        TrackWellKnownInstall(url, selected, targetAgents, global);
 
         foreach (var s in selected)
             outcomes.Add(Outcome(s.InstallName, attempts.Where(a => a.Skill == s.InstallName).ToList(), request.Scope, mode, WellKnown.ComputeSkillDigest(s)));
@@ -352,38 +350,4 @@ internal static class InstallEngine
         };
     }
 
-    /// The CLI's install event, only when the host opted into telemetry.
-    private static void TrackInstall(ParsedSource parsed, bool directDownload, List<Skill> selected, List<string> targetAgents, bool global, System.Text.Json.Nodes.JsonObject skillFiles)
-    {
-        if (!Telemetry.Enabled || InstallRecords.GetLockSources(parsed, directDownload).Normalized is not { } normalized) return;
-        var ownerRepo = SourceParser.ParseOwnerRepo(normalized);
-        bool? isPrivate = parsed.Kind == "github" && ownerRepo is var (o, r) ? SourceParser.IsRepoPrivate(o, r) : null;
-        if (ownerRepo != null && isPrivate != false) return;
-        Telemetry.Track(
-            ("event", "install"),
-            ("source", normalized),
-            ("skills", string.Join(",", selected.Select(s => s.Name))),
-            ("agents", string.Join(",", targetAgents)),
-            ("global", global ? "1" : null),
-            ("skillFiles", Json.Stringify(skillFiles, 0)));
-    }
-
-    private static void TrackWellKnownInstall(string url, List<WellKnownSkill> selected, List<string> targetAgents, bool global)
-    {
-        if (!Telemetry.Enabled) return;
-        var sourceIdentifier = WellKnown.GetSourceIdentifier(url);
-        var isPrivate = SourceParser.ParseOwnerRepo(sourceIdentifier) is var (o, r) ? SourceParser.IsRepoPrivate(o, r) : false;
-        if (isPrivate == true) return;
-        var skillFiles = new System.Text.Json.Nodes.JsonObject();
-        foreach (var s in selected) skillFiles[s.InstallName] = s.SourceUrl;
-        Telemetry.Track(
-            ("event", "install"),
-            ("source", sourceIdentifier),
-            ("skills", string.Join(",", selected.Select(s => s.InstallName))),
-            ("agents", string.Join(",", targetAgents)),
-            ("global", global ? "1" : null),
-            ("skillFiles", Json.Stringify(skillFiles, 0)),
-            ("installUrl", url),
-            ("sourceType", "well-known"));
-    }
 }

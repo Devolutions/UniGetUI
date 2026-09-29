@@ -37,8 +37,6 @@ internal sealed class SkillsPkgDetailsHelper : BasePkgDetailsHelper
                 details.Author = owner;
             }
 
-            if (_skills.GetCatalogPage(source, details.Package.Id) is { } catalogPage)
-                details.ManifestUrl = catalogPage;
         }
 
         if (FindInstalled(details.Package) is { } installed)

@@ -1,4 +1,4 @@
-// Build `skills add` source arguments for updates (port of update-source.ts).
+// Build `skills add` source arguments for updates.
 
 using System.Text.Json.Nodes;
 
@@ -91,7 +91,7 @@ internal sealed record DiscoveredSkillLocation(string Name, string SkillPath);
 
 internal sealed record SkillLocationResolution(List<string> DeletedSkills, List<string> AmbiguousSkills, Dictionary<string, string> ResolvedPaths);
 
-/// Resolve locked skills against their current locations (port of skill-relocation.ts).
+/// Resolve locked skills against their current locations.
 internal static class SkillRelocation
 {
     private static string NormalizePath(string p)

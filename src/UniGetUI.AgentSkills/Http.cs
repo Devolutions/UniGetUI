@@ -118,7 +118,7 @@ internal sealed class HttpRequest(string url)
         foreach (var h in resp.Headers) headers[h.Key.ToLowerInvariant()] = string.Join(", ", h.Value);
         foreach (var h in resp.Content.Headers) headers[h.Key.ToLowerInvariant()] = string.Join(", ", h.Value);
 
-        // Error statuses are reported before size limits (the TS download checks
+        // Error statuses are reported before size limits (download checks
         // `response.ok` first); for size-limited requests their bodies are skipped.
         var ok = status is >= 200 and < 300;
         var max = ok ? _maxBytes : null;

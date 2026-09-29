@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Skills;
 
 namespace Devolutions.AgentSkills;
@@ -19,12 +18,6 @@ public sealed class SkillsManagerOptions
     public string? GitHubToken { get; init; }
 
     /// <summary>
-    /// Send the skills CLI's anonymous install and remove events to skills.sh (they feed its install counts).
-    /// Off by default. <c>DISABLE_TELEMETRY</c> and <c>DO_NOT_TRACK</c> still turn it off.
-    /// </summary>
-    public bool EnableTelemetry { get; init; }
-
-    /// <summary>
     /// The Notion CLI (<c>ntn</c>) that Notion sources and sign-in run, for hosts that install it where <c>PATH</c> does
     /// not reach yet. Defaults to <c>ntn</c> on <c>PATH</c>.
     /// </summary>
@@ -38,17 +31,16 @@ public sealed class SkillsManagerOptions
 }
 
 /// <summary>
-/// Installs, lists, updates and removes agent skills. Compatible with the <c>skills</c> CLI
-/// (<see href="https://github.com/vercel-labs/skills">vercel-labs/skills</see>): the same install locations,
-/// <c>~/.agents/.skill-lock.json</c> and <c>skills-lock.json</c> lock files, and sources.
+/// Installs, lists, updates and removes agent skills using the same install locations
+/// and <c>~/.agents/.skill-lock.json</c> and <c>skills-lock.json</c> lock files as the CLI.
 /// </summary>
 /// <remarks>
 /// Methods are synchronous and may block on the network, <c>git</c> and the file system; call them off the UI
 /// thread, or use the <c>Async</c> variants, which run them on the thread pool. Cancellation stops between steps,
 /// aborts HTTP requests and kills a running <c>git</c>. Instances are thread-safe. Cloning needs <c>git</c> on
-/// <c>PATH</c>; sources served from skills.sh or GitHub's API may not.
+/// <c>PATH</c>; direct downloads and supported external providers may not.
 /// </remarks>
-public sealed partial class SkillsManager
+public sealed class SkillsManager
 {
     private readonly SkillsManagerOptions _options;
     private readonly string? _home;
@@ -80,7 +72,6 @@ public sealed partial class SkillsManager
             Home = _home,
             Env = _env,
             Warn = log,
-            Telemetry = _options.EnableTelemetry,
             Cancel = cancellationToken,
             NotionCli = _options.NotionCliPath,
             NotionRunner = _options.NotionRunner,
@@ -107,30 +98,6 @@ public sealed partial class SkillsManager
     /// <inheritdoc cref="GetInstalledSkills"/>
     public Task<IReadOnlyList<InstalledSkillInfo>> GetInstalledSkillsAsync(SkillScope? scope = null, CancellationToken cancellationToken = default) =>
         Task.Run(() => GetInstalledSkills(scope, cancellationToken), cancellationToken);
-
-    // ─── Search ───
-
-    [GeneratedRegex("^[a-z0-9](?:[a-z0-9-]{0,38})$", RegexOptions.IgnoreCase)]
-    private static partial Regex OwnerRe();
-
-    /// <summary>Search skills.sh. Results are sorted by install count; a network failure returns an empty list.</summary>
-    /// <param name="query">Search text.</param>
-    /// <param name="owner">Only return skills from this GitHub owner.</param>
-    /// <param name="limit">Maximum number of results.</param>
-    /// <param name="cancellationToken">Cancels the request.</param>
-    public IReadOnlyList<SkillSearchResult> Search(string query, string? owner = null, int limit = 20, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
-        var o = owner?.Trim().ToLowerInvariant();
-        if (o != null && !OwnerRe().IsMatch(o)) throw new ArgumentException("Not a valid GitHub owner.", nameof(owner));
-        return Run(_ => SearchApi.Search(query, o, limit)
-            .Select(s => new SkillSearchResult(s.Name, s.Slug, s.Source, (long)s.Installs)).ToList(), null, cancellationToken);
-    }
-
-    /// <inheritdoc cref="Search"/>
-    public Task<IReadOnlyList<SkillSearchResult>> SearchAsync(string query, string? owner = null, int limit = 20, CancellationToken cancellationToken = default) =>
-        Task.Run(() => Search(query, owner, limit, cancellationToken), cancellationToken);
 
     // ─── Sources ───
 

@@ -1,4 +1,4 @@
-// `skills list` (port of list.ts).
+// `skills list`.
 
 using System.Text.Json.Nodes;
 using static Skills.Ansi;
@@ -14,7 +14,7 @@ internal sealed class ListOptions
 
 internal static class ListCommand
 {
-    /// Shorten a path for display (note: plain prefix checks, as in list.ts).
+    /// Shorten a path for display with plain prefix checks.
     private static string ShortenPath(string full, string cwd)
     {
         var home = Sys.HomeDir();

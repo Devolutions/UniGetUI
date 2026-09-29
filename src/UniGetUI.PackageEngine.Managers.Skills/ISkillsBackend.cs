@@ -3,7 +3,7 @@ using Devolutions.AgentSkills;
 namespace UniGetUI.PackageEngine.Managers.SkillsManager;
 
 /// <summary>
-/// The part of the Devolutions.AgentSkills library the manager uses, always in the user (global)
+/// The part of the bundled Agent Skills library the manager uses, always in the user (global)
 /// scope. Tests replace it with a fake.
 /// </summary>
 internal interface ISkillsBackend
@@ -15,9 +15,6 @@ internal interface ISkillsBackend
     IReadOnlyList<AgentInfo> GetAgents();
 
     IReadOnlyList<InstalledSkillInfo> GetInstalledSkills(CancellationToken cancellationToken);
-
-    /// <summary>Searches the skills.sh catalog.</summary>
-    IReadOnlyList<SkillSearchResult> Search(string query, int limit, CancellationToken cancellationToken);
 
     /// <summary>The skills a repository or a well-known index offers.</summary>
     IReadOnlyList<AvailableSkill> GetAvailableSkills(

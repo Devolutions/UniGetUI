@@ -22,9 +22,6 @@ internal sealed class SysContext
     /// Receives non-fatal warnings (skipped SKILL.md files, broken symlinks).
     public Action<string>? Warn { get; init; }
 
-    /// Whether anonymous telemetry may be sent from this call.
-    public bool Telemetry { get; init; }
-
     public CancellationToken Cancel { get; init; }
 
     /// The Notion CLI to run for Notion sources; `ntn` on PATH when null.
@@ -90,7 +87,6 @@ internal static class Sys
             Home = c?.Home,
             Env = env,
             Warn = c?.Warn,
-            Telemetry = c?.Telemetry ?? false,
             Cancel = c?.Cancel ?? CancellationToken.None,
         });
     }

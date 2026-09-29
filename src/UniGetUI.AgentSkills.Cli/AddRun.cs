@@ -1,4 +1,4 @@
-// `skills add` main flow (port of add.ts runAdd).
+// `skills add` main flow.
 
 using System.Text.Json.Nodes;
 
@@ -126,7 +126,7 @@ internal static partial class AddCommand
             Term.OutLine($"    {Pc.Cyan("skills add")} {Pc.Yellow("<source>")} {Pc.Dim("[options]")}");
             Term.OutLine();
             Term.OutLine(Pc.Dim("  Example:"));
-            Term.OutLine($"    {Pc.Cyan("skills add")} {Pc.Yellow("vercel-labs/agent-skills")}");
+            Term.OutLine($"    {Pc.Cyan("skills add")} {Pc.Yellow("./my-skills")}");
             Term.OutLine();
             ctx.Exit(1, "Missing required argument: source");
         }
@@ -230,11 +230,6 @@ internal static partial class AddCommand
               + (parsed.SkillFilter != null ? $" {Pc.Dim("@")}{Pc.Cyan(parsed.SkillFilter)}" : ""));
         if (pinError != null) throw new AddFailure(pinError);
         var pinned = options.Pin != null;
-
-        var ownerRepoRaw = parsed.Kind is "well-known" or "download" ? null : SourceParser.GetOwnerRepo(parsed);
-        var privacy = parsed.Kind == "github" && ownerRepoRaw != null && SourceParser.ParseOwnerRepo(ownerRepoRaw) is var (po, pr)
-            ? Task.Run(() => SourceParser.IsRepoPrivate(po, pr))
-            : Task.FromResult<bool?>(null);
 
         if (parsed.Kind == "well-known")
         {
@@ -420,13 +415,6 @@ internal static partial class AddCommand
             selected = idx.Select(i => skills[i]).ToList();
         }
 
-        // Security audit only after GitHub positively confirmed the repo is public.
-        var ownerRepoForAudit = SourceParser.GetOwnerRepo(parsed);
-        var selectedNames = selected.Select(SkillDiscovery.DisplayName).ToList();
-        var audit = ownerRepoForAudit != null
-            ? Task.Run(() => privacy.Result == false ? Telemetry.FetchAuditData(ownerRepoForAudit, selectedNames) : null)
-            : Task.FromResult<JsonObject?>(null);
-
         List<string> targetAgents;
         if (IsWildcard(options.Agent))
         {
@@ -585,13 +573,6 @@ internal static partial class AddCommand
         Term.OutLine();
         Ui.Note(string.Join("\n", summary), "Installation Summary");
 
-        var auditData = audit.Result;
-        if (auditData != null && ownerRepoForAudit != null)
-        {
-            var lines = BuildSecurityLines(auditData, selectedNames, ownerRepoForAudit);
-            if (lines.Count > 0) Ui.Note(string.Join("\n", lines), "Security Risk Assessments");
-        }
-
         if (!options.Yes && Ui.Confirm("Proceed with installation?") != true) ctx.Cancelled();
 
         spinner.Start("Installing skills…");
@@ -625,21 +606,6 @@ internal static partial class AddCommand
 
         var normalizedSource = InstallRecords.GetLockSources(parsed, directDownload).Normalized;
 
-        if (normalizedSource != null)
-        {
-            if (SourceParser.ParseOwnerRepo(normalizedSource) == null || privacy.Result == false)
-            {
-                Telemetry.Track(
-                    ("event", "install"),
-                    ("source", normalizedSource),
-                    ("skills", string.Join(",", selected.Select(s => s.Name))),
-                    ("agents", string.Join(",", targetAgents)),
-                    ("global", installGlobally ? "1" : null),
-                    ("skillFiles", Json.Stringify(skillFiles, 0)),
-                    ("metadata", options.Metadata));
-            }
-        }
-
         var eveSubagents = targetAgents.Contains("eve") ? eveTargets.Select(s => s ?? "").ToList() : null;
         var hashes = InstallRecords.RecordInstalledSkills(parsed, directDownload, blobResult, tempDir, selected, skillFiles, okNames,
             installGlobally, jsonMode, eveSubagents, cwd, pinned);
@@ -670,7 +636,6 @@ internal static partial class AddCommand
                 o["scope"] = installGlobally ? "global" : "project";
                 o["agents"] = new JsonArray(rs.Where(r => !r.R.Skipped).Select(r => (JsonNode?)r.Agent).ToArray());
                 o["mode"] = Installer.ModeName(rs.Count > 0 ? rs[0].R.Mode : mode);
-                o["security"] = BuildJsonSecurity(auditData, name, ownerRepoForAudit);
                 JsonPush(o);
             }
             EmitJson();
@@ -686,7 +651,6 @@ internal static partial class AddCommand
         Term.OutLine();
         Ui.Outro(DoneOutro());
         ctx.Cleanup();
-        PromptForFindSkills(options, targetAgents);
     }
 
     private static void PrintInstalledNote(List<AddResult> successful, List<string> targetAgents, string cwd)
@@ -750,45 +714,6 @@ internal static partial class AddCommand
         }
     }
 
-    /// One-time prompt to install the find-skills skill after an install.
-    private static void PromptForFindSkills(AddOptions options, List<string> targetAgents)
-    {
-        if (!Term.StdinIsTty() || options.Yes) return;
-        if (SkillLock.IsPromptDismissed("findSkillsPrompt")) return;
-        static void Dismiss()
-        {
-            try
-            {
-                SkillLock.DismissPrompt("findSkillsPrompt");
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-            {
-                // best effort
-            }
-        }
-        if (Installer.IsSkillInstalled("find-skills", "claude-code", true))
-        {
-            Dismiss();
-            return;
-        }
-        Term.OutLine();
-        Ui.Log.Message(Pc.Dim("One-time prompt - you won't be asked again if you dismiss."));
-        var answer = Ui.Confirm($"Install the {Pc.Cyan("find-skills")} skill? It helps your agent discover and suggest skills.");
-        Dismiss();
-        if (answer == true)
-        {
-            var agents = targetAgents.Where(a => a != "replit").ToList();
-            if (agents.Count == 0) return;
-            Term.OutLine();
-            Ui.Log.Step("Installing find-skills skill…");
-            Run(["vercel-labs/skills"], new AddOptions { Skill = ["find-skills"], Global = true, Yes = true, Agent = agents });
-        }
-        else if (answer == false)
-        {
-            Ui.Log.Message(Pc.Dim("You can install it later with: skills add vercel-labs/skills@find-skills"));
-        }
-    }
-
     /// The ref to install for `--pin <pin>`: the pin itself, or the newest
     /// release tag for `--pin latest`.
     /// <exception cref="AddFailure">An invalid pin or a failed release lookup.</exception>
@@ -841,12 +766,6 @@ internal static partial class AddCommand
                     break;
                 case "-s" or "--skill":
                     Collect(o.Skill ??= []);
-                    break;
-                case "--metadata":
-                    i++;
-                    if (i >= args.Count) errors.Add("--metadata requires a JSON value");
-                    else if (Json.TryParse(args[i], out _)) o.Metadata = args[i];
-                    else errors.Add("--metadata must be valid JSON");
                     break;
                 case "--pin":
                     if (i + 1 < args.Count && args[i + 1].Length > 0 && !args[i + 1].StartsWith('-')) o.Pin = args[++i];

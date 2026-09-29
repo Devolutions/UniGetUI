@@ -65,6 +65,14 @@ public static class BrokerRequestBuilder
                 );
         }
 
+        List<string> customParameters = GetCustomParameters(options, role);
+        if (
+            manager is ManagerName.PowerShell
+            && role is OperationType.Install
+            && package.OverridenOptions.PowerShell_AllowClobber
+        )
+            customParameters = [.. customParameters, "-AllowClobber"];
+
         return new PackageOperationRequest
         {
             RequestId = BrokerClient.GenerateRequestId(),
@@ -93,7 +101,7 @@ public static class BrokerRequestBuilder
                 Interactive = options.InteractiveInstallation,
                 SkipHashCheck = options.SkipHashCheck,
                 PreRelease = options.PreRelease,
-                CustomParameters = GetCustomParameters(options, role),
+                CustomParameters = customParameters,
                 CustomInstallLocation = NullIfEmpty(effectiveInstallLocation),
                 // Kill/pre/post actions are owned by the broker for brokered operations:
                 // they are sent in the request (and skipped locally) so that policy is

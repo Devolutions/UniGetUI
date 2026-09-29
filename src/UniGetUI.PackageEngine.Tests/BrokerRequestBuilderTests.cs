@@ -16,6 +16,12 @@ public class BrokerRequestBuilderTests
             .WithId("Contoso.Test")
             .Build();
 
+    private static UniGetUI.PackageEngine.PackageClasses.Package BuildPowerShellPackage()
+        => new PackageBuilder()
+            .WithManager(new PackageManagerBuilder().WithName("PowerShell").Build())
+            .WithId("PowerShellGet")
+            .Build();
+
     [Theory]
     [InlineData(OperationType.Install, Operation.Install)]
     [InlineData(OperationType.Update, Operation.Update)]
@@ -109,6 +115,46 @@ public class BrokerRequestBuilderTests
 
         Assert.Null(request.Options.Scope);
         Assert.Null(request.Package.Architecture);
+    }
+
+    [Fact]
+    public void Build_AllowClobberRetry_AddsTheParameterForPowerShell5Installs()
+    {
+        var package = BuildPowerShellPackage();
+        package.OverridenOptions.PowerShell_AllowClobber = true;
+
+        var request = BrokerRequestBuilder.Build(
+            package,
+            new InstallOptions { CustomParameters_Install = ["-Proxy", "http://proxy"] },
+            OperationType.Install
+        );
+
+        Assert.Equal(["-Proxy", "http://proxy", "-AllowClobber"], request.Options.CustomParameters);
+    }
+
+    [Fact]
+    public void Build_AllowClobberRetry_LeavesTheSavedCustomParametersUntouched()
+    {
+        var package = BuildPowerShellPackage();
+        package.OverridenOptions.PowerShell_AllowClobber = true;
+        var options = new InstallOptions { CustomParameters_Install = ["-Proxy"] };
+
+        BrokerRequestBuilder.Build(package, options, OperationType.Install);
+
+        Assert.Equal(["-Proxy"], options.CustomParameters_Install);
+    }
+
+    [Theory]
+    [InlineData(OperationType.Update)]
+    [InlineData(OperationType.Uninstall)]
+    public void Build_AllowClobberRetry_IsInstallOnly(OperationType role)
+    {
+        var package = BuildPowerShellPackage();
+        package.OverridenOptions.PowerShell_AllowClobber = true;
+
+        var request = BrokerRequestBuilder.Build(package, new InstallOptions(), role);
+
+        Assert.DoesNotContain("-AllowClobber", request.Options.CustomParameters);
     }
 
     [Theory]

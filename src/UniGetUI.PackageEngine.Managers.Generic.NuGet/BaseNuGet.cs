@@ -18,13 +18,14 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
     public abstract class BaseNuGet : PackageManager
     {
         /// <summary>
-        /// Only applies to V2 sources. When true, searches use
+        /// Applies to V2 sources and to local folder feeds. When true, V2 searches use
         /// Packages()?$filter=substringof(query,Id) which searches by package name only but
         /// returns reliable results (e.g. PSGallery's Search() endpoint silently omits some
-        /// packages). When false, the standard Search() endpoint is used which supports
-        /// full-text search across name, description, and tags. V3 sources use
-        /// SearchQueryService and fall back to an exact package-id lookup when the feed
-        /// advertises no search service or returns no results.
+        /// packages), and a local feed matches the package id alone instead of also matching
+        /// title, tags, summary, description, and authors. When false, the standard Search()
+        /// endpoint is used which supports full-text search across name, description, and
+        /// tags. V3 sources use SearchQueryService and fall back to an exact package-id
+        /// lookup when the feed advertises no search service or returns no results.
         /// </summary>
         protected virtual bool UseSubstringSearch => false;
 

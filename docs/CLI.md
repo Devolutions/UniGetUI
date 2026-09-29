@@ -269,7 +269,7 @@ These are read by the application itself rather than by the CLI client.
 | --- | --- | --- |
 | `UNIGETUI_WINGET_CLI` | `default`, `winget`, `pinget` | Chooses which WinGet command-line tool the WinGet manager drives. Takes precedence over the `WinGetCliToolPreference` setting. |
 | `UNIGETUI_WINGET_COM` | `default`, `enabled`/`enable`/`on`/`true`/`1`, `disabled`/`disable`/`off`/`false`/`0` | Forces the WinGet COM API on or off instead of letting UniGetUI decide. Takes precedence over the `WinGetComApiPolicy` setting. |
-| `UNIGETUI_FONT_FAMILY` | A font family name | Windows only. Prepends a family to the UI font chain. Ignored when the "use the system UI font" setting is on, and an entry containing the Avalonia `$Default` family is discarded. |
+| `UNIGETUI_FONT_FAMILY` | A font family name | Prepends a family to the UI font chain, ahead of the platform default (Segoe UI on Windows, the bundled Inter on Linux, the system font on macOS). Ignored when the "use the system UI font" setting is on, which itself does not apply on macOS. An entry containing the Avalonia `$Default` family is discarded. |
 | `UNIGETUI_FORCE_NATIVE_LINUX_DECORATIONS` | `1`/`true`/`on`/`yes`/`enabled`, `0`/`false`/`off`/`no`/`disabled` | Linux only. Forces the window manager's own title bar on or off instead of auto-detecting. An unrecognized value is ignored with a warning. |
 | `UNIGETUI_GITHUB_TOKEN_NAMESPACE` | Any string | Suffixes the credential-store entry holding the GitHub backup token, so several UniGetUI instances on one machine can hold separate logins. |
 | `WEBVIEW2_BROWSER_EXECUTABLE_FOLDER` | A directory path | Windows only. Points the embedded web view at a fixed-version WebView2 runtime instead of the installed evergreen one. |

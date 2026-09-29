@@ -50,7 +50,12 @@ internal static class UiFontPolicy
     {
         // Design mode is excluded because reading a setting there would migrate the user's real
         // configuration directory from the previewer process.
-        if (Design.IsDesignMode || CoreSettings.Get(CoreSettings.K.UseSystemUIFont))
+        if (Design.IsDesignMode)
+        {
+            return null;
+        }
+
+        if (!OperatingSystem.IsMacOS() && CoreSettings.Get(CoreSettings.K.UseSystemUIFont))
         {
             return null;
         }

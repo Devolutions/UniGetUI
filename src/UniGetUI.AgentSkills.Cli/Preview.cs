@@ -35,7 +35,7 @@ internal static class PreviewCommand
     private const int BinarySniffBytes = 8000;
 
     public static string Help() =>
-        "Usage: skills preview <source>[@<skill>] [options]\n\nShow a skill's files and SKILL.md without installing it.\n\nOptions:\n  -s, --skill <skill>   Select the skill to preview\n  --file <path>         Print one file of the skill instead of the overview\n  --full-depth          Search nested directories like skills add --full-depth\n  --json                Output as JSON\n  --no-pager            Do not page the output\n  -h, --help            Show this help message\n\nExamples:\n  skills preview ./my-skills@sample-skill\n  skills preview ./my-skills --skill sample-skill --file scripts/run.sh";
+        Program.FormatCommandHelp("Usage: skills preview <source>[@<skill>] [options]\n\nShow a skill's files and SKILL.md without installing it.\n\nOptions:\n  -s, --skill <skill>   Select the skill to preview\n  --file <path>         Print one file of the skill instead of the overview\n  --full-depth          Search nested directories like skills add --full-depth\n  --json                Output as JSON\n  --no-pager            Do not page the output\n  -h, --help            Show this help message\n\nExamples:\n  skills preview ./my-skills@sample-skill\n  skills preview ./my-skills --skill sample-skill --file scripts/run.sh");
 
     public static void PrintHelp() => Term.OutLine(Help());
 

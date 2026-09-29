@@ -69,8 +69,9 @@ public sealed class SkillSourceLocatorTests
 
     [Theory]
     [InlineData("https://skills.contoso.com", "skills.contoso.com")]
-    [InlineData("https://www.contoso.com/team/skills", "contoso.com")]
-    public void OtherWebsitesAreWellKnownIndexesNamedAfterTheirHost(string input, string expectedName)
+    [InlineData("https://www.contoso.com/team/skills", "contoso.com/team/skills")]
+    [InlineData("https://storage.contoso.com:8443/team", "storage.contoso.com:8443/team")]
+    public void OtherWebsitesAreWellKnownIndexesNamedAfterTheirHostAndPath(string input, string expectedName)
     {
         var source = SkillSourceLocator.Parse(input)!;
 
@@ -166,8 +167,8 @@ public sealed class SkillSourceLocatorTests
     }
 
     [Theory]
-    [InlineData("http://localhost:8080", "localhost")]
-    [InlineData("http://127.0.0.1:5000/skills", "127.0.0.1")]
+    [InlineData("http://localhost:8080", "localhost:8080")]
+    [InlineData("http://127.0.0.1:5000/skills", "127.0.0.1:5000/skills")]
     public void AddressesOnThisComputerMayUsePlainHttp(string input, string expectedName)
     {
         var source = SkillSourceLocator.Parse(input)!;
@@ -181,6 +182,7 @@ public sealed class SkillSourceLocatorTests
     [InlineData("https://storage.contoso.com/team", "https://storage.contoso.com/team", true)]
     [InlineData("https://storage.contoso.com/team", "https://storage.contoso.com/team/v2", true)]
     [InlineData("https://storage.contoso.com/team", "https://storage.contoso.com/team-b", false)]
+    [InlineData("https://storage.contoso.com/Team", "https://storage.contoso.com/team", false)]
     [InlineData("https://storage.contoso.com/team", "https://storage.contoso.com/other", false)]
     [InlineData("https://skills.contoso.com:8443", "https://skills.contoso.com", false)]
     [InlineData("https://github.com/owner/repo/tree/main/approved", "owner/repo", true)]
@@ -226,6 +228,10 @@ public sealed class SkillSourceLocatorTests
 
         Assert.Equal("owner/repo", SkillSourceLocator.ForInstalled(github)?.Name);
         Assert.Equal("skills.contoso.com", SkillSourceLocator.ForInstalled(wellKnown)?.Name);
+        Assert.Equal(
+            "skills.contoso.com/team",
+            SkillSourceLocator.ForInstalled(wellKnown with { SourceBaseUrl = "https://skills.contoso.com/team" })?.Name
+        );
         Assert.Equal("git.example.com/team/repo", SkillSourceLocator.ForInstalled(git)?.Name);
         Assert.Null(SkillSourceLocator.ForInstalled(local));
         Assert.Null(SkillSourceLocator.ForInstalled(untracked));

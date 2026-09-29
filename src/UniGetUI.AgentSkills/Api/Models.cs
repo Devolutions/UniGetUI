@@ -75,6 +75,9 @@ public sealed record InstalledSkillInfo
     /// <summary>Full URL of the source, when recorded.</summary>
     public string? SourceUrl { get; init; }
 
+    /// <summary>Base URL of the well-known index, when recorded separately from the skill file URL.</summary>
+    public string? SourceBaseUrl { get; init; }
+
     /// <summary>Git ref (branch, tag or commit) the skill was installed from, if any.</summary>
     public string? Ref { get; init; }
 

@@ -286,7 +286,7 @@ internal static class UpdateCommand
         Term.OutLine();
         foreach (var (name, source) in pending) Term.OutLine($"  • {Sanitize.Metadata(name)} {Dim}({Sanitize.Metadata(source)}){Reset}");
         Term.OutLine();
-        Term.OutLine($"{Dim}Dry run: no changes made. Run skills update without --dry-run to apply.{Reset}");
+        Term.OutLine($"{Dim}Dry run: no changes made. Run {Program.CommandName} update without --dry-run to apply.{Reset}");
     }
 
     private static List<DiscoveredSkillLocation> DiscoveredLocations(string tempDir) => UpdateChecks.DiscoveredLocations(tempDir);
@@ -309,7 +309,7 @@ internal static class UpdateCommand
             if (o.Skills == null)
             {
                 Term.OutLine($"{Dim}No global skills tracked in lock file.{Reset}");
-                Term.OutLine($"{Dim}Install skills with{Reset} {Text}skills add <package> -g{Reset}");
+                Term.OutLine($"{Dim}Install skills with{Reset} {Text}{Program.CommandName} add <package> -g{Reset}");
             }
             return (0, 0, GhInstalled.ReportGhSkills(true, skills, o.Skills));
         }
@@ -537,7 +537,7 @@ internal static class UpdateCommand
             if (o.Skills == null)
             {
                 Term.OutLine($"{Dim}No project skills to update.{Reset}");
-                Term.OutLine($"{Dim}Install project skills with{Reset} {Text}skills add <package>{Reset}");
+                Term.OutLine($"{Dim}Install project skills with{Reset} {Text}{Program.CommandName} add <package>{Reset}");
             }
             return (0, 0, GhInstalled.ReportGhSkills(false, localLock.Skills, o.Skills));
         }

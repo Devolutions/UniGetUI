@@ -20,7 +20,7 @@ internal sealed class FakeSkillsBackend : ISkillsBackend
     public List<InstalledSkillInfo> Installed { get; } = [];
 
     public Dictionary<string, IReadOnlyList<AvailableSkill>> SourceSkills { get; } =
-        new(StringComparer.OrdinalIgnoreCase);
+        new(StringComparer.Ordinal);
 
     public SkillUpdateCheckResult UpdateCheck { get; set; } = new([], []);
 

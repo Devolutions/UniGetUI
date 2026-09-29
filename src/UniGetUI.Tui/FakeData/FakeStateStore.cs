@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace UniGetUI.Tui.FakeData;
 
@@ -42,6 +43,7 @@ internal sealed partial class FakeStateJsonContext : JsonSerializerContext;
 internal static class FakeStateStore
 {
     private static readonly object _gate = new();
+    private static readonly JsonTypeInfo<FakeState> _typeInfo = FakeStateJsonContext.Default.FakeState;
 
     public static FakeState Read(string path)
     {
@@ -53,7 +55,7 @@ internal static class FakeStateStore
                 {
                     if (!File.Exists(path)) return CreateSeed();
                     using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                    return JsonSerializer.Deserialize(stream, FakeStateJsonContext.Default.FakeState) ?? CreateSeed();
+                    return JsonSerializer.Deserialize(stream, _typeInfo) ?? CreateSeed();
                 }
                 catch (IOException) when (attempt < 40)
                 {
@@ -76,11 +78,11 @@ internal static class FakeStateStore
                     using var stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
                     FakeState state = stream.Length == 0
                         ? CreateSeed()
-                        : JsonSerializer.Deserialize(stream, FakeStateJsonContext.Default.FakeState) ?? CreateSeed();
+                        : JsonSerializer.Deserialize(stream, _typeInfo) ?? CreateSeed();
                     mutate(state);
                     stream.SetLength(0);
                     stream.Position = 0;
-                    JsonSerializer.Serialize(stream, state, FakeStateJsonContext.Default.FakeState);
+                    JsonSerializer.Serialize(stream, state, _typeInfo);
                     return state;
                 }
                 catch (IOException) when (attempt < 200)

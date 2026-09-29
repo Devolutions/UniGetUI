@@ -18,11 +18,7 @@ public sealed class PackageOperationCommandInjectionTests
 
     private static IPackage WinPowerShellPackage(PowerShell manager, string id = "Devolutions.PowerShell")
         => Assert.Single(PowerShell.ParseInstalledPackages(
-            [
-                "Version Name Repository Description",
-                "------- ---- ---------- -----------",
-                $"1.0.0 {id} PSGallery x",
-            ],
+            [$"{id}\t1.0.0\tPSGallery"],
             manager));
 
     private static IPackage PowerShell7Package(PowerShell7 manager, string id = "Devolutions.PowerShell")

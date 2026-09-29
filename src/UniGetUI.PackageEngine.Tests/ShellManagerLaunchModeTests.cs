@@ -31,11 +31,7 @@ public sealed class ShellManagerLaunchModeTests
     private static IPackage PowerShellPackage(PowerShell manager) =>
         Assert.Single(
             PowerShell.ParseInstalledPackages(
-                [
-                    "Version Name Repository Description",
-                    "------- ---- ---------- -----------",
-                    "1.0.0 Devolutions.PowerShell PSGallery x",
-                ],
+                ["Devolutions.PowerShell\t1.0.0\tPSGallery"],
                 manager
             )
         );

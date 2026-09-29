@@ -48,15 +48,13 @@ public sealed class PowerShellManagerTests
     }
 
     [Fact]
-    public void ParseInstalledPackages_BuildsPackagesFromModuleTable()
+    public void ParseInstalledPackages_BuildsPackagesFromModuleList()
     {
         var manager = new PowerShell();
         var packages = PowerShell.ParseInstalledPackages(
             [
-                "Version Name Repository Description",
-                "------- ---- ---------- -----------",
-                "5.5.0 Pester PSGallery Test framework",
-                "2.2.5 PSReadLine PSGallery Command line editing",
+                "Pester\t5.5.0\tPSGallery",
+                "PSReadLine\t2.2.5\tPSGallery",
             ],
             manager
         );
@@ -86,10 +84,8 @@ public sealed class PowerShellManagerTests
         var package = Assert.Single(
             PowerShell.ParseInstalledPackages(
                 [
-                    "Version Name Repository Description",
-                    "------- ---- ---------- -----------",
                     "not-enough-columns",
-                    "5.5.0 Pester PSGallery Test framework",
+                    "Pester\t5.5.0\tPSGallery",
                 ],
                 manager
             )
@@ -98,12 +94,41 @@ public sealed class PowerShellManagerTests
         Assert.Equal("Pester", package.Id);
     }
 
+    [Fact]
+    public void ParseInstalledPackages_PreservesLongNamesAndVersionsVerbatim()
+    {
+        var manager = new PowerShell();
+
+        var packages = PowerShell.ParseInstalledPackages(
+            [
+                "VMware.PowerCLI.VCenter.Types.ApplianceService\t12.6.0.19600125\tPSGallery",
+                "Microsoft.Graph.Beta.DeviceManagement.Administration\t2.34.0\tPSGallery",
+            ],
+            manager
+        );
+
+        Assert.Collection(
+            packages,
+            package =>
+            {
+                Assert.Equal("VMware.PowerCLI.VCenter.Types.ApplianceService", package.Id);
+                Assert.Equal("12.6.0.19600125", package.VersionString);
+            },
+            package =>
+            {
+                Assert.Equal(
+                    "Microsoft.Graph.Beta.DeviceManagement.Administration",
+                    package.Id
+                );
+                Assert.Equal("2.34.0", package.VersionString);
+            }
+        );
+    }
+
     private static UniGetUI.PackageEngine.Interfaces.IPackage BuildInstalledPackage(PowerShell manager)
         => Assert.Single(PowerShell.ParseInstalledPackages(
             [
-                "Version Name Repository Description",
-                "------- ---- ---------- -----------",
-                "1.0.0 Devolutions.PowerShell PSGallery x",
+                "Devolutions.PowerShell\t1.0.0\tPSGallery",
             ],
             manager));
 

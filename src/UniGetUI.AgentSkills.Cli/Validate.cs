@@ -81,7 +81,7 @@ internal static partial class ValidateCommand
     private const int MaxDiscoveryDepth = 8;
 
     public static string Help() =>
-        "Usage: skills validate [path...] [options]\n\nCheck skills against the Agent Skills specification (https://agentskills.io/specification).\n\nOptions:\n  --fix                 Remove install tracking metadata from SKILL.md files\n  --strict              Exit with status 1 on warnings as well as errors\n  --json                Output as JSON\n  -h, --help            Show this help message\n\nExamples:\n  skills validate\n  skills validate skills/my-skill --strict";
+        Program.FormatCommandHelp("Usage: skills validate [path...] [options]\n\nCheck skills against the Agent Skills specification (https://agentskills.io/specification).\n\nOptions:\n  --fix                 Remove install tracking metadata from SKILL.md files\n  --strict              Exit with status 1 on warnings as well as errors\n  --json                Output as JSON\n  -h, --help            Show this help message\n\nExamples:\n  skills validate\n  skills validate skills/my-skill --strict");
 
     public static void PrintHelp() => Term.OutLine(Help());
 

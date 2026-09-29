@@ -159,6 +159,17 @@ public sealed class AgentSkillsManagerTests : IDisposable
         Assert.Equal("1111111", update.VersionString);
         Assert.Equal("3333333", update.NewVersionString);
         Assert.True(update.IsUpgradable);
+        Assert.Equal(["allowed"], Assert.Single(_backend.CheckedSkills));
+    }
+
+    [Fact]
+    public void UpdateCheckDoesNotContactAnUnconfiguredInstalledSource()
+    {
+        _backend.Installed.Add(FakeSkillsBackend.TrackedSkill("stranger", "someone/else", "2222222bbbb"));
+        var manager = CreateManager();
+
+        Assert.Empty(manager.GetAvailableUpdates());
+        Assert.Empty(_backend.CheckedSkills);
     }
 
     [Fact]
@@ -274,7 +285,7 @@ public sealed class AgentSkillsManagerTests : IDisposable
         // The first update applies what the check found, without checking again
         Assert.Equal(OperationVeredict.Success, await Perform(manager, update, OperationType.Update, new RecordingOutput()));
         Assert.Same(found, Assert.Single(Assert.Single(_backend.AppliedUpdates)));
-        Assert.Null(Assert.Single(_backend.CheckedSkills));
+        Assert.Equal(["deploy"], Assert.Single(_backend.CheckedSkills));
 
         // A later one checks the skill again
         Assert.Equal(OperationVeredict.Success, await Perform(manager, update, OperationType.Update, new RecordingOutput()));
@@ -351,14 +362,15 @@ public sealed class AgentSkillsManagerTests : IDisposable
         var manager = CreateManager();
 
         Assert.Empty(manager.GetAvailableUpdates());
+        Assert.Empty(_backend.CheckedSkills);
     }
 
     [Fact]
     public void AnIndexUpdateIsOfferedOnlyFromWithinTheAddedIndexAddress()
     {
         AddSourceSetting("https://storage.contoso.com/team");
-        _backend.Installed.Add(WellKnownSkill("helper", "storage.contoso.com", "https://cdn.contoso.net/helper/SKILL.md"));
-        _backend.Installed.Add(WellKnownSkill("other", "storage.contoso.com", "https://storage.contoso.com/other-team/other/SKILL.md"));
+        _backend.Installed.Add(WellKnownSkill("helper", "storage.contoso.com", "https://cdn.contoso.net/helper/SKILL.md", "https://storage.contoso.com/team"));
+        _backend.Installed.Add(WellKnownSkill("other", "storage.contoso.com", "https://storage.contoso.com/other-team/other/SKILL.md", "https://storage.contoso.com/other-team"));
         _backend.UpdateCheck = new SkillUpdateCheckResult(
             [
                 new SkillUpdate { Name = "helper", Scope = SkillScope.Global, Source = "https://storage.contoso.com/team", CurrentHash = "sha256:1111111aaaa" },
@@ -371,7 +383,8 @@ public sealed class AgentSkillsManagerTests : IDisposable
         var update = Assert.Single(manager.GetAvailableUpdates());
 
         Assert.Equal("helper", update.Id);
-        Assert.Equal("storage.contoso.com", update.Source.Name);
+        Assert.Equal("storage.contoso.com/team", update.Source.Name);
+        Assert.Equal(["helper"], Assert.Single(_backend.CheckedSkills));
     }
 
     [Fact]
@@ -389,6 +402,64 @@ public sealed class AgentSkillsManagerTests : IDisposable
         var package = new Package("Review", "review", AgentSkills.LatestVersion, source!, manager);
         Assert.Equal(OperationVeredict.Success, await Perform(manager, package, OperationType.Install, new RecordingOutput()));
         Assert.Equal("https://storage.contoso.com/team", Assert.Single(_backend.Installs).Source);
+    }
+
+    [Fact]
+    public async Task IndexesOnTheSameHostAreDistinctAndRemovingOneKeepsTheOther()
+    {
+        const string first = "https://storage.contoso.com/team";
+        const string second = "https://storage.contoso.com/other";
+        _backend.SourceSkills[first] = [new AvailableSkill("review", "Reviews code", null)];
+        _backend.SourceSkills[second] = [new AvailableSkill("format", "Formats code", null)];
+        var manager = CreateManager();
+        var helper = (IInProcessSourceHelper)manager.SourcesHelper;
+
+        foreach (var url in new[] { first, second })
+            Assert.Equal(OperationVeredict.Success, await helper.AddSourceAsync(
+                new ManagerSource(manager, url, new Uri(url)), new RecordingOutput(), CancellationToken.None));
+
+        Assert.Equal(["storage.contoso.com/team", "storage.contoso.com/other"],
+            manager.GetBrowsableSources().Select(source => source.Name));
+        Assert.Equal(["format", "review"], manager.FindPackages("").Select(package => package.Id).Order());
+        Assert.Equal(2, _backend.ListedSources.Count);
+        _backend.Installed.Add(WellKnownSkill("review", "storage.contoso.com", "https://cdn.contoso.net/review/SKILL.md", first));
+        _backend.Installed.Add(WellKnownSkill("format", "storage.contoso.com", "https://cdn.contoso.net/format/SKILL.md", second));
+        Assert.Equal(["storage.contoso.com/other", "storage.contoso.com/team"],
+            manager.GetInstalledPackages().Select(package => package.Source.Name).Order());
+        _backend.UpdateCheck = new(
+            [
+                new SkillUpdate { Name = "review", Scope = SkillScope.Global, Source = first, CurrentHash = "sha256:1111111aaaa", LatestHash = "sha256:3333333cccc" },
+                new SkillUpdate { Name = "format", Scope = SkillScope.Global, Source = second, CurrentHash = "sha256:2222222bbbb", LatestHash = "sha256:4444444dddd" },
+            ],
+            []
+        );
+        Assert.Equal(["format", "review"], manager.GetAvailableUpdates().Select(package => package.Id).Order());
+
+        await helper.RemoveSourceAsync(
+            manager.SourcesHelper.Factory.GetSourceOrDefault("storage.contoso.com/team"),
+            new RecordingOutput(), CancellationToken.None);
+
+        Assert.Equal(["storage.contoso.com/other"], manager.GetBrowsableSources().Select(source => source.Name));
+        Assert.Equal("format", Assert.Single(manager.FindPackages("")).Id);
+        Assert.Equal("format", Assert.Single(manager.GetAvailableUpdates()).Id);
+        Assert.Equal(["format"], _backend.CheckedSkills[^1]);
+        Assert.Equal([second], Settings.GetList<string>(AgentSkills.SourcesListKey));
+    }
+
+    [Fact]
+    public void IndexPathsDifferingOnlyInCaseDoNotShareListings()
+    {
+        const string upper = "https://storage.contoso.com/Team";
+        const string lower = "https://storage.contoso.com/team";
+        AddSourceSetting(upper);
+        AddSourceSetting(lower);
+        _backend.SourceSkills[upper] = [new AvailableSkill("review", "Review from Team", null)];
+        _backend.SourceSkills[lower] = [new AvailableSkill("review", "Review from team", null)];
+        var manager = CreateManager();
+
+        Assert.Equal(["storage.contoso.com/Team", "storage.contoso.com/team"],
+            manager.FindPackages("review").Select(package => package.Source.Name).Order(StringComparer.Ordinal));
+        Assert.Equal(2, _backend.ListedSources.Count);
     }
 
     [Fact]
@@ -447,6 +518,38 @@ public sealed class AgentSkillsManagerTests : IDisposable
 
         Assert.Equal(OperationVeredict.Success, veredict);
         Assert.Empty(Settings.GetList<string>(AgentSkills.SourcesListKey) ?? []);
+    }
+
+    [Fact]
+    public async Task AddingAndRemovingARepositoryRefreshesGitDependency()
+    {
+        const string url = "https://github.com/contoso/agent-skills";
+        _backend.SourceSkills[url] = [new AvailableSkill("review", "Reviews code", null)];
+        var manager = CreateManager();
+        var helper = (IInProcessSourceHelper)manager.SourcesHelper;
+        Assert.Empty(manager.Dependencies);
+
+        var source = new ManagerSource(manager, "Contoso", new Uri(url));
+        Assert.Equal(OperationVeredict.Success,
+            await helper.AddSourceAsync(source, new RecordingOutput(), CancellationToken.None));
+        Assert.Equal("Git", Assert.Single(manager.Dependencies).Name);
+
+        Assert.Equal(OperationVeredict.Success,
+            await helper.RemoveSourceAsync(
+                manager.SourcesHelper.Factory.GetSourceOrDefault("contoso/agent-skills"),
+                new RecordingOutput(), CancellationToken.None));
+        Assert.Empty(manager.Dependencies);
+    }
+
+    [Fact]
+    public void SourceDependencyCanBeCheckedBeforeAddingTheSource()
+    {
+        var manager = CreateManager();
+
+        Assert.Equal("Git", manager.GetDependencyForSource(new Uri("https://github.com/contoso/agent-skills"))?.Name);
+        Assert.Equal(NotionCliTool.Name, manager.GetDependencyForSource(new Uri(NotionDatabase))?.Name);
+        Assert.Null(manager.GetDependencyForSource(new Uri("https://skills.contoso.com/team")));
+        Assert.Empty(manager.Dependencies);
     }
 
     [Fact]
@@ -561,6 +664,7 @@ public sealed class AgentSkillsManagerTests : IDisposable
         Assert.Equal([NotionDatabase], Settings.GetList<string>(AgentSkills.SourcesListKey));
         Assert.Contains("Sign in to Notion to use Notion sources.", output.Info);
         Assert.True(manager.HasNotionSources);
+        Assert.Equal(NotionCliTool.Name, Assert.Single(manager.Dependencies).Name);
     }
 
     [Fact]
@@ -699,7 +803,7 @@ public sealed class AgentSkillsManagerTests : IDisposable
             Hash = version,
         };
 
-    private static InstalledSkillInfo WellKnownSkill(string name, string host, string skillFileUrl) =>
+    private static InstalledSkillInfo WellKnownSkill(string name, string host, string skillFileUrl, string? baseUrl = null) =>
         new()
         {
             Name = name,
@@ -710,6 +814,7 @@ public sealed class AgentSkillsManagerTests : IDisposable
             Source = host,
             SourceType = "well-known",
             SourceUrl = skillFileUrl,
+            SourceBaseUrl = baseUrl,
             Hash = "sha256:1111111aaaa",
         };
 

@@ -8,6 +8,12 @@ internal static class Program
 {
     public const string Version = "1.7.0";
     private static readonly object InvocationLock = new();
+    internal static string CommandName =>
+        string.Equals(Path.GetFileNameWithoutExtension(Environment.ProcessPath), "UniGetUI", StringComparison.OrdinalIgnoreCase)
+            ? "unigetui skills"
+            : "skills";
+    internal static string FormatCommandHelp(string help) =>
+        help.Replace("skills ", $"{CommandName} ", StringComparison.Ordinal);
 
     private static readonly string[] LogoLines =
     [
@@ -41,26 +47,27 @@ internal static class Program
         Term.OutLine();
         Term.OutLine($"{Dim}UniGetUI Agent Skills{Reset}");
         Term.OutLine();
-        Term.OutLine($"  {Dim}${Reset} {Text}skills add {Dim}<package>{Reset}        {Dim}Add a new skill{Reset}");
-        Term.OutLine($"  {Dim}${Reset} {Text}skills use {Dim}<package>@<skill>{Reset} {Dim}Use a skill without installing{Reset}");
-        Term.OutLine($"  {Dim}${Reset} {Text}skills remove{Reset}               {Dim}Remove installed skills{Reset}");
-        Term.OutLine($"  {Dim}${Reset} {Text}skills list{Reset}                 {Dim}List installed skills{Reset}");
+        Term.OutLine($"  {Dim}${Reset} {Text}{CommandName} add {Dim}<package>{Reset}        {Dim}Add a new skill{Reset}");
+        Term.OutLine($"  {Dim}${Reset} {Text}{CommandName} use {Dim}<package>@<skill>{Reset} {Dim}Use a skill without installing{Reset}");
+        Term.OutLine($"  {Dim}${Reset} {Text}{CommandName} remove{Reset}               {Dim}Remove installed skills{Reset}");
+        Term.OutLine($"  {Dim}${Reset} {Text}{CommandName} list{Reset}                 {Dim}List installed skills{Reset}");
         Term.OutLine();
-        Term.OutLine($"  {Dim}${Reset} {Text}skills update{Reset}               {Dim}Update installed skills{Reset}");
+        Term.OutLine($"  {Dim}${Reset} {Text}{CommandName} update{Reset}               {Dim}Update installed skills{Reset}");
         Term.OutLine();
-        Term.OutLine($"  {Dim}${Reset} {Text}skills experimental_install{Reset} {Dim}Restore from skills-lock.json{Reset}");
-        Term.OutLine($"  {Dim}${Reset} {Text}skills init {Dim}[name]{Reset}          {Dim}Create a new skill{Reset}");
-        Term.OutLine($"  {Dim}${Reset} {Text}skills experimental_sync{Reset}    {Dim}Sync skills from node_modules{Reset}");
+        Term.OutLine($"  {Dim}${Reset} {Text}{CommandName} experimental_install{Reset} {Dim}Restore from skills-lock.json{Reset}");
+        Term.OutLine($"  {Dim}${Reset} {Text}{CommandName} init {Dim}[name]{Reset}          {Dim}Create a new skill{Reset}");
+        Term.OutLine($"  {Dim}${Reset} {Text}{CommandName} experimental_sync{Reset}    {Dim}Sync skills from node_modules{Reset}");
         Term.OutLine();
-        Term.OutLine($"{Dim}try:{Reset} skills add ./my-skills");
+        Term.OutLine($"{Dim}try:{Reset} {CommandName} add ./my-skills");
         Term.OutLine();
     }
 
     private static void ShowHelp()
     {
         const string b = Bold, d = Dim, r = Reset;
+        string command = CommandName;
         Term.OutLine("\n" + $$"""
-            {{b}}Usage:{{r}} skills <command> [options]
+            {{b}}Usage:{{r}} {{command}} <command> [options]
 
             {{b}}Manage Skills:{{r}}
               add <package>        Add a skill package (alias: a)
@@ -142,31 +149,31 @@ internal static class Program
               --version, -v     Show version number
 
             {{b}}Examples:{{r}}
-              {{d}}${{r}} skills add ./my-skills
-              {{d}}${{r}} skills use ./my-skills@sample-skill | claude
-              {{d}}${{r}} skills use ./my-skills --skill sample-skill --agent claude-code
-              {{d}}${{r}} skills preview ./my-skills@sample-skill
-              {{d}}${{r}} skills add ./my-skills -g
-              {{d}}${{r}} skills add ./my-skills --agent claude-code cursor
-              {{d}}${{r}} skills add ./my-skills --skill sample-skill
-              {{d}}${{r}} skills add ./my-skills --json -y {{d}}# JSON output{{r}}
-              {{d}}${{r}} skills remove                        {{d}}# interactive remove{{r}}
-              {{d}}${{r}} skills remove web-design             {{d}}# remove by name{{r}}
-              {{d}}${{r}} skills rm --global frontend-design
-              {{d}}${{r}} skills list                          {{d}}# list project skills{{r}}
-              {{d}}${{r}} skills ls -g                         {{d}}# list global skills{{r}}
-              {{d}}${{r}} skills ls -a claude-code             {{d}}# filter by agent{{r}}
-              {{d}}${{r}} skills ls --json                      {{d}}# JSON output{{r}}
-              {{d}}${{r}} skills update
-              {{d}}${{r}} skills update my-skill             {{d}}# update a single skill{{r}}
-              {{d}}${{r}} skills update -g                    {{d}}# update global skills only{{r}}
-              {{d}}${{r}} skills update --dry-run             {{d}}# check without installing{{r}}
-              {{d}}${{r}} skills add <owner>/<repo> --pin v1.0.0
-              {{d}}${{r}} skills experimental_install            {{d}}# restore from skills-lock.json{{r}}
-              {{d}}${{r}} skills init my-skill
-              {{d}}${{r}} skills validate                     {{d}}# check skills before publishing{{r}}
-              {{d}}${{r}} skills experimental_sync              {{d}}# sync from node_modules{{r}}
-              {{d}}${{r}} skills experimental_sync -y           {{d}}# sync without prompts{{r}}
+              {{d}}${{r}} {{command}} add ./my-skills
+              {{d}}${{r}} {{command}} use ./my-skills@sample-skill | claude
+              {{d}}${{r}} {{command}} use ./my-skills --skill sample-skill --agent claude-code
+              {{d}}${{r}} {{command}} preview ./my-skills@sample-skill
+              {{d}}${{r}} {{command}} add ./my-skills -g
+              {{d}}${{r}} {{command}} add ./my-skills --agent claude-code cursor
+              {{d}}${{r}} {{command}} add ./my-skills --skill sample-skill
+              {{d}}${{r}} {{command}} add ./my-skills --json -y {{d}}# JSON output{{r}}
+              {{d}}${{r}} {{command}} remove                        {{d}}# interactive remove{{r}}
+              {{d}}${{r}} {{command}} remove web-design             {{d}}# remove by name{{r}}
+              {{d}}${{r}} {{command}} rm --global frontend-design
+              {{d}}${{r}} {{command}} list                          {{d}}# list project skills{{r}}
+              {{d}}${{r}} {{command}} ls -g                         {{d}}# list global skills{{r}}
+              {{d}}${{r}} {{command}} ls -a claude-code             {{d}}# filter by agent{{r}}
+              {{d}}${{r}} {{command}} ls --json                      {{d}}# JSON output{{r}}
+              {{d}}${{r}} {{command}} update
+              {{d}}${{r}} {{command}} update my-skill             {{d}}# update a single skill{{r}}
+              {{d}}${{r}} {{command}} update -g                    {{d}}# update global skills only{{r}}
+              {{d}}${{r}} {{command}} update --dry-run             {{d}}# check without installing{{r}}
+              {{d}}${{r}} {{command}} add <owner>/<repo> --pin v1.0.0
+              {{d}}${{r}} {{command}} experimental_install            {{d}}# restore from skills-lock.json{{r}}
+              {{d}}${{r}} {{command}} init my-skill
+              {{d}}${{r}} {{command}} validate                     {{d}}# check skills before publishing{{r}}
+              {{d}}${{r}} {{command}} experimental_sync              {{d}}# sync from node_modules{{r}}
+              {{d}}${{r}} {{command}} experimental_sync -y           {{d}}# sync without prompts{{r}}
 
             """ + "\n");
     }
@@ -174,8 +181,9 @@ internal static class Program
     private static void ShowRemoveHelp()
     {
         const string b = Bold, d = Dim, r = Reset;
+        string command = CommandName;
         Term.OutLine("\n" + $$"""
-            {{b}}Usage:{{r}} skills remove [skills...] [options]
+            {{b}}Usage:{{r}} {{command}} remove [skills...] [options]
 
             {{b}}Description:{{r}}
               Remove installed skills from agents. If no skill names are provided,
@@ -192,13 +200,13 @@ internal static class Program
               --all              Remove every installed skill (-y implied). Do not combine with named skills.
 
             {{b}}Examples:{{r}}
-              {{d}}${{r}} skills remove                           {{d}}# interactive selection{{r}}
-              {{d}}${{r}} skills remove my-skill                   {{d}}# remove specific skill{{r}}
-              {{d}}${{r}} skills remove skill1 skill2 -y           {{d}}# remove multiple skills{{r}}
-              {{d}}${{r}} skills remove --global my-skill          {{d}}# remove from global scope{{r}}
-              {{d}}${{r}} skills rm --agent claude-code my-skill   {{d}}# remove from specific agent{{r}}
-              {{d}}${{r}} skills remove --all                      {{d}}# remove all skills{{r}}
-              {{d}}${{r}} skills remove --skill '*' -a cursor      {{d}}# remove all skills from cursor{{r}}
+              {{d}}${{r}} {{command}} remove                           {{d}}# interactive selection{{r}}
+              {{d}}${{r}} {{command}} remove my-skill                   {{d}}# remove specific skill{{r}}
+              {{d}}${{r}} {{command}} remove skill1 skill2 -y           {{d}}# remove multiple skills{{r}}
+              {{d}}${{r}} {{command}} remove --global my-skill          {{d}}# remove from global scope{{r}}
+              {{d}}${{r}} {{command}} rm --agent claude-code my-skill   {{d}}# remove from specific agent{{r}}
+              {{d}}${{r}} {{command}} remove --all                      {{d}}# remove all skills{{r}}
+              {{d}}${{r}} {{command}} remove --skill '*' -a cursor      {{d}}# remove all skills from cursor{{r}}
 
             """ + "\n");
     }
@@ -238,8 +246,8 @@ internal static class Program
         Term.OutLine($"  2. Update the {Text}name{Reset} and {Text}description{Reset} in the frontmatter");
         Term.OutLine();
         Term.OutLine($"{Dim}Publishing:{Reset}");
-        Term.OutLine($"  {Dim}GitHub:{Reset}  Push to a repo, then {Text}skills add <owner>/<repo>{Reset}");
-        Term.OutLine($"  {Dim}URL:{Reset}     Host the file, then {Text}skills add https://example.com/{display}{Reset}");
+        Term.OutLine($"  {Dim}GitHub:{Reset}  Push to a repo, then {Text}{CommandName} add <owner>/<repo>{Reset}");
+        Term.OutLine($"  {Dim}URL:{Reset}     Host the file, then {Text}{CommandName} add https://example.com/{display}{Reset}");
         Term.OutLine();
     }
 
@@ -326,7 +334,7 @@ internal static class Program
                 break;
             default:
                 Term.OutLine($"Unknown command: {command}");
-                Term.OutLine($"Run {Bold}skills --help{Reset} for usage.");
+                Term.OutLine($"Run {Bold}{CommandName} --help{Reset} for usage.");
                 Term.ExitCode = 1;
                 break;
         }

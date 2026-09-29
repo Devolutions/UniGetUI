@@ -90,7 +90,17 @@ internal static class AvaloniaBootstrapper
             }
         }
 
-        var missing = await GetMissingDependenciesAsync();
+        await ShowMissingDependenciesAsync(await GetMissingDependenciesAsync());
+    }
+
+    internal static async Task PromptForMissingDependencyAsync(ManagerDependency dependency)
+    {
+        if (await IsMissingDependencyAsync(dependency, "Skills", failOnError: true))
+            await Dispatcher.UIThread.InvokeAsync(() => ShowMissingDependencyDialogAsync(dependency, 1, 1));
+    }
+
+    private static async Task ShowMissingDependenciesAsync(IReadOnlyList<ManagerDependency> missing)
+    {
         if (missing.Count > 0)
         {
             Logger.Info($"Found {missing.Count} missing dependencies; showing install dialogs.");
@@ -516,37 +526,42 @@ internal static class AvaloniaBootstrapper
 
             foreach (var dep in manager.Dependencies)
             {
-                bool isInstalled = true;
-                try
-                {
-                    isInstalled = await dep.IsInstalled();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error($"Error checking dependency {dep.Name}: {ex.Message}");
-                }
-
-                if (!isInstalled)
-                {
-                    if (Settings.GetDictionaryItem<string, string>(
-                            Settings.K.DependencyManagement, dep.Name) == "skipped")
-                    {
-                        Logger.Info($"Dependency {dep.Name} skipped by user preference.");
-                    }
-                    else
-                    {
-                        Logger.Warn(
-                            $"Dependency {dep.Name} not found for manager {manager.Name}.");
-                        missing.Add(dep);
-                    }
-                }
-                else
-                {
-                    Logger.Info($"Dependency {dep.Name} for {manager.Name} is present.");
-                }
+                if (await IsMissingDependencyAsync(dep, manager.Name))
+                    missing.Add(dep);
             }
         }
 
         return missing;
+    }
+
+    private static async Task<bool> IsMissingDependencyAsync(ManagerDependency dep, string managerName, bool failOnError = false)
+    {
+        bool isInstalled = true;
+        try
+        {
+            isInstalled = await dep.IsInstalled();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Error checking dependency {dep.Name}: {ex.Message}");
+            if (failOnError)
+                throw;
+        }
+
+        if (isInstalled)
+        {
+            Logger.Info($"Dependency {dep.Name} for {managerName} is present.");
+            return false;
+        }
+
+        if (Settings.GetDictionaryItem<string, string>(
+                Settings.K.DependencyManagement, dep.Name) == "skipped")
+        {
+            Logger.Info($"Dependency {dep.Name} skipped by user preference.");
+            return false;
+        }
+
+        Logger.Warn($"Dependency {dep.Name} not found for manager {managerName}.");
+        return true;
     }
 }

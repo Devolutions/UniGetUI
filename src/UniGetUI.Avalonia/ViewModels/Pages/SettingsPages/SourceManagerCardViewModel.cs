@@ -12,6 +12,7 @@ using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageOperations;
+using SkillsPackageManager = global::UniGetUI.PackageEngine.Managers.SkillsManager.AgentSkills;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
 
@@ -130,6 +131,21 @@ public partial class SourceManagerCardViewModel : ViewModelBase
             }
 
             source = new ManagerSource(_manager, NewSourceName.Trim(), uri);
+        }
+
+        if (_manager is SkillsPackageManager skills && skills.GetDependencyForSource(source.Url) is { } dependency)
+        {
+            try
+            {
+                await AvaloniaBootstrapper.PromptForMissingDependencyAsync(dependency);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Could not check {dependency.Name} before adding the skill source: {ex.Message}");
+                Logger.Error(ex);
+                AddError = CoreTools.Translate("Could not check the required dependency: {0}", ex.Message);
+                return;
+            }
         }
 
         AddError = "";

@@ -22,10 +22,9 @@ internal enum SkillSourceKind
 /// </summary>
 /// <param name="Kind">The kind of source</param>
 /// <param name="Name">
-/// The source name UniGetUI shows and compares: owner/repo for a GitHub repository, host and path
-/// for other repositories, the host for an index, app.notion.com/p/ and the id for a Notion
-/// database. It matches what the skills lock file records, so a skill found in a source and the same skill once installed get the
-/// same source.
+/// The source name UniGetUI shows and compares: owner/repo for GitHub, host and path for
+/// other repositories and path-scoped indexes, the host for a root index, and the
+/// canonical Notion database address. A well-known lock entry separately records its index URL.
 /// </param>
 /// <param name="InstallSource">What the library installs from</param>
 /// <param name="Url">A browsable address for the source</param>
@@ -136,11 +135,13 @@ internal sealed partial record SkillSourceLocator(
             );
         }
 
-        // Any other website publishes a well-known skills index. The lock file names such sources
-        // after their host.
+        // Include the index path so independent indexes on one host have distinct identities.
+        // Root indexes retain their existing host-only names.
+        string indexHost = host.StartsWith("www.", StringComparison.Ordinal) ? host[4..] : host;
+        string indexPath = uri.AbsolutePath.TrimEnd('/');
         return new(
             SkillSourceKind.Index,
-            host.StartsWith("www.", StringComparison.Ordinal) ? host[4..] : host,
+            $"{indexHost}{(uri.IsDefaultPort ? "" : $":{uri.Port}")}{indexPath}",
             Canonical(uri),
             uri
         );
@@ -154,15 +155,11 @@ internal sealed partial record SkillSourceLocator(
     /// </summary>
     public bool Covers(SkillSourceLocator other)
     {
-        if (
-            Kind != other.Kind
-            || IsGitHub != other.IsGitHub
-            || !Name.Equals(other.Name, StringComparison.OrdinalIgnoreCase)
-        )
+        if (Kind != other.Kind || IsGitHub != other.IsGitHub)
             return false;
 
         if (Kind is not SkillSourceKind.Index)
-            return true;
+            return Name.Equals(other.Name, StringComparison.OrdinalIgnoreCase);
 
         bool sameWebsite =
             Uri.Compare(
@@ -189,7 +186,8 @@ internal sealed partial record SkillSourceLocator(
             "github" => Parse(skill.Source) ?? Parse(skill.SourceUrl),
             // The lock file names an index after its host; the URL it records is the skill file's,
             // which the index picks and may put on any host
-            "well-known" => string.IsNullOrEmpty(skill.Source) ? null : Parse($"https://{skill.Source}"),
+            "well-known" => Parse(skill.SourceBaseUrl)
+                ?? (string.IsNullOrEmpty(skill.Source) ? null : Parse($"https://{skill.Source}")),
             // The source is the database the skill is listed in; the URL is the skill's own page
             "notion" => Parse(skill.Source),
             _ => Parse(skill.SourceUrl) ?? Parse(skill.Source),

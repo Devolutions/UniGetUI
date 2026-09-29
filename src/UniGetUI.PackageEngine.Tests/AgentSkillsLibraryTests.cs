@@ -130,7 +130,7 @@ public sealed class AgentSkillsLibraryTests : IDisposable
 
         var found = Assert.Single(manager.FindPackages("review"));
         Assert.Equal("code-review", found.Id);
-        Assert.Equal("127.0.0.1", found.Source.Name);
+        Assert.Equal($"127.0.0.1:{_server.BaseUri.Port}", found.Source.Name);
 
         // Install
         var output = new Output();

@@ -16,7 +16,7 @@ internal sealed class SkillsSourceFactory(AgentSkills manager) : ISourceFactory
     private readonly ConcurrentDictionary<
         string,
         (SkillSourceLocator? Locator, IManagerSource Source)
-    > _sources = new(StringComparer.OrdinalIgnoreCase);
+    > _sources = new(StringComparer.Ordinal);
 
     /// <summary>
     /// The source object for a locator. Every locator with the same name gets the same object, so
@@ -52,7 +52,7 @@ internal sealed class SkillsSourceFactory(AgentSkills manager) : ISourceFactory
     {
         var configured = AgentSkills
             .GetConfiguredSources()
-            .FirstOrDefault(source => source.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(source => source.Name.Equals(name, StringComparison.Ordinal));
         if (configured is not null)
             return GetOrCreate(configured);
 

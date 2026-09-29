@@ -11,7 +11,7 @@ internal static class InstallLockCommand
         if (lockFile.Skills.Count == 0)
         {
             Ui.Log.Warn("No project skills found in skills-lock.json");
-            Ui.Log.Info($"Add project-level skills with {Pc.Cyan("skills add <package>")} (without {Pc.Cyan("-g")})");
+            Ui.Log.Info($"Add project-level skills with {Pc.Cyan($"{Program.CommandName} add <package>")} (without {Pc.Cyan("-g")})");
             return;
         }
         var universal = Agents.GetUniversalAgents();

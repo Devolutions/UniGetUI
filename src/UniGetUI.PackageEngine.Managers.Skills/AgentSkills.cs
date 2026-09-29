@@ -118,7 +118,7 @@ public sealed class AgentSkills : PackageManager
         {
             if (
                 SkillSourceLocator.Parse(entry) is { } source
-                && !sources.Exists(s => s.Name.Equals(source.Name, StringComparison.OrdinalIgnoreCase))
+                && !sources.Exists(s => s.Name.Equals(source.Name, StringComparison.Ordinal))
             )
                 sources.Add(source);
         }
@@ -129,21 +129,27 @@ public sealed class AgentSkills : PackageManager
     /// <summary>The added repository or index with this name; null for any other name.</summary>
     internal static SkillSourceLocator? GetConfiguredSource(string name) =>
         GetConfiguredSources().FirstOrDefault(source =>
-            source.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+            source.Name.Equals(name, StringComparison.Ordinal)
         );
+
+    internal static SkillSourceLocator? FindConfiguredSource(SkillSourceLocator source) =>
+        GetConfiguredSources()
+            .Where(configured => configured.Covers(source))
+            .OrderByDescending(configured => configured.Url.AbsolutePath.Length)
+            .FirstOrDefault();
 
     /// <summary>
     /// Whether skills may be installed or updated from an added repository or index.
     /// </summary>
     internal static bool IsAllowedSource(SkillSourceLocator source) =>
-        GetConfiguredSource(source.Name)?.Covers(source) ?? false;
+        FindConfiguredSource(source) is not null;
 
     /// <summary>
     /// The configured source the skill is installed from, or null if it is not configured.
     /// </summary>
     internal SkillSourceLocator? GetInstallSource(IManagerSource source) =>
         SourceFactory.GetLocator(source) is { } locator
-            ? GetConfiguredSource(locator.Name)
+            ? FindConfiguredSource(locator)
             : null;
 
     /// <summary>
@@ -191,6 +197,15 @@ public sealed class AgentSkills : PackageManager
 
     /// <summary>Whether one of the sources is a Notion database, which needs the Notion CLI.</summary>
     public bool HasNotionSources => GetConfiguredSources().Any(source => source.Kind is SkillSourceKind.Notion);
+
+    /// <summary>The tool a new source needs before it can be listed, if any.</summary>
+    public ManagerDependency? GetDependencyForSource(Uri address) =>
+        SkillSourceLocator.Parse(address.OriginalString)?.Kind switch
+        {
+            SkillSourceKind.Repository => GitDependency.Create(),
+            SkillSourceKind.Notion => NotionCliTool.CreateDependency(),
+            _ => null,
+        };
 
     /// <summary>Whether the Notion CLI is installed and signed in, and to which workspace.</summary>
     public Task<NotionStatus> GetNotionStatusAsync() =>
@@ -256,7 +271,7 @@ public sealed class AgentSkills : PackageManager
     protected override IReadOnlyList<Package> FindPackages_UnSafe(string query)
     {
         INativeTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.FindPackages);
-        Dictionary<string, Package> packages = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, Package> packages = new(StringComparer.Ordinal);
 
         void Add(string skill, SkillSourceLocator source)
         {
@@ -335,13 +350,24 @@ public sealed class AgentSkills : PackageManager
     protected override IReadOnlyList<Package> GetAvailableUpdates_UnSafe()
     {
         INativeTaskLogger logger = TaskLogger.CreateNew(LoggableTaskType.ListUpdates);
-        var installed = Backend
-            .GetInstalledSkills(CancellationToken.None)
+        var installedSkills = Backend.GetInstalledSkills(CancellationToken.None);
+        var eligibleNames = installedSkills
+            .Where(skill => SkillSourceLocator.ForInstalled(skill) is { } source && IsAllowedSource(source))
+            .Select(skill => skill.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        _pendingUpdates.Clear();
+        if (eligibleNames.Length == 0)
+        {
+            logger.Close(0);
+            return [];
+        }
+
+        var installed = installedSkills
             .GroupBy(skill => skill.Name, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
-        var check = Backend.CheckForUpdates(null, new LoggerProgress(logger), CancellationToken.None);
+        var check = Backend.CheckForUpdates(eligibleNames, new LoggerProgress(logger), CancellationToken.None);
 
-        _pendingUpdates.Clear();
         List<Package> packages = [];
         foreach (var update in check.Updates)
         {
@@ -434,18 +460,21 @@ public sealed class AgentSkills : PackageManager
     protected override void _performExtraLoadingSteps()
     {
         var sources = GetConfiguredSources();
+        RefreshDependencies();
 
-        // Only repository sources need git, and only Notion sources the Notion CLI, so people who
-        // use neither are not asked to install them
+        foreach (var source in sources)
+            _ = Listings.Refresh(source);
+    }
+
+    internal void RefreshDependencies()
+    {
+        var sources = GetConfiguredSources();
         List<ManagerDependency> dependencies = [];
         if (sources.Any(source => source.Kind is SkillSourceKind.Repository))
             dependencies.Add(GitDependency.Create());
         if (sources.Any(source => source.Kind is SkillSourceKind.Notion))
             dependencies.Add(NotionCliTool.CreateDependency());
         Dependencies = dependencies;
-
-        foreach (var source in sources)
-            _ = Listings.Refresh(source);
     }
 
     public override IReadOnlyList<string> FindCandidateExecutableFiles() => [];

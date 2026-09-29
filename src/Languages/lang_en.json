@@ -1225,6 +1225,7 @@
   "No subfolder": "No subfolder",
   "Enter a name for the new source": "Enter a name for the new source",
   "Enter a complete source URL, including the protocol (for example https://)": "Enter a complete source URL, including the protocol (for example https://)",
+  "Could not check the required dependency: {0}": "Could not check the required dependency: {0}",
   "Not set": "Not set",
   "Default location for downloaded installers": "Default location for downloaded installers",
   "Reset the default installer download location": "Reset the default installer download location",

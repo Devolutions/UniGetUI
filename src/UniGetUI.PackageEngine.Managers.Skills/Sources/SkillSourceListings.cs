@@ -16,12 +16,12 @@ internal sealed class SkillSourceListings(ISkillsBackend backend)
 
     private sealed record Listing(DateTime FetchedAt, IReadOnlyList<AvailableSkill> Skills, bool Failed);
 
-    private readonly ConcurrentDictionary<string, Listing> _listings = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, Listing> _listings = new(StringComparer.Ordinal);
 
     // Lazy, because a concurrent dictionary may call its value factories more than once, and each
     // started load would clone the repository again
     private readonly ConcurrentDictionary<string, Lazy<Task<IReadOnlyList<AvailableSkill>>>> _refreshes = new(
-        StringComparer.OrdinalIgnoreCase
+        StringComparer.Ordinal
     );
 
     /// <summary>

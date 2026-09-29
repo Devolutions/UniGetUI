@@ -54,7 +54,7 @@ internal sealed class SkillsSourceHelper : BaseSourceHelper, IInProcessSourceHel
             return OperationVeredict.Failure;
         }
 
-        if (AgentSkills.GetConfiguredSources().Any(s => s.Name.Equals(locator.Name, StringComparison.OrdinalIgnoreCase)))
+        if (AgentSkills.GetConfiguredSource(locator.Name) is not null)
         {
             output.Info($"{locator.Name} is already one of the sources");
             return OperationVeredict.Success;
@@ -84,6 +84,7 @@ internal sealed class SkillsSourceHelper : BaseSourceHelper, IInProcessSourceHel
                 )
             );
             Settings.AddToList(AgentSkills.SourcesListKey, locator.InstallSource);
+            _skills.RefreshDependencies();
             _skills.Listings.Forget(locator);
             InvalidateSourcesCache();
             return OperationVeredict.Success;
@@ -98,6 +99,7 @@ internal sealed class SkillsSourceHelper : BaseSourceHelper, IInProcessSourceHel
         output.Info($"Found {skills.Count} skills");
 
         Settings.AddToList(AgentSkills.SourcesListKey, locator.InstallSource);
+        _skills.RefreshDependencies();
         _skills.Listings.Store(locator, skills);
         InvalidateSourcesCache();
         return OperationVeredict.Success;
@@ -109,10 +111,11 @@ internal sealed class SkillsSourceHelper : BaseSourceHelper, IInProcessSourceHel
         string name = locator?.Name ?? source.Name;
         var remaining = (Settings.GetList<string>(AgentSkills.SourcesListKey) ?? [])
             .Where(entry =>
-                !(SkillSourceLocator.Parse(entry)?.Name ?? entry).Equals(name, StringComparison.OrdinalIgnoreCase)
+                !(SkillSourceLocator.Parse(entry)?.Name ?? entry).Equals(name, StringComparison.Ordinal)
             )
             .ToList();
         Settings.SetList(AgentSkills.SourcesListKey, remaining);
+        _skills.RefreshDependencies();
         if (locator is not null)
             _skills.Listings.Forget(locator);
 

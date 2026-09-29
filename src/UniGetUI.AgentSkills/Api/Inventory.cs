@@ -43,6 +43,7 @@ internal static class Inventory
                 Source = Json.NonEmpty(e, "source"),
                 SourceType = Json.NonEmpty(e, "sourceType"),
                 SourceUrl = Json.NonEmpty(e, "sourceUrl"),
+                SourceBaseUrl = Json.NonEmpty(e, "sourceBaseUrl"),
                 Ref = Json.NonEmpty(e, "ref"),
                 SkillPath = Json.NonEmpty(e, "skillPath"),
                 Hash = Json.NonEmpty(e, skillScope == SkillScope.Global ? "skillFolderHash" : "computedHash")

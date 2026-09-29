@@ -5,6 +5,7 @@ public struct OverridenInstallationOptions
     public string? Scope;
     public bool? RunAsAdministrator;
     public bool PowerShell_DoNotSetScopeParameter = false;
+    public bool PowerShell_AllowClobber = false;
     public bool? WinGet_SpecifyVersion = null;
     public bool Pip_BreakSystemPackages = false;
     public bool WinGet_DropArchAndScope = false;
@@ -20,6 +21,6 @@ public struct OverridenInstallationOptions
 
     public override string ToString()
     {
-        return $"<Scope={Scope};RunAsAdministrator={RunAsAdministrator};WG_SpecifyVersion={WinGet_SpecifyVersion};PS_NoScope={PowerShell_DoNotSetScopeParameter};Pip_BreakSystemPackages={Pip_BreakSystemPackages};WG_DropArchAndScope={WinGet_DropArchAndScope};WG_UseLocalId={WinGet_UseLocalIdentifier};Cargo_DoNotUseBinstall={Cargo_DoNotUseBinstall};Cargo_CustomInstallPath={Cargo_CustomInstallPathRequested}>";
+        return $"<Scope={Scope};RunAsAdministrator={RunAsAdministrator};WG_SpecifyVersion={WinGet_SpecifyVersion};PS_NoScope={PowerShell_DoNotSetScopeParameter};PS_AllowClobber={PowerShell_AllowClobber};Pip_BreakSystemPackages={Pip_BreakSystemPackages};WG_DropArchAndScope={WinGet_DropArchAndScope};WG_UseLocalId={WinGet_UseLocalIdentifier};Cargo_DoNotUseBinstall={Cargo_DoNotUseBinstall};Cargo_CustomInstallPath={Cargo_CustomInstallPathRequested}>";
     }
 }

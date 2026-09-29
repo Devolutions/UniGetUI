@@ -212,6 +212,73 @@ public sealed class PowerShellManagerTests
         Assert.Equal("http://proxy", parameters[^2]);
     }
 
+    private static readonly string[] ClobberFailureOutput =
+    [
+        "PackageManagement\\Install-Package : The following commands are already available on this ",
+        "system:'Find-Package,Install-Package,Uninstall-Package'. This module 'PackageManagement' may override the existing ",
+        "commands. If you still want to install this module 'PackageManagement', use -AllowClobber parameter.",
+        "    + FullyQualifiedErrorId : CommandAlreadyAvailable,Validate-ModuleCommandAlreadyAvailable,Microsoft.PowerShell.Pack ",
+        "   ageManagement.Cmdlets.InstallPackage",
+    ];
+
+    [Fact]
+    public void GetResult_RetriesWithAllowClobberOnAClobberFailure()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Install,
+            ClobberFailureOutput,
+            1
+        );
+
+        Assert.Equal(OperationVeredict.AutoRetry, veredict);
+        Assert.True(package.OverridenOptions.PowerShell_AllowClobber);
+
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Install
+        );
+
+        Assert.Contains("-AllowClobber", parameters);
+    }
+
+    [Fact]
+    public void GetResult_DoesNotRetryAClobberFailureTwice()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+        package.OverridenOptions.PowerShell_AllowClobber = true;
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Install,
+            ClobberFailureOutput,
+            1
+        );
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+    }
+
+    [Fact]
+    public void GetParameters_DoesNotSendAllowClobberOnUpdate()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+        package.OverridenOptions.PowerShell_AllowClobber = true;
+
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Update
+        );
+
+        Assert.DoesNotContain("-AllowClobber", parameters);
+    }
+
     [Fact]
     public void Capabilities_ScopeAppliesToInstallOnly()
     {

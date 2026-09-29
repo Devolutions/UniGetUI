@@ -55,6 +55,9 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
 
         if (operation is OperationType.Install)
         {
+            if (package.OverridenOptions.PowerShell_AllowClobber)
+                parameters.Add("-AllowClobber");
+
             if (options.SkipHashCheck)
                 parameters.Add("-SkipPublisherCheck");
 
@@ -125,6 +128,16 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
         )
         {
             package.OverridenOptions.PowerShell_DoNotSetScopeParameter = true;
+            return OperationVeredict.AutoRetry;
+        }
+
+        if (
+            operation is OperationType.Install
+            && output_string.Contains("CommandAlreadyAvailable")
+            && !package.OverridenOptions.PowerShell_AllowClobber
+        )
+        {
+            package.OverridenOptions.PowerShell_AllowClobber = true;
             return OperationVeredict.AutoRetry;
         }
 

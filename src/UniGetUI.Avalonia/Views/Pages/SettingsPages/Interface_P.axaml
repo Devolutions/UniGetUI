@@ -29,7 +29,7 @@
                                    StateChangedCommand="{Binding ShowRestartRequiredCommand}"
                                    CornerRadius="0"
                                    BorderThickness="1,0,1,1"
-                                   IsVisible="{Binding IsWindows}"/>
+                                   IsVisible="{Binding !IsMacOS}"/>
 
              <settings:ComboboxCard x:Name="StartupPageSelector"
                                     CornerRadius="0"

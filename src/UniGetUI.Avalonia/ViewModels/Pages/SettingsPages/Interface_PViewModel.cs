@@ -14,6 +14,8 @@ public partial class Interface_PViewModel : ViewModelBase
 {
     public bool IsWindows { get; } = OperatingSystem.IsWindows();
 
+    public bool IsMacOS { get; } = OperatingSystem.IsMacOS();
+
     [ObservableProperty] private string _iconCacheSizeText = "";
 
     public event EventHandler? RestartRequired;

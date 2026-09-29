@@ -31,6 +31,7 @@ namespace UniGetUI.Core.Data
             { "GSudo", "MIT" },
             { "UniGetUI Elevator", "MIT" },
             { "Icons", "By Icons8" },
+            { "Inter", "SIL OFL 1.1" },
         };
 
         public static Dictionary<string, Uri> LicenseURLs = new()
@@ -96,6 +97,7 @@ namespace UniGetUI.Core.Data
                 new Uri("https://github.com/Devolutions/gsudo-distro/blob/master/LICENSE")
             },
             { "Icons", new Uri("https://icons8.com/license") },
+            { "Inter", new Uri("https://github.com/rsms/inter/blob/master/LICENSE.txt") },
         };
 
         public static Dictionary<string, Uri> HomepageUrls = new()
@@ -133,6 +135,7 @@ namespace UniGetUI.Core.Data
             { "GSudo", new Uri("https://github.com/gerardog/gsudo/") },
             { "UniGetUI Elevator", new Uri("https://github.com/Devolutions/gsudo-distro") },
             { "Icons", new Uri("https://icons8.com") },
+            { "Inter", new Uri("https://rsms.me/inter/") },
         };
     }
 }

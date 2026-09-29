@@ -111,6 +111,7 @@ public static class AvaloniaAppHost
         Logger.ImportantInfo($"OS: {RuntimeInformation.OSDescription}");
         Logger.ImportantInfo($"Process arch: {RuntimeInformation.ProcessArchitecture} (OS: {RuntimeInformation.OSArchitecture})");
         Logger.ImportantInfo($"Runtime: {RuntimeInformation.FrameworkDescription}");
+        Logger.ImportantInfo($"UI font: {UiFontPolicy.ResolveDefaultFamilyName() ?? "(platform default)"}");
         Logger.ImportantInfo($"Elevated: {CoreTools.IsAdministrator()}");
         Logger.ImportantInfo($"Packaged (MSIX): {CoreTools.IsPackagedApp()}");
         Logger.ImportantInfo($"Args: {(args.Length > 0 ? string.Join(" ", args) : "(none)")}");
@@ -137,6 +138,11 @@ public static class AvaloniaAppHost
 
         if (UiFontPolicy.ResolveDefaultFamilyName() is { } fontFamily)
         {
+            if (UiFontPolicy.RequiresBundledFont(fontFamily))
+            {
+                builder = builder.WithInterFont();
+            }
+
             builder = builder.With(new FontManagerOptions { DefaultFamilyName = fontFamily });
         }
 

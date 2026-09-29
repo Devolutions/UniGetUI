@@ -11,6 +11,10 @@ internal static class UiFontPolicy
 
     private const string FallbackFamily = "Segoe UI";
 
+    private const string BundledFamily = "avares://Avalonia.Fonts.Inter/Assets#Inter";
+
+    private const string MacOSFamily = ".AppleSystemUIFont, .SF NS, SF Pro Text, Helvetica Neue";
+
     // Segoe UI has no glyphs for these scripts, so the interface language picks the primary family
     // the way WinUI does instead of leaving the entire UI to per-glyph fallback.
     private static readonly (string LanguagePrefix, string Family)[] ScriptFamilies =
@@ -33,6 +37,9 @@ internal static class UiFontPolicy
         ("ta", "Nirmala UI"),
     ];
 
+    public static bool RequiresBundledFont(string familyName)
+        => familyName.Contains(BundledFamily, StringComparison.Ordinal);
+
     /// <summary>
     /// Resolves the family chain to pin as Avalonia's default, or <c>null</c> to keep the platform
     /// default. Avalonia derives that default from the Win32 system message font, which is
@@ -41,19 +48,13 @@ internal static class UiFontPolicy
     /// </summary>
     public static string? ResolveDefaultFamilyName()
     {
-        // Non-Windows platforms resolve a sane system font already, and no equivalent hijack exists.
         // Design mode is excluded because reading a setting there would migrate the user's real
         // configuration directory from the previewer process.
-        if (!OperatingSystem.IsWindows() || Design.IsDesignMode ||
-            CoreSettings.Get(CoreSettings.K.UseSystemUIFont))
+        if (Design.IsDesignMode || CoreSettings.Get(CoreSettings.K.UseSystemUIFont))
         {
             return null;
         }
 
-        // The fallback is kept as the tail of every chain so an unavailable family degrades to it
-        // instead of leaving the app with no resolvable font at all.
-        string scriptFamily = ResolveScriptFamily();
-        string chain = scriptFamily == FallbackFamily ? FallbackFamily : $"{scriptFamily}, {FallbackFamily}";
         string? overrideFamily = Environment.GetEnvironmentVariable(FontFamilyEnvironmentVariable)?.Trim();
 
         // A "$Default" entry makes default-family resolution recurse into itself and overflow the
@@ -61,10 +62,25 @@ internal static class UiFontPolicy
         if (overrideFamily is null || overrideFamily.Length == 0 ||
             overrideFamily.Contains(FontFamily.DefaultFontFamilyName, StringComparison.Ordinal))
         {
-            return chain;
+            overrideFamily = null;
         }
 
-        return $"{overrideFamily}, {chain}";
+        // The fallback is kept as the tail of every chain so an unavailable family degrades to it
+        // instead of leaving the app with no resolvable font at all.
+        if (OperatingSystem.IsMacOS())
+        {
+            return overrideFamily is null ? MacOSFamily : $"{overrideFamily}, {MacOSFamily}";
+        }
+
+        if (!OperatingSystem.IsWindows())
+        {
+            return overrideFamily is null ? BundledFamily : $"{overrideFamily}, {BundledFamily}";
+        }
+
+        string scriptFamily = ResolveScriptFamily();
+        string chain = scriptFamily == FallbackFamily ? FallbackFamily : $"{scriptFamily}, {FallbackFamily}";
+
+        return overrideFamily is null ? chain : $"{overrideFamily}, {chain}";
     }
 
     private static string ResolveScriptFamily()

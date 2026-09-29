@@ -1,11 +1,10 @@
-# Devolutions.AgentSkills
+# UniGetUI Agent Skills
 
 A .NET library to install, list, update and remove **agent skills**: folders
 with a `SKILL.md` that coding agents such as Claude Code, Codex, Cursor and
 GitHub Copilot (about 75 others too) load as extra instructions.
 
-It is the core of the C# port of the [`skills`](https://github.com/vercel-labs/skills)
-CLI, compiled directly into UniGetUI as `UniGetUI.AgentSkills`. Its public API
+It is compiled directly into UniGetUI as `UniGetUI.AgentSkills`. Its public API
 remains in the `Devolutions.AgentSkills` namespace. The companion
 `UniGetUI.AgentSkills.Cli` project references this library directly and exposes
 `UniGetUI.AgentSkills.Cli.SkillsCli.RunAsync(string[] args)` for in-process CLI
@@ -13,15 +12,14 @@ commands; it returns an exit code without terminating the host process.
 Pass only the arguments after `skills` (for example, `["list", "--json"]`).
 `update` runs its nested `add` commands in-process rather than relaunching
 the host executable.
-A skill installed by the library can't be told
-apart from one installed with `npx skills add`. Both use the same directories,
-the same lock files (`~/.agents/.skill-lock.json` and `skills-lock.json`) and
-the same sources: GitHub, GitLab, Git URLs, local paths, `/.well-known/skills`
-sites, direct downloads and [skills.sh](https://skills.sh) search.
+A skill installed by the library uses the same directories and lock files
+(`~/.agents/.skill-lock.json` and `skills-lock.json`) as the companion CLI.
+Sources include GitHub, GitLab, Git URLs, local paths, `/.well-known/skills`
+sites and direct downloads. There is no remote catalog or hosted telemetry.
 
 - Targets `net10.0`. It is trim- and NativeAOT-safe: the analyzers run on every build with warnings treated as errors.
 - It has no UI and never prompts. It writes nothing to the console and never exits the process.
-- Cloning needs `git` on `PATH`. Sources that skills.sh or the GitHub API can serve are fetched over HTTP instead.
+- Cloning needs `git` on `PATH`. Direct downloads and supported independent providers use HTTP.
 
 ## Quick start
 
@@ -30,15 +28,11 @@ using Devolutions.AgentSkills;
 
 var skills = new SkillsManager();
 
-// Search skills.sh
-foreach (var hit in await skills.SearchAsync("typescript"))
-    Console.WriteLine($"{hit.InstallSource}@{hit.Name} ({hit.Installs} installs)");
-
 // Install one skill globally, for the detected agents
 var result = await skills.InstallAsync(new SkillInstallRequest
 {
-    Source = "vercel-labs/agent-skills",
-    Skills = ["deploy-to-vercel"],
+    Source = @"C:\skills\my-skills",
+    Skills = ["sample-skill"],
 });
 
 // Installed skills, with their source and content hash
@@ -50,7 +44,7 @@ var check = await skills.CheckForUpdatesAsync(SkillScope.Global);
 await skills.UpdateAsync(check.Updates);
 
 // Remove
-await skills.RemoveAsync(["deploy-to-vercel"], SkillScope.Global);
+await skills.RemoveAsync(["sample-skill"], SkillScope.Global);
 ```
 
 ## API
@@ -59,7 +53,6 @@ await skills.RemoveAsync(["deploy-to-vercel"], SkillScope.Global);
 | --- | --- | --- |
 | `GetAgents()` | | Every supported agent: id, display name, skill directories, and whether it is detected |
 | `GetInstalledSkills(scope)` | `skills list --json` | Merged with the lock file: source, ref, hash, install dates |
-| `Search(query, owner, limit)` | `skills find <query>` | skills.sh search, sorted by installs |
 | `GetAvailableSkills(source)` | `skills add <source> --list` | Lists what a source offers without installing |
 | `Install(request)` | `skills add <source> -y` | Returns one outcome per skill; per-agent failures don't throw |
 | `Remove(names, scope, agents)` | `skills remove <names> -y` | |
@@ -94,7 +87,6 @@ new SkillsManager(new SkillsManagerOptions
 {
     ProjectDirectory = @"C:\src\my-app",   // for SkillScope.Project
     GitHubToken = token,                   // default: GITHUB_TOKEN / GH_TOKEN
-    EnableTelemetry = false,               // skills.sh install counts; off by default
     HomeDirectory = sandboxHome,           // tests and sandboxes
     NotionCliPath = ntnPath,               // default: ntn on PATH
 });
@@ -124,8 +116,7 @@ A failure a host can act on throws `SkillsException` with `Failure` set to
 signed-in workspace).
 
 Global installs from Notion are tracked in the global lock, with the page and
-its Notion version id, so `CheckForUpdates` finds skills edited in Notion. The
-reference CLI doesn't track them, and its `skills update` skips these entries.
+its Notion version id, so `CheckForUpdates` finds skills edited in Notion.
 
 ## Not supported
 
@@ -134,4 +125,4 @@ reference CLI doesn't track them, and its `skills update` skips these entries.
 
 ## License
 
-MIT. Derived from [vercel-labs/skills](https://github.com/vercel-labs/skills) (MIT, © Vercel, Inc.).
+MIT. See `LICENSE` for the original copyright and permission notice.

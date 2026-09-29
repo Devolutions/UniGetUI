@@ -1,4 +1,4 @@
-// Minimal YAML frontmatter parser (port of frontmatter.ts) plus a small YAML
+// Minimal YAML frontmatter parser plus a small YAML
 // emitter modeled on the `yaml` package's stringify defaults, used to rewrite
 // Eve SKILL.md frontmatter.
 //
@@ -23,7 +23,7 @@ internal sealed class YamlParseException(string message) : Exception(message);
 internal enum YamlFlavor
 {
     /// The `yaml` npm package (YAML 1.2 core schema, JS object key order), as
-    /// in the reference CLI.
+    /// in other skill readers.
     Js,
 
     /// The Rust port's serde_yaml 0.9 path, used by the extensions: leading-zero

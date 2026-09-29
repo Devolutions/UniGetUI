@@ -106,20 +106,6 @@ public sealed record InstalledSkillInfo
     public bool IsTracked => Source != null;
 }
 
-/// <summary>A skill found by searching skills.sh.</summary>
-/// <param name="Name">Skill name.</param>
-/// <param name="Id">skills.sh identifier (for example <c>vercel-labs/agent-skills/vercel-deploy</c>).</param>
-/// <param name="Source">Repository the skill comes from (for example <c>vercel-labs/agent-skills</c>); may be empty.</param>
-/// <param name="Installs">Install count reported by skills.sh.</param>
-public sealed record SkillSearchResult(string Name, string Id, string Source, long Installs)
-{
-    /// <summary>The value to pass as <see cref="SkillInstallRequest.Source"/> to install this skill.</summary>
-    public string InstallSource => Source.Length == 0 ? Id : Source;
-
-    /// <summary>The skill's page on skills.sh.</summary>
-    public string Url => $"https://skills.sh/{Id}";
-}
-
 /// <summary>A skill offered by a source (see <see cref="SkillsManager.GetAvailableSkills"/>).</summary>
 /// <param name="Name">Skill name, as passed in <see cref="SkillInstallRequest.Skills"/>.</param>
 /// <param name="Description">Skill description.</param>

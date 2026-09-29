@@ -20,6 +20,8 @@ unigetui skills --help
 `unigetui skills [args...]` runs the bundled Agent Skills CLI in the current directory without
 starting the GUI or connecting to the UniGetUI IPC API. For example, `unigetui skills list`
 lists installed agent skills, and `unigetui skills add <source>` installs skills from a source.
+Skill discovery in the GUI searches only repositories, websites and Notion databases you add as sources;
+the bundled CLI does not provide a public-catalog `find` command.
 Arguments and exit codes after `skills` belong to that CLI, not to the UniGetUI automation
 commands documented below.
 

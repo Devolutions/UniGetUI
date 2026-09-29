@@ -9,8 +9,7 @@ using UniGetUI.PackageEngine.Interfaces.ManagerProviders;
 namespace UniGetUI.PackageEngine.Managers.SkillsManager;
 
 /// <summary>
-/// The skill sources are UniGetUI's own: the skills.sh catalog (on unless removed) and the
-/// repositories and indexes the user added, kept in the settings rather than by a command-line tool.
+/// Skill sources are the repositories and indexes the user added, kept in settings.
 /// </summary>
 internal sealed class SkillsSourceHelper : BaseSourceHelper, IInProcessSourceHelper
 {
@@ -53,13 +52,6 @@ internal sealed class SkillsSourceHelper : BaseSourceHelper, IInProcessSourceHel
             output.Error(message);
             output.SetFailureMessage(message);
             return OperationVeredict.Failure;
-        }
-
-        if (locator.Kind is SkillSourceKind.Catalog)
-        {
-            Settings.Set(Settings.K.DisableSkillsPublicCatalog, false);
-            InvalidateSourcesCache();
-            return OperationVeredict.Success;
         }
 
         if (AgentSkills.GetConfiguredSources().Any(s => s.Name.Equals(locator.Name, StringComparison.OrdinalIgnoreCase)))
@@ -114,13 +106,6 @@ internal sealed class SkillsSourceHelper : BaseSourceHelper, IInProcessSourceHel
     private OperationVeredict RemoveSource(IManagerSource source)
     {
         var locator = _skills.SourceFactory.GetLocator(source);
-        if (locator?.Kind is SkillSourceKind.Catalog)
-        {
-            Settings.Set(Settings.K.DisableSkillsPublicCatalog, true);
-            InvalidateSourcesCache();
-            return OperationVeredict.Success;
-        }
-
         string name = locator?.Name ?? source.Name;
         var remaining = (Settings.GetList<string>(AgentSkills.SourcesListKey) ?? [])
             .Where(entry =>

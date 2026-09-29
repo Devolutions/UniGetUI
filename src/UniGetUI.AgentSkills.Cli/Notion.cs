@@ -1,4 +1,4 @@
-// Notion skills integration via the `ntn` CLI (port of notion.ts).
+// Notion skills integration via the `ntn` CLI.
 
 using System.Text;
 using System.Text.Json.Nodes;

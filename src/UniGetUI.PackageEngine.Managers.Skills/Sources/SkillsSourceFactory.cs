@@ -6,8 +6,7 @@ namespace UniGetUI.PackageEngine.Managers.SkillsManager;
 
 /// <summary>
 /// Resolves source names for the Agent Skills manager. A name resolves to a source only when
-/// skills may be installed from it (a configured source, or a GitHub repository while the skills.sh
-/// catalog is enabled), which is what keeps bundle imports and command-line installs within the
+/// skills may be installed from it (a configured source), which keeps bundle imports and installs within the
 /// sources UniGetUI controls.
 /// </summary>
 internal sealed class SkillsSourceFactory(AgentSkills manager) : ISourceFactory

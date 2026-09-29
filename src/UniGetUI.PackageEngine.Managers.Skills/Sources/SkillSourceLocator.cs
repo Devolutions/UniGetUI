@@ -5,9 +5,6 @@ namespace UniGetUI.PackageEngine.Managers.SkillsManager;
 
 internal enum SkillSourceKind
 {
-    /// <summary>The skills.sh catalog, searched through its API.</summary>
-    Catalog,
-
     /// <summary>A website that publishes a well-known skills index (RFC 8615).</summary>
     Index,
 
@@ -27,8 +24,7 @@ internal enum SkillSourceKind
 /// <param name="Name">
 /// The source name UniGetUI shows and compares: owner/repo for a GitHub repository, host and path
 /// for other repositories, the host for an index, app.notion.com/p/ and the id for a Notion
-/// database, and skills.sh for the catalog. It matches what the
-/// skills lock file records, so a skill found in a source and the same skill once installed get the
+/// database. It matches what the skills lock file records, so a skill found in a source and the same skill once installed get the
 /// same source.
 /// </param>
 /// <param name="InstallSource">What the library installs from</param>
@@ -40,13 +36,6 @@ internal sealed partial record SkillSourceLocator(
     Uri Url
 )
 {
-    public static readonly SkillSourceLocator Catalog = new(
-        SkillSourceKind.Catalog,
-        "skills.sh",
-        "https://skills.sh",
-        new Uri("https://skills.sh")
-    );
-
     [GeneratedRegex(@"^(?:github:)?([A-Za-z0-9][A-Za-z0-9-]*)/([A-Za-z0-9._-]+)$")]
     private static partial Regex GitHubShorthand();
 
@@ -98,9 +87,6 @@ internal sealed partial record SkillSourceLocator(
         if (input.Any(c => c == '\\' || char.IsWhiteSpace(c) || char.IsControl(c)))
             return null;
 
-        if (input.Equals("skills.sh", StringComparison.OrdinalIgnoreCase))
-            return Catalog;
-
         var shorthand = GitHubShorthand().Match(input);
         if (shorthand.Success)
             return TryGitHub(shorthand.Groups[1].Value, shorthand.Groups[2].Value);
@@ -118,9 +104,6 @@ internal sealed partial record SkillSourceLocator(
 
         string host = uri.Host.ToLowerInvariant();
         string[] segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-
-        if (host is "skills.sh" or "www.skills.sh")
-            return Catalog;
 
         if (host is "github.com" or "www.github.com")
             return ParseGitHubUrl(uri, segments);
@@ -211,18 +194,6 @@ internal sealed partial record SkillSourceLocator(
             "notion" => Parse(skill.Source),
             _ => Parse(skill.SourceUrl) ?? Parse(skill.Source),
         };
-
-    /// <summary>
-    /// The GitHub repository a skills.sh search result comes from; null for results from anywhere
-    /// else, which the catalog does not vouch for.
-    /// </summary>
-    public static SkillSourceLocator? ForSearchResult(SkillSearchResult result)
-    {
-        // Results without a source carry the repository in their id (owner/repo/skill)
-        string source =
-            result.Source.Length > 0 ? result.Source : string.Join('/', result.Id.Split('/').Take(2));
-        return Parse(source) is { IsGitHub: true } locator ? locator : null;
-    }
 
     private static SkillSourceLocator? TryGitHub(string owner, string repository) =>
         GitHubShorthand().IsMatch($"{owner}/{repository}") && StripDotGit(repository).Trim('.').Length > 0

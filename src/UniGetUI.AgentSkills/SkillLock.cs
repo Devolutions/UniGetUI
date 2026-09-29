@@ -1,4 +1,4 @@
-// Global lock file ~/.agents/.skill-lock.json (port of skill-lock.ts).
+// Global lock file ~/.agents/.skill-lock.json.
 
 using System.Text.Json.Nodes;
 

@@ -1,4 +1,4 @@
-// Update checks and updates behind the public API (update.ts, split into a
+// Update checks and updates behind the public API (split into a
 // check that reports and an update that reinstalls). Global skills are checked
 // the way `skills update -g` checks them: Git tree SHAs through the GitHub API,
 // falling back to a clone. Project skills, which `skills update` always

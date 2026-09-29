@@ -1,4 +1,4 @@
-// Download a SKILL.md or archive URL into a temp directory (port of download-source.ts).
+// Download a SKILL.md or archive URL into a temp directory.
 
 using System.Formats.Tar;
 using System.IO.Compression;

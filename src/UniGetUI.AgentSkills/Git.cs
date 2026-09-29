@@ -1,5 +1,5 @@
-// Git clone operations (port of git.ts). Invokes `git` directly with the same
-// config overrides and environment the TS CLI passes through simple-git.
+// Git clone operations. Invokes `git` directly with isolated configuration
+// and environment overrides.
 
 using System.Text.RegularExpressions;
 

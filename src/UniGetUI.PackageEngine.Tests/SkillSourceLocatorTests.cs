@@ -6,8 +6,8 @@ namespace UniGetUI.PackageEngine.Tests;
 public sealed class SkillSourceLocatorTests
 {
     [Theory]
-    [InlineData("vercel-labs/agent-skills", "vercel-labs/agent-skills", "https://github.com/vercel-labs/agent-skills")]
-    [InlineData("github:vercel-labs/agent-skills", "vercel-labs/agent-skills", "https://github.com/vercel-labs/agent-skills")]
+    [InlineData("contoso/agent-skills", "contoso/agent-skills", "https://github.com/contoso/agent-skills")]
+    [InlineData("github:contoso/agent-skills", "contoso/agent-skills", "https://github.com/contoso/agent-skills")]
     [InlineData("Anthropics/Skills", "anthropics/skills", "https://github.com/Anthropics/Skills")]
     [InlineData("https://github.com/Anthropics/Skills", "anthropics/skills", "https://github.com/Anthropics/Skills")]
     [InlineData("https://www.github.com/owner/repo/", "owner/repo", "https://github.com/owner/repo")]
@@ -123,14 +123,6 @@ public sealed class SkillSourceLocatorTests
     }
 
     [Theory]
-    [InlineData("skills.sh")]
-    [InlineData("https://skills.sh/")]
-    public void SkillsShIsTheCatalog(string input)
-    {
-        Assert.Same(SkillSourceLocator.Catalog, SkillSourceLocator.Parse(input));
-    }
-
-    [Theory]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("./my-skills")]
@@ -240,36 +232,13 @@ public sealed class SkillSourceLocatorTests
     }
 
     [Fact]
-    public void SearchResultsComeFromTheirGitHubRepository()
+    public void AConfiguredRepositoryAndTheSameSkillInstalledShareTheirSourceName()
     {
-        Assert.Equal(
-            "vercel-labs/agent-skills",
-            SkillSourceLocator
-                .ForSearchResult(new SkillSearchResult("deploy", "vercel-labs/agent-skills/deploy", "vercel-labs/agent-skills", 10))
-                ?.Name
-        );
-        Assert.Equal(
-            "owner/repo",
-            SkillSourceLocator.ForSearchResult(new SkillSearchResult("skill", "owner/repo/skill", "", 1))?.Name
-        );
-        Assert.Null(
-            SkillSourceLocator.ForSearchResult(new SkillSearchResult("skill", "x", "https://example.com/skills", 1))
-        );
-    }
-
-    [Fact]
-    public void ADiscoveredSkillAndTheSameSkillInstalledShareTheirSourceName()
-    {
-        var discovered = SkillSourceLocator.ForSearchResult(
-            new SkillSearchResult("deploy", "vercel-labs/agent-skills/deploy", "vercel-labs/agent-skills", 10)
-        );
+        var discovered = SkillSourceLocator.Parse("contoso/agent-skills");
         var installed = SkillSourceLocator.ForInstalled(
-            FakeSkillsBackendSkill("deploy", "Vercel-Labs/agent-skills")
+            Infrastructure.Fakes.FakeSkillsBackend.TrackedSkill("deploy", "Contoso/agent-skills", "0123456789abcdef")
         );
 
         Assert.Equal(discovered?.Name, installed?.Name);
     }
-
-    private static InstalledSkillInfo FakeSkillsBackendSkill(string name, string source) =>
-        Infrastructure.Fakes.FakeSkillsBackend.TrackedSkill(name, source, "0123456789abcdef");
 }

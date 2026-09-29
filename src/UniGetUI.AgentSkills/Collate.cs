@@ -3,7 +3,7 @@
 // Hashes such as computeSkillFolderHash sort file paths with localeCompare,
 // whose order differs from ordinal order (case-insensitive at the primary level,
 // punctuation before digits before letters, lowercase before uppercase as a
-// tie-break). Matching it keeps computedHash values identical to the TS CLI's.
+// tie-break). Matching it keeps computedHash values stable across installations.
 
 namespace Skills;
 

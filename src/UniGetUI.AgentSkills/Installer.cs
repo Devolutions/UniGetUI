@@ -1,4 +1,4 @@
-// Skill installation (symlink/copy) and installed-skill listing (port of installer.ts).
+// Skill installation (symlink/copy) and installed-skill listing.
 
 using System.Text;
 using System.Text.Json.Nodes;
@@ -96,7 +96,7 @@ internal static partial class Installer
 
     // ─── Populated directories ───
     //
-    // The TS installer cleans and re-copies the canonical directory once per
+    // Clean and re-copy the canonical directory once per
     // target agent, and every universal agent shares that directory, so a
     // 20-agent install copies each skill 20 times. Remember which directories
     // this run already filled from which source and skip identical refills: the
@@ -241,7 +241,7 @@ internal static partial class Installer
 
     /// Copy a skill directory. The tree walk (exclusions, links, Eve rewrites,
     /// directory creation) is sequential; file copies then run in parallel, as
-    /// the TS implementation's concurrent `copyDirectory` does.
+    /// concurrent directory copying does.
     private static void CopyDirectory(string src, string dest, string? agentType)
     {
         var files = new List<(string Src, string Dest)>();

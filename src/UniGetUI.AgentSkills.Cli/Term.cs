@@ -118,7 +118,7 @@ internal static partial class Term
     }
 
     /// End this CLI invocation without terminating an embedding application's process.
-    /// Pending telemetry is intentionally not awaited, as in the standalone CLI.
+    /// Process exit is handled by the host.
     [System.Diagnostics.CodeAnalysis.DoesNotReturn]
     public static void Exit(int code)
     {

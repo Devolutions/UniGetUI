@@ -1,4 +1,4 @@
-// Well-known skills provider (RFC 8615), port of providers/wellknown.ts.
+// Well-known skills provider (RFC 8615).
 //
 // Supports the v0.2.0 $schema + type/url/digest artifact index and the legacy
 // v0.1.0 name/description/files directory index, at /.well-known/agent-skills/

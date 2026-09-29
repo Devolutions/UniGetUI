@@ -14,7 +14,7 @@ using UniGetUI.PackageEngine.Tests.Infrastructure.Helpers;
 namespace UniGetUI.PackageEngine.Tests;
 
 /// <summary>
-/// The Agent Skills manager over the real Devolutions.AgentSkills library, against a well-known
+/// The Agent Skills manager over the bundled library, against a well-known
 /// skills index served on localhost and a sandbox home folder: nothing touches the network or the
 /// real agent folders.
 /// </summary>
@@ -115,7 +115,6 @@ public sealed class AgentSkillsLibraryTests : IDisposable
     public async Task SkillFromAWellKnownIndexIsInstalledUpdatedAndRemoved()
     {
         // Offline: the local index is the only source
-        Settings.Set(Settings.K.DisableSkillsPublicCatalog, true);
         var manager = new AgentSkills(new AgentSkillsBackend(_home));
         manager.Initialize();
         Assert.True(manager.IsReady());

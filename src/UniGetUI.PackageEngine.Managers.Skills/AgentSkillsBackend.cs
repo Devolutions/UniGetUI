@@ -5,8 +5,8 @@ using AgentSkillsClient = Devolutions.AgentSkills.SkillsManager;
 namespace UniGetUI.PackageEngine.Managers.SkillsManager;
 
 /// <summary>
-/// <see cref="ISkillsBackend"/> over the Devolutions.AgentSkills library, which installs skills in
-/// process, with the same lock files and folders as the skills CLI (npx skills) and gh skill.
+/// <see cref="ISkillsBackend"/> over the bundled Agent Skills library, which installs skills in
+/// process, using the shared agent skills folders and lock files.
 /// </summary>
 /// <param name="homeDirectory">Home directory override, for tests; the user's home when null</param>
 internal sealed class AgentSkillsBackend(string? homeDirectory = null) : ISkillsBackend
@@ -18,9 +18,7 @@ internal sealed class AgentSkillsBackend(string? homeDirectory = null) : ISkills
     private AgentSkillsClient CreateClient(bool useGitHubToken = false) => new(CreateOptions(useGitHubToken));
 
     /// <summary>
-    /// The library's options. Its own telemetry, which reports installs to skills.sh, stays off:
-    /// skill operations are reported through UniGetUI's telemetry, to Devolutions only, like those of
-    /// every other manager. The Notion CLI is passed by path, since one that UniGetUI just installed
+    /// The Notion CLI is passed by path, since one that UniGetUI just installed
     /// is not on this process's PATH yet.
     /// </summary>
     internal SkillsManagerOptions CreateOptions(bool useGitHubToken) =>
@@ -28,7 +26,6 @@ internal sealed class AgentSkillsBackend(string? homeDirectory = null) : ISkills
         {
             HomeDirectory = homeDirectory,
             GitHubToken = useGitHubToken ? GetGitHubToken() : null,
-            EnableTelemetry = false,
             NotionCliPath = NotionCliTool.FindExecutable(),
         };
 
@@ -51,12 +48,6 @@ internal sealed class AgentSkillsBackend(string? homeDirectory = null) : ISkills
 
     public IReadOnlyList<InstalledSkillInfo> GetInstalledSkills(CancellationToken cancellationToken) =>
         CreateClient().GetInstalledSkills(SkillScope.Global, cancellationToken);
-
-    public IReadOnlyList<SkillSearchResult> Search(
-        string query,
-        int limit,
-        CancellationToken cancellationToken
-    ) => CreateClient().Search(query, limit: limit, cancellationToken: cancellationToken);
 
     public IReadOnlyList<AvailableSkill> GetAvailableSkills(
         string source,

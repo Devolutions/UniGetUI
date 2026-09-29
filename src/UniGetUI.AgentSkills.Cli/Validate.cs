@@ -1,6 +1,6 @@
 // `skills validate` — check skills against the Agent Skills specification
 // (https://agentskills.io/specification) before publishing them
-// (extension; not in the reference CLI). Runs offline.
+// Runs offline.
 
 using System.Text;
 using System.Text.Json.Nodes;

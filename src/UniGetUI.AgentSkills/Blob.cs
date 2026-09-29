@@ -1,7 +1,7 @@
-// Blob-based skill download (port of blob.ts).
+// Independently hosted repository snapshots and GitHub tree/hash helpers.
 //  1. GitHub Trees API → discover SKILL.md locations
 //  2. raw.githubusercontent.com → fetch frontmatter to get skill names
-//  3. skills.sh/api/download → fetch full file contents from a cached blob
+//  3. Supported repositories supply their own skill snapshots
 
 using System.Security.Cryptography;
 using System.Text;
@@ -24,9 +24,7 @@ internal static partial class Blob
     private const int GhApiMaxBuffer = 16 * 1024 * 1024;
     private static volatile bool _rateLimited;
 
-    private static string DownloadBaseUrl => Sys.Env("SKILLS_DOWNLOAD_URL") ?? "https://skills.sh";
-
-    /// Repos that self-host their downloads on the blob fast-path.
+    /// Repos that independently host their own skill snapshots.
     public static string? AllowedRepoDownloadUrl(string ownerRepoLower, string slug) => ownerRepoLower switch
     {
         "zapier/connectors" => $"https://connectors-skills.zapier.com/download/{UrlUtil.EncodeUriComponent(slug)}/snapshot.json",
@@ -40,7 +38,7 @@ internal static partial class Blob
     [GeneratedRegex("-+")] private static partial Regex Dashes();
     [GeneratedRegex("^-|-$")] private static partial Regex EdgeDash();
 
-    /// Must match the server-side toSkillSlug() exactly.
+    /// Convert a skill name to a provider-compatible slug.
     public static string ToSkillSlug(string name)
     {
         var s = WsUnderscore().Replace(name.ToLowerInvariant(), "-");
@@ -213,11 +211,8 @@ internal static partial class Blob
 
     private static Download? FetchSkillDownload(string source, string slug)
     {
-        var parts = source.Split('/');
-        var owner = parts[0];
-        var repo = parts.Length > 1 ? parts[1] : "undefined";
-        var url = AllowedRepoDownloadUrl(source.ToLowerInvariant(), slug)
-                  ?? $"{DownloadBaseUrl}/api/download/{UrlUtil.EncodeUriComponent(owner)}/{UrlUtil.EncodeUriComponent(repo)}/{UrlUtil.EncodeUriComponent(slug)}";
+        var url = AllowedRepoDownloadUrl(source.ToLowerInvariant(), slug);
+        if (url == null) return null;
         var r = HttpRequest.Get(url).Timeout(FetchTimeout).TrySend();
         if (r is not { Ok: true } || !r.TryJson(out var data) || Json.Get(data, "files") is not JsonArray files) return null;
         return new Download(
@@ -280,6 +275,7 @@ internal static partial class Blob
     /// should fall back to git clone.
     public static BlobInstallResult? TryBlobInstall(string ownerRepo, BlobOptions options)
     {
+        if (!IsAllowedRepo(ownerRepo.ToLowerInvariant())) return null;
         // Snapshots are ref-agnostic; an explicit ref must use the clone path.
         if (options.Ref != null) return null;
         var tree = FetchRepoTree(ownerRepo, null, options.UseToken);

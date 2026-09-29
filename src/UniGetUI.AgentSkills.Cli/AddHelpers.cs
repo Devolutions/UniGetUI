@@ -1,5 +1,4 @@
-// `skills add` (port of add.ts): options, shared helpers, security advisory,
-// agent/scope/mode prompts and summary formatting.
+// `skills add`: options, agent/scope/mode prompts and summary formatting.
 
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -13,7 +12,6 @@ internal sealed class AddOptions
     public List<string>? Agent { get; set; }
     public bool Yes { get; set; }
     public List<string>? Skill { get; set; }
-    public string? Metadata { get; set; }
     public bool List { get; set; }
     public bool All { get; set; }
     public bool FullDepth { get; set; }
@@ -33,70 +31,6 @@ internal static partial class AddCommand
     public static string? GetLockSource(string parsedUrl, string? normalized) => InstallRecords.GetLockSource(parsedUrl, normalized);
 
     public static string? GetProjectLockSourceUrl(string sourceType, string sourceUrl) => InstallRecords.GetProjectLockSourceUrl(sourceType, sourceUrl);
-
-    // ─── Security advisory ───
-
-    private static string RiskLabel(string? risk) => risk switch
-    {
-        "critical" => Pc.Red(Pc.Bold("Critical Risk")),
-        "high" => Pc.Red("High Risk"),
-        "medium" => Pc.Yellow("Med Risk"),
-        "low" => Pc.Green("Low Risk"),
-        "safe" => Pc.Green("Safe"),
-        _ => Pc.Dim("--"),
-    };
-
-    private static long AlertCount(JsonNode? audit) => (long)(Json.AsNumber(Json.Get(audit, "alerts")) ?? 0);
-
-    private static string SocketLabel(JsonNode? audit)
-    {
-        var count = AlertCount(audit);
-        return count > 0 ? Pc.Red($"{count} alert{(count != 1 ? "s" : "")}") : Pc.Green("0 alerts");
-    }
-
-    private static string PadEnd(string s, int width)
-    {
-        var visible = Sanitize.StripTerminalEscapes(s).Length;
-        return s + new string(' ', Math.Max(0, width - visible));
-    }
-
-    private static JsonNode? Partner(JsonNode? data, string key) => Json.Get(data, key) is { } v && Json.Truthy(v) ? v : null;
-
-    private static List<string> BuildSecurityLines(JsonObject? audit, List<string> skills, string source)
-    {
-        if (audit == null) return [];
-        if (!skills.Any(s => audit[s] is JsonObject { Count: > 0 })) return [];
-        var nameWidth = Math.Min(skills.Count == 0 ? 0 : skills.Max(s => s.Length), 36);
-        var lines = new List<string> { $"{PadEnd("", nameWidth + 2)}{PadEnd(Pc.Dim("Gen"), 18)}{PadEnd(Pc.Dim("Socket"), 18)}{Pc.Dim("Snyk")}" };
-        foreach (var skill in skills)
-        {
-            var data = audit[skill];
-            var name = skill.Length > nameWidth ? $"{skill[..Math.Max(0, nameWidth - 1)]}…" : skill;
-            string Risk(string k) => Partner(data, k) is { } p ? RiskLabel(Json.Str(p, "risk")) : Pc.Dim("--");
-            var ath = Risk("ath");
-            var socket = Partner(data, "socket") is { } sock ? SocketLabel(sock) : Pc.Dim("--");
-            var snyk = Risk("snyk");
-            lines.Add($"{PadEnd(Pc.Cyan(name), nameWidth + 2)}{PadEnd(ath, 18)}{PadEnd(socket, 18)}{snyk}");
-        }
-        lines.Add("");
-        lines.Add($"{Pc.Dim("Details:")} {Pc.Dim($"https://skills.sh/{source}")}");
-        return lines;
-    }
-
-    private static JsonNode? BuildJsonSecurity(JsonObject? audit, string skill, string? source)
-    {
-        if (audit?[skill] is not JsonObject { Count: > 0 } data) return null;
-        var output = new JsonObject();
-        if (Partner(data, "ath") is { } a) output["gen"] = Json.Get(a, "risk")?.DeepClone();
-        if (Partner(data, "socket") is { } s)
-        {
-            var n = AlertCount(s);
-            output["socket"] = $"{n} alert{(n != 1 ? "s" : "")}";
-        }
-        if (Partner(data, "snyk") is { } k) output["snyk"] = Json.Get(k, "risk")?.DeepClone();
-        if (!string.IsNullOrEmpty(source)) output["details"] = $"https://skills.sh/{source}";
-        return output;
-    }
 
     // ─── Formatting ───
 
@@ -282,16 +216,6 @@ internal static partial class AddCommand
         return selected;
     }
 
-    [GeneratedRegex("^/p/[^/]+")]
-    private static partial Regex PackPath();
-
-    private static bool IsSkillsShPackUrl(string url)
-    {
-        if (WebUrl.Parse(url) is not { } u) return false;
-        var host = u.Hostname.StartsWith("www.") ? u.Hostname[4..] : u.Hostname;
-        return host == "skills.sh" && PackPath().IsMatch(u.Pathname);
-    }
-
     private static void LogAutoSelectedSkills(List<(string Name, string Description)> entries)
     {
         if (entries.Count != 1)
@@ -313,9 +237,6 @@ internal static partial class AddCommand
         Term.Exit(1);
         return null!;
     }
-
-    private static bool? IsSourcePrivate(string source) =>
-        SourceParser.ParseOwnerRepo(source) is var (o, r) ? SourceParser.IsRepoPrivate(o, r) : false;
 
     private static bool SelectScope()
     {

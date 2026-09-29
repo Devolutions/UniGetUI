@@ -1,5 +1,5 @@
-// Update detection shared by `skills update` and the public API (from
-// update.ts): lock-entry classification, well-known digest checks and skill
+// Update detection shared by `skills update` and the public API:
+// lock-entry classification, well-known digest checks and skill
 // relocation discovery in a fresh clone.
 
 using System.Text.Json.Nodes;

@@ -1,5 +1,5 @@
 // Latest GitHub release lookup, used by `skills add --pin latest` and the
-// `gh skill` update check (extension; not in the reference CLI).
+// GitHub release lookup for pinned skills.
 //
 // Auth follows Blob.FetchRepoTree: an anonymous request first; when it fails
 // in a way credentials can fix (401, 404, or a 403 rate limit), retry with

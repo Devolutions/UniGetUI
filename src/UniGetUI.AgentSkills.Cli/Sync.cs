@@ -1,4 +1,4 @@
-// `skills experimental_sync` — crawl node_modules for skills (port of sync.ts).
+// `skills experimental_sync` — crawl node_modules for skills.
 
 using System.Text.Json.Nodes;
 
@@ -293,7 +293,7 @@ internal static class SyncCommand
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
-                // ignored, as in the TS implementation's best-effort lock update
+                // best-effort lock update
             }
         }
 
@@ -318,12 +318,6 @@ internal static class SyncCommand
             Ui.Log.Error(Pc.Red($"Failed to install {failed.Count}"));
             foreach (var r in failed) Ui.Log.Message($"  {Pc.Red("✗")} {r.Skill} → {r.Agent}: {Pc.Dim(r.Error ?? "undefined")}");
         }
-
-        Telemetry.Track(
-            ("event", "experimental_sync"),
-            ("skillCount", toInstall.Count.ToString()),
-            ("successCount", successfulNames.Count.ToString()),
-            ("agents", string.Join(",", targetAgents)));
 
         Term.OutLine();
         Ui.Outro($"{Pc.Green("Done!")}{Pc.Dim("  Review skills before use; they run with full agent permissions.")}");

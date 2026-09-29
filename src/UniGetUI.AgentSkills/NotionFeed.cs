@@ -1,8 +1,7 @@
 // Notion skills databases and skill pages as sources. A skills database lists
 // its skills as pages; each page downloads as a skill folder (Notion's Agent
 // Skills API), with a version id that changes when the skill does. Installs are
-// tracked in the global lock, which the reference CLI does not do for Notion,
-// so that updates can be found (see docs/EXTENSIONS.md).
+// tracked in the global lock so that updates can be found.
 
 using System.Text;
 using System.Text.Json.Nodes;

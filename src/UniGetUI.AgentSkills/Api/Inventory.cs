@@ -1,4 +1,4 @@
-// Installed-skill listing (list.ts --json) and removal (remove.ts -y) behind
+// Installed-skill listing and removal behind
 // the public API.
 
 using System.Globalization;
@@ -68,7 +68,6 @@ internal static class Inventory
         var targetAgents = agents is { Count: > 0 } && !agents.Contains("*") ? agents.Distinct().ToList() : Agents.AllNames();
 
         var outcomes = new List<SkillRemoveOutcome>();
-        var removed = new List<RemoveOutcome>();
         var done = new HashSet<string>();
         foreach (var name in requested)
         {
@@ -82,26 +81,8 @@ internal static class Inventory
             if (!done.Add(resolved[0])) continue;
             log($"Removing {resolved[0]}…");
             var r = Removal.RemoveSkill(resolved[0], targetAgents, global, cwd, log);
-            removed.Add(r);
             outcomes.Add(new SkillRemoveOutcome(r.Skill, r.Success ? SkillOperationStatus.Succeeded : SkillOperationStatus.Failed, r.Error));
         }
-        TrackRemove(removed.Where(r => r.Success).ToList(), targetAgents, global);
         return new SkillRemoveResult(outcomes);
-    }
-
-    /// The CLI's remove events (one per source), only when the host opted in.
-    private static void TrackRemove(List<RemoveOutcome> successful, List<string> targetAgents, bool global)
-    {
-        if (!Telemetry.Enabled) return;
-        foreach (var group in successful.GroupBy(r => r.Source.Length == 0 ? "local" : r.Source))
-        {
-            Telemetry.Track(
-                ("event", "remove"),
-                ("source", group.Key),
-                ("skills", string.Join(",", group.Select(r => r.Skill))),
-                ("agents", string.Join(",", targetAgents)),
-                ("global", global ? "1" : null),
-                ("sourceType", group.Last().SourceType));
-        }
     }
 }

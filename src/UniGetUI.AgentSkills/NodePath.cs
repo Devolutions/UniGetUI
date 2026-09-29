@@ -1,9 +1,7 @@
 // Node.js `path` module semantics (posix and win32) operating on strings.
 //
-// The TypeScript CLI relies heavily on path.join/resolve/normalize and then
-// performs string prefix checks with path.sep for path-traversal protection.
-// System.IO.Path does not normalize `..` the same way, so Node's behavior is
-// reproduced exactly to keep those safety checks equivalent.
+// Normalize path segments before string prefix checks for path-traversal
+// protection. System.IO.Path does not normalize `..` the same way here.
 
 namespace Skills;
 
@@ -244,7 +242,7 @@ internal static class NodePath
     public static string ToPosix(string path) => Win ? path.Replace('\\', '/') : path;
 
     /// normalize(resolve(target)) starts with normalize(resolve(base)) + sep, or
-    /// equals it. Mirrors the many isPathSafe helpers in the TS source.
+    /// equals it. Used when validating skill paths.
     public static bool IsPathSafe(string basePath, string target)
     {
         var nb = Normalize(Resolve(basePath));

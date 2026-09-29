@@ -1,6 +1,6 @@
-// Skill removal (from remove.ts): scanning installed folders, resolving names
+// Skill removal: scanning installed folders, resolving names
 // and removing one skill from agent directories, the canonical copy and the
-// lock file. The CLI adds prompts, output and telemetry around it.
+// lock file. The CLI adds prompts and output around it.
 
 namespace Skills;
 

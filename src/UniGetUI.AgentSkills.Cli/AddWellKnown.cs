@@ -1,4 +1,4 @@
-// `skills add` well-known discovery flow (port of add.ts handleWellKnownSkills).
+// `skills add` well-known discovery flow.
 
 using System.Text.Json.Nodes;
 
@@ -86,7 +86,6 @@ internal static partial class AddCommand
             {
                 Message = "Select skills to install",
                 Items = items,
-                InitialSelected = IsSkillsShPackUrl(url) ? Enumerable.Range(0, skills.Count).ToList() : [],
                 Required = true,
                 MaxVisible = 20,
                 SelectAll = true,
@@ -128,9 +127,6 @@ internal static partial class AddCommand
 
         if (!options.Yes && Ui.Confirm("Proceed with installation?") != true) ExitInstallationCancelled();
 
-        var sourceIdentifier = WellKnown.GetSourceIdentifier(url);
-        var privacy = Task.Run(() => IsSourcePrivate(sourceIdentifier));
-
         spinner.Start("Installing skills…");
         var results = new List<AddResult>();
         foreach (var s in selected)
@@ -143,23 +139,6 @@ internal static partial class AddCommand
         var successful = results.Where(r => r.R.Success).ToList();
         var failed = results.Where(r => !r.R.Success).ToList();
         var okNames = successful.Select(r => r.Skill).ToHashSet();
-
-        var skillFiles = new JsonObject();
-        foreach (var s in selected) skillFiles[s.InstallName] = s.SourceUrl;
-
-        if (privacy.Result != true)
-        {
-            Telemetry.Track(
-                ("event", "install"),
-                ("source", sourceIdentifier),
-                ("skills", string.Join(",", selected.Select(s => s.InstallName))),
-                ("agents", string.Join(",", targetAgents)),
-                ("global", installGlobally ? "1" : null),
-                ("skillFiles", Json.Stringify(skillFiles, 0)),
-                ("installUrl", url),
-                ("metadata", options.Metadata),
-                ("sourceType", "well-known"));
-        }
 
         if (successful.Count > 0)
         {
@@ -174,7 +153,6 @@ internal static partial class AddCommand
 
         Term.OutLine();
         Ui.Outro(DoneOutro());
-        PromptForFindSkills(options, targetAgents);
         return true;
     }
 

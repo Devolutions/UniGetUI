@@ -1,4 +1,4 @@
-// Sanitize untrusted strings before terminal output (port of sanitize.ts).
+// Sanitize untrusted strings before terminal output.
 //
 // Strips CSI/OSC/DCS/PM/APC sequences, simple two-byte escapes, C1 control
 // codes and raw control characters (except \t and \n), defending against

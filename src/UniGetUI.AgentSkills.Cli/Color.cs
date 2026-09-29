@@ -1,8 +1,5 @@
-// Two color implementations, matching the two used by the TS CLI:
-//  * Pc: a faithful port of picocolors (nested-close replacement, and its
-//    color-support detection, which enables colors unconditionally on Windows).
-//  * Style: Node's util.styleText as used by @clack/prompts, which only colors
-//    when stdout is a TTY (or FORCE_COLOR is set).
+// Two color implementations: Pc supports nested-close replacement and enables
+// colors on Windows; Style only colors when stdout is a TTY or FORCE_COLOR is set.
 
 namespace Skills;
 

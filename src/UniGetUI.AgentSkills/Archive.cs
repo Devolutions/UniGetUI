@@ -1,4 +1,4 @@
-// Strict zip archive reader (port of archive.ts). Rejects unsafe paths, links,
+// Strict zip archive reader. Rejects unsafe paths, links,
 // encryption, multi-disk archives and inconsistent headers.
 
 using System.Buffers.Binary;

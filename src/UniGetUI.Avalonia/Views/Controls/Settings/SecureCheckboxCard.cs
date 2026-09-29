@@ -60,6 +60,7 @@ public partial class SecureCheckboxCard : SettingsCard
         {
             _textblock.Text = value;
             ApplyAutomationMetadata(_checkbox, value, _warningBlock.IsVisible ? _warningBlock.Text : null);
+            SyncToggleItemStatus();
         }
     }
 
@@ -70,6 +71,7 @@ public partial class SecureCheckboxCard : SettingsCard
             _warningBlock.Text = CoreTools.FormatAsTwoLines(value);
             _warningBlock.IsVisible = value.Any();
             ApplyAutomationMetadata(_checkbox, _textblock.Text, _warningBlock.IsVisible ? value : null);
+            SyncToggleItemStatus();
         }
     }
 

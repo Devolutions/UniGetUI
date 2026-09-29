@@ -123,6 +123,8 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             return ParseInstalledPackages(outputLines, this);
         }
 
+        protected override bool UseSubstringSearch => true;
+
         public override List<string> FindCandidateExecutableFiles()
         {
             var candidates = CoreTools.WhichMultiple("powershell.exe");

@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using UniGetUI.Avalonia.Views.Controls;
+using UniGetUI.Core.Tools;
 using ICommand = System.Windows.Input.ICommand;
 
 namespace UniGetUI.Avalonia.Views.Controls.Settings;
@@ -344,6 +345,21 @@ public class SettingsCard : UserControl
 
         if (!string.IsNullOrWhiteSpace(helpText))
             AutomationProperties.SetHelpText(control, helpText);
+    }
+
+    protected void ApplyToggleAutomationState(Control control, bool isChecked, string? baseName)
+    {
+        string state = isChecked
+            ? CoreTools.Translate("Enabled")
+            : CoreTools.Translate("Disabled");
+        // ItemStatus: some screen readers read this separately
+        AutomationProperties.SetItemStatus(control, state);
+        // Name with state suffix: guarantees VoiceOver announces state on macOS
+        // where ToggleSwitch AX role may not expose IsChecked natively
+        if (!string.IsNullOrEmpty(baseName))
+        {
+            AutomationProperties.SetName(control, baseName + ", " + state);
+        }
     }
 
     private static string? ExtractAutomationText(object? value) => value switch

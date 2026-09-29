@@ -169,20 +169,7 @@ public partial class CheckboxCard : SettingsCard
     }
 
     protected void SyncToggleItemStatus()
-    {
-        string state = (_checkbox.IsChecked ?? false)
-            ? CoreTools.Translate("Enabled")
-            : CoreTools.Translate("Disabled");
-        // ItemStatus: some screen readers read this separately
-        AutomationProperties.SetItemStatus(_checkbox, state);
-        // Name with state suffix: guarantees VoiceOver announces state on macOS
-        // where ToggleSwitch AX role may not expose IsChecked natively
-        string? baseName = _textblock.Text;
-        if (!string.IsNullOrEmpty(baseName))
-        {
-            AutomationProperties.SetName(_checkbox, $"{baseName}, {state}");
-        }
-    }
+        => ApplyToggleAutomationState(_checkbox, _checkbox.IsChecked ?? false, _textblock.Text);
 }
 
 public partial class CheckboxCard_Dict : CheckboxCard

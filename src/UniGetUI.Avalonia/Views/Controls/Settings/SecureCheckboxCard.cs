@@ -1,5 +1,7 @@
 using System.Windows.Input;
 using Avalonia;
+using Avalonia.Automation;
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -42,6 +44,7 @@ public partial class SecureCheckboxCard : SettingsCard
             _checkbox.IsChecked = SecureSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
             _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
             UpdateStateLabel();
+            SyncToggleItemStatus();
             _checkbox.IsEnabled = true;
         }
     }
@@ -53,7 +56,11 @@ public partial class SecureCheckboxCard : SettingsCard
 
     public string Text
     {
-        set => _textblock.Text = value;
+        set
+        {
+            _textblock.Text = value;
+            ApplyAutomationMetadata(_checkbox, value, _warningBlock.IsVisible ? _warningBlock.Text : null);
+        }
     }
 
     public string WarningText
@@ -62,6 +69,7 @@ public partial class SecureCheckboxCard : SettingsCard
         {
             _warningBlock.Text = CoreTools.FormatAsTwoLines(value);
             _warningBlock.IsVisible = value.Any();
+            ApplyAutomationMetadata(_checkbox, _textblock.Text, _warningBlock.IsVisible ? value : null);
         }
     }
 
@@ -75,12 +83,15 @@ public partial class SecureCheckboxCard : SettingsCard
             OffContent = null,
             VerticalAlignment = VerticalAlignment.Center,
         };
+        // Force CheckBox role so macOS VoiceOver exposes checked/unchecked state
+        AutomationProperties.SetControlTypeOverride(_checkbox, AutomationControlType.CheckBox);
         _stateLabel = new TextBlock
         {
             Text = DisabledLabel,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 8, 0),
         };
+        AutomationProperties.SetAccessibilityView(_stateLabel, AccessibilityView.Raw);
         _loading = new ProgressBar
         {
             IsIndeterminate = false,
@@ -106,6 +117,7 @@ public partial class SecureCheckboxCard : SettingsCard
         };
         _warningBlock.Classes.Add("setting-warning-text");
         IS_INVERTED = false;
+        AutomationProperties.SetAccessibilityView(_warningBlock, AccessibilityView.Raw);
 
         Content = new StackPanel
         {
@@ -122,6 +134,7 @@ public partial class SecureCheckboxCard : SettingsCard
         };
 
         _checkbox.IsCheckedChanged += (s, e) => _ = _checkbox_Toggled();
+        ApplyAutomationMetadata(_checkbox, _textblock.Text);
 
         this.GetObservable(IsEnabledProperty)
             .SubscribeValue(enabled => _warningBlock.Opacity = enabled ? 1 : 0.2);
@@ -149,6 +162,7 @@ public partial class SecureCheckboxCard : SettingsCard
             _textblock.Opacity = (_checkbox.IsChecked ?? false) ? 1 : 0.7;
             _checkbox.IsChecked = SecureSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
             UpdateStateLabel();
+            SyncToggleItemStatus();
             if (_textblock.Text is not null)
             {
                 AccessibilityAnnouncementService.AnnounceToggle(_textblock.Text, _checkbox.IsChecked ?? false);
@@ -161,6 +175,7 @@ public partial class SecureCheckboxCard : SettingsCard
             Logger.Warn(ex);
             _checkbox.IsChecked = SecureSettings.Get(setting_name) ^ IS_INVERTED ^ ForceInversion;
             UpdateStateLabel();
+            SyncToggleItemStatus();
             _loading.IsVisible = false;
             _checkbox.IsEnabled = true;
         }
@@ -170,4 +185,7 @@ public partial class SecureCheckboxCard : SettingsCard
     {
         _stateLabel.Text = (_checkbox.IsChecked ?? false) ? EnabledLabel : DisabledLabel;
     }
+
+    private void SyncToggleItemStatus()
+        => ApplyToggleAutomationState(_checkbox, _checkbox.IsChecked ?? false, _textblock.Text);
 }

@@ -209,7 +209,14 @@ function Get-DaemonCommand {
         throw "Daemon project not found at $daemonProject"
     }
 
-    switch ([string]$manifest.daemon.kind) {
+    $daemonKind = if ($env:UNIGETUI_DAEMON_EXE) {
+        'avalonia-native'
+    }
+    else {
+        [string]$manifest.daemon.kind
+    }
+
+    switch ($daemonKind) {
         'windows-exe' {
             $daemonExe = if ($env:UNIGETUI_DAEMON_EXE) {
                 $env:UNIGETUI_DAEMON_EXE
@@ -273,6 +280,17 @@ $daemonExtraArgs = @('--headless', '--ipc-api-transport', 'named-pipe', '--ipc-a
 $daemonStartupTimeoutSeconds = if ($runningOnWindows) { 300 } else { 120 }
 $daemonCommand = Get-DaemonCommand
 $cliCommand = $daemonCommand
+if ($env:UNIGETUI_DAEMON_EXE -or [string]$manifest.daemon.kind -eq 'avalonia-native') {
+    $launcherName = if ($runningOnWindows) { 'uniget.exe' } else { 'uniget' }
+    $launcherPath = Join-Path $daemonCommand.WorkingDirectory $launcherName
+    if (-not (Test-Path $launcherPath)) {
+        throw "NativeAOT CLI launcher was not found at $launcherPath"
+    }
+    $cliCommand = @{
+        FilePath = $launcherPath
+        WorkingDirectory = $daemonCommand.WorkingDirectory
+    }
+}
 $process = $null
 $gracefulShutdown = $false
 

@@ -91,6 +91,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+if ($LauncherName -eq 'uniget') {
+    throw "'uniget' is reserved for the UniGetUI command-line launcher"
+}
+
 $SourceDir  = (Resolve-Path $SourceDir).Path
 $OutputPath = [System.IO.Path]::GetFullPath($OutputPath)
 $IconSourcePath = (Resolve-Path $IconSourcePath).Path
@@ -105,6 +109,7 @@ $IconTargetName = "$LauncherName.png"
 $IconInstallPath = "$IconInstallDir/$IconTargetName"
 $DesktopFilePath = "/usr/share/applications/$LauncherName.desktop"
 $LauncherPath = "/usr/bin/$LauncherName"
+$CliLauncherPath = '/usr/bin/uniget'
 
 function New-LinuxIntegrationAssets {
     param(
@@ -122,17 +127,26 @@ function New-LinuxIntegrationAssets {
         throw "App executable '$AppExecutableName' was not found in package payload '$payloadDir'"
     }
 
-    $launcherFullPath = Join-Path $StageRoot $LauncherPath.TrimStart('/')
-    New-Item -ItemType Directory -Path (Split-Path $launcherFullPath -Parent) -Force | Out-Null
-    $launcherCommand = 'exec {0}/{1} "$@"' -f $InstallPrefix, $AppExecutableName
-    $launcherScript = @(
-        '#!/bin/sh',
-        $launcherCommand,
-        ''
-    ) -join "`n"
-    [System.IO.File]::WriteAllText($launcherFullPath, $launcherScript)
-    & chmod 755 $launcherFullPath
-    if ($LASTEXITCODE -ne 0) { throw "chmod (launcher) exited $LASTEXITCODE" }
+    if (-not (Test-Path (Join-Path $payloadDir 'uniget') -PathType Leaf)) {
+        throw "CLI executable 'uniget' was not found in package payload '$payloadDir'"
+    }
+
+    foreach ($launcher in @(
+        @{ Path = $LauncherPath; Executable = $AppExecutableName },
+        @{ Path = $CliLauncherPath; Executable = 'uniget' }
+    )) {
+        $launcherFullPath = Join-Path $StageRoot $launcher.Path.TrimStart('/')
+        New-Item -ItemType Directory -Path (Split-Path $launcherFullPath -Parent) -Force | Out-Null
+        $launcherCommand = 'exec {0}/{1} "$@"' -f $InstallPrefix, $launcher.Executable
+        $launcherScript = @(
+            '#!/bin/sh',
+            $launcherCommand,
+            ''
+        ) -join "`n"
+        [System.IO.File]::WriteAllText($launcherFullPath, $launcherScript)
+        & chmod 755 $launcherFullPath
+        if ($LASTEXITCODE -ne 0) { throw "chmod (launcher) exited $LASTEXITCODE" }
+    }
 
     $desktopEntryFullPath = Join-Path $StageRoot $DesktopFilePath.TrimStart('/')
     New-Item -ItemType Directory -Path (Split-Path $desktopEntryFullPath -Parent) -Force | Out-Null
@@ -269,6 +283,7 @@ cp -rp $DataStage/. %{buildroot}/
 %defattr(-,root,root,-)
 $InstallPrefix
 $LauncherPath
+$CliLauncherPath
 $DesktopFilePath
 $IconInstallPath
 

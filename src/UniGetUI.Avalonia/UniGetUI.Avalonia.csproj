@@ -212,6 +212,39 @@
     </Target>
 
     <Target
+        Name="PublishCliLauncher"
+        AfterTargets="Publish"
+        Condition="'$(DesignTimeBuild)' != 'true' and '$(SkipCliLauncher)' != 'true' and '$(RuntimeIdentifier)' != ''"
+    >
+        <PropertyGroup>
+            <_CliLauncherProject>$([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', '..', 'UniGetUI.CliLauncher', 'UniGetUI.CliLauncher.csproj'))</_CliLauncherProject>
+            <_CliLauncherTargetFramework Condition="'$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-arm64'">$(WindowsTargetFramework)</_CliLauncherTargetFramework>
+            <_CliLauncherTargetFramework Condition="'$(RuntimeIdentifier)' == 'linux-x64' or '$(RuntimeIdentifier)' == 'linux-arm64' or '$(RuntimeIdentifier)' == 'osx-x64' or '$(RuntimeIdentifier)' == 'osx-arm64'">$(PortableTargetFramework)</_CliLauncherTargetFramework>
+            <_CliLauncherPlatform Condition="'$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'linux-x64' or '$(RuntimeIdentifier)' == 'osx-x64'">x64</_CliLauncherPlatform>
+            <_CliLauncherPlatform Condition="'$(RuntimeIdentifier)' == 'win-arm64' or '$(RuntimeIdentifier)' == 'linux-arm64' or '$(RuntimeIdentifier)' == 'osx-arm64'">arm64</_CliLauncherPlatform>
+            <_CliLauncherExecutableName Condition="$([MSBuild]::IsOSPlatform('Windows'))">uniget.exe</_CliLauncherExecutableName>
+            <_CliLauncherExecutableName Condition="!$([MSBuild]::IsOSPlatform('Windows'))">uniget</_CliLauncherExecutableName>
+            <_CliLauncherIntermediateDir>$([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', '$(BaseIntermediateOutputPath)', 'cli-launcher', '$(Configuration)', '$(RuntimeIdentifier)'))))</_CliLauncherIntermediateDir>
+            <_CliLauncherExecutable>$([System.IO.Path]::Combine('$(_CliLauncherIntermediateDir)', '$(_CliLauncherExecutableName)'))</_CliLauncherExecutable>
+            <_CliLauncherSysRootArg Condition="'$(SysRoot)' != ''">/p:SysRoot=&quot;$(SysRoot)&quot;</_CliLauncherSysRootArg>
+            <_CliLauncherLinkerFlavorArg Condition="'$(LinkerFlavor)' != ''">/p:LinkerFlavor=$(LinkerFlavor)</_CliLauncherLinkerFlavorArg>
+        </PropertyGroup>
+        <Error Condition="'$(_CliLauncherPlatform)' == ''"
+               Text="The CLI launcher does not support runtime identifier '$(RuntimeIdentifier)'." />
+        <Exec
+            Command="dotnet publish &quot;$(_CliLauncherProject)&quot; --configuration $(Configuration) --framework $(_CliLauncherTargetFramework) --runtime $(RuntimeIdentifier) --self-contained true --nologo /p:Platform=$(_CliLauncherPlatform) /p:PublishAot=true /p:PublishReadyToRun=false /p:PublishDir=&quot;$(_CliLauncherIntermediateDir)&quot; $(_CliLauncherSysRootArg) $(_CliLauncherLinkerFlavorArg)"
+            WorkingDirectory="$(MSBuildThisFileDirectory)"
+        />
+        <Error Condition="!Exists('$(_CliLauncherExecutable)')"
+               Text="The CLI launcher was not produced at '$(_CliLauncherExecutable)'." />
+        <Copy SourceFiles="$(_CliLauncherExecutable)"
+              DestinationFolder="$(PublishDir)"
+              SkipUnchangedFiles="true" />
+        <Error Condition="!Exists('$(PublishDir)$(_CliLauncherExecutableName)')"
+               Text="The CLI launcher was not staged at '$(PublishDir)$(_CliLauncherExecutableName)'." />
+    </Target>
+
+    <Target
         Name="EnsureBundledElevatorFromNuGet"        BeforeTargets="PrepareForBuild"
         Condition="'$(DesignTimeBuild)' != 'true' and $([MSBuild]::IsOSPlatform('Windows')) and '$(Configuration)' != 'Debug'"
     >

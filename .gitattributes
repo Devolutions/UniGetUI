@@ -1,2 +1,3 @@
 src/UniGetUI.PackageEngine.Managers.Chocolatey/choco-cli/** linguist-vendored
+UniGetUI.iss whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 .githooks/* text eol=lf

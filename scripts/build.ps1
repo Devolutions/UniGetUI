@@ -96,6 +96,11 @@ if (-not (Test-Path $WindowsAppHostPath)) {
     throw "Windows app host was not produced at $WindowsAppHostPath"
 }
 
+$CliLauncherPath = Join-Path $BinDir "uniget.exe"
+if (-not (Test-Path -LiteralPath $CliLauncherPath -PathType Leaf)) {
+    throw "NativeAOT CLI launcher was not staged for win-$Platform at $CliLauncherPath"
+}
+
 # The elevated policy-write helper is authenticated by exact path at runtime, so a missing or
 # misplaced helper must fail the build rather than silently ship an install that cannot elevate.
 $PolicyElevatorPath = Join-Path $BinDir "Assets\Utilities\UniGetUI.PolicyElevator.exe"

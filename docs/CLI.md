@@ -8,13 +8,43 @@ This file documents the **public command-line surface** exposed by UniGetUI in t
 
 ## Quick start
 
+The `uniget` console launcher is included beside the GUI executable on Windows, Linux, and
+macOS. It forwards arguments and terminal input/output, waits for each command to finish, and
+returns its exit code. Keep it with the rest of the installation; copying only the launcher
+elsewhere will not work.
+
+- **Windows:** Select **Add to PATH** during a regular installation to run `uniget` from any
+  directory. This option is off by default and uses the user or system `PATH` according to
+  the install mode. Open a new terminal after installation. Without this option, run
+  `.\uniget.exe` from the installation directory.
+- **Linux:** The `.deb` and `.rpm` packages expose `uniget` on `PATH`; from an extracted tarball,
+  run `./uniget` in the directory containing `UniGetUI`.
+- **macOS:** The launcher is at `/Applications/UniGetUI.app/Contents/MacOS/uniget` after moving
+  the app to `/Applications`; run it by its full path.
+
+The commands below assume PowerShell is in the installation directory on Windows:
+
 ```powershell
-unigetui status
-unigetui app status
-unigetui package search --manager dotnet-tool --query dotnetsay
-unigetui package install --manager dotnet-tool --id dotnetsay --version 2.1.4 --scope Global
-unigetui operation wait --id 123 --timeout 300
+.\uniget.exe status
+.\uniget.exe app status
+.\uniget.exe package search --manager dotnet-tool --query dotnetsay
+.\uniget.exe package install --manager dotnet-tool --id dotnetsay --version 2.1.4 --scope Global
+.\uniget.exe operation wait --id 123 --timeout 300
 ```
+
+For a silent Windows installation, include `ADDTOPATH=1` to opt in, or `ADDTOPATH=0` to
+explicitly deselect **Add to PATH**:
+
+```powershell
+.\UniGetUI.Installer.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART ADDTOPATH=1
+```
+
+The property name is case-insensitive and accepts only `0` or `1`. It overrides the saved
+selection and `/TASKS` or `/MERGETASKS` for this checkbox only; other tasks are unchanged.
+Without it, normal task-selection behavior applies. The existing
+`/MERGETASKS="regularinstall\addtopath"` syntax remains supported.
+Portable installations never change `PATH`, even with `ADDTOPATH=1`. Uninstall removes only
+the `PATH` entry added by this installer; a pre-existing entry is left intact.
 
 ## Global transport options
 

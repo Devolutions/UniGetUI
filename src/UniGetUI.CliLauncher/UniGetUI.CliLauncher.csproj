@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WindowsTargetFramework)</TargetFramework>
+        <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">$(PortableTargetFramework)</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <AssemblyName>uniget</AssemblyName>
+        <RuntimeIdentifiers Condition="$([MSBuild]::IsOSPlatform('Windows'))">win-x64;win-arm64</RuntimeIdentifiers>
+        <RuntimeIdentifiers Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux-x64;linux-arm64</RuntimeIdentifiers>
+        <RuntimeIdentifiers Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx-x64;osx-arm64</RuntimeIdentifiers>
+        <PublishAot>true</PublishAot>
+        <PublishReadyToRun>false</PublishReadyToRun>
+        <IsAotCompatible>true</IsAotCompatible>
+        <InvariantGlobalization>true</InvariantGlobalization>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
+    </ItemGroup>
+</Project>

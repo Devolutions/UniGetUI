@@ -218,6 +218,9 @@ jobs:
           if (-not (Test-Path "unigetui_bin/UniGetUI.exe")) {
             throw "Windows app host was not produced at unigetui_bin/UniGetUI.exe"
           }
+          if (-not (Test-Path -LiteralPath "unigetui_bin/uniget.exe" -PathType Leaf)) {
+            throw "NativeAOT CLI launcher was not staged for win-$Platform at unigetui_bin/uniget.exe"
+          }
 
           # The elevated policy-write helper is authenticated by exact path at runtime, and it must
           # be present here so the code-signing step below signs it and the integrity tree that is
@@ -561,7 +564,13 @@ jobs:
       - name: Verify Linux glibc baseline
         if: runner.os == 'Linux'
         shell: pwsh
-        run: ./scripts/check-linux-glibc.ps1 -Path "bin/${{ matrix.name }}" -MaxVersion '${{ env.LINUX_GLIBC_BASELINE }}'
+        run: |
+          $Launcher = "bin/${{ matrix.name }}/uniget"
+          if (-not (Test-Path -LiteralPath $Launcher -PathType Leaf)) {
+            throw "NativeAOT CLI launcher was not staged for ${{ matrix.runtime }} at $Launcher"
+          }
+          chmod +x $Launcher
+          ./scripts/check-linux-glibc.ps1 -Path "bin/${{ matrix.name }}" -MaxVersion '${{ env.LINUX_GLIBC_BASELINE }}'
 
       - name: Install macOS packaging tools
         if: runner.os == 'macOS'
@@ -600,6 +609,8 @@ jobs:
           cp -R "bin/${{ matrix.name }}/." "${APP_BUNDLE}/Contents/MacOS/"
           find "${APP_BUNDLE}/Contents/MacOS" -name "*.pdb" -type f -delete
           chmod +x "${APP_BUNDLE}/Contents/MacOS/${APP_EXECUTABLE}"
+          test -f "${APP_BUNDLE}/Contents/MacOS/uniget"
+          chmod +x "${APP_BUNDLE}/Contents/MacOS/uniget"
           sed "s|@VERSION@|${VERSION}|g" \
             scripts/macos/Info.plist \
             > "${APP_BUNDLE}/Contents/Info.plist"

@@ -5,6 +5,12 @@ Italian.SetupWindowTitle=Installazione di {#MyAppName} {#MyAppVersion}
 [CustomMessages]
 ; Armenian, Brazilian Portuguese, Catalan, Corsican, Czech, Danish, Dutch, Finnish, French, German, Hebrew, Icelandic, Italian, Japanese, Korean, Norwegian, Polish, Portuguese, Russian, Slovenian, Spanish, Turkish, Ukrainian
 
+; Unqualified messages are the English fallback for languages not yet translated.
+RegAddToPath=Add the uniget command to PATH (reopen terminals after installation)
+InvalidAddToPathProperty=Invalid installer command line.%n%n%1%n%nUse the bare property ADDTOPATH=0 or ADDTOPATH=1. Setup will stop without installing.
+UnigetPathError=Could not update PATH for the uniget command in %1.%n%n%2%n%nInstallation or uninstallation will continue, but PATH may require manual attention. See the log (use /LOG when uninstalling). Reopen terminals after correcting PATH.
+UnigetPathBroadcastError=Windows could not notify running applications of the PATH change. Reopen terminals; signing out and back in may be needed.
+
 ; English
 English.InstallType=Installation type
 English.ShCuts=Shortcuts

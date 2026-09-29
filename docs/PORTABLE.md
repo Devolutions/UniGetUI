@@ -167,6 +167,7 @@ turn a portable copy into a regular one.
 | `.ubundle` file association | Bundle files do not open in UniGetUI on double-click. Pass the path on the command line instead. |
 | Start-at-login entry | UniGetUI does not start with Windows, and `--daemon` is not registered. |
 | Start menu and desktop shortcuts | Not created. |
+| Optional `uniget` PATH entry | Not added. Run `.\uniget.exe` from the installation folder instead. |
 
 ## Fallback when the folder is not writable
 

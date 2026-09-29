@@ -19,6 +19,7 @@
         <ListBox x:Name="NavListBox"
                  Grid.Row="0"
                  SelectionMode="Single"
+                 KeyboardNavigation.TabNavigation="Continue"
                  SelectionChanged="NavListBox_SelectionChanged"
                  Background="Transparent"
                  BorderThickness="0"
@@ -154,6 +155,7 @@
                  (selection coordinated with the main one in code-behind) and share the nav-item look. -->
             <ListBox x:Name="FooterNavListBox"
                      SelectionMode="Single"
+                     KeyboardNavigation.TabNavigation="Continue"
                      SelectionChanged="FooterNavListBox_SelectionChanged"
                      Background="Transparent"
                      BorderThickness="0"
@@ -187,6 +189,7 @@
                 <!-- More is kept selected while its flyout is open so its navigation pill remains visible. -->
                 <ListBoxItem x:Name="MoreNavBtn" Tag="More" Classes="nav-item" Padding="4,2" CornerRadius="6"
                              automation:AutomationProperties.Name="{t:Translate More}"
+                             automation:AutomationProperties.AcceleratorKey="Ctrl+7"
                              ToolTip.Tip="{t:Translate More}">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
                         <TextBlock Grid.Column="0" Text="···" FontSize="20" Width="24" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"

@@ -5,6 +5,7 @@ using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -58,6 +59,8 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         NavigationPillBottomCap.RenderTransform = _pillBottomCapTranslate;
 
         SidebarLayout.SizeChanged += (_, _) => QueueSelectionPillUpdate(animate: false);
+
+        MoreNavBtn.AddHandler(KeyDownEvent, MoreNavBtn_KeyDown, RoutingStrategies.Tunnel);
 
         if (FlyoutBase.GetAttachedFlyout(MoreNavBtn) is { } moreFlyout)
         {
@@ -123,10 +126,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
 
         if (tag == "More")
         {
-            // Keep the item selected until the menu closes so its accent pill remains anchored.
-            _isMoreFlyoutOpen = true;
-            QueueSelectionPillUpdate(animate: true, item);
-            FlyoutBase.ShowAttachedFlyout(item);
+            ShowMoreFlyout();
             return;
         }
 
@@ -149,6 +149,26 @@ public partial class SidebarView : BaseView<SidebarViewModel>
 
     private void SettingsNavBtn_Tapped(object? sender, TappedEventArgs e)
         => _ = _settingsIconSpin.RunAsync(SettingsIcon);
+
+    public void ShowMoreFlyout()
+    {
+        if (_isMoreFlyoutOpen)
+            return;
+
+        // Keep the item selected until the menu closes so its accent pill remains anchored.
+        _isMoreFlyoutOpen = true;
+        QueueSelectionPillUpdate(animate: true, MoreNavBtn);
+        Dispatcher.UIThread.Post(() => FlyoutBase.ShowAttachedFlyout(MoreNavBtn));
+    }
+
+    private void MoreNavBtn_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Space or Key.Enter))
+            return;
+
+        ShowMoreFlyout();
+        e.Handled = true;
+    }
 
     public void FocusSelectedItem()
     {

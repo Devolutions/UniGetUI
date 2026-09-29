@@ -183,6 +183,7 @@ public partial class MainWindow : Window
         RestoreGeometry();
 
         KeyDown += Window_KeyDown;
+        AddHandler(KeyDownEvent, Window_KeyDownTunnel, RoutingStrategies.Tunnel);
         ViewModel.CurrentPageChanged += OnCurrentPageChanged;
         // Title-bar back button: visible whenever there's somewhere to go back to (mirrors WinUI's TitleBar.IsBackButtonVisible).
         ViewModel.CanGoBackChanged += (_, canGoBack) => BackButton.IsVisible = canGoBack;
@@ -275,6 +276,18 @@ public partial class MainWindow : Window
         _trayService = null;
     }
 
+    private void Window_KeyDownTunnel(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is not Key.Tab || !e.KeyModifiers.HasFlag(KeyModifiers.Control) || ModalLayer.IsVisible)
+            return;
+
+        _focusSidebarSelectionOnNextPageChange = true;
+        ViewModel.NavigateTo(e.KeyModifiers.HasFlag(KeyModifiers.Shift)
+            ? MainWindowViewModel.GetPreviousPage(ViewModel.CurrentPage_t)
+            : MainWindowViewModel.GetNextPage(ViewModel.CurrentPage_t));
+        e.Handled = true;
+    }
+
     private void Window_KeyDown(object? sender, KeyEventArgs e)
     {
         // A WinUI ContentDialog is a true modal scope: background navigation and package-page
@@ -292,14 +305,7 @@ public partial class MainWindow : Window
         bool isCtrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
         bool isShift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
 
-        if (e.Key == Key.Tab && isCtrl)
-        {
-            _focusSidebarSelectionOnNextPageChange = true;
-            ViewModel.NavigateTo(isShift
-                ? MainWindowViewModel.GetPreviousPage(ViewModel.CurrentPage_t)
-                : MainWindowViewModel.GetNextPage(ViewModel.CurrentPage_t));
-        }
-        else if (!isCtrl && !isShift && e.Key == Key.F1)
+        if (!isCtrl && !isShift && e.Key == Key.F1)
         {
             ViewModel.NavigateTo(PageType.Help);
         }
@@ -333,6 +339,11 @@ public partial class MainWindow : Window
             });
             e.Handled = true;
         }
+        else if (isCtrl && !isShift && e.Key == Key.D7)
+        {
+            ShowMoreMenu();
+            e.Handled = true;
+        }
         else if (isCtrl && !isShift && e.Key == Key.D)
         {
             (ViewModel.CurrentPageContent as IKeyboardShortcutListener)?.DetailsTriggered();
@@ -351,11 +362,24 @@ public partial class MainWindow : Window
             return;
 
         _focusSidebarSelectionOnNextPageChange = false;
-        Dispatcher.UIThread.Post(() =>
-        {
-            var sidebar = this.GetVisualDescendants().OfType<SidebarView>().FirstOrDefault();
-            sidebar?.FocusSelectedItem();
-        }, DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(() => ActiveSidebar()?.FocusSelectedItem(), DispatcherPriority.Background);
+    }
+
+    private void ShowMoreMenu()
+    {
+        if (!ViewModel.Sidebar.RailVisible && !ViewModel.Sidebar.NavDockVisible && !ViewModel.Sidebar.OverlayActive)
+            ViewModel.Sidebar.IsPaneOpen = true;
+
+        Dispatcher.UIThread.Post(() => ActiveSidebar()?.ShowMoreFlyout(), DispatcherPriority.Background);
+    }
+
+    private SidebarView? ActiveSidebar()
+    {
+        Control host = ViewModel.Sidebar.OverlayActive ? NavFlyout
+            : ViewModel.Sidebar.NavDockVisible ? NavDock
+            : NavRail;
+
+        return host.GetVisualDescendants().OfType<SidebarView>().FirstOrDefault();
     }
 
     private void BackButton_Click(object? sender, RoutedEventArgs e) => ViewModel.NavigateBack();

@@ -16,9 +16,8 @@ namespace UniGetUI.PackageEngine.Managers.SkillsManager;
 
 /// <summary>
 /// Agent skills: folders with a SKILL.md that coding agents such as Claude Code, GitHub Copilot,
-/// Cursor and Codex load. UniGetUI decides which sources skills come from; the Devolutions.AgentSkills
-/// library installs them in process, for the user, into every targeted agent's skills folder,
-/// compatibly with the skills CLI and gh skill.
+/// Cursor and Codex load. UniGetUI decides which sources skills come from; its bundled library
+/// installs them in process, for the user, into every targeted agent's skills folder.
 /// </summary>
 public sealed class AgentSkills : PackageManager
 {
@@ -37,8 +36,6 @@ public sealed class AgentSkills : PackageManager
     /// <summary>Version shown for skills no lock file tracks.</summary>
     internal const string UntrackedVersion = "local";
 
-    private const int SearchLimit = 50;
-
     // Long enough to clone a repository the first time it is searched, within the 60-second
     // limit of listing tasks
     private static readonly TimeSpan ListingWait = TimeSpan.FromSeconds(40);
@@ -47,9 +44,6 @@ public sealed class AgentSkills : PackageManager
         string,
         (SkillUpdate Update, SkillSourceLocator Source)
     > _pendingUpdates = new(StringComparer.OrdinalIgnoreCase);
-
-    // The skills.sh page of each skill a catalog search returned, by source and skill
-    private readonly ConcurrentDictionary<string, Uri> _catalogPages = new(StringComparer.OrdinalIgnoreCase);
 
     internal ISkillsBackend Backend { get; }
     internal SkillsSourceFactory SourceFactory { get; }
@@ -95,7 +89,6 @@ public sealed class AgentSkills : PackageManager
         // Sources refresh their display names from the manager's properties, so they are created
         // once the properties exist
         SourceFactory = new SkillsSourceFactory(this);
-        IManagerSource catalog = SourceFactory.GetOrCreate(SkillSourceLocator.Catalog);
         LocalSource = new ManagerSource(
             this,
             CoreTools.Translate("Local"),
@@ -104,12 +97,10 @@ public sealed class AgentSkills : PackageManager
         );
 
         var properties = Properties;
-        properties.DefaultSource = catalog;
+        properties.DefaultSource = LocalSource;
         properties.KnownSources =
         [
-            catalog,
             SourceFactory.GetOrCreate(SkillSourceLocator.GitHub("anthropics", "skills")),
-            SourceFactory.GetOrCreate(SkillSourceLocator.GitHub("vercel-labs", "agent-skills")),
             SourceFactory.GetOrCreate(SkillSourceLocator.GitHub("github", "awesome-copilot")),
         ];
         Properties = properties;
@@ -119,20 +110,14 @@ public sealed class AgentSkills : PackageManager
         SourcesHelper = new SkillsSourceHelper(this);
     }
 
-    /// <summary>Whether the public skills.sh catalog is one of the sources.</summary>
-    internal static bool CatalogEnabled => !Settings.Get(Settings.K.DisableSkillsPublicCatalog);
-
-    /// <summary>The configured sources: the skills.sh catalog first when enabled, then the added ones.</summary>
+    /// <summary>The configured repository, website and Notion sources.</summary>
     internal static IReadOnlyList<SkillSourceLocator> GetConfiguredSources()
     {
         List<SkillSourceLocator> sources = [];
-        if (CatalogEnabled)
-            sources.Add(SkillSourceLocator.Catalog);
-
         foreach (string entry in Settings.GetList<string>(SourcesListKey) ?? [])
         {
             if (
-                SkillSourceLocator.Parse(entry) is { Kind: not SkillSourceKind.Catalog } source
+                SkillSourceLocator.Parse(entry) is { } source
                 && !sources.Exists(s => s.Name.Equals(source.Name, StringComparison.OrdinalIgnoreCase))
             )
                 sources.Add(source);
@@ -143,28 +128,22 @@ public sealed class AgentSkills : PackageManager
 
     /// <summary>The added repository or index with this name; null for any other name.</summary>
     internal static SkillSourceLocator? GetConfiguredSource(string name) =>
-        GetConfiguredSources()
-            .FirstOrDefault(source =>
-                source.Kind is not SkillSourceKind.Catalog
-                && source.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
-            );
+        GetConfiguredSources().FirstOrDefault(source =>
+            source.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+        );
 
     /// <summary>
-    /// Whether skills may be installed or updated from the given source: from within an added
-    /// repository or index, or from any GitHub repository while the skills.sh catalog is enabled.
+    /// Whether skills may be installed or updated from an added repository or index.
     /// </summary>
     internal static bool IsAllowedSource(SkillSourceLocator source) =>
-        (GetConfiguredSource(source.Name)?.Covers(source) ?? false)
-        || (source.IsGitHub && CatalogEnabled);
+        GetConfiguredSource(source.Name)?.Covers(source) ?? false;
 
     /// <summary>
-    /// What a skill from the given package source is installed from: the added source of that name,
-    /// as it was added, or the GitHub repository while the skills.sh catalog is enabled; null when
-    /// skills may not be installed from it.
+    /// The configured source the skill is installed from, or null if it is not configured.
     /// </summary>
     internal SkillSourceLocator? GetInstallSource(IManagerSource source) =>
         SourceFactory.GetLocator(source) is { } locator
-            ? GetConfiguredSource(locator.Name) ?? (locator.IsGitHub && CatalogEnabled ? locator : null)
+            ? GetConfiguredSource(locator.Name)
             : null;
 
     /// <summary>
@@ -254,14 +233,6 @@ public sealed class AgentSkills : PackageManager
             ? pending.Update
             : null;
 
-    /// <summary>
-    /// The skill's page on skills.sh, when a catalog search returned it; null otherwise. Skills from
-    /// a private repository or a repository skills.sh does not list have no page there, and their
-    /// names are not sent to skills.sh to find out.
-    /// </summary>
-    internal Uri? GetCatalogPage(SkillSourceLocator source, string skill) =>
-        _catalogPages.TryGetValue($"{source.Name}\\{skill}", out Uri? page) ? page : null;
-
     /// <summary>The source object an installed skill came from.</summary>
     internal IManagerSource SourceFor(InstalledSkillInfo skill) =>
         SkillSourceLocator.ForInstalled(skill) is { } source
@@ -303,34 +274,13 @@ public sealed class AgentSkills : PackageManager
 
         // Sources not listed yet start loading together, and all share one deadline
         DateTime deadline = DateTime.UtcNow + ListingWait;
-        foreach (var source in sources.Where(source => source.Kind is not SkillSourceKind.Catalog))
+        foreach (var source in sources)
             Listings.Get(source, TimeSpan.Zero);
 
         foreach (var source in sources)
         {
             try
             {
-                if (source.Kind is SkillSourceKind.Catalog)
-                {
-                    // An empty query browses, and the catalog is too large to list in full
-                    if (query.Length == 0)
-                        continue;
-
-                    var results = Backend.Search(query, SearchLimit, CancellationToken.None);
-                    foreach (var result in results)
-                    {
-                        if (SkillSourceLocator.ForSearchResult(result) is not { } origin)
-                            continue;
-
-                        Add(result.Name, origin);
-                        if (Uri.TryCreate(result.Url, UriKind.Absolute, out Uri? page))
-                            _catalogPages[$"{origin.Name}\\{result.Name}"] = page;
-                    }
-
-                    logger.Log($"skills.sh returned {results.Count} skills for \"{query}\"");
-                    continue;
-                }
-
                 TimeSpan remaining = deadline - DateTime.UtcNow;
                 var skills = Listings.Get(source, remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero);
                 if (skills is null)
@@ -479,7 +429,7 @@ public sealed class AgentSkills : PackageManager
     }
 
     protected override void _loadManagerVersion(out string version) =>
-        version = $"Devolutions.AgentSkills {Backend.Version}";
+        version = $"UniGetUI.AgentSkills {Backend.Version}";
 
     protected override void _performExtraLoadingSteps()
     {
@@ -494,16 +444,15 @@ public sealed class AgentSkills : PackageManager
             dependencies.Add(NotionCliTool.CreateDependency());
         Dependencies = dependencies;
 
-        foreach (var source in sources.Where(source => source.Kind is not SkillSourceKind.Catalog))
+        foreach (var source in sources)
             _ = Listings.Refresh(source);
     }
 
     public override IReadOnlyList<string> FindCandidateExecutableFiles() => [];
 
-    /// <summary>The configured repositories and indexes: the skills.sh catalog is too large to list.</summary>
+    /// <summary>The configured repositories, websites and Notion databases.</summary>
     public override IReadOnlyList<IManagerSource> GetBrowsableSources() =>
         GetConfiguredSources()
-            .Where(source => source.Kind is not SkillSourceKind.Catalog)
             .Select(SourceFactory.GetOrCreate)
             .ToArray();
 

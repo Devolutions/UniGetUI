@@ -1,5 +1,5 @@
 // Parse git URLs, GitHub shorthand, local paths, well-known and download URLs
-// (port of source-parser.ts).
+// from local, Git and web sources.
 
 using System.Text.RegularExpressions;
 
@@ -11,7 +11,6 @@ internal static partial class SourceParser
 {
     [GeneratedRegex(@"^git@[^:]+:([\s\S]+)$")] private static partial Regex Ssh();
     [GeneratedRegex(@"\.git$")] private static partial Regex DotGitEnd();
-    [GeneratedRegex(@"^([^/]+)/([^/]+)$")] private static partial Regex OwnerRepo();
     [GeneratedRegex(@"^(?:GB|GT)([\s\S]+)$", RegexOptions.IgnoreCase)] private static partial Regex AzureVersion();
     [GeneratedRegex(@"^[a-zA-Z]:[/\\]")] private static partial Regex WinDrive();
     [GeneratedRegex(@"^ssh://[\s\S]+\.git(?:$|[/?])", RegexOptions.IgnoreCase)] private static partial Regex SshGit();
@@ -35,7 +34,7 @@ internal static partial class SourceParser
 
     private static string StripDotGit(string s) => DotGitEnd().Replace(s, "", 1);
 
-    /// owner/repo (or group/subgroup/repo) for lockfile tracking and telemetry;
+    /// owner/repo (or group/subgroup/repo) for lockfile tracking;
     /// null for local paths, downloads or unparseable sources.
     public static string? GetOwnerRepo(ParsedSource parsed)
     {
@@ -58,21 +57,6 @@ internal static partial class SourceParser
         if (url == null) return null;
         var p = StripDotGit(url.Pathname.Length > 0 ? url.Pathname[1..] : "");
         return p.Contains('/') ? p : null;
-    }
-
-    public static (string Owner, string Repo)? ParseOwnerRepo(string ownerRepo)
-    {
-        var m = OwnerRepo().Match(ownerRepo);
-        return m.Success ? (m.Groups[1].Value, m.Groups[2].Value) : null;
-    }
-
-    /// true private, false public, null when it cannot be determined.
-    public static bool? IsRepoPrivate(string owner, string repo)
-    {
-        var res = HttpRequest.Get($"https://api.github.com/repos/{owner}/{repo}").Timeout(TimeSpan.FromSeconds(30)).TrySend();
-        if (res == null || !res.Ok) return null;
-        if (!res.TryJson(out var data)) return null;
-        return Json.AsBool(Json.Get(data, "private")) == true;
     }
 
     /// Reject subpaths containing `..` segments.
@@ -125,7 +109,6 @@ internal static partial class SourceParser
     private static string? SourceAlias(string input) => input switch
     {
         "coinbase/agentWallet" => "coinbase/agentic-wallet-skills",
-        "vercel-labs/vercel-skills" => "vercel-labs/agent-skills",
         _ => null,
     };
 

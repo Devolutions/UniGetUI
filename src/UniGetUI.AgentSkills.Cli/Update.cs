@@ -1,4 +1,4 @@
-// `skills update` / `check` / `upgrade` (port of update.ts).
+// `skills update` / `check` / `upgrade`.
 //
 // Changed skills are reinstalled through the same `add` command flow in-process.
 
@@ -38,13 +38,6 @@ internal static class UpdateCommand
     private sealed record WellKnownOutcome(int Ok, int Fail, bool ChangedAny, List<(string Name, string Source)> Pending);
 
     private sealed record Resolution(List<string> Deleted, Dictionary<string, string> Resolved);
-
-    private static string ScopeName(UpdateScope s) => s switch
-    {
-        UpdateScope.Project => "project",
-        UpdateScope.Global => "global",
-        _ => "both",
-    };
 
     public static UpdateOptions ParseOptions(IReadOnlyList<string> args)
     {
@@ -210,7 +203,6 @@ internal static class UpdateCommand
             {
                 Env = new Dictionary<string, string?> { ["GH_HOST"] = "github.com" },
                 Warn = Term.ErrLine,
-                Telemetry = true,
             })
             : null;
         try
@@ -760,12 +752,6 @@ internal static class UpdateCommand
             Term.OutLine($"{Dim}Failed to update {totalFail} skill(s){Reset}");
             Term.ExitCode = 1;
         }
-        Telemetry.Track(
-            ("event", "update"),
-            ("scope", ScopeName(scope)),
-            ("skillCount", (totalOk + totalFail).ToString()),
-            ("successCount", totalOk.ToString()),
-            ("failCount", totalFail.ToString()));
         Term.OutLine();
     }
 }

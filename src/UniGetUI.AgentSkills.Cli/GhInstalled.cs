@@ -1,5 +1,4 @@
-// Skills installed by the GitHub CLI's `gh skill install` (extension; not in
-// the reference CLI).
+// Skills installed by the GitHub CLI's `gh skill install`.
 //
 // `gh skill` copies skills into the same agent directories but records their
 // origin in SKILL.md frontmatter (`metadata.github-repo`, `github-ref`,

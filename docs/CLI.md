@@ -61,12 +61,15 @@ Use `uniget tui --help` for its options, or `uniget tui --fake-data` to try it w
 calling real package managers. See [TUI.md](TUI.md) for keyboard controls and more options.
 This command runs locally, independently of the desktop window or an IPC daemon, and is
 included in the same application package; no separate TUI executable is installed.
+
 ## Agent Skills
 
 `unigetui skills [args...]` runs the bundled Agent Skills CLI in the current directory without
 starting the GUI or connecting to the UniGetUI IPC API. For example, `unigetui skills list`
 lists installed agent skills, and `unigetui skills add <source>` installs skills from a source.
 On Windows PowerShell, use `.\uniget.exe skills [args...]` to wait for completion and return its exit code.
+Skill discovery in the GUI searches only repositories, websites and Notion databases you add as sources;
+the bundled CLI does not provide a public-catalog `find` command.
 Arguments and exit codes after `skills` belong to that CLI, not to the UniGetUI automation
 commands documented below.
 

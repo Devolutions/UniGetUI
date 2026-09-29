@@ -1,4 +1,4 @@
-// Claude plugin manifest discovery (port of plugin-manifest.ts).
+// Claude plugin manifest discovery.
 
 using System.Text.Json.Nodes;
 
@@ -40,7 +40,7 @@ internal static class PluginManifest
         {
             foreach (var p in list)
             {
-                if (p is not JsonObject) return (root ?? "", plugins); // TS throws on property access → rest dropped
+                if (p is not JsonObject) return (root ?? "", plugins); // Invalid plugin entry drops the remaining entries.
                 var sourceNode = Json.Get(p, "source");
                 string? source = null;
                 if (Json.Has(p, "source") && sourceNode != null)

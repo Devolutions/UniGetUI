@@ -1,4 +1,4 @@
-// Lock-file bookkeeping after an install (from add.ts): the global
+// Lock-file bookkeeping after an install: the global
 // ~/.agents/.skill-lock.json and project skills-lock.json entries, their
 // hashes, and the source fields used by `update`. Shared by the CLI and the
 // public API so both write identical lock files.
@@ -12,14 +12,8 @@ internal sealed record LockSources(string? Normalized, string? LockSource, strin
 
 internal static class InstallRecords
 {
-    /// Owners whose GitHub repos may use the skills.sh blob fast path.
-    public static readonly string[] BlobAllowedOwners = ["vercel", "vercel-labs", "heygen-com", "remotion-dev"];
-
-    public static bool IsBlobEligible(string ownerRepo)
-    {
-        var owner = ownerRepo.Split('/')[0].ToLowerInvariant();
-        return owner.Length > 0 && (Blob.IsAllowedRepo(ownerRepo.ToLowerInvariant()) || BlobAllowedOwners.Contains(owner));
-    }
+    /// Only independently hosted repository snapshots can bypass a git clone.
+    public static bool IsBlobEligible(string ownerRepo) => Blob.IsAllowedRepo(ownerRepo.ToLowerInvariant());
 
     public static string? GetLockSource(string parsedUrl, string? normalized)
     {
@@ -175,9 +169,9 @@ internal static class InstallRecords
     }
 
     /// Record skills installed from Notion in the global lock, which the
-    /// reference CLI leaves out: no skillPath and an empty skillFolderHash keep
-    /// its update checks away, and the Notion fields let this library's find
-    /// updates. Project installs from Notion stay untracked, like downloads.
+    /// Notion installs have no skillPath; an empty skillFolderHash prevents
+    /// GitHub update checks, while the Notion fields enable Notion update
+    /// checks. Project installs from Notion stay untracked, like downloads.
     public static void RecordNotionSkills(IEnumerable<(string Name, NotionOrigin Origin)> installed, bool installGlobally)
     {
         if (!installGlobally) return;

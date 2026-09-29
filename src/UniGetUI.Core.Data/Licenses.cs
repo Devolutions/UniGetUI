@@ -13,7 +13,7 @@ namespace UniGetUI.Core.Data
             { "PhotoSauce.MagicScaler", "MIT" },
             { "YamlDotNet", "MIT" },
             { "Tomlyn", "BSD-2-Clause" },
-            { "Devolutions.AgentSkills", "MIT" },
+            { "UniGetUI.AgentSkills", "MIT" },
             { "InnoDependencyInstaller", "CPOL 1.02" },
             // Package managers and related
             { "WinGet", "MIT" },
@@ -61,8 +61,8 @@ namespace UniGetUI.Core.Data
             },
             { "Tomlyn", new Uri("https://github.com/xoofx/tomlyn/blob/main/license.txt") },
             {
-                "Devolutions.AgentSkills",
-                new Uri("https://github.com/mamoreau-devolutions/skills-manager/blob/master/LICENSE")
+                "UniGetUI.AgentSkills",
+                new Uri("https://github.com/Devolutions/UniGetUI/blob/main/src/UniGetUI.AgentSkills/LICENSE")
             },
             {
                 "InnoDependencyInstaller",
@@ -112,8 +112,8 @@ namespace UniGetUI.Core.Data
             { "YamlDotNet", new Uri("https://github.com/aaubry/YamlDotNet/") },
             { "Tomlyn", new Uri("https://github.com/xoofx/tomlyn/") },
             {
-                "Devolutions.AgentSkills",
-                new Uri("https://github.com/mamoreau-devolutions/skills-manager")
+                "UniGetUI.AgentSkills",
+                new Uri("https://github.com/Devolutions/UniGetUI/tree/main/src/UniGetUI.AgentSkills")
             },
             {
                 "InnoDependencyInstaller",

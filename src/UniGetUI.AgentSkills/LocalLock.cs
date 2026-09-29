@@ -1,7 +1,7 @@
-// Project lock file skills-lock.json (port of local-lock.ts).
+// Project lock file skills-lock.json.
 //
 // Entries are kept as ordered JSON objects so rewriting a lock file preserves
-// existing key order exactly like the TS implementation.
+// existing key order.
 
 using System.Security.Cryptography;
 using System.Text;

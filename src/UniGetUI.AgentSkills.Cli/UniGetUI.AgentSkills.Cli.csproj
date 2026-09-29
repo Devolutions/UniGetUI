@@ -8,10 +8,9 @@
     <AssemblyName>UniGetUI.AgentSkills.Cli</AssemblyName>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <RootNamespace>Skills</RootNamespace>
-    <!-- Must equal Program.Version in Main.cs (unit-tested; also checked against
-         the reference CLI's package.json when SKILLS_REFERENCE is set). -->
+    <!-- Must equal Program.Version in Main.cs. -->
     <Version>1.7.0</Version>
-    <Description>The open agent skills ecosystem (C# port of the skills CLI)</Description>
+    <Description>Standalone agent skills command-line interface</Description>
     <IsPackable>false</IsPackable>
     <InvariantGlobalization>true</InvariantGlobalization>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

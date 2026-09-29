@@ -1,8 +1,8 @@
-// Interactive search multiselect prompt (port of prompts/search-multiselect.ts).
+// Interactive search multiselect prompt.
 //
 // Selection is tracked by item index in insertion order, mirroring the JS Set
 // semantics that determine the order of the returned values. It draws with
-// picocolors, like the original.
+// terminal color formatting.
 
 namespace Skills;
 
@@ -132,7 +132,7 @@ internal static class SearchMultiselect
     private static string SBar => Pc.Dim("│");
     private static string SBarH => Pc.Dim("─");
 
-    /// Run the prompt. Returns null when cancelled (the TS cancelSymbol).
+    /// Run the prompt. Returns null when cancelled.
     public static List<T>? Run<T>(SearchMultiselectOptions<T> o)
     {
         var items = o.Items;

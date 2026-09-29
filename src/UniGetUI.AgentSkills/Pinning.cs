@@ -1,7 +1,7 @@
-// Pinned lock entries (extension; not in the reference CLI).
+// Pinned lock entries.
 //
 // `skills add --pin <ref>` records `"pinned": true` right after `"ref"` in the
-// lock entry. The reference CLI ignores the extra field.
+// lock entry.
 
 using System.Text.Json.Nodes;
 

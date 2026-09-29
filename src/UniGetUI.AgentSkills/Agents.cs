@@ -1,7 +1,6 @@
-// Agent definitions and detection (port of agents.ts).
+// Agent definitions and detection.
 //
-// Agents are kept in the same order as the TS `agents` record, because that
-// order is observable (Object.keys(agents) drives prompts, --agent '*', error
+// Agent order is observable (it drives prompts, --agent '*', error
 // messages and lock-file content).
 
 using System.Text.Json.Nodes;

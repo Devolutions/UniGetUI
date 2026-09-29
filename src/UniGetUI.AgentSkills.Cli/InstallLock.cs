@@ -1,5 +1,5 @@
 // `skills experimental_install` — restore project skills from
-// `skills-lock.json` into `.agents/skills` (port of install.ts).
+// `skills-lock.json` into `.agents/skills`.
 
 namespace Skills;
 

@@ -1,4 +1,4 @@
-// Shared data types (port of types.ts and friends).
+// Shared data types.
 
 using System.Text.Json.Nodes;
 

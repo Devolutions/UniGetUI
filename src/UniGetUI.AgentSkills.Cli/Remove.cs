@@ -1,4 +1,4 @@
-// `skills remove` (port of remove.ts).
+// `skills remove`.
 
 namespace Skills;
 
@@ -130,31 +130,6 @@ internal static class RemoveCommand
 
         if (successful.Count > 0)
         {
-            var bySource = new List<(string Source, List<string> Skills, string SourceType)>();
-            foreach (var r in successful)
-            {
-                var src = r.Source.Length == 0 ? "local" : r.Source;
-                var i = bySource.FindIndex(x => x.Source == src);
-                if (i >= 0)
-                {
-                    bySource[i].Skills.Add(r.Skill);
-                    bySource[i] = bySource[i] with { SourceType = r.SourceType };
-                }
-                else
-                {
-                    bySource.Add((src, [r.Skill], r.SourceType));
-                }
-            }
-            foreach (var (source, skills, sourceType) in bySource)
-            {
-                Telemetry.Track(
-                    ("event", "remove"),
-                    ("source", source),
-                    ("skills", string.Join(",", skills)),
-                    ("agents", string.Join(",", targetAgents)),
-                    ("global", isGlobal ? "1" : null),
-                    ("sourceType", sourceType));
-            }
             Ui.Log.Success(Pc.Green($"Successfully removed {successful.Count} skill(s)"));
         }
         if (failed.Count > 0)

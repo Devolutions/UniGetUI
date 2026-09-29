@@ -1,4 +1,4 @@
-// GitHub host selection via GH_HOST (port of github-host.ts).
+// GitHub host selection via GH_HOST.
 
 namespace Skills;
 

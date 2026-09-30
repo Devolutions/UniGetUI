@@ -44,6 +44,13 @@ if ($framework -notmatch '^net\d+\.\d+-windows\d+\.\d+\.\d+\.\d+$') {
     throw "Unexpected Windows target framework: '$framework'."
 }
 $properties += "-p:TargetFramework=$framework"
+$windowsSdk = (dotnet msbuild $project @properties -nologo -getProperty:WindowsSdkPackageVersion | Select-Object -Last 1)
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($windowsSdk)) {
+    throw 'Could not resolve the Windows SDK reference package version.'
+}
+# Restore removes TargetFramework from project references; keep their SDK pack
+# version consistent with the explicitly Windows-targeted build.
+$properties += "-p:WindowsSdkPackageVersion=$($windowsSdk.Trim())"
 $sdk = (dotnet --version).Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the .NET SDK version.' }
 

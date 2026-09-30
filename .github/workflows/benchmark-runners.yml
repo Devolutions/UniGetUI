@@ -10,6 +10,7 @@ on:
       - 'scripts/benchmark-build.ps1'
       - 'scripts/benchmark-nativeaot.props'
       - 'scripts/prepare-benchmark-nativeaot.ps1'
+      - 'scripts/enter-benchmark-vsdevshell.ps1'
       - 'global.json'
       - 'src/**'
   workflow_dispatch:
@@ -88,11 +89,6 @@ jobs:
           ref: ${{ env.BENCHMARK_AOTANYWHERE_REF }}
           path: .benchmark-tooling/AotAnywhere
 
-      - name: Configure Windows native build tools
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
       - name: Prepare benchmark-only AotAnywhere package
         run: .\scripts\prepare-benchmark-nativeaot.ps1 -Mode Package
 
@@ -157,12 +153,6 @@ jobs:
         with:
           name: benchmark-native-toolchain
           path: .benchmark-tooling/packages
-
-      - name: Configure Windows native build tools
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
 
       - name: Prepare NativeAOT toolchain outside the benchmark
         run: .\scripts\prepare-benchmark-nativeaot.ps1 -Mode Consumer

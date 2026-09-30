@@ -37,6 +37,9 @@ $properties = @(
     '-p:SkipBundledPingetCli=true'
 )
 $native = $Phase.StartsWith('Native')
+if ($Phase -eq 'NativePublish' -and $IsWindows) {
+    & (Join-Path $PSScriptRoot 'enter-benchmark-vsdevshell.ps1')
+}
 if ($native) {
     $properties = @($properties | Where-Object { $_ -notin @('-p:SelfContained=false', '-p:PublishAot=false') })
     $properties += @(

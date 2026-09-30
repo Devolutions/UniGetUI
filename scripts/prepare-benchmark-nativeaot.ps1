@@ -43,6 +43,7 @@ $env:PATH = "$llvmBin$([IO.Path]::PathSeparator)$env:PATH"
 
 if ($Mode -eq 'Package') {
     if (-not $IsWindows) { throw 'CRT stub and symbol-import preparation requires Windows.' }
+    & (Join-Path $PSScriptRoot 'enter-benchmark-vsdevshell.ps1')
     $payload = Join-Path $env:RUNNER_TEMP 'benchmark-native-payload'
     $crt = Join-Path $payload 'aot-crt-stub'
     $imports = Join-Path $payload 'windows-sdk-imports'

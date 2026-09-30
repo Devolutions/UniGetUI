@@ -46,6 +46,9 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 30
     steps:
+      - name: Use identical source line endings
+        run: git config --global core.autocrlf false
+
       - uses: actions/checkout@v7
 
       - name: Isolate SDK and package installations
@@ -111,6 +114,24 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Freeze SDK analyzer inputs outside the benchmark
+        run: |
+          $version = (dotnet --version).Trim()
+          $sdk = Join-Path (Split-Path (Get-Command dotnet).Source) "sdk\$version\Sdks\Microsoft.NET.Sdk"
+          $output = Join-Path $env:RUNNER_TEMP 'benchmark-sdk-analyzers\Microsoft.NET.Sdk'
+          New-Item $output -ItemType Directory -Force | Out-Null
+          foreach ($folder in @('analyzers', 'codestyle')) {
+            Copy-Item (Join-Path $sdk $folder) $output -Recurse
+          }
+
+      - name: Upload common SDK analyzers
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-sdk-analyzers
+          path: ${{ runner.temp }}/benchmark-sdk-analyzers
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Check out the pinned AotAnywhere fork
         uses: actions/checkout@v7
         with:
@@ -147,6 +168,9 @@ jobs:
       BENCHMARK_RUNNER: ${{ matrix.runner }}
       BENCHMARK_BINLOG: ${{ inputs.capture_binlog || contains(github.event.head_commit.message, '[benchmark-binlog]') }}
     steps:
+      - name: Use identical source line endings
+        run: git config --global core.autocrlf false
+
       - uses: actions/checkout@v7
 
       - name: Isolate SDK and package installations
@@ -186,9 +210,16 @@ jobs:
           name: benchmark-generated
           path: ${{ runner.temp }}/benchmark-generated
 
+      - name: Download common SDK analyzers
+        uses: actions/download-artifact@v8
+        with:
+          name: benchmark-sdk-analyzers
+          path: ${{ runner.temp }}/benchmark-sdk-analyzers
+
       - name: Configure identical core inputs
         run: |
           "BenchmarkGeneratedSources=$(Join-Path $env:RUNNER_TEMP 'benchmark-generated')" >> $env:GITHUB_ENV
+          "BenchmarkSharedSdkAnalyzers=$(Join-Path $env:RUNNER_TEMP 'benchmark-sdk-analyzers')" >> $env:GITHUB_ENV
 
       - name: Benchmark dotnet restore
         run: .\scripts\benchmark-build.ps1 -Phase Restore

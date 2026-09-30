@@ -41,6 +41,7 @@ $properties = @(
     "-p:CustomAfterMicrosoftCommonProps=$(Join-Path $PSScriptRoot 'benchmark-nativeaot.props')",
     "-p:CustomAfterMicrosoftCommonTargets=$(Join-Path $PSScriptRoot 'benchmark-core.targets')",
     "-p:BenchmarkGeneratedSources=$env:BenchmarkGeneratedSources",
+    "-p:BenchmarkSharedSdkAnalyzers=$env:BenchmarkSharedSdkAnalyzers",
     "-p:BenchmarkInputDirectory=$(Join-Path $env:RUNNER_TEMP 'benchmark-inputs')",
     "-p:BenchmarkPhase=$Phase",
     '-p:UseExternalClang=true',

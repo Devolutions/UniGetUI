@@ -7,6 +7,7 @@
   </ItemGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'UniGetUI.Avalonia'">
     <ApplicationManifest>$(MSBuildProjectDirectory)\app.manifest</ApplicationManifest>
+    <NoWarn>$(NoWarn);MVVMTK0045;AVLN3001</NoWarn>
   </PropertyGroup>
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'UniGetUI.Avalonia' or '$(MSBuildProjectName)' == 'UniGetUI.Interface.IpcApi'">
     <Compile Remove="Generated Files\Secrets.Generated.cs;$(IntermediateOutputPath)Generated Files\Secrets.Generated.cs" />
@@ -20,6 +21,17 @@
            Text="The shared benchmark generated sources are missing for $(MSBuildProjectName)." />
   </Target>
   <Target Name="EnsureBundledElevatorFromNuGet" />
+
+  <Target Name="BenchmarkUseSharedSdkAnalyzers" BeforeTargets="BenchmarkRecordCompilerInputs">
+    <ItemGroup>
+      <_BenchmarkHostSdkAnalyzer Include="@(Analyzer)"
+          Condition="$([System.String]::Copy('%(Analyzer.FullPath)').StartsWith('$(MSBuildSDKsPath)'))">
+        <SharedPath>$([MSBuild]::MakeRelative('$(MSBuildSDKsPath)', '%(Analyzer.FullPath)'))</SharedPath>
+      </_BenchmarkHostSdkAnalyzer>
+      <Analyzer Remove="@(_BenchmarkHostSdkAnalyzer)" />
+      <Analyzer Include="@(_BenchmarkHostSdkAnalyzer->'$(BenchmarkSharedSdkAnalyzers)\%(SharedPath)')" />
+    </ItemGroup>
+  </Target>
 
   <Target Name="BenchmarkRecordCompilerInputs" BeforeTargets="CoreCompile">
     <Error Condition="'$(BenchmarkPhase)' == 'NativePublish' and !Exists('$(IntermediateOutputPath)$(TargetName).dll')"

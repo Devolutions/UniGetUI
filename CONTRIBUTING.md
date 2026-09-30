@@ -58,6 +58,10 @@ sources. A benchmark-only targets file excludes Linux/macOS theme packages,
 the elevator package and resource/executable staging on **both** hosts, and fixes
 the app manifest to Windows. Both hosts consume identical pre-generated build-info
 sources. Ordinary builds and shipping publish profiles are unchanged.
+Checkouts retain repository line endings on both hosts. SDK-bundled analyzers
+are copied once from the Windows SDK installation and shared with both hosts:
+the OS-specific SDK archives contain differently built/signed analyzer DLLs
+despite sharing the same SDK version.
 
 Managed restore, `dotnet build --no-restore`, NativeAOT restore and
 `dotnet publish --no-build --no-restore` have separate timed steps. All phases use

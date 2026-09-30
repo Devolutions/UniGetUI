@@ -28,6 +28,7 @@ $properties = @(
     '-p:Configuration=Release',
     '-p:Platform=x64',
     '-p:RuntimeIdentifier=win-x64',
+    '-p:SelfContained=false',
     '-p:EnableWindowsTargeting=true',
     '-p:PublishAot=false',
     '-p:PublishReadyToRun=false',

@@ -34,6 +34,18 @@ namespace UniGetUI.PackageEngine.PackageLoader
             if (package.VersionString == package.NewVersionString)
                 return false;
 
+            if (
+                package.NormalizedNewVersion != default
+                && package.Manager.CompareVersions(package.VersionString, package.NewVersionString)
+                    is >= 0
+            )
+            {
+                Logger.Info(
+                    $"Ignoring package {package.Id} because the offered version {package.NewVersionString} is not newer than the installed version {package.VersionString}."
+                );
+                return false;
+            }
+
             if (package.NewerVersionIsInstalled())
             {
                 Logger.Info(

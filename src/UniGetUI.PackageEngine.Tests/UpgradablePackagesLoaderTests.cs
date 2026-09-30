@@ -171,6 +171,63 @@ public sealed class UpgradablePackagesLoaderTests : IDisposable
     }
 
     [Fact]
+    public async Task EvaluatePackageAsync_RejectsOlderOfferedVersionWithoutTheInstalledList()
+    {
+        var manager = new PackageManagerBuilder().Build();
+        _ = new InstalledPackagesLoader([manager]);
+        _ = new DiscoverablePackagesLoader([manager]);
+        var loader = new TestUpgradablePackagesLoader([manager]);
+
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Daum.PotPlayer")
+            .WithVersion("260819")
+            .WithNewVersion("210428")
+            .Build();
+
+        Assert.False(await loader.EvaluatePackageAsync(package));
+    }
+
+    [Theory]
+    [InlineData("stable")]
+    [InlineData("latest")]
+    [InlineData("2.0.0_rc1")]
+    public async Task EvaluatePackageAsync_KeepsUpdatesWhoseOfferedVersionCannotBeParsed(string newVersion)
+    {
+        var manager = new PackageManagerBuilder().Build();
+        _ = new InstalledPackagesLoader([manager]);
+        _ = new DiscoverablePackagesLoader([manager]);
+        var loader = new TestUpgradablePackagesLoader([manager]);
+
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("org.contoso.Flatpak")
+            .WithVersion("3.2.1")
+            .WithNewVersion(newVersion)
+            .Build();
+
+        Assert.True(await loader.EvaluatePackageAsync(package));
+    }
+
+    [Fact]
+    public async Task EvaluatePackageAsync_KeepsUpdatesWhenTheInstalledVersionIsUnknown()
+    {
+        var manager = new PackageManagerBuilder().Build();
+        _ = new InstalledPackagesLoader([manager]);
+        _ = new DiscoverablePackagesLoader([manager]);
+        var loader = new TestUpgradablePackagesLoader([manager]);
+
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Unversioned")
+            .WithVersion("Unknown")
+            .WithNewVersion("210428")
+            .Build();
+
+        Assert.True(await loader.EvaluatePackageAsync(package));
+    }
+
+    [Fact]
     public async Task ApplyWhenAddingPackageAsync_UpdatesDiscoverableAndInstalledTags()
     {
         var manager = new PackageManagerBuilder().Build();

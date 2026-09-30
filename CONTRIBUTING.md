@@ -61,6 +61,9 @@ Managed restore, `dotnet build --no-restore`, NativeAOT restore and
 managed compilation succeeds and reuses that build and package cache. Each runner uses
 an isolated SDK installation and fresh NuGet package directory without cache
 restore. SDK setup, projection preparation and artifact transfers are not timed.
+MSBuild scheduling uses one worker, as in the regular repository CI, to avoid
+WinGet project-reference instances concurrently writing the same output files.
+The compilers can still use the runner's 4 vCPUs.
 The comparison appears in the workflow summary and the `benchmark-comparison`
 artifact; per-phase JSON artifacts also record failures. Repeat runs to account
 for hosted-runner and network variability.

@@ -1,5 +1,6 @@
 <Project>
   <Import Project="Sdk.props"
-          Sdk="StuDev.AotAnywhere/0.0.0-benchmark.7661138aebfa"
+          Sdk="StuDev.AotAnywhere"
+          Version="0.0.0-benchmark.7661138aebfa"
           Condition="'$(BenchmarkNativeAot)' == 'true' and '$(MSBuildProjectName)' == 'UniGetUI.Avalonia'" />
 </Project>

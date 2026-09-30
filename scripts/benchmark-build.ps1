@@ -84,7 +84,7 @@ $arguments = @($command, $project) + $properties + @('--nologo', '--verbosity', 
 if ($Phase -in @('Build', 'NativePublish')) {
     dotnet build-server shutdown
     if ($LASTEXITCODE -ne 0) { throw 'Could not shut down build servers before the build measurement.' }
-    $arguments += @('--no-restore', '-maxcpucount:4', '-nodeReuse:false', '-p:UseSharedCompilation=false')
+    $arguments += @('--no-restore', '-maxcpucount:1', '-nodeReuse:false', '-p:UseSharedCompilation=false')
 }
 $publishDir = Join-Path $env:RUNNER_TEMP 'benchmark-native-publish'
 if ($Phase -eq 'NativePublish') { $arguments += @('--output', $publishDir) }
@@ -141,6 +141,7 @@ $timing = [ordered]@{
     runner = $env:BENCHMARK_RUNNER
     os = $env:RUNNER_OS
     vcpus = $vcpus
+    msbuildWorkers = 1
     sdk = $sdk
     framework = $framework
     configuration = 'Release'

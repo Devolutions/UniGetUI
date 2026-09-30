@@ -1,3 +1,4 @@
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -65,8 +66,22 @@ namespace UniGetUI.PackageEngine.PackageLoader
             return await Task.FromResult(true);
         }
 
+        public IReadOnlyList<IPackageManager> GetSearchableManagers()
+            => Managers.Where(manager => manager.IsReady()).ToArray();
+
+        public bool IsManagerSearched(IPackageManager manager)
+            => !Settings.GetDictionaryItem<string, bool>(Settings.K.ExcludedSearchManagers, manager.Name);
+
+        public void SetManagerSearched(IPackageManager manager, bool searched)
+            => Settings.SetDictionaryItem(Settings.K.ExcludedSearchManagers, manager.Name, !searched);
+
         protected override IReadOnlyList<IPackage> LoadPackagesFromManager(IPackageManager manager)
         {
+            if (!IsManagerSearched(manager))
+            {
+                return [];
+            }
+
             string text = QUERY_TEXT;
             text = CoreTools.EnsureSafeQueryString(text);
             if (text == string.Empty)

@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views;
+using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
@@ -67,6 +68,21 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         installInteractive.Click += (_, _) => _ = LaunchInstall(vm.FilteredPackages.GetCheckedPackages(), interactive: true);
         downloadInstallers.Click += (_, _) => _ = AvaloniaPackageOperationHelper.DownloadSelectedAsync(
             vm.FilteredPackages.GetCheckedPackages(), TEL_InstallReferral.DIRECT_SEARCH);
+
+        if (DiscoverablePackagesLoader.Instance is { } discoverLoader)
+        {
+            var sourceSelector = new SearchSourceSelector(discoverLoader);
+            ViewModel.RegisterCollapsibleToolbarLabel(sourceSelector.SummaryLabel);
+            sourceSelector.SelectionCommitted += () =>
+            {
+                if (!string.IsNullOrWhiteSpace(vm.GlobalQueryText)) vm.SubmitSearch();
+            };
+            ViewModel.AddToolbarEntry(
+                new ToolbarEntry(sourceSelector, "Sources", CoreTools.Translate("Sources"),
+                    null, sourceSelector.ShowFlyoutAt),
+                index: 0);
+            if (!ViewModel.DisableReload) ViewModel.AddToolbarSeparator(index: 1);
+        }
 
         // ── Toolbar buttons ─────────────────────────────────────────────────
         ViewModel.AddToolbarSeparator();

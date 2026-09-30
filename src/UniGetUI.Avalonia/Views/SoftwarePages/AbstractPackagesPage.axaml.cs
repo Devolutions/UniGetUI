@@ -260,14 +260,16 @@ public abstract partial class AbstractPackagesPage : UserControl,
             var entry = ViewModel.ToolbarEntries.FirstOrDefault(e => ReferenceEquals(e.Control, control));
             if (entry is null) continue;
 
-            if (entry.Invoke is not { } invoke)
+            if (entry.Invoke is null && entry.InvokeAt is null)
             {
                 if (items.Count > 0 && items[^1] is not Separator) items.Add(new Separator());
                 continue;
             }
 
             var item = new MenuItem { Header = entry.Label, Icon = LoadMenuIcon(entry.IconName) };
-            item.Click += (_, _) => invoke();
+            if (entry.InvokeAt is { } invokeAt)
+                item.Click += (_, _) => Dispatcher.UIThread.Post(() => invokeAt(ToolbarOverflowButton));
+            else if (entry.Invoke is { } invoke) item.Click += (_, _) => invoke();
             items.Add(item);
         }
 

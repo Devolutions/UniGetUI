@@ -27,7 +27,12 @@ using UniGetUI.PackageEngine.PackageLoader;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages;
 
-public sealed record ToolbarEntry(Control Control, string IconName, string Label, Action? Invoke);
+public sealed record ToolbarEntry(
+    Control Control,
+    string IconName,
+    string Label,
+    Action? Invoke,
+    Action<Control>? InvokeAt = null);
 
 public enum SearchMode { Both, Name, Id, Exact, Similar }
 
@@ -358,6 +363,18 @@ public partial class PackagesPageViewModel : ViewModelBase
         return btn;
     }
 
+    public void AddToolbarEntry(ToolbarEntry entry, int index = -1)
+    {
+        if (index < 0 || index > ToolbarEntries.Count) ToolbarEntries.Add(entry);
+        else ToolbarEntries.Insert(index, entry);
+    }
+
+    public void RegisterCollapsibleToolbarLabel(TextBlock label)
+    {
+        label.IsVisible = !_toolbarLabelsCollapsed;
+        _collapsibleToolbarLabels.Add(label);
+    }
+
     /// <summary>
     /// Collapses the menu bar to icon-only (or restores labels) on narrow windows,
     /// mirroring the WinUI CommandBar's DefaultLabelPosition behavior.
@@ -371,7 +388,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     }
 
     /// <summary>Adds a thin vertical separator to the toolbar.</summary>
-    public void AddToolbarSeparator()
+    public void AddToolbarSeparator(int index = -1)
     {
         object? borderResource = null;
         Application.Current?.Resources.TryGetResource(
@@ -388,7 +405,7 @@ public partial class PackagesPageViewModel : ViewModelBase
                          ?? new SolidColorBrush(Color.FromArgb(80, 128, 128, 128)),
         };
         AutomationProperties.SetAccessibilityView(sep, AccessibilityView.Raw);
-        ToolbarEntries.Add(new ToolbarEntry(sep, "", "", null));
+        AddToolbarEntry(new ToolbarEntry(sep, "", "", null), index);
     }
 
     public async Task ShowInfoDialog(Window owner, string title, string message)

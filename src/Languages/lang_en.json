@@ -1696,5 +1696,10 @@
   "{0}...": "{0}...",
   "{0} · {1}%": "{0} · {1}%",
   "{0} · {1}% · {2} / {3}": "{0} · {1}% · {2} / {3}",
-  "{0} · {1}% · {2} / {3} · {4}": "{0} · {1}% · {2} / {3} · {4}"
+  "{0} · {1}% · {2} / {3} · {4}": "{0} · {1}% · {2} / {3} · {4}",
+  "Select which package managers to search": "Select which package managers to search",
+  "Search these package managers": "Search these package managers",
+  "No package managers are available": "No package managers are available",
+  "{0} sources": "{0} sources",
+  "No sources": "No sources"
 }

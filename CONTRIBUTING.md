@@ -49,26 +49,41 @@ dotnet test src/UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Pla
 
 The **Build runner benchmark** workflow (`.github/workflows/benchmark-runners.yml`)
 compares GitHub-hosted Windows and Linux x64 runners with 4 vCPUs. It builds the
-Release `win-x64` managed Avalonia app and its production project references, not
-test projects, NativeAOT output, installers or signed packages. The Windows target
+Release `win-x64` managed Avalonia app and its production project references, then
+publishes that app with NativeAOT. Test projects, the separate elevated policy
+helper, bundled CLI staging, installers and signing are excluded. The Windows target
 framework is explicit on both hosts. The Windows-only C#/WinRT projection tool
 runs once in a preparation job; both benchmark jobs compile those same generated
 sources. Existing host-specific theme references and resource copying remain.
 
-Restore and `dotnet build --no-restore` have separate timed steps. Each runner uses
+Managed restore, `dotnet build --no-restore`, NativeAOT restore and
+`dotnet publish --no-restore` have separate timed steps. NativeAOT runs only after
+managed compilation succeeds and reuses that build and package cache. Each runner uses
 an isolated SDK installation and fresh NuGet package directory without cache
 restore. SDK setup, projection preparation and artifact transfers are not timed.
 The comparison appears in the workflow summary and the `benchmark-comparison`
 artifact; per-phase JSON artifacts also record failures. Repeat runs to account
 for hosted-runner and network variability.
 
-Run it manually with `capture_binlog` enabled to upload separate restore and build
-MSBuild binlogs. Logs add measurement overhead and can contain source paths and
+NativeAOT imports the pinned
+[mamoreau-devolutions/AotAnywhere](https://github.com/mamoreau-devolutions/AotAnywhere)
+fork at `7661138aebfac938e4e6cde9d5e7fc6684c74690`, only in benchmark builds.
+The preparation job builds its SDK package with MIT CRT stubs and symbol-only
+Windows import libraries; it does not redistribute Microsoft SDK/CRT binaries.
+Linux links with the fork's checksum-pinned LLVM 22.1.4; Windows uses MSVC.
+Toolchain download, generation and packaging are excluded from the timings.
+Both outputs must be native x64 PE images with no CLR header, and both undergo
+a Windows CLI-startup smoke check. They are benchmark artifacts, not releases.
+The different native linkers/CRT support and existing host-specific resources
+mean this is a build-throughput comparison, not a byte-identical binary comparison.
+
+Run it manually with `capture_binlog` enabled to upload four phase-specific
+MSBuild binlogs per runner. Logs add measurement overhead and can contain source paths and
 build properties; no repository secrets are passed to this workflow, and embedded
 project imports are disabled. Compare runs with the same logging setting.
 
 The path-filtered `push` trigger runs on any branch when the workflow,
-`scripts/benchmark-build.ps1`, SDK configuration or `src` changes, so it can be
+benchmark scripts/props, SDK configuration or `src` changes, so it can be
 tested before merging to `main`.
 For a push-triggered run with binlogs, include `[benchmark-binlog]` in the head
 commit message. After discovery, manual dispatch can select the benchmark branch.

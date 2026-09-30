@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('Restore', 'Build')]
+    [ValidateSet('Restore', 'Build', 'NativeRestore', 'NativePublish')]
     [string]$Phase
 )
 
@@ -36,6 +36,23 @@ $properties = @(
     "-p:CsWinRTGeneratedFilesDir=$projection$([IO.Path]::DirectorySeparatorChar)",
     '-p:SkipBundledPingetCli=true'
 )
+$native = $Phase.StartsWith('Native')
+if ($native) {
+    $properties = @($properties | Where-Object { $_ -notin @('-p:SelfContained=false', '-p:PublishAot=false') })
+    $properties += @(
+        '-p:SelfContained=true',
+        '-p:PublishAot=true',
+        '-p:BenchmarkNativeAot=true',
+        "-p:CustomAfterMicrosoftCommonProps=$(Join-Path $PSScriptRoot 'benchmark-nativeaot.props')",
+        '-p:UseExternalClang=true',
+        "-p:AotAnywhereClangPath=$env:BENCHMARK_LLVM",
+        '-p:SkipElevatedPolicyHelper=true',
+        '-p:PublishTrimmed=true',
+        '-p:TrimMode=full',
+        '-p:TrimmerSingleWarn=false'
+    )
+    if (-not $IsWindows) { $properties += '-p:UseAotCrtStub=true' }
+}
 # The app otherwise selects its framework from the host OS, not the target RID.
 $framework = (dotnet msbuild $project @properties -nologo -getProperty:WindowsTargetFramework | Select-Object -Last 1)
 if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the Windows target framework.' }
@@ -54,12 +71,20 @@ $properties += "-p:WindowsSdkPackageVersion=$($windowsSdk.Trim())"
 $sdk = (dotnet --version).Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the .NET SDK version.' }
 
-$arguments = @($Phase.ToLowerInvariant(), $project) + $properties + @('--nologo', '--verbosity', 'minimal')
-if ($Phase -eq 'Build') {
+$command = switch ($Phase) {
+    'Restore' { 'restore' }
+    'Build' { 'build' }
+    'NativeRestore' { 'restore' }
+    'NativePublish' { 'publish' }
+}
+$arguments = @($command, $project) + $properties + @('--nologo', '--verbosity', 'minimal')
+if ($Phase -in @('Build', 'NativePublish')) {
     dotnet build-server shutdown
     if ($LASTEXITCODE -ne 0) { throw 'Could not shut down build servers before the build measurement.' }
     $arguments += @('--no-restore', '-maxcpucount:4', '-nodeReuse:false', '-p:UseSharedCompilation=false')
 }
+$publishDir = Join-Path $env:RUNNER_TEMP 'benchmark-native-publish'
+if ($Phase -eq 'NativePublish') { $arguments += @('--output', $publishDir) }
 if ($captureBinlog) {
     $binlog = Join-Path $timingDir "$($Phase.ToLowerInvariant()).binlog"
     $arguments += "-bl:$binlog;ProjectImports=None"
@@ -82,6 +107,31 @@ if ($exitCode -eq 0 -and $Phase -eq 'Build') {
         $exitCode = 1
     }
 }
+$nativeBytes = $null
+if ($exitCode -eq 0 -and $Phase -eq 'NativePublish') {
+    $executable = Join-Path $publishDir 'UniGetUI.exe'
+    if (-not (Test-Path $executable)) {
+        Write-Host "::error::NativeAOT did not produce $executable."
+        $exitCode = 1
+    }
+    else {
+        Add-Type -AssemblyName System.Reflection.Metadata
+        $stream = [IO.File]::OpenRead($executable)
+        $pe = [System.Reflection.PortableExecutable.PEReader]::new($stream)
+        try {
+            if ($pe.PEHeaders.CoffHeader.Machine -ne [System.Reflection.PortableExecutable.Machine]::Amd64 -or
+                $null -ne $pe.PEHeaders.CorHeader) {
+                Write-Host '::error::The published executable is not a native x64 Windows PE image.'
+                $exitCode = 1
+            }
+            $nativeBytes = $stream.Length
+        }
+        finally {
+            $pe.Dispose()
+            $stream.Dispose()
+        }
+    }
+}
 $duration = [math]::Round($stopwatch.Elapsed.TotalSeconds, 2)
 $timing = [ordered]@{
     phase = $Phase
@@ -94,6 +144,7 @@ $timing = [ordered]@{
     runtimeIdentifier = 'win-x64'
     commit = $env:GITHUB_SHA
     captureBinlog = $captureBinlog
+    nativeExecutableBytes = $nativeBytes
     durationSeconds = $duration
     exitCode = $exitCode
     succeeded = ($exitCode -eq 0)

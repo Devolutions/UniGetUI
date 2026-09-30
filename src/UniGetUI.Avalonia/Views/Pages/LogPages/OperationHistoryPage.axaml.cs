@@ -1,4 +1,3 @@
-using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -9,6 +8,7 @@ using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages.LogPages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Tools;
+using ICommand = System.Windows.Input.ICommand;
 
 namespace UniGetUI.Avalonia.Views.Pages.LogPages;
 

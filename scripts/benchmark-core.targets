@@ -28,7 +28,9 @@
       <_BenchmarkInput Include="@(Compile->'source|%(FullPath)');@(ReferencePathWithRefAssemblies->'reference|%(FullPath)');@(Analyzer->'analyzer|%(FullPath)');@(AdditionalFiles->'additional|%(FullPath)');@(EmbeddedResource->'resource|%(FullPath)');@(AvaloniaResource->'resource|%(FullPath)')" />
       <_BenchmarkInput Include="resource|$(ApplicationManifest)" Condition="Exists('$(ApplicationManifest)')" />
       <_BenchmarkInput Include="resource|$(MSBuildProjectDirectory)\$(ApplicationIcon)" Condition="Exists('$(ApplicationIcon)')" />
-      <_BenchmarkInput Include="flags|$(DefineConstants)|$(LangVersion)|$(Nullable)|$(Optimize)|$(AllowUnsafeBlocks)|$(OutputType)|$(TargetFramework)|$(RuntimeIdentifier)" />
+      <_BenchmarkDefine Include="$(DefineConstants)" />
+      <_BenchmarkInput Include="@(_BenchmarkDefine->'flags|define=%(Identity)')" />
+      <_BenchmarkInput Include="flags|lang=$(LangVersion);flags|nullable=$(Nullable);flags|optimize=$(Optimize);flags|unsafe=$(AllowUnsafeBlocks);flags|output=$(OutputType);flags|framework=$(TargetFramework);flags|runtime=$(RuntimeIdentifier);flags|debug=$(DebugType);flags|deterministic=$(Deterministic)" />
     </ItemGroup>
     <MakeDir Directories="$(BenchmarkInputDirectory)" />
     <WriteLinesToFile File="$(BenchmarkInputDirectory)\$(MSBuildProjectName).inputs"

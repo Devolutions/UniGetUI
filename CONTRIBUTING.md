@@ -67,8 +67,9 @@ MSBuild binlogs. Logs add measurement overhead and can contain source paths and
 build properties; no repository secrets are passed to this workflow, and embedded
 project imports are disabled. Compare runs with the same logging setting.
 
-The path-filtered `push` trigger runs on any branch when the workflow or
-`scripts/benchmark-build.ps1` changes, so it can be tested before merging to `main`.
+The path-filtered `push` trigger runs on any branch when the workflow,
+`scripts/benchmark-build.ps1`, SDK configuration or `src` changes, so it can be
+tested before merging to `main`.
 For a push-triggered run with binlogs, include `[benchmark-binlog]` in the head
 commit message. After discovery, manual dispatch can select the benchmark branch.
 

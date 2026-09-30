@@ -8,6 +8,8 @@ on:
     paths:
       - '.github/workflows/benchmark-runners.yml'
       - 'scripts/benchmark-build.ps1'
+      - 'global.json'
+      - 'src/**'
   workflow_dispatch:
     inputs:
       capture_binlog:

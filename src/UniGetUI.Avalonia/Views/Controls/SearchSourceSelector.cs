@@ -140,10 +140,10 @@ public sealed class SearchSourceSelector : Button
         var managers = _loader.GetSearchableManagers();
         var searched = managers.Where(_loader.IsManagerSearched).ToArray();
 
-        if (managers.Count == 0 || searched.Length == managers.Count)
-            _summary.Text = CoreTools.Translate("All sources");
-        else if (searched.Length == 0)
+        if (searched.Length == 0)
             _summary.Text = CoreTools.Translate("No sources");
+        else if (searched.Length == managers.Count)
+            _summary.Text = CoreTools.Translate("All sources");
         else if (searched.Length == 1)
             _summary.Text = searched[0].DisplayName;
         else

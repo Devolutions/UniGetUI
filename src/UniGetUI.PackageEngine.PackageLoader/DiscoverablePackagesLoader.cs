@@ -75,6 +75,9 @@ namespace UniGetUI.PackageEngine.PackageLoader
         public void SetManagerSearched(IPackageManager manager, bool searched)
             => Settings.SetDictionaryItem(Settings.K.ExcludedSearchManagers, manager.Name, !searched);
 
+        protected override bool WillQueryAnyManager()
+            => Managers.Any(manager => manager.IsReady() && IsManagerSearched(manager));
+
         protected override IReadOnlyList<IPackage> LoadPackagesFromManager(IPackageManager manager)
         {
             if (!IsManagerSearched(manager))

@@ -189,7 +189,7 @@ namespace UniGetUI.PackageEngine.PackageLoader
                 IsLoaded = false;
                 InvokePackagesChangedEvent(false, [], []);
 
-                if (REQUIRES_INTERNET)
+                if (REQUIRES_INTERNET && WillQueryAnyManager())
                 {
                     await CoreTools.WaitForInternetConnection();
                 }
@@ -285,6 +285,8 @@ namespace UniGetUI.PackageEngine.PackageLoader
             IsLoading = false;
             InvokePackagesChangedEvent(false, [], []);
         }
+
+        protected virtual bool WillQueryAnyManager() => true;
 
         /// <summary>
         /// Loads the packages from the given manager

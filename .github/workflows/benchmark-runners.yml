@@ -241,10 +241,11 @@ jobs:
             if (@($builds.sdk | Select-Object -Unique).Count -ne 1 -or
                 @($builds.framework | Select-Object -Unique).Count -ne 1 -or
                 @($builds.commit | Select-Object -Unique).Count -ne 1 -or
-                @($builds.captureBinlog | Select-Object -Unique).Count -ne 1) {
+                @($builds.captureBinlog | Select-Object -Unique).Count -ne 1 -or
+                @($builds.nativeDebugSymbols | Select-Object -Unique).Count -ne 1) {
               $complete = $false
               $lines += ''
-              $lines += '**Invalid comparison: SDK, framework, commit or binlog settings differ.**'
+              $lines += '**Invalid comparison: SDK, framework, commit or logging/symbol settings differ.**'
             }
           }
           }
@@ -253,6 +254,7 @@ jobs:
             '- Release win-x64 app and its project references; no test projects, ReadyToRun, signing or installers.',
             '- Managed compilation gates NativeAOT. NativeAOT restore/publish reuses that managed build and package cache; it is not a second cold build.',
             '- NativeAOT uses the pinned mamoreau-devolutions/AotAnywhere fork. Windows uses MSVC; Linux uses LLVM 22.1.4 and MIT CRT stubs plus generated symbol-only Windows imports, not redistributed SDK/CRT binaries.',
+            '- Native debug symbols are disabled on both hosts: LLVM 22.1.4 asserts while producing this app''s PDB. This benchmark measures native code generation/linking, not PDB generation.',
             '- The separately published policy helper and bundled CLI staging are excluded from this core-app benchmark.',
             '- Windows-only C#/WinRT projection generation is shared preparation, excluded from both timings. Both runners compile the generated C#.',
             '- Managed build starts with a fresh isolated NuGet cache and identical SDK, with no restored build outputs or incremental build cache.',

@@ -52,7 +52,8 @@ if ($native) {
         '-p:SkipElevatedPolicyHelper=true',
         '-p:PublishTrimmed=true',
         '-p:TrimMode=full',
-        '-p:TrimmerSingleWarn=false'
+        '-p:TrimmerSingleWarn=false',
+        '-p:NativeDebugSymbols=false'
     )
     if (-not $IsWindows) { $properties += '-p:UseAotCrtStub=true' }
 }
@@ -148,6 +149,7 @@ $timing = [ordered]@{
     runtimeIdentifier = 'win-x64'
     commit = $env:GITHUB_SHA
     captureBinlog = $captureBinlog
+    nativeDebugSymbols = if ($native) { $false } else { $null }
     nativeExecutableBytes = $nativeBytes
     durationSeconds = $duration
     exitCode = $exitCode

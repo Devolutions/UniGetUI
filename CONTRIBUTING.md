@@ -74,6 +74,9 @@ fork at `7661138aebfac938e4e6cde9d5e7fc6684c74690`, only in benchmark builds.
 The preparation job builds its SDK package with MIT CRT stubs and symbol-only
 Windows import libraries; it does not redistribute Microsoft SDK/CRT binaries.
 Linux links with the fork's checksum-pinned LLVM 22.1.4; Windows uses MSVC.
+Native debug symbols are disabled on both hosts because LLVM 22.1.4 asserts
+while generating this application's PDB. Native timings cover code generation
+and linking, not PDB generation; MSBuild binlogs remain independently selectable.
 Toolchain download, generation and packaging are excluded from the timings.
 Both outputs must be native x64 PE images with no CLR header, and both undergo
 a Windows CLI-startup smoke check. They are benchmark artifacts, not releases.

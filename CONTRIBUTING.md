@@ -54,18 +54,28 @@ publishes that app with NativeAOT. Test projects, the separate elevated policy
 helper, bundled CLI staging, installers and signing are excluded. The Windows target
 framework is explicit on both hosts. The Windows-only C#/WinRT projection tool
 runs once in a preparation job; both benchmark jobs compile those same generated
-sources. Existing host-specific theme references and resource copying remain.
+sources. A benchmark-only targets file excludes Linux/macOS theme packages,
+the elevator package and resource/executable staging on **both** hosts, and fixes
+the app manifest to Windows. Both hosts consume identical pre-generated build-info
+sources. Ordinary builds and shipping publish profiles are unchanged.
 
 Managed restore, `dotnet build --no-restore`, NativeAOT restore and
-`dotnet publish --no-restore` have separate timed steps. NativeAOT runs only after
-managed compilation succeeds and reuses that build and package cache. Each runner uses
+`dotnet publish --no-build --no-restore` have separate timed steps. All phases use
+the same self-contained, AOT-ready configuration, so switching to NativeAOT does not
+recompile the managed graph. NativeAOT runs only after managed compilation succeeds.
+Native restore is a warm verification of the same graph, not a second cold restore.
+Each runner uses
 an isolated SDK installation and fresh NuGet package directory without cache
-restore. SDK setup, projection preparation and artifact transfers are not timed.
+restore. SDK/toolchain setup, projection/build-info preparation, input hashing and
+artifact transfers are not timed.
 MSBuild scheduling uses one worker, as in the regular repository CI, to avoid
 WinGet project-reference instances concurrently writing the same output files.
 The compilers can still use the runner's 4 vCPUs.
 The comparison appears in the workflow summary and the `benchmark-comparison`
-artifact; per-phase JSON artifacts also record failures. Repeat runs to account
+artifact; per-phase JSON artifacts also record failures and CPU models. A comparison
+fails if normalized source/resource/reference/analyzer hashes and compiler flags
+do not match; inspect the `.inputs` artifacts to diagnose differences.
+Repeat runs to account
 for hosted-runner and network variability.
 
 NativeAOT imports the pinned
@@ -74,14 +84,14 @@ fork at `7661138aebfac938e4e6cde9d5e7fc6684c74690`, only in benchmark builds.
 The preparation job builds its SDK package with MIT CRT stubs and symbol-only
 Windows import libraries; it does not redistribute Microsoft SDK/CRT binaries.
 Linux links with the fork's checksum-pinned LLVM 22.1.4; Windows uses MSVC.
-Native debug symbols are disabled on both hosts because LLVM 22.1.4 asserts
+Managed and native debug symbols are disabled on both hosts; LLVM 22.1.4 asserts
 while generating this application's PDB. Native timings cover code generation
 and linking, not PDB generation; MSBuild binlogs remain independently selectable.
 Toolchain download, generation and packaging are excluded from the timings.
 Both outputs must be native x64 PE images with no CLR header, and both undergo
 a Windows CLI-startup smoke check with their published runtime files, not just
 the executable in isolation. They are benchmark artifacts, not releases.
-The different native linkers/CRT support and existing host-specific resources
+The different native linkers/CRT support
 mean this is a build-throughput comparison, not a byte-identical binary comparison.
 
 Run it manually with `capture_binlog` enabled to upload four phase-specific

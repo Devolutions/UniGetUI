@@ -28,35 +28,35 @@ $properties = @(
     '-p:Configuration=Release',
     '-p:Platform=x64',
     '-p:RuntimeIdentifier=win-x64',
-    '-p:SelfContained=false',
+    '-p:SelfContained=true',
     '-p:EnableWindowsTargeting=true',
-    '-p:PublishAot=false',
+    '-p:PublishAot=true',
     '-p:PublishReadyToRun=false',
     '-p:CsWinRTGenerateProjection=false',
     "-p:CsWinRTGeneratedFilesDir=$projection$([IO.Path]::DirectorySeparatorChar)",
-    '-p:SkipBundledPingetCli=true'
+    '-p:SkipBundledPingetCli=true',
+    '-p:SkipElevatedPolicyHelper=true',
+    '-p:BenchmarkNativeAot=true',
+    "-p:CustomAfterMicrosoftCommonProps=$(Join-Path $PSScriptRoot 'benchmark-nativeaot.props')",
+    "-p:CustomAfterMicrosoftCommonTargets=$(Join-Path $PSScriptRoot 'benchmark-core.targets')",
+    "-p:BenchmarkGeneratedSources=$env:BenchmarkGeneratedSources",
+    "-p:BenchmarkInputDirectory=$(Join-Path $env:RUNNER_TEMP 'benchmark-inputs')",
+    "-p:BenchmarkPhase=$Phase",
+    '-p:UseExternalClang=true',
+    "-p:AotAnywhereClangPath=$env:BENCHMARK_LLVM",
+    '-p:PublishTrimmed=true',
+    '-p:TrimMode=full',
+    '-p:TrimmerSingleWarn=false',
+    '-p:NativeDebugSymbols=false',
+    '-p:DebugType=None',
+    '-p:DebugSymbols=false',
+    '-p:ContinuousIntegrationBuild=true'
 )
 $native = $Phase.StartsWith('Native')
 if ($Phase -eq 'NativePublish' -and $IsWindows) {
     & (Join-Path $PSScriptRoot 'enter-benchmark-vsdevshell.ps1')
 }
-if ($native) {
-    $properties = @($properties | Where-Object { $_ -notin @('-p:SelfContained=false', '-p:PublishAot=false') })
-    $properties += @(
-        '-p:SelfContained=true',
-        '-p:PublishAot=true',
-        '-p:BenchmarkNativeAot=true',
-        "-p:CustomAfterMicrosoftCommonProps=$(Join-Path $PSScriptRoot 'benchmark-nativeaot.props')",
-        '-p:UseExternalClang=true',
-        "-p:AotAnywhereClangPath=$env:BENCHMARK_LLVM",
-        '-p:SkipElevatedPolicyHelper=true',
-        '-p:PublishTrimmed=true',
-        '-p:TrimMode=full',
-        '-p:TrimmerSingleWarn=false',
-        '-p:NativeDebugSymbols=false'
-    )
-    if (-not $IsWindows) { $properties += '-p:UseAotCrtStub=true' }
-}
+if (-not $IsWindows) { $properties += '-p:UseAotCrtStub=true' }
 # The app otherwise selects its framework from the host OS, not the target RID.
 $framework = (dotnet msbuild $project @properties -nologo -getProperty:WindowsTargetFramework | Select-Object -Last 1)
 if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the Windows target framework.' }
@@ -88,7 +88,7 @@ if ($Phase -in @('Build', 'NativePublish')) {
     $arguments += @('--no-restore', '-maxcpucount:1', '-nodeReuse:false', '-p:UseSharedCompilation=false')
 }
 $publishDir = Join-Path $env:RUNNER_TEMP 'benchmark-native-publish'
-if ($Phase -eq 'NativePublish') { $arguments += @('--output', $publishDir) }
+if ($Phase -eq 'NativePublish') { $arguments += @('--no-build', '-p:BuildProjectReferences=false', '--output', $publishDir) }
 if ($captureBinlog) {
     $binlog = Join-Path $timingDir "$($Phase.ToLowerInvariant()).binlog"
     $arguments += "-bl:$binlog;ProjectImports=None"
@@ -137,11 +137,29 @@ if ($exitCode -eq 0 -and $Phase -eq 'NativePublish') {
     }
 }
 $duration = [math]::Round($stopwatch.Elapsed.TotalSeconds, 2)
+$inputFingerprint = $null
+if ($exitCode -eq 0 -and $Phase -eq 'Build') {
+    $manifest = Join-Path $timingDir "$env:BENCHMARK_RUNNER-inputs.json"
+    & (Join-Path $PSScriptRoot 'benchmark-inputs.ps1') `
+        -InputDirectory (Join-Path $env:RUNNER_TEMP 'benchmark-inputs') -Output $manifest
+    $inputFingerprint = (Get-Content $manifest -Raw | ConvertFrom-Json).sha256
+}
+elseif ($Phase -eq 'NativePublish') {
+    $inputFingerprint = (Get-Content (Join-Path $timingDir "$env:BENCHMARK_RUNNER-inputs.json") -Raw | ConvertFrom-Json).sha256
+}
+$cpuModel = if ($IsWindows) {
+    (Get-CimInstance Win32_Processor | Select-Object -First 1).Name.Trim()
+}
+else {
+    $cpuInfo = Join-Path ([IO.Path]::DirectorySeparatorChar) 'proc\cpuinfo'
+    ((Get-Content $cpuInfo | Where-Object { $_.StartsWith('model name') } | Select-Object -First 1) -split ':', 2)[1].Trim()
+}
 $timing = [ordered]@{
     phase = $Phase
     runner = $env:BENCHMARK_RUNNER
     os = $env:RUNNER_OS
     vcpus = $vcpus
+    cpuModel = $cpuModel
     msbuildWorkers = 1
     sdk = $sdk
     framework = $framework
@@ -149,6 +167,7 @@ $timing = [ordered]@{
     runtimeIdentifier = 'win-x64'
     commit = $env:GITHUB_SHA
     captureBinlog = $captureBinlog
+    inputFingerprint = $inputFingerprint
     nativeDebugSymbols = if ($native) { $false } else { $null }
     nativeExecutableBytes = $nativeBytes
     durationSeconds = $duration

@@ -1,0 +1,35 @@
+<Project>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'UniGetUI.Avalonia'">
+    <PackageReference Remove="Devolutions.AvaloniaTheme.Linux;Devolutions.AvaloniaTheme.MacOS;Devolutions.UniGetUI.Elevator" />
+    <Content Remove="@(Content)" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'UniGetUI.Avalonia'">
+    <ApplicationManifest>$(MSBuildProjectDirectory)\app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'UniGetUI.Avalonia' or '$(MSBuildProjectName)' == 'UniGetUI.Interface.IpcApi'">
+    <Compile Remove="Generated Files\Secrets.Generated.cs;$(IntermediateOutputPath)Generated Files\Secrets.Generated.cs" />
+    <Compile Include="$(BenchmarkGeneratedSources)\$(MSBuildProjectName)\Secrets.Generated.cs" />
+  </ItemGroup>
+
+  <!-- Both hosts consume the same Windows-generated sources; no shell/codegen work is timed. -->
+  <Target Name="GenerateBuildInfo" BeforeTargets="BeforeBuild"
+          Condition="'$(MSBuildProjectName)' == 'UniGetUI.Avalonia' or '$(MSBuildProjectName)' == 'UniGetUI.Interface.IpcApi'">
+    <Error Condition="!Exists('$(BenchmarkGeneratedSources)\$(MSBuildProjectName)\Secrets.Generated.cs')"
+           Text="The shared benchmark generated sources are missing for $(MSBuildProjectName)." />
+  </Target>
+  <Target Name="EnsureBundledElevatorFromNuGet" />
+
+  <Target Name="BenchmarkRecordCompilerInputs" BeforeTargets="CoreCompile">
+    <Error Condition="'$(BenchmarkPhase)' == 'NativePublish' and !Exists('$(IntermediateOutputPath)$(TargetName).dll')"
+           Text="The native benchmark requires an existing managed assembly." />
+    <ItemGroup>
+      <_BenchmarkInput Include="@(Compile->'source|%(FullPath)');@(ReferencePathWithRefAssemblies->'reference|%(FullPath)');@(Analyzer->'analyzer|%(FullPath)');@(AdditionalFiles->'additional|%(FullPath)');@(EmbeddedResource->'resource|%(FullPath)');@(AvaloniaResource->'resource|%(FullPath)')" />
+      <_BenchmarkInput Include="resource|$(ApplicationManifest)" Condition="Exists('$(ApplicationManifest)')" />
+      <_BenchmarkInput Include="resource|$(ApplicationIcon)" Condition="Exists('$(ApplicationIcon)')" />
+      <_BenchmarkInput Include="flags|$(DefineConstants)|$(LangVersion)|$(Nullable)|$(Optimize)|$(AllowUnsafeBlocks)|$(OutputType)|$(TargetFramework)|$(RuntimeIdentifier)" />
+    </ItemGroup>
+    <MakeDir Directories="$(BenchmarkInputDirectory)" />
+    <WriteLinesToFile File="$(BenchmarkInputDirectory)\$(MSBuildProjectName).inputs"
+                      Lines="@(_BenchmarkInput)" Overwrite="true" />
+  </Target>
+</Project>

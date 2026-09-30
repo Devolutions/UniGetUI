@@ -9,6 +9,8 @@ on:
       - '.github/workflows/benchmark-runners.yml'
       - 'scripts/benchmark-build.ps1'
       - 'scripts/benchmark-nativeaot.props'
+      - 'scripts/benchmark-core.targets'
+      - 'scripts/benchmark-inputs.ps1'
       - 'scripts/prepare-benchmark-nativeaot.ps1'
       - 'scripts/enter-benchmark-vsdevshell.ps1'
       - 'global.json'
@@ -82,6 +84,33 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Generate common build-info sources outside the benchmark
+        run: |
+          $generated = Join-Path $env:RUNNER_TEMP 'benchmark-generated'
+          foreach ($project in @('UniGetUI.Avalonia', 'UniGetUI.Interface.IpcApi')) {
+            $output = Join-Path $generated $project
+            Push-Location (Join-Path $env:GITHUB_WORKSPACE "src\$project")
+            try {
+              $script = if ($project -eq 'UniGetUI.Avalonia') { '.\Infrastructure\generate-secrets.ps1' } else { '.\generate-secrets.ps1' }
+              & $script -OutputPath $output
+              if ($project -eq 'UniGetUI.Avalonia') {
+                Copy-Item '.\Generated Files\Secrets.Generated.cs' $output
+              }
+              else {
+                Move-Item (Join-Path $output 'Generated Files\Secrets.Generated.cs') $output
+              }
+            }
+            finally { Pop-Location }
+          }
+
+      - name: Upload common build-info sources
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-generated
+          path: ${{ runner.temp }}/benchmark-generated
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Check out the pinned AotAnywhere fork
         uses: actions/checkout@v7
         with:
@@ -135,12 +164,6 @@ jobs:
           name: windows-projection
           path: ${{ runner.temp }}/windows-projection
 
-      - name: Benchmark dotnet restore
-        run: .\scripts\benchmark-build.ps1 -Phase Restore
-
-      - name: Benchmark core dotnet build (no restore)
-        run: .\scripts\benchmark-build.ps1 -Phase Build
-
       - name: Check out the pinned AotAnywhere fork
         uses: actions/checkout@v7
         with:
@@ -157,10 +180,26 @@ jobs:
       - name: Prepare NativeAOT toolchain outside the benchmark
         run: .\scripts\prepare-benchmark-nativeaot.ps1 -Mode Consumer
 
+      - name: Download common build-info sources
+        uses: actions/download-artifact@v8
+        with:
+          name: benchmark-generated
+          path: ${{ runner.temp }}/benchmark-generated
+
+      - name: Configure identical core inputs
+        run: |
+          "BenchmarkGeneratedSources=$(Join-Path $env:RUNNER_TEMP 'benchmark-generated')" >> $env:GITHUB_ENV
+
+      - name: Benchmark dotnet restore
+        run: .\scripts\benchmark-build.ps1 -Phase Restore
+
+      - name: Benchmark core dotnet build (no restore)
+        run: .\scripts\benchmark-build.ps1 -Phase Build
+
       - name: Benchmark NativeAOT dotnet restore
         run: .\scripts\benchmark-build.ps1 -Phase NativeRestore
 
-      - name: Benchmark NativeAOT publish (no restore)
+      - name: Benchmark NativeAOT publish (no managed rebuild or restore)
         run: .\scripts\benchmark-build.ps1 -Phase NativePublish
 
       - name: Upload native Windows publish output
@@ -176,7 +215,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: build-time-${{ matrix.runner }}
-          path: ${{ runner.temp }}/build-timing/*.json
+          path: |
+            ${{ runner.temp }}/build-timing/*.json
+            ${{ runner.temp }}/build-timing/*.inputs
           if-no-files-found: error
           retention-days: 14
 
@@ -242,25 +283,27 @@ jobs:
                 @($builds.framework | Select-Object -Unique).Count -ne 1 -or
                 @($builds.commit | Select-Object -Unique).Count -ne 1 -or
                 @($builds.captureBinlog | Select-Object -Unique).Count -ne 1 -or
+                @($builds.inputFingerprint | Select-Object -Unique).Count -ne 1 -or
                 ($mode -eq 'NativeAOT' -and @($builds.nativeDebugSymbols | Select-Object -Unique).Count -ne 1)) {
               $complete = $false
               $lines += ''
-              $lines += '**Invalid comparison: SDK, framework, commit or logging/symbol settings differ.**'
+              $lines += '**Invalid comparison: compiler inputs, SDK, framework, commit or logging/symbol settings differ.**'
             }
           }
           }
           $lines += @(
             '',
             '- Release win-x64 app and its project references; no test projects, ReadyToRun, signing or installers.',
-            '- Managed compilation gates NativeAOT. NativeAOT restore/publish reuses that managed build and package cache; it is not a second cold build.',
+            '- All phases use the same self-contained/AOT-ready configuration. Managed compilation gates NativeAOT; native publish uses --no-build --no-restore and must reuse those managed assemblies.',
             '- NativeAOT uses the pinned mamoreau-devolutions/AotAnywhere fork. Windows uses MSVC; Linux uses LLVM 22.1.4 and MIT CRT stubs plus generated symbol-only Windows imports, not redistributed SDK/CRT binaries.',
             '- Native debug symbols are disabled on both hosts: LLVM 22.1.4 asserts while producing this app''s PDB. This benchmark measures native code generation/linking, not PDB generation.',
             '- The separately published policy helper and bundled CLI staging are excluded from this core-app benchmark.',
             '- Windows-only C#/WinRT projection generation is shared preparation, excluded from both timings. Both runners compile the generated C#.',
-            '- Managed build starts with a fresh isolated NuGet cache and identical SDK, with no restored build outputs or incremental build cache.',
+            '- Restore starts with a fresh isolated NuGet cache and identical SDK, with no restored build outputs or incremental build cache. NativeRestore is a warm verification of the same graph.',
             '- MSBuild uses one worker, matching the repository CI: the WinGet graph has overlapping outputs under parallel scheduling. The compiler/NativeAOT processes can still use all 4 vCPUs.',
             '- Restore and build/publish are measured separately. SDK/toolchain setup, projection preparation and artifact transfers are excluded.',
-            '- Host-specific resource copying and theme references still follow the existing project conditions.',
+            '- Windows core inputs exclude platform themes and bundled executable/resource staging on both hosts; projection/build-info generation is shared untimed preparation.',
+            '- Compiler source/resource/reference/analyzer hashes and flags must match across both hosts before timings are comparable. The .inputs artifact makes differences inspectable.',
             '- Binlogs add overhead; compare runs with the same logging setting. No repository secrets are supplied.',
             '- One sample per runner; repeat runs before drawing conclusions about small differences.',
             '',

@@ -79,7 +79,8 @@ while generating this application's PDB. Native timings cover code generation
 and linking, not PDB generation; MSBuild binlogs remain independently selectable.
 Toolchain download, generation and packaging are excluded from the timings.
 Both outputs must be native x64 PE images with no CLR header, and both undergo
-a Windows CLI-startup smoke check. They are benchmark artifacts, not releases.
+a Windows CLI-startup smoke check with their published runtime files, not just
+the executable in isolation. They are benchmark artifacts, not releases.
 The different native linkers/CRT support and existing host-specific resources
 mean this is a build-throughput comparison, not a byte-identical binary comparison.
 

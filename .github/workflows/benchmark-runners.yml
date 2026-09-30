@@ -163,11 +163,11 @@ jobs:
       - name: Benchmark NativeAOT publish (no restore)
         run: .\scripts\benchmark-build.ps1 -Phase NativePublish
 
-      - name: Upload native Windows executable
+      - name: Upload native Windows publish output
         uses: actions/upload-artifact@v7
         with:
           name: native-executable-${{ matrix.runner }}
-          path: ${{ runner.temp }}/benchmark-native-publish/UniGetUI.exe
+          path: ${{ runner.temp }}/benchmark-native-publish
           if-no-files-found: error
           retention-days: 7
 
@@ -296,11 +296,23 @@ jobs:
         run: |
           foreach ($runner in @('windows-2025', 'ubuntu-24.04')) {
             $executable = Join-Path $env:GITHUB_WORKSPACE "native-executables\native-executable-$runner\UniGetUI.exe"
-            $process = Start-Process -FilePath $executable -ArgumentList '--help' -PassThru
-            if (-not $process.WaitForExit(30000)) {
-              Stop-Process -Id $process.Id -Force
-              throw "Native CLI startup timed out for $runner."
+            $info = [Diagnostics.ProcessStartInfo]::new($executable, '--help')
+            $info.UseShellExecute = $false
+            $info.WorkingDirectory = Split-Path $executable -Parent
+            $info.RedirectStandardOutput = $true
+            $info.RedirectStandardError = $true
+            $process = [Diagnostics.Process]::Start($info)
+            try {
+              $stdout = $process.StandardOutput.ReadToEndAsync()
+              $stderr = $process.StandardError.ReadToEndAsync()
+              if (-not $process.WaitForExit(30000)) {
+                Stop-Process -Id $process.Id -Force
+                throw "Native CLI startup timed out for $runner."
+              }
+              Write-Host $stdout.GetAwaiter().GetResult()
+              Write-Host $stderr.GetAwaiter().GetResult()
+              if ($process.ExitCode -ne 0) { throw "Native CLI startup failed for $runner with exit code $($process.ExitCode)." }
             }
-            if ($process.ExitCode -ne 0) { throw "Native CLI startup failed for $runner with exit code $($process.ExitCode)." }
+            finally { $process.Dispose() }
             "Native Windows CLI startup passed for $runner." >> $env:GITHUB_STEP_SUMMARY
           }

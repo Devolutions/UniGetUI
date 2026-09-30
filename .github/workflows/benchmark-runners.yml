@@ -1,0 +1,218 @@
+name: Build runner benchmark
+
+run-name: Windows core build benchmark (binlog ${{ inputs.capture_binlog || contains(github.event.head_commit.message, '[benchmark-binlog]') }})
+
+on:
+  # A push discovers this workflow before it exists on the default branch.
+  push:
+    paths:
+      - '.github/workflows/benchmark-runners.yml'
+      - 'scripts/benchmark-build.ps1'
+  workflow_dispatch:
+    inputs:
+      capture_binlog:
+        description: Capture restore and build MSBuild binlogs (adds logging overhead)
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unigetui-build-runner-benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1'
+
+jobs:
+  prepare-projection:
+    name: Prepare shared Windows projection sources
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Isolate SDK and package installations
+        run: |
+          "DOTNET_INSTALL_DIR=$(Join-Path $env:RUNNER_TEMP 'benchmark-dotnet')" >> $env:GITHUB_ENV
+          "NUGET_PACKAGES=$(Join-Path $env:RUNNER_TEMP 'benchmark-nuget')" >> $env:GITHUB_ENV
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Generate C#/WinRT sources outside the benchmark
+        run: |
+          $project = Join-Path $env:GITHUB_WORKSPACE 'src\WindowsPackageManager.Interop\ExternalLibraries.WindowsPackageManager.Interop.csproj'
+          $projection = Join-Path $env:RUNNER_TEMP 'windows-projection'
+          $properties = @(
+            '-p:Configuration=Release',
+            '-p:Platform=x64',
+            '-p:EnableWindowsTargeting=true',
+            '-p:PublishAot=false',
+            '-p:PublishReadyToRun=false'
+          )
+          dotnet restore $project @properties --verbosity minimal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet msbuild $project @properties -nologo -t:CsWinRTGenerateProjection "-p:CsWinRTGeneratedFilesDir=$projection\" -verbosity:minimal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (@(Get-ChildItem $projection -Filter '*.cs').Count -eq 0) {
+            throw 'C#/WinRT did not generate any projection sources.'
+          }
+
+      - name: Upload common projection sources
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-projection
+          path: ${{ runner.temp }}/windows-projection/*.cs
+          if-no-files-found: error
+          retention-days: 7
+
+  build:
+    name: Windows core build (${{ matrix.os }}, 4 vCPUs)
+    needs: prepare-projection
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Standard x64 runners have 4 vCPUs for this public repository.
+          - os: Windows
+            runner: windows-2025
+          - os: Linux
+            runner: ubuntu-24.04
+    env:
+      BENCHMARK_RUNNER: ${{ matrix.runner }}
+      BENCHMARK_BINLOG: ${{ inputs.capture_binlog || contains(github.event.head_commit.message, '[benchmark-binlog]') }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Isolate SDK and package installations
+        run: |
+          "DOTNET_INSTALL_DIR=$(Join-Path $env:RUNNER_TEMP 'benchmark-dotnet')" >> $env:GITHUB_ENV
+          "NUGET_PACKAGES=$(Join-Path $env:RUNNER_TEMP 'benchmark-nuget')" >> $env:GITHUB_ENV
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Download common projection sources
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-projection
+          path: ${{ runner.temp }}/windows-projection
+
+      - name: Benchmark dotnet restore
+        run: .\scripts\benchmark-build.ps1 -Phase Restore
+
+      - name: Benchmark core dotnet build (no restore)
+        run: .\scripts\benchmark-build.ps1 -Phase Build
+
+      - name: Upload timing data
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-time-${{ matrix.runner }}
+          path: ${{ runner.temp }}/build-timing/*.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload MSBuild binlogs
+        if: ${{ !cancelled() && env.BENCHMARK_BINLOG == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: msbuild-binlogs-${{ matrix.runner }}
+          path: ${{ runner.temp }}/build-timing/*.binlog
+          if-no-files-found: error
+          retention-days: 7
+
+  compare-timings:
+    name: Compare restore and core build times
+    if: ${{ !cancelled() && needs.build.result != 'skipped' }}
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: build-time-*
+          path: build-timings
+          merge-multiple: true
+
+      - name: Summarize benchmarks
+        run: |
+          $timings = @(Get-ChildItem build-timings -Filter '*.json' |
+            ForEach-Object { Get-Content $_.FullName -Raw | ConvertFrom-Json })
+          $builds = @($timings | Where-Object { $_.phase -eq 'Build' -and $_.succeeded })
+          $fastest = if ($builds.Count -gt 0) {
+            ($builds | Measure-Object durationSeconds -Minimum).Minimum
+          }
+          $lines = @(
+            '## Windows core build: GitHub-hosted 4-vCPU runners',
+            '',
+            '| Runner | vCPUs | SDK | Restore (s) | Build --no-restore (s) | Restore + build (s) | Build delta (s) | Binlog | Result |',
+            '| --- | ---: | --- | ---: | ---: | ---: | ---: | --- | --- |'
+          )
+          $complete = $true
+          foreach ($runner in @('windows-2025', 'ubuntu-24.04')) {
+            $restore = @($timings | Where-Object { $_.runner -eq $runner -and $_.phase -eq 'Restore' })
+            $build = @($timings | Where-Object { $_.runner -eq $runner -and $_.phase -eq 'Build' })
+            if ($restore.Count -ne 1 -or $build.Count -ne 1) {
+              $complete = $false
+              $lines += "| $runner | - | - | - | - | - | - | - | Missing phase (restore or build failed before completion) |"
+              continue
+            }
+            $restore = $restore[0]
+            $build = $build[0]
+            $succeeded = $restore.succeeded -and $build.succeeded
+            $complete = $complete -and $succeeded
+            $total = [math]::Round($restore.durationSeconds + $build.durationSeconds, 2)
+            $delta = if ($succeeded) { [math]::Round($build.durationSeconds - $fastest, 2) } else { 'n/a' }
+            $result = if ($succeeded) { 'success' } else { 'failure (not ranked)' }
+            $lines += "| $runner | $($build.vcpus) | $($build.sdk) | $($restore.durationSeconds) | $($build.durationSeconds) | $total | $delta | $($build.captureBinlog) | $result |"
+          }
+          if ($builds.Count -eq 2) {
+            if (@($builds.sdk | Select-Object -Unique).Count -ne 1 -or
+                @($builds.framework | Select-Object -Unique).Count -ne 1 -or
+                @($builds.commit | Select-Object -Unique).Count -ne 1 -or
+                @($builds.captureBinlog | Select-Object -Unique).Count -ne 1) {
+              $complete = $false
+              $lines += ''
+              $lines += '**Invalid comparison: SDK, framework, commit or binlog settings differ.**'
+            }
+          }
+          $lines += @(
+            '',
+            '- Release win-x64 managed app and its project references; no test projects, NativeAOT, ReadyToRun, signing or installers.',
+            '- Windows-only C#/WinRT projection generation is shared preparation, excluded from both timings. Both runners compile the generated C#.',
+            '- Fresh isolated NuGet cache, identical SDK, 4 MSBuild workers, no restored build outputs or incremental build cache.',
+            '- Restore and build are measured separately. Setup, projection preparation and artifact transfers are excluded.',
+            '- Host-specific resource copying and theme references still follow the existing project conditions.',
+            '- Binlogs add overhead; compare runs with the same logging setting. No repository secrets are supplied.',
+            '- One sample per runner; repeat runs before drawing conclusions about small differences.',
+            '',
+            'Runner specifications: https://docs.github.com/en/actions/reference/runners/github-hosted-runners'
+          )
+          $summary = $lines -join [Environment]::NewLine
+          $summary | Out-File $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+          $summary | Set-Content (Join-Path build-timings 'comparison.md') -Encoding utf8
+          Write-Host $summary
+          if (-not $complete) { throw 'Both runners must successfully restore and build with comparable settings.' }
+
+      - name: Upload benchmark comparison
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-comparison
+          path: build-timings
+          if-no-files-found: error
+          retention-days: 14

@@ -45,6 +45,33 @@ dotnet format style src/UniGetUI.Windows.slnx --no-restore --verify-no-changes
 dotnet test src/UniGetUI.Windows.slnx --no-restore --verbosity q --nologo /p:Platform=x64
 ```
 
+### Comparing build runners
+
+The **Build runner benchmark** workflow (`.github/workflows/benchmark-runners.yml`)
+compares GitHub-hosted Windows and Linux x64 runners with 4 vCPUs. It builds the
+Release `win-x64` managed Avalonia app and its production project references, not
+test projects, NativeAOT output, installers or signed packages. The Windows target
+framework is explicit on both hosts. The Windows-only C#/WinRT projection tool
+runs once in a preparation job; both benchmark jobs compile those same generated
+sources. Existing host-specific theme references and resource copying remain.
+
+Restore and `dotnet build --no-restore` have separate timed steps. Each runner uses
+an isolated SDK installation and fresh NuGet package directory without cache
+restore. SDK setup, projection preparation and artifact transfers are not timed.
+The comparison appears in the workflow summary and the `benchmark-comparison`
+artifact; per-phase JSON artifacts also record failures. Repeat runs to account
+for hosted-runner and network variability.
+
+Run it manually with `capture_binlog` enabled to upload separate restore and build
+MSBuild binlogs. Logs add measurement overhead and can contain source paths and
+build properties; no repository secrets are passed to this workflow, and embedded
+project imports are disabled. Compare runs with the same logging setting.
+
+The path-filtered `push` trigger runs on any branch when the workflow or
+`scripts/benchmark-build.ps1` changes, so it can be tested before merging to `main`.
+For a push-triggered run with binlogs, include `[benchmark-binlog]` in the head
+commit message. After discovery, manual dispatch can select the benchmark branch.
+
 ## Coding guidelines
 
 UniGetUI is primarily a C#/.NET Avalonia application. Follow the existing codebase style and patterns:

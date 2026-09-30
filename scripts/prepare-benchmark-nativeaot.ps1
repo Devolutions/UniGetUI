@@ -13,11 +13,17 @@ $version = '0.0.0-benchmark.7661138aebfa'
 if ($Mode -eq 'Consumer') {
     $packages = Join-Path $root '.benchmark-tooling\packages'
     $config = Join-Path $root 'NuGet.Config'
-    if (Test-Path $config) { throw 'Refusing to replace an existing repository NuGet.Config.' }
+    $lowercaseConfig = Join-Path $root 'nuget.config'
+    if ((Test-Path $config) -or (Test-Path $lowercaseConfig)) {
+        throw 'Refusing to replace an existing repository NuGet.Config.'
+    }
     # The SDK resolver needs the local fork package before restore starts.
     # This configuration exists only in the disposable CI checkout.
     dotnet new nugetconfig --output $root --force
     if ($LASTEXITCODE -ne 0) { throw 'Could not create the benchmark NuGet configuration.' }
+    if (-not (Test-Path $config)) {
+        Move-Item -LiteralPath $lowercaseConfig -Destination $config
+    }
     dotnet nuget add source $packages --name benchmark-native-toolchain --configfile $config
     if ($LASTEXITCODE -ne 0) { throw 'Could not register the local AotAnywhere package source.' }
     if ($IsWindows) { return }

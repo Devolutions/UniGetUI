@@ -63,7 +63,7 @@ $framework = $framework.Trim()
 if ($framework -notmatch '^net\d+\.\d+-windows\d+\.\d+\.\d+\.\d+$') {
     throw "Unexpected Windows target framework: '$framework'."
 }
-$properties += "-p:TargetFramework=$framework"
+$properties += @("-p:TargetFramework=$framework", "-p:SharedTargetFrameworks=$framework")
 $windowsSdk = (dotnet msbuild $project @properties -nologo -getProperty:WindowsSdkPackageVersion | Select-Object -Last 1)
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($windowsSdk)) {
     throw 'Could not resolve the Windows SDK reference package version.'

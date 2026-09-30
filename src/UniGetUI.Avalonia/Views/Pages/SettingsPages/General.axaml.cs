@@ -1,9 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Layout;
-using Avalonia.Media;
 using UniGetUI.Avalonia.ViewModels.Pages.SettingsPages;
+using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Language;
 using UniGetUI.Core.Tools;
 using CoreSettings = global::UniGetUI.Core.SettingsEngine.Settings;
@@ -58,16 +57,14 @@ public sealed partial class General : UserControl, ISettingsPage
             Opacity = 0.8,
         };
 
-        var link = new TextBlock
+        var link = new HyperlinkText
         {
             Text = CoreTools.Translate("Become a translator"),
-            TextDecorations = TextDecorations.Underline,
             VerticalAlignment = VerticalAlignment.Center,
-            Cursor = new Cursor(StandardCursorType.Hand),
             Margin = new Thickness(4, 0, 0, 0),
         };
         link.Bind(TextBlock.ForegroundProperty, link.GetResourceObservable("AccentTextFillColorPrimaryBrush"));
-        link.PointerPressed += (_, _) =>
+        link.Activated += (_, _) =>
             CoreTools.Launch("https://github.com/Devolutions/UniGetUI/blob/main/TRANSLATION.md");
 
         var panel = new StackPanel { Orientation = Orientation.Horizontal };

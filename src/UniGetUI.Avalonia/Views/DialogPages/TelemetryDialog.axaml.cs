@@ -1,7 +1,5 @@
-using Avalonia.Automation;
-using Avalonia.Automation.Peers;
 using Avalonia.Controls;
-using Avalonia.Input;
+using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.DialogPages;
@@ -10,22 +8,14 @@ public sealed class TelemetryDialog : ImmersiveConfirmationDialog
 {
     public TelemetryDialog()
     {
-        var detailsLink = new TextBlock
+        var detailsLink = new HyperlinkText
         {
             Text = CoreTools.Translate("More details about the shared data and how it will be processed"),
-            TextDecorations = global::Avalonia.Media.TextDecorations.Underline,
-            Cursor = new Cursor(StandardCursorType.Hand),
             Opacity = 0.9,
         };
-        AutomationProperties.SetName(detailsLink, detailsLink.Text);
-        AutomationProperties.SetControlTypeOverride(detailsLink, AutomationControlType.Hyperlink);
         detailsLink.Bind(TextBlock.ForegroundProperty,
             detailsLink.GetResourceObservable("AccentTextFillColorPrimaryBrush"));
-        detailsLink.PointerPressed += (_, e) =>
-        {
-            if (e.GetCurrentPoint(null).Properties.IsLeftButtonPressed)
-                CoreTools.Launch("https://devolutions.net/legal/");
-        };
+        detailsLink.Activated += (_, _) => CoreTools.Launch("https://devolutions.net/legal/");
 
         var body = new StackPanel { Spacing = 8 };
         body.Children.Add(BodyText(CoreTools.Translate(

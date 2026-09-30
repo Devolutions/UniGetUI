@@ -1007,42 +1007,15 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
     }
 
     /// <summary>A selectable, copyable hyperlink. The hand cursor and activation cover only this text.</summary>
-    private SelectableTextBlock CreateLinkBlock(string text, Action activate)
+    private HyperlinkText CreateLinkBlock(string text, Action activate)
     {
-        var link = new SelectableTextBlock
+        var link = new HyperlinkText
         {
             Text = text,
             Foreground = LinkBrush,
-            TextDecorations = TextDecorations.Underline,
-            Cursor = new Cursor(StandardCursorType.Hand),
         };
-        AttachLinkActivation(link, activate);
+        link.Activated += (_, _) => activate();
         return link;
-    }
-
-    /// <summary>Activate on a clean click, but let a press-and-drag run the text selection instead.</summary>
-    private static void AttachLinkActivation(Control link, Action activate)
-    {
-        Point press = default;
-        bool tracking = false;
-
-        link.AddHandler(InputElement.PointerPressedEvent, (_, e) =>
-        {
-            if (e.GetCurrentPoint(link).Properties.IsLeftButtonPressed)
-            {
-                tracking = true;
-                press = e.GetPosition(link);
-            }
-        }, RoutingStrategies.Bubble, handledEventsToo: true);
-
-        link.AddHandler(InputElement.PointerReleasedEvent, (_, e) =>
-        {
-            if (!tracking) return;
-            tracking = false;
-            var moved = e.GetPosition(link) - press;
-            if (Math.Abs(moved.X) <= 4 && Math.Abs(moved.Y) <= 4)
-                activate();
-        }, RoutingStrategies.Bubble, handledEventsToo: true);
     }
 
     private IBrush LinkBrush =>

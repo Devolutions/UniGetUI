@@ -91,25 +91,27 @@ public sealed class SearchSourceSelector : Button
 
     private Control BuildFlyoutContent()
     {
-        var panel = new StackPanel { Spacing = 2, MinWidth = 200 };
-        panel.Children.Add(new TextBlock
+        var root = new StackPanel { Spacing = 6, MinWidth = 220 };
+        root.Children.Add(new TextBlock
         {
             Text = CoreTools.Translate("Search these package managers"),
             FontSize = 12,
             Opacity = 0.7,
-            Margin = new Thickness(0, 0, 0, 6),
         });
 
         var managers = _loader.GetSearchableManagers();
         if (managers.Count == 0)
         {
-            panel.Children.Add(new TextBlock
+            root.Children.Add(new TextBlock
             {
                 Text = CoreTools.Translate("No package managers are available"),
                 Opacity = 0.7,
             });
-            return panel;
+            return root;
         }
+
+        var boxes = new List<CheckBox>();
+        var list = new StackPanel { Spacing = 2 };
 
         foreach (IPackageManager manager in managers)
         {
@@ -124,15 +126,65 @@ public sealed class SearchSourceSelector : Button
                 _selectionChanged = true;
                 RefreshSummary();
             };
-            panel.Children.Add(box);
+            boxes.Add(box);
+            list.Children.Add(box);
         }
 
-        return new ScrollViewer
+        root.Children.Add(BuildBulkActions(boxes));
+        root.Children.Add(new ScrollViewer
         {
-            MaxHeight = 360,
+            MaxHeight = 320,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Content = panel,
+            Content = list,
+        });
+
+        return root;
+    }
+
+    private static Control BuildBulkActions(List<CheckBox> boxes)
+    {
+        var grid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,*"),
+            ColumnSpacing = 4,
         };
+
+        var selectAll = BuildLinkButton(CoreTools.Translate("Select all"), () => SetAll(boxes, true));
+        var clear = BuildLinkButton(CoreTools.Translate("Clear selection"), () => SetAll(boxes, false));
+
+        Grid.SetColumn(selectAll, 0);
+        Grid.SetColumn(clear, 1);
+        grid.Children.Add(selectAll);
+        grid.Children.Add(clear);
+        return grid;
+    }
+
+    private static Button BuildLinkButton(string label, Action onClick)
+    {
+        var button = new Button
+        {
+            Classes = { "filter-hyperlink" },
+            Padding = new Thickness(2),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            Content = new TextBlock
+            {
+                Text = label,
+                FontSize = 12,
+                FontWeight = FontWeight.SemiBold,
+                TextAlignment = TextAlignment.Center,
+                TextWrapping = TextWrapping.Wrap,
+            },
+        };
+        AutomationProperties.SetName(button, label);
+        button.Click += (_, _) => onClick();
+        return button;
+    }
+
+    private static void SetAll(List<CheckBox> boxes, bool selected)
+    {
+        foreach (CheckBox box in boxes)
+            box.IsChecked = selected;
     }
 
     private void RefreshSummary()

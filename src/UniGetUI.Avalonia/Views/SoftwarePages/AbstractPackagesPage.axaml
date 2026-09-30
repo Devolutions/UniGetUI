@@ -99,27 +99,6 @@
       <Style Selector="RadioButton.filter-radio /template/ ContentPresenter#PART_ContentPresenter">
          <Setter Property="TextWrapping" Value="Wrap"/>
       </Style>
-       <!-- The old WinUI source actions were HyperlinkButtons. Keep their border transparent
-            in every state and use subtle hover/pressed fills instead of generic Button chrome. -->
-       <Style Selector="Button.filter-hyperlink">
-          <Setter Property="Background" Value="Transparent"/>
-          <Setter Property="BorderBrush" Value="Transparent"/>
-          <Setter Property="BorderThickness" Value="1"/>
-          <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
-       </Style>
-       <Style Selector="Button.filter-hyperlink:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-          <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
-          <Setter Property="BorderBrush" Value="Transparent"/>
-          <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorSecondaryBrush}"/>
-       </Style>
-       <Style Selector="Button.filter-hyperlink:pressed">
-          <Setter Property="RenderTransform" Value="none"/>
-       </Style>
-       <Style Selector="Button.filter-hyperlink:pressed /template/ ContentPresenter#PART_ContentPresenter">
-          <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
-          <Setter Property="BorderBrush" Value="Transparent"/>
-          <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorTertiaryBrush}"/>
-       </Style>
       <!-- Toolbar buttons: flat, no background/border in normal state (WinUI AppBarButton style) -->
       <Style Selector="#ToolbarRow Button">
          <Setter Property="Background" Value="Transparent"/>

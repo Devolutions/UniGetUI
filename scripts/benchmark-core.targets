@@ -2,6 +2,8 @@
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'UniGetUI.Avalonia'">
     <PackageReference Remove="Devolutions.AvaloniaTheme.Linux;Devolutions.AvaloniaTheme.MacOS;Devolutions.UniGetUI.Elevator" />
     <Content Remove="@(Content)" />
+    <Compile Include="**/*.cs"
+             Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder);$(BaseIntermediateOutputPath)**;$(BaseOutputPath)**;@(Compile)" />
   </ItemGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'UniGetUI.Avalonia'">
     <ApplicationManifest>$(MSBuildProjectDirectory)\app.manifest</ApplicationManifest>

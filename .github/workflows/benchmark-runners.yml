@@ -242,7 +242,7 @@ jobs:
                 @($builds.framework | Select-Object -Unique).Count -ne 1 -or
                 @($builds.commit | Select-Object -Unique).Count -ne 1 -or
                 @($builds.captureBinlog | Select-Object -Unique).Count -ne 1 -or
-                @($builds.nativeDebugSymbols | Select-Object -Unique).Count -ne 1) {
+                ($mode -eq 'NativeAOT' -and @($builds.nativeDebugSymbols | Select-Object -Unique).Count -ne 1)) {
               $complete = $false
               $lines += ''
               $lines += '**Invalid comparison: SDK, framework, commit or logging/symbol settings differ.**'

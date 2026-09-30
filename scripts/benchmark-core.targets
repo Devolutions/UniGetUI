@@ -25,7 +25,7 @@
     <ItemGroup>
       <_BenchmarkInput Include="@(Compile->'source|%(FullPath)');@(ReferencePathWithRefAssemblies->'reference|%(FullPath)');@(Analyzer->'analyzer|%(FullPath)');@(AdditionalFiles->'additional|%(FullPath)');@(EmbeddedResource->'resource|%(FullPath)');@(AvaloniaResource->'resource|%(FullPath)')" />
       <_BenchmarkInput Include="resource|$(ApplicationManifest)" Condition="Exists('$(ApplicationManifest)')" />
-      <_BenchmarkInput Include="resource|$(ApplicationIcon)" Condition="Exists('$(ApplicationIcon)')" />
+      <_BenchmarkInput Include="resource|$(MSBuildProjectDirectory)\$(ApplicationIcon)" Condition="Exists('$(ApplicationIcon)')" />
       <_BenchmarkInput Include="flags|$(DefineConstants)|$(LangVersion)|$(Nullable)|$(Optimize)|$(AllowUnsafeBlocks)|$(OutputType)|$(TargetFramework)|$(RuntimeIdentifier)" />
     </ItemGroup>
     <MakeDir Directories="$(BenchmarkInputDirectory)" />

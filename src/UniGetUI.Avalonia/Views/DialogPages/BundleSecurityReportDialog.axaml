@@ -5,38 +5,164 @@
         xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
         x:Class="UniGetUI.Avalonia.Views.DialogPages.BundleSecurityReportDialog"
         Title="{t:Translate Bundle security report}"
-        MaxWidth="580"
-        MinWidth="400"
-        MaxHeight="420"
-        MinHeight="300"
+        MaxWidth="640"
+        MinWidth="440"
+        MaxHeight="540"
+        MinHeight="320"
         Background="{DynamicResource AppDialogBackground}">
 
+    <dialogs:ImmersiveDialog.Styles>
+
+        <Style Selector="TextBlock.package-header">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style Selector="TextBlock.package-subheader">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,1,0,2"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </Style>
+
+        <Style Selector="PathIcon.intro-icon">
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
+        <Style Selector="PathIcon.intro-icon.high">
+            <Setter Property="Foreground" Value="{DynamicResource StatusErrorForeground}"/>
+        </Style>
+        <Style Selector="PathIcon.intro-icon.info">
+            <Setter Property="Foreground" Value="{DynamicResource StatusWarningForeground}"/>
+        </Style>
+
+        <Style Selector="Border.intro-separator">
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+        </Style>
+
+        <Style Selector="TextBlock.group-header">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </Style>
+
+        <Style Selector="TextBlock.report-footnote">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </Style>
+
+        <Style Selector="Border.package-rule">
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Margin" Value="10,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+        </Style>
+
+        <Style Selector="Border.finding">
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+        </Style>
+
+        <Style Selector="Border.tag">
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="8,1,8,2"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+        </Style>
+        <Style Selector="Border.tag.high">
+            <Setter Property="Background" Value="{DynamicResource StatusErrorBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource StatusErrorForeground}"/>
+        </Style>
+        <Style Selector="Border.tag.info">
+            <Setter Property="Background" Value="{DynamicResource WarningBannerBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource StatusWarningForeground}"/>
+        </Style>
+        <Style Selector="Border.tag.neutral">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource TextFillColorTertiaryBrush}"/>
+        </Style>
+
+        <Style Selector="TextBlock.tag-text">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="TextBlock.tag-text.high">
+            <Setter Property="Foreground" Value="{DynamicResource StatusErrorForeground}"/>
+        </Style>
+        <Style Selector="TextBlock.tag-text.info">
+            <Setter Property="Foreground" Value="{DynamicResource StatusWarningForeground}"/>
+        </Style>
+        <Style Selector="TextBlock.tag-text.neutral">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </Style>
+
+        <Style Selector="TextBlock.finding-label">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="TextBlock.finding-value">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="FontFamily" Value="Monospace"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
+
+    </dialogs:ImmersiveDialog.Styles>
+
     <Grid Margin="20"
-          RowDefinitions="Auto,*,Auto"
+          RowDefinitions="Auto,Auto,*,Auto,Auto"
           RowSpacing="12">
 
-        <TextBlock Grid.Row="0"
-                   Text="{t:Translate The bundle contained restricted content}"
-                   FontSize="16"
-                   FontWeight="SemiBold"
-                   TextWrapping="Wrap"
-                   automation:AutomationProperties.HeadingLevel="1"/>
+        <Grid Grid.Row="0"
+              ColumnDefinitions="Auto,*"
+              ColumnSpacing="14">
+            <PathIcon x:Name="IntroIcon" Grid.Column="0"/>
+            <StackPanel Grid.Column="1" Spacing="6">
+                <TextBlock x:Name="HeaderText"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"
+                           automation:AutomationProperties.HeadingLevel="1"/>
+                <TextBlock x:Name="SubHeaderText"
+                           TextWrapping="Wrap"
+                           Opacity="0.85"/>
+                <WrapPanel x:Name="SummaryHost" Margin="0,2,0,0"/>
+            </StackPanel>
+        </Grid>
 
-        <ScrollViewer Grid.Row="1">
-            <TextBlock x:Name="ReportText"
-                       TextWrapping="Wrap"
-                       FontFamily="Monospace"
-                       FontSize="12"
-                       Opacity="0.85"/>
+        <Border Grid.Row="1" Classes="intro-separator"/>
+
+        <ScrollViewer Grid.Row="2" Padding="0,0,6,0">
+            <StackPanel x:Name="FindingsHost" Spacing="16"/>
         </ScrollViewer>
 
-        <Button x:Name="OkButton"
-                Grid.Row="2"
-                Content="{t:Translate OK}"
-                MinWidth="80"
-                HorizontalAlignment="Right"
-                Classes="accent"
-                automation:AutomationProperties.Name="{t:Translate OK}"/>
+        <TextBlock x:Name="FootnoteText"
+                   Grid.Row="3"/>
+
+        <Grid Grid.Row="4"
+              ColumnDefinitions="*,Auto,Auto"
+              ColumnSpacing="8">
+            <Button x:Name="PrimaryButton"
+                    Grid.Column="1"
+                    MinWidth="100"
+                    Classes="accent"/>
+            <Button x:Name="CancelButton"
+                    Grid.Column="2"
+                    MinWidth="100"
+                    Content="{t:Translate Cancel}"
+                    automation:AutomationProperties.Name="{t:Translate Cancel}"/>
+        </Grid>
 
     </Grid>
 

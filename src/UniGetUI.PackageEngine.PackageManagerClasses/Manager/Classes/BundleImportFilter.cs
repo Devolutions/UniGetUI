@@ -1,6 +1,8 @@
+using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
+using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.Classes.Manager.Classes;
@@ -17,74 +19,85 @@ public static class BundleImportFilter
 
     public static InstallOptions Apply(
         ref BundleReport report,
-        string packageId,
+        BundleReportSubject subject,
         InstallOptions options,
         bool allowCliArguments,
         bool allowPrePostCommands,
-        bool commandLineIsShellInterpreted
+        bool commandLineIsShellInterpreted,
+        string sourceName = "",
+        BundleSourceStatus sourceStatus = BundleSourceStatus.Default
     )
     {
         ReportList(
             ref report,
-            packageId,
+            subject,
             options.CustomParameters_Install,
+            nameof(options.CustomParameters_Install),
             "Custom install arguments",
             allowCliArguments
         );
         ReportList(
             ref report,
-            packageId,
+            subject,
             options.CustomParameters_Update,
+            nameof(options.CustomParameters_Update),
             "Custom update arguments",
             allowCliArguments
         );
         ReportList(
             ref report,
-            packageId,
+            subject,
             options.CustomParameters_Uninstall,
+            nameof(options.CustomParameters_Uninstall),
             "Custom uninstall arguments",
             allowCliArguments
         );
 
         options.PreInstallCommand = ReportString(
             ref report,
-            packageId,
+            subject,
             options.PreInstallCommand,
+            nameof(options.PreInstallCommand),
             "Pre-install command",
             allowPrePostCommands
         );
         options.PostInstallCommand = ReportString(
             ref report,
-            packageId,
+            subject,
             options.PostInstallCommand,
+            nameof(options.PostInstallCommand),
             "Post-install command",
             allowPrePostCommands
         );
         options.PreUpdateCommand = ReportString(
             ref report,
-            packageId,
+            subject,
             options.PreUpdateCommand,
+            nameof(options.PreUpdateCommand),
             "Pre-update command",
             allowPrePostCommands
         );
         options.PostUpdateCommand = ReportString(
             ref report,
-            packageId,
+            subject,
             options.PostUpdateCommand,
+            nameof(options.PostUpdateCommand),
             "Post-update command",
             allowPrePostCommands
         );
         options.PreUninstallCommand = ReportString(
             ref report,
-            packageId,
+            subject,
             options.PreUninstallCommand,
+            nameof(options.PreUninstallCommand),
             "Pre-uninstall command",
             allowPrePostCommands
         );
         options.PostUninstallCommand = ReportString(
             ref report,
-            packageId,
+            subject,
             options.PostUninstallCommand,
+            nameof(options.PostUninstallCommand),
             "Post-uninstall command",
             allowPrePostCommands
         );
@@ -95,17 +108,92 @@ public static class BundleImportFilter
         if (commandLineIsShellInterpreted)
             options.Version = ReportOutOfPatternValue(
                 ref report,
-                packageId,
+                subject,
                 options.Version,
+                nameof(options.Version),
                 "Requested version"
             );
+
+        ReportFlag(
+            ref report,
+            subject,
+            options.SkipHashCheck,
+            nameof(options.SkipHashCheck),
+            "Installer integrity check disabled",
+            BundleReportSeverity.High
+        );
+        ReportFlag(
+            ref report,
+            subject,
+            options.RunAsAdministrator,
+            nameof(options.RunAsAdministrator),
+            "Runs elevated",
+            BundleReportSeverity.Info
+        );
+        ReportInformativeList(
+            ref report,
+            subject,
+            options.KillBeforeOperation,
+            nameof(options.KillBeforeOperation),
+            "Processes terminated before the operation",
+            BundleReportSeverity.High
+        );
+        ReportInformativeString(
+            ref report,
+            subject,
+            options.CustomInstallLocation,
+            nameof(options.CustomInstallLocation),
+            "Custom install location",
+            BundleReportSeverity.Info
+        );
+
+        if (sourceStatus is not BundleSourceStatus.Default)
+            ReportInformativeString(
+                ref report,
+                subject,
+                sourceName,
+                "Source",
+                sourceStatus is BundleSourceStatus.Unknown
+                    ? "Unknown package source"
+                    : "Non-default package source",
+                BundleReportSeverity.Info
+            );
+
         return options;
+    }
+
+    public static (string Name, BundleSourceStatus Status) ClassifySource(
+        IPackageManager? manager,
+        string declaredSource
+    )
+    {
+        string name = declaredSource.Contains(": ")
+            ? declaredSource.Split(": ")[^1]
+            : declaredSource;
+
+        if (manager is null || name.Length is 0 || !manager.Capabilities.SupportsCustomSources)
+            return (name, BundleSourceStatus.Default);
+
+        if (manager.DefaultSource.Name == name)
+            return (name, BundleSourceStatus.Default);
+
+        var factory = manager.SourcesHelper?.Factory;
+        if (factory is null || factory.GetAvailableSources().Length is 0)
+            return (name, BundleSourceStatus.Default);
+
+        return (
+            name,
+            factory.GetSourceIfExists(name) is not null
+                ? BundleSourceStatus.Known
+                : BundleSourceStatus.Unknown
+        );
     }
 
     private static void ReportList(
         ref BundleReport report,
-        string packageId,
+        BundleReportSubject subject,
         List<string> values,
+        string field,
         string label,
         bool allowed
     )
@@ -113,7 +201,18 @@ public static class BundleImportFilter
         if (!values.Any(value => value.Any()))
             return;
 
-        Add(ref report, packageId, $"{label}: [{string.Join(", ", values)}]", allowed);
+        string value = string.Join(", ", values);
+        Add(
+            ref report,
+            subject,
+            field,
+            label,
+            value,
+            $"{label}: [{value}]",
+            BundleReportSeverity.High,
+            allowed,
+            !allowed
+        );
 
         if (!allowed)
             values.Clear();
@@ -121,8 +220,9 @@ public static class BundleImportFilter
 
     private static string ReportString(
         ref BundleReport report,
-        string packageId,
+        BundleReportSubject subject,
         string value,
+        string field,
         string label,
         bool allowed
     )
@@ -130,33 +230,138 @@ public static class BundleImportFilter
         if (!value.Any())
             return value;
 
-        Add(ref report, packageId, $"{label}: {value}", allowed);
+        Add(
+            ref report,
+            subject,
+            field,
+            label,
+            value,
+            $"{label}: {value}",
+            BundleReportSeverity.High,
+            allowed,
+            !allowed
+        );
         return allowed ? value : "";
     }
 
     private static string ReportOutOfPatternValue(
         ref BundleReport report,
-        string packageId,
+        BundleReportSubject subject,
         string value,
+        string field,
         string label
     )
     {
         if (value.Length is 0 || CoreTools.IsCommandLineInertValue(value))
             return value;
 
-        Add(ref report, packageId, $"{label}: {value}", false);
+        Add(
+            ref report,
+            subject,
+            field,
+            label,
+            value,
+            $"{label}: {value}",
+            BundleReportSeverity.High,
+            false
+        );
         return "";
     }
 
-    private static void Add(ref BundleReport report, string packageId, string line, bool allowed)
+    private static void ReportFlag(
+        ref BundleReport report,
+        BundleReportSubject subject,
+        bool value,
+        string field,
+        string label,
+        BundleReportSeverity severity
+    )
     {
-        if (!report.Contents.TryGetValue(packageId, out var entries))
+        if (!value)
+            return;
+
+        Add(ref report, subject, field, label, "true", label, severity, true);
+    }
+
+    private static void ReportInformativeString(
+        ref BundleReport report,
+        BundleReportSubject subject,
+        string value,
+        string field,
+        string label,
+        BundleReportSeverity severity
+    )
+    {
+        if (!value.Any())
+            return;
+
+        Add(ref report, subject, field, label, value, $"{label}: {value}", severity, true);
+    }
+
+    private static void ReportInformativeList(
+        ref BundleReport report,
+        BundleReportSubject subject,
+        List<string> values,
+        string field,
+        string label,
+        BundleReportSeverity severity
+    )
+    {
+        if (!values.Any(value => value.Any()))
+            return;
+
+        string value = string.Join(", ", values);
+        Add(ref report, subject, field, label, value, $"{label}: [{value}]", severity, true);
+    }
+
+    private static void Add(
+        ref BundleReport report,
+        BundleReportSubject subject,
+        string field,
+        string label,
+        string value,
+        string line,
+        BundleReportSeverity severity,
+        bool allowed,
+        bool strippedBySetting = false
+    )
+    {
+        if (!report.Contents.TryGetValue(subject.Key, out var package))
         {
-            entries = [];
-            report.Contents[packageId] = entries;
+            package = new BundleReportPackage(subject);
+            report.Contents[subject.Key] = package;
         }
 
-        entries.Add(new BundleReportEntry(line, allowed));
+        package.Entries.Add(
+            new BundleReportEntry(
+                field,
+                label,
+                value,
+                line,
+                severity,
+                allowed,
+                strippedBySetting
+            )
+        );
         report.IsEmpty = false;
+    }
+
+    public static void LogReport(BundleReport report, string source)
+    {
+        if (report.IsEmpty)
+            return;
+
+        Logger.Warn(
+            $"Bundle \"{source}\" carries {report.HighSeverityCount} high-severity and "
+                + $"{report.InformationalCount} informational security findings"
+        );
+
+        foreach (var package in report.Contents.Values)
+            foreach (var entry in package.Entries)
+                Logger.Warn(
+                    $"  [{entry.Severity}] {package.Subject.Id} ({package.Subject.ManagerName}): "
+                        + entry.Line
+                        + (entry.Allowed ? "" : " -- stripped on import")
+                );
     }
 }

@@ -242,12 +242,20 @@ public class PackageBundlesPage : AbstractPackagesPage
     // ─── Bundle operations ────────────────────────────────────────────────────
     public async Task<bool> AskForNewBundle()
     {
-        if (_loader.Any() && HasUnsavedChanges && !await AskLoseChanges())
+        if (!await ConfirmDiscardingCurrentBundle())
             return false;
 
+        ClearCurrentBundle();
+        return true;
+    }
+
+    private async Task<bool> ConfirmDiscardingCurrentBundle()
+        => !(_loader.Any() && HasUnsavedChanges) || await AskLoseChanges();
+
+    private void ClearCurrentBundle()
+    {
         _loader.ClearPackages();
         HasUnsavedChanges = false;
-        return true;
     }
 
     public async Task ImportAndInstallPackage(
@@ -312,17 +320,17 @@ public class PackageBundlesPage : AbstractPackagesPage
 
     public async Task OpenFromString(string payload, BundleFormatType format, string source, int? _loadingId = null)
     {
-        if (!await AskForNewBundle()) return;
+        if (!await ConfirmDiscardingCurrentBundle()) return;
 
-        var (openVersion, report) = await AddFromBundle(payload, format);
+        var (openVersion, report, imported) = await AddFromBundle(
+            payload, format, ShowBundleSecurityReport, replaceExisting: true, source: source);
+        if (!imported) return;
+
         TelemetryHandler.ImportBundle(format);
         HasUnsavedChanges = false;
 
         if ((int)(openVersion * 10) != (int)(SerializableBundle.ExpectedVersion * 10))
             Logger.Warn($"Bundle \"{source}\" uses schema version {openVersion}, expected {SerializableBundle.ExpectedVersion}.");
-
-        if (!report.IsEmpty && GetMainWindow() is { } win)
-            await ShowBundleSecurityReport(win, report);
     }
 
     /// <summary>Compatibility overload matching the legacy stub signature.</summary>
@@ -333,7 +341,6 @@ public class PackageBundlesPage : AbstractPackagesPage
 
     public async Task AskOpenFromFile()
     {
-        if (!await AskForNewBundle()) return;
         if (GetMainWindow() is not { } win) return;
 
         var files = await win.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
@@ -416,7 +423,12 @@ public class PackageBundlesPage : AbstractPackagesPage
         return exportableData.AsJsonString();
     }
 
-    public async Task<(double, BundleReport)> AddFromBundle(string content, BundleFormatType format)
+    public async Task<(double Version, BundleReport Report, bool Imported)> AddFromBundle(
+        string content,
+        BundleFormatType format,
+        Func<BundleReport, Task<bool>>? acknowledge = null,
+        bool replaceExisting = false,
+        string source = "")
     {
         if (format is BundleFormatType.YAML)
         {
@@ -440,18 +452,36 @@ public class PackageBundlesPage : AbstractPackagesPage
         var packages = new List<IPackage>();
         foreach (var pkg in deserializedData.packages)
         {
+            var manager = ResolveManagerForImport(pkg.ManagerName);
+            var (sourceName, sourceStatus) = BundleImportFilter.ClassifySource(manager, pkg.Source);
             pkg.InstallationOptions = BundleImportFilter.Apply(
-                ref report, pkg.Id, pkg.InstallationOptions, allowCLI, allowPrePost,
-                ResolveManagerForImport(pkg.ManagerName)?.CommandLineIsShellInterpreted ?? false);
+                ref report,
+                new BundleReportSubject(pkg.Id, pkg.Name, manager?.DisplayName ?? pkg.ManagerName),
+                pkg.InstallationOptions, allowCLI, allowPrePost,
+                manager?.CommandLineIsShellInterpreted ?? false, sourceName, sourceStatus);
             packages.Add(DeserializePackage(pkg));
         }
 
         foreach (var pkg in deserializedData.incompatible_packages)
             packages.Add(DeserializeIncompatiblePackage(pkg, NullSource.Instance));
 
+        BundleImportFilter.LogReport(report, source);
+
+        if (!report.IsEmpty && acknowledge is not null && !await acknowledge(report))
+        {
+            Logger.Warn("The bundle import was discarded by the user after the security report");
+            return (deserializedData.export_version, report, false);
+        }
+
+        if (report.HasHighSeverityFindings)
+            Logger.Warn("The user accepted a bundle carrying high-severity security findings");
+
+        if (replaceExisting)
+            ClearCurrentBundle();
+
         await PackageBundlesLoader.Instance.AddPackagesAsync(packages);
 
-        return (deserializedData.export_version, report);
+        return (deserializedData.export_version, report, true);
     }
 
     private static IPackageManager? ResolveManagerForImport(string managerName)
@@ -678,8 +708,14 @@ public class PackageBundlesPage : AbstractPackagesPage
         return dialog.Confirmed;
     }
 
-    private static async Task ShowBundleSecurityReport(Window owner, BundleReport report)
-        => await new BundleSecurityReportDialog(report).ShowDialog(owner);
+    private static async Task<bool> ShowBundleSecurityReport(BundleReport report)
+    {
+        if (GetMainWindow() is not { } owner) return !report.HasHighSeverityFindings;
+
+        var dialog = new BundleSecurityReportDialog(report);
+        await dialog.ShowDialog(owner);
+        return dialog.Accepted;
+    }
 
     private static async Task ShowErrorDialog(Window owner, string title, string message)
         => await new SimpleErrorDialog(title, message).ShowDialog(owner);

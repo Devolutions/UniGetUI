@@ -101,23 +101,94 @@ namespace UniGetUI.Interface.Enums
         public const string ReleaseSelfUpdateLock = "releaseSelfUpdateLock";
     }
 
+    public enum BundleReportSeverity
+    {
+        Info = 0,
+        High = 1,
+    }
+
+    public enum BundleSourceStatus
+    {
+        Default = 0,
+        Known = 1,
+        Unknown = 2,
+    }
+
     public struct BundleReportEntry
     {
+        public readonly string Field;
+        public readonly string Label;
+        public readonly string Value;
         public readonly string Line;
+        public readonly BundleReportSeverity Severity;
         public readonly bool Allowed;
+        public readonly bool StrippedBySetting;
 
-        public BundleReportEntry(string line, bool allowed)
+        public BundleReportEntry(
+            string field,
+            string label,
+            string value,
+            string line,
+            BundleReportSeverity severity,
+            bool allowed,
+            bool strippedBySetting = false)
         {
+            Field = field;
+            Label = label;
+            Value = value;
             Line = line;
+            Severity = severity;
             Allowed = allowed;
+            StrippedBySetting = strippedBySetting;
         }
+
+        public readonly bool LineCarriesTheValue => Line != Label;
+    }
+
+    public readonly record struct BundleReportSubject(string Id, string Name, string ManagerName)
+    {
+        public string DisplayName => Name.Length is 0 ? Id : Name;
+
+        public string Key => ManagerName.Length is 0 ? Id : $"{ManagerName}/{Id}";
+    }
+
+    public sealed class BundleReportPackage
+    {
+        public BundleReportSubject Subject { get; }
+        public List<BundleReportEntry> Entries { get; } = [];
+
+        public BundleReportPackage(BundleReportSubject subject)
+        {
+            Subject = subject;
+        }
+
+        public bool HasHighSeverityFindings
+            => Entries.Any(entry => entry.Severity is BundleReportSeverity.High);
     }
 
     public struct BundleReport
     {
         public bool IsEmpty = false;
-        public Dictionary<string, List<BundleReportEntry>> Contents = new();
+        public Dictionary<string, BundleReportPackage> Contents = new();
 
         public BundleReport() { }
+
+        public readonly IEnumerable<BundleReportEntry> AllEntries
+            => Contents.Values.SelectMany(package => package.Entries);
+
+        public readonly bool HasHighSeverityFindings
+            => AllEntries.Any(entry => entry.Severity is BundleReportSeverity.High);
+
+        public readonly bool HasStrippedFindings
+            => AllEntries.Any(entry => !entry.Allowed);
+
+        public readonly bool HasSettingControlledStripping
+            => AllEntries.Any(entry => entry.StrippedBySetting);
+
+        public readonly int HighSeverityCount
+            => AllEntries.Count(entry => entry.Severity is BundleReportSeverity.High);
+
+        public readonly int InformationalCount
+            => AllEntries.Count(entry => entry.Severity is BundleReportSeverity.Info);
     }
 }

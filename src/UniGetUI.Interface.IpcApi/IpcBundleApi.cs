@@ -73,6 +73,10 @@ public sealed class IpcBundleInstallRequest
 public sealed class IpcBundleSecurityEntry
 {
     public string PackageId { get; set; } = "";
+    public string Severity { get; set; } = "";
+    public string Field { get; set; } = "";
+    public string Label { get; set; } = "";
+    public string Value { get; set; } = "";
     public string Line { get; set; } = "";
     public bool Allowed { get; set; }
 }
@@ -617,15 +621,24 @@ public static class IpcBundleApi
         List<IPackage> packages = [];
         foreach (var package in deserializedData.packages)
         {
+            var manager = IpcManagerSettingsApi.ResolveImportedManager(package.ManagerName);
+            var (sourceName, sourceStatus) = BundleImportFilter.ClassifySource(
+                manager,
+                package.Source
+            );
             package.InstallationOptions = BundleImportFilter.Apply(
                 ref report,
-                package.Id,
+                new BundleReportSubject(
+                    package.Id,
+                    package.Name,
+                    manager?.DisplayName ?? package.ManagerName
+                ),
                 package.InstallationOptions,
                 allowCliArguments,
                 allowPrePostCommands,
-                IpcManagerSettingsApi.ResolveImportedManager(package.ManagerName)
-                    ?.CommandLineIsShellInterpreted
-                    ?? false
+                manager?.CommandLineIsShellInterpreted ?? false,
+                sourceName,
+                sourceStatus
             );
             packages.Add(DeserializePackage(package));
         }
@@ -634,6 +647,8 @@ public static class IpcBundleApi
         {
             packages.Add(new InvalidImportedPackage(incompatiblePackage, NullSource.Instance));
         }
+
+        BundleImportFilter.LogReport(report, "IPC bundle import");
 
         await GetLoader().AddPackagesAsync(packages);
         return (deserializedData.export_version, report);
@@ -675,15 +690,23 @@ public static class IpcBundleApi
 
         return report
             .Contents.SelectMany(pair =>
-                pair.Value.Select(entry => new IpcBundleSecurityEntry
-                {
-                    PackageId = pair.Key,
-                    Line = entry.Line,
-                    Allowed = entry.Allowed,
-                })
+                pair.Value.Entries.Select(entry =>
+                    (PackageId: pair.Value.Subject.Id, Entry: entry)
+                )
             )
-            .OrderBy(entry => entry.PackageId, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(entry => entry.Line, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item.PackageId, StringComparer.OrdinalIgnoreCase)
+            .ThenByDescending(item => item.Entry.Severity)
+            .ThenBy(item => item.Entry.Line, StringComparer.OrdinalIgnoreCase)
+            .Select(item => new IpcBundleSecurityEntry
+            {
+                PackageId = item.PackageId,
+                Severity = item.Entry.Severity.ToString().ToLowerInvariant(),
+                Field = item.Entry.Field,
+                Label = item.Entry.Label,
+                Value = item.Entry.Value,
+                Line = item.Entry.Line,
+                Allowed = item.Entry.Allowed,
+            })
             .ToArray();
     }
 }

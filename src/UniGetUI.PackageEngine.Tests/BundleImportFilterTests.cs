@@ -18,7 +18,7 @@ public sealed class BundleImportFilterTests
         var report = new BundleReport { IsEmpty = true };
         var filtered = BundleImportFilter.Apply(
             ref report,
-            new BundleReportSubject("Contoso.Test", "Contoso Test", "Winget"),
+            new BundleReportSubject("Contoso.Test", "Contoso Test", "Winget", "winget"),
             options,
             allowCli,
             allowPrePost,
@@ -303,13 +303,16 @@ public sealed class BundleImportFilterTests
         Assert.Equal("Contoso.Test", package.Subject.Id);
         Assert.Equal("Contoso Test", package.Subject.Name);
         Assert.Equal("Winget", package.Subject.ManagerName);
+        Assert.Equal("winget", package.Subject.Source);
         Assert.Equal("Contoso Test", package.Subject.DisplayName);
     }
 
     [Fact]
     public void ASubjectWithoutANameFallsBackToItsIdForDisplay()
     {
-        Assert.Equal("Contoso.Test", new BundleReportSubject("Contoso.Test", "", "Winget").DisplayName);
+        Assert.Equal(
+            "Contoso.Test",
+            new BundleReportSubject("Contoso.Test", "", "Winget", "winget").DisplayName);
     }
 
     [Fact]
@@ -355,12 +358,12 @@ public sealed class BundleImportFilterTests
         var report = new BundleReport { IsEmpty = true };
         BundleImportFilter.Apply(
             ref report,
-            new BundleReportSubject("nodejs", "Node.js", "Scoop"),
+            new BundleReportSubject("nodejs", "Node.js", "Scoop", "main"),
             new InstallOptions { RunAsAdministrator = true },
             true, true, false);
         BundleImportFilter.Apply(
             ref report,
-            new BundleReportSubject("nodejs", "Node.js", "Chocolatey"),
+            new BundleReportSubject("nodejs", "Node.js", "Chocolatey", "chocolatey"),
             new InstallOptions { SkipHashCheck = true },
             true, true, false);
 
@@ -420,5 +423,26 @@ public sealed class BundleImportFilterTests
 
         Assert.True(hash.HasHighSeverityFindings);
         Assert.True(kills.HasHighSeverityFindings);
+    }
+
+    [Fact]
+    public void TheSamePackageIdFromTwoSourcesOfOneManagerIsKeptApart()
+    {
+        var report = new BundleReport { IsEmpty = true };
+        BundleImportFilter.Apply(
+            ref report,
+            new BundleReportSubject("Contoso.App", "App", "Winget", "winget"),
+            new InstallOptions { SkipHashCheck = true },
+            true, true, false);
+        BundleImportFilter.Apply(
+            ref report,
+            new BundleReportSubject("Contoso.App", "App", "Winget", "msstore"),
+            new InstallOptions { RunAsAdministrator = true },
+            true, true, false);
+
+        Assert.Equal(2, report.Contents.Count);
+        Assert.Equal(
+            ["msstore", "winget"],
+            report.Contents.Values.Select(package => package.Subject.Source).Order());
     }
 }

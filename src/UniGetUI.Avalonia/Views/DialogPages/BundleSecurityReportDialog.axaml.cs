@@ -163,6 +163,8 @@ public partial class BundleSecurityReportDialog : UniGetUI.Avalonia.Views.Dialog
         var parts = new List<string> { subject.Id };
         if (subject.ManagerName.Length > 0)
             parts.Add(subject.ManagerName);
+        if (subject.Source.Length > 0)
+            parts.Add(subject.Source);
         return string.Join("  ·  ", parts);
     }
 

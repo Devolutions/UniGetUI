@@ -73,6 +73,8 @@ public sealed class IpcBundleInstallRequest
 public sealed class IpcBundleSecurityEntry
 {
     public string PackageId { get; set; } = "";
+    public string ManagerName { get; set; } = "";
+    public string Source { get; set; } = "";
     public string Severity { get; set; } = "";
     public string Field { get; set; } = "";
     public string Label { get; set; } = "";
@@ -631,7 +633,8 @@ public static class IpcBundleApi
                 new BundleReportSubject(
                     package.Id,
                     package.Name,
-                    manager?.DisplayName ?? package.ManagerName
+                    manager?.DisplayName ?? package.ManagerName,
+                    sourceName
                 ),
                 package.InstallationOptions,
                 allowCliArguments,
@@ -691,15 +694,18 @@ public static class IpcBundleApi
         return report
             .Contents.SelectMany(pair =>
                 pair.Value.Entries.Select(entry =>
-                    (PackageId: pair.Value.Subject.Id, Entry: entry)
+                    (PackageId: pair.Value.Subject, Entry: entry)
                 )
             )
-            .OrderBy(item => item.PackageId, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item.PackageId.Id, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.PackageId.ManagerName, StringComparer.OrdinalIgnoreCase)
             .ThenByDescending(item => item.Entry.Severity)
             .ThenBy(item => item.Entry.Line, StringComparer.OrdinalIgnoreCase)
             .Select(item => new IpcBundleSecurityEntry
             {
-                PackageId = item.PackageId,
+                PackageId = item.PackageId.Id,
+                ManagerName = item.PackageId.ManagerName,
+                Source = item.PackageId.Source,
                 Severity = item.Entry.Severity.ToString().ToLowerInvariant(),
                 Field = item.Entry.Field,
                 Label = item.Entry.Label,

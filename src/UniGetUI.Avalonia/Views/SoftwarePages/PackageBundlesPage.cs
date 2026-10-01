@@ -456,7 +456,8 @@ public class PackageBundlesPage : AbstractPackagesPage
             var (sourceName, sourceStatus) = BundleImportFilter.ClassifySource(manager, pkg.Source);
             pkg.InstallationOptions = BundleImportFilter.Apply(
                 ref report,
-                new BundleReportSubject(pkg.Id, pkg.Name, manager?.DisplayName ?? pkg.ManagerName),
+                new BundleReportSubject(
+                    pkg.Id, pkg.Name, manager?.DisplayName ?? pkg.ManagerName, sourceName),
                 pkg.InstallationOptions, allowCLI, allowPrePost,
                 manager?.CommandLineIsShellInterpreted ?? false, sourceName, sourceStatus);
             packages.Add(DeserializePackage(pkg));

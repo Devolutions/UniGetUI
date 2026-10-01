@@ -145,11 +145,15 @@ namespace UniGetUI.Interface.Enums
         public readonly bool LineCarriesTheValue => Line != Label;
     }
 
-    public readonly record struct BundleReportSubject(string Id, string Name, string ManagerName)
+    public readonly record struct BundleReportSubject(
+        string Id,
+        string Name,
+        string ManagerName,
+        string Source)
     {
         public string DisplayName => Name.Length is 0 ? Id : Name;
 
-        public string Key => ManagerName.Length is 0 ? Id : $"{ManagerName}/{Id}";
+        public string Key => $"{ManagerName}\\{Source}\\{Id}";
     }
 
     public sealed class BundleReportPackage

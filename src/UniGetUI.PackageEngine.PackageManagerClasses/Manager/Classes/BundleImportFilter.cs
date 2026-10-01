@@ -1,3 +1,4 @@
+using System.Text;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
@@ -352,16 +353,35 @@ public static class BundleImportFilter
             return;
 
         Logger.Warn(
-            $"Bundle \"{source}\" carries {report.HighSeverityCount} high-severity and "
-                + $"{report.InformationalCount} informational security findings"
+            $"Bundle \"{Sanitize(source)}\" carries {report.HighSeverityCount} high-severity "
+                + $"and {report.InformationalCount} informational security findings"
         );
 
         foreach (var package in report.Contents.Values)
             foreach (var entry in package.Entries)
                 Logger.Warn(
-                    $"  [{entry.Severity}] {package.Subject.Id} ({package.Subject.ManagerName}): "
-                        + entry.Line
+                    $"  [{entry.Severity}] {Sanitize(package.Subject.Id)} "
+                        + $"({Sanitize(package.Subject.ManagerName)}): {entry.Label}"
                         + (entry.Allowed ? "" : " -- stripped on import")
                 );
+    }
+
+    private const int MaxLoggedLength = 120;
+
+    private static string Sanitize(string value)
+    {
+        if (value.Length is 0)
+            return value;
+
+        var builder = new StringBuilder(Math.Min(value.Length, MaxLoggedLength));
+        foreach (char character in value)
+        {
+            if (builder.Length >= MaxLoggedLength)
+                return builder.Append("...").ToString();
+
+            builder.Append(char.IsControl(character) ? ' ' : character);
+        }
+
+        return builder.ToString();
     }
 }

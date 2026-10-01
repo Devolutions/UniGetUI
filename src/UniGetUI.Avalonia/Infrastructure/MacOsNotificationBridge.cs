@@ -52,12 +52,8 @@ internal static partial class MacOsNotificationBridge
         if (Settings.AreSuccessNotificationsDisabled()) return false;
         try
         {
-            string title = operation.Metadata.SuccessTitle.Length > 0
-                ? operation.Metadata.SuccessTitle
-                : CoreTools.Translate("Success!");
-            string message = operation.Metadata.SuccessMessage.Length > 0
-                ? operation.Metadata.SuccessMessage
-                : CoreTools.Translate("Success!");
+            string title = OperationNotificationText.SuccessTitle(operation);
+            string message = OperationNotificationText.SuccessMessage(operation);
             DeliverNotification(title, message, MainWindow.RuntimeNotificationLevel.Success, allowInAppFallback: false);
             return true;
         }

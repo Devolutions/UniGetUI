@@ -43,6 +43,7 @@ public sealed class OperationHistoryRecord
     /// written before this was tracked, and for operations that never ran a process.
     /// </summary>
     public bool? RanElevated { get; set; }
+    public bool SystemRestartRequired { get; set; }
     /// <summary>Short human-readable reason, derived from the last error line (mainly for failures).</summary>
     public string FailureSummary { get; set; } = "";
     public List<OperationHistoryOutputLine> Output { get; set; } = [];
@@ -74,6 +75,7 @@ public sealed class OperationHistoryRecord
             Role = (int)OperationType.None,
             Status = status,
             TimestampUtc = DateTime.UtcNow.ToString("O"),
+            SystemRestartRequired = op.SystemRestartRequired,
         };
 
         try

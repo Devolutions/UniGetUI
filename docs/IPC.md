@@ -248,12 +248,16 @@ These keys are used by package-related endpoints such as install, update, uninst
 | Method | Path | Auth | Parameters/body | CLI equivalent | Notes |
 | --- | --- | --- | --- | --- | --- |
 | `GET` | `/uniget/v1/status` | No | None | `status`, `version` | Returns `running`, `transport`, `tcpPort`, `namedPipeName`, `namedPipePath`, `baseAddress`, `version`, and `buildNumber`. |
-| `GET` | `/uniget/v1/app` | Yes | None | `app status` | Returns app/headless/window state. |
+| `GET` | `/uniget/v1/app` | Yes | None | `app status` | Returns app/headless/window state, plus `systemRestartPending` and `systemRestartPendingPackages` (see [Pending machine restarts](#pending-machine-restarts)). |
 | `POST` | `/uniget/v1/app/show` | Yes | None | `app show` | UI-only in practice. |
 | `POST` | `/uniget/v1/app/navigate` | Yes | Query: `page`, optional `manager`, optional `helpAttachment` | `app navigate` | UI-only in practice. |
 | `POST` | `/uniget/v1/app/quit` | Yes | None | `app quit` | Shuts down the selected session. |
 
 ### Operations
+
+Every operation payload carries `systemRestartRequired`: `true` when the operation succeeded but
+the machine must be restarted before the change takes effect. See
+[Pending machine restarts](#pending-machine-restarts).
 
 | Method | Path | Auth | Parameters/body | CLI equivalent |
 | --- | --- | --- | --- | --- |
@@ -380,6 +384,10 @@ them first.
 
 ### Packages
 
+Every package payload carries `systemRestartPending`: `true` when that package is one of the
+packages this machine is waiting on a restart for. See
+[Pending machine restarts](#pending-machine-restarts).
+
 | Method | Path | Auth | Parameters/body | CLI equivalent | Notes |
 | --- | --- | --- | --- | --- | --- |
 | `GET` | `/uniget/v1/packages/search` | Yes | Query `query`, optional `manager`, optional `maxResults` | `package search` | Search endpoint. |
@@ -399,6 +407,22 @@ them first.
 | `POST` | `/uniget/v1/packages/show` | Yes | Query `packageId`, `packageSource` | `package show` | UI-oriented package-details flow. |
 | `POST` | `/uniget/v1/packages/update-all` | Yes | None | `package update-all` | Requires `OnUpgradeAll` handler to be wired. |
 | `POST` | `/uniget/v1/packages/update-manager` | Yes | Query `manager` | `package update-manager` | Requires `OnUpgradeAllForManager` handler to be wired. |
+
+## Pending machine restarts
+
+Some installers finish successfully but only take effect after the machine reboots (WinGet
+`0x8A150109`/`0x8A15010B`, Chocolatey `3010`/`1641`). UniGetUI records those packages and keeps the
+record until the machine has actually rebooted — closing and reopening UniGetUI does not clear it.
+
+These fields expose it, so a fleet tool can tell which machines are waiting on a restart and why:
+
+| Payload | Field | Meaning |
+| --- | --- | --- |
+| `GET /uniget/v1/app` | `systemRestartPending` | The machine is waiting on a restart. |
+| `GET /uniget/v1/app` | `systemRestartPendingPackages` | How many packages are waiting on it. |
+| Operation payloads | `systemRestartRequired` | This operation succeeded but needs a restart. |
+| Operation-history entries | `systemRestartRequired` | Same, for a finished operation. |
+| Package payloads | `systemRestartPending` | This package is waiting on a restart. |
 
 ## Headless-specific limitations
 

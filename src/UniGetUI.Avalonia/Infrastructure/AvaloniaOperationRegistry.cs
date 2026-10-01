@@ -34,7 +34,7 @@ public static class AvaloniaOperationRegistry
     private static readonly ConcurrentDictionary<AbstractOperation, int> _errorCounts = new();
     private static int _errorsOccurred;
     public static int ErrorsOccurred => _errorsOccurred;
-    public static bool RestartRequired { get; set; }
+    public static bool AppRestartRequired { get; set; }
 
     private static bool _shortcutDialogOpen;
 
@@ -229,13 +229,8 @@ public static class AvaloniaOperationRegistry
         if (Settings.AreSuccessNotificationsDisabled())
             return;
 
-        string title = op.Metadata.SuccessTitle.Length > 0
-            ? op.Metadata.SuccessTitle
-            : CoreTools.Translate("Success!");
-
-        string message = op.Metadata.SuccessMessage.Length > 0
-            ? op.Metadata.SuccessMessage
-            : CoreTools.Translate("Success!");
+        string title = OperationNotificationText.SuccessTitle(op);
+        string message = OperationNotificationText.SuccessMessage(op);
 
         AccessibilityAnnouncementService.Announce(
             $"{title}. {message}",

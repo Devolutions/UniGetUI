@@ -31,6 +31,7 @@ public class IpcOperationHistoryEntry
     public int OutputLineCount { get; set; }
     public int? ExitCode { get; set; }
     public string FailureSummary { get; set; } = "";
+    public bool SystemRestartRequired { get; set; }
     public string Content { get; set; } = "";
 }
 
@@ -114,6 +115,7 @@ public static class IpcLogsApi
         entry.OutputLineCount = record.Output.Count;
         entry.ExitCode = record.ExitCode;
         entry.FailureSummary = record.FailureSummary;
+        entry.SystemRestartRequired = record.SystemRestartRequired;
         entry.Content = BuildSummary(record);
     }
 
@@ -128,6 +130,7 @@ public static class IpcLogsApi
         if (target.Length > 0) parts.Add(target);
         if (version.Length > 0) parts.Add($"({version})");
         parts.Add($"[{record.Status}]");
+        if (record.SystemRestartRequired) parts.Add("[restart-required]");
         return string.Join(' ', parts);
     }
 

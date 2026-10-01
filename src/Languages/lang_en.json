@@ -1728,5 +1728,20 @@
   "Runs elevated": "Runs elevated",
   "Processes terminated before the operation": "Processes terminated before the operation",
   "Unknown package source": "Unknown package source",
-  "Non-default package source": "Non-default package source"
+  "Non-default package source": "Non-default package source",
+  "This operation finished, but the computer must be restarted before the changes take effect": "This operation finished, but the computer must be restarted before the changes take effect",
+  "Restart computer": "Restart computer",
+  "Restart computer (1 package pending)": "Restart computer (1 package pending)",
+  "Restart computer ({0} packages pending)": "Restart computer ({0} packages pending)",
+  "1 package is waiting for your computer to restart": "1 package is waiting for your computer to restart",
+  "{0} packages are waiting for your computer to restart": "{0} packages are waiting for your computer to restart",
+  "UniGetUI and your computer both need to be restarted": "UniGetUI and your computer both need to be restarted",
+  "Restart your computer?": "Restart your computer?",
+  "Restart now": "Restart now",
+  "Not now": "Not now",
+  "1 package cannot finish until your computer restarts.": "1 package cannot finish until your computer restarts.",
+  "{0} packages cannot finish until your computer restarts.": "{0} packages cannot finish until your computer restarts.",
+  "Your computer will restart now. Save your work and close any open applications first.": "Your computer will restart now. Save your work and close any open applications first.",
+  "The computer could not be restarted": "The computer could not be restarted",
+  "UniGetUI could not start the restart. Please restart your computer manually.": "UniGetUI could not start the restart. Please restart your computer manually."
 }

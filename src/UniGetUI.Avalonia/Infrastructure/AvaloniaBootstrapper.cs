@@ -16,6 +16,7 @@ using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
+using UniGetUI.PackageEngine.Operations.Reboot;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.Infrastructure;
@@ -255,6 +256,8 @@ internal static class AvaloniaBootstrapper
             CanQuit = true,
             CurrentPage = window is null ? "" : IpcAppPages.ToPageName(window.CurrentPage.ToString()),
             SupportedPages = IpcAppPages.SupportedPages,
+            SystemRestartPending = PendingRebootStore.HasPending,
+            SystemRestartPendingPackages = PendingRebootStore.PendingCount,
         };
     }
 

@@ -43,8 +43,7 @@ namespace UniGetUI.PackageEngine.Enums
         Success,
         Failure,
         Canceled,
-
-        // RestartRequired,
+        RestartRequired,
         AutoRetry,
     }
 

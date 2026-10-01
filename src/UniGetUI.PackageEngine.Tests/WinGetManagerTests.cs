@@ -2037,8 +2037,10 @@ public sealed class WinGetManagerTests : IDisposable
         Assert.False(WinGetPkgOperationHelper.ConsumeAlreadyUpgradedSuppression(newerUpdate));
     }
 
-    [Fact]
-    public void RestartRequiredUpgradesNeverTripTheLoopBreaker()
+    [Theory]
+    [InlineData(0x8A150109u)]
+    [InlineData(0x8A15010Bu)]
+    public void RestartRequiredUpgradesNeverTripTheLoopBreaker(uint returnCode)
     {
         var manager = new WinGet();
         var package = new PackageBuilder()
@@ -2056,9 +2058,9 @@ public sealed class WinGetManagerTests : IDisposable
                     package,
                     OperationType.Update,
                     [],
-                    unchecked((int)0x8A150109u)
+                    unchecked((int)returnCode)
                 ),
-                OperationVeredict.Success
+                OperationVeredict.RestartRequired
             );
         }
 

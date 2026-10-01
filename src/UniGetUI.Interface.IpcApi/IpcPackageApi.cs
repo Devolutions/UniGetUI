@@ -5,6 +5,7 @@ using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
+using UniGetUI.PackageEngine.Operations.Reboot;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Serializable;
@@ -21,6 +22,7 @@ public sealed class IpcPackageInfo
     public string Source { get; set; } = "";
     public string Manager { get; set; } = "";
     public bool IsUpgradable { get; set; }
+    public bool SystemRestartPending { get; set; }
 }
 
 public sealed class IpcPackageActionRequest
@@ -810,6 +812,7 @@ public static class IpcPackageApi
             Source = package.Source.AsString_DisplayName,
             Manager = IpcManagerSettingsApi.GetPublicManagerId(package.Manager),
             IsUpgradable = package.IsUpgradable,
+            SystemRestartPending = PendingRebootStore.IsPending(package.Manager.Id, package.Id),
         };
     }
 }

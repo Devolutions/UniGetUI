@@ -30,6 +30,7 @@ public class IpcOperationInfo
     public IpcPackageInfo? Package { get; set; }
     public string ManagerName { get; set; } = "";
     public string SourceName { get; set; } = "";
+    public bool SystemRestartRequired { get; set; }
 }
 
 public sealed class IpcOperationDetails : IpcOperationInfo
@@ -170,6 +171,7 @@ public static class IpcOperationApi
             Package = info.Package,
             ManagerName = info.ManagerName,
             SourceName = info.SourceName,
+            SystemRestartRequired = info.SystemRestartRequired,
             Output = tracked.GetOutputSnapshot(),
         };
     }
@@ -311,6 +313,7 @@ public static class IpcOperationApi
             Package = GetOperationPackage(operation),
             ManagerName = GetManagerName(operation),
             SourceName = GetSourceName(operation),
+            SystemRestartRequired = operation.SystemRestartRequired,
         };
     }
 

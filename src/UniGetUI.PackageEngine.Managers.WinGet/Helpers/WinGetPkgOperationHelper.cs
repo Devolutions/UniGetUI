@@ -294,12 +294,12 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         // See https://github.com/microsoft/winget-cli/blob/master/doc/windows/package-manager/winget/returnCodes.md for reference
         uint uintCode = (uint)returnCode;
 
-        if (uintCode is 0x8A150109)
-        { // TODO: Restart required to finish installation
+        if (uintCode is 0x8A150109 or 0x8A15010B)
+        {
             if (operation is OperationType.Update or OperationType.Install)
                 // Pending-restart sticks after reboot; don't count it as a phantom no-op (#5042).
                 MarkUpgradeAsDone(package, countTowardStuckLoop: false);
-            return OperationVeredict.Success;
+            return OperationVeredict.RestartRequired;
         }
 
         if (uintCode is 0x8A150077 or 0x8A15010C or 0x8A150005)

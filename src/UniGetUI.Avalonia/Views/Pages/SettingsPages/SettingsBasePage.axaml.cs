@@ -120,7 +120,7 @@ public partial class SettingsBasePage : UserControl, IInnerNavigationPage, IEnte
     private void Page_RestartRequired(object? sender, EventArgs e)
     {
         VM.IsRestartBannerVisible = true;
-        AvaloniaOperationRegistry.RestartRequired = true;
+        AvaloniaOperationRegistry.AppRestartRequired = true;
         MainWindow.Instance?.UpdateSystemTrayStatus();
     }
 

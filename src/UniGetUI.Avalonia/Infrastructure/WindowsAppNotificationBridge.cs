@@ -72,13 +72,8 @@ internal static class WindowsAppNotificationBridge
 
     public static bool ShowSuccess(AbstractOperation operation)
     {
-        string title = operation.Metadata.SuccessTitle.Length > 0
-            ? operation.Metadata.SuccessTitle
-            : CoreTools.Translate("Success!");
-
-        string message = operation.Metadata.SuccessMessage.Length > 0
-            ? operation.Metadata.SuccessMessage
-            : CoreTools.Translate("Success!");
+        string title = OperationNotificationText.SuccessTitle(operation);
+        string message = OperationNotificationText.SuccessMessage(operation);
 
         return Show(title, message, MainWindow.RuntimeNotificationLevel.Success, launchAction: NotificationArguments.Show, allowInAppFallback: false);
     }

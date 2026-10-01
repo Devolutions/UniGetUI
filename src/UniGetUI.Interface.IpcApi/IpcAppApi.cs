@@ -10,6 +10,8 @@ public sealed class IpcAppInfo
     public bool CanQuit { get; set; }
     public string CurrentPage { get; set; } = "";
     public IReadOnlyList<string> SupportedPages { get; set; } = IpcAppPages.SupportedPages;
+    public bool SystemRestartPending { get; set; }
+    public int SystemRestartPendingPackages { get; set; }
 }
 
 public sealed class IpcAppNavigateRequest

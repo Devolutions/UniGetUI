@@ -233,8 +233,6 @@ public sealed class ChocolateyManagerTests : IDisposable
 
     [Theory]
     [InlineData(0)]
-    [InlineData(3010)]
-    [InlineData(1641)]
     [InlineData(1614)]
     [InlineData(1605)]
     public void OperationResultTreatsChocolateySuccessCodesAsSuccess(int returnCode)
@@ -250,6 +248,24 @@ public sealed class ChocolateyManagerTests : IDisposable
         );
 
         OperationAssert.HasVeredict(veredict, OperationVeredict.Success);
+    }
+
+    [Theory]
+    [InlineData(3010)]
+    [InlineData(1641)]
+    public void OperationResultTreatsChocolateyRebootCodesAsRestartRequired(int returnCode)
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder().WithManager(manager).Build();
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Install,
+            ["completed"],
+            returnCode
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.RestartRequired);
     }
 
     [Fact]

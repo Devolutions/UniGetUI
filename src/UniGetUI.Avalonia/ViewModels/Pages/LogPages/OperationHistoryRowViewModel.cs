@@ -64,6 +64,8 @@ public partial class OperationHistoryRowViewModel : ViewModelBase
 
     public string StatusLabel => Record.Status switch
     {
+        OperationHistoryRecord.StatusSucceeded when Record.SystemRestartRequired
+            => CoreTools.Translate("Restart required"),
         OperationHistoryRecord.StatusSucceeded => CoreTools.Translate("Succeeded"),
         OperationHistoryRecord.StatusFailed => CoreTools.Translate("Failed"),
         OperationHistoryRecord.StatusCanceled => CoreTools.Translate("Canceled"),
@@ -72,14 +74,26 @@ public partial class OperationHistoryRowViewModel : ViewModelBase
 
     public StatusBadgeSeverity StatusSeverity => Record.Status switch
     {
+        OperationHistoryRecord.StatusSucceeded when Record.SystemRestartRequired
+            => StatusBadgeSeverity.Warning,
         OperationHistoryRecord.StatusSucceeded => StatusBadgeSeverity.Success,
         OperationHistoryRecord.StatusFailed => StatusBadgeSeverity.Error,
         _ => StatusBadgeSeverity.Info,
     };
 
-    public string StatusTooltip => Record.ExitCode is { } code
-        ? CoreTools.Translate("Exit code: {0}", code)
-        : StatusLabel;
+    public string StatusTooltip
+    {
+        get
+        {
+            string status = Record.SystemRestartRequired
+                ? CoreTools.Translate(
+                    "This operation finished, but the computer must be restarted before the changes take effect")
+                : StatusLabel;
+            return Record.ExitCode is { } code
+                ? $"{status} ({CoreTools.Translate("Exit code: {0}", code)})"
+                : status;
+        }
+    }
 
     public DateTime Timestamp
         => DateTime.TryParse(Record.TimestampUtc, null,
@@ -116,6 +130,7 @@ public partial class OperationHistoryRowViewModel : ViewModelBase
             parts.Add(PackageId.Length > 0 && PackageId != TargetName ? $"{TargetName} ({PackageId})" : TargetName);
             if (VersionChange.Length > 0) parts.Add(VersionChange);
             parts.Add(Record.Status);
+            if (Record.SystemRestartRequired) parts.Add("restart-required");
             if (Record.ExitCode is { } code) parts.Add(CoreTools.Translate("exit {0}", code));
             if (Record.FailureSummary.Length > 0) parts.Add(Record.FailureSummary);
             return string.Join(" · ", parts);

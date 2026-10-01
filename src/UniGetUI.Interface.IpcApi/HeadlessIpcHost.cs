@@ -1,4 +1,5 @@
 using UniGetUI.Core.Logging;
+using UniGetUI.PackageEngine.Operations.Reboot;
 
 namespace UniGetUI.Interface;
 
@@ -76,6 +77,8 @@ public static class HeadlessIpcHost
                 CanNavigate = false,
                 CanQuit = true,
                 SupportedPages = IpcAppPages.SupportedPages,
+                SystemRestartPending = PendingRebootStore.HasPending,
+                SystemRestartPendingPackages = PendingRebootStore.PendingCount,
             };
         backgroundApi.ShowAppHandler = () =>
             throw new InvalidOperationException(

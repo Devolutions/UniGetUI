@@ -19,10 +19,7 @@ internal static class SystemRestartService
         {
             if (!await ConfirmAsync(owner)) return;
 
-            if (Restart())
-                PendingRebootStore.ClearAll();
-            else
-                ReportRestartFailure();
+            if (!Restart()) ReportRestartFailure();
         }
         catch (Exception ex)
         {

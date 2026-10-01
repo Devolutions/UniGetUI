@@ -148,6 +148,35 @@ public sealed class PendingRebootStoreTests : IDisposable
     }
 
     [Fact]
+    public void MalformedEntriesAreDiscardedInsteadOfCrashingTheStore()
+    {
+        File.WriteAllText(_tempFile,
+            "[null,{\"PackageId\":null,\"ManagerName\":\"choco\",\"BootId\":\"" + BootA + "\"},"
+            + "{\"PackageId\":\"Contoso.Good\",\"ManagerName\":\"choco\",\"PackageName\":null,"
+            + "\"BootId\":\"" + BootA + "\",\"UptimeTicks\":1}]");
+
+        PendingRebootStore.InvalidateCache();
+
+        Assert.Equal(1, PendingRebootStore.PendingCount);
+        Assert.True(PendingRebootStore.IsPending("choco", "Contoso.Good"));
+        Assert.Equal("", PendingRebootStore.GetPending()[0].PackageName);
+    }
+
+    [Fact]
+    public void RecordsWrittenByAnotherSessionAreObserved()
+    {
+        PendingRebootStore.Record(Package("Contoso.Mine"), OperationType.Install);
+        Assert.Equal(1, PendingRebootStore.PendingCount);
+
+        File.WriteAllText(_tempFile,
+            "[{\"PackageId\":\"Contoso.Mine\",\"ManagerName\":\"Test Manager\",\"BootId\":\"" + BootA + "\",\"UptimeTicks\":1},"
+            + "{\"PackageId\":\"Contoso.Theirs\",\"ManagerName\":\"Test Manager\",\"BootId\":\"" + BootA + "\",\"UptimeTicks\":1}]");
+
+        Assert.Equal(2, PendingRebootStore.PendingCount);
+        Assert.True(PendingRebootStore.IsPending("Test Manager", "Contoso.Theirs"));
+    }
+
+    [Fact]
     public void RealUptimeSourceIsPositiveAndMonotonic()
     {
         BootSession.TestUptimeOverride = null;

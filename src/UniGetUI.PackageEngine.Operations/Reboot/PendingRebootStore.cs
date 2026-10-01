@@ -11,6 +11,7 @@ public static class PendingRebootStore
     private const int MaxEntries = 500;
     private static readonly object _lock = new();
     private static List<PendingRebootEntry>? _cache;
+    private static (DateTime Time, long Length) _cacheStamp = (default, -2L);
 
     public static event EventHandler? Changed;
 
@@ -21,7 +22,11 @@ public static class PendingRebootStore
 
     public static void InvalidateCache()
     {
-        lock (_lock) _cache = null;
+        lock (_lock)
+        {
+            _cache = null;
+            _cacheStamp = (default, -2L);
+        }
     }
 
     public static IReadOnlyList<PendingRebootEntry> GetPending()
@@ -114,7 +119,7 @@ public static class PendingRebootStore
 
     private static List<PendingRebootEntry> LoadUnlocked()
     {
-        if (_cache is not null) return _cache;
+        if (_cache is not null && ReadFileStamp() == _cacheStamp) return _cache;
 
         var loaded = new List<PendingRebootEntry>();
         try
@@ -133,11 +138,54 @@ public static class PendingRebootStore
             loaded = [];
         }
 
-        _cache = loaded;
+        _cache = Sanitize(loaded);
+        _cacheStamp = ReadFileStamp();
+
         if (DropEntriesFromPreviousBootsUnlocked())
             SaveUnlocked();
 
         return _cache;
+    }
+
+    private static List<PendingRebootEntry> Sanitize(List<PendingRebootEntry> entries)
+    {
+        var result = new List<PendingRebootEntry>(entries.Count);
+        foreach (var entry in entries)
+        {
+            if (entry is null) continue;
+
+            entry.PackageId = OrEmpty(entry.PackageId);
+            entry.PackageName = OrEmpty(entry.PackageName);
+            entry.ManagerName = OrEmpty(entry.ManagerName);
+            entry.SourceName = OrEmpty(entry.SourceName);
+            entry.Version = OrEmpty(entry.Version);
+            entry.Kind = OrEmpty(entry.Kind);
+            entry.RecordedAtUtc = OrEmpty(entry.RecordedAtUtc);
+            entry.BootId = OrEmpty(entry.BootId);
+
+            if (entry.PackageId.Length == 0 || entry.ManagerName.Length == 0) continue;
+            result.Add(entry);
+        }
+
+        if (result.Count != entries.Count)
+            Logger.Warn($"Discarded {entries.Count - result.Count} malformed pending-reboot entries");
+
+        return result;
+    }
+
+    private static string OrEmpty(string? value) => value ?? "";
+
+    private static (DateTime Time, long Length) ReadFileStamp()
+    {
+        try
+        {
+            var info = new FileInfo(FilePath);
+            return info.Exists ? (info.LastWriteTimeUtc, info.Length) : (default, -1L);
+        }
+        catch
+        {
+            return (default, -1L);
+        }
     }
 
     private static bool DropEntriesFromPreviousBootsUnlocked()
@@ -171,7 +219,12 @@ public static class PendingRebootStore
         {
             var typeInfo = PendingRebootJsonContext.Default.ListPendingRebootEntry;
             string json = JsonSerializer.Serialize(_cache ?? [], typeInfo);
-            File.WriteAllText(FilePath, json);
+
+            string temporaryPath = FilePath + ".tmp";
+            File.WriteAllText(temporaryPath, json);
+            File.Move(temporaryPath, FilePath, overwrite: true);
+
+            _cacheStamp = ReadFileStamp();
         }
         catch (Exception ex)
         {

@@ -130,10 +130,11 @@ public static class IpcPackageApi
         if (safeQuery.Length is 0)
             return [];
 
+        var pendingRestartKeys = PendingRebootStore.GetPendingKeys();
         return GetManagers(managerName)
             .SelectMany(manager => manager.FindPackages(safeQuery))
             .DistinctBy(GetPackageIdentity)
-            .Select(ToIpcPackageInfo)
+            .Select(package => ToIpcPackageInfo(package, pendingRestartKeys))
             .OrderBy(package => package.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(package => package.Id, StringComparer.OrdinalIgnoreCase)
             .Take(maxResults)
@@ -142,9 +143,10 @@ public static class IpcPackageApi
 
     public static IReadOnlyList<IpcPackageInfo> ListInstalledPackages(string? managerName = null)
     {
+        var pendingRestartKeys = PendingRebootStore.GetPendingKeys();
         return GetInstalledPackagesSnapshot(managerName)
             .DistinctBy(GetPackageIdentity)
-            .Select(ToIpcPackageInfo)
+            .Select(package => ToIpcPackageInfo(package, pendingRestartKeys))
             .OrderBy(package => package.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(package => package.Id, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -152,9 +154,10 @@ public static class IpcPackageApi
 
     public static IReadOnlyList<IpcPackageInfo> ListUpgradablePackages(string? managerName = null)
     {
+        var pendingRestartKeys = PendingRebootStore.GetPendingKeys();
         return GetUpgradablePackagesSnapshot(managerName)
             .DistinctBy(GetPackageIdentity)
-            .Select(ToIpcPackageInfo)
+            .Select(package => ToIpcPackageInfo(package, pendingRestartKeys))
             .OrderBy(package => package.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(package => package.Id, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -802,6 +805,12 @@ public static class IpcPackageApi
     }
 
     private static IpcPackageInfo ToIpcPackageInfo(IPackage package)
+        => ToIpcPackageInfo(package, null);
+
+    private static IpcPackageInfo ToIpcPackageInfo(
+        IPackage package,
+        IReadOnlySet<string>? pendingRestartKeys
+    )
     {
         return new IpcPackageInfo
         {
@@ -812,7 +821,10 @@ public static class IpcPackageApi
             Source = package.Source.AsString_DisplayName,
             Manager = IpcManagerSettingsApi.GetPublicManagerId(package.Manager),
             IsUpgradable = package.IsUpgradable,
-            SystemRestartPending = PendingRebootStore.IsPending(package.Manager.Id, package.Id),
+            SystemRestartPending = pendingRestartKeys is null
+                ? PendingRebootStore.IsPending(package.Manager.Id, package.Id)
+                : pendingRestartKeys.Contains(
+                    PendingRebootStore.KeyFor(package.Manager.Id, package.Id)),
         };
     }
 }

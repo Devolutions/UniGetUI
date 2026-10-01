@@ -50,6 +50,19 @@ public static class PendingRebootStore
         }
     }
 
+    public static IReadOnlySet<string> GetPendingKeys()
+    {
+        lock (_lock)
+        {
+            return LoadUnlocked()
+                .Select(entry => KeyFor(entry.ManagerName, entry.PackageId))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    public static string KeyFor(string managerName, string packageId)
+        => managerName + "|" + packageId;
+
     public static void Record(IPackage package, OperationType role)
     {
         var entry = new PendingRebootEntry
@@ -121,6 +134,7 @@ public static class PendingRebootStore
     {
         if (_cache is not null && ReadFileStamp() == _cacheStamp) return _cache;
 
+        var stampBeforeRead = ReadFileStamp();
         var loaded = new List<PendingRebootEntry>();
         try
         {
@@ -138,10 +152,13 @@ public static class PendingRebootStore
             loaded = [];
         }
 
+        int rawCount = loaded.Count;
         _cache = Sanitize(loaded);
-        _cacheStamp = ReadFileStamp();
+        _cacheStamp = stampBeforeRead;
 
-        if (DropEntriesFromPreviousBootsUnlocked())
+        bool repaired = _cache.Count != rawCount;
+        bool dropped = DropEntriesFromPreviousBootsUnlocked();
+        if (repaired || dropped)
             SaveUnlocked();
 
         return _cache;

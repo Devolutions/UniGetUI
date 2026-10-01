@@ -19,7 +19,7 @@ internal static class SystemRestartService
         {
             if (!await ConfirmAsync(owner)) return;
 
-            if (!Restart()) ReportRestartFailure();
+            if (!await RestartAsync()) ReportRestartFailure();
         }
         catch (Exception ex)
         {
@@ -83,7 +83,7 @@ internal static class SystemRestartService
         return dialog.Result is true;
     }
 
-    private static bool Restart()
+    private static async Task<bool> RestartAsync()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -107,7 +107,12 @@ internal static class SystemRestartService
                 return false;
             }
 
-            if (!process.WaitForExit(ShutdownRequestTimeoutMs))
+            using var timeout = new CancellationTokenSource(ShutdownRequestTimeoutMs);
+            try
+            {
+                await process.WaitForExitAsync(timeout.Token);
+            }
+            catch (OperationCanceledException)
             {
                 Logger.Warn("shutdown.exe did not return in time; assuming the restart was requested");
                 return true;

@@ -1246,22 +1246,29 @@ namespace UniGetUI.PackageEngine.Operations
         /// for installs (and non-WinGet updates) the configured custom location; for
         /// uninstalls nothing.
         /// </summary>
-        private string? GetBrokerEffectiveInstallLocation()
+        private string? GetBrokerEffectiveInstallLocation() =>
+            GetBrokerInstallLocation(Package, Options, Role);
+
+        /// <summary>
+        /// The install location a brokered operation sends for the given package, options and role.
+        /// Shared with the installation options dialog so that it checks the same value.
+        /// </summary>
+        public static string? GetBrokerInstallLocation(IPackage package, InstallOptions options, OperationType role)
         {
-            switch (Role)
+            switch (role)
             {
                 case OperationType.Update:
 #if WINDOWS
-                    if (IsWinGetManager(Package.Manager))
+                    if (IsWinGetManager(package.Manager))
                     {
-                        return WinGetPkgOperationHelper.GetEffectiveUpdateLocation(Package, Options);
+                        return WinGetPkgOperationHelper.GetEffectiveUpdateLocation(package, options);
                     }
 #endif
                     goto case OperationType.Install;
                 case OperationType.Install:
-                    return string.IsNullOrWhiteSpace(Options.CustomInstallLocation)
+                    return string.IsNullOrWhiteSpace(options.CustomInstallLocation)
                         ? null
-                        : Options.CustomInstallLocation;
+                        : options.CustomInstallLocation;
                 default:
                     return null;
             }

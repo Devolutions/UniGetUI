@@ -59,7 +59,13 @@ public static class BrokerRequestBuilder
                     $"Refusing to build a {manager} broker request for the package identifier \"{package.Id}\": it is not a valid package identifier."
                 );
 
-            if (options.Version.Length > 0 && !CoreTools.IsValidPackageVersion(options.Version))
+            // Managers with known broker version rules are checked against those (stricter, and
+            // aware of each manager's range syntax) by BrokerRequestValidator below.
+            if (
+                options.Version.Length > 0
+                && !BrokerRequestValidator.ManagerHasKnownVersionRules(manager)
+                && !CoreTools.IsValidPackageVersion(options.Version)
+            )
                 throw new InvalidOperationException(
                     $"Refusing to build a {manager} broker request for package {package.Id}: the requested version \"{options.Version}\" is not a valid package version."
                 );

@@ -140,6 +140,35 @@ public static class BrokerRequestBuilder
         };
     }
 
+    /// <summary>
+    /// Every problem that would stop <see cref="Build"/> for these values, without building a
+    /// request: the field rules of <see cref="BrokerRequestValidator"/> as well as the
+    /// command-line safety guards. Used to preview a brokered operation before it starts.
+    /// </summary>
+    public static IReadOnlyList<string> FindProblems(
+        IPackage package,
+        InstallOptions options,
+        OperationType role,
+        string? effectiveInstallLocation = null)
+    {
+        if (!SupportsManager(package.Manager.Name))
+            return [];
+
+        try
+        {
+            Build(package, options, role, effectiveInstallLocation);
+            return [];
+        }
+        catch (BrokerRequestValidationException ex)
+        {
+            return ex.Issues;
+        }
+        catch (InvalidOperationException ex)
+        {
+            return [ex.Message];
+        }
+    }
+
     private static Operation MapOperation(OperationType role) => role switch
     {
         OperationType.Install => Operation.Install,

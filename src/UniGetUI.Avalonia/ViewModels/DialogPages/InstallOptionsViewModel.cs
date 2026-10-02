@@ -550,7 +550,7 @@ public partial class InstallOptionsViewModel : ObservableObject
             var applied = await InstallOptionsFactory.LoadApplicableAsync(_package, overridePackageOptions: SnapshotOptions());
             // Resolve the location exactly as the brokered operation will (for WinGet updates
             // this may be the registry-detected location rather than the configured one).
-            var issues = await Task.Run(() => BrokerRequestValidator.Validate(
+            var issues = await Task.Run(() => BrokerRequestBuilder.FindProblems(
                 _package,
                 applied,
                 op,

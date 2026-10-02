@@ -1,6 +1,7 @@
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Client;
 using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
@@ -948,6 +949,78 @@ public class BrokerRequestBuilderTests
         var request = BrokerRequestBuilder.Build(BuildWinGetPackage(), options, OperationType.Install);
 
         Assert.Equal("echo before", request.Options.PreOperationCommand);
+    }
+
+    [Theory]
+    [InlineData("Npm")]
+    [InlineData("Scoop")]
+    [InlineData("Cargo")]
+    public void Build_RefusesMachineScopeForManagersThatInstallPerUser(string managerName)
+    {
+        var options = new InstallOptions { InstallationScope = PackageScope.Machine };
+
+        var exception = Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage(managerName, managerName == "Scoop" ? "7zip" : "contoso-tool"), options, OperationType.Install));
+
+        Assert.Contains(exception.Issues, issue => issue.Contains(CoreTools.Translate("installing for all users")));
+    }
+
+    [Fact]
+    public void Build_RefusesPreReleaseInstallsForNpm()
+    {
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage("Npm"), new InstallOptions { PreRelease = true }, OperationType.Install));
+    }
+
+    [Theory]
+    [InlineData("Npm")]
+    [InlineData("Chocolatey")]
+    [InlineData("Winget")]
+    public void Build_IgnoresPreReleaseSkipHashAndArchitectureForUninstalls(string managerName)
+    {
+        var options = new InstallOptions
+        {
+            PreRelease = true,
+            SkipHashCheck = true,
+            Architecture = UniGetUIArchitecture.arm64,
+        };
+
+        var request = BrokerRequestBuilder.Build(
+            BuildPackage(managerName, managerName == "Winget" ? "Contoso.Test" : "contoso-tool"), options, OperationType.Uninstall);
+
+        Assert.False(request.Options.PreRelease);
+        Assert.False(request.Options.SkipHashCheck);
+        Assert.Null(request.Package.Architecture);
+    }
+
+    [Fact]
+    public void Build_SendsAScoopArchitectureOnlyForInstalls()
+    {
+        var options = new InstallOptions { Architecture = UniGetUIArchitecture.x64 };
+        var package = BuildPackage("Scoop", "7zip");
+
+        Assert.Equal(Architecture.X64, BrokerRequestBuilder.Build(package, options, OperationType.Install).Package.Architecture);
+        Assert.Null(BrokerRequestBuilder.Build(package, options, OperationType.Update).Package.Architecture);
+    }
+
+    [Fact]
+    public void Build_RefusesArm64ForChocolatey()
+    {
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage("Chocolatey"), new InstallOptions { Architecture = UniGetUIArchitecture.arm64 }, OperationType.Install));
+    }
+
+    [Fact]
+    public void Build_RefusesPowerShellSourceNamesWithSurroundingWhitespace()
+    {
+        var package = new PackageBuilder()
+            .WithManager(new PackageManagerBuilder().WithName("PowerShell").Build())
+            .WithSource(new SourceBuilder().WithName(" PSGallery").Build())
+            .WithId("Pester")
+            .Build();
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            package, new InstallOptions(), OperationType.Install));
     }
 
     [Fact]

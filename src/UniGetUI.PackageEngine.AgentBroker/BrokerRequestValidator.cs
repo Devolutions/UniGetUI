@@ -116,13 +116,21 @@ public static partial class BrokerRequestValidator
             AddIssue(issues, CheckVersion(manager, managerName, requestedVersion));
         }
 
-        if (role is not OperationType.Uninstall
-            && !package.OverridenOptions.WinGet_DropArchAndScope
+        if (BrokerRequestBuilder.ArchitectureApplies(manager, package, role)
             && string.Equals(options.Architecture, UniGetUIArchitecture.arm32, StringComparison.OrdinalIgnoreCase))
         {
             issues.Add(CoreTools.Translate(
                 "The {0} architecture cannot be requested through the Devolutions Agent.",
                 UniGetUIArchitecture.arm32));
+        }
+
+        string[] unsupportedOptions = [.. FindUnsupportedOptions(manager, package, options, role, installLocation)];
+        if (unsupportedOptions.Length > 0)
+        {
+            issues.Add(CoreTools.Translate(
+                "The Devolutions Agent does not support these options for {0} packages: {1}.",
+                managerName,
+                string.Join(", ", unsupportedOptions)));
         }
 
         if (!string.IsNullOrWhiteSpace(installLocation))
@@ -176,6 +184,69 @@ public static partial class BrokerRequestValidator
     public static bool RequestsElevation(IPackage package, InstallOptions options) =>
         !Settings.Get(Settings.K.ProhibitElevation)
         && (package.OverridenOptions.RunAsAdministrator is true || options.RunAsAdministrator);
+
+    /// <summary>
+    /// The options the broker's command builder for this manager refuses, as localized names,
+    /// for the values that the request would actually carry for this role.
+    /// </summary>
+    private static IEnumerable<string> FindUnsupportedOptions(
+        ManagerName manager,
+        IPackage package,
+        InstallOptions options,
+        OperationType role,
+        string? installLocation)
+    {
+        bool isUninstall = role is OperationType.Uninstall;
+        Scope? scope = BrokerRequestBuilder.ResolveScope(manager, package, options);
+        bool architecture = BrokerRequestBuilder.ResolveArchitecture(manager, package, options, role) is not null;
+        bool perUserOnly = manager is ManagerName.Npm or ManagerName.Bun or ManagerName.Cargo or ManagerName.Scoop
+            or ManagerName.Vcpkg or ManagerName.Dotnet or ManagerName.Pip;
+        bool packageManagerPicksTheBuild = manager is ManagerName.Npm or ManagerName.Bun or ManagerName.Cargo
+            or ManagerName.Pip or ManagerName.Vcpkg;
+
+        if (scope is Scope.Machine && perUserOnly)
+            yield return CoreTools.Translate("installing for all users");
+
+        if (scope is Scope.User && manager is ManagerName.Chocolatey)
+            yield return CoreTools.Translate("installing for the current user only");
+
+        if (architecture
+            && (packageManagerPicksTheBuild
+                || (manager is ManagerName.Chocolatey
+                    && string.Equals(options.Architecture, UniGetUIArchitecture.arm64, StringComparison.OrdinalIgnoreCase))))
+            yield return CoreTools.Translate("choosing the architecture");
+
+        if (!isUninstall && options.PreRelease
+            && manager is ManagerName.Npm or ManagerName.Bun or ManagerName.Cargo or ManagerName.Scoop or ManagerName.Vcpkg)
+            yield return CoreTools.Translate("pre-release versions");
+
+        if (options.InteractiveInstallation
+            && manager is ManagerName.Npm or ManagerName.Bun or ManagerName.Cargo or ManagerName.Scoop
+                or ManagerName.Vcpkg or ManagerName.Dotnet or ManagerName.Pip)
+            yield return CoreTools.Translate("interactive installation");
+
+        if (!isUninstall && options.SkipHashCheck
+            && manager is ManagerName.Npm or ManagerName.Bun or ManagerName.Cargo or ManagerName.Vcpkg
+                or ManagerName.Dotnet or ManagerName.Pip)
+            yield return CoreTools.Translate("skipping the hash check");
+
+        if (!string.IsNullOrWhiteSpace(installLocation)
+            && manager is ManagerName.Npm or ManagerName.Bun or ManagerName.Scoop or ManagerName.Chocolatey
+                or ManagerName.Vcpkg or ManagerName.Pip)
+            yield return CoreTools.Translate("a custom install location");
+
+        if (role is OperationType.Update && options.UninstallPreviousVersionsOnUpdate
+            && manager is not (ManagerName.Winget or ManagerName.PowerShell or ManagerName.PowerShell7))
+            yield return CoreTools.Translate("uninstalling previous versions");
+
+        if (manager is ManagerName.Cargo)
+        {
+            if ((options.KillBeforeOperation ?? []).Count > 0)
+                yield return CoreTools.Translate("closing apps before the operation");
+            if (HasPrePostCommands(options, role))
+                yield return CoreTools.Translate("pre-operation and post-operation commands");
+        }
+    }
 
     /// <summary>Managers whose broker command builder refuses elevated operations.</summary>
     private static bool ManagerRejectsElevation(ManagerName manager) =>
@@ -397,7 +468,8 @@ public static partial class BrokerRequestValidator
             return null;
         }
 
-        string name = manager is ManagerName.PowerShell or ManagerName.PowerShell7 ? sourceName.Trim() : sourceName;
+        // The broker refuses surrounding whitespace, so the name is checked as it is sent.
+        string name = sourceName;
         bool valid = name.Length is > 0 and <= MaxSourceNameLength
             && char.IsAsciiLetterOrDigit(name[0])
             && !name.EndsWith(' ')

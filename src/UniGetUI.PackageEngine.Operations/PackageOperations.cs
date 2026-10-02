@@ -553,7 +553,7 @@ namespace UniGetUI.PackageEngine.Operations
                 Line("Broker operation was canceled.", LineType.Information);
                 return OperationVeredict.Canceled;
             }
-            catch (BrokerClientException ex) when (BrokerFailureDescriber.DescribeAccessFailure(ex) is { } accessFailure)
+            catch (BrokerClientException ex) when (BrokerFailureDescriber.DescribeCapabilitiesAccessFailure(ex) is { } accessFailure)
             {
                 // The broker is running but does not accept this client: report it as
                 // unavailable for this copy of UniGetUI, with the reason, instead of a

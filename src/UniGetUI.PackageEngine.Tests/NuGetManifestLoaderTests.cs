@@ -34,6 +34,27 @@ public sealed class NuGetManifestLoaderTests
     }
 
     [Fact]
+    public void GetCacheKey_MatchesTheVersionedHashForThePackagesOwnVersion()
+    {
+        var manager = new PackageManagerBuilder().Build();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("1.2.3")
+            .Build();
+
+        Assert.Equal(package.GetVersionedHash(), NuGetManifestLoader.GetCacheKey(package));
+        Assert.Equal(
+            package.GetVersionedHash(),
+            NuGetManifestLoader.GetCacheKey(package, "1.2.3")
+        );
+        Assert.NotEqual(
+            package.GetVersionedHash(),
+            NuGetManifestLoader.GetCacheKey(package, "2.0.0")
+        );
+    }
+
+    [Fact]
     public void GetManifestContent_UsesCachedManifestWhenAvailable()
     {
         BaseNuGet.Manifests.Clear();

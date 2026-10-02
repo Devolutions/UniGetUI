@@ -13,6 +13,19 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         /// </summary>
         /// <param name="package">A valid Package object</param>
         /// <returns>A Uri object</returns>
+        /// <summary>
+        /// Cache key for the manifest and catalog caches. Reproduces the shape of
+        /// IPackage.GetVersionedHash() so that an entry cached for a concrete package is
+        /// reused when another package resolves to that same version, and so that a package
+        /// whose listed version is a placeholder does not share one slot across versions.
+        /// </summary>
+        public static long GetCacheKey(IPackage package, string? version = null)
+        {
+            return CoreTools.HashStringAsLong(
+                $"{package.Manager.Name}\\{package.Source.AsString_DisplayName}\\{package.Id}\\{version ?? package.VersionString}"
+            );
+        }
+
         public static Uri GetManifestUrl(IPackage package, string? version = null)
         {
             return new Uri(
@@ -57,7 +70,8 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         public static string? GetManifestContent(IPackage package, string? version = null)
         {
             version ??= package.VersionString;
-            if (BaseNuGet.Manifests.TryGetValue(package.GetVersionedHash(), out string? manifest))
+            long cacheKey = GetCacheKey(package, version);
+            if (BaseNuGet.Manifests.TryGetValue(cacheKey, out string? manifest))
             {
                 Logger.Debug(
                     $"Loading cached NuGet manifest for package {package.Id} on manager {package.Manager.Name}"
@@ -85,10 +99,10 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                             new Uri(PackageManifestUrl.ToString().Replace(".0')", "')"))
                         );
                         using HttpResponseMessage fallbackResponse = client.Send(fallbackRequest);
-                        return CacheManifestContent(package, PackageManifestUrl, fallbackResponse);
+                        return CacheManifestContent(cacheKey, package, PackageManifestUrl, fallbackResponse);
                     }
 
-                    return CacheManifestContent(package, PackageManifestUrl, initialResponse);
+                    return CacheManifestContent(cacheKey, package, PackageManifestUrl, initialResponse);
                 }
             }
             catch (Exception e)
@@ -102,6 +116,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         }
 
         private static string? CacheManifestContent(
+            long cacheKey,
             IPackage package,
             string packageManifestUrl,
             HttpResponseMessage response
@@ -116,7 +131,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             }
 
             string packageManifestContent = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            BaseNuGet.Manifests[package.GetVersionedHash()] = packageManifestContent;
+            BaseNuGet.Manifests[cacheKey] = packageManifestContent;
             return packageManifestContent;
         }
     }

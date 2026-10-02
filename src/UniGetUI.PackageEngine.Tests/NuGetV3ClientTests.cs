@@ -1253,6 +1253,29 @@ public sealed class NuGetV3ClientTests
     }
 
     [Fact]
+    public void SelectHighestVersion_PrefersAStableReleaseOverAHigherPreRelease()
+    {
+        Assert.Equal(
+            "3.0.0",
+            NuGetV3Client.SelectHighestVersion(
+                ["2.9.0", "3.0.0", "3.1.0-preview1"],
+                includePreRelease: false
+            )
+        );
+        Assert.Equal(
+            "1.0.1",
+            NuGetV3Client.SelectHighestVersion(["1.0.1-beta2", "1.0.1"], includePreRelease: false)
+        );
+        Assert.Null(
+            NuGetV3Client.SelectHighestVersion(["1.0.0-alpha"], includePreRelease: false)
+        );
+        Assert.Equal(
+            "1.0.0-alpha",
+            NuGetV3Client.SelectHighestVersion(["1.0.0-alpha"], includePreRelease: true)
+        );
+    }
+
+    [Fact]
     public void TheClientAndTheManagerAgreeOnLabelOrdering()
     {
         using var feed = new FakeV3Feed();

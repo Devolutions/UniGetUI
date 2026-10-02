@@ -402,7 +402,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         )
         {
             version ??= package.VersionString;
-            long hash = package.GetVersionedHash();
+            long hash = NuGetManifestLoader.GetCacheKey(package, version);
             if (BaseNuGet.V3Entries.TryGetValue(hash, out V3CatalogEntry? cached))
             {
                 Logger.Debug(
@@ -426,7 +426,9 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
             try
             {
-                return NewestVersion(GetInstallableVersions_UnSafe(package))
+                IReadOnlyList<string> versions = GetInstallableVersions_UnSafe(package);
+                return NuGetV3Client.SelectHighestVersion(versions, includePreRelease: false)
+                    ?? NuGetV3Client.SelectHighestVersion(versions, includePreRelease: true)
                     ?? package.VersionString;
             }
             catch (Exception ex)
@@ -438,27 +440,6 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 Logger.Warn(ex);
                 return package.VersionString;
             }
-        }
-
-        private static string? NewestVersion(IReadOnlyList<string> versions)
-        {
-            string? newest = null;
-            CoreTools.Version newestParsed = CoreTools.Version.Null;
-
-            foreach (string candidate in versions)
-            {
-                if (string.IsNullOrWhiteSpace(candidate))
-                    continue;
-
-                CoreTools.Version parsed = CoreTools.VersionStringToStruct(candidate);
-                if (newest is null || parsed.CompareTo(newestParsed) > 0)
-                {
-                    newest = candidate;
-                    newestParsed = parsed;
-                }
-            }
-
-            return newest;
         }
 
         private static string? FirstNonEmpty(params string?[] values)

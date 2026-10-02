@@ -389,6 +389,16 @@ namespace UniGetUI.PackageEngine.Operations
             _brokerStreamedOutput = null;
             Line("Routing operation through Devolutions Agent broker...", LineType.Information);
 
+            if (BrokerRequestBuilder.IsUnsupportedAllowClobberRetry(Package, Role))
+            {
+                Line("The module conflicts with commands that are already installed; the broker cannot retry with -AllowClobber.", LineType.Error);
+                return FailWith(new BrokerFailureDescription(
+                    CoreTools.Translate("The module conflicts with installed commands"),
+                    CoreTools.Translate(
+                        "{0} provides commands that another installed module already provides. Installing it anyway requires the -AllowClobber option, which cannot be used through the Devolutions Agent.",
+                        Package.Name)));
+            }
+
             // Apply manager-specific elevation requirements (e.g. WinGet's detection of
             // machine-scope or elevation-requiring installers) before deciding the requested
             // elevation, mirroring the local execution path where this runs as part of

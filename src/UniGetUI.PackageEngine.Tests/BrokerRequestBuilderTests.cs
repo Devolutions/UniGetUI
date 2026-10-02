@@ -191,31 +191,26 @@ public class BrokerRequestBuilderTests
     }
 
     [Fact]
-    public void Build_AllowClobberRetry_IsRefusedBecauseTheBrokerAcceptsNoPowerShellParameters()
+    public void Build_AllowClobberRetry_IsNotSentToTheBroker()
     {
         var package = BuildPowerShellPackage();
         package.OverridenOptions.PowerShell_AllowClobber = true;
 
-        var exception = Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
-            package,
-            new InstallOptions(),
-            OperationType.Install
-        ));
+        var request = BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Install);
 
-        Assert.Contains(exception.Issues, issue => issue.Contains("-AllowClobber"));
+        Assert.DoesNotContain("-AllowClobber", request.Options.CustomParameters);
+        Assert.True(BrokerRequestBuilder.IsUnsupportedAllowClobberRetry(package, OperationType.Install));
     }
 
-    [Fact]
-    public void Build_AllowClobberRetry_LeavesTheSavedCustomParametersUntouched()
+    [Theory]
+    [InlineData(OperationType.Update)]
+    [InlineData(OperationType.Uninstall)]
+    public void IsUnsupportedAllowClobberRetry_IsInstallOnly(OperationType role)
     {
         var package = BuildPowerShellPackage();
         package.OverridenOptions.PowerShell_AllowClobber = true;
-        var options = new InstallOptions { CustomParameters_Install = ["-Proxy"] };
 
-        Assert.Throws<BrokerRequestValidationException>(
-            () => BrokerRequestBuilder.Build(package, options, OperationType.Install));
-
-        Assert.Equal(["-Proxy"], options.CustomParameters_Install);
+        Assert.False(BrokerRequestBuilder.IsUnsupportedAllowClobberRetry(package, role));
     }
 
     [Theory]

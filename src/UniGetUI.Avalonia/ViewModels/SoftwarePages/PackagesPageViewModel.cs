@@ -683,7 +683,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         UpdateSubtitle();
         PackageCountUpdated?.Invoke();
 
-        bool loadingOrPending = Loader.IsLoading || (LoadsOnStart && !Loader.IsLoaded);
+        bool loadingOrPending = Loader.IsLoading || (LoadsOnStart && Loader.HasPendingInitialLoad);
 
         if (loadingOrPending && FilteredPackages.Count == 0)
         {
@@ -1022,7 +1022,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     // ─── Subtitle ─────────────────────────────────────────────────────────────
     public void UpdateSubtitle()
     {
-        if (Loader.IsLoading || (LoadsOnStart && !Loader.IsLoaded))
+        if (Loader.IsLoading || (LoadsOnStart && Loader.HasPendingInitialLoad))
         {
             Subtitle = _stillLoadingSubtitle;
             return;

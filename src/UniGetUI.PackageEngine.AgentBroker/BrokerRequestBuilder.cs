@@ -27,10 +27,6 @@ public static class BrokerRequestBuilder
         OperationType role,
         string? effectiveInstallLocation = null)
     {
-        // WinGet_DropArchAndScope is set after an "update not applicable" result to retry
-        // without the scope/architecture constraints; mirror the local WinGet behavior so
-        // the AutoRetry does not rebuild the same constrained request indefinitely.
-        bool dropArchAndScope = package.OverridenOptions.WinGet_DropArchAndScope;
 
         ManagerName manager = MapManagerName(package.Manager.Name);
 
@@ -66,7 +62,7 @@ public static class BrokerRequestBuilder
             {
                 Id = package.Id,
                 Version = ResolveVersion(manager, package, options, role),
-                Architecture = dropArchAndScope ? null : MapArchitecture(options.Architecture),
+                Architecture = ResolveArchitecture(manager, package, options, role),
             },
             Options = new RequestOptions
             {
@@ -74,8 +70,9 @@ public static class BrokerRequestBuilder
                 // matching the local WinGet execution path.
                 Scope = ResolveScope(manager, package, options),
                 Interactive = options.InteractiveInstallation,
-                SkipHashCheck = options.SkipHashCheck,
-                PreRelease = options.PreRelease,
+                // Neither flag means anything for an uninstall, matching the local path.
+                SkipHashCheck = role is not OperationType.Uninstall && options.SkipHashCheck,
+                PreRelease = role is not OperationType.Uninstall && options.PreRelease,
                 CustomParameters = customParameters,
                 CustomInstallLocation = NullIfEmpty(effectiveInstallLocation),
                 // Kill/pre/post actions are owned by the broker for brokered operations:
@@ -228,6 +225,29 @@ public static class BrokerRequestBuilder
         mapped = result ?? default;
         return result is not null;
     }
+
+    /// <summary>
+    /// The architecture sent to the broker, or null to let the manager decide. Uninstalls never
+    /// select one, and Scoop only selects one on install, like the local execution paths.
+    /// </summary>
+    /// <remarks>
+    /// WinGet_DropArchAndScope is set after an "update not applicable" result to retry without
+    /// the scope/architecture constraints; mirror the local WinGet behavior so the AutoRetry
+    /// does not rebuild the same constrained request indefinitely.
+    /// </remarks>
+    internal static BrokerArchitecture? ResolveArchitecture(
+        ManagerName manager,
+        IPackage package,
+        InstallOptions options,
+        OperationType role)
+    {
+        return ArchitectureApplies(manager, package, role) ? MapArchitecture(options.Architecture) : null;
+    }
+
+    internal static bool ArchitectureApplies(ManagerName manager, IPackage package, OperationType role) =>
+        !package.OverridenOptions.WinGet_DropArchAndScope
+        && role is not OperationType.Uninstall
+        && (manager is not ManagerName.Scoop || role is OperationType.Install);
 
     /// <summary>The scope sent to the broker for these options, or null to let it decide.</summary>
     internal static Scope? ResolveScope(ManagerName manager, IPackage package, InstallOptions options) =>

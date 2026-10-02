@@ -61,12 +61,58 @@ public static partial class BrokerRequestValidator
         string managerName = package.Manager.DisplayName;
         List<string> issues = [];
 
-        AddIssue(issues, CheckPackageId(manager, managerName, package.Id));
+        // Brokered operations do not go through BasePkgOperationHelper, so the command-line
+        // safety guards that apply to every manager are repeated here: the broker builds a
+        // command line from these values, and an identifier such as
+        // "requests --index-url https://host" would become real options.
+        // Only installs send the saved version (see BrokerRequestBuilder.ResolveVersion), so a
+        // saved value never blocks an update or an uninstall.
+        string requestedVersion = role is OperationType.Install ? options.Version : "";
+        bool idIsOptionSafe = CoreTools.IsOptionSafeIdentifier(
+            package.Id,
+            package.Manager.IdentifiersAreQuotedOnCommandLine);
+        if (!idIsOptionSafe)
+        {
+            issues.Add(CoreTools.Translate(
+                "The package identifier \"{0}\" would be read as a command-line option or split into several arguments.",
+                package.Id));
+        }
+
+        if (!CoreTools.IsOptionSafeValue(requestedVersion))
+        {
+            issues.Add(CoreTools.Translate(
+                "The version \"{0}\" would be read as a command-line option.",
+                requestedVersion));
+        }
+
+        if (ManagerCommandLineIsShellInterpreted(manager))
+        {
+            if (idIsOptionSafe && !CoreTools.IsValidPackageIdentifier(package.Id))
+            {
+                issues.Add(InvalidIdIssue(managerName, package.Id));
+            }
+
+            // Managers with known broker version rules are checked against those below
+            // (stricter, and aware of each manager's range syntax).
+            if (requestedVersion.Length > 0
+                && !ManagerHasKnownVersionRules(manager)
+                && CoreTools.IsOptionSafeValue(requestedVersion)
+                && !CoreTools.IsValidPackageVersion(requestedVersion))
+            {
+                issues.Add(InvalidVersionIssue(managerName, requestedVersion));
+            }
+        }
+
+        if (idIsOptionSafe)
+        {
+            AddIssue(issues, CheckPackageId(manager, managerName, package.Id));
+        }
+
         AddIssue(issues, CheckSourceName(manager, managerName, package.Source.Name));
 
-        if (role is OperationType.Install && options.Version.Length > 0)
+        if (requestedVersion.Length > 0 && CoreTools.IsOptionSafeValue(requestedVersion))
         {
-            AddIssue(issues, CheckVersion(manager, managerName, options.Version));
+            AddIssue(issues, CheckVersion(manager, managerName, requestedVersion));
         }
 
         if (role is not OperationType.Uninstall
@@ -101,7 +147,7 @@ public static partial class BrokerRequestValidator
             }
         }
 
-        return issues;
+        return [.. issues.Distinct()];
     }
 
     /// <summary>
@@ -245,12 +291,8 @@ public static partial class BrokerRequestValidator
                 || c is '.' or '-' or '+' or '_'
                 || extraCharacters.Contains(c));
 
-        return valid
-            ? null
-            : CoreTools.Translate(
-                "The version \"{0}\" contains characters that the Devolutions Agent does not accept for {1} packages.",
-                version,
-                managerName);
+        return valid ? null : InvalidVersionIssue(managerName, version);
+
     }
 
     /// <summary>Returns a localized explanation when the broker would reject the package identifier.</summary>
@@ -520,6 +562,20 @@ public static partial class BrokerRequestValidator
             "The {0} package identifier \"{1}\" is not accepted by the Devolutions Agent: packages must be referenced by their registry name, such as \"name\" or \"@scope/name\", and not by a URL, a Git repository or a local path.",
             managerName,
             id);
+
+    private static string InvalidVersionIssue(string managerName, string version) =>
+        CoreTools.Translate(
+            "The version \"{0}\" contains characters that the Devolutions Agent does not accept for {1} packages.",
+            version,
+            managerName);
+
+    /// <summary>Managers whose broker command runs through a PowerShell script.</summary>
+    private static bool ManagerCommandLineIsShellInterpreted(ManagerName manager) =>
+        manager
+            is ManagerName.PowerShell
+                or ManagerName.PowerShell7
+                or ManagerName.Scoop
+                or ManagerName.Npm;
 
     private static string InvalidIdIssue(string managerName, string id) =>
         CoreTools.Translate(

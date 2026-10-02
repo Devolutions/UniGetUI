@@ -34,47 +34,6 @@ public static class BrokerRequestBuilder
 
         ManagerName manager = MapManagerName(package.Manager.Name);
 
-        // This path does not go through BasePkgOperationHelper, so the checks that apply to every
-        // manager have to be repeated here: the broker builds a command line from these values,
-        // and an identifier such as "requests --index-url https://host" would become real options.
-        if (
-            !CoreTools.IsOptionSafeIdentifier(
-                package.Id,
-                package.Manager.IdentifiersAreQuotedOnCommandLine
-            )
-        )
-            throw new InvalidOperationException(
-                $"Refusing to build a {manager} broker request for the package identifier \"{package.Id}\": it would be read as a command-line option or split into further arguments."
-            );
-
-        // Only installs send the saved version (see ResolveVersion), so a saved value never
-        // blocks an update or an uninstall.
-        string requestedVersion = role is OperationType.Install ? options.Version : "";
-
-        if (!CoreTools.IsOptionSafeValue(requestedVersion))
-            throw new InvalidOperationException(
-                $"Refusing to build a {manager} broker request for package {package.Id}: the requested version \"{requestedVersion}\" would be read as a command-line option."
-            );
-
-        if (ManagerCommandLineIsShellInterpreted(manager))
-        {
-            if (!CoreTools.IsValidPackageIdentifier(package.Id))
-                throw new InvalidOperationException(
-                    $"Refusing to build a {manager} broker request for the package identifier \"{package.Id}\": it is not a valid package identifier."
-                );
-
-            // Managers with known broker version rules are checked against those (stricter, and
-            // aware of each manager's range syntax) by BrokerRequestValidator below.
-            if (
-                requestedVersion.Length > 0
-                && !BrokerRequestValidator.ManagerHasKnownVersionRules(manager)
-                && !CoreTools.IsValidPackageVersion(requestedVersion)
-            )
-                throw new InvalidOperationException(
-                    $"Refusing to build a {manager} broker request for package {package.Id}: the requested version \"{requestedVersion}\" is not a valid package version."
-                );
-        }
-
         // The broker refuses empty custom parameters; blank ones carry nothing, so they are dropped.
         List<string> customParameters = [.. GetCustomParameters(options, role).Where(parameter => !string.IsNullOrWhiteSpace(parameter))];
         if (
@@ -192,13 +151,6 @@ public static class BrokerRequestBuilder
         TryMapManagerName(managerName, out var mapped)
             ? mapped
             : throw new ArgumentException($"Unsupported manager for the broker: {managerName}");
-
-    private static bool ManagerCommandLineIsShellInterpreted(ManagerName manager) =>
-        manager
-            is ManagerName.PowerShell
-                or ManagerName.PowerShell7
-                or ManagerName.Scoop
-                or ManagerName.Npm;
 
     /// <summary>
     /// The concrete version the operation installs, when UniGetUI knows it.

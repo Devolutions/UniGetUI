@@ -86,13 +86,23 @@ public class BrokerFailureDescriberTests
     [InlineData(401, ErrorCode.Unauthorized, "UniGetUI is not authorized to use the Devolutions Agent")]
     [InlineData(401, ErrorCode.Unauthenticated, "UniGetUI is not authorized to use the Devolutions Agent")]
     [InlineData(403, ErrorCode.AdministratorRequired, "Administrator rights are required")]
-    [InlineData(403, ErrorCode.Forbidden, "Administrator rights are required")]
     public void Describe_AuthorizationFailures(int statusCode, ErrorCode code, string expectedTitle)
     {
         var exception = BrokerError(statusCode, code);
 
         Assert.NotNull(BrokerFailureDescriber.DescribeAccessFailure(exception));
         Assert.Equal(CoreTools.Translate(expectedTitle), BrokerFailureDescriber.Describe(exception).Title);
+    }
+
+    [Fact]
+    public void Describe_ForbiddenKeepsTheBrokerReason()
+    {
+        var exception = BrokerError(403, ErrorCode.Forbidden, "policy is not valid until 2026-11-01");
+
+        Assert.Null(BrokerFailureDescriber.DescribeAccessFailure(exception));
+        var description = BrokerFailureDescriber.Describe(exception);
+        Assert.Equal(CoreTools.Translate("The Devolutions Agent refused this operation"), description.Title);
+        Assert.Contains("policy is not valid until 2026-11-01", description.Message);
     }
 
     [Fact]

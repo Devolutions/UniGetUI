@@ -59,7 +59,7 @@ public static class BrokerFailureDescriber
                     "The Devolutions Agent only accepts requests from signed, unmodified copies of UniGetUI. If you are running a development or self-built version, install an official release of UniGetUI and try again."));
         }
 
-        if (exception.StatusCode is 403 || code is ErrorCode.Forbidden or ErrorCode.AdministratorRequired)
+        if (code is ErrorCode.AdministratorRequired)
         {
             return new(
                 CoreTools.Translate("Administrator rights are required"),
@@ -108,6 +108,14 @@ public static class BrokerFailureDescriber
                     CoreTools.Translate("The package broker rejected the request"),
                     WithDetails(
                         CoreTools.Translate("The Devolutions Agent did not accept one of the options of this operation."),
+                        DescribeErrorDetails(error, brokerMessage)));
+
+            case ErrorCode.Forbidden:
+                // Also used when the active policy is outside its validity period.
+                return new(
+                    CoreTools.Translate("The Devolutions Agent refused this operation"),
+                    WithDetails(
+                        CoreTools.Translate("The Devolutions Agent does not allow this operation at the moment. Contact your administrator if the problem persists."),
                         DescribeErrorDetails(error, brokerMessage)));
 
             case ErrorCode.PayloadTooLarge:

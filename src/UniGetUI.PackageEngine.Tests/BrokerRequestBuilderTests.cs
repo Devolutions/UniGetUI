@@ -899,6 +899,46 @@ public class BrokerRequestBuilderTests
             BuildPackage(managerName), options, OperationType.Install));
     }
 
+    [Theory]
+    [InlineData("Npm")]
+    [InlineData("Scoop")]
+    [InlineData("Pip")]
+    public void Build_RefusesElevatedOperationsForManagersThatRunPerUser(string managerName)
+    {
+        var options = new InstallOptions { RunAsAdministrator = true };
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage(managerName, managerName == "Scoop" ? "7zip" : "contoso-tool"), options, OperationType.Install));
+    }
+
+    [Fact]
+    public void Build_RefusesPrePostCommandsForElevatedOperations()
+    {
+        var options = new InstallOptions { RunAsAdministrator = true, PreInstallCommand = "echo before" };
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildWinGetPackage(), options, OperationType.Install));
+    }
+
+    [Fact]
+    public void Build_RefusesPrePostCommandsForMachineScopeOperations()
+    {
+        var options = new InstallOptions { InstallationScope = PackageScope.Machine, PostUpdateCommand = "echo after" };
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildWinGetPackage(), options, OperationType.Update));
+    }
+
+    [Fact]
+    public void Build_KeepsPrePostCommandsForStandardUserOperations()
+    {
+        var options = new InstallOptions { InstallationScope = PackageScope.User, PreInstallCommand = "echo before" };
+
+        var request = BrokerRequestBuilder.Build(BuildWinGetPackage(), options, OperationType.Install);
+
+        Assert.Equal("echo before", request.Options.PreOperationCommand);
+    }
+
     [Fact]
     public void Build_RefusesTheArm32Architecture()
     {

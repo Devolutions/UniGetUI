@@ -78,9 +78,7 @@ public static class BrokerRequestBuilder
             {
                 // The per-package scope override takes precedence over the saved options,
                 // matching the local WinGet execution path.
-                Scope = dropArchAndScope
-                    ? null
-                    : MapScope(manager, package.OverridenOptions.Scope ?? options.InstallationScope),
+                Scope = ResolveScope(manager, package, options),
                 Interactive = options.InteractiveInstallation,
                 SkipHashCheck = options.SkipHashCheck,
                 PreRelease = options.PreRelease,
@@ -225,6 +223,12 @@ public static class BrokerRequestBuilder
         mapped = result ?? default;
         return result is not null;
     }
+
+    /// <summary>The scope sent to the broker for these options, or null to let it decide.</summary>
+    internal static Scope? ResolveScope(ManagerName manager, IPackage package, InstallOptions options) =>
+        package.OverridenOptions.WinGet_DropArchAndScope
+            ? null
+            : MapScope(manager, package.OverridenOptions.Scope ?? options.InstallationScope);
 
     private static Scope? MapScope(ManagerName manager, string? scope)
     {

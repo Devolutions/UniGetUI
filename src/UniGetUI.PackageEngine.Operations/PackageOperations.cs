@@ -168,8 +168,7 @@ namespace UniGetUI.PackageEngine.Operations
         }
 
         private bool RequiresAdminRights() =>
-            !Settings.Get(Settings.K.ProhibitElevation)
-            && (Package.OverridenOptions.RunAsAdministrator is true || Options.RunAsAdministrator);
+            BrokerRequestValidator.RequestsElevation(Package, Options);
 
         private volatile int _ranElevated = -1;
 

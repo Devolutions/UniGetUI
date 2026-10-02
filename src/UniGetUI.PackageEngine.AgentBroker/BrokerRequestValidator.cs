@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Devolutions.Now.Policy.Api;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -129,6 +130,23 @@ public static partial class BrokerRequestValidator
             AddIssue(issues, CheckInstallLocation(manager, installLocation));
         }
 
+        bool elevated = RequestsElevation(package, options);
+        if (elevated && ManagerRejectsElevation(manager))
+        {
+            issues.Add(CoreTools.Translate(
+                "{0} operations cannot run with administrator rights through the Devolutions Agent. Turn off \"Run as admin\" for this package.",
+                managerName));
+        }
+
+        // Pre/post commands would run with the elevated token, so the broker refuses them for
+        // elevated and machine-scope operations whatever the policy says.
+        if (HasPrePostCommands(options, role)
+            && (elevated || BrokerRequestBuilder.ResolveScope(manager, package, options) is Scope.Machine))
+        {
+            issues.Add(CoreTools.Translate(
+                "Pre-operation and post-operation commands cannot be used through the Devolutions Agent when the operation runs with administrator rights or for all users. Remove these commands, or turn off \"Run as admin\" and the machine-wide scope."));
+        }
+
         IReadOnlyList<string> parameters = customParameters ?? GetCustomParameters(options, role);
         string[] nonEmptyParameters = [.. parameters.Where(parameter => !string.IsNullOrWhiteSpace(parameter))];
         if (ManagerRejectsCustomParameters(manager) && nonEmptyParameters.Length > 0)
@@ -149,6 +167,36 @@ public static partial class BrokerRequestValidator
 
         return [.. issues.Distinct()];
     }
+
+    /// <summary>
+    /// Whether the operation asks the broker for elevation: the package's own requirement (for
+    /// example a WinGet installer that needs it) or the "Run as admin" option, unless elevation
+    /// is prohibited. Shared by the brokered operation and the installation options dialog.
+    /// </summary>
+    public static bool RequestsElevation(IPackage package, InstallOptions options) =>
+        !Settings.Get(Settings.K.ProhibitElevation)
+        && (package.OverridenOptions.RunAsAdministrator is true || options.RunAsAdministrator);
+
+    /// <summary>Managers whose broker command builder refuses elevated operations.</summary>
+    private static bool ManagerRejectsElevation(ManagerName manager) =>
+        manager
+            is ManagerName.Npm
+                or ManagerName.Scoop
+                or ManagerName.Bun
+                or ManagerName.Cargo
+                or ManagerName.Pip
+                or ManagerName.Vcpkg;
+
+    private static bool HasPrePostCommands(InstallOptions options, OperationType role) => role switch
+    {
+        OperationType.Install => !string.IsNullOrWhiteSpace(options.PreInstallCommand)
+            || !string.IsNullOrWhiteSpace(options.PostInstallCommand),
+        OperationType.Update => !string.IsNullOrWhiteSpace(options.PreUpdateCommand)
+            || !string.IsNullOrWhiteSpace(options.PostUpdateCommand),
+        OperationType.Uninstall => !string.IsNullOrWhiteSpace(options.PreUninstallCommand)
+            || !string.IsNullOrWhiteSpace(options.PostUninstallCommand),
+        _ => false,
+    };
 
     /// <summary>
     /// The managers whose broker command builder refuses every custom parameter. This is an

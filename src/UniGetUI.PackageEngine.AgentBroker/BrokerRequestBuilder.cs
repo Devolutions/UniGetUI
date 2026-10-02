@@ -187,7 +187,8 @@ public static class BrokerRequestBuilder
             return options.Version;
 
         // A pre-release install may resolve to a newer version than the one listed.
-        if (options.PreRelease || !BrokerRequestValidator.ManagerHasKnownVersionRules(manager))
+        if ((role is OperationType.Install && options.PreRelease)
+            || !BrokerRequestValidator.ManagerHasKnownVersionRules(manager))
             return null;
 
         string? candidate = role switch

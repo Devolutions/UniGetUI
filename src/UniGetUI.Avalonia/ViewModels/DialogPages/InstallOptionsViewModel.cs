@@ -528,8 +528,11 @@ public partial class InstallOptionsViewModel : ObservableObject
     /// reject and warns about custom WinGet installer arguments, using the same rules as the
     /// request builder so the user can fix them before starting the operation.
     /// </summary>
+    private int _brokerNoticesGeneration;
+
     private async Task RefreshBrokerNoticesAsync()
     {
+        int generation = Interlocked.Increment(ref _brokerNoticesGeneration);
         if (!IsBrokered(_package))
         {
             BrokerIssuesText = "";
@@ -538,6 +541,8 @@ public partial class InstallOptionsViewModel : ObservableObject
         }
 
         var op = CurrentOp();
+        string issuesText;
+        string customArgumentsWarning;
         try
         {
             var applied = await InstallOptionsFactory.LoadApplicableAsync(_package, overridePackageOptions: SnapshotOptions());
@@ -548,15 +553,22 @@ public partial class InstallOptionsViewModel : ObservableObject
                 applied,
                 op,
                 PackageOperation.GetBrokerInstallLocation(_package, applied, op)));
-            BrokerIssuesText = string.Join(Environment.NewLine, issues.Select(issue => "• " + issue));
-            BrokerCustomArgumentsWarning = DescribeBrokerCustomArgumentsRisk(applied, op);
+            issuesText = string.Join(Environment.NewLine, issues.Select(issue => "• " + issue));
+            customArgumentsWarning = DescribeBrokerCustomArgumentsRisk(applied, op);
         }
         catch (Exception ex)
         {
             Logger.Warn($"[InstallOptionsViewModel] Could not check the options against the package broker rules: {ex.Message}");
-            BrokerIssuesText = "";
-            BrokerCustomArgumentsWarning = "";
+            issuesText = "";
+            customArgumentsWarning = "";
         }
+
+        // Edits start overlapping refreshes; only the latest one may publish its result.
+        if (generation != _brokerNoticesGeneration)
+            return;
+
+        BrokerIssuesText = issuesText;
+        BrokerCustomArgumentsWarning = customArgumentsWarning;
     }
 
     private string DescribeBrokerCustomArgumentsRisk(InstallOptions applied, OperationType op)
@@ -575,7 +587,12 @@ public partial class InstallOptionsViewModel : ObservableObject
             _ => applied.CustomParameters_Install,
         };
 
-        return parameters.Count > 0 && applied.RunAsAdministrator
+        // Same elevation predicate as the brokered operation: the package's own requirement
+        // (e.g. a WinGet installer that needs elevation) counts as well as the checkbox.
+        bool runsElevated = !Settings.Get(Settings.K.ProhibitElevation)
+            && (_package.OverridenOptions.RunAsAdministrator is true || applied.RunAsAdministrator);
+
+        return parameters.Count > 0 && runsElevated
             ? CoreTools.Translate(
                 "Custom arguments are passed to WinGet by the Devolutions Agent, which runs this operation with administrator rights. Your organization's policy may block custom arguments.")
             : "";

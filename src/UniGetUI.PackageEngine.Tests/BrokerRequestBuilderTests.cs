@@ -584,6 +584,30 @@ public class BrokerRequestBuilderTests
     }
 
     [Fact]
+    public void FindProblems_ReportsTheCommandLineSafetyGuardsToo()
+    {
+        var problems = BrokerRequestBuilder.FindProblems(
+            BuildPackage("Winget", "-foo"), new InstallOptions(), OperationType.Install);
+
+        Assert.NotEmpty(problems);
+    }
+
+    [Fact]
+    public void FindProblems_IsEmptyForAValidRequest()
+    {
+        Assert.Empty(BrokerRequestBuilder.FindProblems(BuildWinGetPackage(), new InstallOptions(), OperationType.Install));
+    }
+
+    [Fact]
+    public void FindProblems_ReportsFieldValidationIssues()
+    {
+        var problems = BrokerRequestBuilder.FindProblems(
+            BuildWinGetPackage(), new InstallOptions(), OperationType.Install, "Tools\\App");
+
+        Assert.Single(problems);
+    }
+
+    [Fact]
     public void Build_DropsEmptyCustomParameters()
     {
         var options = new InstallOptions { CustomParameters_Install = ["", "--silent", "   "] };

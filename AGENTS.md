@@ -218,6 +218,14 @@ Use `CoreTools.Translate("text")` for all user-facing strings. Parameterized: `C
 - Manager initialization flows through `Initialize()` -> `_loadManagerExecutableFile()` -> `_loadManagerVersion()` -> `_performExtraLoadingSteps()`
 - Operations that may fail return `OperationVeredict` (note: intentional misspelling used throughout codebase)
 
+## Terminal UI
+
+- `src/UniGetUI.Tui` is the Consolonia terminal front-end. Pages must reach the engine through `TuiEngine` (never `PEInterface` directly), so that `--fake-data` can swap in the fake managers from `FakeData/`.
+- Run it with fake data: `dotnet run --project src/UniGetUI.Tui/UniGetUI.Tui.csproj -- --fake-data`. Nothing real is installed; all state lives in a sandbox.
+- Dialogs are in-window overlays (`Views/Dialogs/TuiModal`), not Avalonia popups. Popups capture input unreliably in Windows console hosts.
+- Colours come from the active theme: use `TuiPalette` brushes (`Theme/TuiPalette.cs`), never `Color.Parse` in a control, so themes and live theme switching reach it.
+- End-to-end tests in `src/UniGetUI.Tui.Tests/E2E` drive the real UI by keystrokes against the fake data set. Add a test for any new page action.
+
 ## Key Files
 
 | Purpose | Path |
@@ -233,3 +241,5 @@ Use `CoreTools.Translate("text")` for all user-facing strings. Parameterized: `C
 | Setting keys | `src/UniGetUI.Core.Settings/SettingsEngine_Names.cs` |
 | Logger | `src/UniGetUI.Core.Logger/Logger.cs` |
 | CI test workflow | `.github/workflows/dotnet-test.yml` |
+| Terminal UI (Consolonia) | `src/UniGetUI.Tui/` — see `docs/TUI.md` |
+| Terminal UI tests (E2E, fake data) | `src/UniGetUI.Tui.Tests/` |

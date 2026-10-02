@@ -53,10 +53,7 @@ public static class BrokerFailureDescriber
         ErrorCode? code = exception.BrokerError?.Code;
         if (exception.StatusCode is 401 || code is ErrorCode.Unauthorized or ErrorCode.Unauthenticated)
         {
-            return new(
-                CoreTools.Translate("UniGetUI is not authorized to use the Devolutions Agent"),
-                CoreTools.Translate(
-                    "The Devolutions Agent only accepts requests from signed, unmodified copies of UniGetUI. If you are running a development or self-built version, install an official release of UniGetUI and try again."));
+            return DescribeClientNotAuthorized();
         }
 
         if (code is ErrorCode.AdministratorRequired)
@@ -69,6 +66,21 @@ public static class BrokerFailureDescriber
 
         return null;
     }
+
+    /// <summary>
+    /// Explains a refused capabilities request. The broker only requires an authenticated client
+    /// there, so any 401 or 403 means it does not accept this copy of UniGetUI. Returns null
+    /// for other failures.
+    /// </summary>
+    public static BrokerFailureDescription? DescribeCapabilitiesAccessFailure(BrokerClientException exception) =>
+        DescribeAccessFailure(exception)
+        ?? (exception.StatusCode is 403 ? DescribeClientNotAuthorized() : null);
+
+    private static BrokerFailureDescription DescribeClientNotAuthorized() =>
+        new(
+            CoreTools.Translate("UniGetUI is not authorized to use the Devolutions Agent"),
+            CoreTools.Translate(
+                "The Devolutions Agent only accepts requests from signed, unmodified copies of UniGetUI. If you are running a development or self-built version, install an official release of UniGetUI and try again."));
 
     /// <summary>Explains a failed broker request.</summary>
     public static BrokerFailureDescription Describe(BrokerClientException exception)

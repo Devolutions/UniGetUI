@@ -240,6 +240,12 @@ public partial class InstallOptionsViewModel : ObservableObject
     [ObservableProperty] private string _postUninstallText = "";
     [ObservableProperty] private bool _abortUninstall;
 
+    partial void OnPreInstallTextChanged(string value) => Refresh();
+    partial void OnPostInstallTextChanged(string value) => Refresh();
+    partial void OnPreUpdateTextChanged(string value) => Refresh();
+    partial void OnPostUpdateTextChanged(string value) => Refresh();
+    partial void OnPreUninstallTextChanged(string value) => Refresh();
+    partial void OnPostUninstallTextChanged(string value) => Refresh();
     // ── Close apps tab ────────────────────────────────────────────────────────
     public ObservableCollection<KillProcessEntry> KillProcessEntries { get; } = [];
 

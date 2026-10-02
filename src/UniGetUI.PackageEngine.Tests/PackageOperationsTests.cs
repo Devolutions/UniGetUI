@@ -798,8 +798,12 @@ public sealed class PackageOperationsTests
         Assert.Contains("Versions before 2.0 are not allowed", message);
     }
 
-    [Fact]
-    public async Task BrokerRefusingTheCapabilitiesRequestIsReportedAsAnAuthorizationFailure()
+    [Theory]
+    [InlineData(401, BrokerApiErrorCode.Unauthorized)]
+    [InlineData(403, BrokerApiErrorCode.Forbidden)]
+    public async Task BrokerRefusingTheCapabilitiesRequestIsReportedAsAnAuthorizationFailure(
+        int statusCode,
+        BrokerApiErrorCode code)
     {
         bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
         BrokerFailureDescription? notified = null;
@@ -809,7 +813,7 @@ public sealed class PackageOperationsTests
         {
             var transport = new ScriptedBrokerTransport
             {
-                CapabilitiesError = (401, BrokerApiErrorCode.Unauthorized),
+                CapabilitiesError = (statusCode, code),
             };
 
             var (veredict, title, message) = await RunBrokeredOperationCapturingFailure(transport);

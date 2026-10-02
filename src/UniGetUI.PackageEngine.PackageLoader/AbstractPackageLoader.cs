@@ -269,8 +269,6 @@ namespace UniGetUI.PackageEngine.PackageLoader
             catch (Exception ex)
             {
                 Logger.Error(ex);
-                LastLoadReportedFailures = true;
-                IsLoading = false;
 
                 if (
                     !finishWasAnnounced
@@ -278,6 +276,9 @@ namespace UniGetUI.PackageEngine.PackageLoader
                     && LoadOperationIdentifier == current_identifier
                 )
                 {
+                    LastLoadReportedFailures = true;
+                    IsLoading = false;
+
                     try
                     {
                         InvokeFinishedLoadingEvent();

@@ -340,5 +340,39 @@ public sealed class PackageLoaderPipelineTests
         Assert.Equal(1, recorder.FinishedLoadingCount);
         Assert.True(loader.IsLoaded);
         Assert.NotNull(loader.LastLoadFinishedUtc);
+        Assert.False(loader.LastLoadReportedFailures);
+    }
+
+    [Fact]
+    public async Task ReloadPackages_LeavesAQueuedReloadUntouched_WhenAFinishedLoadingSubscriberThrows()
+    {
+        using var release = new ManualResetEventSlim(true);
+        var manager = new PackageManagerBuilder().Build();
+        var loader = new TestPackageLoader(
+            [manager],
+            loadPackages: _ =>
+            {
+                release.Wait();
+                return [];
+            }
+        );
+
+        Task? queued = null;
+        loader.FinishedLoading += (_, _) =>
+        {
+            if (queued is not null) return;
+            release.Reset();
+            queued = loader.ReloadPackages();
+        };
+        loader.FinishedLoading += (_, _) => throw new InvalidOperationException("the subscriber blew up");
+
+        await loader.ReloadPackages();
+
+        Assert.NotNull(queued);
+        Assert.True(loader.IsLoading);
+        Assert.False(loader.LastLoadReportedFailures);
+
+        release.Set();
+        await queued;
     }
 }

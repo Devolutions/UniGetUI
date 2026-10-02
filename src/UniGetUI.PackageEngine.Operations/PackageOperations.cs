@@ -39,10 +39,11 @@ namespace UniGetUI.PackageEngine.Operations
     {
         /// <summary>
         /// Raised when an operation that must be routed through the Devolutions Agent broker
-        /// cannot proceed because the broker is not available. The payload is a user-facing
-        /// error message. The UI layer subscribes to this to show an error message box.
+        /// cannot proceed because the broker is not available, or does not accept this client.
+        /// The payload is the user-facing title and message. The UI layer subscribes to this to
+        /// show an error message box.
         /// </summary>
-        public static event EventHandler<string>? BrokerUnavailable;
+        public static event EventHandler<BrokerFailureDescription>? BrokerUnavailable;
 
         /// <summary>
         /// Test seam: substitutes the transport used to reach the agent broker so tests can
@@ -561,7 +562,7 @@ namespace UniGetUI.PackageEngine.Operations
                 Line($"The agent broker did not accept this client: {ex.Message}", LineType.Error);
                 Logger.Error($"[AgentBroker] Capabilities request was refused (HTTP {ex.StatusCode}, {ex.BrokerError?.Code}): {ex.Message}");
                 FailWith(accessFailure);
-                BrokerUnavailable?.Invoke(this, accessFailure.Message);
+                BrokerUnavailable?.Invoke(this, accessFailure);
                 return OperationVeredict.Failure;
             }
             catch (BrokerClientException ex) when (ex.Kind is BrokerClientErrorKind.BrokerUnavailable)
@@ -920,7 +921,7 @@ namespace UniGetUI.PackageEngine.Operations
                 "The Devolutions Agent broker is not available. The operation cannot be performed. Please ensure the Devolutions Agent is installed and running.");
             Metadata.FailureTitle = CoreTools.Translate("Agent broker unavailable");
             Metadata.FailureMessage = message;
-            BrokerUnavailable?.Invoke(this, message);
+            BrokerUnavailable?.Invoke(this, new BrokerFailureDescription(Metadata.FailureTitle, message));
             return OperationVeredict.Failure;
         }
 

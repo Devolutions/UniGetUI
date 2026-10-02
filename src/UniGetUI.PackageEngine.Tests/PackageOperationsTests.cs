@@ -8,6 +8,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
+using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.NpmManager;
@@ -801,8 +802,8 @@ public sealed class PackageOperationsTests
     public async Task BrokerRefusingTheCapabilitiesRequestIsReportedAsAnAuthorizationFailure()
     {
         bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
-        string? notifiedMessage = null;
-        EventHandler<string> onBrokerUnavailable = (_, message) => notifiedMessage = message;
+        BrokerFailureDescription? notified = null;
+        EventHandler<BrokerFailureDescription> onBrokerUnavailable = (_, failure) => notified = failure;
         PackageOperation.BrokerUnavailable += onBrokerUnavailable;
         try
         {
@@ -816,7 +817,8 @@ public sealed class PackageOperationsTests
             Assert.Equal(OperationVeredict.Failure, veredict);
             Assert.Equal(CoreTools.Translate("UniGetUI is not authorized to use the Devolutions Agent"), title);
             Assert.Contains("signed", message);
-            Assert.Equal(message, notifiedMessage);
+            Assert.Equal(title, notified?.Title);
+            Assert.Equal(message, notified?.Message);
             Assert.DoesNotContain("/v1/package-operations/execute", transport.RequestedPaths);
         }
         finally
@@ -891,7 +893,7 @@ public sealed class PackageOperationsTests
             .Build();
         var package = new PackageBuilder().WithManager(manager).Build();
         string? notifiedMessage = null;
-        EventHandler<string> onBrokerUnavailable = (_, message) => notifiedMessage = message;
+        EventHandler<BrokerFailureDescription> onBrokerUnavailable = (_, failure) => notifiedMessage = failure.Message;
         PackageOperation.BrokerUnavailable += onBrokerUnavailable;
         PackageOperation.BrokerTransportFactory = () => transport;
         Settings.Set(Settings.K.UseAgentBroker, true);

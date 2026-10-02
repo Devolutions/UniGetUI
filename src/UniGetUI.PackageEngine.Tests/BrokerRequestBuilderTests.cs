@@ -396,6 +396,16 @@ public class BrokerRequestBuilderTests
         Assert.Null(request.Package.Version);
     }
 
+    [Fact]
+    public void Build_SendsTheTargetVersionForUpdatesEvenWithPreReleaseEnabled()
+    {
+        var package = BuildPackage("Winget", "Contoso.Test", "1.0.0", "2.0.0-beta.1");
+
+        var request = BrokerRequestBuilder.Build(package, new InstallOptions { PreRelease = true }, OperationType.Update);
+
+        Assert.Equal("2.0.0-beta.1", request.Package.Version);
+    }
+
     [Theory]
     [InlineData("Winget", "Unknown")]
     [InlineData("Winget", "< 1.2")]

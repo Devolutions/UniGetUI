@@ -137,7 +137,7 @@ internal static class AvaloniaBootstrapper
             Secrets.GetOpenSearchUsername(),
             Secrets.GetOpenSearchPassword());
         AbstractOperation.QueueDrained += (_, _) => _ = TelemetryHandler.FlushPackageEventsAsync();
-        PackageOperation.BrokerUnavailable += (_, message) =>
+        PackageOperation.BrokerUnavailable += (_, failure) =>
             Dispatcher.UIThread.Post(async void () =>
             {
                 // Runs on the UI thread, so the flag needs no synchronization.
@@ -146,8 +146,8 @@ internal static class AvaloniaBootstrapper
                 try
                 {
                     await new SimpleErrorDialog(
-                        CoreTools.Translate("Agent broker unavailable"),
-                        message).ShowDialog(owner);
+                        failure.Title,
+                        failure.Message).ShowDialog(owner);
                 }
                 catch (Exception ex)
                 {

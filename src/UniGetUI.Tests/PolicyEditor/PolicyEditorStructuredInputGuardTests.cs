@@ -1232,6 +1232,20 @@ public class PolicyEditorStructuredInputGuardTests
         Assert.DoesNotContain("authenticate", message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData(ErrorCode.AdministratorRequired, "administrator")]
+    [InlineData(ErrorCode.Forbidden, "administrator")]
+    [InlineData(ErrorCode.Unauthorized, "signed")]
+    [InlineData(ErrorCode.Unauthenticated, "signed")]
+    public void AuthorizationRejection_ExplainsWhoCanChangeThePolicy(ErrorCode code, string expected)
+    {
+        string message = PolicyEditorDialogViewModel.DescribeWriteFailure(
+            PolicyWriteFailureKind.BrokerRejected,
+            code);
+
+        Assert.Contains(expected, message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void MalformedDraftRejection_ExplainsSafeRecovery()
     {

@@ -28,6 +28,7 @@ using BrokerOperationStatus = Devolutions.Now.Policy.Api.OperationStatus;
 using BrokerStatusResponse = Devolutions.Now.Policy.Api.StatusResponse;
 using OperationCancelQuery = Devolutions.Now.Policy.Client.OperationCancelQuery;
 using OperationStatusQuery = Devolutions.Now.Policy.Client.OperationStatusQuery;
+using PackageOperationRequest = Devolutions.Now.Policy.Client.PackageOperationRequest;
 #if WINDOWS
 using UniGetUI.PackageEngine.Managers.WingetManager;
 #endif
@@ -405,12 +406,42 @@ namespace UniGetUI.PackageEngine.Operations
                 return HandleBrokerUnavailable();
             }
 
+            // Fetch the capabilities up front: the broker requires an authenticated client for
+            // them, so this is where an unsigned or modified build is turned away. The client
+            // caches the response for the request below.
+            if (await ProbeBrokerCapabilities(client) is { } capabilitiesFailure)
+            {
+                return capabilitiesFailure;
+            }
+
             // Resolve the install location the same way the local WinGet path does, so the
             // portable-install safeguard (registry-detected location) is not bypassed.
             string? effectiveInstallLocation = GetBrokerEffectiveInstallLocation();
 
             // Build the broker request.
-            var request = BrokerRequestBuilder.Build(Package, Options, Role, effectiveInstallLocation);
+            PackageOperationRequest request;
+            try
+            {
+                request = BrokerRequestBuilder.Build(Package, Options, Role, effectiveInstallLocation);
+            }
+            catch (BrokerRequestValidationException ex)
+            {
+                foreach (string issue in ex.Issues)
+                {
+                    Line(issue, LineType.Error);
+                }
+
+                Logger.Warn($"[AgentBroker] Request for {Package.Id} not sent: {ex.Message}");
+                return FailWith(BrokerFailureDescriber.DescribeValidation(ex.Issues));
+            }
+            catch (InvalidOperationException ex)
+            {
+                // A value that would be read as a command-line option or split into further
+                // arguments; the broker would reject it as well.
+                Line(ex.Message, LineType.Error);
+                Logger.Warn($"[AgentBroker] Request for {Package.Id} not sent: {ex.Message}");
+                return FailWith(BrokerFailureDescriber.DescribeValidation([ex.Message]));
+            }
 
             Line($"Sending request to broker: {request.RequestId}", LineType.VerboseDetails);
             Line($"  Package: {request.Package.Id} ({request.Operation})", LineType.VerboseDetails);
@@ -426,11 +457,10 @@ namespace UniGetUI.PackageEngine.Operations
 
                 if (execution.Decision.Decision != BrokerDecision.Allow)
                 {
-                    string denialReason = execution.Decision.Reason ?? CoreTools.Translate("No reason provided");
-                    Line($"Operation denied by policy: {denialReason}", LineType.Error);
-                    Metadata.FailureTitle = CoreTools.Translate("Operation denied by policy");
-                    Metadata.FailureMessage = denialReason;
-                    return OperationVeredict.Failure;
+                    Line(
+                        $"Operation denied by policy: rule={execution.Decision.RuleId}, reason={execution.Decision.Reason}",
+                        LineType.Error);
+                    return FailWith(BrokerFailureDescriber.DescribeDenial(execution.Decision));
                 }
 
                 if (execution.Operation is null)
@@ -503,10 +533,55 @@ namespace UniGetUI.PackageEngine.Operations
             {
                 Line($"Broker operation failed: {ex.Message}", LineType.Error);
                 Logger.Error($"[AgentBroker] Broker operation failed: {ex}");
-                Metadata.FailureTitle = CoreTools.Translate(GetBrokerFailureTitle(ex.Kind));
-                Metadata.FailureMessage = ex.Message;
+                return FailWith(BrokerFailureDescriber.Describe(ex));
+            }
+        }
+
+        /// <summary>
+        /// Fetches the broker capabilities before the request is built. Returns the failure
+        /// veredict when the broker cannot be used, or null to continue.
+        /// </summary>
+        private async Task<OperationVeredict?> ProbeBrokerCapabilities(BrokerClient client)
+        {
+            try
+            {
+                await client.GetCapabilities(CancellationToken);
+                return null;
+            }
+            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+            {
+                Line("Broker operation was canceled.", LineType.Information);
+                return OperationVeredict.Canceled;
+            }
+            catch (BrokerClientException ex) when (BrokerFailureDescriber.DescribeAccessFailure(ex) is { } accessFailure)
+            {
+                // The broker is running but does not accept this client: report it as
+                // unavailable for this copy of UniGetUI, with the reason, instead of a
+                // generic failure on the operation request.
+                Line($"The agent broker did not accept this client: {ex.Message}", LineType.Error);
+                Logger.Error($"[AgentBroker] Capabilities request was refused (HTTP {ex.StatusCode}, {ex.BrokerError?.Code}): {ex.Message}");
+                FailWith(accessFailure);
+                BrokerUnavailable?.Invoke(this, accessFailure.Message);
                 return OperationVeredict.Failure;
             }
+            catch (BrokerClientException ex) when (ex.Kind is BrokerClientErrorKind.BrokerUnavailable)
+            {
+                Logger.Error($"[AgentBroker] Broker became unavailable while reading its capabilities: {ex}");
+                return HandleBrokerUnavailable();
+            }
+            catch (BrokerClientException ex)
+            {
+                Line($"Could not read the broker capabilities: {ex.Message}", LineType.Error);
+                Logger.Error($"[AgentBroker] Capabilities request failed: {ex}");
+                return FailWith(BrokerFailureDescriber.Describe(ex));
+            }
+        }
+
+        private OperationVeredict FailWith(BrokerFailureDescription description)
+        {
+            Metadata.FailureTitle = description.Title;
+            Metadata.FailureMessage = description.Message;
+            return OperationVeredict.Failure;
         }
 
         /// <summary>
@@ -820,9 +895,13 @@ namespace UniGetUI.PackageEngine.Operations
             }
 
             // Operation failed — surface a user-visible error.
-            string reason = status.Message ?? $"Exit code: {status.ExitCode}";
+            string reason = string.IsNullOrWhiteSpace(status.Message)
+                ? CoreTools.Translate(
+                    "The package manager run by the Devolutions Agent reported an error (exit code {0}).",
+                    status.ExitCode?.ToString() ?? "?")
+                : status.Message;
             Line($"Operation failed via broker: {reason}", LineType.Error);
-            Metadata.FailureTitle = CoreTools.Translate("Operation denied or failed via broker");
+            Metadata.FailureTitle = CoreTools.Translate("Operation failed via broker");
             Metadata.FailureMessage = reason;
             return OperationVeredict.Failure;
         }
@@ -949,15 +1028,6 @@ namespace UniGetUI.PackageEngine.Operations
 
             return $"{Environment.UserDomainName}\\{Environment.UserName}";
         }
-
-        private static string GetBrokerFailureTitle(BrokerClientErrorKind kind) =>
-            kind switch
-            {
-                BrokerClientErrorKind.PolicyDenied => "Operation denied by policy",
-                BrokerClientErrorKind.UnsupportedCapability => "Operation unsupported by broker",
-                BrokerClientErrorKind.Timeout => "Broker communication error",
-                _ => "Operation failed via broker",
-            };
 
         protected sealed override Task<OperationVeredict> GetProcessVeredict(
             int ReturnCode,

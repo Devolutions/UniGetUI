@@ -302,7 +302,7 @@ public static partial class BrokerRequestValidator
         if (Encoding.UTF8.GetByteCount(version) > MaxVersionLength)
         {
             return CoreTools.Translate(
-                "The version \"{0}\" is longer than the {1} characters the Devolutions Agent accepts.",
+                "The version \"{0}\" is longer than the Devolutions Agent accepts (at most {1} bytes).",
                 version,
                 MaxVersionLength);
         }
@@ -350,7 +350,7 @@ public static partial class BrokerRequestValidator
         if (Encoding.UTF8.GetByteCount(id) > MaxPackageIdLength)
         {
             return CoreTools.Translate(
-                "The package identifier \"{0}\" is longer than the {1} characters the Devolutions Agent accepts.",
+                "The package identifier \"{0}\" is longer than the Devolutions Agent accepts (at most {1} bytes).",
                 id,
                 MaxPackageIdLength);
         }
@@ -438,7 +438,7 @@ public static partial class BrokerRequestValidator
         if (Encoding.UTF8.GetByteCount(parameter) > MaxCustomParameterLength)
         {
             return CoreTools.Translate(
-                "The custom argument \"{0}\" is longer than the {1} characters the Devolutions Agent accepts.",
+                "The custom argument \"{0}\" is longer than the Devolutions Agent accepts (at most {1} bytes).",
                 parameter,
                 MaxCustomParameterLength);
         }

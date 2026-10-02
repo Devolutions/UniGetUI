@@ -527,8 +527,12 @@ public partial class InstallOptionsViewModel : ObservableObject
     private async Task RefreshCommandPreviewAsync()
     {
         if (!_uiLoaded) return;
-        CommandPreview = await BuildCurrentCommandAsync();
-        await RefreshBrokerNoticesAsync();
+        // Edits start overlapping refreshes; only the latest one may publish its results.
+        int generation = Interlocked.Increment(ref _refreshGeneration);
+        string command = await BuildCurrentCommandAsync();
+        if (generation != _refreshGeneration) return;
+        CommandPreview = command;
+        await RefreshBrokerNoticesAsync(generation);
     }
 
     /// <summary>
@@ -536,11 +540,10 @@ public partial class InstallOptionsViewModel : ObservableObject
     /// reject and warns about custom WinGet installer arguments, using the same rules as the
     /// request builder so the user can fix them before starting the operation.
     /// </summary>
-    private int _brokerNoticesGeneration;
+    private int _refreshGeneration;
 
-    private async Task RefreshBrokerNoticesAsync()
+    private async Task RefreshBrokerNoticesAsync(int generation)
     {
-        int generation = Interlocked.Increment(ref _brokerNoticesGeneration);
         if (!IsBrokered(_package))
         {
             BrokerIssuesText = "";
@@ -571,8 +574,7 @@ public partial class InstallOptionsViewModel : ObservableObject
             customArgumentsWarning = "";
         }
 
-        // Edits start overlapping refreshes; only the latest one may publish its result.
-        if (generation != _brokerNoticesGeneration)
+        if (generation != _refreshGeneration)
             return;
 
         // Assigning bound text is not reliably announced, so route changes through the app's

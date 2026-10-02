@@ -36,14 +36,8 @@ public static class BrokerRequestBuilder
 
         // The broker refuses empty custom parameters; blank ones carry nothing, so they are dropped.
         List<string> customParameters = [.. GetCustomParameters(options, role).Where(parameter => !string.IsNullOrWhiteSpace(parameter))];
-        if (
-            manager is ManagerName.PowerShell
-            && role is OperationType.Install
-            && package.OverridenOptions.PowerShell_AllowClobber
-        )
-            customParameters = [.. customParameters, "-AllowClobber"];
 
-        // Validate what will actually be sent, including parameters added by a retry.
+        // Validate what will actually be sent.
         IReadOnlyList<string> issues = BrokerRequestValidator.Validate(
             package,
             options,
@@ -125,6 +119,17 @@ public static class BrokerRequestBuilder
             return [ex.Message];
         }
     }
+
+    /// <summary>
+    /// Whether the operation is the local PowerShell 5 retry that adds <c>-AllowClobber</c>
+    /// after a command conflict. The broker accepts no PowerShell custom parameter, so the retry
+    /// cannot be sent and the conflict has to be reported instead.
+    /// </summary>
+    public static bool IsUnsupportedAllowClobberRetry(IPackage package, OperationType role) =>
+        role is OperationType.Install
+        && package.OverridenOptions.PowerShell_AllowClobber
+        && TryMapManagerName(package.Manager.Name, out ManagerName manager)
+        && manager is ManagerName.PowerShell;
 
     private static Operation MapOperation(OperationType role) => role switch
     {

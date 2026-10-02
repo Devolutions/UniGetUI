@@ -600,8 +600,7 @@ public partial class InstallOptionsViewModel : ObservableObject
 
         // Same elevation predicate as the brokered operation: the package's own requirement
         // (e.g. a WinGet installer that needs elevation) counts as well as the checkbox.
-        bool runsElevated = !Settings.Get(Settings.K.ProhibitElevation)
-            && (_package.OverridenOptions.RunAsAdministrator is true || applied.RunAsAdministrator);
+        bool runsElevated = BrokerRequestValidator.RequestsElevation(_package, applied);
 
         return parameters.Count > 0 && runsElevated
             ? CoreTools.Translate(

@@ -467,6 +467,12 @@ public sealed class PolicyEditorDialogViewModel : ObservableObject, IDisposable
             PolicyWriteFailureKind.BrokerRejected
                 when errorCode == ErrorCode.MalformedDraft =>
                 CoreTools.Translate("Devolutions Agent rejected the policy draft as malformed. Refresh policy management state, then review the policy before retrying."),
+            PolicyWriteFailureKind.BrokerRejected
+                when errorCode is ErrorCode.AdministratorRequired or ErrorCode.Forbidden =>
+                CoreTools.Translate("Only an administrator running with elevated rights can change the package broker policy. No changes were saved."),
+            PolicyWriteFailureKind.BrokerRejected
+                when errorCode is ErrorCode.Unauthorized or ErrorCode.Unauthenticated =>
+                CoreTools.Translate("Devolutions Agent only accepts policy changes from signed, unmodified copies of UniGetUI. No changes were saved."),
             PolicyWriteFailureKind.BrokerRejected =>
                 CoreTools.Translate("Devolutions Agent rejected the policy replacement."),
             PolicyWriteFailureKind.WriteResultUnknown =>

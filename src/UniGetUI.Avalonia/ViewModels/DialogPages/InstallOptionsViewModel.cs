@@ -12,6 +12,7 @@ using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
 using UniGetUI.Core.Tools.Scheduling;
+using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -194,6 +195,25 @@ public partial class InstallOptionsViewModel : ObservableObject
 
     partial void OnSelectedArchChanged(string? value) => Refresh();
     partial void OnSelectedScopeChanged(string? value) => Refresh();
+    partial void OnLocationTextChanged(string value) => Refresh();
+
+    // ── Package broker notices ────────────────────────────────────────────────
+    /// <summary>Why the Devolutions Agent would reject the current options, one item per line.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BrokerIssuesVisible))]
+    private string _brokerIssuesText = "";
+
+    public bool BrokerIssuesVisible => BrokerIssuesText.Length > 0;
+
+    public string BrokerIssuesHeaderLabel { get; } = CoreTools.Translate(
+        "These options cannot be used through the Devolutions Agent, which will refuse the operation:");
+
+    /// <summary>Warning about custom WinGet arguments when the operation goes through the Devolutions Agent.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BrokerCustomArgumentsWarningVisible))]
+    private string _brokerCustomArgumentsWarning = "";
+
+    public bool BrokerCustomArgumentsWarningVisible => BrokerCustomArgumentsWarning.Length > 0;
 
     // ── CLI params tab ────────────────────────────────────────────────────────
     [ObservableProperty] private string _paramsInstall = "";
@@ -499,7 +519,66 @@ public partial class InstallOptionsViewModel : ObservableObject
     {
         if (!_uiLoaded) return;
         CommandPreview = await BuildCurrentCommandAsync();
+        await RefreshBrokerNoticesAsync();
     }
+
+    /// <summary>
+    /// When the operation goes through the Devolutions Agent, explains the options it would
+    /// reject and warns about custom WinGet installer arguments, using the same rules as the
+    /// request builder so the user can fix them before starting the operation.
+    /// </summary>
+    private async Task RefreshBrokerNoticesAsync()
+    {
+        if (!IsBrokered(_package))
+        {
+            BrokerIssuesText = "";
+            BrokerCustomArgumentsWarning = "";
+            return;
+        }
+
+        var op = CurrentOp();
+        try
+        {
+            var applied = await InstallOptionsFactory.LoadApplicableAsync(_package, overridePackageOptions: SnapshotOptions());
+            string? location = op is OperationType.Uninstall ? null : applied.CustomInstallLocation;
+            var issues = BrokerRequestValidator.Validate(_package, applied, op, location);
+            BrokerIssuesText = string.Join(Environment.NewLine, issues.Select(issue => "• " + issue));
+            BrokerCustomArgumentsWarning = DescribeBrokerCustomArgumentsRisk(applied, op);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[InstallOptionsViewModel] Could not check the options against the package broker rules: {ex.Message}");
+            BrokerIssuesText = "";
+            BrokerCustomArgumentsWarning = "";
+        }
+    }
+
+    private string DescribeBrokerCustomArgumentsRisk(InstallOptions applied, OperationType op)
+    {
+        if (!_package.Manager.Name.Equals("Winget", StringComparison.OrdinalIgnoreCase))
+            return "";
+
+        if (BrokerRequestValidator.UsesWinGetInstallerArguments(_package, applied, op))
+            return CoreTools.Translate(
+                "--override and --custom pass arbitrary arguments to the package installer. Through the Devolutions Agent, the installer can run with administrator rights, so your organization's policy may block these arguments.");
+
+        List<string> parameters = op switch
+        {
+            OperationType.Update => applied.CustomParameters_Update,
+            OperationType.Uninstall => applied.CustomParameters_Uninstall,
+            _ => applied.CustomParameters_Install,
+        };
+
+        return parameters.Count > 0 && applied.RunAsAdministrator
+            ? CoreTools.Translate(
+                "Custom arguments are passed to WinGet by the Devolutions Agent, which runs this operation with administrator rights. Your organization's policy may block custom arguments.")
+            : "";
+    }
+
+    private static bool IsBrokered(IPackage package) =>
+        Settings.Get(Settings.K.UseAgentBroker)
+        && BrokerRequestBuilder.SupportsManager(package.Manager.Name)
+        && !package.Source.IsVirtualManager;
 
     /// <summary>Builds the CLI command for the currently selected operation and options,
     /// identical to the live preview. Used by the Copy / Open-in-terminal actions.</summary>

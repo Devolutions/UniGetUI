@@ -225,6 +225,29 @@
             </Grid>
         </Border>
 
+        <!-- ── Package broker notices (only when the operation goes through the Devolutions Agent) ── -->
+        <Border Background="{DynamicResource InstallOptionsTabBackground}" CornerRadius="8" Padding="16,8"
+                IsVisible="{Binding BrokerIssuesVisible}">
+            <StackPanel Spacing="4">
+                <TextBlock Text="{Binding BrokerIssuesHeaderLabel}"
+                           Foreground="{DynamicResource StatusErrorForeground}"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"/>
+                <SelectableTextBlock Text="{Binding BrokerIssuesText}"
+                                     automation:AutomationProperties.Name="{Binding BrokerIssuesText}"
+                                     automation:AutomationProperties.LiveSetting="Polite"
+                                     TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource InstallOptionsTabBackground}" CornerRadius="8" Padding="16,8"
+                IsVisible="{Binding BrokerCustomArgumentsWarningVisible}">
+            <TextBlock Text="{Binding BrokerCustomArgumentsWarning}"
+                       automation:AutomationProperties.LiveSetting="Polite"
+                       Foreground="{DynamicResource StatusWarningForeground}"
+                       TextWrapping="Wrap"/>
+        </Border>
+
         <!-- ── Options area + lock overlay ── -->
         <Grid>
           <Border Margin="-6"

@@ -65,6 +65,14 @@ public static class BrokerRequestBuilder
                 );
         }
 
+        IReadOnlyList<string> issues = BrokerRequestValidator.Validate(
+            package,
+            options,
+            role,
+            effectiveInstallLocation);
+        if (issues.Count > 0)
+            throw new BrokerRequestValidationException(issues);
+
         List<string> customParameters = GetCustomParameters(options, role);
         if (
             manager is ManagerName.PowerShell
@@ -90,7 +98,7 @@ public static class BrokerRequestBuilder
             Package = new RequestPackage
             {
                 Id = package.Id,
-                Version = string.IsNullOrEmpty(options.Version) ? null : options.Version,
+                Version = ResolveVersion(manager, package, options, role),
                 Architecture = dropArchAndScope ? null : MapArchitecture(options.Architecture),
             },
             Options = new RequestOptions
@@ -149,7 +157,52 @@ public static class BrokerRequestBuilder
                 or ManagerName.Scoop
                 or ManagerName.Npm;
 
-    private static bool TryMapManagerName(string managerName, out ManagerName mapped)
+    /// <summary>
+    /// The concrete version the operation installs, when UniGetUI knows it.
+    /// </summary>
+    /// <remarks>
+    /// The broker evaluates version conditions against the version sent in the request: a Deny
+    /// rule with a version condition matches a request whose version is unknown. So the version
+    /// is resolved here instead of letting the package manager pick "the latest": the one the
+    /// user selected, else the one shown for an install, else the one an update moves to.
+    /// A known version the broker would not accept for the manager is omitted rather than sent,
+    /// and uninstalls never carry a version, since version conditions do not apply to them.
+    /// </remarks>
+    internal static string? ResolveVersion(
+        ManagerName manager,
+        IPackage package,
+        InstallOptions options,
+        OperationType role)
+    {
+        if (role is OperationType.Uninstall || !BrokerRequestValidator.ManagerAcceptsVersion(manager))
+            return null;
+
+        if (role is OperationType.Install && options.Version.Length > 0)
+            return options.Version;
+
+        // A pre-release install may resolve to a newer version than the one listed.
+        if (options.PreRelease || !BrokerRequestValidator.ManagerHasKnownVersionRules(manager))
+            return null;
+
+        string? candidate = role switch
+        {
+            OperationType.Install when package.HasConcreteVersion => package.VersionString,
+            OperationType.Update when package.IsUpgradable => package.NewVersionString,
+            _ => null,
+        };
+
+        if (
+            string.IsNullOrWhiteSpace(candidate)
+            || candidate.Equals("Unknown", StringComparison.OrdinalIgnoreCase)
+            || !CoreTools.IsOptionSafeValue(candidate)
+            || BrokerRequestValidator.CheckVersion(manager, package.Manager.DisplayName, candidate) is not null
+        )
+            return null;
+
+        return candidate;
+    }
+
+    internal static bool TryMapManagerName(string managerName, out ManagerName mapped)
     {
         ManagerName? result = managerName.ToLowerInvariant() switch
         {

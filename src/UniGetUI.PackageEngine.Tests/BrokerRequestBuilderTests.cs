@@ -624,6 +624,66 @@ public class BrokerRequestBuilderTests
         Assert.Equal(version, request.Package.Version);
     }
 
+    [Theory]
+    [InlineData("1.2.3-01")]
+    [InlineData("01.2.3")]
+    [InlineData("99999999999999999999.0.0")]
+    public void Build_RefusesBunVersionsThatAreNotCanonicalSemanticVersions(string version)
+    {
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage("Bun"), new InstallOptions { Version = version }, OperationType.Install));
+    }
+
+    [Theory]
+    [InlineData("1.2.3-rc.1")]
+    [InlineData("1.2.3-0a")]
+    [InlineData("1.2.3+build.01")]
+    public void Build_KeepsCanonicalBunVersions(string version)
+    {
+        var request = BrokerRequestBuilder.Build(
+            BuildPackage("Bun"), new InstallOptions { Version = version }, OperationType.Install);
+
+        Assert.Equal(version, request.Package.Version);
+    }
+
+    [Theory]
+    [InlineData(OperationType.Update)]
+    [InlineData(OperationType.Uninstall)]
+    public void Build_IgnoresASavedInstallVersionForOtherOperations(OperationType role)
+    {
+        var options = new InstallOptions { Version = "/latest" };
+
+        var request = BrokerRequestBuilder.Build(BuildWinGetPackage(), options, role);
+
+        Assert.Null(request.Package.Version);
+    }
+
+    [Fact]
+    public void Build_RefusesPackageIdentifiersLongerThanTheBrokerAccepts()
+    {
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage("Winget", "Contoso." + new string('a', 260)), new InstallOptions(), OperationType.Install));
+    }
+
+    [Fact]
+    public void Build_RefusesCustomParametersLongerThanTheBrokerAccepts()
+    {
+        var options = new InstallOptions { CustomParameters_Install = ["--log=" + new string('a', 520)] };
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildWinGetPackage(), options, OperationType.Install));
+    }
+
+    [Fact]
+    public void Build_DropsEmptyCustomParameters()
+    {
+        var options = new InstallOptions { CustomParameters_Install = ["", "--silent", ""] };
+
+        var request = BrokerRequestBuilder.Build(BuildWinGetPackage(), options, OperationType.Install);
+
+        Assert.Equal(["--silent"], request.Options.CustomParameters);
+    }
+
     [Fact]
     public void Build_RefusesBunVersionsLongerThanTheBrokerAccepts()
     {
@@ -694,6 +754,9 @@ public class BrokerRequestBuilderTests
     [InlineData("Cargo", "my crate")]
     [InlineData("Pip", "requests[security]")]
     [InlineData("Winget", "Contoso.App&Other")]
+    [InlineData("Npm", "eslint-v9:eslint@^9.x")]
+    [InlineData("Winget", "Contoso App")]
+    [InlineData("Winget", "Contoso.Äpp")]
     public void Build_RefusesPackageIdentifiersTheBrokerRejects(string managerName, string id)
     {
         Assert.ThrowsAny<InvalidOperationException>(() => BrokerRequestBuilder.Build(
@@ -704,7 +767,7 @@ public class BrokerRequestBuilderTests
     [InlineData("Chocolatey", "notepadplusplus.install")]
     [InlineData("Chocolatey", "allure")]
     [InlineData("Npm", "@contoso/tool")]
-    [InlineData("Npm", "eslint-v9:eslint@^9.x")]
+    [InlineData("Npm", "eslint-v9:eslint@9.0.0")]
     [InlineData("Bun", "@contoso/tool")]
     [InlineData("PowerShell", "Az.Accounts")]
     [InlineData("Scoop", "7zip")]

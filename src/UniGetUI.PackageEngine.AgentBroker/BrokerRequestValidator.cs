@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using Devolutions.Now.Policy.Api;
 using UniGetUI.Core.Tools;
@@ -32,6 +34,8 @@ public static partial class BrokerRequestValidator
     private const string BatchMetacharactersDisplay = "\" % ! ^ & | < >";
     private const int MaxVersionLength = 128;
     private const int MaxSourceNameLength = 128;
+    private const int MaxPackageIdLength = 256;
+    private const int MaxCustomParameterLength = 512;
 
     /// <summary>
     /// Returns a localized explanation for every field of the given operation that the package
@@ -90,7 +94,8 @@ public static partial class BrokerRequestValidator
         }
         else
         {
-            foreach (string parameter in parameters)
+            // Empty entries are dropped from the request rather than sent.
+            foreach (string parameter in parameters.Where(parameter => parameter.Length > 0))
             {
                 AddIssue(issues, CheckCustomParameter(manager, managerName, parameter));
             }
@@ -200,9 +205,17 @@ public static partial class BrokerRequestValidator
                 managerName);
         }
 
+        if (Encoding.UTF8.GetByteCount(version) > MaxVersionLength)
+        {
+            return CoreTools.Translate(
+                "The version \"{0}\" is longer than the {1} characters the Devolutions Agent accepts.",
+                version,
+                MaxVersionLength);
+        }
+
         if (manager is ManagerName.Bun)
         {
-            return version.Length <= MaxVersionLength && SemanticVersionRegex().IsMatch(version)
+            return IsCanonicalSemanticVersion(version)
                 ? null
                 : CoreTools.Translate(
                     "{0} package versions must be complete semantic versions, such as 1.2.3.",
@@ -243,6 +256,20 @@ public static partial class BrokerRequestValidator
     /// <summary>Returns a localized explanation when the broker would reject the package identifier.</summary>
     internal static string? CheckPackageId(ManagerName manager, string managerName, string id)
     {
+        // Every request is refused while it is read when its identifier breaks the API-wide rules.
+        if (Encoding.UTF8.GetByteCount(id) > MaxPackageIdLength)
+        {
+            return CoreTools.Translate(
+                "The package identifier \"{0}\" is longer than the {1} characters the Devolutions Agent accepts.",
+                id,
+                MaxPackageIdLength);
+        }
+
+        if (id.Length == 0 || !id.All(IsPackageIdCharacter))
+        {
+            return InvalidIdIssue(managerName, id);
+        }
+
         string? issue = manager switch
         {
             ManagerName.Chocolatey when !IsNuGetStylePackageId(id) => CoreTools.Translate(
@@ -318,6 +345,14 @@ public static partial class BrokerRequestValidator
     /// <summary>Returns a localized explanation when the broker would reject a custom parameter.</summary>
     internal static string? CheckCustomParameter(ManagerName manager, string managerName, string parameter)
     {
+        if (Encoding.UTF8.GetByteCount(parameter) > MaxCustomParameterLength)
+        {
+            return CoreTools.Translate(
+                "The custom argument \"{0}\" is longer than the {1} characters the Devolutions Agent accepts.",
+                parameter,
+                MaxCustomParameterLength);
+        }
+
         if (RunsThroughBatchScript(manager) && parameter.IndexOfAny(BatchMetacharacters) >= 0)
         {
             return CoreTools.Translate(
@@ -508,8 +543,26 @@ public static partial class BrokerRequestValidator
         }
     }
 
+    /// <summary>
+    /// A SemVer 2.0 version with the canonical numeric rules the broker parser applies: no
+    /// leading zeros in numeric identifiers, and release components that fit 64 bits.
+    /// </summary>
+    internal static bool IsCanonicalSemanticVersion(string version)
+    {
+        Match match = SemanticVersionRegex().Match(version);
+        return match.Success
+            && ulong.TryParse(match.Groups["major"].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out _)
+            && ulong.TryParse(match.Groups["minor"].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out _)
+            && ulong.TryParse(match.Groups["patch"].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out _);
+    }
+
+    /// <summary>Characters the broker API accepts in any package identifier.</summary>
+    private static bool IsPackageIdCharacter(char c) =>
+        char.IsAsciiLetterOrDigit(c)
+        || c is '.' or '-' or '_' or '+' or '@' or '/' or ':' or '[' or ']' or ',' or '#' or '$' or '%' or '{' or '}';
+
     [GeneratedRegex(
-        @"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?\z",
+        @"^(?<major>0|[1-9][0-9]*)\.(?<minor>0|[1-9][0-9]*)\.(?<patch>0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?\z",
         RegexOptions.CultureInvariant)]
     private static partial Regex SemanticVersionRegex();
 }

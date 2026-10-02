@@ -379,6 +379,8 @@ public partial class InstallOptionsViewModel : ObservableObject
         // Close apps
         foreach (var proc in options.KillBeforeOperation)
             KillProcessEntries.Add(new KillProcessEntry(proc, e => KillProcessEntries.Remove(e)));
+        // Close-app entries are part of the brokered request, so changes re-check its rules.
+        KillProcessEntries.CollectionChanged += (_, _) => Refresh();
         ForceKillChecked = Settings.Get(Settings.K.KillProcessesThatRefuseToDie);
 
         // Show fallback immediately, then replace with real icon if available
@@ -735,6 +737,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         o.PreUninstallCommand = PreUninstallText;
         o.PostUninstallCommand = PostUninstallText;
         o.AbortOnPreUninstallFail = AbortUninstall;
+        o.KillBeforeOperation = KillProcessEntries.Select(e => e.Name).ToList();
         return o;
     }
 

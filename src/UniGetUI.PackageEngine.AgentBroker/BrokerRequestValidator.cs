@@ -153,7 +153,7 @@ public static partial class BrokerRequestValidator
 
         if (manager is ManagerName.Bun)
         {
-            return SemanticVersionRegex().IsMatch(version)
+            return version.Length <= MaxVersionLength && SemanticVersionRegex().IsMatch(version)
                 ? null
                 : CoreTools.Translate(
                     "{0} package versions must be complete semantic versions, such as 1.2.3.",

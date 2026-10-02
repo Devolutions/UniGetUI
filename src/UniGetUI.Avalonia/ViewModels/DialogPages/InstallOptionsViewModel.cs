@@ -16,6 +16,7 @@ using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 
@@ -540,8 +541,13 @@ public partial class InstallOptionsViewModel : ObservableObject
         try
         {
             var applied = await InstallOptionsFactory.LoadApplicableAsync(_package, overridePackageOptions: SnapshotOptions());
-            string? location = op is OperationType.Uninstall ? null : applied.CustomInstallLocation;
-            var issues = BrokerRequestValidator.Validate(_package, applied, op, location);
+            // Resolve the location exactly as the brokered operation will (for WinGet updates
+            // this may be the registry-detected location rather than the configured one).
+            var issues = await Task.Run(() => BrokerRequestValidator.Validate(
+                _package,
+                applied,
+                op,
+                PackageOperation.GetBrokerInstallLocation(_package, applied, op)));
             BrokerIssuesText = string.Join(Environment.NewLine, issues.Select(issue => "• " + issue));
             BrokerCustomArgumentsWarning = DescribeBrokerCustomArgumentsRisk(applied, op);
         }

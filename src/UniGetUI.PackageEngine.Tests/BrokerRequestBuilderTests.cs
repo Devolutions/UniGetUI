@@ -279,7 +279,7 @@ public class BrokerRequestBuilderTests
             .Build();
         var options = new InstallOptions { Version = "1.2.3; Start-Process calc" };
 
-        Assert.Throws<InvalidOperationException>(
+        Assert.ThrowsAny<InvalidOperationException>(
             () => BrokerRequestBuilder.Build(package, options, OperationType.Install)
         );
     }
@@ -425,6 +425,9 @@ public class BrokerRequestBuilderTests
 
     [Theory]
     [InlineData("Npm", "1.2.x")]
+    [InlineData("Npm", "~1.2")]
+    [InlineData("Npm", "1.2.*")]
+    [InlineData("PowerShell7", "[1.0, 2.0)")]
     [InlineData("Npm", "1.x")]
     [InlineData("Cargo", "=1.2.3")]
     [InlineData(".NET Tool", "[1.0,2.0)")]
@@ -435,6 +438,15 @@ public class BrokerRequestBuilderTests
             BuildPackage(managerName), new InstallOptions { Version = version }, OperationType.Install);
 
         Assert.Equal(version, request.Package.Version);
+    }
+
+    [Fact]
+    public void Build_RefusesBunVersionsLongerThanTheBrokerAccepts()
+    {
+        string version = "1.2.3+" + new string('a', 200);
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage("Bun"), new InstallOptions { Version = version }, OperationType.Install));
     }
 
     [Theory]

@@ -334,8 +334,15 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         private string ResolveInstallerVersion()
         {
+            string listedVersion = HasConcreteVersion ? VersionString : "";
+            string resolvedVersion =
+                Details.Version is { } reported && reported.Any(char.IsDigit) ? reported : "";
+
             if (Manager.InstallerUrlFollowsPackageVersion)
-                return VersionString;
+                return listedVersion.Length > 0 ? listedVersion : resolvedVersion;
+
+            if (resolvedVersion.Length > 0)
+                return resolvedVersion;
 
             if (IsUpgradable)
                 return NewVersionString;
@@ -346,23 +353,24 @@ namespace UniGetUI.PackageEngine.PackageClasses
             if (GetAvailablePackage() is { } available)
                 return available.VersionString;
 
-            return VersionString;
+            return listedVersion;
         }
 
         public async Task<string?> GetInstallerFileName()
         {
             var scheme = InstallerFileNaming.ResolveScheme();
-            string version = scheme is InstallerNameScheme.PublisherName
-                ? ""
-                : ResolveInstallerVersion();
+            bool versioned = scheme is not InstallerNameScheme.PublisherName;
 
             if (Manager.Name.StartsWith("PowerShell") || Manager.Name.StartsWith(".NET"))
             {
+                if (versioned && !HasConcreteVersion && !Details.IsPopulated)
+                    await Details.Load();
+
                 return InstallerFileNaming.Build(
                     $"{Id}.nupkg",
                     Name,
                     Id,
-                    version,
+                    versioned ? ResolveInstallerVersion() : "",
                     "nupkg",
                     scheme
                 );
@@ -377,7 +385,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
                     await CoreTools.GetFileNameAsync(Details.InstallerUrl),
                     Name,
                     Id,
-                    version,
+                    versioned ? ResolveInstallerVersion() : "",
                     Details.InstallerType,
                     scheme
                 );

@@ -44,12 +44,14 @@ internal sealed class CargoPkgDetailsHelper(Cargo manager) : BasePkgDetailsHelpe
         var categories = manifest.categories?.Select(c => c.category) ?? [];
         details.Tags = [.. keywords, .. categories];
 
-        var versionData = manifest.versions.FirstOrDefault(v =>
-            v.num == details.Package.VersionString
-        );
+        var versionData = details.Package.HasConcreteVersion
+            ? manifest.versions.FirstOrDefault(v => v.num == details.Package.VersionString)
+            : manifest.versions.FirstOrDefault(v => v.num == manifest.crate.max_stable_version)
+                ?? manifest.versions.FirstOrDefault(v => v.num == manifest.crate.newest_version);
 
         if (versionData is not null)
         {
+            details.Version = versionData.num;
             details.Author = versionData.published_by?.name;
             details.License = versionData.license;
             details.InstallerUrl = new Uri(

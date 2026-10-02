@@ -406,6 +406,7 @@ internal sealed class PingetPackageDetailsProvider : IPingetPackageDetailsProvid
         Manifest manifest = result.Manifest;
         Installer? installer = result.SelectedInstaller ?? manifest.Installers.FirstOrDefault();
 
+        SetIfPresent(value => details.Version = value, manifest.Version);
         SetIfMissing(value => details.Author = value, details.Author, manifest.Author);
         SetIfMissing(
             value => details.Description = value,

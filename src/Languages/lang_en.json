@@ -1743,5 +1743,9 @@
   "{0} packages cannot finish until your computer restarts.": "{0} packages cannot finish until your computer restarts.",
   "Your computer will restart now. Save your work and close any open applications first.": "Your computer will restart now. Save your work and close any open applications first.",
   "The computer could not be restarted": "The computer could not be restarted",
-  "UniGetUI could not start the restart. Please restart your computer manually.": "UniGetUI could not start the restart. Please restart your computer manually."
+  "UniGetUI could not start the restart. Please restart your computer manually.": "UniGetUI could not start the restart. Please restart your computer manually.",
+  "No installer is available for {0}": "No installer is available for {0}",
+  "{0} did not report a download address for this package. It may not be offered for your system, or it may no longer exist on {1}.": "{0} did not report a download address for this package. It may not be offered for your system, or it may no longer exist on {1}.",
+  "Some packages cannot be downloaded": "Some packages cannot be downloaded",
+  "{0} of the {1} selected packages were skipped, because their package manager cannot download installers or could not be found.": "{0} of the {1} selected packages were skipped, because their package manager cannot download installers or could not be found."
 }

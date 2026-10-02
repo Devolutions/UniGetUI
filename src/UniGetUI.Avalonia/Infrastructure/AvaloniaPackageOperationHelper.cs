@@ -117,6 +117,16 @@ internal static class AvaloniaPackageOperationHelper
         if (package.Details.InstallerUrl is null)
         {
             Logger.Warn($"No installer URL found for {package.Id}");
+            win.ShowBanner(
+                CoreTools.Translate("No installer is available for {0}", package.Name),
+                CoreTools.Translate(
+                    "{0} did not report a download address for this package. It may not be "
+                        + "offered for your system, or it may no longer exist on {1}.",
+                    package.Manager.DisplayName,
+                    package.Source.AsString_DisplayName
+                ),
+                MainWindow.RuntimeNotificationLevel.Error
+            );
             return;
         }
 
@@ -160,9 +170,24 @@ internal static class AvaloniaPackageOperationHelper
     {
         if (MainWindow.Instance is not { } win) return;
 
-        var eligible = packages
+        var selected = packages.ToList();
+        var eligible = selected
             .Where(p => !p.Source.IsVirtualManager && p.Manager.Capabilities.CanDownloadInstaller)
             .ToList();
+
+        if (eligible.Count < selected.Count)
+        {
+            win.ShowBanner(
+                CoreTools.Translate("Some packages cannot be downloaded"),
+                CoreTools.Translate(
+                    "{0} of the {1} selected packages were skipped, because their package "
+                        + "manager cannot download installers or could not be found.",
+                    selected.Count - eligible.Count,
+                    selected.Count
+                ),
+                MainWindow.RuntimeNotificationLevel.Error
+            );
+        }
 
         if (eligible.Count == 0) return;
 

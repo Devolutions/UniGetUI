@@ -22,21 +22,25 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             var logger = Manager.TaskLogger.CreateNew(LoggableTaskType.LoadPackageDetails);
             try
             {
+                string version = ResolveDetailsVersion(details.Package);
+                details.Version = version;
+
                 if (NuGetLocalFeed.TryGetDirectory(details.Package.Source, out string directory))
                 {
-                    logger.Close(GetDetailsLocal(details, directory, logger) ? 0 : 1);
+                    logger.Close(GetDetailsLocal(details, directory, version, logger) ? 0 : 1);
                     return;
                 }
 
                 if (NuGetV3ServiceIndex.IsV3Source(details.Package.Source))
                 {
-                    logger.Close(GetDetailsV3(details, logger) ? 0 : 1);
+                    logger.Close(GetDetailsV3(details, version, logger) ? 0 : 1);
                     return;
                 }
 
-                details.ManifestUrl = NuGetManifestLoader.GetManifestUrl(details.Package);
+                details.ManifestUrl = NuGetManifestLoader.GetManifestUrl(details.Package, version);
                 string? PackageManifestContents = NuGetManifestLoader.GetManifestContent(
-                    details.Package
+                    details.Package,
+                    version
                 );
                 logger.Log(PackageManifestContents);
 
@@ -240,20 +244,17 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
         private static bool GetDetailsLocal(
             IPackageDetails details,
             string directory,
+            string version,
             INativeTaskLogger logger
         )
         {
             IPackage package = details.Package;
-            LocalNuGetPackage? local = NuGetLocalFeed.Find(
-                directory,
-                package.Id,
-                package.VersionString
-            );
+            LocalNuGetPackage? local = NuGetLocalFeed.Find(directory, package.Id, version);
 
             if (local is null)
             {
                 logger.Error(
-                    $"No package file for {package.Id} version {package.VersionString} was found "
+                    $"No package file for {package.Id} version {version} was found "
                         + $"on source {package.Source.Name} at Directory={directory}"
                 );
                 return false;
@@ -303,7 +304,11 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             return true;
         }
 
-        private static bool GetDetailsV3(IPackageDetails details, INativeTaskLogger logger)
+        private static bool GetDetailsV3(
+            IPackageDetails details,
+            string version,
+            INativeTaskLogger logger
+        )
         {
             IPackage package = details.Package;
             NuGetV3ServiceIndex? index = NuGetV3ServiceIndex.Resolve(package.Source);
@@ -317,10 +322,10 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             }
 
             details.ManifestUrl =
-                NuGetV3Client.GetRegistrationLeafUrl(index, package.Id, package.VersionString)
-                ?? NuGetV3Client.GetNuspecUrl(index, package.Id, package.VersionString);
+                NuGetV3Client.GetRegistrationLeafUrl(index, package.Id, version)
+                ?? NuGetV3Client.GetNuspecUrl(index, package.Id, version);
 
-            V3CatalogEntry? entry = GetOrFetchCatalogEntry(package, index);
+            V3CatalogEntry? entry = GetOrFetchCatalogEntry(package, index, version);
             if (entry is null)
             {
                 logger.Error(
@@ -356,7 +361,7 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
             Uri? installerUrl =
                 Uri.TryCreate(entry.PackageContent, UriKind.Absolute, out Uri? packageContent)
                     ? packageContent
-                    : NuGetV3Client.GetPackageContentUrl(index, package.Id, package.VersionString);
+                    : NuGetV3Client.GetPackageContentUrl(index, package.Id, version);
             details.InstallerUrl = installerUrl;
 
             if (entry.PackageSize > 0)
@@ -392,9 +397,11 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
 
         private static V3CatalogEntry? GetOrFetchCatalogEntry(
             IPackage package,
-            NuGetV3ServiceIndex index
+            NuGetV3ServiceIndex index,
+            string? version = null
         )
         {
+            version ??= package.VersionString;
             long hash = package.GetVersionedHash();
             if (BaseNuGet.V3Entries.TryGetValue(hash, out V3CatalogEntry? cached))
             {
@@ -404,16 +411,54 @@ namespace UniGetUI.PackageEngine.Managers.PowerShellManager
                 return cached;
             }
 
-            V3CatalogEntry? entry = NuGetV3Client.GetCatalogEntry(
-                index,
-                package.Id,
-                package.VersionString
-            );
+            V3CatalogEntry? entry = NuGetV3Client.GetCatalogEntry(index, package.Id, version);
 
             if (entry is not null)
                 BaseNuGet.V3Entries[hash] = entry;
 
             return entry;
+        }
+
+        private string ResolveDetailsVersion(IPackage package)
+        {
+            if (package.HasConcreteVersion)
+                return package.VersionString;
+
+            try
+            {
+                return NewestVersion(GetInstallableVersions_UnSafe(package))
+                    ?? package.VersionString;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(
+                    $"Could not resolve the newest version of package {package.Id} on manager "
+                        + $"{package.Manager.Name}, the listed version will be used instead"
+                );
+                Logger.Warn(ex);
+                return package.VersionString;
+            }
+        }
+
+        private static string? NewestVersion(IReadOnlyList<string> versions)
+        {
+            string? newest = null;
+            CoreTools.Version newestParsed = CoreTools.Version.Null;
+
+            foreach (string candidate in versions)
+            {
+                if (string.IsNullOrWhiteSpace(candidate))
+                    continue;
+
+                CoreTools.Version parsed = CoreTools.VersionStringToStruct(candidate);
+                if (newest is null || parsed.CompareTo(newestParsed) > 0)
+                {
+                    newest = candidate;
+                    newestParsed = parsed;
+                }
+            }
+
+            return newest;
         }
 
         private static string? FirstNonEmpty(params string?[] values)

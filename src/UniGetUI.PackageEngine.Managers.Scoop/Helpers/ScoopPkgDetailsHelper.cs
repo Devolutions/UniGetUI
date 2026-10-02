@@ -98,6 +98,8 @@ namespace UniGetUI.PackageEngine.Managers.ScoopManager
                 details.Description = contents["description"]?.ToString();
             }
 
+            details.Version = contents["version"]?.ToString();
+
             // Load installer type
             if (contents["innsetup"]?.ToString() == "true")
                 details.InstallerType = "Inno Setup (" + CoreTools.Translate("extracted") + ")";

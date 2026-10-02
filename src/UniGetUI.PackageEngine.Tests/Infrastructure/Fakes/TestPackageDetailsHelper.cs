@@ -56,6 +56,7 @@ public sealed class TestPackageDetailsHelper(TestPackageManager manager) : BaseP
         target.HomepageUrl = source.HomepageUrl;
         target.License = source.License;
         target.LicenseUrl = source.LicenseUrl;
+        target.Version = source.Version;
         target.InstallerUrl = source.InstallerUrl;
         target.InstallerHash = source.InstallerHash;
         target.InstallerType = source.InstallerType;

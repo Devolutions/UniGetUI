@@ -60,6 +60,7 @@ namespace UniGetUI.PackageEngine.Managers.NpmManager
                 logger.AddToStdOut(strContents);
                 JsonObject? contents = JsonNode.Parse(strContents) as JsonObject;
 
+                details.Version = contents?["version"]?.ToString();
                 details.License = contents?["license"]?.ToString();
                 details.Description = contents?["description"]?.ToString();
 

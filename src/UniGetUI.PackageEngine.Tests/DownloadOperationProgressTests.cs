@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net;
+using System.Security.Cryptography;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
@@ -398,6 +399,132 @@ public sealed class DownloadOperationProgressTests
             File.Delete(secretPath);
             if (File.Exists(downloadPath))
                 File.Delete(downloadPath);
+        }
+    }
+
+    private static IPackage CreatePackageWithHash(string installerHash)
+    {
+        var manager = new PackageManagerBuilder()
+            .ConfigureDetails(helper =>
+            {
+                helper.PopulateDetails = details =>
+                {
+                    details.InstallerUrl = new Uri("http://127.0.0.1/payload.bin");
+                    details.InstallerType = "exe";
+                    details.InstallerHash = installerHash;
+                };
+            })
+            .Build();
+        return new PackageBuilder().WithManager(manager).Build();
+    }
+
+    [Fact]
+    public async Task AnExistingFileMatchingThePublishedHashIsNotDownloadedAgain()
+    {
+        byte[] payload = new byte[64 * 1024];
+        new Random(53).NextBytes(payload);
+
+        IPackage package = CreatePackageWithHash(
+            Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant()
+        );
+        string downloadPath = Path.Join(
+            Path.GetTempPath(),
+            $"unigetui-already-there-{Guid.NewGuid():N}.bin"
+        );
+        File.WriteAllBytes(downloadPath, payload);
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(
+                package,
+                downloadPath,
+                new UnreachableHandler()
+            );
+
+            Assert.Equal(
+                OperationVeredict.Success,
+                await operation.InvokePerformOperationForTests()
+            );
+            Assert.Equal(payload, File.ReadAllBytes(downloadPath));
+            Assert.Contains(
+                operation.GetOutput(),
+                line => line.Item1.Contains("the download was skipped")
+            );
+            Assert.Equal(100, Math.Round(operation.CurrentProgress.Percentage!.Value));
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    [Fact]
+    public async Task AnExistingFileThatDoesNotMatchThePublishedHashIsDownloadedAgain()
+    {
+        byte[] payload = new byte[64 * 1024];
+        new Random(59).NextBytes(payload);
+        byte[] stale = new byte[64 * 1024];
+        new Random(61).NextBytes(stale);
+
+        IPackage package = CreatePackageWithHash(Convert.ToHexString(SHA256.HashData(payload)));
+        var handler = new FakeDownloadHandler(payload, 4096, null, TimeSpan.Zero, null);
+        string downloadPath = Path.Join(
+            Path.GetTempPath(),
+            $"unigetui-stale-{Guid.NewGuid():N}.bin"
+        );
+        File.WriteAllBytes(downloadPath, stale);
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(package, downloadPath, handler);
+
+            Assert.Equal(
+                OperationVeredict.Success,
+                await operation.InvokePerformOperationForTests()
+            );
+            Assert.Equal(payload, File.ReadAllBytes(downloadPath));
+        }
+        finally
+        {
+            File.Delete(downloadPath);
+        }
+    }
+
+    [Fact]
+    public async Task AnIntegrityHashFromANonSha256ManagerAlsoSkipsTheDownload()
+    {
+        byte[] payload = new byte[64 * 1024];
+        new Random(67).NextBytes(payload);
+
+        IPackage package = CreatePackageWithHash(
+            "sha512-" + Convert.ToBase64String(SHA512.HashData(payload))
+        );
+        string downloadPath = Path.Join(
+            Path.GetTempPath(),
+            $"unigetui-integrity-{Guid.NewGuid():N}.bin"
+        );
+        File.WriteAllBytes(downloadPath, payload);
+
+        try
+        {
+            using var operation = new ProbeDownloadOperation(
+                package,
+                downloadPath,
+                new UnreachableHandler()
+            );
+
+            Assert.Equal(
+                OperationVeredict.Success,
+                await operation.InvokePerformOperationForTests()
+            );
+            Assert.Contains(
+                operation.GetOutput(),
+                line => line.Item1.Contains("the download was skipped")
+            );
+        }
+        finally
+        {
+            File.Delete(downloadPath);
         }
     }
 

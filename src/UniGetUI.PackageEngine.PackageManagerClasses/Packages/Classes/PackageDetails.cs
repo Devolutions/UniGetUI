@@ -50,6 +50,12 @@ namespace UniGetUI.PackageEngine.PackageClasses
         public Uri? LicenseUrl { get; set; }
 
         /// <summary>
+        /// The version of the package the installer URL points at, as reported by the
+        /// loaded manifest. Null when the manager does not report it.
+        /// </summary>
+        public string? Version { get; set; }
+
+        /// <summary>
         /// A URL pointing to the installer of the package
         /// </summary>
         public Uri? InstallerUrl { get; set; }

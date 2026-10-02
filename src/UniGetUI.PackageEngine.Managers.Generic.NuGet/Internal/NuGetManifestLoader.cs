@@ -13,10 +13,10 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         /// </summary>
         /// <param name="package">A valid Package object</param>
         /// <returns>A Uri object</returns>
-        public static Uri GetManifestUrl(IPackage package)
+        public static Uri GetManifestUrl(IPackage package, string? version = null)
         {
             return new Uri(
-                $"{package.Source.Url}/Packages(Id='{package.Id}',Version='{package.VersionString}')"
+                $"{package.Source.Url}/Packages(Id='{package.Id}',Version='{version ?? package.VersionString}')"
             );
         }
 
@@ -54,8 +54,9 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         /// </summary>
         /// <param name="package">The package for which to obtain the manifest</param>
         /// <returns>A string containing the contents of the manifest</returns>
-        public static string? GetManifestContent(IPackage package)
+        public static string? GetManifestContent(IPackage package, string? version = null)
         {
+            version ??= package.VersionString;
             if (BaseNuGet.Manifests.TryGetValue(package.GetVersionedHash(), out string? manifest))
             {
                 Logger.Debug(
@@ -64,7 +65,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                 return manifest;
             }
 
-            string PackageManifestUrl = GetManifestUrl(package).ToString();
+            string PackageManifestUrl = GetManifestUrl(package, version).ToString();
 
             try
             {
@@ -77,7 +78,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
                     );
                     using HttpResponseMessage initialResponse = client.Send(initialRequest);
 
-                    if (!initialResponse.IsSuccessStatusCode && package.VersionString.EndsWith(".0"))
+                    if (!initialResponse.IsSuccessStatusCode && version.EndsWith(".0"))
                     {
                         using var fallbackRequest = new HttpRequestMessage(
                             HttpMethod.Get,

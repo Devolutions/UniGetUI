@@ -79,6 +79,22 @@ public class DownloadOperation : AbstractOperation
         }
     }
 
+    private async Task<bool> AlreadyDownloaded(string path, PublishedInstallerHash expectedHash)
+    {
+        try
+        {
+            return await expectedHash.MatchesAsync(path, CancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Line(
+                $"The existing file {path} could not be checked against the published hash: {ex.Message}",
+                LineType.Information
+            );
+            return false;
+        }
+    }
+
     internal static bool IsSameFile(string source, string destination)
     {
         try
@@ -153,6 +169,37 @@ public class DownloadOperation : AbstractOperation
                     LineType.Error
                 );
                 return OperationVeredict.Failure;
+            }
+
+            if (File.Exists(downloadLocation)
+                && PublishedInstallerHash.TryParse(
+                    _package.Details.InstallerHash,
+                    out PublishedInstallerHash expectedHash
+                ))
+            {
+                Line(
+                    $"A file already exists at {downloadLocation}, checking whether it is this installer...",
+                    LineType.Information
+                );
+                if (await AlreadyDownloaded(downloadLocation, expectedHash))
+                {
+                    long existingSize = new FileInfo(downloadLocation).Length;
+                    ReportProgress(
+                        OperationProgress.FromDownload((ulong)existingSize, (ulong)existingSize)
+                    );
+                    Line(
+                        $"The file {downloadLocation} matches the {expectedHash.Algorithm} hash "
+                            + "published for this installer, the download was skipped",
+                        LineType.Information
+                    );
+                    return OperationVeredict.Success;
+                }
+
+                Line(
+                    $"The file {downloadLocation} does not match the {expectedHash.Algorithm} hash "
+                        + "published for this installer, it will be downloaded again",
+                    LineType.Information
+                );
             }
 
             Line($"Download URL found at {downloadUrl} ", LineType.Information);

@@ -35,6 +35,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
 
             if (contents?["info"] is JsonObject info)
             {
+                details.Version = info["version"]?.ToString();
                 details.Description = info["summary"]?.ToString();
                 details.Author = info["author"]?.ToString();
                 details.Publisher = info["maintainer"]?.ToString();

@@ -75,8 +75,8 @@ public static class BrokerRequestBuilder
                 );
         }
 
-        // The broker refuses empty custom parameters; they carry nothing, so they are dropped.
-        List<string> customParameters = [.. GetCustomParameters(options, role).Where(parameter => parameter.Length > 0)];
+        // The broker refuses empty custom parameters; blank ones carry nothing, so they are dropped.
+        List<string> customParameters = [.. GetCustomParameters(options, role).Where(parameter => !string.IsNullOrWhiteSpace(parameter))];
         if (
             manager is ManagerName.PowerShell
             && role is OperationType.Install

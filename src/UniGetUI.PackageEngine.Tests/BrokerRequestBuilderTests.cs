@@ -574,9 +574,19 @@ public class BrokerRequestBuilderTests
     }
 
     [Fact]
+    public void Build_DropsBlankCustomParametersForManagersThatAcceptNone()
+    {
+        var options = new InstallOptions { CustomParameters_Install = ["  "] };
+
+        var request = BrokerRequestBuilder.Build(BuildPackage("Chocolatey"), options, OperationType.Install);
+
+        Assert.Empty(request.Options.CustomParameters);
+    }
+
+    [Fact]
     public void Build_DropsEmptyCustomParameters()
     {
-        var options = new InstallOptions { CustomParameters_Install = ["", "--silent", ""] };
+        var options = new InstallOptions { CustomParameters_Install = ["", "--silent", "   "] };
 
         var request = BrokerRequestBuilder.Build(BuildWinGetPackage(), options, OperationType.Install);
 

@@ -559,11 +559,17 @@ public partial class InstallOptionsViewModel : ObservableObject
             var applied = await InstallOptionsFactory.LoadApplicableAsync(_package, overridePackageOptions: SnapshotOptions());
             // Resolve the location exactly as the brokered operation will (for WinGet updates
             // this may be the registry-detected location rather than the configured one).
-            var issues = await Task.Run(() => BrokerRequestBuilder.FindProblems(
-                _package,
-                applied,
-                op,
-                PackageOperation.GetBrokerInstallLocation(_package, applied, op)));
+            var issues = await Task.Run(() =>
+            {
+                // Apply the manager's own elevation requirements first, as the brokered
+                // operation does (e.g. a WinGet installer that must run elevated).
+                _package.Manager.OperationHelper.ApplyElevationRequirements(_package, applied, op);
+                return BrokerRequestBuilder.FindProblems(
+                    _package,
+                    applied,
+                    op,
+                    PackageOperation.GetBrokerInstallLocation(_package, applied, op));
+            });
             issuesText = string.Join(Environment.NewLine, issues.Select(issue => "• " + issue));
             customArgumentsWarning = DescribeBrokerCustomArgumentsRisk(applied, op);
         }

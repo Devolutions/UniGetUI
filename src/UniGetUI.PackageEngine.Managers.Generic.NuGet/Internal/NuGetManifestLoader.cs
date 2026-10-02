@@ -9,16 +9,14 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
     internal static class NuGetManifestLoader
     {
         /// <summary>
-        /// Returns the URL to the manifest of a NuGet-based package
-        /// </summary>
-        /// <param name="package">A valid Package object</param>
-        /// <returns>A Uri object</returns>
-        /// <summary>
         /// Cache key for the manifest and catalog caches. Reproduces the shape of
         /// IPackage.GetVersionedHash() so that an entry cached for a concrete package is
         /// reused when another package resolves to that same version, and so that a package
         /// whose listed version is a placeholder does not share one slot across versions.
         /// </summary>
+        /// <param name="package">A valid Package object</param>
+        /// <param name="version">The version to key on; the package's own when omitted</param>
+        /// <returns>A cache key</returns>
         public static long GetCacheKey(IPackage package, string? version = null)
         {
             return CoreTools.HashStringAsLong(
@@ -26,6 +24,12 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
             );
         }
 
+        /// <summary>
+        /// Returns the URL to the manifest of a NuGet-based package
+        /// </summary>
+        /// <param name="package">A valid Package object</param>
+        /// <param name="version">The version to address; the package's own when omitted</param>
+        /// <returns>A Uri object</returns>
         public static Uri GetManifestUrl(IPackage package, string? version = null)
         {
             return new Uri(
@@ -66,6 +70,7 @@ namespace UniGetUI.PackageEngine.Managers.Generic.NuGet.Internal
         /// Returns the contents of the manifest of a NuGet-based package
         /// </summary>
         /// <param name="package">The package for which to obtain the manifest</param>
+        /// <param name="version">The version to fetch; the package's own when omitted</param>
         /// <returns>A string containing the contents of the manifest</returns>
         public static string? GetManifestContent(IPackage package, string? version = null)
         {

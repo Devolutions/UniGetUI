@@ -1,5 +1,6 @@
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Client;
+using UniGetUI.Core.SettingsEngine;
 using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
@@ -801,8 +802,23 @@ public class BrokerRequestBuilderTests
     {
         var options = new InstallOptions { RunAsAdministrator = true };
 
-        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
-            BuildPackage(managerName, managerName == "Scoop" ? "7zip" : "contoso-tool"), options, OperationType.Install));
+        WithElevationAllowed(() => Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage(managerName, managerName == "Scoop" ? "7zip" : "contoso-tool"), options, OperationType.Install)));
+    }
+
+    /// <summary>Runs an assertion with elevation allowed, whatever the machine's settings are.</summary>
+    private static void WithElevationAllowed(Action assertion)
+    {
+        bool original = Settings.Get(Settings.K.ProhibitElevation);
+        Settings.Set(Settings.K.ProhibitElevation, false);
+        try
+        {
+            assertion();
+        }
+        finally
+        {
+            Settings.Set(Settings.K.ProhibitElevation, original);
+        }
     }
 
     [Fact]
@@ -810,8 +826,8 @@ public class BrokerRequestBuilderTests
     {
         var options = new InstallOptions { RunAsAdministrator = true, PreInstallCommand = "echo before" };
 
-        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
-            BuildWinGetPackage(), options, OperationType.Install));
+        WithElevationAllowed(() => Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildWinGetPackage(), options, OperationType.Install)));
     }
 
     [Fact]

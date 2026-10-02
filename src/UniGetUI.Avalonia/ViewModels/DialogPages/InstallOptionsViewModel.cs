@@ -616,7 +616,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         // (e.g. a WinGet installer that needs elevation) counts as well as the checkbox.
         bool runsElevated = BrokerRequestValidator.RequestsElevation(_package, applied);
 
-        return parameters.Count > 0 && runsElevated
+        return parameters.Any(parameter => !string.IsNullOrWhiteSpace(parameter)) && runsElevated
             ? CoreTools.Translate(
                 "Custom arguments are passed to WinGet by the Devolutions Agent, which runs this operation with administrator rights. Your organization's policy may block custom arguments.")
             : "";

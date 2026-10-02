@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
 using System.Net.Http;
 using System.Windows.Input;
+using Avalonia.Automation;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Language;
 using UniGetUI.Core.Logging;
@@ -12,9 +14,11 @@ using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
 using UniGetUI.Core.Tools.Scheduling;
+using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Classes.Packages.Classes;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.PackageEngine.Operations;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
 
@@ -194,6 +198,25 @@ public partial class InstallOptionsViewModel : ObservableObject
 
     partial void OnSelectedArchChanged(string? value) => Refresh();
     partial void OnSelectedScopeChanged(string? value) => Refresh();
+    partial void OnLocationTextChanged(string value) => Refresh();
+
+    // ── Package broker notices ────────────────────────────────────────────────
+    /// <summary>Why the Devolutions Agent would reject the current options, one item per line.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BrokerIssuesVisible))]
+    private string _brokerIssuesText = "";
+
+    public bool BrokerIssuesVisible => BrokerIssuesText.Length > 0;
+
+    public string BrokerIssuesHeaderLabel { get; } = CoreTools.Translate(
+        "These options cannot be used through the Devolutions Agent, which will refuse the operation:");
+
+    /// <summary>Warning about custom WinGet arguments when the operation goes through the Devolutions Agent.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BrokerCustomArgumentsWarningVisible))]
+    private string _brokerCustomArgumentsWarning = "";
+
+    public bool BrokerCustomArgumentsWarningVisible => BrokerCustomArgumentsWarning.Length > 0;
 
     // ── CLI params tab ────────────────────────────────────────────────────────
     [ObservableProperty] private string _paramsInstall = "";
@@ -217,6 +240,12 @@ public partial class InstallOptionsViewModel : ObservableObject
     [ObservableProperty] private string _postUninstallText = "";
     [ObservableProperty] private bool _abortUninstall;
 
+    partial void OnPreInstallTextChanged(string value) => Refresh();
+    partial void OnPostInstallTextChanged(string value) => Refresh();
+    partial void OnPreUpdateTextChanged(string value) => Refresh();
+    partial void OnPostUpdateTextChanged(string value) => Refresh();
+    partial void OnPreUninstallTextChanged(string value) => Refresh();
+    partial void OnPostUninstallTextChanged(string value) => Refresh();
     // ── Close apps tab ────────────────────────────────────────────────────────
     public ObservableCollection<KillProcessEntry> KillProcessEntries { get; } = [];
 
@@ -350,6 +379,8 @@ public partial class InstallOptionsViewModel : ObservableObject
         // Close apps
         foreach (var proc in options.KillBeforeOperation)
             KillProcessEntries.Add(new KillProcessEntry(proc, e => KillProcessEntries.Remove(e)));
+        // Close-app entries are part of the brokered request, so changes re-check its rules.
+        KillProcessEntries.CollectionChanged += (_, _) => Refresh();
         ForceKillChecked = Settings.Get(Settings.K.KillProcessesThatRefuseToDie);
 
         // Show fallback immediately, then replace with real icon if available
@@ -498,8 +529,105 @@ public partial class InstallOptionsViewModel : ObservableObject
     private async Task RefreshCommandPreviewAsync()
     {
         if (!_uiLoaded) return;
-        CommandPreview = await BuildCurrentCommandAsync();
+        // Edits start overlapping refreshes; only the latest one may publish its results.
+        int generation = Interlocked.Increment(ref _refreshGeneration);
+        string command = await BuildCurrentCommandAsync();
+        if (generation != _refreshGeneration) return;
+        CommandPreview = command;
+        await RefreshBrokerNoticesAsync(generation);
     }
+
+    /// <summary>
+    /// When the operation goes through the Devolutions Agent, explains the options it would
+    /// reject and warns about custom WinGet installer arguments, using the same rules as the
+    /// request builder so the user can fix them before starting the operation.
+    /// </summary>
+    private int _refreshGeneration;
+
+    private async Task RefreshBrokerNoticesAsync(int generation)
+    {
+        if (!IsBrokered(_package))
+        {
+            BrokerIssuesText = "";
+            BrokerCustomArgumentsWarning = "";
+            return;
+        }
+
+        var op = CurrentOp();
+        string issuesText;
+        string customArgumentsWarning;
+        try
+        {
+            var applied = await InstallOptionsFactory.LoadApplicableAsync(_package, overridePackageOptions: SnapshotOptions());
+            // Resolve the location exactly as the brokered operation will (for WinGet updates
+            // this may be the registry-detected location rather than the configured one).
+            var issues = await Task.Run(() =>
+            {
+                // Apply the manager's own elevation requirements first, as the brokered
+                // operation does (e.g. a WinGet installer that must run elevated).
+                _package.Manager.OperationHelper.ApplyElevationRequirements(_package, applied, op);
+                return BrokerRequestBuilder.FindProblems(
+                    _package,
+                    applied,
+                    op,
+                    PackageOperation.GetBrokerInstallLocation(_package, applied, op));
+            });
+            issuesText = string.Join(Environment.NewLine, issues.Select(issue => "• " + issue));
+            customArgumentsWarning = DescribeBrokerCustomArgumentsRisk(applied, op);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[InstallOptionsViewModel] Could not check the options against the package broker rules: {ex.Message}");
+            issuesText = "";
+            customArgumentsWarning = "";
+        }
+
+        if (generation != _refreshGeneration)
+            return;
+
+        // Assigning bound text is not reliably announced, so route changes through the app's
+        // live region. Assigning an unchanged value is a no-op, which suppresses repeats.
+        if (issuesText != BrokerIssuesText && issuesText.Length > 0)
+            AccessibilityAnnouncementService.Announce(
+                $"{BrokerIssuesHeaderLabel} {issuesText}",
+                AutomationLiveSetting.Assertive);
+        if (customArgumentsWarning != BrokerCustomArgumentsWarning && customArgumentsWarning.Length > 0)
+            AccessibilityAnnouncementService.Announce(customArgumentsWarning, AutomationLiveSetting.Polite);
+
+        BrokerIssuesText = issuesText;
+        BrokerCustomArgumentsWarning = customArgumentsWarning;
+    }
+
+    private string DescribeBrokerCustomArgumentsRisk(InstallOptions applied, OperationType op)
+    {
+        if (!_package.Manager.Name.Equals("Winget", StringComparison.OrdinalIgnoreCase))
+            return "";
+
+        if (BrokerRequestValidator.UsesWinGetInstallerArguments(_package, applied, op))
+            return CoreTools.Translate(
+                "--override and --custom pass arbitrary arguments to the package installer. Through the Devolutions Agent, the installer can run with administrator rights, so your organization's policy may block these arguments.");
+
+        List<string> parameters = op switch
+        {
+            OperationType.Update => applied.CustomParameters_Update,
+            OperationType.Uninstall => applied.CustomParameters_Uninstall,
+            _ => applied.CustomParameters_Install,
+        };
+
+        // Same elevation predicate as the brokered operation: the package's own requirement
+        // (e.g. a WinGet installer that needs elevation) counts as well as the checkbox.
+        bool runsElevated = BrokerRequestValidator.RequestsElevation(_package, applied);
+
+        return parameters.Any(parameter => !string.IsNullOrWhiteSpace(parameter)) && runsElevated
+            ? CoreTools.Translate(
+                "Custom arguments are passed to WinGet by the Devolutions Agent, which runs this operation with administrator rights. Your organization's policy may block custom arguments.")
+            : "";
+    }
+
+    private static bool IsBrokered(IPackage package) =>
+        Settings.Get(Settings.K.UseAgentBroker)
+        && BrokerRequestBuilder.SupportsManager(package.Manager.Name)
+        && !package.Source.IsVirtualManager;
 
     /// <summary>Builds the CLI command for the currently selected operation and options,
     /// identical to the live preview. Used by the Copy / Open-in-terminal actions.</summary>
@@ -609,6 +737,7 @@ public partial class InstallOptionsViewModel : ObservableObject
         o.PreUninstallCommand = PreUninstallText;
         o.PostUninstallCommand = PostUninstallText;
         o.AbortOnPreUninstallFail = AbortUninstall;
+        o.KillBeforeOperation = KillProcessEntries.Select(e => e.Name).ToList();
         return o;
     }
 

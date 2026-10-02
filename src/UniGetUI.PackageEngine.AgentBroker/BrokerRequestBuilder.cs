@@ -27,51 +27,21 @@ public static class BrokerRequestBuilder
         OperationType role,
         string? effectiveInstallLocation = null)
     {
-        // WinGet_DropArchAndScope is set after an "update not applicable" result to retry
-        // without the scope/architecture constraints; mirror the local WinGet behavior so
-        // the AutoRetry does not rebuild the same constrained request indefinitely.
-        bool dropArchAndScope = package.OverridenOptions.WinGet_DropArchAndScope;
 
         ManagerName manager = MapManagerName(package.Manager.Name);
 
-        // This path does not go through BasePkgOperationHelper, so the checks that apply to every
-        // manager have to be repeated here: the broker builds a command line from these values,
-        // and an identifier such as "requests --index-url https://host" would become real options.
-        if (
-            !CoreTools.IsOptionSafeIdentifier(
-                package.Id,
-                package.Manager.IdentifiersAreQuotedOnCommandLine
-            )
-        )
-            throw new InvalidOperationException(
-                $"Refusing to build a {manager} broker request for the package identifier \"{package.Id}\": it would be read as a command-line option or split into further arguments."
-            );
+        // The broker refuses empty custom parameters; blank ones carry nothing, so they are dropped.
+        List<string> customParameters = [.. GetCustomParameters(options, role).Where(parameter => !string.IsNullOrWhiteSpace(parameter))];
 
-        if (!CoreTools.IsOptionSafeValue(options.Version))
-            throw new InvalidOperationException(
-                $"Refusing to build a {manager} broker request for package {package.Id}: the requested version \"{options.Version}\" would be read as a command-line option."
-            );
-
-        if (ManagerCommandLineIsShellInterpreted(manager))
-        {
-            if (!CoreTools.IsValidPackageIdentifier(package.Id))
-                throw new InvalidOperationException(
-                    $"Refusing to build a {manager} broker request for the package identifier \"{package.Id}\": it is not a valid package identifier."
-                );
-
-            if (options.Version.Length > 0 && !CoreTools.IsValidPackageVersion(options.Version))
-                throw new InvalidOperationException(
-                    $"Refusing to build a {manager} broker request for package {package.Id}: the requested version \"{options.Version}\" is not a valid package version."
-                );
-        }
-
-        List<string> customParameters = GetCustomParameters(options, role);
-        if (
-            manager is ManagerName.PowerShell
-            && role is OperationType.Install
-            && package.OverridenOptions.PowerShell_AllowClobber
-        )
-            customParameters = [.. customParameters, "-AllowClobber"];
+        // Validate what will actually be sent.
+        IReadOnlyList<string> issues = BrokerRequestValidator.Validate(
+            package,
+            options,
+            role,
+            effectiveInstallLocation,
+            customParameters);
+        if (issues.Count > 0)
+            throw new BrokerRequestValidationException(issues);
 
         return new PackageOperationRequest
         {
@@ -83,26 +53,26 @@ public static class BrokerRequestBuilder
             Source = new RequestSource
             {
                 Name = package.Source.Name,
-                Url = SourceUrlIdentifiesAnIndex(manager)
+                // Most managers identify their source by name and refuse a URL.
+                Url = BrokerRequestValidator.ManagerAcceptsSourceUrl(manager)
                     ? package.Source.Url?.ToString()
                     : null,
             },
             Package = new RequestPackage
             {
                 Id = package.Id,
-                Version = string.IsNullOrEmpty(options.Version) ? null : options.Version,
-                Architecture = dropArchAndScope ? null : MapArchitecture(options.Architecture),
+                Version = ResolveVersion(manager, package, options, role),
+                Architecture = ResolveArchitecture(manager, package, options, role),
             },
             Options = new RequestOptions
             {
                 // The per-package scope override takes precedence over the saved options,
                 // matching the local WinGet execution path.
-                Scope = dropArchAndScope
-                    ? null
-                    : MapScope(manager, package.OverridenOptions.Scope ?? options.InstallationScope),
+                Scope = ResolveScope(manager, package, options),
                 Interactive = options.InteractiveInstallation,
-                SkipHashCheck = options.SkipHashCheck,
-                PreRelease = options.PreRelease,
+                // Neither flag means anything for an uninstall, matching the local path.
+                SkipHashCheck = role is not OperationType.Uninstall && options.SkipHashCheck,
+                PreRelease = role is not OperationType.Uninstall && options.PreRelease,
                 CustomParameters = customParameters,
                 CustomInstallLocation = NullIfEmpty(effectiveInstallLocation),
                 // Kill/pre/post actions are owned by the broker for brokered operations:
@@ -117,6 +87,46 @@ public static class BrokerRequestBuilder
             },
         };
     }
+
+    /// <summary>
+    /// Every problem that would stop <see cref="Build"/> for these values, without building a
+    /// request: the field rules of <see cref="BrokerRequestValidator"/> as well as the
+    /// command-line safety guards. Used to preview a brokered operation before it starts.
+    /// </summary>
+    public static IReadOnlyList<string> FindProblems(
+        IPackage package,
+        InstallOptions options,
+        OperationType role,
+        string? effectiveInstallLocation = null)
+    {
+        if (!SupportsManager(package.Manager.Name))
+            return [];
+
+        try
+        {
+            Build(package, options, role, effectiveInstallLocation);
+            return [];
+        }
+        catch (BrokerRequestValidationException ex)
+        {
+            return ex.Issues;
+        }
+        catch (InvalidOperationException ex)
+        {
+            return [ex.Message];
+        }
+    }
+
+    /// <summary>
+    /// Whether the operation is the local PowerShell 5 retry that adds <c>-AllowClobber</c>
+    /// after a command conflict. The broker accepts no PowerShell custom parameter, so the retry
+    /// cannot be sent and the conflict has to be reported instead.
+    /// </summary>
+    public static bool IsUnsupportedAllowClobberRetry(IPackage package, OperationType role) =>
+        role is OperationType.Install
+        && package.OverridenOptions.PowerShell_AllowClobber
+        && TryMapManagerName(package.Manager.Name, out ManagerName manager)
+        && manager is ManagerName.PowerShell;
 
     private static Operation MapOperation(OperationType role) => role switch
     {
@@ -142,14 +152,53 @@ public static class BrokerRequestBuilder
             ? mapped
             : throw new ArgumentException($"Unsupported manager for the broker: {managerName}");
 
-    private static bool ManagerCommandLineIsShellInterpreted(ManagerName manager) =>
-        manager
-            is ManagerName.PowerShell
-                or ManagerName.PowerShell7
-                or ManagerName.Scoop
-                or ManagerName.Npm;
+    /// <summary>
+    /// The concrete version the operation installs, when UniGetUI knows it.
+    /// </summary>
+    /// <remarks>
+    /// The broker evaluates version conditions against the version sent in the request: a Deny
+    /// rule with a version condition matches a request whose version is unknown. So the version
+    /// is resolved here instead of letting the package manager pick "the latest": the one the
+    /// user selected, else the one shown for an install, else the one an update moves to.
+    /// A known version the broker would not accept for the manager is omitted rather than sent,
+    /// and uninstalls never carry a version, since version conditions do not apply to them.
+    /// </remarks>
+    internal static string? ResolveVersion(
+        ManagerName manager,
+        IPackage package,
+        InstallOptions options,
+        OperationType role)
+    {
+        if (role is OperationType.Uninstall || !BrokerRequestValidator.ManagerAcceptsVersion(manager))
+            return null;
 
-    private static bool TryMapManagerName(string managerName, out ManagerName mapped)
+        if (role is OperationType.Install && options.Version.Length > 0)
+            return options.Version;
+
+        // A pre-release install may resolve to a newer version than the one listed.
+        if ((role is OperationType.Install && options.PreRelease)
+            || !BrokerRequestValidator.ManagerHasKnownVersionRules(manager))
+            return null;
+
+        string? candidate = role switch
+        {
+            OperationType.Install when package.HasConcreteVersion => package.VersionString,
+            OperationType.Update when package.IsUpgradable => package.NewVersionString,
+            _ => null,
+        };
+
+        if (
+            string.IsNullOrWhiteSpace(candidate)
+            || candidate.Equals("Unknown", StringComparison.OrdinalIgnoreCase)
+            || !CoreTools.IsOptionSafeValue(candidate)
+            || BrokerRequestValidator.CheckVersion(manager, package.Manager.DisplayName, candidate) is not null
+        )
+            return null;
+
+        return candidate;
+    }
+
+    internal static bool TryMapManagerName(string managerName, out ManagerName mapped)
     {
         ManagerName? result = managerName.ToLowerInvariant() switch
         {
@@ -177,6 +226,35 @@ public static class BrokerRequestBuilder
         return result is not null;
     }
 
+    /// <summary>
+    /// The architecture sent to the broker, or null to let the manager decide. Uninstalls never
+    /// select one, and Scoop only selects one on install, like the local execution paths.
+    /// </summary>
+    /// <remarks>
+    /// WinGet_DropArchAndScope is set after an "update not applicable" result to retry without
+    /// the scope/architecture constraints; mirror the local WinGet behavior so the AutoRetry
+    /// does not rebuild the same constrained request indefinitely.
+    /// </remarks>
+    internal static BrokerArchitecture? ResolveArchitecture(
+        ManagerName manager,
+        IPackage package,
+        InstallOptions options,
+        OperationType role)
+    {
+        return ArchitectureApplies(manager, package, role) ? MapArchitecture(options.Architecture) : null;
+    }
+
+    internal static bool ArchitectureApplies(ManagerName manager, IPackage package, OperationType role) =>
+        !package.OverridenOptions.WinGet_DropArchAndScope
+        && role is not OperationType.Uninstall
+        && (manager is not ManagerName.Scoop || role is OperationType.Install);
+
+    /// <summary>The scope sent to the broker for these options, or null to let it decide.</summary>
+    internal static Scope? ResolveScope(ManagerName manager, IPackage package, InstallOptions options) =>
+        package.OverridenOptions.WinGet_DropArchAndScope
+            ? null
+            : MapScope(manager, package.OverridenOptions.Scope ?? options.InstallationScope);
+
     private static Scope? MapScope(ManagerName manager, string? scope)
     {
         if (string.IsNullOrEmpty(scope))
@@ -198,9 +276,6 @@ public static class BrokerRequestBuilder
     }
 
     private static bool ManagerScopeDistinguishesSystemWideInstalls(ManagerName manager) =>
-        manager is not ManagerName.Pip;
-
-    private static bool SourceUrlIdentifiesAnIndex(ManagerName manager) =>
         manager is not ManagerName.Pip;
 
     private static BrokerArchitecture? MapArchitecture(string? architecture)

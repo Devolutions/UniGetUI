@@ -8,6 +8,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
+using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.NpmManager;
@@ -26,6 +27,8 @@ using BrokerApiConstants = Devolutions.Now.Policy.Api.BrokerApi;
 using BrokerApiDecision = Devolutions.Now.Policy.Api.Decision;
 using BrokerApiDecisionInfo = Devolutions.Now.Policy.Api.DecisionInfo;
 using BrokerApiElevation = Devolutions.Now.Policy.Api.Elevation;
+using BrokerApiErrorCode = Devolutions.Now.Policy.Api.ErrorCode;
+using BrokerApiErrorResponse = Devolutions.Now.Policy.Api.ErrorResponse;
 using BrokerApiEventChannel = Devolutions.Now.Policy.Api.EventChannel;
 using BrokerApiEventChannelKind = Devolutions.Now.Policy.Api.EventChannelKind;
 using BrokerApiExecutionResponse = Devolutions.Now.Policy.Api.ExecutionResponse;
@@ -762,6 +765,112 @@ public sealed class PackageOperationsTests
         Assert.Contains(transport.RequestedPaths, path => path != "/v1/health");
     }
 
+    private static async Task<(OperationVeredict Veredict, string? Title, string? Message)> RunBrokeredOperationCapturingFailure(
+        ScriptedBrokerTransport transport,
+        string? packageId = null)
+    {
+        AbstractOperation? created = null;
+        var result = await RunBrokeredOperationWithOutput(
+            transport,
+            onOperationCreated: operation => created = operation,
+            packageId: packageId);
+        return (result.Veredict, created?.Metadata.FailureTitle, created?.Metadata.FailureMessage);
+    }
+
+    [Fact]
+    public async Task BrokerPolicyDenialExplainsTheReasonAndRule()
+    {
+        var transport = new ScriptedBrokerTransport
+        {
+            Denial = new BrokerApiDecisionInfo
+            {
+                Decision = BrokerApiDecision.Deny,
+                RuleId = "deny-old-versions",
+                Reason = "Versions before 2.0 are not allowed",
+            },
+        };
+
+        var (veredict, title, message) = await RunBrokeredOperationCapturingFailure(transport);
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+        Assert.Equal(CoreTools.Translate("Operation denied by policy"), title);
+        Assert.Contains("deny-old-versions", message);
+        Assert.Contains("Versions before 2.0 are not allowed", message);
+    }
+
+    [Theory]
+    [InlineData(401, BrokerApiErrorCode.Unauthorized)]
+    [InlineData(403, BrokerApiErrorCode.Forbidden)]
+    public async Task BrokerRefusingTheCapabilitiesRequestIsReportedAsAnAuthorizationFailure(
+        int statusCode,
+        BrokerApiErrorCode code)
+    {
+        bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
+        BrokerFailureDescription? notified = null;
+        EventHandler<BrokerFailureDescription> onBrokerUnavailable = (_, failure) => notified = failure;
+        PackageOperation.BrokerUnavailable += onBrokerUnavailable;
+        try
+        {
+            var transport = new ScriptedBrokerTransport
+            {
+                CapabilitiesError = (statusCode, code),
+            };
+
+            var (veredict, title, message) = await RunBrokeredOperationCapturingFailure(transport);
+
+            Assert.Equal(OperationVeredict.Failure, veredict);
+            Assert.Equal(CoreTools.Translate("UniGetUI is not authorized to use the Devolutions Agent"), title);
+            Assert.Contains("signed", message);
+            Assert.Equal(title, notified?.Title);
+            Assert.Equal(message, notified?.Message);
+            Assert.DoesNotContain("/v1/package-operations/execute", transport.RequestedPaths);
+        }
+        finally
+        {
+            PackageOperation.BrokerUnavailable -= onBrokerUnavailable;
+            Settings.Set(Settings.K.UseAgentBroker, originalSetting);
+        }
+    }
+
+    [Fact]
+    public async Task BrokerPausedWithoutPolicyIsExplained()
+    {
+        var transport = new ScriptedBrokerTransport
+        {
+            CapabilitiesError = (503, BrokerApiErrorCode.BrokerPaused),
+        };
+
+        var (veredict, title, _) = await RunBrokeredOperationCapturingFailure(transport);
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+        Assert.Equal(CoreTools.Translate("Package operations are paused"), title);
+    }
+
+    [Fact]
+    public async Task BrokerRequestThatTheBrokerWouldRejectIsNotSent()
+    {
+        var transport = new ScriptedBrokerTransport();
+
+        var (veredict, title, message) = await RunBrokeredOperationCapturingFailure(transport, packageId: "git;7zip");
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+        Assert.Equal(CoreTools.Translate("The package broker cannot accept this request"), title);
+        Assert.Contains("git;7zip", message);
+        Assert.DoesNotContain("/v1/package-operations/execute", transport.RequestedPaths);
+    }
+
+    [Fact]
+    public async Task BrokeredInstallSendsTheResolvedPackageVersion()
+    {
+        var transport = new ScriptedBrokerTransport();
+
+        await RunBrokeredOperation(transport);
+
+        Assert.NotNull(transport.LastExecuteRequestBody);
+        var request = BrokerSerializer.Deserialize<BrokerApiPackageRequest>(transport.LastExecuteRequestBody!);
+        Assert.Equal("1.0.0", request!.Package.Version);
+    }
+
     /// <summary>
     /// Runs an install operation against a broker whose transport simulates an outage and
     /// asserts the policy-enforcement contract: the operation fails with the
@@ -788,7 +897,7 @@ public sealed class PackageOperationsTests
             .Build();
         var package = new PackageBuilder().WithManager(manager).Build();
         string? notifiedMessage = null;
-        EventHandler<string> onBrokerUnavailable = (_, message) => notifiedMessage = message;
+        EventHandler<BrokerFailureDescription> onBrokerUnavailable = (_, failure) => notifiedMessage = failure.Message;
         PackageOperation.BrokerUnavailable += onBrokerUnavailable;
         PackageOperation.BrokerTransportFactory = () => transport;
         Settings.Set(Settings.K.UseAgentBroker, true);
@@ -842,7 +951,8 @@ public sealed class PackageOperationsTests
         Action<CancellationTokenSource>? configureCancellation = null,
         Action<TestPackageOperationHelper>? configureOperationHelper = null,
         Action<AbstractOperation>? onOperationCreated = null,
-        TimeSpan? operationTimeout = null)
+        TimeSpan? operationTimeout = null,
+        string? packageId = null)
     {
         bool originalSetting = Settings.Get(Settings.K.UseAgentBroker);
         int originalPollInterval = PackageOperation.BrokerStatusPollIntervalMs;
@@ -858,7 +968,7 @@ public sealed class PackageOperationsTests
             })
             .ConfigureOperation(helper => configureOperationHelper?.Invoke(helper))
             .Build();
-        var package = new PackageBuilder().WithManager(manager).Build();
+        var package = new PackageBuilder().WithManager(manager).WithId(packageId ?? "Contoso.Test").Build();
         PackageOperation.BrokerTransportFactory = () => transport;
         PackageOperation.BrokerStatusPollIntervalMs = 5;
         PackageOperation.BrokerCancelRequestTimeout = TimeSpan.FromSeconds(2);
@@ -1332,6 +1442,12 @@ public sealed class PackageOperationsTests
         /// </summary>
         public string? LastExecuteRequestBody { get; private set; }
 
+        /// <summary>When set, the capabilities endpoint answers with this structured error.</summary>
+        public (int StatusCode, BrokerApiErrorCode Code)? CapabilitiesError { get; set; }
+
+        /// <summary>When set, the execute endpoint reports this policy decision without an operation.</summary>
+        public BrokerApiDecisionInfo? Denial { get; set; }
+
         private bool cancelReceived;
 
         public BrokerTransportKind Kind => BrokerTransportKind.HttpNamedPipe;
@@ -1350,6 +1466,16 @@ public sealed class PackageOperationsTests
             return request.Path switch
             {
                 "/v1/health" => Json(BrokerSerializer.Serialize(BuildHealthResponse())),
+                "/v1/capabilities" when CapabilitiesError is { } error => Task.FromResult(
+                    new BrokerTransportResponse
+                    {
+                        StatusCode = error.StatusCode,
+                        Body = BrokerSerializer.Serialize(new BrokerApiErrorResponse
+                        {
+                            Code = error.Code,
+                            Message = "capabilities refused",
+                        }),
+                    }),
                 "/v1/capabilities" => Json(BrokerSerializer.Serialize(BuildCapabilities())),
                 "/v1/package-operations/execute" => Json(BrokerSerializer.Serialize(BuildExecutionResponse())),
                 "/v1/package-operations/get-status" => HandleStatusQuery(),
@@ -1438,25 +1564,38 @@ public sealed class PackageOperationsTests
             ],
         };
 
-        private BrokerApiExecutionResponse BuildExecutionResponse() => new()
+        private BrokerApiExecutionResponse BuildExecutionResponse()
         {
-            ResponseKind = BrokerApiConstants.ExecutionResponseKind,
-            ResponseVersion = BrokerApiConstants.Version,
-            Decision = new BrokerApiDecisionInfo { Decision = BrokerApiDecision.Allow },
-            Operation = new BrokerApiOperationSubmission
+            if (Denial is { } denial)
             {
-                OperationId = OperationId,
-                Status = BrokerApiOperationStatus.Starting,
-                SubmittedAt = DateTimeOffset.UtcNow,
-                EventChannel = EventChannelPipeName is null
-                    ? null
-                    : new BrokerApiEventChannel
-                    {
-                        Kind = BrokerApiEventChannelKind.LocalPipe,
-                        Path = EventChannelPipeName,
-                    },
-            },
-        };
+                return new()
+                {
+                    ResponseKind = BrokerApiConstants.ExecutionResponseKind,
+                    ResponseVersion = BrokerApiConstants.Version,
+                    Decision = denial,
+                };
+            }
+
+            return new()
+            {
+                ResponseKind = BrokerApiConstants.ExecutionResponseKind,
+                ResponseVersion = BrokerApiConstants.Version,
+                Decision = new BrokerApiDecisionInfo { Decision = BrokerApiDecision.Allow },
+                Operation = new BrokerApiOperationSubmission
+                {
+                    OperationId = OperationId,
+                    Status = BrokerApiOperationStatus.Starting,
+                    SubmittedAt = DateTimeOffset.UtcNow,
+                    EventChannel = EventChannelPipeName is null
+                        ? null
+                        : new BrokerApiEventChannel
+                        {
+                            Kind = BrokerApiEventChannelKind.LocalPipe,
+                            Path = EventChannelPipeName,
+                        },
+                },
+            };
+        }
     }
 
     /// <summary>

@@ -1,5 +1,7 @@
 using Devolutions.Now.Policy.Api;
 using Devolutions.Now.Policy.Client;
+using UniGetUI.Core.SettingsEngine;
+using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
@@ -61,6 +63,7 @@ public class BrokerRequestBuilderTests
     {
         var package = new PackageBuilder()
             .WithManager(new PackageManagerBuilder().WithName(managerName).Build())
+            .WithId("contoso-test")
             .Build();
 
         var request = BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Install);
@@ -190,30 +193,26 @@ public class BrokerRequestBuilderTests
     }
 
     [Fact]
-    public void Build_AllowClobberRetry_AddsTheParameterForPowerShell5Installs()
+    public void Build_AllowClobberRetry_IsNotSentToTheBroker()
     {
         var package = BuildPowerShellPackage();
         package.OverridenOptions.PowerShell_AllowClobber = true;
 
-        var request = BrokerRequestBuilder.Build(
-            package,
-            new InstallOptions { CustomParameters_Install = ["-Proxy", "http://proxy"] },
-            OperationType.Install
-        );
+        var request = BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Install);
 
-        Assert.Equal(["-Proxy", "http://proxy", "-AllowClobber"], request.Options.CustomParameters);
+        Assert.DoesNotContain("-AllowClobber", request.Options.CustomParameters);
+        Assert.True(BrokerRequestBuilder.IsUnsupportedAllowClobberRetry(package, OperationType.Install));
     }
 
-    [Fact]
-    public void Build_AllowClobberRetry_LeavesTheSavedCustomParametersUntouched()
+    [Theory]
+    [InlineData(OperationType.Update)]
+    [InlineData(OperationType.Uninstall)]
+    public void IsUnsupportedAllowClobberRetry_IsInstallOnly(OperationType role)
     {
         var package = BuildPowerShellPackage();
         package.OverridenOptions.PowerShell_AllowClobber = true;
-        var options = new InstallOptions { CustomParameters_Install = ["-Proxy"] };
 
-        BrokerRequestBuilder.Build(package, options, OperationType.Install);
-
-        Assert.Equal(["-Proxy"], options.CustomParameters_Install);
+        Assert.False(BrokerRequestBuilder.IsUnsupportedAllowClobberRetry(package, role));
     }
 
     [Theory]
@@ -350,7 +349,7 @@ public class BrokerRequestBuilderTests
             .Build();
         var options = new InstallOptions { Version = "1.2.3; Start-Process calc" };
 
-        Assert.Throws<InvalidOperationException>(
+        Assert.ThrowsAny<InvalidOperationException>(
             () => BrokerRequestBuilder.Build(package, options, OperationType.Install)
         );
     }
@@ -363,13 +362,13 @@ public class BrokerRequestBuilderTests
             .WithId("powershell-yaml; Start-Process calc")
             .Build();
 
-        Assert.Throws<InvalidOperationException>(
+        Assert.Throws<BrokerRequestValidationException>(
             () => BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Install)
         );
     }
 
     [Fact]
-    public void Build_KeepsWinGetVersionsThatAreNotPlainVersions()
+    public void Build_RefusesWinGetVersionsThatTheBrokerRejects()
     {
         var package = new PackageBuilder()
             .WithManager(new PackageManagerBuilder().WithName("Winget").Build())
@@ -377,9 +376,581 @@ public class BrokerRequestBuilderTests
             .Build();
         var options = new InstallOptions { Version = "2021 Update" };
 
-        var request = BrokerRequestBuilder.Build(package, options, OperationType.Install);
+        var exception = Assert.Throws<BrokerRequestValidationException>(
+            () => BrokerRequestBuilder.Build(package, options, OperationType.Install));
 
-        Assert.Equal("2021 Update", request.Package.Version);
+        Assert.Contains(exception.Issues, issue => issue.Contains("2021 Update"));
+    }
+
+    private static UniGetUI.PackageEngine.PackageClasses.Package BuildPackage(
+        string managerName,
+        string id = "contoso-tool",
+        string version = "1.2.3",
+        string? newVersion = null)
+    {
+        var builder = new PackageBuilder()
+            .WithManager(new PackageManagerBuilder().WithName(managerName).Build())
+            .WithId(id)
+            .WithVersion(version);
+        if (newVersion is not null)
+            builder = builder.WithNewVersion(newVersion);
+        return builder.Build();
+    }
+
+    [Theory]
+    [InlineData("Winget")]
+    [InlineData("Chocolatey")]
+    [InlineData("Npm")]
+    [InlineData("Cargo")]
+    [InlineData(".NET Tool")]
+    [InlineData("PowerShell")]
+    [InlineData("PowerShell7")]
+    [InlineData("Pip")]
+    [InlineData("Bun")]
+    public void Build_SendsTheListedVersionForInstallsWithoutAnExplicitVersion(string managerName)
+    {
+        var request = BrokerRequestBuilder.Build(
+            BuildPackage(managerName), new InstallOptions(), OperationType.Install);
+
+        Assert.Equal("1.2.3", request.Package.Version);
+    }
+
+    [Fact]
+    public void Build_SendsTheTargetVersionForUpdates()
+    {
+        var package = BuildPackage("Winget", "Contoso.Test", "1.0.0", "2.0.0");
+
+        var request = BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Update);
+
+        Assert.Equal("2.0.0", request.Package.Version);
+    }
+
+    [Fact]
+    public void Build_PrefersTheExplicitlySelectedVersion()
+    {
+        var request = BrokerRequestBuilder.Build(
+            BuildPackage("Npm"), new InstallOptions { Version = "1.0.0" }, OperationType.Install);
+
+        Assert.Equal("1.0.0", request.Package.Version);
+    }
+
+    [Theory]
+    [InlineData("Winget")]
+    [InlineData("Npm")]
+    [InlineData("Pip")]
+    public void Build_NeverSendsAVersionForUninstalls(string managerName)
+    {
+        var request = BrokerRequestBuilder.Build(
+            BuildPackage(managerName), new InstallOptions(), OperationType.Uninstall);
+
+        Assert.Null(request.Package.Version);
+    }
+
+    [Theory]
+    [InlineData("Scoop")]
+    [InlineData("vcpkg")]
+    public void Build_NeverSendsAVersionForManagersThatPinTheirOwn(string managerName)
+    {
+        var request = BrokerRequestBuilder.Build(
+            BuildPackage(managerName), new InstallOptions(), OperationType.Install);
+
+        Assert.Null(request.Package.Version);
+    }
+
+    [Fact]
+    public void Build_LeavesTheVersionUnsetForPreReleaseInstalls()
+    {
+        var request = BrokerRequestBuilder.Build(
+            BuildPackage("Winget", "Contoso.Test"), new InstallOptions { PreRelease = true }, OperationType.Install);
+
+        Assert.Null(request.Package.Version);
+    }
+
+    [Fact]
+    public void Build_SendsTheTargetVersionForUpdatesEvenWithPreReleaseEnabled()
+    {
+        var package = BuildPackage("Winget", "Contoso.Test", "1.0.0", "2.0.0-beta.1");
+
+        var request = BrokerRequestBuilder.Build(package, new InstallOptions { PreRelease = true }, OperationType.Update);
+
+        Assert.Equal("2.0.0-beta.1", request.Package.Version);
+    }
+
+    [Theory]
+    [InlineData("Winget", "Unknown")]
+    [InlineData("Winget", "< 1.2")]
+    [InlineData("Winget", "2021 Update")]
+    [InlineData("Bun", "1.2")]
+    [InlineData("Npm", "^1.2.0")]
+    public void Build_OmitsAListedVersionTheBrokerWouldNotAccept(string managerName, string listedVersion)
+    {
+        var request = BrokerRequestBuilder.Build(
+            BuildPackage(managerName, version: listedVersion), new InstallOptions(), OperationType.Install);
+
+        Assert.Null(request.Package.Version);
+    }
+
+    [Theory]
+    [InlineData("Npm", "^1.2.0")]
+    [InlineData("Npm", ">=1.0.0")]
+    [InlineData("Cargo", "<2")]
+    [InlineData("Bun", "1.2")]
+    [InlineData("PowerShell", "[1.0,2.0)")]
+    [InlineData("Scoop", "1.2.3")]
+    public void Build_RefusesAnExplicitVersionTheBrokerWouldReject(string managerName, string version)
+    {
+        Assert.ThrowsAny<InvalidOperationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage(managerName), new InstallOptions { Version = version }, OperationType.Install));
+    }
+
+    [Theory]
+    [InlineData("Npm", "1.2.x")]
+    [InlineData("Npm", "~1.2")]
+    [InlineData("Npm", "1.2.*")]
+    [InlineData("PowerShell7", "[1.0, 2.0)")]
+    [InlineData("Npm", "1.x")]
+    [InlineData("Cargo", "=1.2.3")]
+    [InlineData(".NET Tool", "[1.0,2.0)")]
+    [InlineData("Pip", "1!2.0")]
+    public void Build_KeepsVersionSyntaxTheBrokerAccepts(string managerName, string version)
+    {
+        var request = BrokerRequestBuilder.Build(
+            BuildPackage(managerName), new InstallOptions { Version = version }, OperationType.Install);
+
+        Assert.Equal(version, request.Package.Version);
+    }
+
+    [Theory]
+    [InlineData("1.2.3-01")]
+    [InlineData("01.2.3")]
+    [InlineData("99999999999999999999.0.0")]
+    public void Build_RefusesBunVersionsThatAreNotCanonicalSemanticVersions(string version)
+    {
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage("Bun"), new InstallOptions { Version = version }, OperationType.Install));
+    }
+
+    [Theory]
+    [InlineData("1.2.3-rc.1")]
+    [InlineData("1.2.3-0a")]
+    [InlineData("1.2.3+build.01")]
+    public void Build_KeepsCanonicalBunVersions(string version)
+    {
+        var request = BrokerRequestBuilder.Build(
+            BuildPackage("Bun"), new InstallOptions { Version = version }, OperationType.Install);
+
+        Assert.Equal(version, request.Package.Version);
+    }
+
+    [Theory]
+    [InlineData(OperationType.Update)]
+    [InlineData(OperationType.Uninstall)]
+    public void Build_IgnoresASavedInstallVersionForOtherOperations(OperationType role)
+    {
+        var options = new InstallOptions { Version = "/latest" };
+
+        var request = BrokerRequestBuilder.Build(BuildWinGetPackage(), options, role);
+
+        Assert.Null(request.Package.Version);
+    }
+
+    [Fact]
+    public void Build_RefusesPackageIdentifiersLongerThanTheBrokerAccepts()
+    {
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage("Winget", "Contoso." + new string('a', 260)), new InstallOptions(), OperationType.Install));
+    }
+
+    [Fact]
+    public void Build_RefusesCustomParametersLongerThanTheBrokerAccepts()
+    {
+        var options = new InstallOptions { CustomParameters_Install = ["--log=" + new string('a', 520)] };
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildWinGetPackage(), options, OperationType.Install));
+    }
+
+    [Fact]
+    public void Build_DropsBlankCustomParametersForManagersThatAcceptNone()
+    {
+        var options = new InstallOptions { CustomParameters_Install = ["  "] };
+
+        var request = BrokerRequestBuilder.Build(BuildPackage("Chocolatey"), options, OperationType.Install);
+
+        Assert.Empty(request.Options.CustomParameters);
+    }
+
+    [Fact]
+    public void FindProblems_ReportsTheCommandLineSafetyGuardsToo()
+    {
+        var problems = BrokerRequestBuilder.FindProblems(
+            BuildPackage("Winget", "-foo"), new InstallOptions(), OperationType.Install);
+
+        Assert.Contains(problems, problem => problem.Contains("-foo") && !problem.StartsWith("Refusing"));
+    }
+
+    [Fact]
+    public void FindProblems_IsEmptyForAValidRequest()
+    {
+        Assert.Empty(BrokerRequestBuilder.FindProblems(BuildWinGetPackage(), new InstallOptions(), OperationType.Install));
+    }
+
+    [Fact]
+    public void FindProblems_ReportsFieldValidationIssues()
+    {
+        var problems = BrokerRequestBuilder.FindProblems(
+            BuildWinGetPackage(), new InstallOptions(), OperationType.Install, "Tools\\App");
+
+        Assert.Single(problems);
+    }
+
+    [Fact]
+    public void Build_DropsEmptyCustomParameters()
+    {
+        var options = new InstallOptions { CustomParameters_Install = ["", "--silent", "   "] };
+
+        var request = BrokerRequestBuilder.Build(BuildWinGetPackage(), options, OperationType.Install);
+
+        Assert.Equal(["--silent"], request.Options.CustomParameters);
+    }
+
+    [Fact]
+    public void Build_RefusesBunVersionsLongerThanTheBrokerAccepts()
+    {
+        string version = "1.2.3+" + new string('a', 200);
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage("Bun"), new InstallOptions { Version = version }, OperationType.Install));
+    }
+
+    [Theory]
+    [InlineData("C:\\Tools\\..\\Windows")]
+    [InlineData("C:\\Tools\\.")]
+    [InlineData("C:\\Tools\\App.")]
+    [InlineData("C:\\Tools\\App ")]
+    [InlineData("C:\\Tools\\file.txt:stream")]
+    [InlineData("Tools\\App")]
+    [InlineData("\\\\server\\share\\App")]
+    [InlineData("\\\\?\\C:\\Tools")]
+    [InlineData("C:Tools")]
+    [InlineData("C:\\Tools\\%APPDATA%")]
+    public void Build_RefusesInstallLocationsTheBrokerRejects(string location)
+    {
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildWinGetPackage(), new InstallOptions(), OperationType.Install, location));
+    }
+
+    [Theory]
+    [InlineData("C:\\Program Files\\App v1.2")]
+    [InlineData("d:/Tools//App/")]
+    [InlineData("D:\\")]
+    public void Build_KeepsPlainLocalInstallLocations(string location)
+    {
+        var request = BrokerRequestBuilder.Build(
+            BuildWinGetPackage(), new InstallOptions(), OperationType.Install, location);
+
+        Assert.Equal(location, request.Options.CustomInstallLocation);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Build_SendsNoInstallLocationForBlankValues(string location)
+    {
+        var request = BrokerRequestBuilder.Build(
+            BuildWinGetPackage(), new InstallOptions(), OperationType.Install, location);
+
+        Assert.Null(request.Options.CustomInstallLocation);
+    }
+
+    [Theory]
+    [InlineData("Chocolatey", "git;7zip")]
+    [InlineData("Chocolatey", "all")]
+    [InlineData("Chocolatey", "packages.config")]
+    [InlineData("Chocolatey", "git.nupkg")]
+    [InlineData("Chocolatey", "C:\\pkgs\\git")]
+    [InlineData("Scoop", "*")]
+    [InlineData("Scoop", "7z*")]
+    [InlineData("Scoop", "--all")]
+    [InlineData("PowerShell", "Pester*")]
+    [InlineData("PowerShell7", "[Pp]ester")]
+    [InlineData("Npm", "user/repo")]
+    [InlineData("Npm", "github:user/repo")]
+    [InlineData("Npm", "git+https://example.test/repo.git")]
+    [InlineData("Npm", "file:../pkg")]
+    [InlineData("Npm", "pkg.tgz")]
+    [InlineData("Npm", "contoso%PATH%")]
+    [InlineData("Bun", "github:user/repo")]
+    [InlineData("Cargo", "my crate")]
+    [InlineData("Pip", "requests[security]")]
+    [InlineData("Winget", "Contoso.App&Other")]
+    [InlineData("Npm", "eslint-v9:eslint@^9.x")]
+    [InlineData("Winget", "Contoso App")]
+    [InlineData("Winget", "Contoso.Äpp")]
+    public void Build_RefusesPackageIdentifiersTheBrokerRejects(string managerName, string id)
+    {
+        Assert.ThrowsAny<InvalidOperationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage(managerName, id), new InstallOptions(), OperationType.Install));
+    }
+
+    [Theory]
+    [InlineData("Chocolatey", "notepadplusplus.install")]
+    [InlineData("Chocolatey", "allure")]
+    [InlineData("Npm", "@contoso/tool")]
+    [InlineData("Npm", "eslint-v9:eslint@9.0.0")]
+    [InlineData("Bun", "@contoso/tool")]
+    [InlineData("PowerShell", "Az.Accounts")]
+    [InlineData("Scoop", "7zip")]
+    public void Build_KeepsPackageIdentifiersTheBrokerAccepts(string managerName, string id)
+    {
+        var request = BrokerRequestBuilder.Build(
+            BuildPackage(managerName, id), new InstallOptions(), OperationType.Install);
+
+        Assert.Equal(id, request.Package.Id);
+    }
+
+    [Theory]
+    [InlineData("--all")]
+    [InlineData("--arch=64bit")]
+    [InlineData("-a")]
+    [InlineData("-qa")]
+    [InlineData("--global")]
+    [InlineData("-g")]
+    [InlineData("extras/app")]
+    [InlineData("--")]
+    public void Build_RefusesScoopCustomParametersTheBrokerRejects(string parameter)
+    {
+        var options = new InstallOptions { CustomParameters_Update = [parameter] };
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage("Scoop", "7zip"), options, OperationType.Update));
+    }
+
+    [Theory]
+    [InlineData("--no-cache")]
+    [InlineData("--quiet")]
+    [InlineData("-fq")]
+    public void Build_KeepsScoopCustomParametersTheBrokerAccepts(string parameter)
+    {
+        var options = new InstallOptions { CustomParameters_Update = [parameter] };
+
+        var request = BrokerRequestBuilder.Build(BuildPackage("Scoop", "7zip"), options, OperationType.Update);
+
+        Assert.Equal([parameter], request.Options.CustomParameters);
+    }
+
+    [Theory]
+    [InlineData("\"/S")]
+    [InlineData("%TEMP%")]
+    [InlineData("/D=a!b")]
+    [InlineData("a^b")]
+    public void Build_RefusesBatchMetacharactersInWinGetCustomParameters(string parameter)
+    {
+        var options = new InstallOptions { CustomParameters_Install = ["--override", parameter] };
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildWinGetPackage(), options, OperationType.Install));
+    }
+
+    [Theory]
+    [InlineData("Chocolatey")]
+    [InlineData("PowerShell")]
+    [InlineData("PowerShell7")]
+    [InlineData("Npm")]
+    [InlineData("Bun")]
+    [InlineData("Cargo")]
+    [InlineData(".NET Tool")]
+    [InlineData("Pip")]
+    [InlineData("vcpkg")]
+    public void Build_SendsNoSourceUrlForManagersThatIdentifySourcesByName(string managerName)
+    {
+        var request = BrokerRequestBuilder.Build(BuildPackage(managerName), new InstallOptions(), OperationType.Install);
+
+        Assert.Null(request.Source.Url);
+        Assert.False(string.IsNullOrEmpty(request.Source.Name));
+    }
+
+    [Theory]
+    [InlineData("Winget")]
+    [InlineData("Scoop")]
+    public void Build_KeepsTheSourceUrlForManagersThatAcceptOne(string managerName)
+    {
+        var package = BuildPackage(managerName, managerName == "Winget" ? "Contoso.Test" : "7zip");
+
+        var request = BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Install);
+
+        Assert.Equal(package.Source.Url?.ToString(), request.Source.Url);
+    }
+
+    [Theory]
+    [InlineData("Chocolatey")]
+    [InlineData("Npm")]
+    [InlineData("Pip")]
+    [InlineData(".NET Tool")]
+    public void Build_RefusesCustomParametersForManagersThatAcceptNone(string managerName)
+    {
+        var options = new InstallOptions { CustomParameters_Install = ["--force"] };
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage(managerName), options, OperationType.Install));
+    }
+
+    [Theory]
+    [InlineData("Npm")]
+    [InlineData("Scoop")]
+    [InlineData("Pip")]
+    public void Build_RefusesElevatedOperationsForManagersThatRunPerUser(string managerName)
+    {
+        var options = new InstallOptions { RunAsAdministrator = true };
+
+        WithElevationAllowed(() => Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage(managerName, managerName == "Scoop" ? "7zip" : "contoso-tool"), options, OperationType.Install)));
+    }
+
+    /// <summary>Runs an assertion with elevation allowed, whatever the machine's settings are.</summary>
+    private static void WithElevationAllowed(Action assertion)
+    {
+        bool original = Settings.Get(Settings.K.ProhibitElevation);
+        Settings.Set(Settings.K.ProhibitElevation, false);
+        try
+        {
+            assertion();
+        }
+        finally
+        {
+            Settings.Set(Settings.K.ProhibitElevation, original);
+        }
+    }
+
+    [Fact]
+    public void Build_RefusesPrePostCommandsForElevatedOperations()
+    {
+        var options = new InstallOptions { RunAsAdministrator = true, PreInstallCommand = "echo before" };
+
+        WithElevationAllowed(() => Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildWinGetPackage(), options, OperationType.Install)));
+    }
+
+    [Fact]
+    public void Build_RefusesPrePostCommandsForMachineScopeOperations()
+    {
+        var options = new InstallOptions { InstallationScope = PackageScope.Machine, PostUpdateCommand = "echo after" };
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildWinGetPackage(), options, OperationType.Update));
+    }
+
+    [Fact]
+    public void Build_KeepsPrePostCommandsForStandardUserOperations()
+    {
+        var options = new InstallOptions { InstallationScope = PackageScope.User, PreInstallCommand = "echo before" };
+
+        var request = BrokerRequestBuilder.Build(BuildWinGetPackage(), options, OperationType.Install);
+
+        Assert.Equal("echo before", request.Options.PreOperationCommand);
+    }
+
+    [Theory]
+    [InlineData("Npm")]
+    [InlineData("Scoop")]
+    [InlineData("Cargo")]
+    public void Build_RefusesMachineScopeForManagersThatInstallPerUser(string managerName)
+    {
+        var options = new InstallOptions { InstallationScope = PackageScope.Machine };
+
+        var exception = Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage(managerName, managerName == "Scoop" ? "7zip" : "contoso-tool"), options, OperationType.Install));
+
+        Assert.Contains(exception.Issues, issue => issue.Contains(CoreTools.Translate("installing for all users")));
+    }
+
+    [Fact]
+    public void Build_RefusesPreReleaseInstallsForNpm()
+    {
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage("Npm"), new InstallOptions { PreRelease = true }, OperationType.Install));
+    }
+
+    [Theory]
+    [InlineData("Npm")]
+    [InlineData("Chocolatey")]
+    [InlineData("Winget")]
+    public void Build_IgnoresPreReleaseSkipHashAndArchitectureForUninstalls(string managerName)
+    {
+        var options = new InstallOptions
+        {
+            PreRelease = true,
+            SkipHashCheck = true,
+            Architecture = UniGetUIArchitecture.arm64,
+        };
+
+        var request = BrokerRequestBuilder.Build(
+            BuildPackage(managerName, managerName == "Winget" ? "Contoso.Test" : "contoso-tool"), options, OperationType.Uninstall);
+
+        Assert.False(request.Options.PreRelease);
+        Assert.False(request.Options.SkipHashCheck);
+        Assert.Null(request.Package.Architecture);
+    }
+
+    [Fact]
+    public void Build_SendsAScoopArchitectureOnlyForInstalls()
+    {
+        var options = new InstallOptions { Architecture = UniGetUIArchitecture.x64 };
+        var package = BuildPackage("Scoop", "7zip");
+
+        Assert.Equal(Architecture.X64, BrokerRequestBuilder.Build(package, options, OperationType.Install).Package.Architecture);
+        Assert.Null(BrokerRequestBuilder.Build(package, options, OperationType.Update).Package.Architecture);
+    }
+
+    [Fact]
+    public void Build_RefusesArm64ForChocolatey()
+    {
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage("Chocolatey"), new InstallOptions { Architecture = UniGetUIArchitecture.arm64 }, OperationType.Install));
+    }
+
+    [Fact]
+    public void Build_RefusesPowerShellSourceNamesWithSurroundingWhitespace()
+    {
+        var package = new PackageBuilder()
+            .WithManager(new PackageManagerBuilder().WithName("PowerShell").Build())
+            .WithSource(new SourceBuilder().WithName(" PSGallery").Build())
+            .WithId("Pester")
+            .Build();
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            package, new InstallOptions(), OperationType.Install));
+    }
+
+    [Fact]
+    public void Build_RefusesTheArm32Architecture()
+    {
+        var options = new InstallOptions { Architecture = UniGetUIArchitecture.arm32 };
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildWinGetPackage(), options, OperationType.Install));
+    }
+
+    [Theory]
+    [InlineData("--override", true)]
+    [InlineData("--OVERRIDE=/S", true)]
+    [InlineData("--custom", true)]
+    [InlineData("--custom=/quiet", true)]
+    [InlineData("--silent", false)]
+    [InlineData("override", false)]
+    public void HasWinGetInstallerArguments_MatchesOverrideAndCustom(string parameter, bool expected)
+    {
+        Assert.Equal(expected, BrokerRequestValidator.HasWinGetInstallerArguments([parameter]));
+    }
+
+    [Fact]
+    public void UsesWinGetInstallerArguments_IsWinGetOnly()
+    {
+        var options = new InstallOptions { CustomParameters_Install = ["--override"] };
+
+        Assert.True(BrokerRequestValidator.UsesWinGetInstallerArguments(BuildWinGetPackage(), options, OperationType.Install));
+        Assert.False(BrokerRequestValidator.UsesWinGetInstallerArguments(BuildWinGetPackage(), options, OperationType.Update));
+        Assert.False(BrokerRequestValidator.UsesWinGetInstallerArguments(BuildPackage("Scoop", "7zip"), options, OperationType.Install));
     }
 
     [Fact]

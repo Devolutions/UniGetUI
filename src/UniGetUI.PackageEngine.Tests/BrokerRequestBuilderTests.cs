@@ -365,7 +365,7 @@ public class BrokerRequestBuilderTests
             .WithId("powershell-yaml; Start-Process calc")
             .Build();
 
-        Assert.Throws<InvalidOperationException>(
+        Assert.Throws<BrokerRequestValidationException>(
             () => BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Install)
         );
     }
@@ -690,7 +690,7 @@ public class BrokerRequestBuilderTests
         var problems = BrokerRequestBuilder.FindProblems(
             BuildPackage("Winget", "-foo"), new InstallOptions(), OperationType.Install);
 
-        Assert.NotEmpty(problems);
+        Assert.Contains(problems, problem => problem.Contains("-foo") && !problem.StartsWith("Refusing"));
     }
 
     [Fact]

@@ -1256,6 +1256,8 @@
   "The version \"{0}\" is longer than the {1} characters the Devolutions Agent accepts.": "The version \"{0}\" is longer than the {1} characters the Devolutions Agent accepts.",
   "The package identifier \"{0}\" is longer than the {1} characters the Devolutions Agent accepts.": "The package identifier \"{0}\" is longer than the {1} characters the Devolutions Agent accepts.",
   "The custom argument \"{0}\" is longer than the {1} characters the Devolutions Agent accepts.": "The custom argument \"{0}\" is longer than the {1} characters the Devolutions Agent accepts.",
+  "The package identifier \"{0}\" would be read as a command-line option or split into several arguments.": "The package identifier \"{0}\" would be read as a command-line option or split into several arguments.",
+  "The version \"{0}\" would be read as a command-line option.": "The version \"{0}\" would be read as a command-line option.",
   "Loading policy management state": "Loading policy management state",
   "Your organization": "Your organization",
   "Policy management is unsupported": "Policy management is unsupported",

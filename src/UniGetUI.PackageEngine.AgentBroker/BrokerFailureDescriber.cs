@@ -41,7 +41,7 @@ public static class BrokerFailureDescriber
                 [
                     CoreTools.Translate("The Devolutions Agent would reject the following options of this operation:"),
                     .. issues.Select(issue => "• " + issue),
-                    CoreTools.Translate("Change the installation options of this package, then try again."),
+                    CoreTools.Translate("Adjust the installation options of this package, or choose another package or source, then try again."),
                 ]));
 
     /// <summary>

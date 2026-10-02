@@ -1217,7 +1217,7 @@
   "Contact your administrator if you need this operation to be allowed.": "Contact your administrator if you need this operation to be allowed.",
   "The package broker cannot accept this request": "The package broker cannot accept this request",
   "The Devolutions Agent would reject the following options of this operation:": "The Devolutions Agent would reject the following options of this operation:",
-  "Change the installation options of this package, then try again.": "Change the installation options of this package, then try again.",
+  "Adjust the installation options of this package, or choose another package or source, then try again.": "Adjust the installation options of this package, or choose another package or source, then try again.",
   "UniGetUI is not authorized to use the Devolutions Agent": "UniGetUI is not authorized to use the Devolutions Agent",
   "The Devolutions Agent only accepts requests from signed, unmodified copies of UniGetUI. If you are running a development or self-built version, install an official release of UniGetUI and try again.": "The Devolutions Agent only accepts requests from signed, unmodified copies of UniGetUI. If you are running a development or self-built version, install an official release of UniGetUI and try again.",
   "Administrator rights are required": "Administrator rights are required",

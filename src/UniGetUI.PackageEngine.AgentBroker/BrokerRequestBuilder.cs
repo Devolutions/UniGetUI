@@ -47,9 +47,13 @@ public static class BrokerRequestBuilder
                 $"Refusing to build a {manager} broker request for the package identifier \"{package.Id}\": it would be read as a command-line option or split into further arguments."
             );
 
-        if (!CoreTools.IsOptionSafeValue(options.Version))
+        // Only installs send the saved version (see ResolveVersion), so a saved value never
+        // blocks an update or an uninstall.
+        string requestedVersion = role is OperationType.Install ? options.Version : "";
+
+        if (!CoreTools.IsOptionSafeValue(requestedVersion))
             throw new InvalidOperationException(
-                $"Refusing to build a {manager} broker request for package {package.Id}: the requested version \"{options.Version}\" would be read as a command-line option."
+                $"Refusing to build a {manager} broker request for package {package.Id}: the requested version \"{requestedVersion}\" would be read as a command-line option."
             );
 
         if (ManagerCommandLineIsShellInterpreted(manager))
@@ -62,16 +66,17 @@ public static class BrokerRequestBuilder
             // Managers with known broker version rules are checked against those (stricter, and
             // aware of each manager's range syntax) by BrokerRequestValidator below.
             if (
-                options.Version.Length > 0
+                requestedVersion.Length > 0
                 && !BrokerRequestValidator.ManagerHasKnownVersionRules(manager)
-                && !CoreTools.IsValidPackageVersion(options.Version)
+                && !CoreTools.IsValidPackageVersion(requestedVersion)
             )
                 throw new InvalidOperationException(
-                    $"Refusing to build a {manager} broker request for package {package.Id}: the requested version \"{options.Version}\" is not a valid package version."
+                    $"Refusing to build a {manager} broker request for package {package.Id}: the requested version \"{requestedVersion}\" is not a valid package version."
                 );
         }
 
-        List<string> customParameters = GetCustomParameters(options, role);
+        // The broker refuses empty custom parameters; they carry nothing, so they are dropped.
+        List<string> customParameters = [.. GetCustomParameters(options, role).Where(parameter => parameter.Length > 0)];
         if (
             manager is ManagerName.PowerShell
             && role is OperationType.Install

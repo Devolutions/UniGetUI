@@ -65,10 +65,19 @@ public class BrokerFailureDescriberTests
     }
 
     [Fact]
+    public void Describe_UnstructuredServiceUnavailableIsBusy()
+    {
+        var description = BrokerFailureDescriber.Describe(new BrokerClientException(
+            BrokerClientErrorKind.BrokerError, "Broker returned HTTP 503", "/v1/capabilities", 503));
+
+        Assert.Equal(CoreTools.Translate("The Devolutions Agent is busy"), description.Title);
+    }
+
+    [Fact]
     public void Describe_PausedBrokerWithoutPolicy()
     {
         var description = BrokerFailureDescriber.Describe(
-            BrokerError(409, ErrorCode.BrokerPaused, "no valid policy"));
+            BrokerError(503, ErrorCode.BrokerPaused, "active policy is unavailable"));
 
         Assert.Equal(CoreTools.Translate("Package operations are paused"), description.Title);
     }

@@ -38,11 +38,16 @@ public static partial class BrokerRequestValidator
     /// broker is known to reject. An empty list means no known rule is violated.
     /// </summary>
     /// <param name="installLocation">The install location that would be sent, or null.</param>
+    /// <param name="customParameters">
+    /// The custom parameters that would be sent, when they differ from the ones saved in
+    /// <paramref name="options"/> for the role (for example a parameter added by a retry).
+    /// </param>
     public static IReadOnlyList<string> Validate(
         IPackage package,
         InstallOptions options,
         OperationType role,
-        string? installLocation)
+        string? installLocation,
+        IReadOnlyList<string>? customParameters = null)
     {
         if (!BrokerRequestBuilder.TryMapManagerName(package.Manager.Name, out ManagerName manager))
         {
@@ -74,13 +79,57 @@ public static partial class BrokerRequestValidator
             AddIssue(issues, CheckInstallLocation(manager, installLocation));
         }
 
-        foreach (string parameter in GetCustomParameters(options, role))
+        IReadOnlyList<string> parameters = customParameters ?? GetCustomParameters(options, role);
+        string[] nonEmptyParameters = [.. parameters.Where(parameter => parameter.Trim().Length > 0)];
+        if (ManagerRejectsCustomParameters(manager) && nonEmptyParameters.Length > 0)
         {
-            AddIssue(issues, CheckCustomParameter(manager, managerName, parameter));
+            issues.Add(CoreTools.Translate(
+                "The Devolutions Agent does not accept custom arguments for {0} packages ({1}). Remove them from the installation options of this package.",
+                managerName,
+                string.Join(' ', nonEmptyParameters)));
+        }
+        else
+        {
+            foreach (string parameter in parameters)
+            {
+                AddIssue(issues, CheckCustomParameter(manager, managerName, parameter));
+            }
         }
 
         return issues;
     }
+
+    /// <summary>
+    /// Whether the broker refuses every custom parameter for this manager: only WinGet and
+    /// Scoop pass custom parameters to the package manager.
+    /// </summary>
+    internal static bool ManagerRejectsCustomParameters(ManagerName manager) =>
+        manager
+            is ManagerName.Chocolatey
+                or ManagerName.PowerShell
+                or ManagerName.PowerShell7
+                or ManagerName.Npm
+                or ManagerName.Bun
+                or ManagerName.Cargo
+                or ManagerName.Dotnet
+                or ManagerName.Pip
+                or ManagerName.Vcpkg;
+
+    /// <summary>
+    /// Whether the broker accepts a package source URL for this manager. The other managers
+    /// identify their source by name only and refuse a URL, or only accept their default one.
+    /// </summary>
+    internal static bool ManagerAcceptsSourceUrl(ManagerName manager) =>
+        manager
+            is not (ManagerName.Chocolatey
+                or ManagerName.PowerShell
+                or ManagerName.PowerShell7
+                or ManagerName.Npm
+                or ManagerName.Bun
+                or ManagerName.Cargo
+                or ManagerName.Dotnet
+                or ManagerName.Pip
+                or ManagerName.Vcpkg);
 
     /// <summary>
     /// Whether the custom parameters of the operation pass WinGet <c>--override</c> or

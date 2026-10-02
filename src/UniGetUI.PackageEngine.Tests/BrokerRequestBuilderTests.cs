@@ -119,18 +119,18 @@ public class BrokerRequestBuilderTests
     }
 
     [Fact]
-    public void Build_AllowClobberRetry_AddsTheParameterForPowerShell5Installs()
+    public void Build_AllowClobberRetry_IsRefusedBecauseTheBrokerAcceptsNoPowerShellParameters()
     {
         var package = BuildPowerShellPackage();
         package.OverridenOptions.PowerShell_AllowClobber = true;
 
-        var request = BrokerRequestBuilder.Build(
+        var exception = Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
             package,
-            new InstallOptions { CustomParameters_Install = ["-Proxy", "http://proxy"] },
+            new InstallOptions(),
             OperationType.Install
-        );
+        ));
 
-        Assert.Equal(["-Proxy", "http://proxy", "-AllowClobber"], request.Options.CustomParameters);
+        Assert.Contains(exception.Issues, issue => issue.Contains("-AllowClobber"));
     }
 
     [Fact]
@@ -140,7 +140,8 @@ public class BrokerRequestBuilderTests
         package.OverridenOptions.PowerShell_AllowClobber = true;
         var options = new InstallOptions { CustomParameters_Install = ["-Proxy"] };
 
-        BrokerRequestBuilder.Build(package, options, OperationType.Install);
+        Assert.Throws<BrokerRequestValidationException>(
+            () => BrokerRequestBuilder.Build(package, options, OperationType.Install));
 
         Assert.Equal(["-Proxy"], options.CustomParameters_Install);
     }
@@ -583,6 +584,49 @@ public class BrokerRequestBuilderTests
 
         Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
             BuildWinGetPackage(), options, OperationType.Install));
+    }
+
+    [Theory]
+    [InlineData("Chocolatey")]
+    [InlineData("PowerShell")]
+    [InlineData("PowerShell7")]
+    [InlineData("Npm")]
+    [InlineData("Bun")]
+    [InlineData("Cargo")]
+    [InlineData(".NET Tool")]
+    [InlineData("Pip")]
+    [InlineData("vcpkg")]
+    public void Build_SendsNoSourceUrlForManagersThatIdentifySourcesByName(string managerName)
+    {
+        var request = BrokerRequestBuilder.Build(BuildPackage(managerName), new InstallOptions(), OperationType.Install);
+
+        Assert.Null(request.Source.Url);
+        Assert.False(string.IsNullOrEmpty(request.Source.Name));
+    }
+
+    [Theory]
+    [InlineData("Winget")]
+    [InlineData("Scoop")]
+    public void Build_KeepsTheSourceUrlForManagersThatAcceptOne(string managerName)
+    {
+        var package = BuildPackage(managerName, managerName == "Winget" ? "Contoso.Test" : "7zip");
+
+        var request = BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Install);
+
+        Assert.Equal(package.Source.Url?.ToString(), request.Source.Url);
+    }
+
+    [Theory]
+    [InlineData("Chocolatey")]
+    [InlineData("Npm")]
+    [InlineData("Pip")]
+    [InlineData(".NET Tool")]
+    public void Build_RefusesCustomParametersForManagersThatAcceptNone(string managerName)
+    {
+        var options = new InstallOptions { CustomParameters_Install = ["--force"] };
+
+        Assert.Throws<BrokerRequestValidationException>(() => BrokerRequestBuilder.Build(
+            BuildPackage(managerName), options, OperationType.Install));
     }
 
     [Fact]

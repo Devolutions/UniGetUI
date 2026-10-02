@@ -71,14 +71,6 @@ public static class BrokerRequestBuilder
                 );
         }
 
-        IReadOnlyList<string> issues = BrokerRequestValidator.Validate(
-            package,
-            options,
-            role,
-            effectiveInstallLocation);
-        if (issues.Count > 0)
-            throw new BrokerRequestValidationException(issues);
-
         List<string> customParameters = GetCustomParameters(options, role);
         if (
             manager is ManagerName.PowerShell
@@ -86,6 +78,16 @@ public static class BrokerRequestBuilder
             && package.OverridenOptions.PowerShell_AllowClobber
         )
             customParameters = [.. customParameters, "-AllowClobber"];
+
+        // Validate what will actually be sent, including parameters added by a retry.
+        IReadOnlyList<string> issues = BrokerRequestValidator.Validate(
+            package,
+            options,
+            role,
+            effectiveInstallLocation,
+            customParameters);
+        if (issues.Count > 0)
+            throw new BrokerRequestValidationException(issues);
 
         return new PackageOperationRequest
         {
@@ -97,7 +99,10 @@ public static class BrokerRequestBuilder
             Source = new RequestSource
             {
                 Name = package.Source.Name,
-                Url = package.Source.Url?.ToString(),
+                // Most managers identify their source by name and refuse a URL.
+                Url = BrokerRequestValidator.ManagerAcceptsSourceUrl(manager)
+                    ? package.Source.Url?.ToString()
+                    : null,
             },
             Package = new RequestPackage
             {

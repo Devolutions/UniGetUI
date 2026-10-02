@@ -1252,6 +1252,7 @@
   "The {0} package identifier \"{1}\" is not accepted by the Devolutions Agent: packages must be referenced by their registry name, such as \"name\" or \"@scope/name\", and not by a URL, a Git repository or a local path.": "The {0} package identifier \"{1}\" is not accepted by the Devolutions Agent: packages must be referenced by their registry name, such as \"name\" or \"@scope/name\", and not by a URL, a Git repository or a local path.",
   "The package identifier \"{0}\" contains characters that the Devolutions Agent does not accept for {1} packages.": "The package identifier \"{0}\" contains characters that the Devolutions Agent does not accept for {1} packages.",
   "The package manager run by the Devolutions Agent reported an error (exit code {0}).": "The package manager run by the Devolutions Agent reported an error (exit code {0}).",
+  "The Devolutions Agent does not accept custom arguments for {0} packages ({1}). Remove them from the installation options of this package.": "The Devolutions Agent does not accept custom arguments for {0} packages ({1}). Remove them from the installation options of this package.",
   "Loading policy management state": "Loading policy management state",
   "Your organization": "Your organization",
   "Policy management is unsupported": "Policy management is unsupported",

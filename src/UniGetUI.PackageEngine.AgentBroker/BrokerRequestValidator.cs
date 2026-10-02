@@ -84,7 +84,7 @@ public static partial class BrokerRequestValidator
         }
 
         IReadOnlyList<string> parameters = customParameters ?? GetCustomParameters(options, role);
-        string[] nonEmptyParameters = [.. parameters.Where(parameter => parameter.Trim().Length > 0)];
+        string[] nonEmptyParameters = [.. parameters.Where(parameter => !string.IsNullOrWhiteSpace(parameter))];
         if (ManagerRejectsCustomParameters(manager) && nonEmptyParameters.Length > 0)
         {
             issues.Add(CoreTools.Translate(
@@ -94,8 +94,8 @@ public static partial class BrokerRequestValidator
         }
         else
         {
-            // Empty entries are dropped from the request rather than sent.
-            foreach (string parameter in parameters.Where(parameter => parameter.Length > 0))
+            // Blank entries are dropped from the request rather than sent.
+            foreach (string parameter in nonEmptyParameters)
             {
                 AddIssue(issues, CheckCustomParameter(manager, managerName, parameter));
             }

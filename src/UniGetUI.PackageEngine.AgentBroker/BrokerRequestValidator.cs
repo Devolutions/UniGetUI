@@ -100,8 +100,8 @@ public static partial class BrokerRequestValidator
     }
 
     /// <summary>
-    /// Whether the broker refuses every custom parameter for this manager: only WinGet and
-    /// Scoop pass custom parameters to the package manager.
+    /// The managers whose broker command builder refuses every custom parameter. This is an
+    /// explicit list: managers not listed here (WinGet, Scoop and others) pass them through.
     /// </summary>
     internal static bool ManagerRejectsCustomParameters(ManagerName manager) =>
         manager

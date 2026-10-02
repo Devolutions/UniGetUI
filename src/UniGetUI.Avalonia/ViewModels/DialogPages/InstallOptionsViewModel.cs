@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
 using System.Net.Http;
 using System.Windows.Input;
+using Avalonia.Automation;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Core.Language;
 using UniGetUI.Core.Logging;
@@ -566,6 +568,15 @@ public partial class InstallOptionsViewModel : ObservableObject
         // Edits start overlapping refreshes; only the latest one may publish its result.
         if (generation != _brokerNoticesGeneration)
             return;
+
+        // Assigning bound text is not reliably announced, so route changes through the app's
+        // live region. Assigning an unchanged value is a no-op, which suppresses repeats.
+        if (issuesText != BrokerIssuesText && issuesText.Length > 0)
+            AccessibilityAnnouncementService.Announce(
+                $"{BrokerIssuesHeaderLabel} {issuesText}",
+                AutomationLiveSetting.Assertive);
+        if (customArgumentsWarning != BrokerCustomArgumentsWarning && customArgumentsWarning.Length > 0)
+            AccessibilityAnnouncementService.Announce(customArgumentsWarning, AutomationLiveSetting.Polite);
 
         BrokerIssuesText = issuesText;
         BrokerCustomArgumentsWarning = customArgumentsWarning;

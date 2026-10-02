@@ -83,7 +83,9 @@ public static class BrokerRequestBuilder
             Source = new RequestSource
             {
                 Name = package.Source.Name,
-                Url = package.Source.Url?.ToString(),
+                Url = SourceUrlIdentifiesAnIndex(manager)
+                    ? package.Source.Url?.ToString()
+                    : null,
             },
             Package = new RequestPackage
             {
@@ -97,7 +99,7 @@ public static class BrokerRequestBuilder
                 // matching the local WinGet execution path.
                 Scope = dropArchAndScope
                     ? null
-                    : MapScope(package.OverridenOptions.Scope ?? options.InstallationScope),
+                    : MapScope(manager, package.OverridenOptions.Scope ?? options.InstallationScope),
                 Interactive = options.InteractiveInstallation,
                 SkipHashCheck = options.SkipHashCheck,
                 PreRelease = options.PreRelease,
@@ -175,21 +177,31 @@ public static class BrokerRequestBuilder
         return result is not null;
     }
 
-    private static Scope? MapScope(string? scope)
+    private static Scope? MapScope(ManagerName manager, string? scope)
     {
         if (string.IsNullOrEmpty(scope))
         {
             return null;
         }
 
-        return scope.ToLowerInvariant() switch
+        Scope? mapped = scope.ToLowerInvariant() switch
         {
             "user" => Scope.User,
             "machine" => Scope.Machine,
             "global" => Scope.Machine,
             _ => null,
         };
+
+        return mapped is Scope.Machine && !ManagerScopeDistinguishesSystemWideInstalls(manager)
+            ? null
+            : mapped;
     }
+
+    private static bool ManagerScopeDistinguishesSystemWideInstalls(ManagerName manager) =>
+        manager is not ManagerName.Pip;
+
+    private static bool SourceUrlIdentifiesAnIndex(ManagerName manager) =>
+        manager is not ManagerName.Pip;
 
     private static BrokerArchitecture? MapArchitecture(string? architecture)
     {

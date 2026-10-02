@@ -1,4 +1,5 @@
 using Devolutions.Now.Policy.Api;
+using Devolutions.Now.Policy.Client;
 using UniGetUI.PackageEngine.AgentBroker;
 using UniGetUI.PackageEngine.Serializable;
 using UniGetUI.PackageEngine.Tests.Infrastructure.Builders;
@@ -14,6 +15,12 @@ public class BrokerRequestBuilderTests
         => new PackageBuilder()
             .WithManager(new PackageManagerBuilder().WithName("Winget").Build())
             .WithId("Contoso.Test")
+            .Build();
+
+    private static UniGetUI.PackageEngine.PackageClasses.Package BuildPipPackage()
+        => new PackageBuilder()
+            .WithManager(new PackageManagerBuilder().WithName("Pip").Build())
+            .WithId("requests")
             .Build();
 
     private static UniGetUI.PackageEngine.PackageClasses.Package BuildPowerShellPackage()
@@ -100,6 +107,71 @@ public class BrokerRequestBuilderTests
         Assert.Equal(Scope.User, request.Options.Scope);
     }
 
+    [Fact]
+    public void Build_OmitsMachineScopeForPip()
+    {
+        var package = BuildPipPackage();
+        package.OverridenOptions.Scope = PackageScope.Global;
+        var options = new InstallOptions { InstallationScope = PackageScope.Machine };
+
+        var request = BrokerRequestBuilder.Build(package, options, OperationType.Update);
+
+        Assert.Null(request.Options.Scope);
+    }
+
+    [Fact]
+    public void Build_KeepsUserScopeForPip()
+    {
+        var package = BuildPipPackage();
+        package.OverridenOptions.Scope = PackageScope.User;
+
+        var request = BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Update);
+
+        Assert.Equal(Scope.User, request.Options.Scope);
+    }
+
+    [Fact]
+    public void Build_OmitsAConfiguredMachineScopeForPip()
+    {
+        var package = BuildPipPackage();
+        var options = new InstallOptions { InstallationScope = PackageScope.Machine };
+
+        var request = BrokerRequestBuilder.Build(package, options, OperationType.Install);
+
+        Assert.Null(request.Options.Scope);
+    }
+
+    [Fact]
+    public void Build_KeepsAConfiguredMachineScopeForManagersThatResolveIt()
+    {
+        var package = BuildWinGetPackage();
+        var options = new InstallOptions { InstallationScope = PackageScope.Machine };
+
+        var request = BrokerRequestBuilder.Build(package, options, OperationType.Install);
+
+        Assert.Equal(Scope.Machine, request.Options.Scope);
+    }
+
+    [Fact]
+    public void Build_OmitsTheSourceUrlForPipButKeepsTheSourceName()
+    {
+        var package = BuildPipPackage();
+
+        var request = BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Update);
+
+        Assert.Null(request.Source.Url);
+        Assert.Equal(package.Source.Name, request.Source.Name);
+    }
+
+    [Fact]
+    public void Build_KeepsTheSourceUrlForOtherManagers()
+    {
+        var package = BuildWinGetPackage();
+
+        var request = BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Update);
+
+        Assert.Equal(package.Source.Url?.ToString(), request.Source.Url);
+    }
     [Fact]
     public void Build_DropArchAndScopeRetry_OmitsScopeAndArchitecture()
     {
@@ -310,4 +382,104 @@ public class BrokerRequestBuilderTests
         Assert.Equal("2021 Update", request.Package.Version);
     }
 
+    [Fact]
+    public async Task Build_PipUpdateRequest_ClearsTheBrokerCapabilityCheck()
+    {
+        var package = BuildPipPackage();
+        package.OverridenOptions.Scope = PackageScope.Global;
+
+        var request = BrokerRequestBuilder.Build(package, new InstallOptions(), OperationType.Update);
+
+        using var client = CreatePipBrokerClient();
+
+        var execution = await client.Execute(request, CancellationToken.None);
+
+        Assert.Equal(Decision.Allow, execution.Decision.Decision);
+    }
+
+    [Fact]
+    public async Task Build_PipRequestWithAConfiguredMachineScope_ClearsTheBrokerCapabilityCheck()
+    {
+        var package = BuildPipPackage();
+        var options = new InstallOptions { InstallationScope = PackageScope.Machine };
+
+        var request = BrokerRequestBuilder.Build(package, options, OperationType.Update);
+
+        using var client = CreatePipBrokerClient();
+
+        var execution = await client.Execute(request, CancellationToken.None);
+
+        Assert.Equal(Decision.Allow, execution.Decision.Decision);
+    }
+
+    private const string TestEffectiveUser = "TESTDOMAIN\\tester";
+    private const string TestClientExecutablePath = "C:\\test\\unigetui.exe";
+
+    private static BrokerClient CreatePipBrokerClient()
+        => new(new BrokerClientOptions
+        {
+            Transport = new PipCapabilityTransport(),
+            RequestedElevation = Elevation.Standard,
+            EffectiveUser = TestEffectiveUser,
+            ClientExecutablePath = TestClientExecutablePath,
+            ClientVersion = "0.0.0-tests",
+        });
+
+    private sealed class PipCapabilityTransport : IBrokerTransport
+    {
+        public Transport Kind => Transport.HttpNamedPipe;
+
+        public Task<BrokerTransportResponse> Send(
+            BrokerTransportRequest request,
+            CancellationToken cancellationToken = default
+        ) => request.Path switch
+        {
+            "/v1/capabilities" => Json(BrokerSerializer.Serialize(Capabilities())),
+            "/v1/package-operations/execute" => Json(BrokerSerializer.Serialize(Execution())),
+            _ => throw new BrokerClientException(
+                BrokerClientErrorKind.InvalidRequest,
+                $"Unexpected request path: {request.Path}",
+                request.Path
+            ),
+        };
+
+        public void Dispose() { }
+
+        private static Task<BrokerTransportResponse> Json(string body) =>
+            Task.FromResult(new BrokerTransportResponse { StatusCode = 200, Body = body });
+
+        private static CapabilitiesResponse Capabilities() => new()
+        {
+            ResponseKind = BrokerApi.CapabilitiesResponseKind,
+            ResponseVersion = BrokerApi.Version,
+            MaxRequestBodyBytes = 1_000_000,
+            Transports = [Transport.HttpNamedPipe],
+            Managers =
+            [
+                new ManagerCapability
+                {
+                    Manager = ManagerName.Pip,
+                    Operations = [Operation.Install, Operation.Update, Operation.Uninstall],
+                    Scopes = [Scope.User],
+                    Architectures = [Architecture.Neutral],
+                    SupportsCustomParameters = false,
+                    SupportsCustomInstallLocation = false,
+                    SupportsCaptureOutput = true,
+                },
+            ],
+        };
+
+        private static ExecutionResponse Execution() => new()
+        {
+            ResponseKind = BrokerApi.ExecutionResponseKind,
+            ResponseVersion = BrokerApi.Version,
+            Decision = new DecisionInfo { Decision = Decision.Allow },
+            Operation = new OperationSubmission
+            {
+                OperationId = "test-pip-operation",
+                Status = OperationStatus.Starting,
+                SubmittedAt = DateTimeOffset.UtcNow,
+            },
+        };
+    }
 }

@@ -79,7 +79,13 @@ public static class BrokerFailureDescriber
         ErrorResponse? error = exception.BrokerError;
         string? brokerMessage = string.IsNullOrWhiteSpace(error?.Message) ? null : error.Message.Trim();
 
-        if (exception.StatusCode is 503 && error?.Code is null or ErrorCode.BrokerPaused)
+        // The broker answers both "busy" (connection limit, retried by the client) and "no valid
+        // policy" with BrokerPaused over HTTP 503; only the busy reply says so in its message.
+        bool busy = error is null
+            ? exception.StatusCode is 503
+            : error.Code is ErrorCode.BrokerPaused
+                && brokerMessage?.Contains("busy", StringComparison.OrdinalIgnoreCase) is true;
+        if (busy)
         {
             return new(
                 CoreTools.Translate("The Devolutions Agent is busy"),
@@ -92,8 +98,10 @@ public static class BrokerFailureDescriber
             case ErrorCode.BrokerPaused:
                 return new(
                     CoreTools.Translate("Package operations are paused"),
-                    CoreTools.Translate(
-                        "The Devolutions Agent is not accepting package operations, usually because no valid package policy is installed. Contact your administrator."));
+                    WithDetails(
+                        CoreTools.Translate(
+                            "The Devolutions Agent is not accepting package operations, usually because no valid package policy is installed. Contact your administrator."),
+                        brokerMessage));
 
             case ErrorCode.ValidationFailed or ErrorCode.BadRequest:
                 return new(

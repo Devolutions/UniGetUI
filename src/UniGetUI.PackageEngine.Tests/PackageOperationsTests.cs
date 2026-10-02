@@ -1079,7 +1079,7 @@ public sealed class PackageOperationsTests
     {
         var transport = new ScriptedBrokerTransport
         {
-            CapabilitiesError = (409, BrokerApiErrorCode.BrokerPaused),
+            CapabilitiesError = (503, BrokerApiErrorCode.BrokerPaused),
         };
 
         var (veredict, title, _) = await RunBrokeredOperationCapturingFailure(transport);

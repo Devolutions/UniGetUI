@@ -681,6 +681,7 @@ public abstract partial class AbstractOperation : IDisposable
                 while (OperationQueue.Remove(this))
                     ;
                 OperationQueue.Insert(Math.Min(MAX_OPERATIONS, OperationQueue.Count), this);
+                IsBackgroundOperation = false;
             }
         }
         FORCE_HOLD_QUEUE = false;

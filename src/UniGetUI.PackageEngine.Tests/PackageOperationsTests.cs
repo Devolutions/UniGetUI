@@ -913,6 +913,69 @@ public sealed class PackageOperationsTests
         Assert.False(operation.IsBackgroundOperation);
     }
 
+    [Fact]
+    public async Task APromotedBackgroundOperationKeepsItsSlotWhenNoUserOperationIsQueued()
+    {
+        using var running = new CancellationAwareStubOperation(queueEnabled: true)
+        {
+            IsBackgroundOperation = true,
+        };
+        using var untouchedBackground = new CancellationAwareStubOperation(queueEnabled: true)
+        {
+            IsBackgroundOperation = true,
+        };
+        using var promotedBackground = new CancellationAwareStubOperation(queueEnabled: true)
+        {
+            IsBackgroundOperation = true,
+        };
+        using var lateUser = new CancellationAwareStubOperation(queueEnabled: true);
+
+        AbstractOperation.OperationQueue.Clear();
+        int previousMax = AbstractOperation.MAX_OPERATIONS;
+        AbstractOperation.MAX_OPERATIONS = 1;
+
+        try
+        {
+            Task runningTask = running.MainThread();
+            await running.PerformStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+            _ = untouchedBackground.MainThread();
+            await WaitUntilQueued(untouchedBackground);
+            _ = promotedBackground.MainThread();
+            await WaitUntilQueued(promotedBackground);
+
+            promotedBackground.RunNext();
+
+            _ = lateUser.MainThread();
+            await WaitUntilQueued(lateUser);
+
+            Assert.Equal(
+                new AbstractOperation[]
+                {
+                    running,
+                    promotedBackground,
+                    lateUser,
+                    untouchedBackground,
+                },
+                AbstractOperation.OperationQueue
+            );
+
+            untouchedBackground.Cancel();
+            promotedBackground.Cancel();
+            lateUser.Cancel();
+
+            running.Cancel();
+            await running.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            running.AllowCleanupToComplete.TrySetResult(true);
+            await runningTask;
+        }
+        finally
+        {
+            AbstractOperation.MAX_OPERATIONS = previousMax;
+            AbstractOperation.OperationQueue.Clear();
+        }
+    }
+
     private static async Task WaitUntilQueued(AbstractOperation operation)
     {
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(1);

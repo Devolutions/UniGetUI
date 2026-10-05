@@ -742,6 +742,188 @@ public sealed class PackageOperationsTests
         await firstRun;
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    public async Task UserRequestedOperationsQueueAheadOfBackgroundOnes(int parallelOperations)
+    {
+        var running = new List<CancellationAwareStubOperation>();
+        var runningTasks = new List<Task>();
+        for (int i = 0; i < parallelOperations; i++)
+            running.Add(new CancellationAwareStubOperation(queueEnabled: true) { IsBackgroundOperation = true });
+
+        using var firstBackground = new CancellationAwareStubOperation(queueEnabled: true)
+        {
+            IsBackgroundOperation = true,
+        };
+        using var secondBackground = new CancellationAwareStubOperation(queueEnabled: true)
+        {
+            IsBackgroundOperation = true,
+        };
+        using var userRequested = new CancellationAwareStubOperation(queueEnabled: true);
+
+        AbstractOperation.OperationQueue.Clear();
+        int previousMax = AbstractOperation.MAX_OPERATIONS;
+        AbstractOperation.MAX_OPERATIONS = parallelOperations;
+
+        try
+        {
+            foreach (var blocker in running)
+            {
+                runningTasks.Add(blocker.MainThread());
+                await blocker.PerformStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            }
+
+            _ = firstBackground.MainThread();
+            await WaitUntilQueued(firstBackground);
+            _ = secondBackground.MainThread();
+            await WaitUntilQueued(secondBackground);
+            _ = userRequested.MainThread();
+            await WaitUntilQueued(userRequested);
+
+            var expected = new List<AbstractOperation>(running)
+            {
+                userRequested,
+                firstBackground,
+                secondBackground,
+            };
+            Assert.Equal(expected, AbstractOperation.OperationQueue);
+
+            firstBackground.Cancel();
+            secondBackground.Cancel();
+            userRequested.Cancel();
+
+            foreach (var blocker in running)
+            {
+                blocker.Cancel();
+                await blocker.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+                blocker.AllowCleanupToComplete.TrySetResult(true);
+            }
+
+            await Task.WhenAll(runningTasks);
+        }
+        finally
+        {
+            foreach (var blocker in running)
+                blocker.Dispose();
+            AbstractOperation.MAX_OPERATIONS = previousMax;
+            AbstractOperation.OperationQueue.Clear();
+        }
+    }
+
+    [Fact]
+    public async Task AUserRequestedOperationDoesNotOvertakeEarlierUserRequestedOnes()
+    {
+        using var running = new CancellationAwareStubOperation(queueEnabled: true)
+        {
+            IsBackgroundOperation = true,
+        };
+        using var firstUser = new CancellationAwareStubOperation(queueEnabled: true);
+        using var secondUser = new CancellationAwareStubOperation(queueEnabled: true);
+        using var promotedBackground = new CancellationAwareStubOperation(queueEnabled: true)
+        {
+            IsBackgroundOperation = true,
+        };
+        using var lateUser = new CancellationAwareStubOperation(queueEnabled: true);
+
+        AbstractOperation.OperationQueue.Clear();
+        int previousMax = AbstractOperation.MAX_OPERATIONS;
+        AbstractOperation.MAX_OPERATIONS = 1;
+
+        try
+        {
+            Task runningTask = running.MainThread();
+            await running.PerformStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+            _ = firstUser.MainThread();
+            await WaitUntilQueued(firstUser);
+            _ = secondUser.MainThread();
+            await WaitUntilQueued(secondUser);
+            _ = promotedBackground.MainThread();
+            await WaitUntilQueued(promotedBackground);
+
+            promotedBackground.RunNext();
+
+            _ = lateUser.MainThread();
+            await WaitUntilQueued(lateUser);
+
+            Assert.Equal(
+                new AbstractOperation[]
+                {
+                    running,
+                    promotedBackground,
+                    firstUser,
+                    secondUser,
+                    lateUser,
+                },
+                AbstractOperation.OperationQueue
+            );
+
+            firstUser.Cancel();
+            secondUser.Cancel();
+            promotedBackground.Cancel();
+            lateUser.Cancel();
+
+            running.Cancel();
+            await running.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            running.AllowCleanupToComplete.TrySetResult(true);
+            await runningTask;
+        }
+        finally
+        {
+            AbstractOperation.MAX_OPERATIONS = previousMax;
+            AbstractOperation.OperationQueue.Clear();
+        }
+    }
+
+    [Fact]
+    public void ReorderingAnOperationThatLeftTheQueueDoesNotPutItBack()
+    {
+        using var runNext = new CancellationAwareStubOperation(queueEnabled: true);
+        using var backOfQueue = new CancellationAwareStubOperation(queueEnabled: true);
+
+        AbstractOperation.OperationQueue.Clear();
+
+        try
+        {
+            Assert.Equal(OperationStatus.InQueue, runNext.Status);
+            Assert.Equal(OperationStatus.InQueue, backOfQueue.Status);
+
+            runNext.RunNext();
+            backOfQueue.BackOfTheQueue();
+
+            Assert.Empty(AbstractOperation.OperationQueue);
+        }
+        finally
+        {
+            AbstractOperation.OperationQueue.Clear();
+        }
+    }
+
+    [Fact]
+    public void RetryingABackgroundOperationMakesItUserRequested()
+    {
+        using var operation = new CancellationAwareStubOperation(queueEnabled: true)
+        {
+            IsBackgroundOperation = true,
+        };
+
+        operation.Retry(AbstractOperation.RetryMode.Retry);
+
+        Assert.False(operation.IsBackgroundOperation);
+    }
+
+    private static async Task WaitUntilQueued(AbstractOperation operation)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(1);
+        while (!AbstractOperation.OperationQueue.Contains(operation))
+        {
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException("The operation never reached the queue");
+            await Task.Delay(10);
+        }
+    }
+
     [Fact]
     public async Task BrokerOperationFailsWithoutLocalFallbackWhenProbeFails()
     {

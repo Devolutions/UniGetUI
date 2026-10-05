@@ -161,7 +161,7 @@ public static class AvaloniaOperationRegistry
             Operations.Remove(vm.Operation);
             UpdateTrayStatus();
         });
-        while (AbstractOperation.OperationQueue.Remove(vm.Operation)) ;
+        AbstractOperation.RemoveFromQueue(vm.Operation);
         if (vm.Operation.Status is not (OperationStatus.InQueue or OperationStatus.Running))
         {
             IpcOperationApi.ForgetTracking(vm.Operation.Metadata.Identifier);

@@ -30,13 +30,13 @@ namespace UniGetUI.Avalonia.Infrastructure;
 /// </summary>
 internal static class AvaloniaPackageOperationHelper
 {
-    public static async Task UpdateAllAsync()
+    public static async Task UpdateAllAsync(bool background = false)
     {
         foreach (var pkg in UpgradablePackagesLoader.Instance.Packages.ToList())
         {
             var opts = await InstallOptionsFactory.LoadApplicableAsync(pkg);
             if (PackageOperation.HasPendingOperation(pkg, OperationType.Update)) continue;
-            var op = new UpdatePackageOperation(pkg, opts);
+            var op = new UpdatePackageOperation(pkg, opts) { IsBackgroundOperation = background };
             op.OperationSucceeded += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.SUCCESS);
             op.OperationFailed += (_, _) => TelemetryHandler.UpdatePackage(pkg, TEL_OP_RESULT.FAILED);
             AvaloniaOperationRegistry.Add(op);

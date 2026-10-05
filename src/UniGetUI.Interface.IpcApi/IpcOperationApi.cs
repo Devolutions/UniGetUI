@@ -374,7 +374,7 @@ public static class IpcOperationApi
             return null;
         }
 
-        int index = AbstractOperation.OperationQueue.IndexOf(operation);
+        int index = AbstractOperation.IndexInQueue(operation);
         if (index < 0)
         {
             return null;

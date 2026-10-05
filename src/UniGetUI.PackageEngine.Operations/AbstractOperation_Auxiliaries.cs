@@ -3,6 +3,7 @@ namespace UniGetUI.PackageOperations;
 public abstract partial class AbstractOperation
 {
     public static readonly List<AbstractOperation> OperationQueue = [];
+    private static readonly object QueueLock = new();
     public static int MAX_OPERATIONS;
 
     /// <summary>

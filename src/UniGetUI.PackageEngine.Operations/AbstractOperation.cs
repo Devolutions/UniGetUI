@@ -20,6 +20,12 @@ public abstract partial class AbstractOperation : IDisposable
     public event EventHandler<BadgeCollection>? BadgesChanged;
 
     public bool Started { get; private set; }
+
+    /// <summary>
+    /// Operations UniGetUI started on its own (scheduled updates, <c>--updateapps</c>) rather than
+    /// in response to a user action. They queue behind every user-requested operation.
+    /// </summary>
+    public bool IsBackgroundOperation { get; set; }
     protected bool QUEUE_ENABLED;
     protected bool FORCE_HOLD_QUEUE;
     private bool IsInnerOperation;
@@ -119,8 +125,7 @@ public abstract partial class AbstractOperation : IDisposable
         // queue until MainThread has awaited its task and completed its cleanup.
         if (!hasActiveWork)
         {
-            while (OperationQueue.Remove(this))
-                ;
+            RemoveFromQueue(this);
         }
     }
 
@@ -269,7 +274,7 @@ public abstract partial class AbstractOperation : IDisposable
 
             Started = true;
 
-            if (OperationQueue.Contains(this))
+            if (IndexInQueue(this) >= 0)
                 throw new InvalidOperationException("This operation was already on the queue");
 
             if (runCancellation.IsCancellationRequested)
@@ -301,11 +306,10 @@ public abstract partial class AbstractOperation : IDisposable
             {
                 // QUEUE HANDLER
                 SKIP_QUEUE = false;
-                OperationQueue.Add(this);
+                EnqueueByPriority();
                 if (runCancellation.IsCancellationRequested)
                 {
-                    while (OperationQueue.Remove(this))
-                        ;
+                    RemoveFromQueue(this);
                     CompleteCanceledRun();
                     return;
                 }
@@ -314,10 +318,10 @@ public abstract partial class AbstractOperation : IDisposable
 
                 while (
                     FORCE_HOLD_QUEUE
-                    || (OperationQueue.IndexOf(this) >= MAX_OPERATIONS && !SKIP_QUEUE)
+                    || (IndexInQueue(this) >= MAX_OPERATIONS && !SKIP_QUEUE)
                 )
                 {
-                    int pos = OperationQueue.IndexOf(this) - MAX_OPERATIONS + 1;
+                    int pos = IndexInQueue(this) - MAX_OPERATIONS + 1;
 
                     if (pos == -1)
                         return;
@@ -347,8 +351,7 @@ public abstract partial class AbstractOperation : IDisposable
             {
                 IsExecutingOperation = false;
             }
-            while (OperationQueue.Remove(this))
-                ;
+            RemoveFromQueue(this);
 
             SystemRestartRequired = result is OperationVeredict.RestartRequired;
 
@@ -398,8 +401,7 @@ public abstract partial class AbstractOperation : IDisposable
                 Line(line, LineType.Error);
             }
 
-            while (OperationQueue.Remove(this))
-                ;
+            RemoveFromQueue(this);
 
             MarkRunAsStarted(runCancellation);
             Status = OperationStatus.Failed;
@@ -437,7 +439,7 @@ public abstract partial class AbstractOperation : IDisposable
             finally
             {
                 EndRunCancellation(runCancellation);
-                if (OperationQueue.Count == 0)
+                if (QueueLength() == 0)
                     QueueDrained?.Invoke(null, EventArgs.Empty);
             }
         }
@@ -609,14 +611,60 @@ public abstract partial class AbstractOperation : IDisposable
         return result;
     }
 
+    public static void RemoveFromQueue(AbstractOperation operation)
+    {
+        lock (QueueLock)
+        {
+            while (OperationQueue.Remove(operation))
+                ;
+        }
+    }
+
+    /// <summary>
+    /// The position of the operation in <see cref="OperationQueue"/>, or -1 when it is not queued.
+    /// Reading the queue without the queue lock can observe an insertion or a removal half-applied
+    /// and report -1 for an operation that is really still queued.
+    /// </summary>
+    public static int IndexInQueue(AbstractOperation operation)
+    {
+        lock (QueueLock)
+            return OperationQueue.IndexOf(operation);
+    }
+
+    public static int QueueLength()
+    {
+        lock (QueueLock)
+            return OperationQueue.Count;
+    }
+
+    private void EnqueueByPriority()
+    {
+        lock (QueueLock)
+        {
+            if (IsBackgroundOperation)
+            {
+                OperationQueue.Add(this);
+                return;
+            }
+
+            int position = Math.Min(MAX_OPERATIONS, OperationQueue.Count);
+            for (int i = position; i < OperationQueue.Count; i++)
+            {
+                if (!OperationQueue[i].IsBackgroundOperation)
+                    position = i + 1;
+            }
+
+            OperationQueue.Insert(position, this);
+        }
+    }
+
     private bool SKIP_QUEUE;
 
     public void SkipQueue()
     {
         if (Status != OperationStatus.InQueue)
             return;
-        while (OperationQueue.Remove(this))
-            ;
+        RemoveFromQueue(this);
         SKIP_QUEUE = true;
     }
 
@@ -624,13 +672,17 @@ public abstract partial class AbstractOperation : IDisposable
     {
         if (Status != OperationStatus.InQueue)
             return;
-        if (!OperationQueue.Contains(this))
-            return;
 
         FORCE_HOLD_QUEUE = true;
-        while (OperationQueue.Remove(this))
-            ;
-        OperationQueue.Insert(Math.Min(MAX_OPERATIONS, OperationQueue.Count), this);
+        lock (QueueLock)
+        {
+            if (OperationQueue.Contains(this))
+            {
+                while (OperationQueue.Remove(this))
+                    ;
+                OperationQueue.Insert(Math.Min(MAX_OPERATIONS, OperationQueue.Count), this);
+            }
+        }
         FORCE_HOLD_QUEUE = false;
     }
 
@@ -638,13 +690,17 @@ public abstract partial class AbstractOperation : IDisposable
     {
         if (Status != OperationStatus.InQueue)
             return;
-        if (!OperationQueue.Contains(this))
-            return;
 
         FORCE_HOLD_QUEUE = true;
-        while (OperationQueue.Remove(this))
-            ;
-        OperationQueue.Add(this);
+        lock (QueueLock)
+        {
+            if (OperationQueue.Contains(this))
+            {
+                while (OperationQueue.Remove(this))
+                    ;
+                OperationQueue.Add(this);
+            }
+        }
         FORCE_HOLD_QUEUE = false;
     }
 
@@ -652,6 +708,8 @@ public abstract partial class AbstractOperation : IDisposable
     {
         if (retryMode is RetryMode.NoRetry)
             throw new InvalidOperationException("We weren't supposed to reach this, weren't we?");
+
+        IsBackgroundOperation = false;
 
         Task? previousRun = null;
         TaskCompletionSource? scheduledRetry = null;
@@ -781,8 +839,7 @@ public abstract partial class AbstractOperation : IDisposable
         DisposeStaleSpeedTimer();
         if (!IsExecutingOperation)
         {
-            while (OperationQueue.Remove(this))
-                ;
+            RemoveFromQueue(this);
         }
     }
 }

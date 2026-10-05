@@ -1518,10 +1518,9 @@ internal sealed class PackageListPage : UserControl, ITuiPage
     {
         try
         {
-            var (count, report) = await TuiBundleService.OpenFileAsync(path);
+            var (count, imported) = await TuiBundleService.OpenFileAsync(path, TuiBundleService.ReviewReportAsync);
+            if (!imported) return;
             TuiNotifications.Success(CoreTools.Translate("Package Bundles"), CoreTools.Translate("{0} package(s) loaded from {1}", count, Path.GetFileName(path)));
-            if (!report.IsEmpty)
-                await TuiPrompts.ShowTextAsync(CoreTools.Translate("Bundle security report"), TuiBundleService.DescribeReport(report));
         }
         catch (Exception ex)
         {

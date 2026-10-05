@@ -1,10 +1,13 @@
+using System.Text.Json.Nodes;
 using NUnit.Framework;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools.Scheduling;
 using UniGetUI.Interface.Enums;
+using UniGetUI.PackageEngine.Classes.Serializable;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Operations.History;
 using UniGetUI.PackageEngine.PackageLoader;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageOperations;
 using UniGetUI.Tui.Infrastructure;
 using UniGetUI.Tui.Views.Dialogs;
@@ -58,6 +61,58 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
         await Type("i");
         await WaitForOperationsToFinishAsync();
         NAssert.That(InstalledVersion("Winget", "Proseware.Archiver"), Is.EqualTo("24.08"));
+    }
+
+    [Test]
+    public async Task Bundles_RiskyImportRequiresConfirmationBeforeReplacingCurrentBundle()
+    {
+        await ResetAsync(TuiPageIds.Discover);
+        await EnterPage();
+        await Type("proseware");
+        await Key(K.Enter);
+        await WaitForTextAsync("Proseware Archiver");
+        await Key(K.Down);
+        await Type("b");
+        await WaitUntilAsync(() => PackageBundlesLoader.Instance.Packages.Count == 1, "the existing bundle package");
+
+        string existingPath = Path.Join(FakeDataSetUp.Sandbox, "existing-bundle.ubundle");
+        await TuiBundleService.SaveAsync(existingPath);
+        var original = PackageBundlesLoader.Instance.Packages.Single();
+        var bundle = new SerializableBundle(JsonNode.Parse(await File.ReadAllTextAsync(existingPath))!);
+        bundle.packages.Single().InstallationOptions.SkipHashCheck = true;
+        string riskyPath = Path.Join(FakeDataSetUp.Sandbox, "risky-bundle.ubundle");
+        await File.WriteAllTextAsync(riskyPath, bundle.AsJsonString());
+
+        await OnUi(() => Window.NavigateTo(TuiPageIds.Bundles));
+        await EnterPage();
+        await OpenRiskyBundleAsync(riskyPath);
+        await Key(K.Enter); // Cancel is focused by default.
+        await WaitForNoDialogAsync();
+        NAssert.That(PackageBundlesLoader.Instance.Packages.Single(), Is.SameAs(original));
+        NAssert.That(TuiBundleService.HasUnsavedChanges, Is.False);
+
+        await EnterPage();
+        await OpenRiskyBundleAsync(riskyPath);
+        await Key(K.Left);
+        await Key(K.Enter);
+        await WaitForNoDialogAsync();
+        await WaitUntilAsync(() => PackageBundlesLoader.Instance.Packages.Single() is ImportedPackage,
+            "the imported package");
+        NAssert.That(((ImportedPackage)PackageBundlesLoader.Instance.Packages.Single()).installation_options.SkipHashCheck,
+            Is.True);
+    }
+
+    private async Task OpenRiskyBundleAsync(string path)
+    {
+        await Key(K.O, RawModifiers.Control);
+        await WaitForDialogAsync("Open existing bundle");
+        await ReplaceTextAsync(path);
+        await Key(K.Enter);
+        await WaitForDialogAsync("Bundle security report");
+        await WaitForTextAsync("Proseware Archiver", "[HIGH]", "Installer integrity check disabled");
+        await Key(K.Escape);
+        await WaitForDialogAsync("Bundle security report");
+        await WaitForTextAsync("Import anyway", "Cancel");
     }
 
     [Test]
@@ -240,7 +295,7 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
         await WaitForSuccessAsync(op);
     }
 
-    private static async Task WaitForSuccessAsync(UniGetUI.PackageOperations.AbstractOperation op)
+    private async Task WaitForSuccessAsync(UniGetUI.PackageOperations.AbstractOperation op)
     {
         await WaitUntilAsync(() => op.Status is UniGetUI.PackageEngine.Enums.OperationStatus.Succeeded or UniGetUI.PackageEngine.Enums.OperationStatus.Failed,
             "the operation to finish");
@@ -248,7 +303,7 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
             string.Join("\n", await OnUi(() => op.GetOutput().Select(l => l.Item1).ToList())));
     }
 
-    private static async Task OpenScoopSettingsAsync()
+    private async Task OpenScoopSettingsAsync()
     {
         await WaitForTextAsync("Package managers", "Scoop is enabled and ready to go");
         await EnterPage();
@@ -257,7 +312,7 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
         await WaitForDialogAsync("Scoop settings");
     }
 
-    private static async Task<UniGetUI.PackageOperations.AbstractOperation> WaitForScoopOperationAsync(string title)
+    private async Task<UniGetUI.PackageOperations.AbstractOperation> WaitForScoopOperationAsync(string title)
     {
         await WaitUntilAsync(() => TuiOperationRegistry.Snapshot().Any(o => o.Metadata.Title == title), $"the \"{title}\" operation");
         return await OnUi(() => TuiOperationRegistry.Snapshot().First(o => o.Metadata.Title == title));
@@ -458,6 +513,9 @@ internal sealed class OtherPagesE2ETests : TuiE2ETestBase
         await FocusFieldAsync("Restore a backup from the cloud");
         await Key(K.Enter);
         await ChooseAsync(Environment.MachineName);
+        await WaitForDialogAsync("Bundle security report");
+        await WaitForTextAsync("Some packages use non-default install settings");
+        await Key(K.Escape);
         await WaitUntilAsync(() => PackageBundlesLoader.Instance.Packages.Count == 16, "the backup to load into the bundle");
         await WaitForTextAsync("Package Bundles", "Woodgrove Vault");
 

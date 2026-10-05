@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Avalonia;
 using Consolonia;
@@ -85,12 +84,6 @@ internal static class Program
         return BuildAvaloniaApp().StartWithConsoleLifetime(commandLine.RemainingArgs);
     }
 
-    // Consolonia creates these internal Avalonia types by name through reflection (UseClipboard and the console
-    // window's launcher). Nothing references them statically, so trimming / NativeAOT would remove them.
-    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors,
-        "Avalonia.Input.Platform.Clipboard", "Avalonia.Base")]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors,
-        "Avalonia.Platform.Storage.FileIO.BclLauncher", "Avalonia.Base")]
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .LogToException()

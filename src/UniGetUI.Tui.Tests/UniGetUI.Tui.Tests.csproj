@@ -29,7 +29,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\UniGetUI.Tui\UniGetUI.Tui.csproj" />
-        <PackageReference Include="Consolonia.NUnit" Version="12.0.3.13" />
+        <PackageReference Include="Consolonia.NUnit" Version="12.0.3.14" />
     </ItemGroup>
 
     <ItemGroup>

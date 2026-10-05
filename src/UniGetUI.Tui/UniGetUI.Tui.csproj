@@ -14,7 +14,7 @@
         <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
         <!-- The TUI owns the console; never spawn or attach a GUI window. -->
         <PublishSingleFile>false</PublishSingleFile>
-        <ConsoloniaVersion>12.0.3.13</ConsoloniaVersion>
+        <ConsoloniaVersion>12.0.3.14</ConsoloniaVersion>
         <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
     </PropertyGroup>
 
@@ -103,19 +103,5 @@
             <ResolvedFileToPublish Remove="@(_TuiEmbeddedAsset)" />
         </ItemGroup>
     </Target>
-
-    <!-- Trimmed / NativeAOT builds: Consolonia is not trim-safe. It loads its theme and control XAML by avares://
-         URI and creates internal Avalonia types by name, which the trimmer cannot see, so keep its assemblies whole. -->
-    <ItemGroup Condition="'$(PublishTrimmed)' == 'true' or '$(PublishAot)' == 'true'">
-        <TrimmerRootAssembly Include="Consolonia" />
-        <TrimmerRootAssembly Include="Consolonia.Core" />
-        <TrimmerRootAssembly Include="Consolonia.Controls" />
-        <TrimmerRootAssembly Include="Consolonia.Controls.DataGrid" />
-        <TrimmerRootAssembly Include="Consolonia.Themes" />
-        <TrimmerRootAssembly Include="Consolonia.Fonts" />
-        <TrimmerRootAssembly Include="Consolonia.ManagedWindows" />
-        <TrimmerRootAssembly Include="Consolonia.PlatformSupport" />
-        <TrimmerRootAssembly Include="Consolonia.GuiCS" />
-    </ItemGroup>
 
 </Project>

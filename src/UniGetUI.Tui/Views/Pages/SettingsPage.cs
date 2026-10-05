@@ -605,9 +605,11 @@ internal sealed class SettingsPage : UserControl, ITuiPage
         int? picked = await TuiPrompts.ChooseAsync(CoreTools.Translate("Select backup"), backups.Select(b => new TuiChoice(b.Display)).ToList());
         if (picked is not int i) return;
         string contents = await TuiCloudBackup.DownloadAsync(backups[i].Key);
+        var (count, imported) = await TuiBundleService.AddFromStringAsync(
+            contents, UniGetUI.PackageEngine.Enums.BundleFormatType.UBUNDLE,
+            TuiBundleService.ReviewReportAsync, replaceExisting: true);
+        if (!imported) return;
         TuiShell.Navigate(TuiPageIds.Bundles);
-        TuiBundleService.Clear();
-        var (count, _) = await TuiBundleService.AddFromStringAsync(contents, UniGetUI.PackageEngine.Enums.BundleFormatType.UBUNDLE);
         TuiNotifications.Success(CoreTools.Translate("Cloud backup"), CoreTools.Translate("{0} package(s) loaded from {1}", count, backups[i].Key));
     }
 

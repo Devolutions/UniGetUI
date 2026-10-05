@@ -36,12 +36,13 @@ The output is `src/UniGetUI.Tui/bin/x64/Release/net10.0-windows10.0.26100.0/win-
 
 - Prerequisite on Windows: the Visual Studio "MSVC x64/x86 build tools" component (or the "Desktop development
   with C++" workload), which provides the native linker. Without it the publish fails with "Platform linker not found".
-- Consolonia is not trim-safe (it loads XAML by `avares://` URI and creates internal Avalonia types by name), so
-  trimmed builds keep its assemblies whole (`TrimmerRootAssembly` in `UniGetUI.Tui.csproj`) and `Program` keeps
-  the two Avalonia types it creates by reflection. Grid columns use compiled (lambda) bindings for the same reason.
+- Consolonia 12.0.3.14 includes NativeAOT fixes for its theme/style loading and internal Avalonia types;
+  the TUI no longer roots the entire Consolonia assemblies or those Avalonia constructors for trimming.
+  Grid columns continue to use compiled (lambda) bindings.
 - To publish the JIT (ReadyToRun) build instead: add `-p:PublishAot=false -p:PublishTrimmed=false -p:PublishReadyToRun=true`.
 
-Measured on the same commit, fake data, in a real terminal (median of 9–10 warm runs):
+Historical measurements with Consolonia 12.0.3.13, fake data, in a real terminal (median of 9–10
+warm runs). These have not been remeasured for 12.0.3.14:
 
 | Metric | ReadyToRun (JIT) | NativeAOT |
 | --- | --- | --- |
@@ -134,7 +135,7 @@ For contributors:
 | Open install location | ✓ Shows the path; Open launches it |
 | Export to CSV, add to bundle, copy package info | ✓ |
 | Installer host / download size columns | ✓ |
-| Bundles: new, open (ubundle/json/yaml/xml), save, security report, create .ps1, remove, unsaved-changes guard, install already-installed setting | ✓ |
+| Bundles: new, open (ubundle/json/yaml/xml), save, security report with explicit confirmation for high-risk findings, create .ps1, remove, unsaved-changes guard, install already-installed setting | ✓ |
 | Operations: live list and output, cancel, close, retry and retry variants, run now / next / last, bulk retry / clear / cancel, auto-remove succeeded, parallel limit | ✓ |
 | Operation history: filters, revert, run again, retry variants, full log, copy, remove, clear | ✓ |
 | Notifications (progress, success, error, updates available, batch summary) | ✓ In-app notification line, honouring the same settings |

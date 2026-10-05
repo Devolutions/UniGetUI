@@ -14,6 +14,7 @@ using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.Serializable;
+using UniGetUI.Tui.Views.Dialogs;
 
 namespace UniGetUI.Tui.Infrastructure;
 
@@ -85,19 +86,18 @@ internal static class TuiBundleService
     }
 
     /// <summary>
-    /// Replaces the bundle with the file's contents. Returns the security report for any stripped
-    /// custom arguments or pre/post commands, as the desktop app shows after opening a bundle.
+    /// Replaces the bundle with the file's contents only after the security report is acknowledged.
     /// </summary>
-    public static async Task<(int Count, BundleReport Report)> OpenFileAsync(string path)
+    public static async Task<(int Count, bool Imported)> OpenFileAsync(
+        string path, Func<BundleReport, Task<bool>> acknowledge)
     {
         string content = await File.ReadAllTextAsync(path);
-        PackageBundlesLoader.Instance.ClearPackages();
-        var result = await AddFromStringAsync(content, DetectFormat(path));
-        HasUnsavedChanges = false;
+        var result = await AddFromStringAsync(content, DetectFormat(path), acknowledge, replaceExisting: true);
         return result;
     }
 
-    public static async Task<(int Count, BundleReport Report)> AddFromStringAsync(string content, BundleFormatType format)
+    public static async Task<(int Count, bool Imported)> AddFromStringAsync(
+        string content, BundleFormatType format, Func<BundleReport, Task<bool>> acknowledge, bool replaceExisting = false)
     {
         if (format is BundleFormatType.YAML)
             content = await SerializationHelpers.YAML_to_JSON(content);
@@ -117,31 +117,67 @@ internal static class TuiBundleService
         var packages = new List<IPackage>();
         foreach (var raw in bundle.packages)
         {
-            raw.InstallationOptions = BundleImportFilter.Apply(ref report, raw.Id, raw.InstallationOptions,
-                allowCli, allowPrePost, TuiEngine.FindManager(raw.ManagerName)?.CommandLineIsShellInterpreted ?? false);
+            var manager = TuiEngine.FindManager(raw.ManagerName);
+            var (sourceName, sourceStatus) = BundleImportFilter.ClassifySource(manager, raw.Source);
+            raw.InstallationOptions = BundleImportFilter.Apply(
+                ref report,
+                new BundleReportSubject(raw.Id, raw.Name, manager?.DisplayName ?? raw.ManagerName, sourceName),
+                raw.InstallationOptions, allowCli, allowPrePost,
+                manager?.CommandLineIsShellInterpreted ?? false, sourceName, sourceStatus);
             packages.Add(DeserializePackage(raw));
         }
 
         foreach (var raw in bundle.incompatible_packages)
             packages.Add(new InvalidImportedPackage(raw, NullSource.Instance));
 
+        BundleImportFilter.LogReport(report, "TUI bundle import");
+        if (!report.IsEmpty && !await acknowledge(report))
+        {
+            Logger.Warn("The bundle import was discarded by the user after the security report");
+            return (0, false);
+        }
+
+        if (report.HasHighSeverityFindings)
+            Logger.Warn("The user accepted a bundle carrying high-severity security findings");
+
+        if (replaceExisting)
+        {
+            PackageBundlesLoader.Instance.ClearPackages();
+            HasUnsavedChanges = false;
+        }
         await PackageBundlesLoader.Instance.AddPackagesAsync(packages);
-        return (packages.Count, report);
+        return (packages.Count, true);
     }
 
     public static string DescribeReport(BundleReport report)
     {
         var sb = new StringBuilder();
-        sb.AppendLine(CoreTools.Translate("Some of the settings in this bundle were not applied because of your security settings:"));
+        sb.AppendLine(report.HasHighSeverityFindings
+            ? CoreTools.Translate("This bundle changes how packages are installed")
+            : CoreTools.Translate("Some packages use non-default install settings"));
         sb.AppendLine();
-        foreach (var (id, entries) in report.Contents)
+        foreach (var package in report.Contents.Values.OrderByDescending(p => p.HasHighSeverityFindings)
+                     .ThenBy(p => p.Subject.DisplayName, StringComparer.OrdinalIgnoreCase))
         {
-            sb.AppendLine(id);
-            foreach (BundleReportEntry entry in entries)
-                sb.AppendLine($"  {(entry.Allowed ? "[kept]   " : "[removed]")} {entry.Line}");
+            var subject = package.Subject;
+            sb.AppendLine($"{subject.DisplayName} ({subject.Id}, {subject.ManagerName}, {subject.Source})");
+            foreach (BundleReportEntry entry in package.Entries.OrderByDescending(e => e.Severity))
+                sb.AppendLine($"  {(entry.Severity is BundleReportSeverity.High ? "[HIGH]" : "[info]")} "
+                    + $"{(entry.Allowed ? "[kept]" : "[removed]")} {CoreTools.Translate(entry.Label)}: {entry.Value}");
         }
 
         return sb.ToString();
+    }
+
+    public static async Task<bool> ReviewReportAsync(BundleReport report)
+    {
+        await TuiPrompts.ShowTextAsync(CoreTools.Translate("Bundle security report"), DescribeReport(report));
+        return !report.HasHighSeverityFindings
+            || await TuiModal.ShowAsync(new MessageDialog(
+                CoreTools.Translate("Bundle security report"),
+                CoreTools.Translate("This bundle changes how packages are installed"),
+                [CoreTools.Translate("Import anyway"), CoreTools.Translate("Cancel")],
+                defaultButton: 1)) is 0;
     }
 
     public static async Task AddPackagesAsync(IReadOnlyList<IPackage> packages)

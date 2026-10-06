@@ -1,5 +1,5 @@
-using Avalonia;
 using System.ComponentModel;
+using Avalonia;
 using Consolonia;
 using Consolonia.Fonts;
 using Consolonia.ManagedWindows.Storage;

@@ -113,7 +113,7 @@ public static class AvaloniaAppHost
         Logger.ImportantInfo($"Runtime: {RuntimeInformation.FrameworkDescription}");
         Logger.ImportantInfo($"UI font: {UiFontPolicy.ResolveDefaultFamilyName() ?? "(platform default)"}");
         Logger.ImportantInfo($"UI font fallbacks: {(UiFontPolicy.ResolveFontFallbacks() is { } fallbacks
-            ? string.Join(", ", fallbacks.Select(f => f.FontFamily.Name).Distinct())
+            ? string.Join(", ", fallbacks.Select(f => f.FontFamily.Name))
             : "(none)")}");
         Logger.ImportantInfo($"Elevated: {CoreTools.IsAdministrator()}");
         Logger.ImportantInfo($"Packaged (MSIX): {CoreTools.IsPackagedApp()}");
@@ -134,16 +134,23 @@ public static class AvaloniaAppHost
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 
+    /// <summary>
+    /// Builds the font options the app builder is configured with, so the policy's output and the
+    /// options it is carried in can be exercised without standing up Avalonia.
+    /// </summary>
+    public static FontManagerOptions BuildFontManagerOptions()
+        => new()
+        {
+            DefaultFamilyName = UiFontPolicy.ResolveDefaultFamilyName(),
+            FontFallbacks = UiFontPolicy.ResolveFontFallbacks(),
+        };
+
     public static AppBuilder BuildAvaloniaApp()
     {
         AppBuilder builder = AppBuilder.Configure<App>()
             .UsePlatformDetect();
 
-        var fontOptions = new FontManagerOptions
-        {
-            DefaultFamilyName = UiFontPolicy.ResolveDefaultFamilyName(),
-            FontFallbacks = UiFontPolicy.ResolveFontFallbacks(),
-        };
+        FontManagerOptions fontOptions = BuildFontManagerOptions();
 
         if (fontOptions.DefaultFamilyName is { } fontFamily && UiFontPolicy.RequiresBundledFont(fontFamily))
         {

@@ -39,8 +39,8 @@ internal static class UiFontPolicy
 
     private static readonly string[][] CjkFamilyGroups =
     [
-        ["Microsoft YaHei UI", "Microsoft YaHei", "SimSun"],
-        ["Microsoft JhengHei UI", "Microsoft JhengHei"],
+        ["Microsoft YaHei UI", "Microsoft YaHei", "SimSun", "SimSun-ExtB"],
+        ["Microsoft JhengHei UI", "Microsoft JhengHei", "MingLiU-ExtB"],
         ["Yu Gothic UI", "Yu Gothic"],
         ["Malgun Gothic"],
     ];

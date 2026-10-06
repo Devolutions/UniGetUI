@@ -130,12 +130,28 @@ public sealed class UiFontPolicyTests
         Assert.Single(leaders.Distinct());
     }
 
-    [Fact]
-    public void ResolveFontFallbacks_IsRegisteredForTheRunningProcess()
+    [Theory]
+    [InlineData(0x20000, "SimSun-ExtB")]
+    [InlineData(0x2A700, "SimSun-ExtB")]
+    [InlineData(0x20000, "MingLiU-ExtB")]
+    public void BuildFontFallbacks_BacksSupplementaryIdeographsWithAnExtBFamily(int codepoint, string family)
     {
-        IReadOnlyList<FontFallback>? fallbacks = UiFontPolicy.ResolveFontFallbacks();
+        IReadOnlyList<FontFallback> fallbacks = UiFontPolicy.BuildFontFallbacks("zh_CN", "zh-CN");
 
-        Assert.NotNull(fallbacks);
-        Assert.NotEmpty(fallbacks);
+        string[] families = [.. fallbacks
+            .Where(f => f.UnicodeRange.IsInRange(codepoint))
+            .Select(f => f.FontFamily.Name)];
+
+        Assert.Contains(family, families);
+    }
+
+    [Fact]
+    public void BuildFontManagerOptions_CarriesTheFallbackTable()
+    {
+        FontManagerOptions options = AvaloniaAppHost.BuildFontManagerOptions();
+
+        Assert.NotNull(options.FontFallbacks);
+        Assert.NotEmpty(options.FontFallbacks);
+        Assert.Contains(options.FontFallbacks, f => f.UnicodeRange.IsInRange(0x4E2D));
     }
 }

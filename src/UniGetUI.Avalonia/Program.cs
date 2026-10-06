@@ -2,6 +2,7 @@ using System;
 using Avalonia;
 using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Data;
+using UniGetUI.Tui;
 
 namespace UniGetUI.Avalonia;
 
@@ -13,7 +14,7 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        // Bail out if the installer is mid-swap (try/catch so the guard never blocks a normal launch).
+        // Both front-ends must wait while the installer replaces their shared files.
         try
         {
             if (UpdateInProgressGuard.IsUpdateInProgress())
@@ -23,6 +24,19 @@ sealed class Program
             }
         }
         catch { }
+
+        if (TuiAppHost.TryRunFakeCacheCommand(args, out int fakeExitCode))
+        {
+            Environment.ExitCode = fakeExitCode;
+            return;
+        }
+
+        // Terminal sessions are independent of the desktop UI and its single-instance redirector.
+        if (TuiAppHost.IsCommand(args))
+        {
+            Environment.ExitCode = TuiAppHost.Run(args[1..]);
+            return;
+        }
 
 #if WINDOWS
         // Stamp the AUMID onto this process before anything else so the shell attributes

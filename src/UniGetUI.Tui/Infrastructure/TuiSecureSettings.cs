@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
@@ -7,8 +6,8 @@ namespace UniGetUI.Tui.Infrastructure;
 
 /// <summary>
 /// Changes a secure setting. On Windows the secure settings live under Program Files, so the desktop
-/// app relaunches itself elevated with <c>--enable-secure-setting-for-user</c>; the TUI does the same
-/// with its own executable. In fake-data mode the store is the sandbox and is written directly.
+/// app relaunches itself elevated with <c>--enable-secure-setting-for-user</c>; the TUI reuses that
+/// shared command and cache invalidation. In fake-data mode the sandbox store is written directly.
 /// </summary>
 internal static class TuiSecureSettings
 {
@@ -21,27 +20,7 @@ internal static class TuiSecureSettings
 
         try
         {
-            using var p = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    UseShellExecute = true,
-                    CreateNoWindow = true,
-                    FileName = Environment.ProcessPath ?? "UniGetUI.Tui.exe",
-                    Verb = "runas",
-                    ArgumentList =
-                    {
-                        enabled ? SecureSettings.Args.ENABLE_FOR_USER : SecureSettings.Args.DISABLE_FOR_USER,
-                        user,
-                        setting,
-                    },
-                },
-            };
-            p.Start();
-            await p.WaitForExitAsync();
-            // The elevated child wrote the file; drop our cached value so the next read sees it.
-            SecureSettings.ApplyForUser(user, setting, enabled);
-            return p.ExitCode is 0;
+            return await SecureSettings.TrySet(key, enabled);
         }
         catch (Exception ex)
         {

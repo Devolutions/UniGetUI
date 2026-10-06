@@ -28,7 +28,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\UniGetUI.Tui\UniGetUI.Tui.csproj" />
+        <ProjectReference Include="..\UniGetUI.Avalonia\UniGetUI.Avalonia.csproj" />
         <PackageReference Include="Consolonia.NUnit" Version="12.0.3.14" />
     </ItemGroup>
 
@@ -39,4 +39,20 @@
     <ItemGroup>
         <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
     </ItemGroup>
+
+    <Target Name="CopyMainHostForTerminalSubprocessTests" AfterTargets="Build">
+        <MSBuild Projects="..\UniGetUI.Avalonia\UniGetUI.Avalonia.csproj" Targets="GetTargetPath">
+            <Output TaskParameter="TargetOutputs" ItemName="_TuiMainAssembly" />
+        </MSBuild>
+        <PropertyGroup>
+            <_TuiMainHostName Condition="$([MSBuild]::IsOSPlatform('Windows'))">UniGetUI.exe</_TuiMainHostName>
+            <_TuiMainHostName Condition="!$([MSBuild]::IsOSPlatform('Windows'))">UniGetUI</_TuiMainHostName>
+        </PropertyGroup>
+        <ItemGroup>
+            <_TuiMainHostFiles Include="%(_TuiMainAssembly.RootDir)%(_TuiMainAssembly.Directory)$(_TuiMainHostName)" />
+            <_TuiMainHostFiles Include="%(_TuiMainAssembly.RootDir)%(_TuiMainAssembly.Directory)UniGetUI.runtimeconfig.json" />
+            <_TuiMainHostFiles Include="%(_TuiMainAssembly.RootDir)%(_TuiMainAssembly.Directory)UniGetUI.deps.json" />
+        </ItemGroup>
+        <Copy SourceFiles="@(_TuiMainHostFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    </Target>
 </Project>

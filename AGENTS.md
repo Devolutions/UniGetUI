@@ -220,8 +220,8 @@ Use `CoreTools.Translate("text")` for all user-facing strings. Parameterized: `C
 
 ## Terminal UI
 
-- `src/UniGetUI.Tui` is the Consolonia terminal front-end. Pages must reach the engine through `TuiEngine` (never `PEInterface` directly), so that `--fake-data` can swap in the fake managers from `FakeData/`.
-- Run it with fake data: `dotnet run --project src/UniGetUI.Tui/UniGetUI.Tui.csproj -- --fake-data`. Nothing real is installed; all state lives in a sandbox.
+- `src/UniGetUI.Tui` is the Consolonia terminal front-end library, hosted by the main executable's `tui` command (`unigetui tui` or `uniget tui`). Pages must reach the engine through `TuiEngine` (never `PEInterface` directly), so that `--fake-data` can swap in the fake managers from `FakeData/`.
+- Run it with fake data: `dotnet run --project src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj -- tui --fake-data`. Nothing real is installed; all state lives in a sandbox.
 - Dialogs are in-window overlays (`Views/Dialogs/TuiModal`), not Avalonia popups. Popups capture input unreliably in Windows console hosts.
 - Colours come from the active theme: use `TuiPalette` brushes (`Theme/TuiPalette.cs`), never `Color.Parse` in a control, so themes and live theme switching reach it.
 - End-to-end tests in `src/UniGetUI.Tui.Tests/E2E` drive the real UI by keystrokes against the fake data set. Add a test for any new page action.

@@ -4,6 +4,8 @@ using UniGetUI.Tui.Infrastructure;
 
 namespace UniGetUI.Tui.Tests;
 
+using Avalonia = global::Avalonia;
+
 [TestFixture]
 [NonParallelizable]
 internal sealed class TuiShellNUnitTests : TuiE2ETestBase

@@ -2,8 +2,8 @@ namespace UniGetUI.Core.Data
 {
     /// <summary>
     /// Read-only files that ship with the application under <c>Assets\</c> (translations, translator and
-    /// contributor lists). They are read from next to the executable; a host that ships as a single file
-    /// (the terminal UI embeds them in its executable) supplies them through <see cref="Provider"/> instead.
+    /// contributor lists). They are read from next to the executable; a host that embeds these files
+    /// supplies them through <see cref="Provider"/> instead.
     /// </summary>
     public static class BundledAssets
     {

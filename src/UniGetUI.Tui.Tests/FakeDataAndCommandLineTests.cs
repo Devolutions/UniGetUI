@@ -23,6 +23,66 @@ public class TuiCommandLineTests
         Assert.Equal("some dir", cl.FakeDataDirectory);
     }
 
+    [Theory]
+    [InlineData("--page")]
+    [InlineData("--theme")]
+    [InlineData("--fake-data-dir")]
+    [InlineData("--import-settings")]
+    [InlineData("--export-settings")]
+    [InlineData("--enable-setting")]
+    [InlineData("--disable-setting")]
+    [InlineData("--enable-secure-setting")]
+    [InlineData("--disable-secure-setting")]
+    [InlineData("--set-setting-value")]
+    [InlineData("--enable-secure-setting-for-user")]
+    [InlineData("--disable-secure-setting-for-user")]
+    public void RejectsOptionsMissingRequiredValues(string option)
+    {
+        var ex = Assert.Throws<ArgumentException>(() => TuiCommandLine.Parse([option]));
+        Assert.Contains(option, ex.Message);
+    }
+
+    [Fact]
+    public void RejectsSettingValueCommandMissingItsSecondValue()
+        => Assert.Throws<ArgumentException>(() =>
+            TuiCommandLine.Parse(["--set-setting-value", "PreferredLanguage"]));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("--page")]
+    public void RejectsMissingFakeDataDirectoryInsteadOfConsumingAnotherOption(string value)
+    {
+        var ex = Assert.Throws<ArgumentException>(() =>
+            TuiCommandLine.Parse(["--fake-data-dir", value]));
+        Assert.Contains("--fake-data-dir", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("--unknown-option")]
+    [InlineData("unexpected-token")]
+    public void RejectsUnsupportedArguments(string argument)
+    {
+        var ex = Assert.Throws<ArgumentException>(() => TuiCommandLine.Parse([argument]));
+        Assert.Contains(argument, ex.Message);
+    }
+
+    [Theory]
+    [InlineData("--help")]
+    [InlineData("--fake-data")]
+    [InlineData("--fake-data-dir")]
+    [InlineData("--updateapps")]
+    public void SettingValuesAreNotInterpretedAsTerminalOptions(string value)
+    {
+        var cl = TuiCommandLine.Parse(["--set-setting-value", "PreferredLanguage", value]);
+        Assert.True(cl.HasHeadlessCommand);
+        Assert.False(cl.ShowHelp);
+        Assert.Equal(FakeDataEnvironment.IsRequested([]), cl.FakeData);
+        Assert.Null(cl.FakeDataDirectory);
+        Assert.False(cl.UpdateAppsOnStart);
+        Assert.Empty(cl.BundleFiles);
+    }
+
     [Fact]
     public void RejectsUnknownPage()
         => Assert.Throws<ArgumentException>(() => TuiCommandLine.Parse(["--page", "nope"]));
@@ -140,7 +200,7 @@ public class FakePackageManagerProcessTests : IDisposable
     public void FakeElevatorDelegatesWithoutElevating()
     {
         Assert.True(FakePackageManagerProcess.TryRun(
-            [FakePackageManagerProcess.ElevateFlag, "UniGetUI.Tui.exe", FakePackageManagerProcess.PmFlag, "--state", _state, "Npm", "install", "--id", "tailspin-bundler"],
+            [FakePackageManagerProcess.ElevateFlag, "UniGetUI.exe", "tui", FakePackageManagerProcess.PmFlag, "--state", _state, "Npm", "install", "--id", "tailspin-bundler"],
             out int code));
         Assert.Equal(0, code);
         Assert.Equal("5.4.10", Version("Npm", "tailspin-bundler"));

@@ -29,7 +29,8 @@ internal sealed class TuiCommandLine
     public static readonly string HelpText = """
         UniGetUI Terminal UI
 
-        Usage: UniGetUI.Tui [options] [bundle-file]
+        Usage: unigetui tui [options] [bundle-file]
+               uniget tui [options] [bundle-file]
 
           --help                          Show this help and exit.
           --fake-data                     Run against a built-in fake data set. No real package
@@ -56,6 +57,7 @@ internal sealed class TuiCommandLine
     private TuiCommandLine(string[] args) => _args = args;
 
     public bool ShowHelp { get; private init; }
+    public bool HasHeadlessCommand => _args.Length > 0;
     public bool FakeData { get; private init; }
     public string? FakeDataDirectory { get; private init; }
     public string? StartupPage { get; private init; }
@@ -70,6 +72,12 @@ internal sealed class TuiCommandLine
     {
         string? page = null;
         TuiTheme? theme = null;
+        bool showHelp = false;
+        bool fakeData = FakeDataEnvironment.IsRequested([]);
+        string? fakeDataDirectory = null;
+        bool updateApps = false;
+        string[] settingsArgs = [];
+        int settingsPriority = int.MaxValue;
         List<string> bundles = [];
         for (int i = 0; i < args.Length; i++)
         {
@@ -90,7 +98,39 @@ internal sealed class TuiCommandLine
             }
             else if (ValueCount(arg) is > 0 and int count)
             {
+                if (i + count >= args.Length)
+                    throw new ArgumentException($"{arg} needs {count} value(s).");
+                if (arg == FakeDataEnvironment.DirectoryFlag)
+                {
+                    string directory = args[i + 1];
+                    if (string.IsNullOrWhiteSpace(directory) || directory.StartsWith('-'))
+                        throw new ArgumentException("--fake-data-dir needs a directory path (use ./ or .\\ for a path starting with '-').");
+                    fakeData = true;
+                    fakeDataDirectory ??= directory;
+                }
+                else
+                {
+                    // Preserve desktop command precedence without treating values as commands.
+                    int priority = Array.IndexOf(SettingsCommands, arg);
+                    if (priority < settingsPriority)
+                    {
+                        settingsPriority = priority;
+                        settingsArgs = args[i..(i + count + 1)];
+                    }
+                }
                 i += count;
+            }
+            else if (arg is "--help" or "-h")
+            {
+                showHelp = true;
+            }
+            else if (arg == FakeDataEnvironment.Flag)
+            {
+                fakeData = true;
+            }
+            else if (arg == UpdateAppsFlag)
+            {
+                updateApps = true;
             }
             else if (!arg.StartsWith('-') && BundleExtensions.Contains(Path.GetExtension(arg), StringComparer.OrdinalIgnoreCase))
             {
@@ -98,15 +138,19 @@ internal sealed class TuiCommandLine
                 if (!File.Exists(full)) throw new ArgumentException($"Bundle file not found: {full}");
                 bundles.Add(full);
             }
+            else
+            {
+                throw new ArgumentException($"Unknown terminal argument \"{arg}\".");
+            }
         }
 
-        return new TuiCommandLine(args)
+        return new TuiCommandLine(settingsArgs)
         {
-            ShowHelp = args.Contains("--help") || args.Contains("-h"),
-            FakeData = FakeDataEnvironment.IsRequested(args),
-            FakeDataDirectory = FakeDataEnvironment.RequestedDirectory(args),
+            ShowHelp = showHelp,
+            FakeData = fakeData,
+            FakeDataDirectory = fakeDataDirectory,
             StartupPage = page,
-            UpdateAppsOnStart = args.Contains(UpdateAppsFlag),
+            UpdateAppsOnStart = updateApps,
             Theme = theme,
             BundleFiles = bundles,
         };
@@ -129,9 +173,23 @@ internal sealed class TuiCommandLine
     public bool TryRunHeadlessCommand(out int exitCode)
     {
         exitCode = 0;
-        if (!_args.Any(a => SettingsCommands.Contains(a))) return false;
-        exitCode = SharedPreUiCommandDispatcher.TryHandle(_args, SharedPreUiCommandDispatcher.PortableCliExitCodes)
-                   ?? 0;
+        if (!HasHeadlessCommand) return false;
+        var codes = SharedPreUiCommandDispatcher.PortableCliExitCodes;
+        exitCode = _args[0] switch
+        {
+            SharedPreUiCommandDispatcher.ImportSettingsArgument => SharedPreUiCommandDispatcher.ImportSettings(_args, codes),
+            SharedPreUiCommandDispatcher.ExportSettingsArgument => SharedPreUiCommandDispatcher.ExportSettings(_args, codes),
+            SharedPreUiCommandDispatcher.EnableSettingArgument => SharedPreUiCommandDispatcher.EnableSetting(_args, codes),
+            SharedPreUiCommandDispatcher.DisableSettingArgument => SharedPreUiCommandDispatcher.DisableSetting(_args, codes),
+            SharedPreUiCommandDispatcher.SetSettingValueArgument => SharedPreUiCommandDispatcher.SetSettingValue(_args, codes),
+            SharedPreUiCommandDispatcher.EnableSecureSettingArgument => SharedPreUiCommandDispatcher.EnableSecureSetting(_args, codes),
+            SharedPreUiCommandDispatcher.DisableSecureSettingArgument => SharedPreUiCommandDispatcher.DisableSecureSetting(_args, codes),
+            UniGetUI.Core.SettingsEngine.SecureSettings.SecureSettings.Args.ENABLE_FOR_USER =>
+                SharedPreUiCommandDispatcher.EnableSecureSettingForUser(_args, codes),
+            UniGetUI.Core.SettingsEngine.SecureSettings.SecureSettings.Args.DISABLE_FOR_USER =>
+                SharedPreUiCommandDispatcher.DisableSecureSettingForUser(_args, codes),
+            _ => throw new InvalidOperationException("Unrecognized parsed settings command."),
+        };
         Console.WriteLine(exitCode == 0 ? "Done." : $"Failed with exit code {exitCode}.");
         return true;
     }

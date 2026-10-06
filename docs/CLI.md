@@ -26,6 +26,7 @@ The commands below assume PowerShell is in the installation directory on Windows
 
 ```powershell
 .\uniget.exe status
+.\uniget.exe tui
 .\uniget.exe app status
 .\uniget.exe package search --manager dotnet-tool --query dotnetsay
 .\uniget.exe package install --manager dotnet-tool --id dotnetsay --version 2.1.4 --scope Global
@@ -45,6 +46,20 @@ Without it, normal task-selection behavior applies. The existing
 `/MERGETASKS="regularinstall\addtopath"` syntax remains supported.
 Portable installations never change `PATH`, even with `ADDTOPATH=1`. Uninstall removes only
 the `PATH` entry added by this installer; a pre-existing entry is left intact.
+
+## Terminal UI
+
+`unigetui tui` opens the interactive terminal UI inside the main executable.
+On Windows PowerShell, use `.\uniget.exe tui` (or `uniget tui` on PATH): the launcher
+forwards to the same command and waits for the session to exit. A direct `.\UniGetUI.exe tui`
+launch does not block the PowerShell prompt, which then competes with the TUI for console
+input and can cause a startup failure. To launch the main executable itself, use
+`Start-Process -FilePath .\UniGetUI.exe -ArgumentList 'tui' -NoNewWindow -Wait`.
+
+Use `uniget tui --help` for its options, or `uniget tui --fake-data` to try it without
+calling real package managers. See [TUI.md](TUI.md) for keyboard controls and more options.
+This command runs locally, independently of the desktop window or an IPC daemon, and is
+included in the same application package; no separate TUI executable is installed.
 
 ## Global transport options
 

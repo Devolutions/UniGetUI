@@ -26,7 +26,7 @@ internal sealed class AboutDialog : TuiDialog
         Body.Content = _form;
 
         _form.AddHeader("UniGetUI");
-        _form.AddNote($"{CoreTools.Translate("Version")}: {CoreData.VersionName} (build {CoreData.BuildNumber})");
+        _form.AddNote($"{CoreTools.Translate("Version")}: {CoreData.VersionName}");
         _form.AddNote(CoreTools.Translate("The main goal of this project is to create an intuitive UI to manage the most common CLI package managers for Windows, such as Winget and Scoop."));
         _form.AddNote(CoreTools.Translate("UniGetUI is not related to the compatible package managers. UniGetUI is an independent project."));
         _form.AddButton("https://devolutions.net/unigetui", () => TuiPackageActions.OpenExternally("https://devolutions.net/unigetui"));

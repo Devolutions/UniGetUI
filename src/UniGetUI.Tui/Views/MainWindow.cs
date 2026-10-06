@@ -439,7 +439,7 @@ internal sealed class MainWindow : Window
     private void UpdateTitle()
     {
         Title = Settings.Get(Settings.K.ShowVersionNumberOnTitlebar)
-            ? $"UniGetUI TUI v{CoreData.VersionName} (build {CoreData.BuildNumber})"
+            ? $"UniGetUI TUI v{CoreData.VersionName}"
             : "UniGetUI TUI";
     }
 

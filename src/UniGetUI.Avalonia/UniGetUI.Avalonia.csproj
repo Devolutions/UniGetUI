@@ -300,6 +300,7 @@
         <ProjectReference Include="..\UniGetUI.Interface.Telemetry\UniGetUI.Interface.Telemetry.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.AgentBroker\UniGetUI.PackageEngine.AgentBroker.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.PackageEngine\UniGetUI.PackageEngine.PEInterface.csproj" />
+        <ProjectReference Include="..\UniGetUI.Tui\UniGetUI.Tui.csproj" />
     </ItemGroup>
 
     <ItemGroup>

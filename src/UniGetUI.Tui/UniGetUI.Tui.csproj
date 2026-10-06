@@ -6,26 +6,13 @@
         <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WindowsTargetFramework)</TargetFramework>
         <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">$(PortableTargetFramework)</TargetFramework>
         <TargetFrameworks />
-        <OutputType>Exe</OutputType>
+        <OutputType>Library</OutputType>
         <RootNamespace>UniGetUI.Tui</RootNamespace>
         <AssemblyName>UniGetUI.Tui</AssemblyName>
         <!-- The UI is built entirely in C# (no AXAML), so compiled bindings are irrelevant here;
              keep parity with the Consolonia fork projects which opt out under Avalonia 12. -->
         <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
-        <!-- The TUI owns the console; never spawn or attach a GUI window. -->
-        <PublishSingleFile>false</PublishSingleFile>
         <ConsoloniaVersion>12.0.3.14</ConsoloniaVersion>
-        <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
-    </PropertyGroup>
-
-    <!-- NativeAOT is the default for Release publishes, like the desktop app: about 3x faster startup, less memory and
-         a third of the size of the ReadyToRun build (see docs/TUI.md). Debug builds and tests stay on the JIT. -->
-    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-        <PublishAot>true</PublishAot>
-        <PublishTrimmed>true</PublishTrimmed>
-        <TrimMode>full</TrimMode>
-        <!-- NativeAOT and ReadyToRun are mutually exclusive. -->
-        <PublishReadyToRun>false</PublishReadyToRun>
     </PropertyGroup>
 
     <ItemGroup>
@@ -34,8 +21,6 @@
 
     <ItemGroup>
         <Compile Include="..\Shared\SharedPreUiCommandDispatcher.cs" Link="Shared\SharedPreUiCommandDispatcher.cs" />
-        <!-- Cloud backup: the same GitHub gist client the desktop app uses. -->
-        <Compile Include="..\UniGetUI.Interface.IpcApi\GitHubApiClient.cs" Link="Shared\GitHubApiClient.cs" />
     </ItemGroup>
 
     <!-- The GitHub OAuth client ID comes from the same build-time variable as the desktop app's
@@ -54,7 +39,7 @@
         </ItemGroup>
     </Target>
 
-    <!-- UniGetUI engine projects (headless subset: no IpcApi / Telemetry, those are GUI-only). -->
+    <!-- Runtime services are selected by the host; the terminal path does not start IPC or telemetry. -->
     <ItemGroup>
         <ProjectReference Include="..\UniGetUI.Core.Data\UniGetUI.Core.Data.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.LanguageEngine\UniGetUI.Core.LanguageEngine.csproj" />
@@ -63,6 +48,7 @@
         <ProjectReference Include="..\UniGetUI.Core.Settings\UniGetUI.Core.Settings.csproj" />
         <ProjectReference Include="..\UniGetUI.Core.Tools\UniGetUI.Core.Tools.csproj" />
         <ProjectReference Include="..\UniGetUI.Interface.Enums\UniGetUI.Interface.Enums.csproj" />
+        <ProjectReference Include="..\UniGetUI.Interface.IpcApi\UniGetUI.Interface.IpcApi.csproj" />
         <ProjectReference Include="..\UniGetUI.PackageEngine.PackageEngine\UniGetUI.PackageEngine.PEInterface.csproj" />
     </ItemGroup>
 
@@ -78,30 +64,5 @@
         <PackageReference Include="Consolonia.Controls.DataGrid" Version="$(ConsoloniaVersion)" />
         <PackageReference Include="Consolonia.ManagedWindows" Version="$(ConsoloniaVersion)" />
     </ItemGroup>
-
-    <!-- The engine's bundled assets (translations, translator / contributor lists) are embedded in the executable
-         and served through BundledAssets.Provider (see Program), so the published TUI needs no Assets folder. -->
-    <ItemGroup>
-        <EmbeddedResource Include="..\Languages\lang_*.json" LogicalName="UniGetUI.Assets/Languages/%(Filename)%(Extension)" />
-        <EmbeddedResource Include="..\Languages\Data\LanguagesReference.json;..\Languages\Data\TranslatedPercentages.json;..\Languages\Data\Translators.json"
-                          LogicalName="UniGetUI.Assets/Data/%(Filename)%(Extension)" />
-        <EmbeddedResource Include="..\UniGetUI.Core.Data\Assets\Data\Contributors.list" LogicalName="UniGetUI.Assets/Data/Contributors.list" />
-    </ItemGroup>
-
-    <!-- The PowerShell operation launcher (PowerShell 5/7, Scoop and npm operations) must be a real file next to the
-         executable: it is run with -File and can run elevated, so it stays where the binary's own permissions apply.
-         The desktop app's Scoop .cmd scripts are not shipped; the TUI runs those tasks itself (TuiScoopMaintenance). -->
-    <ItemGroup>
-        <Content Include="..\SharedAssets\Assets\Utilities\unigetui_ps_operation.ps1" Link="Assets\Utilities\unigetui_ps_operation.ps1"
-                 CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    </ItemGroup>
-
-    <Target Name="DropEmbeddedAssetsFromPublish" AfterTargets="ComputeResolvedFilesToPublishList">
-        <ItemGroup>
-            <_TuiEmbeddedAsset Include="@(ResolvedFileToPublish)"
-                               Condition="$([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').StartsWith('Assets\Languages\')) or $([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').StartsWith('Assets\Data\'))" />
-            <ResolvedFileToPublish Remove="@(_TuiEmbeddedAsset)" />
-        </ItemGroup>
-    </Target>
 
 </Project>

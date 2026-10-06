@@ -2,6 +2,7 @@ using UniGetUI.Core.Data;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.PackageEngine.Interfaces;
+using UniGetUI.Tui.Infrastructure;
 
 namespace UniGetUI.Tui.FakeData;
 
@@ -71,16 +72,16 @@ internal sealed class FakeDataEnvironment
         CoreData.TEST_DownloadsDirectoryOverride = downloads;
         SecureSettings.TEST_SecureSettingsRootOverride = Path.Join(sandbox, "SecureSettings");
 
-        (string cliPath, string[] cliPrefix) = ResolveFakeCli();
+        (string cliPath, string[] cliPrefix) = TuiProcessHost.Resolve();
         var env = new FakeDataEnvironment(sandbox, cliPath, cliPrefix);
         FakeStateStore.EnsureSeeded(env.StatePath);
 
         // Children spawned by fake operations inherit this marker (see FakePackageManagerProcess).
         Environment.SetEnvironmentVariable(FakePackageManagerProcess.ChildMarkerVariable, "1");
 
-        // Elevation goes to the fake elevator: same binary, "--fake-elevate" prefix. Nothing is elevated.
+        // Elevation re-enters the terminal command; nothing is elevated.
         CoreData.ElevatorPath = cliPath;
-        CoreData.ElevatorArgs = FakePackageManagerProcess.ElevateFlag;
+        CoreData.ElevatorArgs = $"{TuiAppHost.Command} {FakePackageManagerProcess.ElevateFlag}";
 
         // The Devolutions Agent broker is a real out-of-process service; never route fake operations there.
         Settings.Set(Settings.K.UseAgentBroker, false);
@@ -97,19 +98,4 @@ internal sealed class FakeDataEnvironment
         FakeStateStore.EnsureSeeded(StatePath);
     }
 
-    private static (string Path, string[] Prefix) ResolveFakeCli()
-    {
-        string exeName = OperatingSystem.IsWindows() ? "UniGetUI.Tui.exe" : "UniGetUI.Tui";
-        string? processPath = Environment.ProcessPath;
-        if (processPath is not null
-            && Path.GetFileName(processPath).Equals(exeName, StringComparison.OrdinalIgnoreCase))
-            return (processPath, []);
-
-        // Under a test host the process is testhost/dotnet; the TUI apphost sits next to our assembly.
-        string candidate = Path.Join(AppContext.BaseDirectory, exeName);
-        if (File.Exists(candidate)) return (candidate, []);
-
-        string dll = Path.Join(AppContext.BaseDirectory, "UniGetUI.Tui.dll");
-        return ("dotnet", [dll]);
-    }
 }

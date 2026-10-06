@@ -1,16 +1,38 @@
 # UniGetUI Terminal UI
 
-`UniGetUI.Tui` is a terminal front-end for the UniGetUI package engine, built with
+`unigetui tui` is the terminal front-end for the UniGetUI package engine, built with
 [Consolonia](https://github.com/Consolonia/Consolonia) (Avalonia 12 rendered to a console). It uses the
 same engine, settings, secure settings, install options, ignored-updates database, bundles and
 operation history as the desktop app, so a change made in one is seen by the other.
+It runs inside the main `UniGetUI` executable: `src/UniGetUI.Tui` is a library, not a
+separately published application. The normal installer and release packages include it as
+part of the main executable; there is no additional TUI executable or package.
 
 ## Running
 
 ```shell
-dotnet run --project src/UniGetUI.Tui/UniGetUI.Tui.csproj
-dotnet run --project src/UniGetUI.Tui/UniGetUI.Tui.csproj -- --fake-data
+unigetui tui
+uniget tui --fake-data
+dotnet run --project src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj -- tui --fake-data
 ```
+
+On Windows PowerShell, use `.\uniget.exe tui` from the installation directory, or `uniget tui`
+when the existing console launcher is on PATH. This launcher waits for the terminal session
+and returns its exit code; the TUI still runs inside `UniGetUI.exe`.
+The main executable retains its GUI
+subsystem so ordinary desktop launches do not open a console. Terminal startup attaches
+to the calling console (or creates one when no parent console exists), before any desktop
+startup or single-instance forwarding. Do not launch `.\UniGetUI.exe tui` directly from an
+interactive PowerShell prompt: PowerShell immediately resumes reading input and changing
+console modes, competing with the TUI and potentially failing with "The parameter is incorrect."
+To launch the main executable itself from PowerShell, wait explicitly:
+
+```powershell
+Start-Process -FilePath .\UniGetUI.exe -ArgumentList 'tui' -NoNewWindow -Wait
+```
+
+From `cmd.exe`, `UniGetUI.exe tui` is supported. On Linux/macOS, run `./UniGetUI tui`
+or the packaged `uniget tui` launcher.
 
 | Option | Meaning |
 | --- | --- |
@@ -23,15 +45,20 @@ dotnet run --project src/UniGetUI.Tui/UniGetUI.Tui.csproj -- --fake-data
 | `--import-settings`, `--export-settings`, `--enable-setting`, `--disable-setting`, `--set-setting-value`, `--enable-secure-setting`, `--disable-secure-setting` | The desktop settings commands. They run without opening the UI, then exit. |
 | `--help` | Print the usage and exit. |
 
+Unknown arguments and missing option values exit with code `2` before the engine starts.
+Settings values are consumed literally, even when they look like terminal options.
+The installer's update-in-progress guard applies to both front-ends.
+
 ## Publishing (NativeAOT)
 
-Release publishes are NativeAOT (trimmed, native executable), like the desktop app:
+Publish the main application as usual. Release packages include both front-ends in the
+same NativeAOT executable:
 
 ```
-dotnet publish src/UniGetUI.Tui/UniGetUI.Tui.csproj -c Release -r win-x64 -p:Platform=x64 -m:1
+dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj -c Release -r win-x64 -p:Platform=x64 -p:PublishProfile=Win-x64-NativeAot -m:1
 ```
 
-The output is `src/UniGetUI.Tui/bin/x64/Release/net10.0-windows10.0.26100.0/win-x64/publish/UniGetUI.Tui.exe`.
+The output is `src/UniGetUI.Avalonia/bin/x64/Release/net10.0-windows10.0.26100.0/win-x64/publish/UniGetUI.exe`.
 `-m:1` avoids a parallel-build file lock on the WinGet project, which is referenced two different ways.
 
 - Prerequisite on Windows: the Visual Studio "MSVC x64/x86 build tools" component (or the "Desktop development
@@ -41,8 +68,8 @@ The output is `src/UniGetUI.Tui/bin/x64/Release/net10.0-windows10.0.26100.0/win-
   Grid columns continue to use compiled (lambda) bindings.
 - To publish the JIT (ReadyToRun) build instead: add `-p:PublishAot=false -p:PublishTrimmed=false -p:PublishReadyToRun=true`.
 
-Historical measurements with Consolonia 12.0.3.13, fake data, in a real terminal (median of 9–10
-warm runs). These have not been remeasured for 12.0.3.14:
+Historical measurements of the former standalone TUI with Consolonia 12.0.3.13, fake data,
+in a real terminal (median of 9–10 warm runs). These do not describe the integrated executable:
 
 | Metric | ReadyToRun (JIT) | NativeAOT |
 | --- | --- | --- |
@@ -62,8 +89,8 @@ redirects all UniGetUI state into a sandbox under `%TEMP%\UniGetUI-TUI-FakeData\
   installed. Package names, publishers and URLs are fictitious (Contoso, Fabrikam, Northwind…, all on the
   reserved `.invalid` domain).
 - **Operations** run through the real operation engine: options, the command line, process spawn, output
-  streaming, verdicts, history, and the loader updates. The "package manager" they spawn is the TUI binary
-  itself (`--fake-pm …`). It only edits the sandbox's `fake-system-state.json`.
+  streaming, verdicts, history, and the loader updates. The "package manager" they spawn re-enters
+  the main executable (`UniGetUI tui --fake-pm …`). It only edits the sandbox's `fake-system-state.json`.
 - **Special packages.** Ids containing `Failing` always fail. Ids containing `Slow` take long enough to
   cancel. Elevation goes to a fake elevator (`--fake-elevate`).
 - **Other paths.** Downloads are served from memory, so no network is used. Cloud backup uses a
@@ -161,7 +188,7 @@ For contributors:
   (`E2E/FakeDataSetUp.cs`), and drives it with keystrokes only. The tests read the rendered screen and, for
   effects that don't appear on screen, the fake system state file. They cover every page and dialog.
   Unit tests cover the command line, the fake package manager process and the fake catalog.
-- Real-terminal checks: run `UniGetUI.Tui.exe --fake-data` under a ConPTY driver (for example node-pty
+- Real-terminal checks: run `uniget tui --fake-data` under a ConPTY driver (for example node-pty
   with a headless xterm). This catches console-driver input problems that the in-memory console can't see.
 
 ## Terminal input notes

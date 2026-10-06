@@ -132,8 +132,15 @@ internal static class TuiBootstrapper
                 }
             }
 
-            // The TUI is not (yet) shipping the bundled "UniGetUI Elevator"; fall back to a
-            // gsudo.exe on PATH. Bundled-elevator resolution is a packaging concern for M7.
+            string bundled = Path.Join(CoreData.UniGetUIExecutableDirectory,
+                "Assets", "Utilities", "UniGetUI Elevator.exe");
+            if (File.Exists(bundled))
+            {
+                CoreData.ElevatorPath = bundled;
+                Logger.Debug($"Using built-in UniGetUI Elevator at {bundled}.");
+                return;
+            }
+
             var (found, path) = await CoreTools.WhichAsync("gsudo.exe");
             if (found)
             {
@@ -142,7 +149,7 @@ internal static class TuiBootstrapper
             }
             else
             {
-                Logger.Warn("No 'gsudo.exe' found on PATH; elevated operations will fail until packaged.");
+                Logger.Warn("No bundled UniGetUI Elevator or 'gsudo.exe' on PATH; elevated operations will fail.");
             }
         }
         catch (Exception ex)

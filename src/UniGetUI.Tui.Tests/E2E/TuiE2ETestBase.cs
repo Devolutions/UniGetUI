@@ -15,6 +15,8 @@ using UniGetUI.Tui.Views.Dialogs;
 
 namespace UniGetUI.Tui.Tests;
 
+using Avalonia = global::Avalonia;
+
 /// <summary>
 /// Base for end-to-end tests: a real TUI instance per test rendered into an in-memory console and driven
 /// only through keyboard input. Assertions read the rendered screen and, where an effect lives outside

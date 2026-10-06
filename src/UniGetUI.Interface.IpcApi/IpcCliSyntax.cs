@@ -153,6 +153,7 @@ Global options:
   --pipe-name <name>
 
 Core commands:
+  tui [options] [bundle-file]   (local terminal UI; use tui --help for options)
   status
   version
   app status|show|navigate|quit

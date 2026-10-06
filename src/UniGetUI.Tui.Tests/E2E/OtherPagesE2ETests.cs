@@ -17,6 +17,8 @@ using NAssert = NUnit.Framework.Assert;
 
 namespace UniGetUI.Tui.Tests;
 
+using Avalonia = global::Avalonia;
+
 /// <summary>Bundles, Operations, Managers, Settings, Logs, History and Help, driven by keyboard.</summary>
 [TestFixture]
 [NonParallelizable]

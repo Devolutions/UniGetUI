@@ -2,7 +2,7 @@ namespace UniGetUI.Tui.FakeData;
 
 /// <summary>
 /// The command-line "package manager" that fake-data operations actually execute. The fake managers
-/// point their executable at the TUI binary itself with a <c>--fake-pm</c> prefix, so a real
+/// re-enter <c>UniGetUI tui --fake-pm</c>, so a real
 /// <c>InstallPackageOperation</c> (options, pre/post commands, process spawn, stdout/stderr streaming,
 /// return-code verdicts, loader updates) runs end to end — but the child process only edits the
 /// sandboxed <see cref="FakeStateStore"/> file. It never downloads, installs or runs anything else.
@@ -37,8 +37,15 @@ internal static class FakePackageManagerProcess
         if (args[0] == ElevateFlag)
         {
             Console.WriteLine("[fake elevator] Simulating administrator rights - nothing is actually elevated.");
-            // args[1] is the "manager executable" the elevator was asked to run (this binary).
-            exitCode = args.Length > 2 && args[2] == PmFlag ? RunPm(args[3..]) : 0;
+            int index = 2;
+            if (args.Length > index && args[index].Equals(TuiAppHost.Command, StringComparison.OrdinalIgnoreCase))
+                index++;
+            if (args.Length <= index || args[index] != PmFlag)
+            {
+                exitCode = Fail("fake elevator: expected a UniGetUI tui --fake-pm command.");
+                return true;
+            }
+            exitCode = RunPm(args[(index + 1)..]);
             return true;
         }
 

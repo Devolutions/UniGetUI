@@ -82,7 +82,16 @@ internal static class UiFontPolicy
             return null;
         }
 
-        string scriptFamily = ResolveCjkFamily();
+        return BuildFontFallbacks(ResolveInterfaceLanguage(), CultureInfo.CurrentUICulture.Name);
+    }
+
+    /// <summary>
+    /// Builds the fallback table for an explicit pair of languages, so the regional ordering can be
+    /// exercised without the process' own settings and culture.
+    /// </summary>
+    public static IReadOnlyList<FontFallback> BuildFontFallbacks(string interfaceLanguage, string systemLanguage)
+    {
+        string scriptFamily = ResolveCjkFamily(interfaceLanguage, systemLanguage);
         IEnumerable<string> cjkFamilies = CjkFamilyGroups
             .OrderByDescending(group => group[0] == scriptFamily)
             .SelectMany(group => group);
@@ -162,26 +171,25 @@ internal static class UiFontPolicy
     /// the regions that share the block, so the interface language chooses, and the operating
     /// system's own language chooses when the interface runs in a language that shares no block.
     /// </summary>
-    private static string ResolveCjkFamily()
+    private static string ResolveCjkFamily(string interfaceLanguage, string systemLanguage)
     {
-        string family = ResolveScriptFamily();
+        string family = ResolveScriptFamily(interfaceLanguage);
         if (CjkFamilyGroups.Any(group => group[0] == family))
         {
             return family;
         }
 
-        return ResolveScriptFamily(CultureInfo.CurrentUICulture.Name);
+        return ResolveScriptFamily(systemLanguage);
     }
 
     private static string ResolveScriptFamily()
+        => ResolveScriptFamily(ResolveInterfaceLanguage());
+
+    private static string ResolveInterfaceLanguage()
     {
         string language = CoreSettings.GetValue(CoreSettings.K.PreferredLanguage);
-        if (language is "default" or "")
-        {
-            language = CultureInfo.CurrentUICulture.Name;
-        }
 
-        return ResolveScriptFamily(language);
+        return language is "default" or "" ? CultureInfo.CurrentUICulture.Name : language;
     }
 
     private static string ResolveScriptFamily(string language)

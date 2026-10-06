@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Tools;
 using ICommand = System.Windows.Input.ICommand;
@@ -54,6 +55,7 @@ public class SettingsCard : UserControl
     private Control? _headerIcon;
     private object? _rightContent;
     private bool _isClickEnabled;
+    private bool _pointerPressed;
 
     /// <summary>
     /// Keep compact toggle-style content at the right edge when the card wraps.
@@ -239,6 +241,8 @@ public class SettingsCard : UserControl
         base.Content = _border;
 
         PointerPressed += OnPointerPressed;
+        PointerReleased += OnPointerReleased;
+        PointerCaptureLost += OnPointerCaptureLost;
         KeyDown += OnKeyDown;
         SizeChanged += (_, e) => UpdateResponsiveLayout(e.NewSize.Width);
         // Keyboard focus keeps the SettingsCard itself as the focus target. A card-specific
@@ -395,8 +399,26 @@ public class SettingsCard : UserControl
 
         // Pointer activation leaves the card's normal stroke untouched; keyboard focus is
         // handled solely by the external focus adorner.
+        _pointerPressed = true;
+        e.Handled = true;
+    }
+
+    private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!_pointerPressed) return;
+        _pointerPressed = false;
+
+        if (!_isClickEnabled) return;
+        if (e.InitialPressMouseButton is not MouseButton.Left) return;
+        if (!this.GetVisualsAt(e.GetPosition(this)).Any(c => this == c || this.IsVisualAncestorOf(c))) return;
+
         InvokeClick();
         e.Handled = true;
+    }
+
+    private void OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        _pointerPressed = false;
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)

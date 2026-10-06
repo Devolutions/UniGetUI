@@ -1,207 +1,247 @@
 # UniGetUI Terminal UI
 
-`unigetui tui` is the terminal front-end for the UniGetUI package engine, built with
-[Consolonia](https://github.com/Consolonia/Consolonia) (Avalonia 12 rendered to a console). It uses the
-same engine, settings, secure settings, install options, ignored-updates database, bundles and
-operation history as the desktop app, so a change made in one is seen by the other.
-It runs inside the main `UniGetUI` executable: `src/UniGetUI.Tui` is a library, not a
-separately published application. The normal installer and release packages include it as
-part of the main executable; there is no additional TUI executable or package.
+The terminal UI lets you search, install, update and remove software without opening the
+UniGetUI desktop window. It is included with UniGetUI; no separate terminal application or
+package is needed.
 
-## Running
+It uses the same package managers, settings, installation options, ignored updates, bundles
+and operation history as the desktop app. **In normal mode, your actions affect the software
+on your computer.** Your saved automatic-update and scheduled-maintenance preferences also
+apply. Use [demo mode](#try-it-without-changing-your-computer) to explore safely.
+
+## Getting started
+
+Install UniGetUI using the [installation guide](../README.md#installation). You do not need
+to build it from source to use the terminal UI.
+
+If `uniget` is on your `PATH`, open a terminal and run:
 
 ```shell
-unigetui tui
-uniget tui --fake-data
-dotnet run --project src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj -- tui --fake-data
+uniget tui
 ```
 
-On Windows PowerShell, use `.\uniget.exe tui` from the installation directory, or `uniget tui`
-when the existing console launcher is on PATH. This launcher waits for the terminal session
-and returns its exit code; the TUI still runs inside `UniGetUI.exe`.
-The main executable retains its GUI
-subsystem so ordinary desktop launches do not open a console. Terminal startup attaches
-to the calling console (or creates one when no parent console exists), before any desktop
-startup or single-instance forwarding. Do not launch `.\UniGetUI.exe tui` directly from an
-interactive PowerShell prompt: PowerShell immediately resumes reading input and changing
-console modes, competing with the TUI and potentially failing with "The parameter is incorrect."
-To launch the main executable itself from PowerShell, wait explicitly:
+Otherwise, use the launcher included with your installation:
+
+| Platform | How to start |
+| --- | --- |
+| Windows | Open PowerShell in the UniGetUI installation folder and run `.\uniget.exe tui`. |
+| Linux | Installed `.deb` and `.rpm` packages provide `uniget tui`. From an extracted archive, open its folder and run `./uniget tui`. |
+| macOS | After installing in Applications, run `/Applications/UniGetUI.app/Contents/MacOS/uniget tui`. From an extracted archive, run `./uniget tui` in its folder. |
+
+On Windows, selecting **Add to PATH** during installation lets you use `uniget` from any
+folder. Open a new terminal after installation. Portable installations do not change `PATH`;
+run the launcher from the portable folder. See [the CLI guide](CLI.md#quick-start) for more
+launch options and [portable mode](PORTABLE.md) for portable installation details.
+
+**In PowerShell, use `uniget.exe`, not `UniGetUI.exe` directly.** The launcher keeps PowerShell
+waiting while you use the TUI. If you need to launch `UniGetUI.exe` itself, run this from its
+installation folder:
 
 ```powershell
 Start-Process -FilePath .\UniGetUI.exe -ArgumentList 'tui' -NoNewWindow -Wait
 ```
 
-From `cmd.exe`, `UniGetUI.exe tui` is supported. On Linux/macOS, run `./UniGetUI tui`
-or the packaged `uniget tui` launcher.
+At startup, a version banner and `Initializing UniGetUI engine (loading package managers)...`
+appear while your package managers load. The interactive screen opens afterwards; there is
+no progress bar during this initial step.
 
-| Option | Meaning |
+Press **F1** for help at any time and **Ctrl+Q** to quit.
+
+## Try it without changing your computer
+
+Demo mode provides sample packages so you can try searching, installing, updating and
+uninstalling without calling real package managers or changing your normal UniGetUI settings:
+
+```shell
+uniget tui --fake-data
+```
+
+If `uniget` is not on your `PATH`, use the same platform-specific launcher as above, followed
+by `tui --fake-data`.
+
+The screen displays **FAKE DATA** throughout the session. Packages and operations are
+simulated, downloads do not use the network, and cloud backups stay in a local demo folder.
+Links and "open" actions show their target instead of launching another application.
+Actions that would change your real machine, such as repairing WinGet or managing desktop
+shortcuts, are unavailable.
+
+To keep your demo settings and sample package changes between sessions, choose a dedicated
+folder and reuse it:
+
+```shell
+uniget tui --fake-data-dir "my-tui-demo"
+```
+
+Without a chosen folder, each launch uses a new temporary sandbox.
+
+## Find your way around
+
+The numbered tabs take you to each page. Use **Alt+1** through **Alt+9**, or click a tab.
+**Ctrl+Tab** and **Ctrl+Shift+Tab** move to the next and previous pages. Some terminals also
+support **Ctrl+1** through **Ctrl+9**.
+
+| Tab | What you can do |
 | --- | --- |
-| `--fake-data` | Run against the built-in fake data set (see below). Nothing real is installed. |
-| `--fake-data-dir <dir>` | Same, but keep the sandbox in `<dir>` so fake state survives restarts. |
-| `--page <id>` | Open on `discover`, `updates`, `installed`, `bundles`, `operations`, `managers`, `settings`, `logs`, `history`, `help` or `about`. |
-| `--updateapps` | Update every upgradable package once the update check finishes. |
-| `--theme <id>` | Use a colour theme for this session without saving it. `--help` lists the theme ids. |
-| `<file.ubundle\|.json\|.yaml\|.xml>` | Open a package bundle on start. |
-| `--import-settings`, `--export-settings`, `--enable-setting`, `--disable-setting`, `--set-setting-value`, `--enable-secure-setting`, `--disable-secure-setting` | The desktop settings commands. They run without opening the UI, then exit. |
-| `--help` | Print the usage and exit. |
+| 1 Discover | Search for packages and install them. |
+| 2 Updates | Review available updates, update packages, or ignore and pause updates. |
+| 3 Installed | View installed packages, uninstall or reinstall them, and open installation locations. |
+| 4 Bundles | Create, open, save and install lists of packages. |
+| 5 Operations | Follow installation progress and output, cancel operations, or retry failures. |
+| 6 Managers | Check package manager status, enable or disable managers, and manage package sources. |
+| 7 Settings | Change preferences, default installation options, update behavior, backups and scheduled maintenance. |
+| 8 Logs | Read and export UniGetUI and package manager logs. |
+| 9 History | Review previous operations, view their logs, or run them again. |
 
-Unknown arguments and missing option values exit with code `2` before the engine starts.
-Settings values are consumed literally, even when they look like terminal options.
-The installer's update-in-progress guard applies to both front-ends.
+Use **Tab** and **Shift+Tab** to move between controls. **F10** opens the menu bar; use the
+arrow keys to choose a menu or action, then **Enter** to activate it. The **Page** menu
+contains actions for the page you are viewing.
 
-## Publishing (NativeAOT)
+## Common tasks
 
-Publish the main application as usual. Release packages include both front-ends in the
-same NativeAOT executable:
+### Search for and install a package
 
+1. Open **Discover** with **Alt+1**, press **Ctrl+F**, type a package name or ID, and press **Enter**.
+2. When results appear, press **Down** to move to the list and use the arrow keys to highlight
+   a package. Press **Enter** to view its details.
+3. Back in the list, press **Ctrl+Enter** to install the highlighted package, or **o** to review
+   installation options first. Use **Space** to select multiple packages for a batch installation.
+
+The source, sort and search-mode controls above the list let you narrow the results.
+Press **m** in the list to see all available actions for the package.
+
+### Update or remove packages
+
+Open **Updates** with **Alt+2** or **Installed** with **Alt+3**. Review the packages and use
+**Space** to select or unselect them. **Ctrl+Enter** updates packages on the Updates page
+and uninstalls packages on the Installed page. It acts on checked packages, or on the
+highlighted package if none are checked.
+
+Updates are selected by default unless you have changed that preference. Check the selection
+before starting a batch. Press **m** for other actions, such as ignoring an update, skipping
+a version, pausing updates or reinstalling a package.
+
+### Choose installation options
+
+In a package list, press **o** to choose options such as version, architecture, installation
+scope or location, additional command-line arguments, and administrator or interactive mode.
+Available choices depend on the package manager. Some operations require administrator
+permission.
+
+### Follow an operation or investigate a failure
+
+Open **Operations** with **Alt+5** to see progress and command output. Use its actions to
+cancel or retry an operation. **History** keeps previous operations and their logs, while
+**Logs** provides application and package manager diagnostics.
+
+### Work with package bundles
+
+Use **Bundles** to create or open a list of packages, save it, and install its contents.
+Supported bundle formats are `.ubundle`, `.json`, `.yaml` and `.xml`. You can also open an
+existing bundle when starting the TUI:
+
+```shell
+uniget tui "my-packages.ubundle"
 ```
-dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj -c Release -r win-x64 -p:Platform=x64 -p:PublishProfile=Win-x64-NativeAot -m:1
-```
 
-The output is `src/UniGetUI.Avalonia/bin/x64/Release/net10.0-windows10.0.26100.0/win-x64/publish/UniGetUI.exe`.
-`-m:1` avoids a parallel-build file lock on the WinGet project, which is referenced two different ways.
-
-- Prerequisite on Windows: the Visual Studio "MSVC x64/x86 build tools" component (or the "Desktop development
-  with C++" workload), which provides the native linker. Without it the publish fails with "Platform linker not found".
-- Consolonia 12.0.3.14 includes NativeAOT fixes for its theme/style loading and internal Avalonia types;
-  the TUI no longer roots the entire Consolonia assemblies or those Avalonia constructors for trimming.
-  Grid columns continue to use compiled (lambda) bindings.
-- To publish the JIT (ReadyToRun) build instead: add `-p:PublishAot=false -p:PublishTrimmed=false -p:PublishReadyToRun=true`.
-
-Historical measurements of the former standalone TUI with Consolonia 12.0.3.13, fake data,
-in a real terminal (median of 9–10 warm runs). These do not describe the integrated executable:
-
-| Metric | ReadyToRun (JIT) | NativeAOT |
-| --- | --- | --- |
-| Launch to first screen | 725 ms | 252 ms |
-| Launch to packages loaded | 727 ms | 421 ms |
-| `--help` (start to exit) | 105 ms | 46 ms |
-| Working set once loaded | 91 MB | 67 MB |
-| Published size (without symbols) | 190 MB, 340 files | 60 MB, 69 files |
-
-## Fake data mode
-
-`--fake-data` (or `UNIGETUI_TUI_FAKE_DATA=1`) replaces every package manager with fake ones and
-redirects all UniGetUI state into a sandbox under `%TEMP%\UniGetUI-TUI-FakeData\` (or
-`--fake-data-dir`):
-
-- **Managers.** WinGet, Scoop, Chocolatey, Pip and Npm are fake and "ready". Cargo is reported as not
-  installed. Package names, publishers and URLs are fictitious (Contoso, Fabrikam, Northwind…, all on the
-  reserved `.invalid` domain).
-- **Operations** run through the real operation engine: options, the command line, process spawn, output
-  streaming, verdicts, history, and the loader updates. The "package manager" they spawn re-enters
-  the main executable (`UniGetUI tui --fake-pm …`). It only edits the sandbox's `fake-system-state.json`.
-- **Special packages.** Ids containing `Failing` always fail. Ids containing `Slow` take long enough to
-  cancel. Elevation goes to a fake elevator (`--fake-elevate`).
-- **Other paths.** Downloads are served from memory, so no network is used. Cloud backup uses a
-  sandbox folder instead of GitHub.
-- **Real-machine actions are refused.** The Devolutions Agent broker, desktop-shortcut management, the
-  WinGet repair and the Scoop scripts are disabled, and "open" actions print their target instead of
-  launching it.
+Review any bundle security warnings before confirming installation.
 
 ## Keyboard
 
+These shortcuts apply when the relevant page or package list has focus. When typing into
+a text field, ordinary letters enter text instead of running package actions.
+
 | Keys | Action |
 | --- | --- |
-| Alt+1 … Alt+9 (or Ctrl+1 … Ctrl+9) | Go to the numbered page tab: Discover, Updates, Installed, Bundles, Operations, Managers, Settings, Logs, History. Help (F1) and About are dialogs, opened from the Help menu. Clicking a tab works too. |
+| Alt+1 through Alt+9 | Go to a numbered page tab |
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous page |
-| Tab / Shift+Tab | Move between the controls of the page (focus always stays in the page) |
-| Esc | Close a dialog or menu, otherwise return to the page's main control (e.g. from the filter to the list) |
-| F10 or Alt+letter | Menu bar: Alt+F File, Alt+P Page, Alt+V View, Alt+O Operations, Alt+H Help. Inside an open menu, ↑ ↓ and Enter pick an item (items have no access letters; their global shortcut is shown on the right), ← → or Alt+letter switch menus. The menu's access letter is underlined and highlighted; letters are assigned at runtime from the translated labels, so every language gets unique keys. |
-| F1, F5 or Ctrl+R, Ctrl+F or `/`, Ctrl+A, Ctrl+Q | Help, reload, search, select all, quit |
-| Space, Enter, Ctrl+Enter, `o` or Alt+Enter, `m` | Package lists: select, details, main action, options, all actions |
-| `i` `u` `x` `b` `g` `f` `s` | Install, update, uninstall, add to bundle, ignore updates, filter by source, sort |
-| F3 | Package lists: search mode and options (the header's Mode chip). Clicking the Mode, Sources or Sort chip opens the same picker as F3, `f` or `s`. |
+| Tab / Shift+Tab | Next / previous control |
+| Esc | Close a dialog or menu, or return from a search field to the list |
+| F10 | Open the menu bar |
+| Alt+letter | Open a menu using its highlighted access letter |
+| F1 | Open help |
+| F5 or Ctrl+R | Reload the current page |
+| Ctrl+F or `/` | Focus search or filtering |
+| Ctrl+A | Select all packages |
+| Ctrl+Q | Quit |
+| Space | Select or unselect the highlighted package |
+| Enter | View package details |
+| Ctrl+Enter | Install, update or uninstall, depending on the page |
+| `o` or Alt+Enter | Open installation options |
+| `m` | Show all actions for the package |
+| `i` / `u` / `x` | Install / update / uninstall |
+| `b` | Add packages to a bundle |
+| `g` | Ignore updates |
+| `f` / `s` / F3 | Filter by source / sort / change search mode |
+
+Inside dialogs, use **Tab** to move between fields, the arrow keys to change choices,
+**Enter** to activate a control, and **Esc** to cancel.
 
 ## Themes
 
-Pick a theme in **Settings › User interface preferences › Theme** (Left/Right previews each one live) or
-**View › Theme…**. The choice is saved (`TuiTheme` setting) and applied immediately, without a restart.
+Choose a theme in **View > Theme** or **Settings > User interface preferences > Theme**.
+The change appears immediately and is saved for future sessions.
 
-| Theme | Notes |
+The default is **Devolutions - Graphite**. Other choices include Devolutions Black, Light,
+Dark Blue, Blue, Gray and High contrast, plus Dracula, Monokai, Nord, Gruvbox Dark,
+Solarized Dark, Solarized Light, One Dark, Tokyo Night and Catppuccin Mocha.
+
+Use **High contrast** if you need stronger separation between text, controls and backgrounds.
+Older 16-colour consoles display approximate theme colours.
+
+For a temporary theme, use `--theme <id>`. Run `uniget tui --help` to see the theme IDs.
+
+## Startup options
+
+Add these options after `uniget tui`:
+
+| Option | What it does |
 | --- | --- |
-| Devolutions - Graphite | The original TUI look and the default: graphite grey with Devolutions blue chrome. |
-| Devolutions - Black | True black and fully neutral: a pure black `#000000` page, `#0D0D0D` bars, grey panels, borders, focus and selection, white headings and access letters, no blue or yellow. Softer than High contrast. |
-| Devolutions - Light | RDM Light: white surfaces, brand blue `#0068C3` title bar, light-blue focus with dark text. |
-| Devolutions - Dark Blue | RDM's default dark ramp (`DarkBlue`): navy fills and navy chrome. |
-| Devolutions - Blue | The same navy fills with Devolutions brand-blue title and menu bars. |
-| Devolutions - Gray | RDM `DarkGray`. |
-| Devolutions - High contrast | RDM `DarkHighContrast`: black, white text, light borders, yellow access keys. |
-| Dracula, Monokai, Nord, Gruvbox Dark, Solarized Dark, Solarized Light, One Dark, Tokyo Night, Catppuccin Mocha | The projects' published palettes, with a few colours darkened or lightened where the original fails the contrast checks below. |
+| `--page <id>` | Start on `discover`, `updates`, `installed`, `bundles`, `operations`, `managers`, `settings`, `logs` or `history`. `help` and `about` open their dialogs. |
+| `--theme <id>` | Choose a theme for this session without saving it. |
+| `--fake-data` | Explore with simulated packages and separate settings. |
+| `--fake-data-dir <folder>` | Explore with simulated packages and keep demo state in the chosen folder. |
+| `--updateapps` | Start updating every available package after the update check finishes. |
+| `<bundle-file>` | Open an existing `.ubundle`, `.json`, `.yaml` or `.xml` package bundle. |
+| `--help` | Show usage, settings commands and theme IDs, then exit. |
 
-The Devolutions colours come from Remote Desktop Manager's colour tokens (`fill-*`, `border-*`, `text-*`
-in its Light, DarkBlue, DarkGray and DarkHighContrast ramps).
+For example, open the Updates page to review available updates:
 
-For contributors:
-- A theme is a set of semantic roles (`Theme/TuiTheme.cs`): text, muted and dim text, brand, chrome, panel frame,
-  menu, focus, selection, edit surface, status colours, access key, and so on. `Theme/TuiPalette.cs`
-  exposes them as shared brushes and overrides Consolonia's `Theme*Brush` resources.
-- Never hard-code a colour in a control. Use a `TuiPalette` brush, so every theme (and a live switch)
-  reaches it.
-- `TuiThemeTests` checks WCAG contrast for every text/background pairing the UI draws, in every theme:
-  body text at 7:1, other text at 4.5:1, and status colours, placeholders and access keys at 3:1.
-- In the 16-colour legacy console (no `WT_SESSION`) Consolonia maps theme colours to the nearest
-  console colour, so themes are approximate there.
+```shell
+uniget tui --page updates
+```
 
-## Feature parity with the desktop app
+**Use `--updateapps` only when you intend to update all available packages.** Unlike
+`--page updates`, it requests automatic updates rather than just choosing the starting page.
+Your saved automatic-update preferences still apply without this option.
 
-| Desktop feature | TUI |
+Settings import, export and individual setting changes can also be run without opening the
+interactive screen. Use `uniget tui --help` for their syntax.
+
+## Differences from the desktop app
+
+Most package-management tasks are available in both interfaces. The terminal UI displays
+progress and notifications within the terminal rather than using a tray icon or system
+notifications. Settings that only affect the desktop window are labelled **(desktop app)**.
+
+The TUI does not update UniGetUI itself. Install application updates through the desktop app
+or your usual installation method; the **Help** menu links to the release page.
+The Devolutions Agent policy inspector and editor are available only in the desktop app.
+
+## Troubleshooting
+
+| Problem | What to try |
 | --- | --- |
-| Discover / Updates / Installed / Bundles pages | ✓ Same loaders, main actions and per-page action lists (toolbar + context menu → `m` menu and F10 › Page) |
-| Search modes (both, name, id, exact, similar), case, special characters, instant search | ✓ Search options dialog |
-| Source filter tree | ✓ Filter-by-source dialog (per manager / source, including "Local") |
-| Sorting (name, id, version, new version, source) persisted per page | ✓ `s` menu and column headers |
-| Multi-select, select all, updates checked by default | ✓ Space, Ctrl+A, `DisableSelectingUpdatesByDefault` |
-| As administrator / interactive / skip hash / remove data variants | ✓ |
-| Reinstall, uninstall-then-reinstall, uninstall-then-update, update to version X | ✓ |
-| Ignore updates, skip version, pause updates (1 day … 12 months), manage ignored updates | ✓ |
-| Package details (all fields, dependencies, main action and variants) | ✓ |
-| Installation options (profiles, follow defaults, version/arch/scope/location, CLI args, close apps, pre/post commands, live command preview, auto-update, ignore future updates) | ✓ One scrolling dialog instead of tabs |
-| Manual install/update/uninstall command | ✓ Shown in a dialog to copy (no pre-filled terminal window) |
-| Download installer(s) | ✓ |
-| Open install location | ✓ Shows the path; Open launches it |
-| Export to CSV, add to bundle, copy package info | ✓ |
-| Installer host / download size columns | ✓ |
-| Bundles: new, open (ubundle/json/yaml/xml), save, security report with explicit confirmation for high-risk findings, create .ps1, remove, unsaved-changes guard, install already-installed setting | ✓ |
-| Operations: live list and output, cancel, close, retry and retry variants, run now / next / last, bulk retry / clear / cancel, auto-remove succeeded, parallel limit | ✓ |
-| Operation history: filters, revert, run again, retry variants, full log, copy, remove, clear | ✓ |
-| Notifications (progress, success, error, updates available, batch summary) | ✓ In-app notification line, honouring the same settings |
-| Settings: General, Interface, Notifications, Updates, Operations, Scheduled maintenance, Backup, Administrator (incl. secure settings), Internet (proxy and credentials), Experimental; import / export / reset | ✓ Every key; desktop-only ones are labelled "(desktop app)" |
-| Package managers page: enable/disable, status, executable selection, default install options, notifications, minimum update age, logs, sources (add known/custom, remove), WinGet / Scoop / Bun / vcpkg extras | ✓ |
-| Scheduled maintenance (check / install updates, local and cloud backups, run now, manage automatic updates) | ✓ |
-| Local backup and cloud backup (GitHub gist) | ✓ GitHub sign-in uses the device flow (code + URL) |
-| Logs: UniGetUI log with 5 levels, manager logs (+ verbose), copy, export | ✓ |
-| Help, release notes, about (version, contributors, translators, licenses) | ✓ Links open in the browser |
-| Command-line flags (`--updateapps`, bundle file, settings commands) | ✓ |
-| Keyboard shortcuts | ✓ See above |
-| Administrator warning, WinGet malfunction warning | ✓ As notifications |
-| Manage desktop shortcuts | ✓ Windows, real data only |
-| Theme, fonts, nav menu mode, tray icon, icons and illustrations, GPU rendering | Desktop-only visuals; the settings stay editable |
-| Tray icon and OS toast notifications | Not applicable to a terminal |
-| Self-update of UniGetUI | Desktop-only; Help links to the release page |
-| Devolutions Agent policy inspector / editor | Desktop-only (the broker toggle itself is available) |
-| Start Menu shortcut rules, integrity-violation and crash-report dialogs | Desktop-only |
+| `uniget` is not recognized | Open a new terminal after adding UniGetUI to `PATH`, or run the launcher from the installation folder. |
+| PowerShell shows another prompt while the TUI starts, or reports "The parameter is incorrect" | Use `.\uniget.exe tui`, or the explicit `Start-Process` command above. Do not launch `.\UniGetUI.exe tui` directly from an interactive PowerShell prompt. |
+| The startup screen stays on "loading package managers" | Initialization must finish before the interactive screen appears. If startup fails, keep the error message for troubleshooting. |
+| A package manager is unavailable or a package action is missing | Check **Managers** for its status and enabled state. Available actions depend on the manager and platform. |
+| Alt shortcuts do not work | Use **F10** and the arrow keys for menus. On macOS Terminal, enable **Settings > Profiles > Keyboard > Use Option as Meta key**. |
+| Alt+Enter switches Windows Terminal to full screen | Use **o** to open installation options instead. |
+| Colours look different or menu letters are not underlined | Try a modern terminal such as Windows Terminal. Older consoles have a smaller colour palette. |
 
-## Tests
+Run the TUI in an interactive terminal, not with its input or output redirected to a file or
+pipeline.
 
-- `src/UniGetUI.Tui.Tests` runs the real TUI in Consolonia's in-memory test console, in fake data mode
-  (`E2E/FakeDataSetUp.cs`), and drives it with keystrokes only. The tests read the rendered screen and, for
-  effects that don't appear on screen, the fake system state file. They cover every page and dialog.
-  Unit tests cover the command line, the fake package manager process and the fake catalog.
-- Real-terminal checks: run `uniget tui --fake-data` under a ConPTY driver (for example node-pty
-  with a headless xterm). This catches console-driver input problems that the in-memory console can't see.
-
-## Terminal input notes
-
-- On Windows the TUI unregisters Avalonia's clipboard service at startup. Consolonia's Win32 console
-  otherwise routes every keystroke through a clipboard-paste detector that drops typed characters under
-  ConPTY. Copy commands write to the Windows clipboard directly.
-- AltGr characters (`\ @ { } [ ] | €` on many layouts) arrive as Ctrl+Alt chords. Consolonia never turns
-  those into text, so the main window delivers the key's symbol as text itself.
-- Alt+letter needs the terminal to send Alt as Meta (Esc prefix). That is the default in Windows Terminal,
-  GNOME Terminal, iTerm2 and most others. macOS Terminal.app needs *Settings › Profiles › Keyboard ›
-  Use Option as Meta key*. F10 always works. Windows Terminal binds Alt+Enter to full screen by default, so
-  use `o` for installation options there.
-- The underlined access letter needs ANSI output. On Windows, Consolonia uses it inside Windows Terminal
-  (`WT_SESSION`) and falls back to the 16-colour legacy console (no underline, dimmer letter) elsewhere.
-- `UNIGETUI_TUI_KEYLOG=<file>` (developer only) logs every key and text event as the terminal delivered it.
+For more help, press **F1** or use the **Help** menu. When reporting a problem, include your
+UniGetUI version, operating system, terminal application, and the error or relevant logs.
+**Help > About** provides terminal diagnostics, and **Logs** lets you export logs for review.

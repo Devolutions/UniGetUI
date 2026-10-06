@@ -563,6 +563,7 @@ internal sealed class SettingsPage : UserControl, ITuiPage
             });
         }, cancellation.Token);
         bool ok;
+        string? failureMessage = null;
         try
         {
             ok = await signIn;
@@ -574,11 +575,13 @@ internal sealed class SettingsPage : UserControl, ITuiPage
         catch (Exception ex)
         {
             Logger.Error(ex);
+            failureMessage = ex.Message;
             ok = false;
         }
 
         codeDialog?.Close(null);
         if (ok) TuiNotifications.Success(CoreTools.Translate("Log in with GitHub"), CoreTools.Translate("You are logged in as {0} (@{1})", TuiCloudBackup.UserLogin, TuiCloudBackup.UserLogin));
+        else if (failureMessage is not null) TuiNotifications.Error(CoreTools.Translate("Log in with GitHub"), failureMessage);
         else TuiNotifications.Warning(CoreTools.Translate("Log in with GitHub"), CoreTools.Translate("The login was not completed"));
         _form.Refresh();
     }

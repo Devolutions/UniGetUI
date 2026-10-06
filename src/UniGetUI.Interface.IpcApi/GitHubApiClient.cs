@@ -296,6 +296,14 @@ public sealed class GitHubOAuthToken
 {
     [JsonPropertyName("access_token")]
     public string AccessToken { get; set; } = "";
+
+    [JsonPropertyName("error")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Error { get; set; }
+
+    [JsonPropertyName("error_description")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ErrorDescription { get; set; }
 }
 
 public sealed class GitHubDeviceFlow

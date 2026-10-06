@@ -62,23 +62,53 @@ internal static class TuiCloudBackup
         GitHubDeviceFlow flow = await client.InitiateDeviceFlowAsync(TuiSecrets.GitHubClientId, Scopes, cancellation);
         await showCode(flow.VerificationUri, flow.UserCode);
 
+        GitHubOAuthToken token = await PollAccessTokenAsync(flow,
+            ct => client.CreateAccessTokenForDeviceFlowAsync(TuiSecrets.GitHubClientId, flow, ct), cancellation);
+        SecureGHTokenManager.StoreToken(token.AccessToken);
+        using var userClient = new GitHubApiClient(token.AccessToken);
+        GitHubUser user = await userClient.GetCurrentUserAsync(cancellation);
+        Settings.SetValue(Settings.K.GitHubUserLogin, user.Login);
+        StatusChanged?.Invoke();
+        return true;
+    }
+
+    internal static async Task<GitHubOAuthToken> PollAccessTokenAsync(
+        GitHubDeviceFlow flow,
+        Func<CancellationToken, Task<GitHubOAuthToken>> requestToken,
+        CancellationToken cancellation,
+        TimeProvider? timeProvider = null)
+    {
+        timeProvider ??= TimeProvider.System;
         TimeSpan interval = TimeSpan.FromSeconds(Math.Max(5, flow.Interval));
-        DateTime expires = DateTime.UtcNow.AddSeconds(Math.Max(60, flow.ExpiresIn));
-        while (DateTime.UtcNow < expires)
+        TimeSpan lifetime = TimeSpan.FromSeconds(Math.Max(0, flow.ExpiresIn));
+        long started = timeProvider.GetTimestamp();
+        while (true)
         {
-            await Task.Delay(interval, cancellation);
-            GitHubOAuthToken token = await client.CreateAccessTokenForDeviceFlowAsync(TuiSecrets.GitHubClientId, flow, cancellation);
-            if (string.IsNullOrEmpty(token.AccessToken)) continue; // authorization_pending / slow_down
+            cancellation.ThrowIfCancellationRequested();
+            TimeSpan remaining = lifetime - timeProvider.GetElapsedTime(started);
+            if (remaining <= TimeSpan.Zero)
+                throw new TimeoutException(CoreTools.Translate("The GitHub sign-in code has expired. Please try again."));
 
-            SecureGHTokenManager.StoreToken(token.AccessToken);
-            using var userClient = new GitHubApiClient(token.AccessToken);
-            GitHubUser user = await userClient.GetCurrentUserAsync(cancellation);
-            Settings.SetValue(Settings.K.GitHubUserLogin, user.Login);
-            StatusChanged?.Invoke();
-            return true;
+            await Task.Delay(remaining < interval ? remaining : interval, timeProvider, cancellation);
+            cancellation.ThrowIfCancellationRequested();
+            if (timeProvider.GetElapsedTime(started) >= lifetime)
+                throw new TimeoutException(CoreTools.Translate("The GitHub sign-in code has expired. Please try again."));
+
+            GitHubOAuthToken token = await requestToken(cancellation);
+            if (token.Error == "authorization_pending") continue;
+            if (token.Error == "slow_down")
+            {
+                interval += TimeSpan.FromSeconds(5);
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(token.Error))
+                throw new InvalidOperationException(CoreTools.Translate("GitHub sign-in failed ({0}): {1}",
+                    token.Error, string.IsNullOrWhiteSpace(token.ErrorDescription) ? token.Error : token.ErrorDescription));
+            if (string.IsNullOrWhiteSpace(token.AccessToken))
+                throw new InvalidOperationException(CoreTools.Translate("GitHub returned an empty access token."));
+            return token;
         }
-
-        return false;
     }
 
     public static void SignOut()

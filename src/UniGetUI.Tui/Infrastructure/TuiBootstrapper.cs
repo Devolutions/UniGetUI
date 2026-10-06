@@ -61,7 +61,7 @@ internal static class TuiBootstrapper
         Logger.Info("UniGetUI TUI bootstrap completed");
     }
 
-    private static void ApplyProxySettingsToProcess()
+    internal static void ApplyProxySettingsToProcess()
     {
         try
         {
@@ -69,6 +69,7 @@ internal static class TuiBootstrapper
             if (proxyUri is null || !Settings.Get(Settings.K.EnableProxy))
             {
                 Environment.SetEnvironmentVariable("HTTP_PROXY", "", EnvironmentVariableTarget.Process);
+                Environment.SetEnvironmentVariable("HTTPS_PROXY", "", EnvironmentVariableTarget.Process);
                 return;
             }
 
@@ -88,6 +89,7 @@ internal static class TuiBootstrapper
             }
 
             Environment.SetEnvironmentVariable("HTTP_PROXY", content, EnvironmentVariableTarget.Process);
+            Environment.SetEnvironmentVariable("HTTPS_PROXY", content, EnvironmentVariableTarget.Process);
         }
         catch (Exception ex)
         {

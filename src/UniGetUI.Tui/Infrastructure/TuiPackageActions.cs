@@ -91,12 +91,15 @@ internal static class TuiPackageActions
     /// Uninstall, then install fresh (used by "Uninstall then reinstall" and "Uninstall then update").
     /// The uninstall runs as the install's prerequisite, so only the install is started.
     /// </summary>
-    public static async Task<bool> UninstallThenInstallAsync(IPackage package)
+    public static async Task<bool> UninstallThenInstallAsync(
+        IPackage package, OperationType pendingOperation = OperationType.Install)
     {
         if (package.Source.IsVirtualManager) return false;
         var uninstallOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
         var installOpts = await InstallOptionsFactory.LoadApplicableAsync(package);
-        if (PackageOperation.HasPendingOperation(package, OperationType.Install)) return false;
+        if (PackageOperation.HasPendingOperation(package, pendingOperation)
+            || (pendingOperation != OperationType.Install
+                && PackageOperation.HasPendingOperation(package, OperationType.Install))) return false;
         var uninstall = new UninstallPackageOperation(package, uninstallOpts);
         var install = new InstallPackageOperation(package, installOpts, req: uninstall);
         TuiOperationRegistry.Track(uninstall);

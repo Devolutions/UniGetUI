@@ -22,6 +22,10 @@ namespace UniGetUI.Tui.Infrastructure;
 internal static class TuiOperationRegistry
 {
     private static readonly List<AbstractOperation> _ops = [];
+    private static readonly Dictionary<AbstractOperation, OperationStatus?> _batch = [];
+    private static int _batchVersion;
+    private static int _resetVersion;
+    internal static TimeProvider Clock { get; set; } = TimeProvider.System;
 
     // Cancellation sets Status = Canceled from several code paths, so StatusChanged(Canceled) can fire more than once
     // per run. The operations whose current run already showed its "Operation canceled" notification (UI thread only).
@@ -81,6 +85,7 @@ internal static class TuiOperationRegistry
         op.OperationFailed += OnOpFailed;
         op.OperationFinished += OnOpFinished;
         op.LogLineAdded += OnOpLogLine;
+        if (op.Status is OperationStatus.InQueue or OperationStatus.Running) TrackBatchRun(op);
         RaiseChanged();
     }
 
@@ -98,6 +103,8 @@ internal static class TuiOperationRegistry
         op.OperationFailed -= OnOpFailed;
         op.OperationFinished -= OnOpFinished;
         op.LogLineAdded -= OnOpLogLine;
+        if (op.Status is OperationStatus.Succeeded or OperationStatus.Failed or OperationStatus.Canceled)
+            FinishBatchRun(op, op.Status);
         _ops.Remove(op);
         _cancelNotified.Remove(op);
         while (AbstractOperation.OperationQueue.Remove(op)) { }
@@ -126,11 +133,20 @@ internal static class TuiOperationRegistry
     /// <summary>Test hook: cancels and forgets everything.</summary>
     public static void Reset()
     {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(Reset);
+            return;
+        }
+
         foreach (var op in Snapshot())
         {
             if (op.Status is OperationStatus.Running or OperationStatus.InQueue) op.Cancel();
             Remove(op);
         }
+        _batch.Clear();
+        _batchVersion++;
+        _resetVersion++;
     }
 
     private static void RemoveWhere(Func<AbstractOperation, bool> predicate)
@@ -146,12 +162,18 @@ internal static class TuiOperationRegistry
 
     private static void OnOpStatusChanged(object? sender, OperationStatus status)
     {
-        if (status is OperationStatus.Canceled && sender is AbstractOperation op)
+        if (sender is AbstractOperation op)
         {
             Dispatcher.UIThread.Post(() =>
             {
-                if (!_cancelNotified.Add(op)) return;
-                if (!Settings.AreErrorNotificationsDisabled() && !Settings.Get(Settings.K.DisableNotifications))
+                if (!_ops.Contains(op) && !_batch.ContainsKey(op)) return;
+                if (status is OperationStatus.InQueue or OperationStatus.Running)
+                    TrackBatchRun(op);
+                else if (status is OperationStatus.Succeeded or OperationStatus.Failed or OperationStatus.Canceled)
+                    FinishBatchRun(op, status);
+
+                if (status is OperationStatus.Canceled && _cancelNotified.Add(op)
+                    && !Settings.AreErrorNotificationsDisabled() && !Settings.Get(Settings.K.DisableNotifications))
                     TuiNotifications.Warning(CoreTools.Translate("Operation canceled"), TitleOf(op));
             });
         }
@@ -199,23 +221,27 @@ internal static class TuiOperationRegistry
         if (sender is not AbstractOperation op) return;
 
         // The terminal line is appended after the finished events fire; record once the run task is done.
-        op.MainThread().ContinueWith(_ => RecordHistory(op), TaskScheduler.Default);
+        OperationStatus completedStatus = op.Status;
+        _ = RecordHistoryAfterCompletionAsync(op, op.MainThread(), completedStatus);
         RaiseChanged();
-        _ = PostBatchChecksAsync();
     }
 
     private static void OnOpLogLine(object? sender, (string, AbstractOperation.LineType) line) => RaiseChanged();
 
-    private static void RecordHistory(AbstractOperation op)
+    internal static Task RecordHistoryAfterCompletionAsync(
+        AbstractOperation op, Task completion, OperationStatus completedStatus)
+        => completion.ContinueWith(_ => RecordHistory(op, completedStatus), TaskScheduler.Default);
+
+    private static void RecordHistory(AbstractOperation op, OperationStatus completedStatus)
     {
         try
         {
-            string status = op.Status switch
+            string status = completedStatus switch
             {
                 OperationStatus.Succeeded => OperationHistoryRecord.StatusSucceeded,
                 OperationStatus.Failed => OperationHistoryRecord.StatusFailed,
                 OperationStatus.Canceled => OperationHistoryRecord.StatusCanceled,
-                _ => op.Status.ToString().ToLowerInvariant(),
+                _ => completedStatus.ToString().ToLowerInvariant(),
             };
             OperationHistoryStore.Add(OperationHistoryRecord.FromOperation(op, status));
         }
@@ -226,29 +252,53 @@ internal static class TuiOperationRegistry
         }
     }
 
-    private static async Task PostBatchChecksAsync()
+    private static void TrackBatchRun(AbstractOperation op)
     {
-        await Task.Delay(500);
-        bool anyActive = await Dispatcher.UIThread.InvokeAsync(() => ActiveCount > 0);
-        if (anyActive) return;
+        if (_batch.TryGetValue(op, out OperationStatus? status) && status is null) return;
+        _batch[op] = null;
+        _batchVersion++;
+    }
+
+    private static void FinishBatchRun(AbstractOperation op, OperationStatus status)
+    {
+        if (!_batch.TryGetValue(op, out OperationStatus? previous) || previous == status) return;
+        _batch[op] = status;
+        _ = PostBatchChecksAsync(++_batchVersion);
+    }
+
+    private sealed record BatchResult(int Succeeded, int Failed, long UacGeneration, int ResetVersion);
+
+    private static async Task PostBatchChecksAsync(int batchVersion)
+    {
+        await Task.Delay(TimeSpan.FromMilliseconds(500), Clock);
+        BatchResult? result = await Dispatcher.UIThread.InvokeAsync<BatchResult?>(() =>
+        {
+            if (batchVersion != _batchVersion || _batch.Count == 0 || ActiveCount > 0
+                || _batch.Values.Any(status => status is null)) return null;
+            var completed = new BatchResult(
+                _batch.Values.Count(status => status is OperationStatus.Succeeded),
+                _batch.Values.Count(status => status is OperationStatus.Failed),
+                CoreTools.UACCacheGeneration, _resetVersion);
+            _batch.Clear();
+            _batchVersion++;
+            return completed;
+        });
+        if (result is null) return;
 
         if (Settings.Get(Settings.K.DoCacheAdminRightsForBatches))
         {
             Logger.Info("Clearing UAC prompt since there are no remaining operations");
-            await CoreTools.ResetUACForCurrentProcess();
+            await CoreTools.ResetUACForCurrentProcess(result.UacGeneration);
         }
 
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
+            if (result.ResetVersion != _resetVersion) return;
             if (Settings.Get(Settings.K.ShowOperationSummaryNotifications))
             {
-                var finished = _ops.Where(o => o.Status is not (OperationStatus.Running or OperationStatus.InQueue)).ToList();
-                int ok = finished.Count(o => o.Status is OperationStatus.Succeeded);
-                int failed = finished.Count(o => o.Status is OperationStatus.Failed);
-                if (finished.Count > 0)
-                    TuiNotifications.Show(failed > 0 ? TuiNotificationSeverity.Warning : TuiNotificationSeverity.Success,
-                        CoreTools.Translate("Operations finished"),
-                        CoreTools.Translate("{0} succeeded, {1} failed", ok, failed));
+                TuiNotifications.Show(result.Failed > 0 ? TuiNotificationSeverity.Warning : TuiNotificationSeverity.Success,
+                    CoreTools.Translate("Operations finished"),
+                    CoreTools.Translate("{0} succeeded, {1} failed", result.Succeeded, result.Failed));
             }
 
             BatchCompleted?.Invoke();
@@ -257,7 +307,7 @@ internal static class TuiOperationRegistry
 
     private static async Task RemoveAfterDelayAsync(AbstractOperation op, TimeSpan delay)
     {
-        await Task.Delay(delay);
+        await Task.Delay(delay, Clock);
         Dispatcher.UIThread.Post(() =>
         {
             if (op.Status is OperationStatus.Succeeded && _ops.Contains(op)) Remove(op);

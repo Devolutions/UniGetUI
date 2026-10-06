@@ -19,15 +19,21 @@ internal static class TuiInputGuard
 
         string current = target.Text ?? string.Empty;
         int caret = Math.Clamp(target.CaretIndex, 0, current.Length);
-        int available = Math.Max(0, maxTextLength - current.Length);
+        int selectionStart = Math.Clamp(Math.Min(target.SelectionStart, target.SelectionEnd), 0, current.Length);
+        int selectionEnd = Math.Clamp(Math.Max(target.SelectionStart, target.SelectionEnd), 0, current.Length);
+        int selectedLength = selectionEnd - selectionStart;
+        int insertionIndex = selectedLength > 0 ? selectionStart : caret;
+        int available = Math.Max(0, maxTextLength - (current.Length - selectedLength));
         string sanitized = Sanitize(incoming, available, out bool changed, out bool truncated);
         if (!changed && !truncated) return false;
 
         e.Handled = true;
-        if (sanitized.Length > 0)
+        if (sanitized.Length > 0 || selectedLength > 0)
         {
-            target.Text = current.Insert(caret, sanitized);
-            target.CaretIndex = caret + sanitized.Length;
+            target.Text = current.Remove(insertionIndex, selectedLength).Insert(insertionIndex, sanitized);
+            target.CaretIndex = insertionIndex + sanitized.Length;
+            target.SelectionStart = target.CaretIndex;
+            target.SelectionEnd = target.CaretIndex;
         }
 
         string reason = truncated

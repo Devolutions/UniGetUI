@@ -1261,7 +1261,11 @@ internal sealed class PackageListPage : UserControl, ITuiPage
 
     private async Task UninstallThenInstallAsync(IPackage package)
     {
-        if (await TuiPackageActions.UninstallThenInstallAsync(package)) AfterEnqueue(1, CoreTools.Translate("Uninstall and reinstall"));
+        OperationType pendingOperation = _kind == PackagePageKind.Updates ? OperationType.Update : OperationType.Install;
+        if (await TuiPackageActions.UninstallThenInstallAsync(package, pendingOperation))
+            AfterEnqueue(1, _kind == PackagePageKind.Updates
+                ? CoreTools.Translate("Uninstall package, then update it")
+                : CoreTools.Translate("Uninstall package, then reinstall it"));
     }
 
     private async Task InstallFromBundleAsync(IReadOnlyList<IPackage> packages, bool? elevated = null, bool? interactive = null, bool? skipHash = null)

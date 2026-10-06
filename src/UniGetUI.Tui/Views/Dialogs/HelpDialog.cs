@@ -27,27 +27,7 @@ internal sealed class HelpDialog : TuiDialog
         Body.Content = _form;
 
         _form.AddHeader(CoreTools.Translate("Keyboard shortcuts"));
-        foreach (string line in new[]
-                 {
-                     "Alt+1 … Alt+9       go to the numbered page tab (Ctrl+1 … Ctrl+9 where the terminal sends it)",
-                     "Ctrl+Tab            next page (Ctrl+Shift+Tab: previous)",
-                     "Tab / Shift+Tab     move between the controls of the page",
-                     "F10 / Alt+letter    menu bar (Alt+F File, Alt+P Page, …); ↑ ↓ Enter pick an item",
-                     "F1                  help          F5 / Ctrl+R  reload",
-                     "Ctrl+F or /         search        Ctrl+A  select all      Ctrl+Q  quit",
-                     "Esc                 close a dialog or menu, or go back to the page's list",
-                     "",
-                     "Package lists:",
-                     "  Space             select or unselect the package",
-                     "  Enter             package details      Ctrl+Enter  main action",
-                     "  o / Alt+Enter     installation options m  all actions for the package",
-                     "  i u x             install / update / uninstall",
-                     "  b                 add to bundle        g  ignore updates",
-                     "  f s F3            filter by source / sort / search mode (or click the header chips)",
-                     "",
-                     "Dialogs:            Tab moves between fields, Enter activates, Esc cancels",
-                     "Choice fields:      ← → change the value, Enter lists every value",
-                 })
+        foreach (string line in GetKeyboardReference())
             _form.AddNote(line, TuiPalette.Text);
 
         _form.AddHeader(CoreTools.Translate("Documentation"));
@@ -61,12 +41,34 @@ internal sealed class HelpDialog : TuiDialog
         _form.AddHeader(CoreTools.Translate("Command line"));
         foreach (string line in TuiCommandLine.HelpText.Split('\n'))
             _form.AddNote(line.TrimEnd('\r'));
-        _form.AddNote("Themes (--theme <id>):");
+        _form.AddNote(CoreTools.Translate("Themes") + " (--theme <id>):");
         foreach (TuiTheme theme in TuiThemes.All)
             _form.AddNote($"  {theme.Id,-30}  {theme.Name}");
 
         _close = AddButton(CoreTools.Translate("Close"), () => Close(null));
     }
+
+    internal static IReadOnlyList<string> GetKeyboardReference() =>
+    [
+        "Alt+1 … Alt+9       " + CoreTools.Translate("Go to the numbered page tab ({0} where the terminal sends it)", "Ctrl+1 … Ctrl+9"),
+        "Ctrl+Tab            " + CoreTools.Translate("Next page ({0}: previous)", "Ctrl+Shift+Tab"),
+        "Tab / Shift+Tab     " + CoreTools.Translate("Move between the controls of the page"),
+        "F10 / Alt+" + CoreTools.Translate("letter") + "    " + CoreTools.Translate("Menu bar; use the highlighted access letter, then {0} to pick an item", "↑ ↓ Enter"),
+        $"F1                  {CoreTools.Translate("Help")}          F5 / Ctrl+R  {CoreTools.Translate("Reload")}",
+        $"Ctrl+F or /         {CoreTools.Translate("Search")}        Ctrl+A  {CoreTools.Translate("Select all")}      Ctrl+Q  {CoreTools.Translate("Quit")}",
+        "Esc                 " + CoreTools.Translate("Close a dialog or menu, or return to the page's list"),
+        "",
+        CoreTools.Translate("Package lists") + ":",
+        "  Space             " + CoreTools.Translate("Select or unselect the package"),
+        $"  Enter             {CoreTools.Translate("Package details")}      Ctrl+Enter  {CoreTools.Translate("Main action")}",
+        $"  o / Alt+Enter     {CoreTools.Translate("Installation options")} m  {CoreTools.Translate("All actions for the package")}",
+        $"  i u x             {CoreTools.Translate("Install")} / {CoreTools.Translate("Update")} / {CoreTools.Translate("Uninstall")}",
+        $"  b                 {CoreTools.Translate("Add to bundle")}        g  {CoreTools.Translate("Ignore updates")}",
+        $"  f s F3            {CoreTools.Translate("Filter by source")} / {CoreTools.Translate("Sort")} / {CoreTools.Translate("Search mode")}",
+        "",
+        CoreTools.Translate("Dialogs") + ":            " + CoreTools.Translate("{0} moves between fields, {1} activates, {2} cancels", "Tab", "Enter", "Esc"),
+        CoreTools.Translate("Choice fields") + ":      " + CoreTools.Translate("{0} changes the value, {1} lists every value", "← →", "Enter"),
+    ];
 
     public static Task ShowAsync() => TuiModal.ShowAsync(new HelpDialog());
 

@@ -1256,6 +1256,12 @@ public partial class MainWindow : Window
             switch (msg)
             {
                 case WM_NCHITTEST:
+                    int borderEdge = HitTestResizeBorder(hWnd, lParam);
+                    if (borderEdge is not HTNOWHERE and not HTTOP)
+                    {
+                        handled = true;
+                        return borderEdge;
+                    }
                     if (self.HitTestMaximizeButton(lParam))
                     {
                         handled = true;

@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <!-- Mirror the TUI's single-TFM selection (Windows TFM on Windows). -->
+        <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WindowsTargetFramework)</TargetFramework>
+        <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">$(PortableTargetFramework)</TargetFramework>
+        <TargetFrameworks />
+        <IsPackable>false</IsPackable>
+        <IsTestProject>true</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector" Version="6.0.4">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+        <PackageReference Include="NUnit" Version="3.13.1" />
+        <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+        <PackageReference Include="xunit" Version="2.9.3" />
+        <PackageReference Include="xunit.analyzers" Version="1.24.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\UniGetUI.Avalonia\UniGetUI.Avalonia.csproj" />
+        <PackageReference Include="Consolonia.NUnit" Version="12.0.3.14" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="..\SharedAssemblyInfo.cs" Link="SharedAssemblyInfo.cs" />
+    </ItemGroup>
+
+    <Target Name="CopyMainHostForTerminalSubprocessTests" AfterTargets="Build">
+        <MSBuild Projects="..\UniGetUI.Avalonia\UniGetUI.Avalonia.csproj" Targets="GetTargetPath">
+            <Output TaskParameter="TargetOutputs" ItemName="_TuiMainAssembly" />
+        </MSBuild>
+        <PropertyGroup>
+            <_TuiMainHostName Condition="$([MSBuild]::IsOSPlatform('Windows'))">UniGetUI.exe</_TuiMainHostName>
+            <_TuiMainHostName Condition="!$([MSBuild]::IsOSPlatform('Windows'))">UniGetUI</_TuiMainHostName>
+        </PropertyGroup>
+        <ItemGroup>
+            <_TuiMainHostFiles Include="%(_TuiMainAssembly.RootDir)%(_TuiMainAssembly.Directory)$(_TuiMainHostName)" />
+            <_TuiMainHostFiles Include="%(_TuiMainAssembly.RootDir)%(_TuiMainAssembly.Directory)UniGetUI.runtimeconfig.json" />
+            <_TuiMainHostFiles Include="%(_TuiMainAssembly.RootDir)%(_TuiMainAssembly.Directory)UniGetUI.deps.json" />
+        </ItemGroup>
+        <Copy SourceFiles="@(_TuiMainHostFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    </Target>
+</Project>

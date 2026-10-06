@@ -37,8 +37,77 @@ internal static class UiFontPolicy
         ("ta", "Nirmala UI"),
     ];
 
+    private static readonly string[][] CjkFamilyGroups =
+    [
+        ["Microsoft YaHei UI", "Microsoft YaHei", "SimSun"],
+        ["Microsoft JhengHei UI", "Microsoft JhengHei"],
+        ["Yu Gothic UI", "Yu Gothic"],
+        ["Malgun Gothic"],
+    ];
+
+    private static readonly UnicodeRangeSegment[] CjkSegments =
+    [
+        new(0x1100, 0x11FF),
+        new(0x2E80, 0x303F),
+        new(0x3040, 0x30FF),
+        new(0x3100, 0x312F),
+        new(0x3130, 0x318F),
+        new(0x3190, 0x4DBF),
+        new(0x4E00, 0x9FFF),
+        new(0xA960, 0xA97F),
+        new(0xAC00, 0xD7FF),
+        new(0xF900, 0xFAFF),
+        new(0xFE30, 0xFE4F),
+        new(0xFF00, 0xFFEF),
+        new(0x20000, 0x2FA1F),
+    ];
+
+    private static readonly (UnicodeRangeSegment[] Segments, string[] Families)[] ScriptFallbacks =
+    [
+        ([new(0x0900, 0x0DFF)], ["Nirmala UI"]),
+        ([new(0x0E00, 0x0EFF)], ["Leelawadee UI"]),
+    ];
+
     public static bool RequiresBundledFont(string familyName)
         => familyName.Contains(BundledFamily, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Resolves the per-codepoint font fallbacks to register with Avalonia, or <c>null</c> to keep
+    /// Avalonia's own fallback lookup.
+    /// </summary>
+    public static IReadOnlyList<FontFallback>? ResolveFontFallbacks()
+    {
+        if (Design.IsDesignMode || !OperatingSystem.IsWindows())
+        {
+            return null;
+        }
+
+        string scriptFamily = ResolveCjkFamily();
+        IEnumerable<string> cjkFamilies = CjkFamilyGroups
+            .OrderByDescending(group => group[0] == scriptFamily)
+            .SelectMany(group => group);
+
+        var fallbacks = new List<FontFallback>();
+
+        foreach ((UnicodeRangeSegment[] segments, string[] families) in ScriptFallbacks)
+        {
+            AddFallbacks(fallbacks, segments, families);
+        }
+
+        AddFallbacks(fallbacks, CjkSegments, cjkFamilies);
+
+        return fallbacks;
+
+        static void AddFallbacks(List<FontFallback> target, UnicodeRangeSegment[] segments, IEnumerable<string> families)
+        {
+            var range = new UnicodeRange(segments);
+
+            foreach (string family in families)
+            {
+                target.Add(new FontFallback { FontFamily = new FontFamily(family), UnicodeRange = range });
+            }
+        }
+    }
 
     /// <summary>
     /// Resolves the family chain to pin as Avalonia's default, or <c>null</c> to keep the platform
@@ -88,6 +157,22 @@ internal static class UiFontPolicy
         return overrideFamily is null ? chain : $"{overrideFamily}, {chain}";
     }
 
+    /// <summary>
+    /// Resolves the family whose group leads the CJK fallback order. Han glyph forms differ between
+    /// the regions that share the block, so the interface language chooses, and the operating
+    /// system's own language chooses when the interface runs in a language that shares no block.
+    /// </summary>
+    private static string ResolveCjkFamily()
+    {
+        string family = ResolveScriptFamily();
+        if (CjkFamilyGroups.Any(group => group[0] == family))
+        {
+            return family;
+        }
+
+        return ResolveScriptFamily(CultureInfo.CurrentUICulture.Name);
+    }
+
     private static string ResolveScriptFamily()
     {
         string language = CoreSettings.GetValue(CoreSettings.K.PreferredLanguage);
@@ -96,6 +181,11 @@ internal static class UiFontPolicy
             language = CultureInfo.CurrentUICulture.Name;
         }
 
+        return ResolveScriptFamily(language);
+    }
+
+    private static string ResolveScriptFamily(string language)
+    {
         language = language.Replace('-', '_').ToLowerInvariant();
 
         foreach ((string prefix, string family) in ScriptFamilies)

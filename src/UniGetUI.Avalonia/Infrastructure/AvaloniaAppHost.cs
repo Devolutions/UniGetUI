@@ -112,6 +112,9 @@ public static class AvaloniaAppHost
         Logger.ImportantInfo($"Process arch: {RuntimeInformation.ProcessArchitecture} (OS: {RuntimeInformation.OSArchitecture})");
         Logger.ImportantInfo($"Runtime: {RuntimeInformation.FrameworkDescription}");
         Logger.ImportantInfo($"UI font: {UiFontPolicy.ResolveDefaultFamilyName() ?? "(platform default)"}");
+        Logger.ImportantInfo($"UI font fallbacks: {(UiFontPolicy.ResolveFontFallbacks() is { } fallbacks
+            ? string.Join(", ", fallbacks.Select(f => f.FontFamily.Name).Distinct())
+            : "(none)")}");
         Logger.ImportantInfo($"Elevated: {CoreTools.IsAdministrator()}");
         Logger.ImportantInfo($"Packaged (MSIX): {CoreTools.IsPackagedApp()}");
         Logger.ImportantInfo($"Args: {(args.Length > 0 ? string.Join(" ", args) : "(none)")}");
@@ -136,14 +139,20 @@ public static class AvaloniaAppHost
         AppBuilder builder = AppBuilder.Configure<App>()
             .UsePlatformDetect();
 
-        if (UiFontPolicy.ResolveDefaultFamilyName() is { } fontFamily)
+        var fontOptions = new FontManagerOptions
         {
-            if (UiFontPolicy.RequiresBundledFont(fontFamily))
-            {
-                builder = builder.WithInterFont();
-            }
+            DefaultFamilyName = UiFontPolicy.ResolveDefaultFamilyName(),
+            FontFallbacks = UiFontPolicy.ResolveFontFallbacks(),
+        };
 
-            builder = builder.With(new FontManagerOptions { DefaultFamilyName = fontFamily });
+        if (fontOptions.DefaultFamilyName is { } fontFamily && UiFontPolicy.RequiresBundledFont(fontFamily))
+        {
+            builder = builder.WithInterFont();
+        }
+
+        if (fontOptions.DefaultFamilyName is not null || fontOptions.FontFallbacks is not null)
+        {
+            builder = builder.With(fontOptions);
         }
 
 #if WINDOWS

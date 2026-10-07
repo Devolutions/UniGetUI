@@ -9,7 +9,7 @@ const
   PathOwnerKey = 'Software\Devolutions\UniGetUI\InstallerPath';
 
 var
-  UnigetPathUpdateFailed: Boolean;
+  UnigetPathUpdateFailed, UnigetPathChanged: Boolean;
 
 function PathRegOpenKey(Root: Integer; SubKey: String; Options, Access: LongWord;
   var Key: THandle): LongWord;
@@ -207,6 +207,7 @@ begin
      (Existed and (CurrentKind <> Kind)) then
     RaiseException('PATH changed concurrently; no PATH write was attempted. Retry setup.');
   PathWrite(Root, EnvironmentKey, 'Path', After, Kind);
+  UnigetPathChanged := True;
 end;
 
 // O + entry = committed ownership; P/R + before/after SHA256 + entry =
@@ -316,6 +317,7 @@ var
   Root: Integer;
   EnvironmentKey, Scope: String;
   Response: THandle;
+  Failed: Boolean;
 begin
   if IsAdminInstallMode then
   begin
@@ -329,10 +331,13 @@ begin
     EnvironmentKey := 'Environment';
     Scope := 'HKCU (current user)';
   end;
+  UnigetPathChanged := False;
+  Failed := False;
   try
     Log('Updating uniget PATH task: ' + Scope);
     PathUpdate(Root, EnvironmentKey, PathOwnerKey, ExpandConstant('{app}'), Selected);
   except
+    Failed := True;
     UnigetPathUpdateFailed := True;
     Log('ERROR updating uniget PATH: ' + GetExceptionMessage);
     SuppressibleMsgBox(FmtMessage(CustomMessage('UnigetPathError'), [Scope, GetExceptionMessage]),
@@ -340,6 +345,11 @@ begin
   end;
   // Also broadcast on partial failures: PATH may have changed before finalizing
   // ownership failed. Existing terminals retain their old environment regardless.
+  if not (UnigetPathChanged or Failed) then
+  begin
+    Log('PATH was not modified; no environment-change broadcast was sent.');
+    Exit;
+  end;
   if PathSendEnvironmentChange(HWND_BROADCAST, $001A, 0, 'Environment',
        $0002, 5000, Response) = 0 then
   begin

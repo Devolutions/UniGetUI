@@ -2,6 +2,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.SettingsEngine.SecureSettings;
 using UniGetUI.Core.Tools;
+using UniGetUI.Interface;
 
 namespace UniGetUI.Shared;
 
@@ -30,8 +31,6 @@ internal static class SharedPreUiCommandDispatcher
         NoSuchFile: 3,
         UnknownSettingsKey: 4
     );
-
-    internal static readonly string[] HelpArguments = ["--help", "-h"];
 
     internal const string ImportSettingsArgument = "--import-settings";
     internal const string ExportSettingsArgument = "--export-settings";
@@ -72,7 +71,7 @@ internal static class SharedPreUiCommandDispatcher
 
     public static int? TryHandle(IReadOnlyList<string> args, SharedPreUiCommandExitCodes exitCodes)
     {
-        if (args.Any(arg => HelpArguments.Contains(arg, StringComparer.OrdinalIgnoreCase)))
+        if (IpcCliSyntax.IsHelpRequest(args))
         {
             return null;
         }

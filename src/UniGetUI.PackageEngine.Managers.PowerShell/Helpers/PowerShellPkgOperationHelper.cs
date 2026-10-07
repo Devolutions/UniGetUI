@@ -42,6 +42,11 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
         ];
         parameters.AddRange(["-Name", package.Id, "-Confirm:$false", "-Force"]);
 
+        package.OverridenOptions.PowerShell_UpdateThroughInstall = updatesThroughInstall;
+
+        if (updatesThroughInstall && package.Source.Name.Length > 0)
+            parameters.AddRange(["-Repository", package.Source.Name]);
+
         if (operation is not OperationType.Uninstall)
         {
             if (options.PreRelease)
@@ -54,7 +59,11 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
                 string scope = options.InstallationScope.Length > 0
                     ? options.InstallationScope
                     : package.OverridenOptions.Scope ?? "";
-                parameters.AddRange(["-Scope", scope == PackageScope.Global ? "AllUsers" : "CurrentUser"]);
+
+                if (operation is OperationType.Install || scope.Length > 0)
+                    parameters.AddRange(
+                        ["-Scope", scope == PackageScope.Global ? "AllUsers" : "CurrentUser"]
+                    );
             }
         }
 
@@ -66,7 +75,7 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
             if (options.SkipHashCheck)
                 parameters.Add("-SkipPublisherCheck");
 
-            if (options.Version != "")
+            if (operation is OperationType.Install && options.Version != "")
                 parameters.AddRange(["-RequiredVersion", options.Version]);
         }
 
@@ -137,7 +146,10 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
         }
 
         if (
-            operation is OperationType.Install
+            (
+                operation is OperationType.Install
+                || package.OverridenOptions.PowerShell_UpdateThroughInstall
+            )
             && output_string.Contains("CommandAlreadyAvailable")
             && !package.OverridenOptions.PowerShell_AllowClobber
         )

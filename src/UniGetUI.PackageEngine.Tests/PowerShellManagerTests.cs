@@ -218,6 +218,109 @@ public sealed class PowerShellManagerTests
         Assert.Contains("AllUsers", parameters);
     }
 
+    [Fact]
+    public void GetParameters_UpdateThroughInstallModuleOmitsScopeWhenNoneIsKnown()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var options = new InstallOptions { SkipHashCheck = true };
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            options,
+            OperationType.Update
+        );
+
+        Assert.DoesNotContain("-Scope", parameters);
+        Assert.DoesNotContain("CurrentUser", parameters);
+    }
+
+    [Fact]
+    public void GetParameters_UpdateThroughInstallModuleKeepsTheInstalledRepository()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var options = new InstallOptions { SkipHashCheck = true };
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            options,
+            OperationType.Update
+        );
+
+        int repositoryIndex = parameters.ToList().IndexOf("-Repository");
+        Assert.NotEqual(-1, repositoryIndex);
+        Assert.Equal(package.Source.Name, parameters[repositoryIndex + 1]);
+    }
+
+    [Fact]
+    public void GetParameters_UpdateThroughInstallModuleIgnoresAPinnedVersion()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var options = new InstallOptions { SkipHashCheck = true, Version = "1.0.0" };
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            options,
+            OperationType.Update
+        );
+
+        Assert.DoesNotContain("-RequiredVersion", parameters);
+        Assert.DoesNotContain("1.0.0", parameters);
+    }
+
+    [Fact]
+    public void GetResult_RetriesWithAllowClobberOnAnUpdateRoutedThroughInstallModule()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var options = new InstallOptions { SkipHashCheck = true };
+        manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            ClobberFailureOutput,
+            1
+        );
+
+        Assert.Equal(OperationVeredict.AutoRetry, veredict);
+        Assert.True(package.OverridenOptions.PowerShell_AllowClobber);
+
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            options,
+            OperationType.Update
+        );
+
+        Assert.Contains("-AllowClobber", parameters);
+    }
+
+    [Fact]
+    public void GetResult_DoesNotRetryWithAllowClobberOnAPlainUpdate()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Update
+        );
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            ClobberFailureOutput,
+            1
+        );
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+        Assert.False(package.OverridenOptions.PowerShell_AllowClobber);
+    }
+
     [Theory]
     [InlineData(OperationType.Install)]
     [InlineData(OperationType.Update)]

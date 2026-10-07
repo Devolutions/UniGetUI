@@ -107,7 +107,7 @@ internal static class TuiOperationRegistry
             FinishBatchRun(op, op.Status);
         _ops.Remove(op);
         _cancelNotified.Remove(op);
-        while (AbstractOperation.OperationQueue.Remove(op)) { }
+        AbstractOperation.RemoveFromQueue(op);
         RaiseChanged();
     }
 

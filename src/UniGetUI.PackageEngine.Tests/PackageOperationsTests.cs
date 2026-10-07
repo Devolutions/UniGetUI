@@ -8,6 +8,7 @@ using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
 using UniGetUI.Interface.Enums;
+using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Managers.NpmManager;
@@ -1869,6 +1870,61 @@ public sealed class PackageOperationsTests
         {
             return Task.FromResult(_veredict);
         }
+    }
+
+    [Fact]
+    public async Task UnmetPreconditionIsReportedWithoutTheInternalErrorStackTrace()
+    {
+        using var operation = new ThrowingStubOperation(
+            new OperationPreconditionException("Run UniGetUI as a regular user and try again.")
+        );
+
+        await operation.MainThread();
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+        var lines = operation.GetOutput().Select(line => line.Item1).ToList();
+        Assert.Contains("Run UniGetUI as a regular user and try again.", lines);
+        Assert.DoesNotContain("An internal error occurred:", lines);
+        Assert.DoesNotContain(lines, line => line.Contains("OperationPreconditionException"));
+    }
+
+    [Fact]
+    public async Task AnUnexpectedExceptionStillReportsItsStackTrace()
+    {
+        using var operation = new ThrowingStubOperation(
+            new InvalidOperationException("some unexpected failure")
+        );
+
+        await operation.MainThread();
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+        var lines = operation.GetOutput().Select(line => line.Item1).ToList();
+        Assert.Contains(lines, line => line.Contains("InvalidOperationException"));
+        Assert.Contains(lines, line => line.TrimStart().StartsWith("at ", StringComparison.Ordinal));
+    }
+
+    private sealed class ThrowingStubOperation : AbstractOperation
+    {
+        private readonly Exception _exception;
+
+        public ThrowingStubOperation(Exception exception)
+            : base(queue_enabled: false)
+        {
+            _exception = exception;
+            Metadata.Status = "Throwing stub status";
+            Metadata.Title = "Throwing stub title";
+            Metadata.OperationInformation = "Throwing stub info";
+            Metadata.SuccessTitle = "Throwing stub success";
+            Metadata.SuccessMessage = "Throwing stub success";
+            Metadata.FailureTitle = "Throwing stub failure";
+            Metadata.FailureMessage = "Throwing stub failure";
+        }
+
+        protected override void ApplyRetryAction(string retryMode) { }
+
+        protected override Task<OperationVeredict> PerformOperation() => throw _exception;
+
+        public override Task<Uri> GetOperationIcon() => Task.FromResult(new Uri("about:blank"));
     }
 
     private sealed class CancellationAwareStubOperation : AbstractOperation

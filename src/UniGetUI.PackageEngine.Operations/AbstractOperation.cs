@@ -1,6 +1,7 @@
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Enums;
 
 namespace UniGetUI.PackageOperations;
@@ -395,10 +396,17 @@ public abstract partial class AbstractOperation : IDisposable
         }
         catch (Exception ex)
         {
-            Line("An internal error occurred:", LineType.Error);
-            foreach (var line in ex.ToString().Split("\n"))
+            if (ex is OperationPreconditionException)
             {
-                Line(line, LineType.Error);
+                Line(ex.Message, LineType.Error);
+            }
+            else
+            {
+                Line("An internal error occurred:", LineType.Error);
+                foreach (var line in ex.ToString().Split("\n"))
+                {
+                    Line(line, LineType.Error);
+                }
             }
 
             RemoveFromQueue(this);
@@ -547,9 +555,16 @@ public abstract partial class AbstractOperation : IDisposable
                     ? OperationVeredict.Canceled
                     : OperationVeredict.Failure;
                 Logger.Error(e);
-                foreach (string l in e.ToString().Split("\n"))
+                if (e is OperationPreconditionException)
                 {
-                    Line(l, LineType.Error);
+                    Line(e.Message, LineType.Error);
+                }
+                else
+                {
+                    foreach (string l in e.ToString().Split("\n"))
+                    {
+                        Line(l, LineType.Error);
+                    }
                 }
             }
         } while (result is OperationVeredict.AutoRetry);

@@ -3,6 +3,7 @@ using Microsoft.Win32;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.SettingsEngine;
 using UniGetUI.Core.Tools;
+using UniGetUI.PackageEngine.Classes.Manager;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
@@ -243,20 +244,22 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
             )
             {
                 if (CoreTools.IsAdministrator())
-                    throw new UnauthorizedAccessException(
+                    throw new OperationPreconditionException(
                         CoreTools.Translate(
                             "This package cannot be installed from an elevated context."
                         )
+                            + " "
                             + CoreTools.Translate(
                                 "Please run UniGetUI as a regular user and try again."
                             )
                     );
 
                 if (options.RunAsAdministrator)
-                    throw new UnauthorizedAccessException(
+                    throw new OperationPreconditionException(
                         CoreTools.Translate(
                             "This package cannot be installed from an elevated context."
                         )
+                            + " "
                             + CoreTools.Translate(
                                 "Please check the installation options for this package and try again"
                             )
@@ -276,7 +279,7 @@ internal sealed class WinGetPkgOperationHelper : BasePkgOperationHelper
         }
         catch (Exception ex)
         {
-            if (ex is UnauthorizedAccessException)
+            if (ex is OperationPreconditionException)
                 throw;
 
             Logger.Error("Recovered from fatal WinGet exception:");

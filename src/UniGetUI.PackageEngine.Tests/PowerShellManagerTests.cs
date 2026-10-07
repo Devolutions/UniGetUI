@@ -250,7 +250,81 @@ public sealed class PowerShellManagerTests
 
         int repositoryIndex = parameters.ToList().IndexOf("-Repository");
         Assert.NotEqual(-1, repositoryIndex);
-        Assert.Equal(package.Source.Name, parameters[repositoryIndex + 1]);
+        Assert.Contains(package.Source.Name, parameters[repositoryIndex + 1]);
+    }
+
+    [Fact]
+    public void GetStandaloneParameters_UpdateThroughInstallModuleQuotesTheRepository()
+    {
+        var manager = new PowerShell();
+        var package = Assert.Single(
+            PowerShell.ParseInstalledPackages(
+                ["Devolutions.PowerShell\t1.0.0\tInternal Modules"],
+                manager
+            )
+        );
+
+        var options = new InstallOptions { SkipHashCheck = true };
+        var parameters = manager.OperationHelper.GetStandaloneParameters(
+            package,
+            options,
+            OperationType.Update
+        );
+
+        int repositoryIndex = parameters.ToList().IndexOf("-Repository");
+        Assert.NotEqual(-1, repositoryIndex);
+        Assert.Equal("'Internal Modules'", parameters[repositoryIndex + 1]);
+    }
+
+    [Fact]
+    public void GetParameters_UpdateThroughInstallModuleKeepsTheRepositoryRawForTheArgumentVector()
+    {
+        var manager = new PowerShell();
+        manager.Initialize();
+
+        if (manager.Status.OperationCallArgs.Count is 0)
+            return;
+
+        var package = Assert.Single(
+            PowerShell.ParseInstalledPackages(
+                ["Devolutions.PowerShell\t1.0.0\tInternal Modules"],
+                manager
+            )
+        );
+
+        var options = new InstallOptions { SkipHashCheck = true };
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            options,
+            OperationType.Update
+        );
+
+        int repositoryIndex = parameters.ToList().IndexOf("-Repository");
+        Assert.NotEqual(-1, repositoryIndex);
+        Assert.Equal("Internal Modules", parameters[repositoryIndex + 1]);
+    }
+
+    [Fact]
+    public void GetStandaloneParameters_UpdateThroughInstallModuleEscapesAQuotedRepository()
+    {
+        var manager = new PowerShell();
+        var package = Assert.Single(
+            PowerShell.ParseInstalledPackages(
+                ["Devolutions.PowerShell\t1.0.0\tBob's Modules"],
+                manager
+            )
+        );
+
+        var options = new InstallOptions { SkipHashCheck = true };
+        var parameters = manager.OperationHelper.GetStandaloneParameters(
+            package,
+            options,
+            OperationType.Update
+        );
+
+        int repositoryIndex = parameters.ToList().IndexOf("-Repository");
+        Assert.NotEqual(-1, repositoryIndex);
+        Assert.Equal("'Bob''s Modules'", parameters[repositoryIndex + 1]);
     }
 
     [Fact]

@@ -44,8 +44,15 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
 
         package.OverridenOptions.PowerShell_UpdateThroughInstall = updatesThroughInstall;
 
+        bool shellInterpreted = standalone || Manager.Status.OperationCallArgs.Count is 0;
+
         if (updatesThroughInstall && package.Source.Name.Length > 0)
-            parameters.AddRange(["-Repository", package.Source.Name]);
+            parameters.AddRange(
+                [
+                    "-Repository",
+                    shellInterpreted ? QuoteForPowerShell(package.Source.Name) : package.Source.Name,
+                ]
+            );
 
         if (operation is not OperationType.Uninstall)
         {
@@ -113,6 +120,9 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
 
         return parameters;
     }
+
+    private static string QuoteForPowerShell(string value) =>
+        $"'{value.Replace("'", "''")}'";
 
     protected override OperationVeredict _getOperationResult(
         IPackage package,

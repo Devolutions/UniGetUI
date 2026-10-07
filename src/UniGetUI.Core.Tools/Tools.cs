@@ -1438,10 +1438,62 @@ namespace UniGetUI.Core.Tools
         }
 
         /// <summary>
-        /// Pings the update server and 3 well-known sites to check for internet availability
+        /// Waits until the device reports internet access, giving up after
+        /// <see cref="InternetWaitTimeout"/> so that a wrong answer from the system never blocks loading forever
         /// </summary>
         public static async Task WaitForInternetConnection() =>
             await TaskRecycler<int>.RunOrAttachAsync_VOID(_waitForInternetConnection);
+
+        private static readonly TimeSpan InternetWaitTimeout = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan HttpCheckTimeout = TimeSpan.FromSeconds(5);
+        private const string ConnectivityTestUrl = "http://www.msftconnecttest.com/connecttest.txt";
+        private const string ConnectivityTestBody = "Microsoft Connect Test";
+
+        private static bool _systemReportsInternetAccess()
+        {
+#if WINDOWS
+            var profile = NetworkInformation.GetInternetConnectionProfile();
+            return profile?.GetNetworkConnectivityLevel() == NetworkConnectivityLevel.InternetAccess;
+#else
+            return NetworkInterface.GetIsNetworkAvailable();
+#endif
+        }
+
+        private static bool _tryHttpConnectivityCheck(TimeSpan budget)
+        {
+            var handler = GenericHttpClientParameters;
+            handler.AllowAutoRedirect = false;
+            return HttpConnectivityCheck(handler, new Uri(ConnectivityTestUrl), budget);
+        }
+
+        /// <summary>
+        /// Fetches the connectivity test page and returns whether it came back as expected within
+        /// <paramref name="budget"/> (at most <see cref="HttpCheckTimeout"/>)
+        /// </summary>
+        internal static bool HttpConnectivityCheck(HttpMessageHandler handler, Uri url, TimeSpan budget)
+        {
+            try
+            {
+                using HttpClient client = new(handler)
+                {
+                    Timeout = budget < HttpCheckTimeout ? budget : HttpCheckTimeout,
+                    MaxResponseContentBufferSize = 1024,
+                };
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                using HttpResponseMessage response = client.Send(request);
+                if (response.StatusCode != HttpStatusCode.OK)
+                    return false;
+
+                // A captive portal can answer 200 too, so the page itself has to be the expected one
+                using var reader = new StreamReader(response.Content.ReadAsStream());
+                return reader.ReadToEnd().Trim() == ConnectivityTestBody;
+            }
+            catch (Exception)
+            {
+                // Any failure, including the timeout, means the endpoint could not be reached
+                return false;
+            }
+        }
 
         public static void _waitForInternetConnection()
         {
@@ -1449,30 +1501,56 @@ namespace UniGetUI.Core.Tools
                 return;
 
             Logger.Debug("Checking for internet connectivity...");
+            WaitForConnectivity(
+                _systemReportsInternetAccess,
+                _tryHttpConnectivityCheck,
+                InternetWaitTimeout,
+                TimeSpan.FromSeconds(1)
+            );
+        }
+
+        /// <summary>
+        /// Polls until the system or the HTTP check reports connectivity, or until
+        /// <paramref name="timeout"/> has elapsed. The HTTP check is told how much of the timeout
+        /// is left. Returns whether connectivity was established.
+        /// </summary>
+        internal static bool WaitForConnectivity(
+            Func<bool> systemReportsInternet,
+            Func<TimeSpan, bool> httpCheckSucceeds,
+            TimeSpan timeout,
+            TimeSpan pollInterval
+        )
+        {
+            var stopwatch = Stopwatch.StartNew();
             bool internetLost = false;
 
-#if WINDOWS
-            var profile = NetworkInformation.GetInternetConnectionProfile();
-            while (
-                profile is null
-                || profile.GetNetworkConnectivityLevel()
-                    is not NetworkConnectivityLevel.InternetAccess
-            )
+            while (true)
             {
-                Thread.Sleep(1000);
-                profile = NetworkInformation.GetInternetConnectionProfile();
-                if (!internetLost)
+                if (systemReportsInternet())
+                {
+                    Logger.Debug("Internet connectivity was established.");
+                    return true;
+                }
+
+                // NCSI may be stale (common Windows 10 bug); verify with a real HTTP request
+                TimeSpan remaining = timeout - stopwatch.Elapsed;
+                if (remaining > TimeSpan.Zero && httpCheckSucceeds(remaining))
+                {
+                    Logger.Debug(
+                        "Internet connectivity was established (HTTP check passed, NCSI was stale)."
+                    );
+                    return true;
+                }
+
+                remaining = timeout - stopwatch.Elapsed;
+                if (remaining <= TimeSpan.Zero)
                 {
                     Logger.Warn(
-                        "User is not connected to the internet, waiting for an internet connectio to be available..."
+                        $"Internet connectivity check timed out after {timeout.TotalSeconds}s, proceeding anyway."
                     );
-                    internetLost = true;
+                    return false;
                 }
-            }
-#else
-            while (!NetworkInterface.GetIsNetworkAvailable())
-            {
-                Thread.Sleep(1000);
+
                 if (!internetLost)
                 {
                     Logger.Warn(
@@ -1480,9 +1558,9 @@ namespace UniGetUI.Core.Tools
                     );
                     internetLost = true;
                 }
+
+                Thread.Sleep(remaining < pollInterval ? remaining : pollInterval);
             }
-#endif
-            Logger.Debug("Internet connectivity was established.");
         }
 
         public static string TextProgressGenerator(int length, int progressPercent, string? extra)

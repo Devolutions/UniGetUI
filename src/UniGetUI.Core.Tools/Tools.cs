@@ -908,6 +908,7 @@ namespace UniGetUI.Core.Tools
                         "The administrator rights cache is no longer reachable, it will be requested again"
                     );
                     _uacCacheHeld = false;
+                    _elevationCacheWaitTimedOut = false;
                     Interlocked.Increment(ref _uacCacheGeneration);
                 }
 
@@ -1012,6 +1013,8 @@ namespace UniGetUI.Core.Tools
 
         private static bool _elevationCacheProbeUnsupported;
 
+        private static bool _elevationCacheProbeFailureLogged;
+
         private static bool _elevationCacheWaitTimedOut;
 
         private static async Task<ElevationCacheState> WaitForElevationCacheAsync()
@@ -1069,11 +1072,18 @@ namespace UniGetUI.Core.Tools
                 Task<string> stdout = p.StandardOutput.ReadToEndAsync();
                 Task<string> stderr = p.StandardError.ReadToEndAsync();
                 Task reads = Task.WhenAll(stdout, stderr);
+                _ = reads.ContinueWith(
+                    completed => _ = completed.Exception,
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted,
+                    TaskScheduler.Default
+                );
 
                 using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
                 try
                 {
                     await p.WaitForExitAsync(cts.Token);
+                    await reads.WaitAsync(cts.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1082,36 +1092,34 @@ namespace UniGetUI.Core.Tools
                         p.Kill(entireProcessTree: true);
                     }
                     catch (Exception killEx)
+                        when (killEx is InvalidOperationException or NotSupportedException)
                     {
-                        Logger.Warn(killEx);
-                    }
-
-                    try
-                    {
-                        await reads;
-                    }
-                    catch (Exception readEx)
-                    {
-                        Logger.Warn(readEx);
+                        Logger.Debug(killEx);
                     }
 
                     Logger.Warn("The elevator did not report the administrator rights cache status");
                     return ElevationCacheState.Unknown;
                 }
 
-                await reads;
-
                 if (bool.TryParse(stdout.Result.Trim(), out bool available))
                     return available
                         ? ElevationCacheState.Available
                         : ElevationCacheState.Unavailable;
 
-                _elevationCacheProbeUnsupported = true;
-                Logger.Warn(
-                    $"The elevator does not report the administrator rights cache status (exit code {p.ExitCode})"
-                );
-                if (stderr.Result.Trim().Length > 0)
-                    Logger.Warn(stderr.Result.Trim());
+                string error = stderr.Result.Trim();
+
+                if (error.Contains("not a valid Status Key", StringComparison.OrdinalIgnoreCase))
+                    _elevationCacheProbeUnsupported = true;
+
+                if (!_elevationCacheProbeFailureLogged)
+                {
+                    _elevationCacheProbeFailureLogged = true;
+                    Logger.Warn(
+                        $"The elevator did not report the administrator rights cache status (exit code {p.ExitCode})"
+                    );
+                    if (error.Length > 0)
+                        Logger.Warn(error);
+                }
 
                 return ElevationCacheState.Unknown;
             }
@@ -1133,6 +1141,8 @@ namespace UniGetUI.Core.Tools
             await _uacCacheLock.WaitAsync();
             try
             {
+                _elevationCacheWaitTimedOut = false;
+
                 if (expectedGeneration is long expected
                     && (expected != _uacCacheGeneration || !_uacCacheHeld))
                     return false;
@@ -1177,6 +1187,8 @@ namespace UniGetUI.Core.Tools
             await _uacCacheLock.WaitAsync();
             try
             {
+                _elevationCacheWaitTimedOut = false;
+
                 if (expectedGeneration is long expected
                     && (expected != _uacCacheGeneration || !_uacCacheHeld))
                     return false;

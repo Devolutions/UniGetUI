@@ -224,4 +224,41 @@ public sealed class IpcCliSyntaxTests
             GetEffectiveArgs(result)
         );
     }
+
+    [Theory]
+    [InlineData("--help")]
+    [InlineData("-h")]
+    [InlineData("--HELP")]
+    public void IsHelpRequestRecognizesTheGlobalHelpFlags(string flag)
+    {
+        Assert.True(IpcCliSyntax.IsHelpRequest([flag]));
+    }
+
+    [Fact]
+    public void IsHelpRequestRecognizesHelpAfterACommandPath()
+    {
+        Assert.True(IpcCliSyntax.IsHelpRequest(["package", "install", "--help"]));
+    }
+
+    [Fact]
+    public void IsHelpRequestReturnsFalseForStartupParameters()
+    {
+        Assert.False(IpcCliSyntax.IsHelpRequest(["--daemon", "--headless"]));
+    }
+
+    [Theory]
+    [InlineData("--help")]
+    [InlineData("-h")]
+    public void ParseTreatsTheGlobalHelpFlagsAsCliHelp(string flag)
+    {
+        Assert.Equal(IpcCliParseStatus.Help, IpcCliSyntax.Parse([flag]).Status);
+    }
+
+    [Theory]
+    [InlineData("--help")]
+    [InlineData("-h")]
+    public void IsIpcCommandClaimsTheGlobalHelpFlags(string flag)
+    {
+        Assert.True(IpcCliSyntax.IsIpcCommand([flag]));
+    }
 }

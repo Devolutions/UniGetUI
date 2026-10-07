@@ -352,4 +352,70 @@ public sealed class CLIHandlerTests : IDisposable
             )
         );
     }
+
+    [Theory]
+    [InlineData("--help")]
+    [InlineData("-h")]
+    public void Help_IsLeftToTheCommandLineInterface(string flag)
+    {
+        Assert.Null(
+            SharedPreUiCommandDispatcher.TryHandle(
+                [flag],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            )
+        );
+    }
+
+    [Fact]
+    public void Help_AfterACommandPathIsLeftToTheCommandLineInterface()
+    {
+        Assert.Null(
+            SharedPreUiCommandDispatcher.TryHandle(
+                ["package", "install", "--help"],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            )
+        );
+    }
+
+    [Theory]
+    [InlineData(SharedPreUiCommandDispatcher.ExportSettingsArgument, "--help")]
+    [InlineData(SharedPreUiCommandDispatcher.ExportSettingsArgument, "-h")]
+    [InlineData(SharedPreUiCommandDispatcher.ImportSettingsArgument, "--help")]
+    [InlineData(SharedPreUiCommandDispatcher.ImportSettingsArgument, "-h")]
+    [InlineData(SharedPreUiCommandDispatcher.SetSettingValueArgument, "--help")]
+    [InlineData(SharedPreUiCommandDispatcher.EnableSettingArgument, "-h")]
+    public void Help_WinsOverASettingsCommandThatWouldConsumeItAsAValue(
+        string settingsArgument,
+        string helpFlag
+    )
+    {
+        Assert.Null(
+            SharedPreUiCommandDispatcher.TryHandle(
+                [settingsArgument, helpFlag],
+                SharedPreUiCommandDispatcher.WindowsCliExitCodes
+            )
+        );
+    }
+
+    [Fact]
+    public void Help_DoesNotExportSettingsToAFileNamedAfterTheFlag()
+    {
+        string previous = Directory.GetCurrentDirectory();
+        Directory.SetCurrentDirectory(_testRoot);
+        try
+        {
+            Assert.Null(
+                SharedPreUiCommandDispatcher.TryHandle(
+                    [SharedPreUiCommandDispatcher.ExportSettingsArgument, "--help"],
+                    SharedPreUiCommandDispatcher.WindowsCliExitCodes
+                )
+            );
+
+            Assert.Empty(Directory.GetFiles(_testRoot, "*help*"));
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(previous);
+        }
+    }
 }

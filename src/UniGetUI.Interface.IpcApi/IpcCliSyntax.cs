@@ -31,8 +31,7 @@ public static class IpcCliSyntax
             return new(IpcCliParseStatus.NotIpcCommand);
         }
 
-        if (args.Any(arg => string.Equals(arg, "--help", StringComparison.OrdinalIgnoreCase))
-            || args.Any(arg => string.Equals(arg, "-h", StringComparison.OrdinalIgnoreCase)))
+        if (IsHelpRequest(args))
         {
             return new(IpcCliParseStatus.Help);
         }
@@ -117,6 +116,12 @@ public static class IpcCliSyntax
             Command: command,
             EffectiveArgs: [.. leadingGlobalArgs, .. injectedArgs, .. remainingArgs]
         );
+    }
+
+    public static bool IsHelpRequest(IReadOnlyList<string> args)
+    {
+        return args.Any(arg => string.Equals(arg, "--help", StringComparison.OrdinalIgnoreCase))
+            || args.Any(arg => string.Equals(arg, "-h", StringComparison.OrdinalIgnoreCase));
     }
 
     public static bool IsIpcCommand(IReadOnlyList<string> args)

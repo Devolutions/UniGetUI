@@ -67,9 +67,12 @@ public static class AvaloniaAppHost
 
         ProcessEnvironmentConfigurator.ConfigurePingetStorage();
 
-        if (ShouldPrepareCliConsole(args))
+        bool cliConsoleReady = ShouldPrepareCliConsole(args) && WindowsConsoleHost.PrepareCliIO();
+
+        if (OperatingSystem.IsWindows() && !cliConsoleReady && IpcCliSyntax.IsHelpRequest(args))
         {
-            WindowsConsoleHost.PrepareCliIO();
+            CoreTools.Launch(CliDocumentationUrl);
+            return;
         }
 
         if (AvaloniaCliHandler.HandlePreUiArgs(args) is { } exitCode)
@@ -175,9 +178,12 @@ public static class AvaloniaAppHost
         return builder.LogToTrace();
     }
 
+    private const string CliDocumentationUrl =
+        "https://github.com/Devolutions/UniGetUI/blob/main/docs/CLI.md#unigetui-command-line-interface";
+
     private static bool ShouldPrepareCliConsole(IReadOnlyList<string> args)
     {
-        return IpcCliSyntax.HasVerbCommand(args);
+        return IpcCliSyntax.HasVerbCommand(args) || IpcCliSyntax.IsHelpRequest(args);
     }
 
     private static bool TryRegisterSingleInstance(string[] args)

@@ -160,6 +160,64 @@ public sealed class PowerShellManagerTests
         Assert.DoesNotContain("-Scope", parameters);
     }
 
+    [Fact]
+    public void GetParameters_UpdateKeepsUpdateModuleWhenIntegrityChecksAreNotSkipped()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            new InstallOptions(),
+            OperationType.Update
+        );
+
+        Assert.Contains("Update-Module", parameters);
+        Assert.DoesNotContain("Install-Module", parameters);
+        Assert.DoesNotContain("-SkipPublisherCheck", parameters);
+    }
+
+    [Fact]
+    public void GetParameters_UpdateRunsThroughInstallModuleWhenIntegrityChecksAreSkipped()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var options = new InstallOptions { SkipHashCheck = true };
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            options,
+            OperationType.Update
+        );
+
+        Assert.Contains("Install-Module", parameters);
+        Assert.DoesNotContain("Update-Module", parameters);
+        Assert.Contains("-SkipPublisherCheck", parameters);
+        Assert.Contains("-Name", parameters);
+        Assert.Contains(package.Id, parameters);
+    }
+
+    [Fact]
+    public void GetParameters_UpdateThroughInstallModuleCarriesTheSelectedScope()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var options = new InstallOptions
+        {
+            SkipHashCheck = true,
+            InstallationScope = PackageScope.Machine,
+        };
+        var parameters = manager.OperationHelper.GetParameters(
+            package,
+            options,
+            OperationType.Update
+        );
+
+        Assert.Contains("-Scope", parameters);
+        Assert.Contains("AllUsers", parameters);
+    }
+
     [Theory]
     [InlineData(OperationType.Install)]
     [InlineData(OperationType.Update)]

@@ -25,15 +25,20 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
         bool standalone
     )
     {
+        bool updatesThroughInstall =
+            operation is OperationType.Update && options.SkipHashCheck;
+        bool usesInstallVerb = operation is OperationType.Install || updatesThroughInstall;
+
         List<string> parameters =
         [
-            operation switch
-            {
-                OperationType.Install => Manager.Properties.InstallVerb,
-                OperationType.Update => Manager.Properties.UpdateVerb,
-                OperationType.Uninstall => Manager.Properties.UninstallVerb,
-                _ => throw new InvalidDataException("Invalid package operation"),
-            },
+            usesInstallVerb
+                ? Manager.Properties.InstallVerb
+                : operation switch
+                {
+                    OperationType.Update => Manager.Properties.UpdateVerb,
+                    OperationType.Uninstall => Manager.Properties.UninstallVerb,
+                    _ => throw new InvalidDataException("Invalid package operation"),
+                },
         ];
         parameters.AddRange(["-Name", package.Id, "-Confirm:$false", "-Force"]);
 
@@ -43,7 +48,7 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
                 parameters.Add("-AllowPrerelease");
 
             // Update-Module (PowerShellGet) has no -Scope parameter; only Install-Module accepts it
-            if (operation is OperationType.Install && !package.OverridenOptions.PowerShell_DoNotSetScopeParameter)
+            if (usesInstallVerb && !package.OverridenOptions.PowerShell_DoNotSetScopeParameter)
             {
                 // The scope chosen in the options dialog wins; fall back to the auto-detected install scope
                 string scope = options.InstallationScope.Length > 0
@@ -53,7 +58,7 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
             }
         }
 
-        if (operation is OperationType.Install)
+        if (usesInstallVerb)
         {
             if (package.OverridenOptions.PowerShell_AllowClobber)
                 parameters.Add("-AllowClobber");

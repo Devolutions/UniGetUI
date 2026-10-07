@@ -284,7 +284,7 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
 
         private readonly record struct CachedResolution(string ETag, string? Version);
 
-        private readonly record struct VersionResolution(string? Version, bool Failed);
+        internal readonly record struct VersionResolution(string? Version, bool Failed);
 
         private readonly object _indexUpdateCheckLock = new();
         private bool _indexUpdateCheckProbed;
@@ -458,16 +458,19 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
         private static readonly SemaphoreSlim _updateFetchSemaphore = new(6, 6);
         private static readonly TimeSpan UpdateResolutionBudget = TimeSpan.FromSeconds(45);
 
-        private static async Task<VersionResolution> ResolveLatestVersionAsync(
+        internal static async Task<VersionResolution> ResolveLatestVersionAsync(
             HttpClient client,
             string packageId,
             PythonVersion interpreter,
             CancellationToken token
         )
         {
-            await _updateFetchSemaphore.WaitAsync(token).ConfigureAwait(false);
+            bool acquired = false;
             try
             {
+                await _updateFetchSemaphore.WaitAsync(token).ConfigureAwait(false);
+                acquired = true;
+
                 using var request = new HttpRequestMessage(
                     HttpMethod.Get,
                     $"https://pypi.org/simple/{NormalizeProjectNameForUrl(packageId)}/"
@@ -536,7 +539,8 @@ namespace UniGetUI.PackageEngine.Managers.PipManager
             }
             finally
             {
-                _updateFetchSemaphore.Release();
+                if (acquired)
+                    _updateFetchSemaphore.Release();
             }
         }
 

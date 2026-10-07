@@ -345,4 +345,44 @@ public sealed class PipManagerTests : IDisposable
         Assert.Equal(PackageScope.User, userScopedPackage.OverridenOptions.Scope);
         Assert.Equal(OperationVeredict.Failure, failureResult);
     }
+
+    [Fact]
+    public async Task ResolveLatestVersionReportsAFailureWhenTheResolutionBudgetIsAlreadySpent()
+    {
+        Assert.True(PythonVersion.TryParse("3.12.0", out PythonVersion interpreter));
+
+        using HttpClient client = new(CoreTools.GenericHttpClientParameters);
+        using CancellationTokenSource budget = new();
+        await budget.CancelAsync();
+
+        Pip.VersionResolution resolution = await Pip.ResolveLatestVersionAsync(
+            client,
+            "requests",
+            interpreter,
+            budget.Token
+        );
+
+        Assert.True(resolution.Failed);
+        Assert.Null(resolution.Version);
+    }
+
+    [Fact]
+    public async Task ResolveLatestVersionKeepsServingLaterLookupsAfterASpentBudget()
+    {
+        Assert.True(PythonVersion.TryParse("3.12.0", out PythonVersion interpreter));
+
+        using HttpClient client = new(CoreTools.GenericHttpClientParameters);
+
+        for (int i = 0; i < 12; i++)
+        {
+            using CancellationTokenSource budget = new();
+            await budget.CancelAsync();
+
+            Pip.VersionResolution resolution = await Pip
+                .ResolveLatestVersionAsync(client, $"package-{i}", interpreter, budget.Token)
+                .WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.True(resolution.Failed);
+        }
+    }
 }

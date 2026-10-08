@@ -1468,19 +1468,35 @@ namespace UniGetUI.Core.Tools
 
         /// <summary>
         /// Fetches the connectivity test page and returns whether it came back as expected within
-        /// <paramref name="budget"/> (at most <see cref="HttpCheckTimeout"/>)
+        /// <paramref name="budget"/> (at most <see cref="HttpCheckTimeout"/>). Once SendAsync has returned its
+        /// task, the call stops waiting at that limit even if the request does not react to cancellation, and
+        /// leaves the request to end on its own.
         /// </summary>
         internal static bool HttpConnectivityCheck(HttpMessageHandler handler, Uri url, TimeSpan budget)
+        {
+            TimeSpan limit = budget < HttpCheckTimeout ? budget : HttpCheckTimeout;
+            try
+            {
+                return HttpConnectivityCheckAsync(handler, url, limit).WaitAsync(limit).GetAwaiter().GetResult();
+            }
+            catch (Exception)
+            {
+                // WaitAsync throws once the limit has passed, and any other failure is no connection either
+                return false;
+            }
+        }
+
+        private static async Task<bool> HttpConnectivityCheckAsync(HttpMessageHandler handler, Uri url, TimeSpan limit)
         {
             try
             {
                 using HttpClient client = new(handler)
                 {
-                    Timeout = budget < HttpCheckTimeout ? budget : HttpCheckTimeout,
+                    Timeout = limit,
                     MaxResponseContentBufferSize = 1024,
                 };
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                using HttpResponseMessage response = client.Send(request);
+                using HttpResponseMessage response = await client.SendAsync(request).ConfigureAwait(false);
                 if (response.StatusCode != HttpStatusCode.OK)
                     return false;
 

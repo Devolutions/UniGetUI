@@ -247,4 +247,36 @@ public class ConnectivityWaitTests
         Assert.False(connected);
         Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(10), $"waited {stopwatch.Elapsed}");
     }
+
+    // Stands in for a request that HttpClient cannot interrupt: it answers after the delay and
+    // takes no notice of the cancellation token
+    private sealed class DeafHandler(TimeSpan delay) : HttpMessageHandler
+    {
+        protected override HttpResponseMessage Send(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Thread.Sleep(delay);
+            return Page(HttpStatusCode.OK, "Microsoft Connect Test");
+        }
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
+        {
+            await Task.Delay(delay);
+            return Page(HttpStatusCode.OK, "Microsoft Connect Test");
+        }
+    }
+
+    [Fact]
+    public void ARequestThatCannotBeCancelledStillEndsAtTheBudget()
+    {
+        var handler = new DeafHandler(TimeSpan.FromSeconds(4));
+        var stopwatch = Stopwatch.StartNew();
+
+        bool connected = CoreTools.HttpConnectivityCheck(handler, TestUrl, TimeSpan.FromMilliseconds(150));
+
+        Assert.False(connected);
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2), $"waited {stopwatch.Elapsed}");
+    }
 }

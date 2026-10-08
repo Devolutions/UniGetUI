@@ -319,15 +319,14 @@ public abstract partial class AbstractOperation : IDisposable
 
                 while (
                     FORCE_HOLD_QUEUE
-                    || (IndexInQueue(this) >= MAX_OPERATIONS && !SKIP_QUEUE)
+                    || (SlotsTakenAhead(this) >= MAX_OPERATIONS && !SKIP_QUEUE)
                 )
                 {
-                    int pos = IndexInQueue(this) - MAX_OPERATIONS + 1;
-
-                    if (pos == -1)
+                    if (IndexInQueue(this) - MAX_OPERATIONS + 1 == -1)
                         return;
                     // In this case, operation was canceled;
 
+                    int pos = SlotsTakenAhead(this) - MAX_OPERATIONS + 1;
                     if (pos != lastPos)
                     {
                         lastPos = pos;
@@ -644,6 +643,31 @@ public abstract partial class AbstractOperation : IDisposable
     {
         lock (QueueLock)
             return OperationQueue.IndexOf(operation);
+    }
+
+    internal bool IsWaitingForManager
+    {
+        get => _isWaitingForManager;
+        set => _isWaitingForManager = value;
+    }
+    private volatile bool _isWaitingForManager;
+
+    private static int SlotsTakenAhead(AbstractOperation operation)
+    {
+        lock (QueueLock)
+        {
+            int index = OperationQueue.IndexOf(operation);
+            if (index < 0)
+                return index;
+
+            int taken = 0;
+            for (int i = 0; i < index; i++)
+            {
+                if (!OperationQueue[i].IsWaitingForManager)
+                    taken++;
+            }
+            return taken;
+        }
     }
 
     public static int QueueLength()

@@ -384,8 +384,10 @@ public sealed class PackageOperationsTests
                 manager.ExecutableArguments = "/c";
             })
             .ConfigureOperation(helper =>
-                helper.ParametersFactory = (_, _, _) => ["ping", "-n", "3", "127.0.0.1"]
-            )
+            {
+                helper.ParametersFactory = (_, _, _) => ["ping", "-n", "3", "127.0.0.1"];
+                helper.ResultFactory = (_, _, _, _) => OperationVeredict.Success;
+            })
             .Build();
     }
 
@@ -519,9 +521,66 @@ public sealed class PackageOperationsTests
 
         Assert.Equal(OperationStatus.Canceled, waiting.Status);
         Assert.False(HasLine(waiting, "Executing process"));
+        Assert.DoesNotContain(
+            waiting.GetOutput(),
+            line => line.Item1.Contains("CanceledException", StringComparison.Ordinal)
+        );
         Assert.Equal(OperationStatus.Succeeded, first.Status);
         Assert.Equal(OperationStatus.Succeeded, third.Status);
         Assert.False(thirdWaited());
+    }
+
+    [Fact]
+    public async Task AnOperationWaitingOnASerializingManagerDoesNotHoldAParallelSlot()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var serialized = CreateSlowProcessManager(serializesOperations: true);
+        var other = CreateSlowProcessManager(serializesOperations: false);
+        InitializeLoaders();
+        using var first = new InstallPackageOperation(
+            new PackageBuilder().WithManager(serialized).WithId("first").Build(),
+            new InstallOptions()
+        );
+        using var waiting = new InstallPackageOperation(
+            new PackageBuilder().WithManager(serialized).WithId("waiting").Build(),
+            new InstallOptions()
+        );
+        using var unrelated = new InstallPackageOperation(
+            new PackageBuilder().WithManager(other).WithId("unrelated").Build(),
+            new InstallOptions()
+        );
+        var waitingReported = ReportsWaitingOnTheGate(waiting);
+        bool? firstFinishedWhenUnrelatedStarted = null;
+        unrelated.LogLineAdded += (_, line) =>
+        {
+            if (line.Item1.StartsWith("Executing process", StringComparison.Ordinal))
+                firstFinishedWhenUnrelatedStarted = HasLine(first, "Process return value");
+        };
+
+        AbstractOperation.OperationQueue.Clear();
+        int previousMax = AbstractOperation.MAX_OPERATIONS;
+        AbstractOperation.MAX_OPERATIONS = 2;
+        try
+        {
+            Task firstRun = first.MainThread();
+            await WaitForConditionAsync(() => HasLine(first, "Start Time"));
+            Task waitingRun = waiting.MainThread();
+            await WaitForConditionAsync(waitingReported);
+            Task unrelatedRun = unrelated.MainThread();
+            await Task.WhenAll(firstRun, waitingRun, unrelatedRun).WaitAsync(TimeSpan.FromSeconds(30));
+        }
+        finally
+        {
+            AbstractOperation.MAX_OPERATIONS = previousMax;
+            AbstractOperation.OperationQueue.Clear();
+        }
+
+        Assert.Equal(OperationStatus.Succeeded, first.Status);
+        Assert.Equal(OperationStatus.Succeeded, waiting.Status);
+        Assert.Equal(OperationStatus.Succeeded, unrelated.Status);
+        Assert.False(firstFinishedWhenUnrelatedStarted);
     }
 
     private static TestPackageManager CreateFailingEchoManager(params string[] echoed)

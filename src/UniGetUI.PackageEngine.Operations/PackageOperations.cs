@@ -361,7 +361,19 @@ namespace UniGetUI.PackageEngine.Operations
                         ),
                         LineType.ProgressIndicator
                     );
-                    await gate.WaitAsync(CancellationToken);
+                    IsWaitingForManager = true;
+                    try
+                    {
+                        await gate.WaitAsync(CancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return OperationVeredict.Canceled;
+                    }
+                    finally
+                    {
+                        IsWaitingForManager = false;
+                    }
                 }
 
                 try

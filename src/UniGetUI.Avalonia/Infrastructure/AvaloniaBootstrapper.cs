@@ -255,7 +255,9 @@ internal static class AvaloniaBootstrapper
             CanNavigate = window is not null,
             CanQuit = true,
             CurrentPage = window is null ? "" : IpcAppPages.ToPageName(window.CurrentPage.ToString()),
-            SupportedPages = IpcAppPages.SupportedPages,
+            SupportedPages = window is { SoftwareCatalogEnabled: true }
+                ? IpcAppPages.SupportedPages
+                : IpcAppPages.SupportedPages.Where(page => page != "catalog").ToArray(),
             SystemRestartPending = PendingRebootStore.HasPending,
             SystemRestartPendingPackages = PendingRebootStore.PendingCount,
         };
@@ -289,6 +291,11 @@ internal static class AvaloniaBootstrapper
                 break;
             case "bundles":
                 window.Navigate(PageType.Bundles);
+                break;
+            case "catalog":
+                if (!window.SoftwareCatalogEnabled)
+                    throw new InvalidOperationException("Software Catalog is disabled. Enable it in Experimental settings and developer options, then restart UniGetUI.");
+                window.Navigate(PageType.Catalog);
                 break;
             case "settings":
                 window.Navigate(PageType.Settings);

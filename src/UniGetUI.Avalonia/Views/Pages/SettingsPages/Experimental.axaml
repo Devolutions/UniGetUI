@@ -79,6 +79,14 @@
                                    Text="{t:Translate Text='When batch installing packages from a bundle, install also packages that are already installed'}"
                                    CornerRadius="8"/>
 
+            <UserControl Height="16"/>
+
+            <settings:CheckboxCard x:Name="SoftwareCatalogCard" SettingName="EnableSoftwareCatalog"
+                                   Text="{t:Translate Enable Software Catalog}"
+                                   WarningText="{t:Translate Requires a machine-wide SoftwareCatalog.json file and an application restart.}"
+                                   StateChangedCommand="{Binding ShowRestartRequiredCommand}"
+                                   CornerRadius="8"/>
+
         </StackPanel>
     </ScrollViewer>
 

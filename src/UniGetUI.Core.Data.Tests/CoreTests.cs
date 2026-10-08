@@ -23,6 +23,17 @@ namespace UniGetUI.Core.Data.Tests
         }
 
         [Fact]
+        public void GlobalDirectoryResolvesToTheMachineWidePlatformPath()
+        {
+            string expected = OperatingSystem.IsWindows()
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Devolutions", "UniGetUI")
+                : OperatingSystem.IsLinux() ? "/etc/UniGetUI"
+                : "/Library/Application Support/Devolutions/UniGetUI";
+            Assert.Equal(expected, CoreData.UniGetUIGlobalDirectory);
+            Assert.True(Path.IsPathFullyQualified(CoreData.UniGetUIGlobalDirectory));
+        }
+
+        [Fact]
         public void CheckOtherAttributes()
         {
             Assert.NotEmpty(CoreData.VersionName);

@@ -145,6 +145,18 @@
                 </Panel>
             </ListBoxItem>
 
+            <ListBoxItem x:Name="CatalogNavBtn" Tag="Catalog" Classes="nav-item" Padding="4,2" CornerRadius="6"
+                         automation:AutomationProperties.Name="{t:Translate Software Catalog}"
+                         ToolTip.Tip="{t:Translate Software Catalog}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package_managers.svg"
+                                      Width="24" Height="24" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="{t:Translate Software Catalog}" FontSize="14"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
+                </Grid>
+            </ListBoxItem>
+
         </ListBox>
 
         <!-- Footer items -->

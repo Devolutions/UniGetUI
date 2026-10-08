@@ -35,6 +35,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly SoftwareUpdatesPage UpdatesPage;
     private readonly InstalledPackagesPage InstalledPage;
     private readonly PackageBundlesPage BundlesPage;
+    private SoftwareCatalogPage? CatalogPage;
     private SettingsBasePage? SettingsPage;
     private SettingsBasePage? ManagersPage;
     private UniGetUILogPage? UniGetUILogPage;
@@ -647,6 +648,7 @@ public partial class MainWindowViewModel : ViewModelBase
             "updates" => PageType.Updates,
             "installed" => PageType.Installed,
             "bundles" => PageType.Bundles,
+            "catalog" when Sidebar.SoftwareCatalogEnabled => PageType.Catalog,
             "settings" => PageType.Settings,
             _ => UpgradablePackagesLoader.Instance is { } l && l.Count() > 0 ? PageType.Updates : PageType.Discover,
         };
@@ -667,6 +669,7 @@ public partial class MainWindowViewModel : ViewModelBase
             PageType.Updates => UpdatesPage,
             PageType.Installed => InstalledPage,
             PageType.Bundles => BundlesPage,
+            PageType.Catalog => CatalogPage ??= new SoftwareCatalogPage(),
             PageType.Settings => SettingsPage ??= new SettingsBasePage(false),
             PageType.Managers => ManagersPage ??= new SettingsBasePage(true),
             PageType.OwnLog => UniGetUILogPage ??= new UniGetUILogPage(),
@@ -679,25 +682,33 @@ public partial class MainWindowViewModel : ViewModelBase
         };
 
     public static PageType GetNextPage(PageType type) =>
+        GetNextPage(type, Settings.Get(Settings.K.EnableSoftwareCatalog));
+
+    internal static PageType GetNextPage(PageType type, bool catalogEnabled) =>
         type switch
         {
             PageType.Discover => PageType.Updates,
             PageType.Updates => PageType.Installed,
             PageType.Installed => PageType.Bundles,
-            PageType.Bundles => PageType.Settings,
+            PageType.Bundles => catalogEnabled ? PageType.Catalog : PageType.Settings,
+            PageType.Catalog => PageType.Settings,
             PageType.Settings => PageType.Managers,
             PageType.Managers => PageType.Discover,
             _ => PageType.Discover,
         };
 
     public static PageType GetPreviousPage(PageType type) =>
+        GetPreviousPage(type, Settings.Get(Settings.K.EnableSoftwareCatalog));
+
+    internal static PageType GetPreviousPage(PageType type, bool catalogEnabled) =>
         type switch
         {
             PageType.Discover => PageType.Managers,
             PageType.Updates => PageType.Discover,
             PageType.Installed => PageType.Updates,
             PageType.Bundles => PageType.Installed,
-            PageType.Settings => PageType.Bundles,
+            PageType.Catalog => PageType.Bundles,
+            PageType.Settings => catalogEnabled ? PageType.Catalog : PageType.Bundles,
             PageType.Managers => PageType.Settings,
             _ => PageType.Discover,
         };
@@ -710,6 +721,15 @@ public partial class MainWindowViewModel : ViewModelBase
         bool toHistory = true,
         CancellationToken cancellationToken = default)
     {
+        if (newPage_t is PageType.Catalog && !Sidebar.SoftwareCatalogEnabled)
+        {
+            Logger.Warn("Software Catalog navigation was rejected because the experimental feature is disabled.");
+            MainWindow.Instance?.ShowBanner(
+                CoreTools.Translate("Software Catalog is disabled"),
+                CoreTools.Translate("Enable Software Catalog in Experimental settings and developer options, then restart UniGetUI."),
+                MainWindow.RuntimeNotificationLevel.Error);
+            return false;
+        }
         if (newPage_t is PageType.About) { _ = ShowAboutDialog(); return true; }
         if (newPage_t is PageType.Quit) { MainWindow.Instance?.QuitApplication(); return true; }
 
@@ -795,6 +815,7 @@ public partial class MainWindowViewModel : ViewModelBase
         PageType.Updates => CoreTools.Translate("Software Updates"),
         PageType.Installed => CoreTools.Translate("Installed Packages"),
         PageType.Bundles => CoreTools.Translate("Package Bundles"),
+        PageType.Catalog => CoreTools.Translate("Software Catalog"),
         PageType.Settings => CoreTools.Translate("Settings"),
         PageType.Managers => CoreTools.Translate("Package Managers"),
         PageType.OwnLog => CoreTools.Translate("UniGetUI Log"),

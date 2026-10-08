@@ -43,6 +43,7 @@ public enum PageType
     About,
     Quit,
     Null, // Used for initializers
+    Catalog,
 }
 
 public partial class MainWindow : Window
@@ -170,6 +171,7 @@ public partial class MainWindow : Window
 
     private MainWindowViewModel ViewModel => (MainWindowViewModel)DataContext!;
     public PageType CurrentPage => ViewModel.CurrentPage_t;
+    public bool SoftwareCatalogEnabled => ViewModel.Sidebar.SoftwareCatalogEnabled;
 
     public MainWindow()
     {
@@ -293,8 +295,8 @@ public partial class MainWindow : Window
 
         _focusSidebarSelectionOnNextPageChange = true;
         ViewModel.NavigateTo(e.KeyModifiers.HasFlag(KeyModifiers.Shift)
-            ? MainWindowViewModel.GetPreviousPage(ViewModel.CurrentPage_t)
-            : MainWindowViewModel.GetNextPage(ViewModel.CurrentPage_t));
+            ? MainWindowViewModel.GetPreviousPage(ViewModel.CurrentPage_t, SoftwareCatalogEnabled)
+            : MainWindowViewModel.GetNextPage(ViewModel.CurrentPage_t, SoftwareCatalogEnabled));
         e.Handled = true;
     }
 

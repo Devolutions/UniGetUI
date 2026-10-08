@@ -109,6 +109,19 @@ namespace UniGetUI.Core.Data
         public static bool IsPortable => AppPaths.IsPortable;
 
         /// <summary>
+        /// Machine-wide configuration directory, independent of portable mode. Resolving this
+        /// path does not create it; administrators provision its contents and permissions.
+        /// </summary>
+        public static string UniGetUIGlobalDirectory =>
+            OperatingSystem.IsWindows()
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Devolutions", "UniGetUI")
+                : OperatingSystem.IsLinux()
+                    ? "/etc/UniGetUI"
+                    : OperatingSystem.IsMacOS()
+                        ? "/Library/Application Support/Devolutions/UniGetUI"
+                        : throw new PlatformNotSupportedException("No global UniGetUI directory is defined for this platform.");
+
+        /// <summary>
         /// Where the per-user data directory lives, regardless of whether portable mode is
         /// active. Unlike <see cref="UniGetUIDataDirectory"/> this creates and migrates nothing.
         /// </summary>

@@ -1,0 +1,91 @@
+<UserControl x:Class="UniGetUI.Avalonia.Views.Pages.SoftwareCatalogPage"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:vm="using:UniGetUI.Avalonia.ViewModels.Pages"
+             xmlns:models="using:UniGetUI.Avalonia.Models"
+             xmlns:controls="using:UniGetUI.Avalonia.Views.Controls"
+             xmlns:t="using:UniGetUI.Avalonia.MarkupExtensions"
+             x:DataType="vm:SoftwareCatalogViewModel">
+    <Grid RowDefinitions="Auto,Auto,*" Margin="24" RowSpacing="16">
+        <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="6">
+                <TextBlock Text="{t:Translate Software Catalog}" FontSize="28" FontWeight="SemiBold"/>
+                <TextBlock Text="{t:Translate 'Software selected for you, ready to install.'}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Content="{t:Translate Edit}" Command="{Binding EditCommand}"
+                        ToolTip.Tip="{t:Translate Edit the catalog JSON then save and click Refresh.}"
+                        automation:AutomationProperties.Name="{t:Translate Edit software catalog}"/>
+                <Button Content="{t:Translate Refresh}" Command="{Binding RefreshCommand}"
+                        automation:AutomationProperties.Name="{t:Translate Refresh software catalog}"/>
+            </StackPanel>
+        </Grid>
+        <StackPanel Grid.Row="1" Spacing="8">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="{t:Translate Catalog}" VerticalAlignment="Center"/>
+                <ComboBox ItemsSource="{Binding Catalogs}" SelectedItem="{Binding SelectedCatalog}" MinWidth="260"
+                          automation:AutomationProperties.Name="{t:Translate Select software catalog}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:CatalogDefinition">
+                            <TextBlock Text="{Binding Name}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="3"/>
+            <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
+            <TextBlock Text="{t:Translate This catalog contains no packages.}" IsVisible="{Binding IsEmpty}"/>
+        </StackPanel>
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Packages}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CatalogTileViewModel">
+                        <Border Width="300" MinHeight="290" Margin="0,0,16,16" Padding="20" CornerRadius="8"
+                                Background="{DynamicResource SettingsCardBackground}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                            <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="12">
+                                <Panel Width="40" Height="40" HorizontalAlignment="Left" Opacity="{Binding TitleOpacity}">
+                                    <Image Source="{Binding IconBitmap}" IsVisible="{Binding HasCustomIcon}"
+                                           Width="40" Height="40" Stretch="Uniform"
+                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/package.svg"
+                                                      Width="40" Height="40" IsVisible="{Binding !HasCustomIcon}"/>
+                                </Panel>
+                                <TextBlock Grid.Row="1" Text="{Binding Entry.Name}" FontSize="19" FontWeight="SemiBold"
+                                           TextWrapping="Wrap" Opacity="{Binding TitleOpacity}"
+                                           ToolTip.Tip="{Binding UnavailableReason}"/>
+                                <StackPanel Grid.Row="2" Spacing="4">
+                                    <TextBlock Text="{Binding Entry.Id}" FontSize="12" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{Binding Entry.Manager}" FontSize="12"/>
+                                        <TextBlock Text=" / " FontSize="12"/>
+                                        <TextBlock Text="{Binding Entry.Source}" FontSize="12"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <TextBlock Grid.Row="3" Text="{Binding StatusText}" TextWrapping="Wrap" FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                <Panel Grid.Row="4">
+                                    <Button Content="{t:Translate Install}" IsVisible="{Binding ShowInstall}" IsEnabled="{Binding CanInstall}"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                            Command="{Binding $parent[ItemsControl].((vm:SoftwareCatalogViewModel)DataContext).InstallCommand}"
+                                            CommandParameter="{Binding}"/>
+                                    <TextBlock Text="{t:Translate Installed}" IsVisible="{Binding IsInstalled}"
+                                               FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,8"/>
+                                </Panel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

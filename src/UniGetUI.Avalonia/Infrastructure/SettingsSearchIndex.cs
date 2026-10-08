@@ -141,6 +141,7 @@ public static class SettingsSearchIndex
         new("Administrator rights and other dangerous settings", ["administrator", "dangerous"], typeof(Administrator), null),
 
         // ── Experimental ─────────────────────────────────────────────────────
+        new("Enable Software Catalog", ["catalog", "software catalog"], typeof(Experimental), "SoftwareCatalogCard"),
         new("Show UniGetUI's version and build number on the titlebar.", ["version number", "titlebar", "build number"], typeof(Experimental), "ShowVersionNumberOnTitlebar"),
         new("Enable background api (UniGetUI Widgets and Sharing, port 7058)", ["api", "widgets", "sharing", "port"], typeof(Experimental), "BackgroundApiCard"),
         new("Disable the 1-minute timeout for package-related operations", ["timeout"], typeof(Experimental), "DisableTimeoutCard"),

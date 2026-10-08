@@ -94,7 +94,10 @@ internal sealed class PipPkgOperationHelper : BasePkgOperationHelper
                 return OperationVeredict.AutoRetry;
             }
 
-            if (package.OverridenOptions.Scope != PackageScope.User)
+            if (
+                operation is not OperationType.Update
+                && package.OverridenOptions.Scope != PackageScope.User
+            )
             {
                 package.OverridenOptions.Scope = PackageScope.User;
                 return OperationVeredict.AutoRetry;

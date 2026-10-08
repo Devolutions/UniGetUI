@@ -346,6 +346,28 @@ public sealed class PipManagerTests : IDisposable
         Assert.Equal(OperationVeredict.Failure, failureResult);
     }
 
+    [Theory]
+    [InlineData(OperationType.Install, OperationVeredict.AutoRetry, PackageScope.User)]
+    [InlineData(OperationType.Update, OperationVeredict.Failure, null)]
+    public void OperationHelperMovesOnlyNonUpdatesToTheUserSchemeOnARepeatedExternallyManagedFailure(
+        OperationType operation,
+        OperationVeredict expectedResult,
+        string? expectedScope
+    )
+    {
+        var manager = new Pip();
+        var package = new PackageBuilder().WithManager(manager).WithId("requests").Build();
+        string[] output = ["error: externally-managed-environment"];
+
+        var firstResult = manager.OperationHelper.GetResult(package, operation, output, 1);
+        var secondResult = manager.OperationHelper.GetResult(package, operation, output, 1);
+
+        Assert.Equal(OperationVeredict.AutoRetry, firstResult);
+        Assert.True(package.OverridenOptions.Pip_BreakSystemPackages);
+        Assert.Equal(expectedResult, secondResult);
+        Assert.Equal(expectedScope, package.OverridenOptions.Scope);
+    }
+
     private static readonly string[] SharingViolationOutput =
     [
         "Attempting uninstall: botocore",

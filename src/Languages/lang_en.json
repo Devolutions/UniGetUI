@@ -1842,5 +1842,7 @@
   "GitHub returned an empty access token.": "GitHub returned an empty access token.",
   "GitHub sign-in failed ({0}): {1}": "GitHub sign-in failed ({0}): {1}",
   "The GitHub sign-in code has expired. Please try again.": "The GitHub sign-in code has expired. Please try again.",
-  "WinGet repair exited with code {0}.": "WinGet repair exited with code {0}."
+  "WinGet repair exited with code {0}.": "WinGet repair exited with code {0}.",
+  "Waiting for another {0} operation to finish...": "Waiting for another {0} operation to finish...",
+  "A file of {package} is in use by another program. Close any program that may be using it, then try again": "A file of {package} is in use by another program. Close any program that may be using it, then try again"
 }

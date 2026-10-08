@@ -346,6 +346,80 @@ public sealed class PipManagerTests : IDisposable
         Assert.Equal(OperationVeredict.Failure, failureResult);
     }
 
+    private static readonly string[] SharingViolationOutput =
+    [
+        "Attempting uninstall: botocore",
+        "ERROR: Could not install packages due to an OSError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Python314\\Lib\\site-packages\\botocore\\signers.py'",
+        "Consider using the `--user` option or check the permissions.",
+    ];
+
+    private static readonly string[] PermissionDeniedOutput =
+    [
+        "ERROR: Could not install packages due to an OSError: [WinError 5] Access is denied: 'C:\\Python314\\Lib\\site-packages\\requests'",
+        "Consider using the `--user` option or check the permissions.",
+    ];
+
+    [Theory]
+    [InlineData(OperationType.Install)]
+    [InlineData(OperationType.Update)]
+    public void OperationHelperDoesNotMoveToTheUserSchemeOnASharingViolation(
+        OperationType operation
+    )
+    {
+        var manager = new Pip();
+        var package = new PackageBuilder().WithManager(manager).WithId("boto3").Build();
+
+        var result = manager.OperationHelper.GetResult(
+            package,
+            operation,
+            SharingViolationOutput,
+            1
+        );
+
+        Assert.Equal(OperationVeredict.Failure, result);
+        Assert.Null(package.OverridenOptions.Scope);
+    }
+
+    [Fact]
+    public void OperationHelperDoesNotMoveAnUpdateToTheUserScheme()
+    {
+        var manager = new Pip();
+        var package = new PackageBuilder().WithManager(manager).WithId("requests").Build();
+
+        var result = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            PermissionDeniedOutput,
+            1
+        );
+
+        Assert.Equal(OperationVeredict.Failure, result);
+        Assert.Null(package.OverridenOptions.Scope);
+    }
+
+    [Fact]
+    public void OperationHelperStillRetriesAnInstallInTheUserSchemeWhenAccessIsDenied()
+    {
+        var manager = new Pip();
+        var package = new PackageBuilder().WithManager(manager).WithId("requests").Build();
+
+        var result = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Install,
+            PermissionDeniedOutput,
+            1
+        );
+
+        Assert.Equal(OperationVeredict.AutoRetry, result);
+        Assert.Equal(PackageScope.User, package.OverridenOptions.Scope);
+    }
+
+    [Fact]
+    public void PipSerializesItsOperations()
+    {
+        Assert.True(new Pip().Capabilities.SerializesOperations);
+    }
+
     [Fact]
     public async Task ResolveLatestVersionReportsAFailureWhenTheResolutionBudgetIsAlreadySpent()
     {

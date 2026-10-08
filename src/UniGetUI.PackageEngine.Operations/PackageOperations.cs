@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using UniGetUI.Core.Classes;
@@ -344,11 +345,40 @@ namespace UniGetUI.PackageEngine.Operations
 
             if (!ShouldUseAgentBroker())
             {
-                return await base.PerformOperation();
+                if (!Package.Manager.Capabilities.SerializesOperations)
+                    return await base.PerformOperation();
+
+                SemaphoreSlim gate = ManagerOperationGates.GetOrAdd(
+                    Package.Manager.Name,
+                    _ => new SemaphoreSlim(1, 1)
+                );
+                if (!await gate.WaitAsync(0))
+                {
+                    Line(
+                        CoreTools.Translate(
+                            "Waiting for another {0} operation to finish...",
+                            Package.Manager.DisplayName
+                        ),
+                        LineType.ProgressIndicator
+                    );
+                    await gate.WaitAsync(CancellationToken);
+                }
+
+                try
+                {
+                    return await base.PerformOperation();
+                }
+                finally
+                {
+                    gate.Release();
+                }
             }
 
             return await PerformBrokerOperation();
         }
+
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> ManagerOperationGates =
+            new();
 
         /// <summary>
         /// Determines whether this operation should be routed through the agent broker.
@@ -1058,6 +1088,7 @@ namespace UniGetUI.PackageEngine.Operations
                     ExplainNotApplicableUpdate(Output, ReturnCode);
                 ExplainInstallerHashMismatch(ReturnCode);
                 ExplainApplicationCurrentlyRunning(Output, ReturnCode);
+                ExplainFileInUse(Output);
             }
 
             return Task.FromResult(veredict);
@@ -1195,6 +1226,17 @@ namespace UniGetUI.PackageEngine.Operations
                 new Dictionary<string, object?> { { "package", Package.Name } }
             );
 #endif
+        }
+
+        private void ExplainFileInUse(List<string> output)
+        {
+            if (!output.Any(line => line.Contains("[WinError 32]", StringComparison.Ordinal)))
+                return;
+
+            Metadata.FailureMessage = CoreTools.Translate(
+                "A file of {package} is in use by another program. Close any program that may be using it, then try again",
+                new Dictionary<string, object?> { { "package", Package.Name } }
+            );
         }
 
         private void ExplainNotApplicableUpdate(List<string> output, int returnCode)

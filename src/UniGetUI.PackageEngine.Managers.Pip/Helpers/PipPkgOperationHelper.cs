@@ -101,7 +101,12 @@ internal sealed class PipPkgOperationHelper : BasePkgOperationHelper
             }
         }
 
-        if (output_string.Contains("--user") && package.OverridenOptions.Scope != PackageScope.User)
+        if (
+            operation is not OperationType.Update
+            && output_string.Contains("--user")
+            && !output_string.Contains("[WinError 32]")
+            && package.OverridenOptions.Scope != PackageScope.User
+        )
         {
             package.OverridenOptions.Scope = PackageScope.User;
             return OperationVeredict.AutoRetry;

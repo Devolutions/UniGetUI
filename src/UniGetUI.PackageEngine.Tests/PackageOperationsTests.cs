@@ -369,6 +369,221 @@ public sealed class PackageOperationsTests
         Assert.Equal(PackageScope.Machine, badges.Scope);
     }
 
+    private static TestPackageManager CreateSlowProcessManager(bool serializesOperations)
+    {
+        return new PackageManagerBuilder()
+            .WithName($"SlowManager{Guid.NewGuid():N}")
+            .ConfigureCapabilities(capabilities =>
+            {
+                capabilities.SerializesOperations = serializesOperations;
+                return capabilities;
+            })
+            .ConfigureManager(manager =>
+            {
+                manager.ExecutablePath = Path.Join(Environment.SystemDirectory, "cmd.exe");
+                manager.ExecutableArguments = "/c";
+            })
+            .ConfigureOperation(helper =>
+                helper.ParametersFactory = (_, _, _) => ["ping", "-n", "3", "127.0.0.1"]
+            )
+            .Build();
+    }
+
+    private static bool HasLine(AbstractOperation operation, string prefix) =>
+        operation.GetOutput().Any(line => line.Item1.StartsWith(prefix, StringComparison.Ordinal));
+
+    private static async Task WaitForConditionAsync(Func<bool> condition)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        while (!condition())
+            await Task.Delay(25, timeout.Token);
+    }
+
+    private static Func<bool> ReportsWaitingOnTheGate(AbstractOperation operation)
+    {
+        bool reported = false;
+        operation.LogLineAdded += (_, line) =>
+        {
+            if (line.Item1.StartsWith("Waiting for another", StringComparison.Ordinal))
+                reported = true;
+        };
+        return () => reported;
+    }
+
+    [Fact]
+    public async Task OperationsOfASerializingManagerNeverRunTheirProcessesConcurrently()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var manager = CreateSlowProcessManager(serializesOperations: true);
+        InitializeLoaders();
+        using var first = new InstallPackageOperation(
+            new PackageBuilder().WithManager(manager).WithId("first").Build(),
+            new InstallOptions(),
+            IgnoreParallelInstalls: true
+        );
+        using var second = new InstallPackageOperation(
+            new PackageBuilder().WithManager(manager).WithId("second").Build(),
+            new InstallOptions(),
+            IgnoreParallelInstalls: true
+        );
+        var secondWaited = ReportsWaitingOnTheGate(second);
+        bool? firstFinishedWhenSecondStarted = null;
+        second.LogLineAdded += (_, line) =>
+        {
+            if (line.Item1.StartsWith("Executing process", StringComparison.Ordinal))
+                firstFinishedWhenSecondStarted = HasLine(first, "Process return value");
+        };
+
+        Task firstRun = first.MainThread();
+        await WaitForConditionAsync(() => HasLine(first, "Start Time"));
+        Task secondRun = second.MainThread();
+        await Task.WhenAll(firstRun, secondRun).WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(OperationStatus.Succeeded, first.Status);
+        Assert.Equal(OperationStatus.Succeeded, second.Status);
+        Assert.True(firstFinishedWhenSecondStarted);
+        Assert.True(secondWaited());
+    }
+
+    [Fact]
+    public async Task OperationsOfANonSerializingManagerRunTheirProcessesConcurrently()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var manager = CreateSlowProcessManager(serializesOperations: false);
+        InitializeLoaders();
+        using var first = new InstallPackageOperation(
+            new PackageBuilder().WithManager(manager).WithId("first").Build(),
+            new InstallOptions(),
+            IgnoreParallelInstalls: true
+        );
+        using var second = new InstallPackageOperation(
+            new PackageBuilder().WithManager(manager).WithId("second").Build(),
+            new InstallOptions(),
+            IgnoreParallelInstalls: true
+        );
+        var secondWaited = ReportsWaitingOnTheGate(second);
+        bool? firstFinishedWhenSecondStarted = null;
+        second.LogLineAdded += (_, line) =>
+        {
+            if (line.Item1.StartsWith("Executing process", StringComparison.Ordinal))
+                firstFinishedWhenSecondStarted = HasLine(first, "Process return value");
+        };
+
+        Task firstRun = first.MainThread();
+        await WaitForConditionAsync(() => HasLine(first, "Start Time"));
+        Task secondRun = second.MainThread();
+        await Task.WhenAll(firstRun, secondRun).WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.False(firstFinishedWhenSecondStarted);
+        Assert.False(secondWaited());
+    }
+
+    [Fact]
+    public async Task CancelingAnOperationWaitingOnASerializingManagerLeavesTheGateUsable()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var manager = CreateSlowProcessManager(serializesOperations: true);
+        InitializeLoaders();
+        using var first = new InstallPackageOperation(
+            new PackageBuilder().WithManager(manager).WithId("first").Build(),
+            new InstallOptions(),
+            IgnoreParallelInstalls: true
+        );
+        using var waiting = new InstallPackageOperation(
+            new PackageBuilder().WithManager(manager).WithId("waiting").Build(),
+            new InstallOptions(),
+            IgnoreParallelInstalls: true
+        );
+        using var third = new InstallPackageOperation(
+            new PackageBuilder().WithManager(manager).WithId("third").Build(),
+            new InstallOptions(),
+            IgnoreParallelInstalls: true
+        );
+        var waitingReported = ReportsWaitingOnTheGate(waiting);
+        var thirdWaited = ReportsWaitingOnTheGate(third);
+
+        Task firstRun = first.MainThread();
+        await WaitForConditionAsync(() => HasLine(first, "Start Time"));
+        Task waitingRun = waiting.MainThread();
+        await WaitForConditionAsync(waitingReported);
+        waiting.Cancel();
+        await waitingRun.WaitAsync(TimeSpan.FromSeconds(10));
+        await firstRun.WaitAsync(TimeSpan.FromSeconds(30));
+        await third.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(OperationStatus.Canceled, waiting.Status);
+        Assert.False(HasLine(waiting, "Executing process"));
+        Assert.Equal(OperationStatus.Succeeded, first.Status);
+        Assert.Equal(OperationStatus.Succeeded, third.Status);
+        Assert.False(thirdWaited());
+    }
+
+    private static TestPackageManager CreateFailingEchoManager(params string[] echoed)
+    {
+        return new PackageManagerBuilder()
+            .WithName($"FailingManager{Guid.NewGuid():N}")
+            .ConfigureManager(manager =>
+            {
+                manager.ExecutablePath = Path.Join(Environment.SystemDirectory, "cmd.exe");
+                manager.ExecutableArguments = "/c";
+            })
+            .ConfigureOperation(helper =>
+            {
+                helper.ParametersFactory = (_, _, _) => ["echo", .. echoed];
+                helper.ResultFactory = (_, _, _, _) => OperationVeredict.Failure;
+            })
+            .Build();
+    }
+
+    [Fact]
+    public async Task AFailureCausedByAFileInUseTellsTheUserToCloseTheProgramUsingIt()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var manager = CreateFailingEchoManager("ERROR:", "[WinError", "32]", "file", "busy");
+        InitializeLoaders();
+        using var operation = new UpdatePackageOperation(
+            new PackageBuilder().WithManager(manager).WithId("botocore").WithName("botocore").Build(),
+            new InstallOptions(),
+            IgnoreParallelInstalls: true
+        );
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+        Assert.Equal(
+            "A file of botocore is in use by another program. Close any program that may be using it, then try again",
+            operation.Metadata.FailureMessage
+        );
+    }
+
+    [Fact]
+    public async Task AFailureWithoutAFileInUseKeepsTheGenericFailureMessage()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var manager = CreateFailingEchoManager("ERROR:", "[WinError", "5]", "denied");
+        InitializeLoaders();
+        using var operation = new UpdatePackageOperation(
+            new PackageBuilder().WithManager(manager).WithId("botocore").WithName("botocore").Build(),
+            new InstallOptions(),
+            IgnoreParallelInstalls: true
+        );
+
+        await operation.MainThread().WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(OperationStatus.Failed, operation.Status);
+        Assert.DoesNotContain("in use by another program", operation.Metadata.FailureMessage);
+    }
+
     [Fact]
     public async Task InstallOperationSuccessfulRunSetsPackageTagAndAddsInstalledCopy()
     {

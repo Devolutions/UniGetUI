@@ -157,6 +157,18 @@
                 </Grid>
             </ListBoxItem>
 
+            <ListBoxItem x:Name="CatalogEditorNavBtn" Tag="CatalogEditor" Classes="nav-item" Padding="4,2" CornerRadius="6"
+                        automation:AutomationProperties.Name="{t:Translate Catalog Editor}"
+                        ToolTip.Tip="{t:Translate Catalog Editor}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="8,8">
+                    <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/add_to.svg"
+                                      Width="24" Height="24" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="{t:Translate Catalog Editor}" FontSize="14"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding $parent[local:SidebarView].ShowLabels}"/>
+                </Grid>
+            </ListBoxItem>
+
         </ListBox>
 
         <!-- Footer items -->

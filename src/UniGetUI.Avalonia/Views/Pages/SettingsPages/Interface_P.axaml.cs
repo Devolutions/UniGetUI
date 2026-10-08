@@ -44,7 +44,10 @@ public sealed partial class Interface_P : UserControl, ISettingsPage
         StartupPageSelector.AddItem(CoreTools.Translate("Installed Packages"), "installed");
         StartupPageSelector.AddItem(CoreTools.Translate("Package Bundles"), "bundles");
         if (CoreSettings.Get(CoreSettings.K.EnableSoftwareCatalog))
+        {
             StartupPageSelector.AddItem(CoreTools.Translate("Software Catalog"), "catalog");
+            StartupPageSelector.AddItem(CoreTools.Translate("Catalog Editor"), "catalog-editor");
+        }
         StartupPageSelector.AddItem(CoreTools.Translate("Settings"), "settings");
         StartupPageSelector.SettingName = CoreSettings.K.StartupPage;
         StartupPageSelector.Text = CoreTools.Translate("UniGetUI startup page:");

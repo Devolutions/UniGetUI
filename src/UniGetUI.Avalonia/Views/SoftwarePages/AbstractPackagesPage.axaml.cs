@@ -43,7 +43,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
     private static readonly TimeSpan FilterAnimationDuration = TimeSpan.FromMilliseconds(300);
     private readonly MenuFlyout _toolbarOverflowFlyout = new();
 
-    protected AbstractPackagesPage(PackagesPageData data)
+    protected AbstractPackagesPage(PackagesPageData data, Action<PackagesPageViewModel>? configureToolbar = null)
     {
         // InitializeComponent BEFORE setting DataContext so that the svg:Svg
         // Path binding has no context during XamlIlPopulate — Skia crashes if
@@ -98,6 +98,7 @@ public abstract partial class AbstractPackagesPage : UserControl,
 
         // Build the toolbar now that both AXAML controls and the ViewModel are ready
         GenerateToolBar(ViewModel);
+        configureToolbar?.Invoke(ViewModel);
         InitializeToolbarOverflow();
 
         // Double-click a package row → show details. DataGrid-level gestures also receive
@@ -266,7 +267,12 @@ public abstract partial class AbstractPackagesPage : UserControl,
                 continue;
             }
 
-            var item = new MenuItem { Header = entry.Label, Icon = LoadMenuIcon(entry.IconName) };
+            var item = new MenuItem
+            {
+                Header = entry.Label,
+                Icon = LoadMenuIcon(entry.IconName),
+                IsEnabled = control.IsEnabled,
+            };
             if (entry.InvokeAt is { } invokeAt)
                 item.Click += (_, _) => Dispatcher.UIThread.Post(() => invokeAt(ToolbarOverflowButton));
             else if (entry.Invoke is { } invoke) item.Click += (_, _) => invoke();
@@ -342,6 +348,14 @@ public abstract partial class AbstractPackagesPage : UserControl,
     protected void SetMainButtonDropdown(MenuFlyout flyout)
     {
         MainToolbarButtonDropdown.Flyout = flyout;
+    }
+
+    protected void SetPageOptions(Control control) => PageOptions.Content = control;
+
+    protected void SetMainButtonState(bool enabled, bool showDropdown = true)
+    {
+        MainToolbarButton.IsEnabled = enabled;
+        MainToolbarButtonDropdown.IsVisible = showDropdown;
     }
 
     // ─── Package selection ────────────────────────────────────────────────────

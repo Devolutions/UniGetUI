@@ -15,11 +15,26 @@
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Content="{t:Translate Filters}" automation:AutomationProperties.Name="{t:Translate Catalog filters}">
+                    <Button.Flyout>
+                        <Flyout>
+                            <CheckBox Content="{t:Translate Hide packages with unavailable sources}"
+                                      IsChecked="{Binding HideUnavailablePackages}"/>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
                 <Button Content="{t:Translate Edit}" Command="{Binding EditCommand}"
-                        ToolTip.Tip="{t:Translate Edit the catalog JSON then save and click Refresh.}"
+                        ToolTip.Tip="{t:Translate Open Catalog Editor}"
                         automation:AutomationProperties.Name="{t:Translate Edit software catalog}"/>
-                <Button Content="{t:Translate Refresh}" Command="{Binding RefreshCommand}"
-                        automation:AutomationProperties.Name="{t:Translate Refresh software catalog}"/>
+                <Button Command="{Binding RefreshCommand}" Padding="10,4" CornerRadius="4"
+                        ToolTip.Tip="{t:Translate Reload page}"
+                        automation:AutomationProperties.Name="{t:Translate Reload}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/reload.svg"
+                                          Width="20" Height="20" VerticalAlignment="Center"/>
+                        <TextBlock Text="{t:Translate Reload}" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Grid>
         <StackPanel Grid.Row="1" Spacing="8">
@@ -37,7 +52,9 @@
             <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="3"/>
             <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextWrapping="Wrap"
                        Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
-            <TextBlock Text="{t:Translate This catalog contains no packages.}" IsVisible="{Binding IsEmpty}"/>
+            <TextBlock Text="{Binding EmptyMessage}" IsVisible="{Binding IsEmpty}"/>
+            <TextBlock Text="{t:Translate Packages with unavailable sources are hidden. Change Filters to show them.}"
+                       IsVisible="{Binding HasHiddenPackages}" TextWrapping="Wrap"/>
         </StackPanel>
         <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding Packages}">
@@ -66,7 +83,7 @@
                                     <TextBlock Text="{Binding Entry.Id}" FontSize="12" TextWrapping="Wrap"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <TextBlock Text="{Binding Entry.Manager}" FontSize="12"/>
+                                        <TextBlock Text="{Binding Entry.ManagerName}" FontSize="12"/>
                                         <TextBlock Text=" / " FontSize="12"/>
                                         <TextBlock Text="{Binding Entry.Source}" FontSize="12"/>
                                     </StackPanel>

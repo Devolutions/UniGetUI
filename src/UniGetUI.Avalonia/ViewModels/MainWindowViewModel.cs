@@ -36,6 +36,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly InstalledPackagesPage InstalledPage;
     private readonly PackageBundlesPage BundlesPage;
     private SoftwareCatalogPage? CatalogPage;
+    private CatalogEditorPage? _catalogEditorPage;
+    public CatalogEditorViewModel? CatalogEditor { get; }
     private SettingsBasePage? SettingsPage;
     private SettingsBasePage? ManagersPage;
     private UniGetUILogPage? UniGetUILogPage;
@@ -421,7 +423,8 @@ public partial class MainWindowViewModel : ViewModelBase
         RegisterBannerToast(TelemetryWarner);
         RegisterBannerToast(PortableImportBanner);
 
-        DiscoverPage = new DiscoverSoftwarePage();
+        CatalogEditor = Sidebar.SoftwareCatalogEnabled ? new CatalogEditorViewModel() : null;
+        DiscoverPage = new DiscoverSoftwarePage(CatalogEditor);
         UpdatesPage = new SoftwareUpdatesPage();
         InstalledPage = new InstalledPackagesPage();
         BundlesPage = new PackageBundlesPage();
@@ -649,6 +652,7 @@ public partial class MainWindowViewModel : ViewModelBase
             "installed" => PageType.Installed,
             "bundles" => PageType.Bundles,
             "catalog" when Sidebar.SoftwareCatalogEnabled => PageType.Catalog,
+            "catalog-editor" when Sidebar.SoftwareCatalogEnabled => PageType.CatalogEditor,
             "settings" => PageType.Settings,
             _ => UpgradablePackagesLoader.Instance is { } l && l.Count() > 0 ? PageType.Updates : PageType.Discover,
         };
@@ -670,6 +674,8 @@ public partial class MainWindowViewModel : ViewModelBase
             PageType.Installed => InstalledPage,
             PageType.Bundles => BundlesPage,
             PageType.Catalog => CatalogPage ??= new SoftwareCatalogPage(),
+            PageType.CatalogEditor => _catalogEditorPage ??= new CatalogEditorPage(
+                CatalogEditor ?? throw new InvalidOperationException("Catalog Editor is disabled.")),
             PageType.Settings => SettingsPage ??= new SettingsBasePage(false),
             PageType.Managers => ManagersPage ??= new SettingsBasePage(true),
             PageType.OwnLog => UniGetUILogPage ??= new UniGetUILogPage(),
@@ -691,7 +697,8 @@ public partial class MainWindowViewModel : ViewModelBase
             PageType.Updates => PageType.Installed,
             PageType.Installed => PageType.Bundles,
             PageType.Bundles => catalogEnabled ? PageType.Catalog : PageType.Settings,
-            PageType.Catalog => PageType.Settings,
+            PageType.Catalog => catalogEnabled ? PageType.CatalogEditor : PageType.Settings,
+            PageType.CatalogEditor => PageType.Settings,
             PageType.Settings => PageType.Managers,
             PageType.Managers => PageType.Discover,
             _ => PageType.Discover,
@@ -708,7 +715,8 @@ public partial class MainWindowViewModel : ViewModelBase
             PageType.Installed => PageType.Updates,
             PageType.Bundles => PageType.Installed,
             PageType.Catalog => PageType.Bundles,
-            PageType.Settings => catalogEnabled ? PageType.Catalog : PageType.Bundles,
+            PageType.CatalogEditor => catalogEnabled ? PageType.Catalog : PageType.Bundles,
+            PageType.Settings => catalogEnabled ? PageType.CatalogEditor : PageType.Bundles,
             PageType.Managers => PageType.Settings,
             _ => PageType.Discover,
         };
@@ -721,7 +729,7 @@ public partial class MainWindowViewModel : ViewModelBase
         bool toHistory = true,
         CancellationToken cancellationToken = default)
     {
-        if (newPage_t is PageType.Catalog && !Sidebar.SoftwareCatalogEnabled)
+        if (newPage_t is PageType.Catalog or PageType.CatalogEditor && !Sidebar.SoftwareCatalogEnabled)
         {
             Logger.Warn("Software Catalog navigation was rejected because the experimental feature is disabled.");
             MainWindow.Instance?.ShowBanner(
@@ -816,6 +824,7 @@ public partial class MainWindowViewModel : ViewModelBase
         PageType.Installed => CoreTools.Translate("Installed Packages"),
         PageType.Bundles => CoreTools.Translate("Package Bundles"),
         PageType.Catalog => CoreTools.Translate("Software Catalog"),
+        PageType.CatalogEditor => CoreTools.Translate("Catalog Editor"),
         PageType.Settings => CoreTools.Translate("Settings"),
         PageType.Managers => CoreTools.Translate("Package Managers"),
         PageType.OwnLog => CoreTools.Translate("UniGetUI Log"),
@@ -928,8 +937,14 @@ public partial class MainWindowViewModel : ViewModelBase
         await _navigationSemaphore.WaitAsync(cancellationToken);
         try
         {
-            return CurrentPageContent is not IAsyncLeaveGuard guard
-                || await guard.CanLeaveAsync(PageLeaveReason.Shutdown, cancellationToken);
+            if (CurrentPageContent is IAsyncLeaveGuard guard
+                && !await guard.CanLeaveAsync(PageLeaveReason.Shutdown, cancellationToken))
+                return false;
+            if (CatalogEditor is null) return true;
+            if (CatalogEditor.IsBusy) return false;
+            if (!CatalogEditor.IsDirty) return true;
+            _catalogEditorPage ??= new CatalogEditorPage(CatalogEditor);
+            return await _catalogEditorPage.ConfirmDiscardAsync();
         }
         finally
         {

@@ -79,7 +79,10 @@ public partial class SidebarView : BaseView<SidebarViewModel>
         if (DataContext is SidebarViewModel vm)
         {
             if (!vm.SoftwareCatalogEnabled)
+            {
                 NavListBox.Items.Remove(CatalogNavBtn);
+                NavListBox.Items.Remove(CatalogEditorNavBtn);
+            }
 
             vm.PropertyChanged += (_, args) =>
             {
@@ -105,6 +108,7 @@ public partial class SidebarView : BaseView<SidebarViewModel>
             PageType.Installed => InstalledNavBtn,
             PageType.Bundles => BundlesNavBtn,
             PageType.Catalog => CatalogNavBtn,
+            PageType.CatalogEditor => CatalogEditorNavBtn,
             _ => null,
         };
         FooterNavListBox.SelectedItem = page switch

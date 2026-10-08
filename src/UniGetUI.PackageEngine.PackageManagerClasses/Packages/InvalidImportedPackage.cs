@@ -85,7 +85,7 @@ namespace UniGetUI.PackageEngine.PackageClasses
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public InvalidImportedPackage(SerializableIncompatiblePackage data, IManagerSource source)
+        public InvalidImportedPackage(SerializableIncompatiblePackage data, IManagerSource source, string? identity = null)
         {
             Name = data.Name;
             Id = data.Id.Split('\\')[^1];
@@ -97,8 +97,8 @@ namespace UniGetUI.PackageEngine.PackageClasses
             Source = source;
             Details = new PackageDetails(this);
 
-            __hash = CoreTools.HashStringAsLong(data.Name + data.Id);
-            __extended_hash = CoreTools.HashStringAsLong(data.Name + data.Id + data.Version);
+            __hash = CoreTools.HashStringAsLong(identity ?? data.Name + data.Id);
+            __extended_hash = CoreTools.HashStringAsLong((identity ?? data.Name + data.Id) + data.Version);
         }
 
         public Task AddToIgnoredUpdatesAsync(string version = "*")

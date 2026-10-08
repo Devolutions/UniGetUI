@@ -44,6 +44,7 @@ public enum PageType
     Quit,
     Null, // Used for initializers
     Catalog,
+    CatalogEditor,
 }
 
 public partial class MainWindow : Window

@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using UniGetUI.Avalonia.Infrastructure;
+using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views;
 using UniGetUI.Avalonia.Views.Controls;
@@ -25,7 +26,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
     private MenuItem? _menuSkipHash;
     private MenuItem? _menuDownloadInstaller;
 
-    public DiscoverSoftwarePage() : base(new PackagesPageData
+    public DiscoverSoftwarePage(CatalogEditorViewModel? catalogEditor = null) : base(new PackagesPageData
     {
         PageName = "SoftwarePages.DiscoverSoftwarePage",
         PageTitle = CoreTools.Translate("Discover Packages"),
@@ -44,8 +45,55 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         NoPackages_SubtitleText_Base = CoreTools.Translate("No packages were found"),
         MainSubtitle_StillLoading = CoreTools.Translate("Loading packages"),
         NoMatches_BackgroundText = CoreTools.Translate("No results were found matching the input criteria"),
-    })
-    { }
+    }, vm => AddCatalogToolbar(vm, catalogEditor))
+    {     }
+
+    private static void AddCatalogToolbar(PackagesPageViewModel vm, CatalogEditorViewModel? document)
+    {
+        if (document is null) return;
+        var selector = new CatalogSelector(document);
+        var button = vm.AddToolbarButton("add_to", CoreTools.Translate("Add selection to catalog"),
+            () => _ = AddSelectionToCatalogAsync(vm, document));
+        vm.AddToolbarEntry(new ToolbarEntry(selector, "add_to", CoreTools.Translate("Select a catalog"), null,
+            selector.ShowFlyoutAt));
+        void UpdateState()
+        {
+            button.IsEnabled = document.CanEdit && document.HasSelectedCatalog
+                && vm.FilteredPackages.GetCheckedPackages().Count > 0;
+            ToolTip.SetTip(selector, string.IsNullOrEmpty(document.Message) ? document.FilePath : document.Message);
+        }
+        document.PropertyChanged += (_, _) => UpdateState();
+        vm.PackageCountUpdated += UpdateState;
+        UpdateState();
+    }
+
+    public override async void OnEnter()
+    {
+        base.OnEnter();
+        if (GetMainWindow()?.DataContext is MainWindowViewModel { CatalogEditor: { } document })
+            await document.EnsureLoadedAsync();
+    }
+
+    private static async Task AddSelectionToCatalogAsync(PackagesPageViewModel vm, CatalogEditorViewModel document)
+    {
+        try
+        {
+            var packages = vm.FilteredPackages.GetCheckedPackages();
+            if (packages.Count == 0) return;
+            if (!await document.EnsureLoadedAsync()) return;
+            document.AddPackages(packages);
+            if (GetMainWindow()?.DataContext is MainWindowViewModel main)
+                await main.NavigateToAsync(PageType.CatalogEditor);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Could not add packages to the catalog.");
+            Logger.Error(ex);
+            document.Message = CoreTools.Translate("Could not add packages to the catalog: {0}", ex.Message);
+            GetMainWindow()?.ShowBanner(CoreTools.Translate("Could not add packages to the catalog"),
+                ex.Message, MainWindow.RuntimeNotificationLevel.Error);
+        }
+    }
 
     protected override void GenerateToolBar(PackagesPageViewModel vm)
     {

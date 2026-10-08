@@ -232,7 +232,7 @@
       </ResourceDictionary>
    </UserControl.Resources>
 
-   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="8,6,8,8">
+   <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="8,6,8,8">
 
         <!-- ==================== HEADER ==================== -->
         <Grid Name="MainHeader"
@@ -355,8 +355,10 @@
         </Grid>
 
         <!-- ==================== MAIN CONTENT (filter pane + package list) ==================== -->
+        <ContentControl x:Name="PageOptions" Grid.Row="2"/>
+
         <Grid x:Name="FilteringPanel"
-              Grid.Row="2"
+              Grid.Row="3"
               ClipToBounds="True"
               ColumnDefinitions="220,12,*">
 
@@ -1168,7 +1170,7 @@
         </Grid>
 
     <!-- ==================== FOOTER STATUS BAR ==================== -->
-    <Border Grid.Row="3" Margin="0,-4,0,-8" VerticalAlignment="Center"
+    <Border Grid.Row="4" Margin="0,-4,0,-8" VerticalAlignment="Center"
             BorderThickness="0"
             Padding="0,4,0,0">
         <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">

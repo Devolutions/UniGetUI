@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -21,11 +20,22 @@ namespace UniGetUI.Avalonia.ViewModels.Pages;
 public partial class SoftwareCatalogViewModel : ViewModelBase
 {
     private readonly Dictionary<string, IReadOnlyList<IManagerSource>> _sources = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<CatalogTileViewModel> _allPackages = [];
     public ObservableCollection<CatalogTileViewModel> Packages { get; } = [];
     public ObservableCollection<CatalogDefinition> Catalogs { get; } = [];
 
     [ObservableProperty]
     private CatalogDefinition? _selectedCatalog;
+
+    [ObservableProperty]
+    private bool _hideUnavailablePackages = true;
+
+    partial void OnHideUnavailablePackagesChanged(bool value) => ApplyAvailabilityFilter();
+
+    public bool HasHiddenPackages => Packages.Count < _allPackages.Count;
+    public string EmptyMessage => CoreTools.Translate(HasHiddenPackages
+        ? "No packages are available with the current filters."
+        : "This catalog contains no packages.");
 
     public bool IsEmpty => !IsLoading && !HasError && Packages.Count == 0;
 
@@ -33,16 +43,16 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
 
     partial void OnSelectedCatalogChanged(CatalogDefinition? value)
     {
-        Packages.Clear();
+        _allPackages.Clear();
         foreach (var entry in value?.Packages ?? [])
         {
             var tile = new CatalogTileViewModel(entry);
-            Packages.Add(tile);
-            var manager = FindManager(entry.Manager);
+            _allPackages.Add(tile);
+            var manager = FindManager(entry);
             var source = FindSource(entry);
             if (manager is null || source is null) continue;
             var package = InstalledPackagesLoader.Instance?.Packages.FirstOrDefault(entry.Matches)
-                ?? new Package(entry.Name, entry.Id, "", source, manager);
+                ?? new Package(entry.Name, entry.Id, entry.Version, source, manager);
             _ = tile.LoadIconAsync(package);
         }
         UpdateStates();
@@ -64,20 +74,20 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void Edit()
+    private async Task EditAsync()
     {
         try
         {
-            if (!File.Exists(SoftwareCatalog.FilePath))
-                throw new FileNotFoundException("The software catalog file was not found.", SoftwareCatalog.FilePath);
-            using var process = Process.Start(SoftwareCatalog.CreateEditorStartInfo())
-                ?? throw new InvalidOperationException("The catalog editor could not be started.");
+            var owner = MainWindow.Instance
+                ?? throw new InvalidOperationException("The catalog editor requires an application window.");
+            owner.Navigate(PageType.CatalogEditor);
+            await Task.CompletedTask;
         }
         catch (Exception ex)
         {
             Logger.Error("Could not open the software catalog editor.");
             Logger.Error(ex);
-            ErrorMessage = CoreTools.Translate("The software catalog could not be opened for editing. Check that SoftwareCatalog.json exists and a text editor is available.");
+            ErrorMessage = CoreTools.Translate("The catalog editor could not be opened: {0}", ex.Message);
         }
     }
 
@@ -96,11 +106,10 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
             SelectedCatalog = null;
             Catalogs.Clear();
 
-            foreach (var managerId in catalogs.SelectMany(c => c.Packages).Select(e => e.Manager).Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (var manager in catalogs.SelectMany(c => c.Packages).Select(FindManager).OfType<IPackageManager>().Distinct())
             {
-                var manager = FindManager(managerId);
-                if (manager is null || !manager.IsReady()) continue;
-                _sources[managerId] = manager.Capabilities.SupportsCustomSources
+                if (!manager.IsReady()) continue;
+                _sources[manager.Id] = manager.Capabilities.SupportsCustomSources
                     ? await Task.Run(manager.SourcesHelper.GetSources)
                     : [manager.DefaultSource];
             }
@@ -126,11 +135,11 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         }
     }
 
-    private static IPackageManager? FindManager(string id) =>
-        PEInterface.Managers.FirstOrDefault(m => string.Equals(m.Id, id, StringComparison.OrdinalIgnoreCase));
+    private static IPackageManager? FindManager(CatalogEntry entry) =>
+        PEInterface.Managers.FirstOrDefault(entry.MatchesManager);
 
     private IManagerSource? FindSource(CatalogEntry entry) =>
-        _sources.TryGetValue(entry.Manager, out var sources)
+        FindManager(entry) is { } manager && _sources.TryGetValue(manager.Id, out var sources)
             ? sources.FirstOrDefault(s => string.Equals(s.Name, entry.Source, StringComparison.OrdinalIgnoreCase))
             : null;
 
@@ -138,12 +147,12 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     {
         var loader = InstalledPackagesLoader.Instance;
         var installed = loader?.Packages ?? [];
-        foreach (var tile in Packages)
+        foreach (var tile in _allPackages)
         {
-            var manager = FindManager(tile.Entry.Manager);
+            var manager = FindManager(tile.Entry);
             var source = FindSource(tile.Entry);
             string? unavailableReason = manager is null
-                ? CoreTools.Translate("The package manager {0} is not available on this platform.", tile.Entry.Manager)
+                ? CoreTools.Translate("The package manager {0} is not available on this platform.", tile.Entry.ManagerName)
                 : !manager.IsEnabled()
                     ? CoreTools.Translate("The package manager {0} is disabled. Enable it in Package Managers.", manager.DisplayName)
                     : !manager.IsReady()
@@ -161,6 +170,21 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                     && manager is { LastInstalledListingFailed: false },
                 pending);
         }
+        ApplyAvailabilityFilter();
+    }
+
+    internal void ApplyAvailabilityFilter()
+    {
+        var visible = _allPackages.Where(p => !HideUnavailablePackages || p.UnavailableReason is null).ToArray();
+        if (!Packages.SequenceEqual(visible))
+        {
+            Packages.Clear();
+            foreach (var package in visible)
+                Packages.Add(package);
+        }
+        OnPropertyChanged(nameof(HasHiddenPackages));
+        OnPropertyChanged(nameof(EmptyMessage));
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     [RelayCommand]
@@ -171,11 +195,11 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         tile.IsBusy = true;
         try
         {
-            var manager = FindManager(tile.Entry.Manager)
+            var manager = FindManager(tile.Entry)
                 ?? throw new InvalidOperationException("The catalog package manager is unavailable.");
             var matches = await Task.Run(() => manager.FindPackages(tile.Entry.Id));
             var package = matches.FirstOrDefault(tile.Entry.Matches)
-                ?? throw new InvalidOperationException($"Package {tile.Entry.Id} was not found in {tile.Entry.Manager}/{tile.Entry.Source}.");
+                ?? throw new InvalidOperationException($"Package {tile.Entry.Id} was not found in {tile.Entry.ManagerName}/{tile.Entry.Source}.");
             UpdateStates();
             if (tile.IsInstalled || tile.UnavailableReason is not null || !tile.InventoryKnown || tile.IsPending) return;
             await PackagesPageViewModel.LaunchInstall([package]);

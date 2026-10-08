@@ -1268,6 +1268,7 @@
   "installing for the current user only": "installing for the current user only",
   "choosing the architecture": "choosing the architecture",
   "pre-release versions": "pre-release versions",
+  "interactive installation": "interactive installation",
   "skipping the hash check": "skipping the hash check",
   "a custom install location": "a custom install location",
   "uninstalling previous versions": "uninstalling previous versions",

@@ -42,7 +42,8 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
         ];
         parameters.AddRange(["-Name", package.Id, "-Confirm:$false", "-Force"]);
 
-        package.OverridenOptions.PowerShell_UpdateThroughInstall = updatesThroughInstall;
+        if (!standalone)
+            package.OverridenOptions.PowerShell_UpdateThroughInstall = updatesThroughInstall;
 
         bool shellInterpreted = standalone || Manager.Status.OperationCallArgs.Count is 0;
 
@@ -133,6 +134,9 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
     {
         string output_string = string.Join("\n", processOutput);
 
+        bool routedThroughInstall = package.OverridenOptions.PowerShell_UpdateThroughInstall;
+        package.OverridenOptions.PowerShell_UpdateThroughInstall = false;
+
         if (
             package.OverridenOptions.RunAsAdministrator is not true
             && (
@@ -156,10 +160,7 @@ internal sealed class PowerShellPkgOperationHelper : BasePkgOperationHelper
         }
 
         if (
-            (
-                operation is OperationType.Install
-                || package.OverridenOptions.PowerShell_UpdateThroughInstall
-            )
+            (operation is OperationType.Install || routedThroughInstall)
             && output_string.Contains("CommandAlreadyAvailable")
             && !package.OverridenOptions.PowerShell_AllowClobber
         )

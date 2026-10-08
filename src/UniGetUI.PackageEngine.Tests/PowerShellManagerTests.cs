@@ -280,10 +280,7 @@ public sealed class PowerShellManagerTests
     public void GetParameters_UpdateThroughInstallModuleKeepsTheRepositoryRawForTheArgumentVector()
     {
         var manager = new PowerShell();
-        manager.Initialize();
-
-        if (manager.Status.OperationCallArgs.Count is 0)
-            return;
+        manager.Status.OperationCallArgs = LauncherVector;
 
         var package = Assert.Single(
             PowerShell.ParseInstalledPackages(
@@ -302,6 +299,62 @@ public sealed class PowerShellManagerTests
         int repositoryIndex = parameters.ToList().IndexOf("-Repository");
         Assert.NotEqual(-1, repositoryIndex);
         Assert.Equal("Internal Modules", parameters[repositoryIndex + 1]);
+    }
+
+    private static readonly string[] LauncherVector =
+    [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        @"C:\App\Assets\Utilities\unigetui_ps_operation.ps1",
+        "tls12",
+    ];
+
+    [Fact]
+    public void GetStandaloneParameters_DoesNotRecordTheRoutingDecisionOnThePackage()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var options = new InstallOptions { SkipHashCheck = true };
+        manager.OperationHelper.GetStandaloneParameters(package, options, OperationType.Update);
+
+        Assert.False(package.OverridenOptions.PowerShell_UpdateThroughInstall);
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            ClobberFailureOutput,
+            1
+        );
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
+        Assert.False(package.OverridenOptions.PowerShell_AllowClobber);
+    }
+
+    [Fact]
+    public void GetResult_ClearsTheRoutingDecisionSoItCannotLeakIntoALaterOperation()
+    {
+        var manager = new PowerShell();
+        var package = BuildInstalledPackage(manager);
+
+        var options = new InstallOptions { SkipHashCheck = true };
+        manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+        Assert.True(package.OverridenOptions.PowerShell_UpdateThroughInstall);
+
+        manager.OperationHelper.GetResult(package, OperationType.Update, ["done"], 0);
+
+        Assert.False(package.OverridenOptions.PowerShell_UpdateThroughInstall);
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            ClobberFailureOutput,
+            1
+        );
+
+        Assert.Equal(OperationVeredict.Failure, veredict);
     }
 
     [Fact]

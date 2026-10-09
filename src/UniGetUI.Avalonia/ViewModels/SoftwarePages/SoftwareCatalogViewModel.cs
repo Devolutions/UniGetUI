@@ -11,8 +11,8 @@ using UniGetUI.PackageEngine;
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Operations;
-using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageEngine.PackageClasses;
+using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.PackageOperations;
 
 namespace UniGetUI.Avalonia.ViewModels.Pages;
@@ -207,7 +207,8 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                     var key = SourceKey(entry);
                     var child = new SourceTreeNode
                     {
-                        PackageName = entry.Source, Source = entry.Source,
+                        PackageName = entry.Source,
+                        Source = entry.Source,
                         IsSelected = previous.GetValueOrDefault(key, true),
                     };
                     root.Children.Add(child);

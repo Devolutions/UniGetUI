@@ -1,8 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using UniGetUI.Core.Data;
-using UniGetUI.PackageEngine.Interfaces;
 using UniGetUI.PackageEngine.Classes.Serializable;
+using UniGetUI.PackageEngine.Interfaces;
 
 namespace UniGetUI.Avalonia.Models;
 
@@ -35,13 +35,20 @@ public sealed class CatalogEntry
 
     public static CatalogEntry FromPackage(IPackage package) => new()
     {
-        Id = package.Id, Name = package.Name, Version = "",
-        Source = package.Source.Name, ManagerName = package.Manager.DisplayName,
+        Id = package.Id,
+        Name = package.Name,
+        Version = "",
+        Source = package.Source.Name,
+        ManagerName = package.Manager.DisplayName,
     };
 
     public SerializablePackage AsSerializable() => new()
     {
-        Id = Id, Name = Name, Version = Version, Source = Source, ManagerName = ManagerName,
+        Id = Id,
+        Name = Name,
+        Version = Version,
+        Source = Source,
+        ManagerName = ManagerName,
     };
 
     public bool Matches(string id, string manager, string source) =>

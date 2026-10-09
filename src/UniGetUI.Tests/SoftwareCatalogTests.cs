@@ -3,8 +3,8 @@ using UniGetUI.Avalonia.Models;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views;
-using UniGetUI.Interface;
 using UniGetUI.Core.Data;
+using UniGetUI.Interface;
 
 namespace UniGetUI.Tests;
 
@@ -20,7 +20,8 @@ public class SoftwareCatalogTests
             HideUnavailablePackages = false,
             SelectedCatalog = new CatalogDefinition
             {
-                Id = "test", Name = "Test",
+                Id = "test",
+                Name = "Test",
                 Packages =
                 [
                     new CatalogEntry
@@ -127,7 +128,8 @@ public class SoftwareCatalogTests
     {
         var catalog = new CatalogDefinition
         {
-            Id = "test", Name = "Test",
+            Id = "test",
+            Name = "Test",
             Packages =
             [
                 new CatalogEntry { Id = "one", Name = "One", ManagerName = "missing-one", Source = "private" },
@@ -172,7 +174,8 @@ public class SoftwareCatalogTests
         {
             SelectedCatalog = new CatalogDefinition
             {
-                Id = "missing-manager", Name = "Missing manager",
+                Id = "missing-manager",
+                Name = "Missing manager",
                 Packages = [new CatalogEntry { Id = "tool", Name = "Tool", Source = "private", ManagerName = "missing-test-manager" }],
             },
         };
@@ -194,7 +197,8 @@ public class SoftwareCatalogTests
         var vm = new SoftwareCatalogViewModel { HideUnavailablePackages = false };
         var catalog = new CatalogDefinition
         {
-            Id = "test", Name = "Test",
+            Id = "test",
+            Name = "Test",
             Packages = [new CatalogEntry { Id = "tool", Name = "Tool", Source = "private", ManagerName = "missing-test-manager" }],
         };
         vm.SelectedCatalog = catalog;
@@ -386,7 +390,10 @@ public class SoftwareCatalogTests
         var manager = new UniGetUI.PackageEngine.Managers.ChocolateyManager.Chocolatey();
         var entry = new CatalogEntry
         {
-            Id = "example.tool", Name = "Example tool", ManagerName = managerName, Source = "private",
+            Id = "example.tool",
+            Name = "Example tool",
+            ManagerName = managerName,
+            Source = "private",
         };
         var installed = new UniGetUI.PackageEngine.PackageClasses.Package(
             "Example tool", "EXAMPLE.TOOL", "1.0", manager.DefaultSource, manager);
@@ -414,7 +421,10 @@ public class SoftwareCatalogTests
         var manager = new UniGetUI.PackageEngine.Managers.NpmManager.Npm();
         var entry = new CatalogEntry
         {
-            Id = "example.tool", Name = "Example tool", ManagerName = manager.Id, Source = "private",
+            Id = "example.tool",
+            Name = "Example tool",
+            ManagerName = manager.Id,
+            Source = "private",
         };
         var package = new UniGetUI.PackageEngine.PackageClasses.Package(
             entry.Name, entry.Id, "1.0", manager.DefaultSource, manager);
@@ -426,7 +436,10 @@ public class SoftwareCatalogTests
         Assert.True(entry.MatchesInstalled(package));
         var chocolateyEntry = new CatalogEntry
         {
-            Id = entry.Id, Name = entry.Name, ManagerName = "chocolatey", Source = "private",
+            Id = entry.Id,
+            Name = entry.Name,
+            ManagerName = "chocolatey",
+            Source = "private",
         };
         Assert.False(chocolateyEntry.MatchesInstalled(package));
     }

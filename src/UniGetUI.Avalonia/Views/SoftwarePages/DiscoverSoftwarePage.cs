@@ -46,7 +46,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         MainSubtitle_StillLoading = CoreTools.Translate("Loading packages"),
         NoMatches_BackgroundText = CoreTools.Translate("No results were found matching the input criteria"),
     }, vm => AddCatalogToolbar(vm, catalogEditor))
-    {     }
+    { }
 
     private static void AddCatalogToolbar(PackagesPageViewModel vm, CatalogEditorViewModel? document)
     {

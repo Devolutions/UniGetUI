@@ -259,7 +259,11 @@ public partial class CatalogEditorViewModel : ViewModelBase
             Name = c.Name,
             Packages = c.Packages.Select(p => new CatalogEntry
             {
-                Id = p.Id, Name = p.Name, Version = p.Version, Source = p.Source, ManagerName = p.ManagerName,
+                Id = p.Id,
+                Name = p.Name,
+                Version = p.Version,
+                Source = p.Source,
+                ManagerName = p.ManagerName,
             }).ToArray(),
         }).ToArray();
 

@@ -1,6 +1,6 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text;
 using UniGetUI.Avalonia.Models;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Pages;
@@ -79,7 +79,10 @@ public class CatalogEditorTests : IDisposable
         vm.SelectedCatalog = vm.Catalogs[1];
         var existing = new CatalogEntry
         {
-            Id = package.Id, Name = "Pinned Tool", Version = "1", Source = package.Source.Name,
+            Id = package.Id,
+            Name = "Pinned Tool",
+            Version = "1",
+            Source = package.Source.Name,
             ManagerName = managerName,
         };
         vm.SelectedCatalog.Packages.Add(existing);
@@ -440,11 +443,17 @@ public class CatalogEditorTests : IDisposable
         Assert.True(result.Matches(package));
         Assert.True(new CatalogEntry
         {
-            Id = result.Id, Name = result.Name, Source = result.Source, ManagerName = manager.Id,
+            Id = result.Id,
+            Name = result.Name,
+            Source = result.Source,
+            ManagerName = manager.Id,
         }.Matches(package));
         Assert.True(new CatalogEntry
         {
-            Id = result.Id, Name = result.Name, Source = result.Source, ManagerName = manager.Name,
+            Id = result.Id,
+            Name = result.Name,
+            Source = result.Source,
+            ManagerName = manager.Name,
         }.Matches(package));
         vm.SelectedResult = result;
         vm.AddPackageCommand.Execute(null);

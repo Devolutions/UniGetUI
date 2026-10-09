@@ -1,5 +1,5 @@
-using System.ComponentModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -168,7 +168,8 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         body.Children.Add(input);
         body.Children.Add(error);
         var dialog = new ImmersiveConfirmationDialog(CoreTools.Translate("Rename catalog"), body,
-            CoreTools.Translate("Rename"), CoreTools.Translate("Cancel")) { FocusPrimaryButton = false };
+            CoreTools.Translate("Rename"), CoreTools.Translate("Cancel"))
+        { FocusPrimaryButton = false };
         var confirm = dialog.GetControl<Button>("PrimaryButton");
         input.TextChanged += (_, _) =>
         {
@@ -227,7 +228,8 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         {
             var files = await MainWindow.Instance!.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = CoreTools.Translate("Open catalog file"), AllowMultiple = false,
+                Title = CoreTools.Translate("Open catalog file"),
+                AllowMultiple = false,
                 FileTypeFilter = [new FilePickerFileType("JSON") { Patterns = ["*.json"] }],
             });
             if (files.Count > 0)
@@ -252,7 +254,8 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
                 {
                     Title = CoreTools.Translate("Save catalog as"),
                     SuggestedFileName = string.IsNullOrEmpty(path) ? "SoftwareCatalog.json" : Path.GetFileName(path),
-                    DefaultExtension = "json", ShowOverwritePrompt = true,
+                    DefaultExtension = "json",
+                    ShowOverwritePrompt = true,
                     FileTypeChoices = [new FilePickerFileType("JSON") { Patterns = ["*.json"] }],
                 });
                 if (file is null) return;

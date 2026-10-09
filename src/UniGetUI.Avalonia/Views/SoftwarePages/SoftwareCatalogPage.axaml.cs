@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels.Pages;
-using UniGetUI.PackageEngine.PackageLoader;
 using UniGetUI.Core.Tools;
+using UniGetUI.PackageEngine.PackageLoader;
 
 namespace UniGetUI.Avalonia.Views.Pages;
 

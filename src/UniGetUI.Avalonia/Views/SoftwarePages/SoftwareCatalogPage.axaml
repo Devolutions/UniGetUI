@@ -162,14 +162,7 @@
                 </ComboBox>
             </StackPanel>
         </Grid>
-        <StackPanel Grid.Row="2" Spacing="8" Margin="0,4,0,8" IsVisible="{Binding HasStatusMessage}">
-            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="3"/>
-            <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextWrapping="Wrap"
-                       Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
-            <TextBlock Text="{Binding EmptyMessage}" IsVisible="{Binding IsEmpty}"/>
-            <TextBlock Text="{t:Translate Packages with unavailable sources are hidden. Change Filters to show them.}"
-                       IsVisible="{Binding HasHiddenPackages}" TextWrapping="Wrap"/>
-        </StackPanel>
+        <ProgressBar Grid.Row="2" Margin="0,4,0,8" IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="3"/>
         <Grid Grid.Row="3" Name="FilteringPanel" ColumnDefinitions="220,12,*">
             <Border x:Name="InlineSidePanel"
                     Grid.Column="0"
@@ -430,6 +423,12 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="30" FontWeight="Bold" Opacity="0.5"
+                           TextAlignment="Center" TextWrapping="Wrap"
+                           Text="{Binding BackgroundText}"
+                           IsVisible="{Binding HasBackgroundText}"
+                           IsHitTestVisible="False"/>
             </Panel>
         </Grid>
         <Grid Grid.Row="4" Margin="0,4" HorizontalAlignment="Right">

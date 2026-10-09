@@ -109,12 +109,25 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
 
     public bool IsEmpty => !IsLoading && !HasError && Packages.Count == 0;
 
-    public bool HasStatusMessage => IsLoading || HasError || IsEmpty || HasHiddenPackages;
+    public string BackgroundText => HasError
+        ? ErrorMessage
+        : !IsEmpty ? ""
+        : HasHiddenPackages
+            ? CoreTools.Translate("Packages with unavailable sources are hidden. Change Filters to show them.")
+            : EmptyMessage;
+
+    public bool HasBackgroundText => BackgroundText.Length > 0;
 
     partial void OnIsLoadingChanged(bool value)
     {
         OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(HasStatusMessage));
+        NotifyBackgroundTextChanged();
+    }
+
+    private void NotifyBackgroundTextChanged()
+    {
+        OnPropertyChanged(nameof(BackgroundText));
+        OnPropertyChanged(nameof(HasBackgroundText));
     }
 
     partial void OnSelectedCatalogChanged(CatalogDefinition? value)
@@ -134,7 +147,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         }
         UpdateStates();
         OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(HasStatusMessage));
+        NotifyBackgroundTextChanged();
     }
 
     [ObservableProperty]
@@ -149,7 +162,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(HasError));
         OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(HasStatusMessage));
+        NotifyBackgroundTextChanged();
         if (value.Length > 0)
             Avalonia.Infrastructure.AccessibilityAnnouncementService.Announce(
                 value, global::Avalonia.Automation.AutomationLiveSetting.Assertive);
@@ -359,7 +372,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasHiddenPackages));
         OnPropertyChanged(nameof(EmptyMessage));
         OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(HasStatusMessage));
+        NotifyBackgroundTextChanged();
     }
 
     private bool MatchesQuery(CatalogEntry entry, string query) => query.Length == 0 || SearchMode switch

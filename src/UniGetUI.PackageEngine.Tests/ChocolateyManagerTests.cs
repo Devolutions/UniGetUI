@@ -288,6 +288,105 @@ public sealed class ChocolateyManagerTests : IDisposable
         Assert.True(package.OverridenOptions.RunAsAdministrator);
     }
 
+    private static readonly string[] NonElevatedBanner =
+    [
+        "Chocolatey v2.4.3",
+        "Chocolatey detected you are not running from an elevated command shell",
+        " (cmd/powershell).",
+        "",
+        " You may experience errors - many functions/packages",
+        " require admin rights. Only advanced users should run choco w/out an",
+        " elevated shell. When you open the command shell, you should ensure",
+        " that you do so with \"Run as Administrator\" selected. If you are",
+        " attempting to use Chocolatey in a non-administrator setting, you",
+        " must select a different location other than the default install",
+        " location. See",
+        " https://docs.chocolatey.org/en-us/choco/setup#non-administrative-install",
+        " for details.",
+        "For the question below, you have 20 seconds to make a selection.",
+        " Do you want to continue?([Y]es/[N]o): ",
+        "Timeout or your choice of '' is not a valid selection.",
+    ];
+
+    private const string PackageScriptAdminError =
+        "ERROR: Installation of python314 to default folder requires Administrative permissions. Please run from elevated prompt.";
+
+    private static string[] NonElevatedFailure(string errorLine) =>
+        [
+            .. NonElevatedBanner,
+            "Installing 64-bit python314...",
+            "python314 has been installed.",
+            errorLine,
+            "The upgrade of python314 was NOT successful.",
+            "Chocolatey upgraded 0/3 packages. 3 packages failed.",
+        ];
+
+    [Theory]
+    [InlineData(PackageScriptAdminError)]
+    [InlineData("ERROR: Installation of examplepkg requires Administrative permissions.")]
+    [InlineData("ERROR: examplepkg cannot be installed here. Please run from elevated prompt.")]
+    public void OperationResultPromotesPackageScriptAdminRequirementToAutoRetry(string errorLine)
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithOptions(new OverridenInstallationOptions(runAsAdministrator: false))
+            .Build();
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            NonElevatedFailure(errorLine),
+            -1
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.AutoRetry);
+        Assert.True(package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void OperationResultDoesNotElevateOnTheNonElevatedBannerAlone()
+    {
+        var manager = new Chocolatey();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithOptions(new OverridenInstallationOptions(runAsAdministrator: false))
+            .Build();
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            NonElevatedFailure(
+                "ERROR: The install script of examplepkg exited with an unexpected error."
+            ),
+            -1
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.NotEqual(true, package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void OperationResultDoesNotRetryWhenElevationIsProhibited()
+    {
+        Settings.Set(Settings.K.ProhibitElevation, true);
+        var manager = new Chocolatey();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithOptions(new OverridenInstallationOptions(runAsAdministrator: false))
+            .Build();
+
+        var veredict = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Update,
+            NonElevatedFailure(PackageScriptAdminError),
+            -1
+        );
+
+        OperationAssert.HasVeredict(veredict, OperationVeredict.Failure);
+        Assert.NotEqual(true, package.OverridenOptions.RunAsAdministrator);
+    }
+
     [Fact]
     public void OperationResultReturnsFailureWhenElevationWasAlreadyRequested()
     {

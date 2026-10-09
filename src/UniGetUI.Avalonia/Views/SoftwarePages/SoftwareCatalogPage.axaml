@@ -58,7 +58,7 @@
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="24" RowSpacing="12">
         <StackPanel Spacing="6">
             <TextBlock Text="{t:Translate Software Catalog}" FontSize="28" FontWeight="SemiBold"/>
-            <TextBlock Text="{t:Translate 'Software selected for you, ready to install.'}"
+            <TextBlock Text="{t:Translate Text='Software selected for you, ready to install.'}"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
         <Grid Grid.Row="1" Name="CatalogToolbar" ColumnDefinitions="Auto,*" ColumnSpacing="4">

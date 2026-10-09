@@ -1471,8 +1471,22 @@ namespace UniGetUI.PackageEngine.Operations
 
             if (role is OperationType.Update && opts.UninstallPreviousVersionsOnUpdate)
             {
+                var capabilities = package.Manager.Capabilities;
+                string? updatedScope =
+                    capabilities.SupportsCustomScopes
+                    && capabilities.SupportsCustomScopesOnUpdate
+                    && opts.InstallationScope.Length > 0
+                        ? opts.InstallationScope
+                        : package.OverridenOptions.Scope;
+
                 var matches = InstalledPackagesLoader.Instance.Packages.Where(p =>
-                    p.IsEquivalentTo(package) && IsSupersededBy(p, package)
+                    p.IsEquivalentTo(package)
+                    && (
+                        string.IsNullOrEmpty(p.OverridenOptions.Scope)
+                        || string.IsNullOrEmpty(updatedScope)
+                        || p.OverridenOptions.Scope == updatedScope
+                    )
+                    && IsSupersededBy(p, package)
                 );
                 foreach (var match in matches)
                 {

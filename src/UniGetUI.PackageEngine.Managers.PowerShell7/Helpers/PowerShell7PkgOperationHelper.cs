@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using UniGetUI.Core.Tools;
 using UniGetUI.PackageEngine.Classes.Manager.BaseProviders;
 using UniGetUI.PackageEngine.Enums;
@@ -6,7 +7,7 @@ using UniGetUI.PackageEngine.Serializable;
 
 namespace UniGetUI.PackageEngine.Managers.PowerShell7Manager;
 
-internal sealed class PowerShell7PkgOperationHelper : BasePkgOperationHelper
+internal sealed partial class PowerShell7PkgOperationHelper : BasePkgOperationHelper
 {
     public PowerShell7PkgOperationHelper(PowerShell7 manager)
         : base(manager) { }
@@ -54,24 +55,38 @@ internal sealed class PowerShell7PkgOperationHelper : BasePkgOperationHelper
 
             if (options.PreRelease)
                 parameters.Add("-Prerelease");
-
-            // The scope chosen in the options dialog wins; fall back to the auto-detected install scope
-            string scope = options.InstallationScope.Length > 0
-                ? options.InstallationScope
-                : package.OverridenOptions.Scope ?? "";
-            parameters.AddRange(["-Scope", scope == PackageScope.Global ? "AllUsers" : "CurrentUser"]);
         }
 
-        parameters.AddRange(
-            operation switch
-            {
-                OperationType.Update => options.CustomParameters_Update,
-                OperationType.Uninstall => options.CustomParameters_Uninstall,
-                _ => options.CustomParameters_Install,
-            }
-        );
+        List<string> customParameters = operation switch
+        {
+            OperationType.Update => options.CustomParameters_Update,
+            OperationType.Uninstall => options.CustomParameters_Uninstall,
+            _ => options.CustomParameters_Install,
+        };
+
+        // Uninstall targets the scope the copy was detected in; otherwise the scope chosen in the
+        // options dialog wins, falling back to the auto-detected install scope
+        string? scope = operation is OperationType.Uninstall
+            ? package.OverridenOptions.Scope
+            : options.InstallationScope.Length > 0
+                ? options.InstallationScope
+                : package.OverridenOptions.Scope;
+
+        if (!customParameters.Any(IsScopeParameter))
+            parameters.AddRange(["-Scope", scope == PackageScope.Global ? "AllUsers" : "CurrentUser"]);
+
+        parameters.AddRange(customParameters);
 
         return parameters;
+    }
+
+    private static bool IsScopeParameter(string argument)
+    {
+        if (!argument.StartsWith('-'))
+            return false;
+
+        string name = argument[1..].Split(':', 2)[0];
+        return name.Length >= 2 && "Scope".StartsWith(name, StringComparison.OrdinalIgnoreCase);
     }
 
     protected override OperationVeredict _getOperationResult(
@@ -83,13 +98,25 @@ internal sealed class PowerShell7PkgOperationHelper : BasePkgOperationHelper
     {
         string output_string = string.Join("\n", processOutput);
 
-        if (
-            package.OverridenOptions.RunAsAdministrator is not true
-            && (
-                output_string.Contains("AdminPrivilegesAreRequired")
-                || output_string.Contains("AdminPrivilegeRequired")
-            )
-        )
+        bool needsElevation =
+            output_string.Contains("AdminPrivilegesAreRequired")
+            || output_string.Contains("AdminPrivilegeRequired");
+
+        if (operation is OperationType.Uninstall && returnCode != 0)
+        {
+            var failures = NotDeletedRegex()
+                .Matches(output_string)
+                .Select(match => IsLeftoverOnly(match, package.Id))
+                .ToArray();
+
+            if (failures.Length > 0 && failures.All(leftoverOnly => leftoverOnly))
+                return OperationVeredict.Success;
+
+            needsElevation |=
+                failures.Length > 0 && package.OverridenOptions.Scope == PackageScope.Global;
+        }
+
+        if (package.OverridenOptions.RunAsAdministrator is not true && needsElevation)
         {
             package.OverridenOptions.RunAsAdministrator = true;
             return OperationVeredict.AutoRetry;
@@ -97,4 +124,18 @@ internal sealed class PowerShell7PkgOperationHelper : BasePkgOperationHelper
 
         return returnCode == 0 ? OperationVeredict.Success : OperationVeredict.Failure;
     }
+
+    private static bool IsLeftoverOnly(Match match, string packageId) =>
+        match.Groups["kind"].Value switch
+        {
+            "Script metadata file" => true,
+            "Parent directory" => Path.GetFileName(
+                    match.Groups["path"].Value.TrimEnd('\\', '/')
+                )
+                .Equals(packageId, StringComparison.OrdinalIgnoreCase),
+            _ => false,
+        };
+
+    [GeneratedRegex(@"(?<kind>Parent directory|Script metadata file|Script) '(?<path>[^']+)' could not be deleted")]
+    private static partial Regex NotDeletedRegex();
 }

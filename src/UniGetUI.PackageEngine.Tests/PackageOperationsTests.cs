@@ -302,6 +302,137 @@ public sealed class PackageOperationsTests
     }
 
     [Fact]
+    public async Task UpdateOperationOnlyQueuesPreviousVersionsFromTheSameScope()
+    {
+        var manager = CreateManager();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("2.0.0")
+            .WithNewVersion("3.0.0")
+            .WithOptions(new OverridenInstallationOptions(PackageScope.User))
+            .Build();
+        InitializeLoaders();
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithId("Contoso.Tool")
+                .WithVersion("1.0.0")
+                .WithOptions(new OverridenInstallationOptions(PackageScope.Machine))
+                .Build()
+        );
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithId("Contoso.Tool")
+                .WithVersion("1.5.0")
+                .WithOptions(new OverridenInstallationOptions(PackageScope.User))
+                .Build()
+        );
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithId("Contoso.Tool")
+                .WithVersion("1.7.0")
+                .Build()
+        );
+
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallPreviousVersionsOnUpdate = true }
+        );
+
+        var uninstalled = GetInnerOperations(operation, "PostOperations")
+            .Select(inner => Assert.IsType<UninstallPackageOperation>(inner.Operation).Package.VersionString)
+            .Order()
+            .ToArray();
+        Assert.Equal(["1.5.0", "1.7.0"], uninstalled);
+    }
+
+    [Fact]
+    public async Task UpdateOperationQueuesPreviousVersionsFromTheScopeChosenForTheUpdate()
+    {
+        var manager = CreateManager();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("2.0.0")
+            .WithNewVersion("3.0.0")
+            .WithOptions(new OverridenInstallationOptions(PackageScope.User))
+            .Build();
+        InitializeLoaders();
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithId("Contoso.Tool")
+                .WithVersion("1.0.0")
+                .WithOptions(new OverridenInstallationOptions(PackageScope.Machine))
+                .Build()
+        );
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithId("Contoso.Tool")
+                .WithVersion("1.5.0")
+                .WithOptions(new OverridenInstallationOptions(PackageScope.User))
+                .Build()
+        );
+
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions
+            {
+                UninstallPreviousVersionsOnUpdate = true,
+                InstallationScope = PackageScope.Machine,
+            }
+        );
+
+        var inner = Assert.Single(GetInnerOperations(operation, "PostOperations"));
+        var uninstall = Assert.IsType<UninstallPackageOperation>(inner.Operation);
+        Assert.Equal("1.0.0", uninstall.Package.VersionString);
+    }
+
+    [Fact]
+    public async Task UpdateOperationWithoutAScopeQueuesPreviousVersionsFromEveryScope()
+    {
+        var manager = CreateManager();
+        var package = new PackageBuilder()
+            .WithManager(manager)
+            .WithId("Contoso.Tool")
+            .WithVersion("2.0.0")
+            .WithNewVersion("3.0.0")
+            .Build();
+        InitializeLoaders();
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithId("Contoso.Tool")
+                .WithVersion("1.0.0")
+                .WithOptions(new OverridenInstallationOptions(PackageScope.Machine))
+                .Build()
+        );
+        await InstalledPackagesLoader.Instance.AddForeign(
+            new PackageBuilder()
+                .WithManager(manager)
+                .WithId("Contoso.Tool")
+                .WithVersion("1.5.0")
+                .WithOptions(new OverridenInstallationOptions(PackageScope.User))
+                .Build()
+        );
+
+        using var operation = new UpdatePackageOperation(
+            package,
+            new InstallOptions { UninstallPreviousVersionsOnUpdate = true }
+        );
+
+        var uninstalled = GetInnerOperations(operation, "PostOperations")
+            .Select(inner => Assert.IsType<UninstallPackageOperation>(inner.Operation).Package.VersionString)
+            .Order()
+            .ToArray();
+        Assert.Equal(["1.0.0", "1.5.0"], uninstalled);
+    }
+
+    [Fact]
     public void UninstallOperationBuildsPreAndPostCommandsForUninstallPath()
     {
         var package = CreatePackage();

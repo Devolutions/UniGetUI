@@ -2,7 +2,9 @@
 using UniGetUI.PackageEngine.Enums;
 using UniGetUI.PackageEngine.Managers.PowerShell7Manager;
 using UniGetUI.PackageEngine.Managers.PowerShellManager;
+using UniGetUI.PackageEngine.PackageClasses;
 using UniGetUI.PackageEngine.Serializable;
+using UniGetUI.PackageEngine.Structs;
 
 namespace UniGetUI.PackageEngine.Tests;
 
@@ -149,6 +151,194 @@ public sealed class PowerShell7ManagerTests
 
         Assert.Contains("AllUsers", parameters);
         Assert.DoesNotContain("CurrentUser", parameters);
+    }
+
+    [Theory]
+    [InlineData("AllUsers", PackageScope.User, "AllUsers", "CurrentUser")]
+    [InlineData("CurrentUser", PackageScope.Machine, "CurrentUser", "AllUsers")]
+    [InlineData("AllUsers", "", "AllUsers", "CurrentUser")]
+    public void GetParameters_UninstallTargetsDetectedScope(
+        string listedScope,
+        string optionsScope,
+        string expected,
+        string unexpected)
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            [$"##SCOPE:{listedScope}##", "Devolutions.PowerShell\t2026.2.4\tPSGallery"], manager));
+
+        var options = new InstallOptions { InstallationScope = optionsScope };
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Uninstall);
+
+        int scopeIndex = parameters.ToList().IndexOf("-Scope");
+        Assert.True(scopeIndex >= 0);
+        Assert.Equal(expected, parameters[scopeIndex + 1]);
+        Assert.DoesNotContain(unexpected, parameters);
+        Assert.Contains("2026.2.4", parameters);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void GetParameters_UninstallWithoutDetectedScopeIgnoresOptionsScope(string? detectedScope)
+    {
+        var manager = new PowerShell7();
+        var package = new Package(
+            "Devolutions.PowerShell",
+            "Devolutions.PowerShell",
+            "2026.2.4",
+            manager.DefaultSource,
+            manager,
+            new OverridenInstallationOptions(detectedScope));
+
+        var options = new InstallOptions { InstallationScope = PackageScope.Machine };
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Uninstall);
+
+        Assert.Contains("CurrentUser", parameters);
+        Assert.DoesNotContain("AllUsers", parameters);
+    }
+
+    [Theory]
+    [InlineData(OperationType.Install)]
+    [InlineData(OperationType.Update)]
+    [InlineData(OperationType.Uninstall)]
+    public void GetParameters_CustomScopeArgumentIsNotDuplicated(OperationType operation)
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:CurrentUser##", "Devolutions.PowerShell\t2026.2.4\tPSGallery"], manager));
+
+        var options = new InstallOptions
+        {
+            CustomParameters_Install = ["-Scope", "AllUsers"],
+            CustomParameters_Update = ["-Scope", "AllUsers"],
+            CustomParameters_Uninstall = ["-Scope", "AllUsers"],
+        };
+        var parameters = manager.OperationHelper.GetParameters(package, options, operation);
+
+        Assert.Single(parameters, p => p == "-Scope");
+        Assert.Equal("AllUsers", parameters[parameters.ToList().IndexOf("-Scope") + 1]);
+        Assert.DoesNotContain("CurrentUser", parameters);
+    }
+
+    [Fact]
+    public void GetResult_AccessDeniedUninstallRetriesAsAdministrator()
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "Devolutions.PowerShell\t2026.2.4\tPSGallery"], manager));
+
+        var result = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Uninstall,
+            [
+                "Uninstall-PSResource: Parent directory 'C:\\Program Files\\PowerShell\\Modules\\Devolutions.PowerShell\\2026.2.4' could not be deleted: Access to the path 'Devolutions.PowerShell.psd1' is denied.",
+            ],
+            1);
+
+        Assert.Equal(OperationVeredict.AutoRetry, result);
+        Assert.True(package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void GetResult_LocalizedDeleteFailureStillRetriesAsAdministrator()
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "Devolutions.PowerShell\t2026.2.4\tPSGallery"], manager));
+
+        var result = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Uninstall,
+            [
+                "Uninstall-PSResource: Parent directory 'C:\\Program Files\\PowerShell\\Modules\\Devolutions.PowerShell\\2026.2.4' could not be deleted: Der Zugriff auf den Pfad wurde verweigert.",
+            ],
+            1);
+
+        Assert.Equal(OperationVeredict.AutoRetry, result);
+    }
+
+    [Fact]
+    public void GetResult_CurrentUserDeleteFailureDoesNotElevate()
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:CurrentUser##", "Devolutions.PowerShell\t2026.2.4\tPSGallery"], manager));
+
+        var result = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Uninstall,
+            [
+                "Uninstall-PSResource: Parent directory 'C:\\Users\\me\\Documents\\PowerShell\\Modules\\Devolutions.PowerShell\\2026.2.4' could not be deleted: The process cannot access the file because it is being used by another process.",
+            ],
+            1);
+
+        Assert.Equal(OperationVeredict.Failure, result);
+        Assert.NotEqual(true, package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Theory]
+    [InlineData("Uninstall-PSResource: Parent directory 'C:\\Program Files\\PowerShell\\Modules\\Devolutions.PowerShell' could not be deleted: Access to the path 'C:\\Program Files\\PowerShell\\Modules\\Devolutions.PowerShell' is denied.")]
+    [InlineData("Uninstall-PSResource: Script metadata file 'C:\\Program Files\\PowerShell\\Scripts\\InstalledScriptInfos\\Devolutions.PowerShell_InstalledScriptInfo.xml' could not be deleted: Access to the path is denied.")]
+    public void GetResult_LeftoverOnlyAfterRemovingTheVersionIsSuccess(string output)
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "Devolutions.PowerShell\t2026.2.4\tPSGallery"], manager));
+
+        var result = manager.OperationHelper.GetResult(package, OperationType.Uninstall, [output], 1);
+
+        Assert.Equal(OperationVeredict.Success, result);
+        Assert.NotEqual(true, package.OverridenOptions.RunAsAdministrator);
+    }
+
+    [Theory]
+    [InlineData("-Scop")]
+    [InlineData("-sc")]
+    [InlineData("-SCOPE")]
+    public void GetParameters_AbbreviatedCustomScopeArgumentIsNotDuplicated(string scopeArgument)
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:CurrentUser##", "Devolutions.PowerShell\t2026.2.4\tPSGallery"], manager));
+
+        var options = new InstallOptions { CustomParameters_Update = [scopeArgument, "AllUsers"] };
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Update);
+
+        Assert.DoesNotContain("-Scope", parameters);
+        Assert.DoesNotContain("CurrentUser", parameters);
+        Assert.Contains(scopeArgument, parameters);
+    }
+
+    [Fact]
+    public void GetParameters_SkipDependencyCheckIsNotTakenForScope()
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "Devolutions.PowerShell\t2026.2.4\tPSGallery"], manager));
+
+        var options = new InstallOptions { CustomParameters_Uninstall = ["-SkipDependencyCheck"] };
+        var parameters = manager.OperationHelper.GetParameters(package, options, OperationType.Uninstall);
+
+        Assert.Contains("-Scope", parameters);
+        Assert.Contains("AllUsers", parameters);
+    }
+
+    [Fact]
+    public void GetResult_AccessDeniedUninstallAlreadyElevatedFails()
+    {
+        var manager = new PowerShell7();
+        var package = Assert.Single(PowerShell7.ParseInstalledPackages(
+            ["##SCOPE:AllUsers##", "Devolutions.PowerShell\t2026.2.4\tPSGallery"], manager));
+        package.OverridenOptions.RunAsAdministrator = true;
+
+        var result = manager.OperationHelper.GetResult(
+            package,
+            OperationType.Uninstall,
+            ["Parent directory 'x' could not be deleted: Access to the path 'x' is denied."],
+            1);
+
+        Assert.Equal(OperationVeredict.Failure, result);
     }
 
     // Regression for https://github.com/Devolutions/UniGetUI/issues/5163:

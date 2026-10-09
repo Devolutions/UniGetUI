@@ -119,7 +119,7 @@ internal sealed class TuiFunctionBar : Border
     /// </summary>
     internal static (List<int> Keys, int Variant) Fit(IReadOnlyList<TuiKeyHint> keys, string? badge, IReadOnlyList<string> variants, double width)
     {
-        int NotificationWidth(int variant) => Gap + badge!.Length + 2 + (variants[variant].Length > 0 ? variants[variant].Length + 2 : 0);
+        int NotificationWidth(int variant) => Gap + TuiChrome.Cells(badge!) + 2 + (variants[variant].Length > 0 ? TuiChrome.Cells(variants[variant]) + 2 : 0);
 
         var byPriority = Enumerable.Range(0, keys.Count).OrderBy(i => keys[i].Priority).ToList();
         var shown = new List<int>();
@@ -152,13 +152,13 @@ internal sealed class TuiFunctionBar : Border
         return (shown, chosen);
     }
 
-    private static int CellWidth(TuiKeyHint hint) => hint.Key.Length + 2 + 1 + hint.Label.Length;
+    private static int CellWidth(TuiKeyHint hint) => TuiChrome.Cells(hint.Key) + 2 + 1 + TuiChrome.Cells(hint.Label);
 
     private void Layout()
     {
         double width = Bounds.Width - Padding.Left - Padding.Right;
         if (width <= 0) return;
-        double badges = _badgeTexts.Sum(b => b.Length + 2) + Math.Max(0, _badgeTexts.Count - 1) + (_badgeTexts.Count > 0 ? 1 : 0);
+        double badges = _badgeTexts.Sum(b => TuiChrome.Cells(b) + 2) + Math.Max(0, _badgeTexts.Count - 1) + (_badgeTexts.Count > 0 ? 1 : 0);
         IReadOnlyList<string> variants = NotificationVariants(_title, _message);
         string? badge = _notificationActive ? _notificationBadge.Text?.Trim() : null;
         (List<int> keys, int variant) = Fit(_hints, badge, variants, width - badges);

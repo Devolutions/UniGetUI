@@ -58,4 +58,20 @@ internal sealed class TuiFunctionBarTests
         NAssert.That(keys, Is.EqualTo(new[] { 0, 1, 2, 3, 4 }));
         NAssert.That(variant, Is.EqualTo(-1));
     }
+
+    [Test]
+    public void DoubleWidthLabelsAreMeasuredInTerminalCells()
+    {
+        NAssert.That(TuiChrome.Cells("帮助"), Is.EqualTo(4));
+        NAssert.That(TuiChrome.Cells("Help"), Is.EqualTo(4));
+
+        TuiKeyHint[] keys = [new("F1", "帮助", 0), new("F5", "重新加载", 4)];
+        (List<int> shown, _) = TuiFunctionBar.Fit(keys, null, [""], 20);
+        NAssert.That(shown, Is.EqualTo(new[] { 0 }));
+        (shown, _) = TuiFunctionBar.Fit(keys, null, [""], 24);
+        NAssert.That(shown, Is.EqualTo(new[] { 0, 1 }));
+
+        (_, int variant) = TuiFunctionBar.Fit([], "INFO", ["已更新 3 个软件包", ""], 25);
+        NAssert.That(variant, Is.EqualTo(1));
+    }
 }

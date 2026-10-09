@@ -351,7 +351,7 @@ internal sealed class MainWindow : Window
         foreach (TabDensity candidate in Enum.GetValues<TabDensity>())
         {
             density = candidate;
-            int width = tabs.Sum(t => TabLabel(t.Id, t.Index, t.Id == _currentPageId ? TabDensity.Full : candidate).Length + 2);
+            int width = tabs.Sum(t => TuiChrome.Cells(TabLabel(t.Id, t.Index, t.Id == _currentPageId ? TabDensity.Full : candidate)) + 2);
             if (available <= 0 || width <= available) break;
         }
 

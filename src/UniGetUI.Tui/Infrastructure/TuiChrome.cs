@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using UniGetUI.Core.Tools;
 using UniGetUI.Tui.Views.Controls;
+using Wcwidth;
 
 namespace UniGetUI.Tui.Infrastructure;
 
@@ -17,4 +18,6 @@ internal static class TuiChrome
     /// <summary>Key hints with translated labels, most important first, for <see cref="ITuiPage.KeyHints"/>.</summary>
     public static IReadOnlyList<TuiKeyHint> Hints(params (string Key, string Label)[] hints)
         => hints.Select((h, i) => new TuiKeyHint(h.Key, CoreTools.Translate(h.Label), i)).ToList();
+
+    public static int Cells(string text) => text.EnumerateRunes().Sum(r => Math.Max(0, UnicodeCalculator.GetWidth(r)));
 }

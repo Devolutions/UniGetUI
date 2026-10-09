@@ -783,7 +783,7 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
-                                                  automation:AutomationProperties.Name="{Binding VersionComboString}">
+                                                  automation:AutomationProperties.Name="{Binding VersionAutomationName}">
                                                 <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/version.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"
                                                                   IsVisible="{Binding !InstalledVersionIsUnverified}"/>
@@ -806,7 +806,7 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
-                                                  automation:AutomationProperties.Name="{Binding Package.NewVersionString}">
+                                                  automation:AutomationProperties.Name="{Binding NewVersionAutomationName}">
                                                 <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/download.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"
                                                                   IsVisible="{Binding !InstallerHostChanged}"/>
@@ -844,7 +844,7 @@
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
                                                   controls:PackageRowValueLoader.Track="True"
-                                                  automation:AutomationProperties.Name="{Binding InstallerHostText}">
+                                                  automation:AutomationProperties.Name="{Binding InstallerHostAutomationName}">
                                                 <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/launch.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"
                                                                   IsVisible="{Binding !InstallerHostChanged}"/>

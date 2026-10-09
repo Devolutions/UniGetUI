@@ -672,7 +672,9 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
             {
                 AutomationProperties.SetName(
                     pip,
-                    CoreTools.Translate("Screenshot {0} of {1}", index + 1, _vm.ScreenshotCount));
+                    index == active
+                        ? CoreTools.Translate("Screenshot {0} of {1}, current", index + 1, _vm.ScreenshotCount)
+                        : CoreTools.Translate("Screenshot {0} of {1}", index + 1, _vm.ScreenshotCount));
             }
             Ellipse? ellipse = container is Button { Content: Ellipse direct }
                 ? direct

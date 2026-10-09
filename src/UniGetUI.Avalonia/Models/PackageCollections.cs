@@ -203,6 +203,20 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
     public string InstallerHostText { get; private set; } = "";
     public string? InstallerHostTooltip { get; private set; }
 
+    public string VersionAutomationName =>
+        InstalledVersionIsUnverified && InstalledVersionTooltip is { } notice
+            ? $"{VersionComboString}, {notice}"
+            : VersionComboString;
+
+    public string NewVersionAutomationName =>
+        WithInstallerHostWarning(Package.NewVersionString);
+
+    public string InstallerHostAutomationName =>
+        WithInstallerHostWarning(InstallerHostText);
+
+    private string WithInstallerHostWarning(string value) =>
+        InstallerHostChanged ? $"{value}, {InstallerHostChangeTooltip}" : value;
+
     public string DownloadSizeText { get; private set; } = "";
     public long DownloadSizeBytes { get; private set; }
 
@@ -365,6 +379,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
         InstallerHostTooltip = urls.Length > 0 ? urls : null;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InstallerHostText)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InstallerHostTooltip)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InstallerHostAutomationName)));
     }
 
     private static bool TryGetCachedInstallerHost(long hash, out (string Host, string Urls) entry)
@@ -619,6 +634,14 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
                     PropertyChanged?.Invoke(
                         this,
                         new PropertyChangedEventArgs(nameof(InstallerHostChangeTooltip))
+                    );
+                    PropertyChanged?.Invoke(
+                        this,
+                        new PropertyChangedEventArgs(nameof(NewVersionAutomationName))
+                    );
+                    PropertyChanged?.Invoke(
+                        this,
+                        new PropertyChangedEventArgs(nameof(InstallerHostAutomationName))
                     );
                 });
             }

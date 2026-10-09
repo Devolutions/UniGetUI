@@ -1847,5 +1847,6 @@
   "A file of {package} is in use by another program. Close any program that may be using it, then try again": "A file of {package} is in use by another program. Close any program that may be using it, then try again",
   "Previous screenshot": "Previous screenshot",
   "Next screenshot": "Next screenshot",
-  "Screenshot {0} of {1}": "Screenshot {0} of {1}"
+  "Screenshot {0} of {1}": "Screenshot {0} of {1}",
+  "Screenshot {0} of {1}, current": "Screenshot {0} of {1}, current"
 }

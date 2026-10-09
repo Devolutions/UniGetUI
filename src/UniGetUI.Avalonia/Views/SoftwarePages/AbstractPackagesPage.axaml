@@ -391,7 +391,8 @@
                                   IsExpanded="True"
                                   CornerRadius="8"
                                   Padding="16,8,16,8"
-                                  Background="{DynamicResource FilterExpanderContentBackground}">
+                                  Background="{DynamicResource FilterExpanderContentBackground}"
+                                  automation:AutomationProperties.Name="{t:Translate Sources}">
                             <Expander.Header>
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                                     <controls:SvgIcon Grid.Column="0"
@@ -455,7 +456,8 @@
                                             <DataTemplate x:DataType="vm:SourceTreeNode">
                                                 <StackPanel>
                                                     <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                              VerticalAlignment="Center">
+                                                              VerticalAlignment="Center"
+                                                              automation:AutomationProperties.Name="{Binding PackageName}">
                                                         <CheckBox.Content>
                                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="4">
                                                         <ToggleButton Grid.Column="0" IsChecked="{Binding IsExpanded, Mode=TwoWay}"
@@ -518,7 +520,8 @@
                                   IsExpanded="False"
                                   CornerRadius="8"
                                   Padding="16,8,16,8"
-                                  Background="{DynamicResource FilterExpanderContentBackground}">
+                                  Background="{DynamicResource FilterExpanderContentBackground}"
+                                  automation:AutomationProperties.Name="{t:Translate Filters}">
                             <Expander.Header>
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                                     <controls:SvgIcon Grid.Column="0"
@@ -557,7 +560,8 @@
                                   IsExpanded="True"
                                   CornerRadius="8"
                                   Padding="16,8,16,8"
-                                  Background="{DynamicResource FilterExpanderContentBackground}">
+                                  Background="{DynamicResource FilterExpanderContentBackground}"
+                                  automation:AutomationProperties.Name="{t:Translate Search mode}">
                             <Expander.Header>
                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                                     <controls:SvgIcon Grid.Column="0"
@@ -763,7 +767,8 @@
                                                         Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
-                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0">
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
+                                                  automation:AutomationProperties.Name="{Binding Package.Id}">
                                                 <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/id.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding Package.Id}" VerticalAlignment="Center"
@@ -777,7 +782,8 @@
                                                         Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
-                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0">
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
+                                                  automation:AutomationProperties.Name="{Binding VersionComboString}">
                                                 <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/version.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"
                                                                   IsVisible="{Binding !InstalledVersionIsUnverified}"/>
@@ -799,7 +805,8 @@
                                                         IsVisible="{Binding $parent[UserControl].((vm:PackagesPageViewModel)DataContext).NewVersionHeaderVisible}">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
-                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0">
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
+                                                  automation:AutomationProperties.Name="{Binding Package.NewVersionString}">
                                                 <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/download.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"
                                                                   IsVisible="{Binding !InstallerHostChanged}"/>
@@ -819,7 +826,8 @@
                                                         Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
-                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0">
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
+                                                  automation:AutomationProperties.Name="{Binding Package.Source.AsString_DisplayName}">
                                                 <controls:SvgIcon Grid.Column="0" Path="{Binding SourceIconPath}"
                                                                   Width="24" Height="24" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding Package.Source.AsString_DisplayName}" VerticalAlignment="Center"
@@ -835,7 +843,8 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
-                                                  controls:PackageRowValueLoader.Track="True">
+                                                  controls:PackageRowValueLoader.Track="True"
+                                                  automation:AutomationProperties.Name="{Binding InstallerHostText}">
                                                 <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/launch.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"
                                                                   IsVisible="{Binding !InstallerHostChanged}"/>
@@ -858,7 +867,8 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="pkg:PackageWrapper">
                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center" Margin="4,0"
-                                                  controls:PackageRowValueLoader.Track="True">
+                                                  controls:PackageRowValueLoader.Track="True"
+                                                  automation:AutomationProperties.Name="{Binding DownloadSizeText}">
                                                 <controls:SvgIcon Grid.Column="0" Path="avares://UniGetUI/Assets/Symbols/disk.svg"
                                                                   Width="24" Height="24" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding DownloadSizeText}" VerticalAlignment="Center"

@@ -279,7 +279,8 @@
                                   IsExpanded="False"
                                   CornerRadius="8"
                                   Padding="0"
-                                  Background="Transparent">
+                                  Background="Transparent"
+                                  automation:AutomationProperties.Name="{Binding LabelInstallationOptions}">
                             <Expander.Header>
                                 <Grid ColumnDefinitions="Auto,*,Auto"
                                       ColumnSpacing="12">
@@ -362,7 +363,8 @@
                                         Classes="carousel-nav"
                                         HorizontalAlignment="Left"
                                         Margin="6,0,0,0"
-                                        IsVisible="{Binding HasScreenshots}">
+                                        IsVisible="{Binding HasScreenshots}"
+                                        automation:AutomationProperties.Name="{t:Translate Previous screenshot}">
                                     <!-- WinUI FlipView's EDD9 CaretLeftSolid8, expressed as geometry so it
                                          stays identical on systems without Segoe Fluent Icons. -->
                                     <Path Data="M 5,0 L 0,4 L 5,8 Z"
@@ -373,7 +375,8 @@
                                         Classes="carousel-nav"
                                         HorizontalAlignment="Right"
                                         Margin="0,0,6,0"
-                                        IsVisible="{Binding HasScreenshots}">
+                                        IsVisible="{Binding HasScreenshots}"
+                                        automation:AutomationProperties.Name="{t:Translate Next screenshot}">
                                     <!-- WinUI FlipView's EDDA CaretRightSolid8 glyph. -->
                                     <Path Data="M 0,0 L 5,4 L 0,8 Z"
                                           Width="5" Height="8"

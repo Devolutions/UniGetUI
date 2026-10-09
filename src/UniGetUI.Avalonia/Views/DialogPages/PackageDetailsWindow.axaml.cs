@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Controls.Shapes;
@@ -665,6 +666,14 @@ public partial class PackageDetailsWindow : UniGetUI.Avalonia.Views.DialogPages.
         foreach (var container in ScreenshotPips.GetRealizedContainers())
         {
             int index = ScreenshotPips.IndexFromContainer(container);
+            Button? pip = container as Button
+                ?? container.GetVisualDescendants().OfType<Button>().FirstOrDefault();
+            if (pip is not null)
+            {
+                AutomationProperties.SetName(
+                    pip,
+                    CoreTools.Translate("Screenshot {0} of {1}", index + 1, _vm.ScreenshotCount));
+            }
             Ellipse? ellipse = container is Button { Content: Ellipse direct }
                 ? direct
                 : container.GetVisualDescendants()

@@ -164,6 +164,17 @@ dotnet publish src/UniGetUI.Avalonia/UniGetUI.Avalonia.csproj /p:Configuration=R
 - Self-contained, publish-trimmed (partial), Windows App SDK self-contained
 - Tests use **xUnit** (`[Fact]`, `Assert.*`)
 
+### Formatting (required before every commit)
+
+The PR check (`.github/workflows/dotnet-test.yml`) fails on any whitespace or code-style diff, even when the build and tests pass. After changing any C# file, apply both formatters from the repo root and commit the result:
+
+```shell
+dotnet format whitespace src --folder
+dotnet format style src/UniGetUI.Windows.slnx --no-restore
+```
+
+To reproduce the CI gate exactly, add `--verify-no-changes --verbosity minimal` to both commands; they must exit with code 0. Run both — `whitespace` and `style` catch different issues, and passing one does not imply passing the other.
+
 ## NativeAOT and Trim Safety
 
 Release packages are self-contained, fully trimmed NativeAOT binaries on every supported RID. Treat NativeAOT safety as a non-negotiable production requirement: changes must work without runtime-generated code or metadata that the trimmer cannot prove is required.

@@ -282,8 +282,19 @@ partial void OnErrorMessageChanged(string value)
 
     public void UpdateStates()
     {
+        if (_allPackages.Count == 0)
+        {
+            ApplyAvailabilityFilter();
+            return;
+        }
         var loader = InstalledPackagesLoader.Instance;
-        var installed = loader?.Packages ?? [];
+        var installed = new CatalogPackageIdentitySet(loader?.Packages ?? [], installedInventory: true);
+        var pending = new CatalogPackageIdentitySet(
+            Avalonia.Infrastructure.AvaloniaOperationRegistry.OperationViewModels
+                .Select(o => o.Operation)
+                .OfType<PackageOperation>()
+                .Where(o => o.Status is OperationStatus.InQueue or OperationStatus.Running)
+                .Select(o => o.Package));
         foreach (var tile in _allPackages)
         {
             var manager = FindManager(tile.Entry);
@@ -297,15 +308,12 @@ partial void OnErrorMessageChanged(string value)
                         : source is null
                             ? CoreTools.Translate("The source {0} is not enabled for {1}. Add it in Package Managers.", tile.Entry.Source, manager.DisplayName)
                             : null;
-            bool pending = Avalonia.Infrastructure.AvaloniaOperationRegistry.OperationViewModels.Any(o =>
-                o.Operation is PackageOperation operation && tile.Entry.Matches(operation.Package)
-                && o.Operation.Status is OperationStatus.InQueue or OperationStatus.Running);
             tile.UpdateState(
-                installed.Any(tile.Entry.MatchesInstalled),
+                installed.Contains(tile.Entry),
                 unavailableReason,
                 !IsLoading && loader is { HasPendingInitialLoad: false, IsLoading: false }
                     && manager is { LastInstalledListingFailed: false },
-                pending);
+                pending.Contains(tile.Entry));
         }
         ApplyAvailabilityFilter();
     }

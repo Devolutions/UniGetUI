@@ -19,5 +19,8 @@ internal static class TuiChrome
     public static IReadOnlyList<TuiKeyHint> Hints(params (string Key, string Label)[] hints)
         => hints.Select((h, i) => new TuiKeyHint(h.Key, CoreTools.Translate(h.Label), i)).ToList();
 
-    public static int Cells(string text) => text.EnumerateRunes().Sum(r => Math.Max(0, UnicodeCalculator.GetWidth(r)));
+    public static int Cells(string text)
+        => Application.Current is null
+            ? text.EnumerateRunes().Sum(r => Math.Max(0, UnicodeCalculator.GetWidth(r)))
+            : Consolonia.Controls.ControlUtils.MeasureText(text);
 }

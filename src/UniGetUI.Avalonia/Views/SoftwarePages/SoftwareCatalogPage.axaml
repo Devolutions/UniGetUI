@@ -25,16 +25,61 @@
             <Setter Property="MinHeight" Value="44"/>
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
-        <Style Selector="Expander.catalog-filter-expander">
+        <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
+            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+        </Style>
+        <Style Selector="Expander.filter-pane-expander">
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}"/>
+        </Style>
+        <Style Selector="RadioButton.filter-radio">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="MinHeight" Value="30"/>
+        </Style>
+        <Style Selector="RadioButton.filter-radio /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
     </UserControl.Styles>
     <UserControl.Resources>
+        <ResourceDictionary>
+            <SolidColorBrush x:Key="ExpanderChevronBackground" Color="Transparent"/>
+            <SolidColorBrush x:Key="ExpanderChevronBackgroundDisabled" Color="Transparent"/>
+            <SolidColorBrush x:Key="ExpanderChevronBorderBrush" Color="Transparent"/>
+            <SolidColorBrush x:Key="ExpanderChevronBorderBrushPointerOver" Color="Transparent"/>
+            <SolidColorBrush x:Key="ExpanderChevronBorderBrushPressed" Color="Transparent"/>
+            <SolidColorBrush x:Key="ExpanderChevronBorderBrushDisabled" Color="Transparent"/>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="FilterPaneOutlineBrush" Color="#ECECEC"/>
+                    <SolidColorBrush x:Key="FilterExpanderContentBackground" Color="#06000000"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#B3FFFFFF"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#B3FFFFFF"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundDisabled" Color="#B3FFFFFF"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#0F000000"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="#0F000000"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="#0F000000"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBorderBrushDisabled" Color="#0F000000"/>
+                    <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#0F000000"/>
+                    <SolidColorBrush x:Key="ExpanderChevronBackgroundPointerOver" Color="#09000000"/>
+                    <SolidColorBrush x:Key="ExpanderChevronBackgroundPressed" Color="#06000000"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="FilterPaneOutlineBrush" Color="#393939"/>
+                    <SolidColorBrush x:Key="FilterExpanderContentBackground" Color="#08FFFFFF"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#0DFFFFFF"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#0DFFFFFF"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundDisabled" Color="#0DFFFFFF"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#19000000"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="#19000000"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="#19000000"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBorderBrushDisabled" Color="#19000000"/>
+                    <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#19000000"/>
+                    <SolidColorBrush x:Key="ExpanderChevronBackgroundPointerOver" Color="#0FFFFFFF"/>
+                    <SolidColorBrush x:Key="ExpanderChevronBackgroundPressed" Color="#0AFFFFFF"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
         <DataTemplate x:Key="CatalogSmallIcon" x:DataType="vm:CatalogTileViewModel">
             <Panel Width="24" Height="24" Opacity="{Binding TitleOpacity}">
                 <Image Source="{Binding IconBitmap}" IsVisible="{Binding HasCustomIcon}" Stretch="Uniform"
@@ -54,22 +99,46 @@
                            FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,8"/>
             </Panel>
         </DataTemplate>
+        </ResourceDictionary>
     </UserControl.Resources>
-    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="24" RowSpacing="12">
-        <StackPanel Spacing="6">
-            <TextBlock Text="{t:Translate Software Catalog}" FontSize="28" FontWeight="SemiBold"/>
-            <TextBlock Text="{t:Translate Text='Software selected for you, ready to install.'}"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-        </StackPanel>
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="8,6,8,8">
+        <Grid Name="MainHeader" ColumnDefinitions="80,*" ColumnSpacing="8" Margin="0,0,0,8">
+            <controls:SvgIcon Grid.Column="0"
+                              Width="40" Height="40"
+                              Margin="0,0,4,0"
+                              automation:AutomationProperties.AccessibilityView="Raw"
+                              VerticalAlignment="Center" HorizontalAlignment="Center"
+                              Path="avares://UniGetUI/Assets/Symbols/catalog.svg"/>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
+                <TextBlock Text="{t:Translate Software Catalog}"
+                           HorizontalAlignment="Left"
+                           FontSize="28"
+                           FontWeight="SemiBold"
+                           FontFamily="Segoe UI Variable Display"
+                           TextWrapping="Wrap"/>
+                <TextBlock Text="{t:Translate Text='Software selected for you, ready to install.'}"
+                           HorizontalAlignment="Left"
+                           FontSize="12"
+                           FontWeight="Normal"
+                           Opacity="0.6"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Grid>
         <Grid Grid.Row="1" Name="CatalogToolbar" ColumnDefinitions="Auto,*" ColumnSpacing="4">
-            <StackPanel Margin="0,0,8,0">
-                <ToggleButton IsChecked="{Binding IsFilterPaneOpen, Mode=TwoWay}" Height="40"
+            <StackPanel Margin="0,0,8,0" MinWidth="{Binding FilterPaneColumnWidth}">
+                <StackPanel.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="MinWidth" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                    </Transitions>
+                </StackPanel.Transitions>
+                <ToggleButton Classes="filter-toggle"
+                              IsChecked="{Binding IsFilterPaneOpen, Mode=TwoWay}" Height="40"
                               Padding="10,4" CornerRadius="4" HorizontalAlignment="Left"
                               ToolTip.Tip="{t:Translate Filters}" automation:AutomationProperties.Name="{t:Translate Filters}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/Filter.svg"
                                           Width="20" Height="20" VerticalAlignment="Center"/>
-                        <TextBlock Text="{t:Translate Filters}" FontSize="12" VerticalAlignment="Center"/>
+                        <TextBlock Text="{t:Translate Filters}" FontSize="12" FontWeight="Medium" VerticalAlignment="Center"/>
                     </StackPanel>
                 </ToggleButton>
             </StackPanel>
@@ -93,7 +162,7 @@
                 </ComboBox>
             </StackPanel>
         </Grid>
-        <StackPanel Grid.Row="2" Spacing="8">
+        <StackPanel Grid.Row="2" Spacing="8" Margin="0,4,0,8" IsVisible="{Binding HasStatusMessage}">
             <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="3"/>
             <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextWrapping="Wrap"
                        Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
@@ -101,11 +170,21 @@
             <TextBlock Text="{t:Translate Packages with unavailable sources are hidden. Change Filters to show them.}"
                        IsVisible="{Binding HasHiddenPackages}" TextWrapping="Wrap"/>
         </StackPanel>
-        <Grid Grid.Row="3" ColumnDefinitions="Auto,*">
-            <ScrollViewer IsVisible="{Binding IsFilterPaneOpen}" Width="260" Margin="0,0,16,0"
-                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                <StackPanel Spacing="10">
-                <Expander Classes="catalog-filter-expander" IsExpanded="True">
+        <Grid Grid.Row="3" Name="FilteringPanel" ColumnDefinitions="220,12,*">
+            <Border x:Name="InlineSidePanel"
+                    Grid.Column="0"
+                    BorderBrush="{DynamicResource FilterPaneOutlineBrush}"
+                    CornerRadius="8"
+                    ClipToBounds="True"
+                    IsVisible="{Binding IsFilterPaneOpen}">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                              HorizontalContentAlignment="Left" VerticalContentAlignment="Top"
+                              Background="{DynamicResource MicaPageBackground}">
+                <Border Padding="4,3,4,4" VerticalAlignment="Top">
+                <StackPanel Spacing="8">
+                <Expander Classes="filter-pane-expander" IsExpanded="True"
+                          CornerRadius="8" Padding="16,8,16,8"
+                          Background="{DynamicResource FilterExpanderContentBackground}">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/Sources.svg"
@@ -153,7 +232,9 @@
                         </ItemsControl>
                     </StackPanel>
                 </Expander>
-                <Expander Classes="catalog-filter-expander" IsExpanded="True">
+                <Expander Classes="filter-pane-expander" IsExpanded="True"
+                          CornerRadius="8" Padding="16,8,16,8"
+                          Background="{DynamicResource FilterExpanderContentBackground}">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/Filter.svg"
@@ -166,7 +247,9 @@
                         <TextBlock Text="{t:Translate Hide packages with unavailable sources}" TextWrapping="Wrap"/>
                     </CheckBox>
                 </Expander>
-                <Expander Classes="catalog-filter-expander" IsExpanded="True">
+                <Expander Classes="filter-pane-expander" IsExpanded="True"
+                          CornerRadius="8" Padding="16,8,16,8"
+                          Background="{DynamicResource FilterExpanderContentBackground}">
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <controls:SvgIcon Path="avares://UniGetUI/Assets/Symbols/search_filled.svg"
@@ -175,23 +258,32 @@
                         </StackPanel>
                     </Expander.Header>
                     <StackPanel>
-                        <RadioButton GroupName="CatalogSearchMode" IsChecked="{Binding SearchMode_Name, Mode=TwoWay}"
+                        <RadioButton Classes="filter-radio" GroupName="CatalogSearchMode" IsChecked="{Binding SearchMode_Name, Mode=TwoWay}"
                                      Content="{t:Translate Package Name}"
                                      automation:AutomationProperties.Name="{t:Translate Package Name}"/>
-                        <RadioButton GroupName="CatalogSearchMode" IsChecked="{Binding SearchMode_Id, Mode=TwoWay}"
+                        <RadioButton Classes="filter-radio" GroupName="CatalogSearchMode" IsChecked="{Binding SearchMode_Id, Mode=TwoWay}"
                                      Content="{t:Translate Package ID}"
                                      automation:AutomationProperties.Name="{t:Translate Package ID}"/>
-                        <RadioButton GroupName="CatalogSearchMode" IsChecked="{Binding SearchMode_Both, Mode=TwoWay}"
+                        <RadioButton Classes="filter-radio" GroupName="CatalogSearchMode" IsChecked="{Binding SearchMode_Both, Mode=TwoWay}"
                                      Content="{t:Translate Both}"
                                      automation:AutomationProperties.Name="{t:Translate Both}"/>
-                        <RadioButton GroupName="CatalogSearchMode" IsChecked="{Binding SearchMode_Exact, Mode=TwoWay}"
+                        <RadioButton Classes="filter-radio" GroupName="CatalogSearchMode" IsChecked="{Binding SearchMode_Exact, Mode=TwoWay}"
                                      Content="{t:Translate Exact match}"
                                      automation:AutomationProperties.Name="{t:Translate Exact match}"/>
                     </StackPanel>
                 </Expander>
                 </StackPanel>
-            </ScrollViewer>
-            <Panel Grid.Column="1">
+                </Border>
+                </ScrollViewer>
+            </Border>
+            <GridSplitter x:Name="FilterSplitter"
+                          Classes="winui-vertical-splitter"
+                          Grid.Column="1"
+                          Margin="0,0,2,0"
+                          IsVisible="{Binding IsFilterPaneOpen}"
+                          HorizontalAlignment="Stretch"
+                          ResizeDirection="Columns"/>
+            <Panel Grid.Column="2" Margin="0,6,0,0">
                 <ScrollViewer IsVisible="{Binding IsTilesView}" HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl ItemsSource="{Binding Packages}">
                         <ItemsControl.ItemsPanel>
@@ -340,9 +432,8 @@
                 </ScrollViewer>
             </Panel>
         </Grid>
-        <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Margin="0,4">
-            <TextBlock Text="{Binding PackageCountText}" VerticalAlignment="Center"/>
-            <ListBox Grid.Column="1" SelectionMode="Single" SelectedIndex="{Binding ViewModeIndex, Mode=TwoWay}"
+        <Grid Grid.Row="4" Margin="0,4" HorizontalAlignment="Right">
+            <ListBox SelectionMode="Single" SelectedIndex="{Binding ViewModeIndex, Mode=TwoWay}"
                      Background="Transparent" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                      CornerRadius="4" Padding="0" automation:AutomationProperties.Name="{t:Translate View modes}">
                 <ListBox.ItemsPanel>

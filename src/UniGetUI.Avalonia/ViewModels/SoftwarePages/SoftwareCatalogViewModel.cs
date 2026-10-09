@@ -40,6 +40,25 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isFilterPaneOpen;
 
+    // Live width of the filter pane, kept in sync by the page so the toolbar's Filters button
+    // reserves the pane's width and the remaining buttons align with the package list.
+    private double _trackedFilterPaneWidth = 220.0;
+    public double TrackedFilterPaneWidth
+    {
+        get => _trackedFilterPaneWidth;
+        set
+        {
+            if (Math.Abs(_trackedFilterPaneWidth - value) < 0.5) return;
+            _trackedFilterPaneWidth = value;
+            if (IsFilterPaneOpen) OnPropertyChanged(nameof(FilterPaneColumnWidth));
+        }
+    }
+
+    public double FilterPaneColumnWidth => IsFilterPaneOpen ? _trackedFilterPaneWidth : 0.0;
+
+    partial void OnIsFilterPaneOpenChanged(bool value) =>
+        OnPropertyChanged(nameof(FilterPaneColumnWidth));
+
     [ObservableProperty]
     private SearchMode _searchMode = SearchMode.Both;
 
@@ -84,14 +103,19 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                 && MatchesQuery(p.Entry, query));
         }
     }
-    public string PackageCountText => CoreTools.Translate("{0} packages found", Packages.Count);
     public string EmptyMessage => CoreTools.Translate(_allPackages.Count > 0
         ? "No packages are available with the current filters."
         : "This catalog contains no packages.");
 
     public bool IsEmpty => !IsLoading && !HasError && Packages.Count == 0;
 
-    partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(IsEmpty));
+    public bool HasStatusMessage => IsLoading || HasError || IsEmpty || HasHiddenPackages;
+
+    partial void OnIsLoadingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(HasStatusMessage));
+    }
 
     partial void OnSelectedCatalogChanged(CatalogDefinition? value)
     {
@@ -110,6 +134,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         }
         UpdateStates();
         OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(HasStatusMessage));
     }
 
     [ObservableProperty]
@@ -124,6 +149,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(HasError));
         OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(HasStatusMessage));
         if (value.Length > 0)
             Avalonia.Infrastructure.AccessibilityAnnouncementService.Announce(
                 value, global::Avalonia.Automation.AutomationLiveSetting.Assertive);
@@ -333,7 +359,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasHiddenPackages));
         OnPropertyChanged(nameof(EmptyMessage));
         OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(PackageCountText));
+        OnPropertyChanged(nameof(HasStatusMessage));
     }
 
     private bool MatchesQuery(CatalogEntry entry, string query) => query.Length == 0 || SearchMode switch

@@ -149,38 +149,6 @@
          <Setter Property="Background" Value="{DynamicResource SearchBoxFocusedBackground}"/>
          <Setter Property="BorderBrush" Value="{DynamicResource SearchBoxFocusedBorderBrush}"/>
       </Style>
-      <!-- The full splitter track is interactive. Its subtle rounded hover surface sits beneath
-           the persistent grip, matching WinUI's pane-resize affordance. -->
-      <Style Selector="GridSplitter.winui-vertical-splitter">
-         <Setter Property="Background" Value="Transparent"/>
-         <Setter Property="Transitions">
-            <Transitions>
-               <BrushTransition Property="Background" Duration="0:0:0.083"/>
-            </Transitions>
-         </Setter>
-         <Setter Property="Template">
-            <ControlTemplate>
-               <!-- Match the visible splitter track to the package-list container on the
-                    right, whose outer card is inset 6 DIPs vertically. -->
-               <Border Background="{TemplateBinding Background}"
-                       Margin="0,6"
-                       CornerRadius="6">
-                  <Border Width="4" Height="22"
-                          CornerRadius="2"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center"
-                          Background="{DynamicResource TextFillColorTertiaryBrush}"
-                          IsHitTestVisible="False"/>
-               </Border>
-            </ControlTemplate>
-         </Setter>
-      </Style>
-      <Style Selector="GridSplitter.winui-vertical-splitter:pointerover">
-         <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
-      </Style>
-      <Style Selector="GridSplitter.winui-vertical-splitter:pressed">
-         <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
-      </Style>
    </UserControl.Styles>
 
    <UserControl.Resources>

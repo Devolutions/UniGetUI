@@ -30,7 +30,11 @@ public class CatalogPackageIdentitySetTests(ITestOutputHelper output)
 
     private static CatalogEntry Entry(string manager, string id = "example.tool", string source = "private") => new()
     {
-        Name = "Example tool", Id = id, ManagerName = manager, Source = source, Version = "unrelated-version",
+        Name = "Example tool",
+        Id = id,
+        ManagerName = manager,
+        Source = source,
+        Version = "unrelated-version",
     };
 
     private static Package Package(IPackageManager manager, string id = "EXAMPLE.TOOL", string source = "PRIVATE") =>
@@ -56,13 +60,13 @@ public class CatalogPackageIdentitySetTests(ITestOutputHelper output)
                      manager.Id, manager.Name, manager.DisplayName, chocolatey.Id, chocolatey.Name,
                      chocolatey.DisplayName, "missing-manager",
                  })
-        foreach (string id in new[] { "EXAMPLE.TOOL", "example.other", "example.tool.extra" })
-        foreach (string source in new[] { "private", "PUBLIC", "community", "different" })
-        {
-            var entry = Entry(alias.ToUpperInvariant(), id, source);
-            Assert.Equal(packages.Any(installedInventory ? entry.MatchesInstalled : entry.Matches),
-                identities.Contains(entry));
-        }
+            foreach (string id in new[] { "EXAMPLE.TOOL", "example.other", "example.tool.extra" })
+                foreach (string source in new[] { "private", "PUBLIC", "community", "different" })
+                {
+                    var entry = Entry(alias.ToUpperInvariant(), id, source);
+                    Assert.Equal(packages.Any(installedInventory ? entry.MatchesInstalled : entry.Matches),
+                        identities.Contains(entry));
+                }
         Assert.False(new CatalogPackageIdentitySet([]).Contains(Entry(manager.Id)));
     }
 
@@ -114,7 +118,8 @@ public class CatalogPackageIdentitySetTests(ITestOutputHelper output)
                 HideUnavailablePackages = false,
                 SelectedCatalog = new CatalogDefinition
                 {
-                    Id = "test", Name = "Test",
+                    Id = "test",
+                    Name = "Test",
                     Packages =
                     [
                         Entry(manager.Id), Entry(manager.Name), Entry(manager.DisplayName),

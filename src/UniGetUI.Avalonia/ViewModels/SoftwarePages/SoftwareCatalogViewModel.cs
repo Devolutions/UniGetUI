@@ -72,18 +72,18 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     partial void OnQueryChanged(string value) => ApplyAvailabilityFilter();
     partial void OnHideUnavailablePackagesChanged(bool value) => ApplyAvailabilityFilter();
 
-public bool HasHiddenPackages
-{
-    get
+    public bool HasHiddenPackages
     {
-        if (!HideUnavailablePackages) return false;
-        string query = Query.Trim();
-        return _allPackages.Any(p => p.UnavailableReason is not null
-            && _catalogSources.TryGetValue(SourceKey(p.Entry), out var source)
-            && source.IsSelected
-            && MatchesQuery(p.Entry, query));
+        get
+        {
+            if (!HideUnavailablePackages) return false;
+            string query = Query.Trim();
+            return _allPackages.Any(p => p.UnavailableReason is not null
+                && _catalogSources.TryGetValue(SourceKey(p.Entry), out var source)
+                && source.IsSelected
+                && MatchesQuery(p.Entry, query));
+        }
     }
-}
     public string PackageCountText => CoreTools.Translate("{0} packages found", Packages.Count);
     public string EmptyMessage => CoreTools.Translate(_allPackages.Count > 0
         ? "No packages are available with the current filters."
@@ -120,14 +120,14 @@ public bool HasHiddenPackages
 
     public bool HasError => ErrorMessage.Length > 0;
 
-partial void OnErrorMessageChanged(string value)
-{
-    OnPropertyChanged(nameof(HasError));
-    OnPropertyChanged(nameof(IsEmpty));
-    if (value.Length > 0)
-        Avalonia.Infrastructure.AccessibilityAnnouncementService.Announce(
-            value, global::Avalonia.Automation.AutomationLiveSetting.Assertive);
-}
+    partial void OnErrorMessageChanged(string value)
+    {
+        OnPropertyChanged(nameof(HasError));
+        OnPropertyChanged(nameof(IsEmpty));
+        if (value.Length > 0)
+            Avalonia.Infrastructure.AccessibilityAnnouncementService.Announce(
+                value, global::Avalonia.Automation.AutomationLiveSetting.Assertive);
+    }
 
     [RelayCommand]
     private async Task EditAsync()

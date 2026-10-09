@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Avalonia.Automation;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Models;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Avalonia.Views.Pages;
@@ -42,6 +44,78 @@ public class CatalogEditorTests : IDisposable
         var vm = new CatalogEditorViewModel();
         Assert.True(await vm.LoadAsync(FilePath));
         return vm;
+    }
+
+    [Fact]
+    public void OnlyChangedNonEmptyMessagesAreAnnounced()
+    {
+        var announcements = new List<AccessibilityAnnouncement>();
+        var vm = new CatalogEditorViewModel((message, setting) =>
+            announcements.Add(new AccessibilityAnnouncement(message!, setting)));
+        vm.NewDocument();
+        vm.Message = "Status";
+        vm.Message = "Status";
+        vm.Query = "tool";
+        vm.IsBusy = true;
+        vm.IsBusy = false;
+        vm.SelectedCatalog!.Name = "Renamed";
+        vm.IsDirty = false;
+        vm.IsDirty = true;
+        vm.SelectedCatalog = null;
+        Assert.Equal(new AccessibilityAnnouncement("Status", AutomationLiveSetting.Polite),
+            Assert.Single(announcements));
+        vm.Message = "";
+        vm.Message = " ";
+        Assert.Single(announcements);
+        vm.SetErrorMessage("File picker failed");
+        vm.SetErrorMessage("File picker failed");
+        vm.Message = "Recovered";
+        Assert.Equal(
+            [
+                new AccessibilityAnnouncement("Status", AutomationLiveSetting.Polite),
+                new AccessibilityAnnouncement("File picker failed", AutomationLiveSetting.Assertive),
+                new AccessibilityAnnouncement("Recovered", AutomationLiveSetting.Polite),
+            ], announcements);
+    }
+
+    [Fact]
+    public async Task LoadSaveAndSearchOutcomesAnnounceWithTheCorrectPriorityOnce()
+    {
+        var announcements = new List<AccessibilityAnnouncement>();
+        var vm = new CatalogEditorViewModel((message, setting) =>
+            announcements.Add(new AccessibilityAnnouncement(message!, setting)));
+        await SoftwareCatalog.SaveAsync(FilePath, Definitions);
+        Assert.True(await vm.LoadAsync(FilePath));
+        Assert.Empty(announcements);
+
+        string invalid = Path.Combine(_directory, "invalid.json");
+        await File.WriteAllTextAsync(invalid, "[{}]");
+        Assert.False(await vm.LoadAsync(invalid));
+        Assert.Equal(new AccessibilityAnnouncement(vm.Message, AutomationLiveSetting.Assertive),
+            Assert.Single(announcements));
+        announcements.Clear();
+
+        Assert.False(await vm.SaveAsync(Path.Combine(_directory, "missing", "catalog.json")));
+        Assert.Equal(new AccessibilityAnnouncement(vm.Message, AutomationLiveSetting.Assertive),
+            Assert.Single(announcements));
+        announcements.Clear();
+
+        Assert.True(await vm.SaveAsync(FilePath));
+        Assert.Equal(new AccessibilityAnnouncement(vm.Message, AutomationLiveSetting.Polite),
+            Assert.Single(announcements));
+        announcements.Clear();
+
+        vm.Query = "tool";
+        vm.SelectedManager = new SearchManager { Failure = new IOException("Search unavailable") };
+        await vm.SearchCommand.ExecuteAsync(null);
+        Assert.Equal(new AccessibilityAnnouncement(vm.Message, AutomationLiveSetting.Assertive),
+            Assert.Single(announcements));
+        announcements.Clear();
+
+        vm.SelectedManager = new SearchManager();
+        await vm.SearchCommand.ExecuteAsync(null);
+        Assert.Equal(new AccessibilityAnnouncement(vm.Message, AutomationLiveSetting.Polite),
+            Assert.Single(announcements));
     }
 
     [Fact]

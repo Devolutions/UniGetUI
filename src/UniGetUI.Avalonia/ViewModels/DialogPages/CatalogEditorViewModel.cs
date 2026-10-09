@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using Avalonia.Automation;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Models;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
@@ -53,8 +55,27 @@ public partial class CatalogEditorViewModel : ViewModelBase
     [ObservableProperty]
     private string _filePath = SoftwareCatalog.FilePath;
 
-    [ObservableProperty]
     private string _message = "";
+
+    private readonly Action<string?, AutomationLiveSetting> _announce;
+
+    public string Message
+    {
+        get => _message;
+        set => SetMessage(value);
+    }
+
+    public CatalogEditorViewModel() : this(AccessibilityAnnouncementService.Announce) { }
+
+    internal CatalogEditorViewModel(Action<string?, AutomationLiveSetting> announce) => _announce = announce;
+
+    public void SetErrorMessage(string message) => SetMessage(message, AutomationLiveSetting.Assertive);
+
+    private void SetMessage(string message, AutomationLiveSetting liveSetting = AutomationLiveSetting.Polite)
+    {
+        if (SetProperty(ref _message, message, nameof(Message)) && !string.IsNullOrWhiteSpace(message))
+            _announce(message, liveSetting);
+    }
 
     [ObservableProperty]
     private bool _isDirty;
@@ -189,7 +210,7 @@ public partial class CatalogEditorViewModel : ViewModelBase
         {
             Logger.Error($"Could not open catalog file {path}.");
             Logger.Error(ex);
-            Message = CoreTools.Translate("Could not open catalog file {0}: {1}", path, ex.Message);
+            SetErrorMessage(CoreTools.Translate("Could not open catalog file {0}: {1}", path, ex.Message));
             return false;
         }
         finally
@@ -217,7 +238,7 @@ public partial class CatalogEditorViewModel : ViewModelBase
         {
             Logger.Error($"Could not save catalog file {path}.");
             Logger.Error(ex);
-            Message = CoreTools.Translate("Could not save catalog file {0}: {1}", path, ex.Message);
+            SetErrorMessage(CoreTools.Translate("Could not save catalog file {0}: {1}", path, ex.Message));
             return false;
         }
         finally
@@ -336,7 +357,7 @@ public partial class CatalogEditorViewModel : ViewModelBase
         {
             Logger.Error("Catalog package search failed.");
             Logger.Error(ex);
-            Message = CoreTools.Translate("Catalog package search failed: {0}", ex.Message);
+            SetErrorMessage(CoreTools.Translate("Catalog package search failed: {0}", ex.Message));
         }
         finally
         {

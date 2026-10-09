@@ -272,7 +272,7 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
     {
         Logger.Error("Could not select a catalog file.");
         Logger.Error(ex);
-        _document.Message = CoreTools.Translate("Could not select a catalog file: {0}", ex.Message);
+        _document.SetErrorMessage(CoreTools.Translate("Could not select a catalog file: {0}", ex.Message));
     }
 }
 

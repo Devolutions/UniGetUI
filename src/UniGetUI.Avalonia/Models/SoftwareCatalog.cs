@@ -58,6 +58,13 @@ public sealed class CatalogEntry
         string.Equals(Id, package.Id, StringComparison.OrdinalIgnoreCase)
         && string.Equals(Source, package.Source.Name, StringComparison.OrdinalIgnoreCase)
         && MatchesManager(package.Manager);
+
+    public bool MatchesInstalled(IPackage package) =>
+        string.Equals(Id, package.Id, StringComparison.OrdinalIgnoreCase)
+        && MatchesManager(package.Manager)
+        // Chocolatey's installed inventory assigns DefaultSource and does not retain feed provenance.
+        && (string.Equals(package.Manager.Id, "chocolatey", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Source, package.Source.Name, StringComparison.OrdinalIgnoreCase));
 }
 
 internal static class SoftwareCatalog

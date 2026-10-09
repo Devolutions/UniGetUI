@@ -2,14 +2,25 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.PackageEngine.PackageLoader;
+using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views.Pages;
 
-public partial class SoftwareCatalogPage : UserControl, IEnterLeaveListener
+public partial class SoftwareCatalogPage : UserControl, IEnterLeaveListener, ISearchBoxPage
 {
     private readonly SoftwareCatalogViewModel _viewModel = new();
     private readonly DispatcherTimer _stateTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private InstalledPackagesLoader? _loader;
+
+    public string QueryBackup
+    {
+        get => _viewModel.Query;
+        set => _viewModel.Query = value;
+    }
+
+    public string SearchBoxPlaceholder => CoreTools.Translate("Search for packages");
+    public void ApplyQuery(string query) => _viewModel.Query = query;
+    public void SearchBox_QuerySubmitted(object? sender, EventArgs? e) { }
 
     public SoftwareCatalogPage()
     {

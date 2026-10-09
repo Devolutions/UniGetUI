@@ -54,6 +54,7 @@ public class DiscoverSoftwarePage : AbstractPackagesPage
         var selector = new CatalogSelector(document);
         var button = vm.AddToolbarButton("add_to", CoreTools.Translate("Add selection to catalog"),
             () => _ = AddSelectionToCatalogAsync(vm, document));
+        ToolTip.SetShowOnDisabled(button, true);
         vm.AddToolbarEntry(new ToolbarEntry(selector, "add_to", CoreTools.Translate("Select a catalog"), null,
             selector.ShowFlyoutAt));
         void UpdateState()

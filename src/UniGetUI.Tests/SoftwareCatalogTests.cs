@@ -10,6 +10,71 @@ namespace UniGetUI.Tests;
 
 public class SoftwareCatalogTests
 {
+    [Theory]
+    [InlineData("clAuDe")]
+    [InlineData("Anthropic.")]
+    public void CatalogSearchMatchesNameAndIdCaseInsensitively(string query)
+    {
+        var vm = new SoftwareCatalogViewModel
+        {
+            HideUnavailablePackages = false,
+            SelectedCatalog = new CatalogDefinition
+            {
+                Id = "test", Name = "Test",
+                Packages =
+                [
+                    new CatalogEntry
+                    {
+                        Id = "Anthropic.Claude", Name = "Claude", ManagerName = "missing-test-manager", Source = "private",
+                    },
+                    new CatalogEntry { Id = "other", Name = "Other", ManagerName = "different-manager", Source = "public" },
+                ],
+            },
+        };
+        var original = vm.Packages[0];
+        vm.Query = $"  {query}  ";
+        Assert.Same(original, Assert.Single(vm.Packages));
+        Assert.False(vm.HasHiddenPackages);
+        vm.HideUnavailablePackages = true;
+        Assert.Empty(vm.Packages);
+        Assert.True(vm.HasHiddenPackages);
+        vm.HideUnavailablePackages = false;
+        Assert.Same(original, Assert.Single(vm.Packages));
+        vm.Query = "no match";
+        Assert.Empty(vm.Packages);
+        Assert.True(vm.IsEmpty);
+        Assert.False(vm.HasHiddenPackages);
+        vm.Query = "";
+        Assert.Equal(2, vm.Packages.Count);
+        Assert.Same(original, vm.Packages[0]);
+    }
+
+    [Fact]
+    public void CatalogDefaultsToTilesAndViewSwitchingPreservesPackagesAndFilters()
+    {
+        var vm = new SoftwareCatalogViewModel
+        {
+            HideUnavailablePackages = false,
+            Query = "Claude",
+            SelectedCatalog = new CatalogDefinition { Id = "test", Name = "Test", Packages = [Entry] },
+        };
+        Assert.Equal(3, vm.ViewModeIndex);
+        Assert.False(vm.IsFilterPaneOpen);
+        Assert.True(vm.IsTilesView);
+        var tile = Assert.Single(vm.Packages);
+        for (int index = 0; index < 4; index++)
+        {
+            vm.ViewModeIndex = index;
+            Assert.Equal(index == 0, vm.IsListView);
+            Assert.Equal(index == 1, vm.IsGridView);
+            Assert.Equal(index == 2, vm.IsIconsView);
+            Assert.Equal(index == 3, vm.IsTilesView);
+            Assert.Same(tile, Assert.Single(vm.Packages));
+            Assert.Equal("Claude", vm.Query);
+            Assert.False(vm.HideUnavailablePackages);
+        }
+    }
+
     private const string EntryJson = """
         {"Id":"Anthropic.Claude","Name":"Claude","Version":"","Source":"winget","ManagerName":"WinGet"}
         """;
@@ -21,6 +86,84 @@ public class SoftwareCatalogTests
         ManagerName = "WinGet",
         Source = "winget",
     };
+
+    [Theory]
+    [InlineData(SearchMode.Name, "claude", 1)]
+    [InlineData(SearchMode.Id, "claude", 1)]
+    [InlineData(SearchMode.Name, "anthropic", 0)]
+    [InlineData(SearchMode.Id, "anthropic", 1)]
+    [InlineData(SearchMode.Both, "anthropic", 1)]
+    [InlineData(SearchMode.Exact, "cla", 0)]
+    [InlineData(SearchMode.Exact, "CLAUDE", 1)]
+    [InlineData(SearchMode.Exact, "ANTHROPIC.CLAUDE", 1)]
+    [InlineData(SearchMode.Exact, " ", 1)]
+    public void CatalogSearchModesApplyImmediately(SearchMode mode, string query, int count)
+    {
+        var vm = new SoftwareCatalogViewModel
+        {
+            HideUnavailablePackages = false,
+            SelectedCatalog = new CatalogDefinition { Id = "test", Name = "Test", Packages = [Entry] },
+            Query = query,
+            SearchMode = mode,
+        };
+        Assert.Equal(count, vm.Packages.Count);
+        Assert.Equal(mode == SearchMode.Name, vm.SearchMode_Name);
+        Assert.Equal(mode == SearchMode.Id, vm.SearchMode_Id);
+        Assert.Equal(mode == SearchMode.Both, vm.SearchMode_Both);
+        Assert.Equal(mode == SearchMode.Exact, vm.SearchMode_Exact);
+        vm.Query = "anthropic";
+        vm.SearchMode_Name = true;
+        Assert.Empty(vm.Packages);
+        vm.SearchMode_Id = true;
+        Assert.Single(vm.Packages);
+        vm.SearchMode_Exact = true;
+        Assert.Empty(vm.Packages);
+        vm.SearchMode_Both = true;
+        Assert.Single(vm.Packages);
+    }
+
+    [Fact]
+    public void CatalogSourcesFilterByManagerAndSourceAndPersistAcrossSameCatalogReload()
+    {
+        var catalog = new CatalogDefinition
+        {
+            Id = "test", Name = "Test",
+            Packages =
+            [
+                new CatalogEntry { Id = "one", Name = "One", ManagerName = "missing-one", Source = "private" },
+                new CatalogEntry { Id = "two", Name = "Two", ManagerName = "MISSING-ONE", Source = "public" },
+                new CatalogEntry { Id = "three", Name = "Three", ManagerName = "missing-two", Source = "private" },
+            ],
+        };
+        var vm = new SoftwareCatalogViewModel { HideUnavailablePackages = false, SelectedCatalog = catalog };
+        Assert.False(vm.IsFilterPaneOpen);
+        Assert.Equal(2, vm.SourceNodes.Count);
+        Assert.Equal(2, vm.SourceNodes[0].Children.Count);
+        var first = vm.Packages[0];
+        vm.SourceNodes[0].Children[0].IsSelected = false;
+        Assert.Equal(["two", "three"], vm.Packages.Select(p => p.Entry.Id));
+        Assert.False(vm.SourceNodes[0].IsSelected);
+        vm.SourceNodes[0].IsSelected = true;
+        Assert.Equal(3, vm.Packages.Count);
+        Assert.Same(first, vm.Packages[0]);
+        vm.SourceNodes[0].IsSelected = false;
+        Assert.Equal("three", Assert.Single(vm.Packages).Entry.Id);
+        vm.SelectedCatalog = null;
+        vm.SelectedCatalog = catalog;
+        Assert.Equal("three", Assert.Single(vm.Packages).Entry.Id);
+        vm.SelectAllSourcesCommand.Execute(null);
+        Assert.Equal(3, vm.Packages.Count);
+        vm.ClearSourceSelectionCommand.Execute(null);
+        Assert.Empty(vm.Packages);
+        vm.HideUnavailablePackages = true;
+        vm.SelectAllSourcesCommand.Execute(null);
+        Assert.Empty(vm.Packages);
+        vm.HideUnavailablePackages = false;
+        Assert.Equal(3, vm.Packages.Count);
+        vm.ClearSourceSelectionCommand.Execute(null);
+        vm.SelectedCatalog = new CatalogDefinition { Id = "other", Name = "Other", Packages = catalog.Packages };
+        Assert.Equal(3, vm.Packages.Count);
+    }
 
     [Fact]
     public void UnavailableSourcesAreHiddenByDefaultAndTheFilterRestoresTheSameTiles()
@@ -232,6 +375,60 @@ public class SoftwareCatalogTests
         Assert.False(Entry.Matches("Anthropic.Claude", "scoop", "winget"));
         Assert.False(Entry.Matches("Anthropic.Claude", "winget", "msstore"));
         Assert.False(Entry.Matches("Anthropic.Claude.Other", "winget", "winget"));
+    }
+
+    [Theory]
+    [InlineData("Chocolatey")]
+    [InlineData("chocolatey")]
+    [InlineData("CHOCOLATEY")]
+    public void ChocolateyInstalledMatchingIgnoresFeedButRepositoryMatchingRemainsExact(string managerName)
+    {
+        var manager = new UniGetUI.PackageEngine.Managers.ChocolateyManager.Chocolatey();
+        var entry = new CatalogEntry
+        {
+            Id = "example.tool", Name = "Example tool", ManagerName = managerName, Source = "private",
+        };
+        var installed = new UniGetUI.PackageEngine.PackageClasses.Package(
+            "Example tool", "EXAMPLE.TOOL", "1.0", manager.DefaultSource, manager);
+        Assert.True(entry.MatchesInstalled(installed));
+        Assert.False(entry.Matches(installed));
+        var privateSource = new UniGetUI.PackageEngine.Classes.Manager.ManagerSource(
+            manager, "private", new Uri("https://example.test/feed"));
+        var repositoryPackage = new UniGetUI.PackageEngine.PackageClasses.Package(
+            "Example tool", entry.Id, "2.0", privateSource, manager);
+        Assert.True(entry.Matches(repositoryPackage));
+        Assert.True(entry.MatchesInstalled(repositoryPackage));
+        var differentPackage = new UniGetUI.PackageEngine.PackageClasses.Package(
+            "Different tool", "example.other", "1.0", manager.DefaultSource, manager);
+        Assert.False(entry.MatchesInstalled(differentPackage));
+        var tile = new CatalogTileViewModel(entry);
+        tile.UpdateState(entry.MatchesInstalled(installed), null, true, false);
+        Assert.True(tile.IsInstalled);
+        Assert.False(tile.ShowInstall);
+        Assert.False(tile.CanInstall);
+    }
+
+    [Fact]
+    public void OtherManagersStillRequireTheInstalledSourceAndManagerToMatch()
+    {
+        var manager = new UniGetUI.PackageEngine.Managers.NpmManager.Npm();
+        var entry = new CatalogEntry
+        {
+            Id = "example.tool", Name = "Example tool", ManagerName = manager.Id, Source = "private",
+        };
+        var package = new UniGetUI.PackageEngine.PackageClasses.Package(
+            entry.Name, entry.Id, "1.0", manager.DefaultSource, manager);
+        Assert.False(entry.MatchesInstalled(package));
+        var privateSource = new UniGetUI.PackageEngine.Classes.Manager.ManagerSource(
+            manager, "PRIVATE", new Uri("https://example.test/feed"));
+        package = new UniGetUI.PackageEngine.PackageClasses.Package(
+            entry.Name, entry.Id, "1.0", privateSource, manager);
+        Assert.True(entry.MatchesInstalled(package));
+        var chocolateyEntry = new CatalogEntry
+        {
+            Id = entry.Id, Name = entry.Name, ManagerName = "chocolatey", Source = "private",
+        };
+        Assert.False(chocolateyEntry.MatchesInstalled(package));
     }
 
     [Theory]

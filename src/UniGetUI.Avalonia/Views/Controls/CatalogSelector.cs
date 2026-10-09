@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using Avalonia.Layout;
 using UniGetUI.Avalonia.ViewModels;
 using UniGetUI.Core.Tools;
 
@@ -19,6 +20,8 @@ public sealed class CatalogSelector : ComboBox
         _document = document;
         MinWidth = 180;
         MaxWidth = 300;
+        VerticalAlignment = VerticalAlignment.Center;
+        VerticalContentAlignment = VerticalAlignment.Center;
         PlaceholderText = CoreTools.Translate("Select a catalog");
         AutomationProperties.SetName(this, CoreTools.Translate("Catalog"));
         ItemsSource = document.Catalogs;

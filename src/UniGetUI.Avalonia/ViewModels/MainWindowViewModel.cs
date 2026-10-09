@@ -198,6 +198,8 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_syncingSearch) return;
         if (CurrentPageContent is AbstractPackagesPage page)
             page.ViewModel.GlobalQueryText = value;
+        else if (CurrentPageContent is SoftwareCatalogPage catalogPage)
+            catalogPage.ApplyQuery(value);
         else if (CurrentPageContent is SettingsBasePage)
             UpdateSettingsSuggestions(value);
         else if (CurrentPageContent is Views.Pages.LogPages.OperationHistoryPage historyPage)
@@ -209,6 +211,7 @@ public partial class MainWindowViewModel : ViewModelBase
         DiscoverPage.ViewModel.ClearSearchQuery();
         UpdatesPage.ViewModel.ClearSearchQuery();
         InstalledPage.ViewModel.ClearSearchQuery();
+        CatalogPage?.ApplyQuery("");
         GlobalSearchText = "";
     }
 

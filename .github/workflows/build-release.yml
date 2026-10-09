@@ -414,6 +414,7 @@ jobs:
       UNIGETUI_OPENSEARCH_PASSWORD: ${{ secrets.UNIGETUI_OPENSEARCH_PASSWORD }}
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
       SIGNING_IDENTITY: 'Developer ID Application: Devolutions inc.'
+      INSTALLER_SIGNING_IDENTITY: 'Developer ID Installer: Devolutions inc.'
     strategy:
       fail-fast: false
       matrix:
@@ -679,6 +680,77 @@ jobs:
           apple_password: ${{ secrets.APPLE_BOT_PASSWORD }}
           package_path: output/UniGetUI.${{ matrix.name }}.dmg
 
+      - name: Import Developer ID Installer certificate
+        if: ${{ runner.os == 'macOS' && fromJSON(needs.preflight.outputs.dry-run) == false }}
+        env:
+          INSTALLER_CERTIFICATE: ${{ secrets.APPLE_DEV_ID_INSTALLER_CERTIFICATE }}
+          INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEV_ID_INSTALLER_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$INSTALLER_CERTIFICATE" ] || [ -z "$INSTALLER_CERTIFICATE_PASSWORD" ]; then
+            echo "::error::APPLE_DEV_ID_INSTALLER_CERTIFICATE and APPLE_DEV_ID_INSTALLER_CERTIFICATE_PASSWORD must be set in this environment to sign the macOS .pkg."
+            exit 1
+          fi
+          KEYCHAIN="installer.keychain"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          CERTIFICATE="$RUNNER_TEMP/installer.p12"
+          printf '%s' "$INSTALLER_CERTIFICATE" | base64 -d -o "$CERTIFICATE"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$CERTIFICATE" -P "$INSTALLER_CERTIFICATE_PASSWORD" -k "$KEYCHAIN" -T /usr/bin/pkgbuild -T /usr/bin/productbuild
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          rm -f "$CERTIFICATE"
+          security list-keychains -d user -s $(security list-keychains -d user | tr -d '"') "$KEYCHAIN"
+
+      - name: Package PKG (macOS)
+        if: ${{ runner.os == 'macOS' }}
+        run: |
+          set -euo pipefail
+          VERSION='${{ needs.preflight.outputs.package-version }}'
+          DRY_RUN='${{ needs.preflight.outputs.dry-run }}'
+          PKG="output/UniGetUI.${{ matrix.name }}.pkg"
+          PKG_ROOT="$RUNNER_TEMP/pkg-root"
+          COMPONENT_PLIST="$RUNNER_TEMP/pkg-component.plist"
+
+          rm -rf "$PKG_ROOT" "$PKG"
+          mkdir -p "$PKG_ROOT"
+          ditto UniGetUI.app "$PKG_ROOT/UniGetUI.app"
+
+          pkgbuild --analyze --root "$PKG_ROOT" "$COMPONENT_PLIST"
+          plutil -replace 0.BundleIsRelocatable -bool NO "$COMPONENT_PLIST"
+
+          SIGN_ARGS=()
+          if [ "$DRY_RUN" = "false" ]; then
+            SIGN_ARGS=(--sign "$INSTALLER_SIGNING_IDENTITY" --timestamp)
+          fi
+
+          pkgbuild \
+            --root "$PKG_ROOT" \
+            --component-plist "$COMPONENT_PLIST" \
+            --install-location /Applications \
+            --identifier io.github.marticliment.unigetui \
+            --version "$VERSION" \
+            ${SIGN_ARGS[@]+"${SIGN_ARGS[@]}"} \
+            "$PKG"
+
+          PAYLOAD="$(pkgutil --payload-files "$PKG")"
+          UNEXPECTED="$(printf '%s\n' "$PAYLOAD" | grep -v -E '^\./?(UniGetUI\.app(/.*)?)?$' || true)"
+          if [ -n "$UNEXPECTED" ]; then
+            echo "::error::$PKG installs files outside /Applications/UniGetUI.app:"
+            printf '%s\n' "$UNEXPECTED"
+            exit 1
+          fi
+
+      - name: Notarize PKG
+        if: ${{ runner.os == 'macOS' && fromJSON(needs.preflight.outputs.dry-run) == false }}
+        uses: ./.github/workflows/macos-notarize
+        timeout-minutes: 15
+        with:
+          apple_password: ${{ secrets.APPLE_BOT_PASSWORD }}
+          package_path: output/UniGetUI.${{ matrix.name }}.pkg
+
       - name: Install Linux packaging tools
         if: runner.os == 'Linux'
         run: |
@@ -905,6 +977,8 @@ jobs:
             "output/UniGetUI-release-arm64/UniGetUI.arm64.zip" = "Devolutions.UniGetUI.win-arm64.$OneDriveVersion.zip"
             "output/UniGetUI-macos-x64/UniGetUI.macos-x64.dmg" = "Devolutions.UniGetUI.macos-x64.$OneDriveVersion.dmg"
             "output/UniGetUI-macos-arm64/UniGetUI.macos-arm64.dmg" = "Devolutions.UniGetUI.macos-arm64.$OneDriveVersion.dmg"
+            "output/UniGetUI-macos-x64/UniGetUI.macos-x64.pkg" = "Devolutions.UniGetUI.macos-x64.$OneDriveVersion.pkg"
+            "output/UniGetUI-macos-arm64/UniGetUI.macos-arm64.pkg" = "Devolutions.UniGetUI.macos-arm64.$OneDriveVersion.pkg"
             "output/UniGetUI-macos-x64/UniGetUI.macos-x64.tar.gz" = "Devolutions.UniGetUI.macos-x64.$OneDriveVersion.tar.gz"
             "output/UniGetUI-macos-arm64/UniGetUI.macos-arm64.tar.gz" = "Devolutions.UniGetUI.macos-arm64.$OneDriveVersion.tar.gz"
             "output/UniGetUI-linux-x64/UniGetUI.linux-x64.deb" = "Devolutions.UniGetUI.linux-x64.$OneDriveVersion.deb"

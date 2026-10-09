@@ -18,6 +18,7 @@
   "Add packages from Discover using Add selection to catalog.": "Add packages from Discover using Add selection to catalog.",
   "No packages in this catalog": "No packages in this catalog",
   "Loading catalog": "Loading catalog",
+  "No packages match your filters": "No packages match your filters",
   "Open or create a catalog before adding packages.": "Open or create a catalog before adding packages.",
   "{0} packages added to catalog {1}. Save the catalog to keep your changes.": "{0} packages added to catalog {1}. Save the catalog to keep your changes.",
   "Could not add packages to the catalog": "Could not add packages to the catalog",

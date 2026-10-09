@@ -312,7 +312,7 @@ internal sealed class MainWindow : Window
     /// <summary>The pages, each with a numbered tab (Help and About are dialogs, opened from the Help menu and F1).</summary>
     private static readonly string[] TabPages = TuiPageIds.All.Where(id => id is not (TuiPageIds.Help or TuiPageIds.About)).ToArray();
 
-    private enum TabDensity
+    internal enum TabDensity
     {
         Full,
         Short,
@@ -342,18 +342,24 @@ internal sealed class MainWindow : Window
         };
     }
 
+    internal static (TabDensity Others, TabDensity Active) FitTabs(int count, int active, Func<int, TabDensity, string> label, double available)
+    {
+        foreach (TabDensity candidate in Enum.GetValues<TabDensity>())
+        {
+            int width = Enumerable.Range(0, count).Sum(i => TuiChrome.Cells(label(i, i == active ? TabDensity.Full : candidate)) + 2);
+            if (available <= 0 || width <= available) return (candidate, TabDensity.Full);
+        }
+
+        return (TabDensity.NumberOnly, TabDensity.NumberOnly);
+    }
+
     private void RefreshTabs()
     {
         List<(string Id, int Index)> tabs = TabPages.Select((id, i) => (id, i)).ToList();
 
         double available = (_tabStrip.Parent as Control)?.Bounds.Width ?? 0;
-        TabDensity density = TabDensity.Full;
-        foreach (TabDensity candidate in Enum.GetValues<TabDensity>())
-        {
-            density = candidate;
-            int width = tabs.Sum(t => TuiChrome.Cells(TabLabel(t.Id, t.Index, t.Id == _currentPageId ? TabDensity.Full : candidate)) + 2);
-            if (available <= 0 || width <= available) break;
-        }
+        int current = tabs.FindIndex(t => t.Id == _currentPageId);
+        (TabDensity density, TabDensity activeDensity) = FitTabs(tabs.Count, current, (i, d) => TabLabel(tabs[i].Id, tabs[i].Index, d), available);
 
         while (_tabStrip.Children.Count > tabs.Count) _tabStrip.Children.RemoveAt(_tabStrip.Children.Count - 1);
         for (int i = 0; i < tabs.Count; i++)
@@ -377,7 +383,7 @@ internal sealed class MainWindow : Window
             var text = (TextBlock)border.Child!;
             border.Tag = id;
             border.Background = active ? TuiPalette.Focus : Brushes.Transparent;
-            text.Text = " " + TabLabel(id, index, active ? TabDensity.Full : density) + " ";
+            text.Text = " " + TabLabel(id, index, active ? activeDensity : density) + " ";
             text.Foreground = active ? TuiPalette.FocusText : TuiPalette.TextMuted;
             text.FontWeight = active ? FontWeight.Bold : FontWeight.Normal;
         }

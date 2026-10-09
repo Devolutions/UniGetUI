@@ -736,7 +736,7 @@ jobs:
             "$PKG"
 
           PAYLOAD="$(pkgutil --payload-files "$PKG")"
-          UNEXPECTED="$(printf '%s\n' "$PAYLOAD" | grep -v -E '^\./?(UniGetUI\.app(/.*)?)?$' || true)"
+          UNEXPECTED="$(printf '%s\n' "$PAYLOAD" | grep -v -E '^\./?((\._)?UniGetUI\.app(/.*)?)?$' || true)"
           if [ -n "$UNEXPECTED" ]; then
             echo "::error::$PKG installs files outside /Applications/UniGetUI.app:"
             printf '%s\n' "$UNEXPECTED"

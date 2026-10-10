@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using Avalonia;
+using Avalonia.Automation;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using UniGetUI.Avalonia.Extensions;
@@ -61,13 +63,76 @@ public partial class SoftwareCatalogPage : UserControl, IEnterLeaveListener, ISe
             });
 
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        foreach (var col in PackageList.Columns)
+        {
+            if (col.Tag is not string tag || !Enum.TryParse<CatalogSortField>(tag, out var colField)) continue;
+            col.CanUserSort = true;
+            col.CustomSortComparer = System.Collections.Generic.Comparer<CatalogTileViewModel>.Create(
+                (a, b) => SoftwareCatalogViewModel.CompareTiles(colField, a, b));
+        }
+        SetupSortArrows();
+        PackageList.Sorting += (_, e) =>
+        {
+            e.Handled = true;
+            if (e.Column.Tag is string tag && Enum.TryParse<CatalogSortField>(tag, out var field))
+                _viewModel.ToggleSort(field);
+        };
         UpdateFilterPaneColumn(_viewModel.IsFilterPaneOpen);
+        SyncOrderBy();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(SoftwareCatalogViewModel.IsFilterPaneOpen))
             UpdateFilterPaneColumn(_viewModel.IsFilterPaneOpen);
+        else if (e.PropertyName is nameof(SoftwareCatalogViewModel.SortField) or nameof(SoftwareCatalogViewModel.SortAscending))
+        {
+            UpdateSortArrows();
+            SyncOrderBy();
+        }
+    }
+
+    private static TextBlock? Check(bool show) =>
+        show ? new TextBlock { Text = "✓", FontSize = 12 } : null;
+
+    private void SyncOrderBy()
+    {
+        string direction = _viewModel.SortAscending
+            ? CoreTools.Translate("Ascending")
+            : CoreTools.Translate("Descending");
+        AutomationProperties.SetName(
+            OrderByButton,
+            CoreTools.Translate("{0}: {1}, {2}", CoreTools.Translate("Order by"), _viewModel.SortFieldName, direction));
+        OrderByName_Menu.Icon = Check(_viewModel.SortField == CatalogSortField.Name);
+        OrderById_Menu.Icon = Check(_viewModel.SortField == CatalogSortField.Id);
+        OrderBySource_Menu.Icon = Check(_viewModel.SortField == CatalogSortField.Source);
+        OrderByAscending_Menu.Icon = Check(_viewModel.SortAscending);
+        OrderByDescending_Menu.Icon = Check(!_viewModel.SortAscending);
+    }
+    // The arrow is the DataGrid's native one, driven by the collection view's sort descriptions.
+    // The view-model already orders the items, so the same order is mirrored onto the grid.
+    private void SetupSortArrows()
+    {
+        PackageList.AttachedToVisualTree += (_, _) => UpdateSortArrows();
+        PackageList.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == DataGrid.ItemsSourceProperty) UpdateSortArrows();
+        };
+        UpdateSortArrows();
+    }
+
+    private void UpdateSortArrows()
+    {
+        var view = PackageList.CollectionView;
+        if (view is null) return;
+        var direction = _viewModel.SortAscending ? ListSortDirection.Ascending : ListSortDirection.Descending;
+        var active = PackageList.Columns.FirstOrDefault(c => c.Tag as string == _viewModel.SortField.ToString());
+        using (view.DeferRefresh())
+        {
+            view.SortDescriptions.Clear();
+            if (active?.CustomSortComparer is { } comparer)
+                view.SortDescriptions.Add(DataGridSortDescription.FromComparer(comparer, direction));
+        }
     }
 
     private void UpdateFilterPaneColumn(bool open)

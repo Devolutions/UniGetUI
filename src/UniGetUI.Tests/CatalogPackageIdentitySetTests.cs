@@ -113,22 +113,19 @@ public class CatalogPackageIdentitySetTests(ITestOutputHelper output)
         AvaloniaOperationRegistry.OperationViewModels.Add(operationVm);
         try
         {
-            var vm = new SoftwareCatalogViewModel
+            var vm = new SoftwareCatalogViewModel { HideUnavailablePackages = false };
+            vm.LoadCatalogs([new CatalogDefinition
             {
-                HideUnavailablePackages = false,
-                SelectedCatalog = new CatalogDefinition
-                {
-                    Id = "test",
-                    Name = "Test",
-                    Packages =
-                    [
-                        Entry(manager.Id), Entry(manager.Name), Entry(manager.DisplayName),
-                        Entry(manager.Id, source: "different"),
-                        Entry(manager.Id, id: "different"),
-                        Entry("different-manager"),
-                    ],
-                },
-            };
+                Id = "test",
+                Name = "Test",
+                Packages =
+                [
+                    Entry(manager.Id), Entry(manager.Name), Entry(manager.DisplayName),
+                    Entry(manager.Id, source: "different"),
+                    Entry(manager.Id, id: "different"),
+                    Entry("different-manager"),
+                ],
+            }]);
             Assert.Equal([pending, pending, pending, false, false, false], vm.Packages.Select(p => p.IsPending));
             operation.Status = OperationStatus.Canceled;
             vm.UpdateStates();

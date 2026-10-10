@@ -15,23 +15,20 @@ public class SoftwareCatalogTests
     [InlineData("Anthropic.")]
     public void CatalogSearchMatchesNameAndIdCaseInsensitively(string query)
     {
-        var vm = new SoftwareCatalogViewModel
+        var vm = new SoftwareCatalogViewModel { HideUnavailablePackages = false };
+        vm.LoadCatalogs([new CatalogDefinition
         {
-            HideUnavailablePackages = false,
-            SelectedCatalog = new CatalogDefinition
-            {
-                Id = "test",
-                Name = "Test",
-                Packages =
-                [
-                    new CatalogEntry
-                    {
-                        Id = "Anthropic.Claude", Name = "Claude", ManagerName = "missing-test-manager", Source = "private",
-                    },
-                    new CatalogEntry { Id = "other", Name = "Other", ManagerName = "different-manager", Source = "public" },
-                ],
-            },
-        };
+            Id = "test",
+            Name = "Test",
+            Packages =
+            [
+                new CatalogEntry
+                {
+                    Id = "Anthropic.Claude", Name = "Claude", ManagerName = "missing-test-manager", Source = "private",
+                },
+                new CatalogEntry { Id = "other", Name = "Other", ManagerName = "different-manager", Source = "public" },
+            ],
+        }]);
         var original = vm.Packages[0];
         vm.Query = $"  {query}  ";
         Assert.Same(original, Assert.Single(vm.Packages));
@@ -57,8 +54,8 @@ public class SoftwareCatalogTests
         {
             HideUnavailablePackages = false,
             Query = "Claude",
-            SelectedCatalog = new CatalogDefinition { Id = "test", Name = "Test", Packages = [Entry] },
         };
+        vm.LoadCatalogs([new CatalogDefinition { Id = "test", Name = "Test", Packages = [Entry] }]);
         Assert.Equal(3, vm.ViewModeIndex);
         Assert.False(vm.IsFilterPaneOpen);
         Assert.True(vm.IsTilesView);
@@ -103,10 +100,10 @@ public class SoftwareCatalogTests
         var vm = new SoftwareCatalogViewModel
         {
             HideUnavailablePackages = false,
-            SelectedCatalog = new CatalogDefinition { Id = "test", Name = "Test", Packages = [Entry] },
             Query = query,
             SearchMode = mode,
         };
+        vm.LoadCatalogs([new CatalogDefinition { Id = "test", Name = "Test", Packages = [Entry] }]);
         Assert.Equal(count, vm.Packages.Count);
         Assert.Equal(mode == SearchMode.Name, vm.SearchMode_Name);
         Assert.Equal(mode == SearchMode.Id, vm.SearchMode_Id);
@@ -137,21 +134,22 @@ public class SoftwareCatalogTests
                 new CatalogEntry { Id = "three", Name = "Three", ManagerName = "missing-two", Source = "private" },
             ],
         };
-        var vm = new SoftwareCatalogViewModel { HideUnavailablePackages = false, SelectedCatalog = catalog };
+        var vm = new SoftwareCatalogViewModel { HideUnavailablePackages = false };
+        vm.LoadCatalogs([catalog]);
         Assert.False(vm.IsFilterPaneOpen);
         Assert.Equal(2, vm.SourceNodes.Count);
         Assert.Equal(2, vm.SourceNodes[0].Children.Count);
         var first = vm.Packages[0];
         vm.SourceNodes[0].Children[0].IsSelected = false;
-        Assert.Equal(["two", "three"], vm.Packages.Select(p => p.Entry.Id));
+        Assert.Equal(["three", "two"], vm.Packages.Select(p => p.Entry.Id));
         Assert.False(vm.SourceNodes[0].IsSelected);
         vm.SourceNodes[0].IsSelected = true;
         Assert.Equal(3, vm.Packages.Count);
         Assert.Same(first, vm.Packages[0]);
         vm.SourceNodes[0].IsSelected = false;
         Assert.Equal("three", Assert.Single(vm.Packages).Entry.Id);
-        vm.SelectedCatalog = null;
-        vm.SelectedCatalog = catalog;
+        vm.LoadCatalogs([]);
+        vm.LoadCatalogs([catalog]);
         Assert.Equal("three", Assert.Single(vm.Packages).Entry.Id);
         vm.SelectAllSourcesCommand.Execute(null);
         Assert.Equal(3, vm.Packages.Count);
@@ -162,23 +160,67 @@ public class SoftwareCatalogTests
         Assert.Empty(vm.Packages);
         vm.HideUnavailablePackages = false;
         Assert.Equal(3, vm.Packages.Count);
-        vm.ClearSourceSelectionCommand.Execute(null);
-        vm.SelectedCatalog = new CatalogDefinition { Id = "other", Name = "Other", Packages = catalog.Packages };
+    }
+
+    [Fact]
+    public void CatalogsFilterAndGroupPackagesByCatalog()
+    {
+        var first = new CatalogDefinition
+        {
+            Id = "first",
+            Name = "First",
+            Packages = [new CatalogEntry { Id = "one", Name = "One", ManagerName = "missing-one", Source = "x" }],
+        };
+        var second = new CatalogDefinition
+        {
+            Id = "second",
+            Name = "Second",
+            Packages =
+            [
+                new CatalogEntry { Id = "two", Name = "Two", ManagerName = "missing-one", Source = "x" },
+                new CatalogEntry { Id = "three", Name = "Three", ManagerName = "missing-one", Source = "x" },
+            ],
+        };
+        var vm = new SoftwareCatalogViewModel { HideUnavailablePackages = false, GroupByCatalog = false };
+        vm.LoadCatalogs([first, second]);
+        Assert.Equal(["first", "second"], vm.CatalogNodes.Select(n => n.Definition.Id));
         Assert.Equal(3, vm.Packages.Count);
+        Assert.Equal(["First", "Second"], vm.Packages.Select(p => p.CatalogName).Distinct().Order());
+
+        var flat = Assert.Single(vm.Groups);
+        Assert.False(flat.HasHeader);
+        Assert.Equal(3, flat.Packages.Count);
+
+        vm.GroupByCatalog = true;
+        Assert.Equal(["First", "Second"], vm.Groups.Select(g => g.Name));
+        Assert.All(vm.Groups, g => Assert.True(g.HasHeader));
+        Assert.Equal([1, 2], vm.Groups.Select(g => g.Packages.Count));
+
+        vm.CatalogNodes[0].IsSelected = false;
+        Assert.Equal(["three", "two"], vm.Packages.Select(p => p.Entry.Id));
+        Assert.Equal("Second", Assert.Single(vm.Groups).Name);
+
+        vm.ClearCatalogSelectionCommand.Execute(null);
+        Assert.Empty(vm.Packages);
+        Assert.Empty(vm.Groups);
+        vm.SelectAllCatalogsCommand.Execute(null);
+        Assert.Equal(3, vm.Packages.Count);
+
+        vm.CatalogNodes[1].IsSelected = false;
+        vm.LoadCatalogs([first, second]);
+        Assert.Equal("one", Assert.Single(vm.Packages).Entry.Id);
     }
 
     [Fact]
     public void UnavailableSourcesAreHiddenByDefaultAndTheFilterRestoresTheSameTiles()
     {
-        var vm = new SoftwareCatalogViewModel
+        var vm = new SoftwareCatalogViewModel();
+        vm.LoadCatalogs([new CatalogDefinition
         {
-            SelectedCatalog = new CatalogDefinition
-            {
-                Id = "missing-manager",
-                Name = "Missing manager",
-                Packages = [new CatalogEntry { Id = "tool", Name = "Tool", Source = "private", ManagerName = "missing-test-manager" }],
-            },
-        };
+            Id = "missing-manager",
+            Name = "Missing manager",
+            Packages = [new CatalogEntry { Id = "tool", Name = "Tool", Source = "private", ManagerName = "missing-test-manager" }],
+        }]);
         Assert.True(vm.HideUnavailablePackages);
         Assert.Empty(vm.Packages);
         Assert.True(vm.HasHiddenPackages);
@@ -201,7 +243,7 @@ public class SoftwareCatalogTests
             Name = "Test",
             Packages = [new CatalogEntry { Id = "tool", Name = "Tool", Source = "private", ManagerName = "missing-test-manager" }],
         };
-        vm.SelectedCatalog = catalog;
+        vm.LoadCatalogs([catalog]);
         var tile = Assert.Single(vm.Packages);
         vm.HideUnavailablePackages = true;
         tile.UpdateState(true, null, true, false);
@@ -212,8 +254,8 @@ public class SoftwareCatalogTests
         tile.UpdateState(true, "Disabled source", true, false);
         vm.ApplyAvailabilityFilter();
         Assert.Empty(vm.Packages);
-        Assert.Same(catalog, vm.SelectedCatalog);
-        vm.SelectedCatalog = null;
+        Assert.Same(catalog, Assert.Single(vm.CatalogNodes).Definition);
+        vm.LoadCatalogs([]);
         vm.HideUnavailablePackages = false;
         Assert.Empty(vm.Packages);
         Assert.False(vm.HasHiddenPackages);
@@ -335,13 +377,9 @@ public class SoftwareCatalogTests
         var vm = new SoftwareCatalogViewModel();
         var first = new CatalogDefinition { Id = "first", Name = "First", Packages = [] };
         var second = new CatalogDefinition { Id = "second", Name = "Second", Packages = [] };
-        vm.Catalogs.Add(first);
-        vm.Catalogs.Add(second);
-        vm.SelectedCatalog = first;
-        Assert.Same(first, vm.SelectedCatalog);
+        vm.LoadCatalogs([first, second]);
+        Assert.Equal(2, vm.CatalogNodes.Count);
         Assert.True(vm.IsEmpty);
-        vm.SelectedCatalog = second;
-        Assert.Same(second, vm.SelectedCatalog);
         Assert.Empty(vm.Packages);
         vm.ErrorMessage = "Catalog file unavailable";
         Assert.False(vm.IsEmpty);

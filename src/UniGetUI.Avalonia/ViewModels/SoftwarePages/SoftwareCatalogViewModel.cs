@@ -22,14 +22,18 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     private readonly Dictionary<string, IReadOnlyList<IManagerSource>> _sources = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<CatalogTileViewModel> _allPackages = [];
     private readonly Dictionary<(string Manager, string Source), SourceTreeNode> _catalogSources = [];
-    private string? _sourceCatalogId;
     private bool _updatingSourceSelection;
+    private bool _updatingCatalogSelection;
+    private readonly Dictionary<(string Manager, string Source), bool> _sourceSelectionMemory = [];
     public ObservableCollection<CatalogTileViewModel> Packages { get; } = [];
-    public ObservableCollection<CatalogDefinition> Catalogs { get; } = [];
+    public ObservableCollection<CatalogGroupViewModel> Groups { get; } = [];
+    public ObservableCollection<CatalogFilterNode> CatalogNodes { get; } = [];
     public ObservableCollection<SourceTreeNode> SourceNodes { get; } = [];
 
     [ObservableProperty]
-    private CatalogDefinition? _selectedCatalog;
+    private bool _groupByCatalog = true;
+
+    partial void OnGroupByCatalogChanged(bool value) => RebuildGroups();
 
     [ObservableProperty]
     private bool _hideUnavailablePackages = true;
@@ -98,8 +102,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
             if (!HideUnavailablePackages) return false;
             string query = Query.Trim();
             return _allPackages.Any(p => p.UnavailableReason is not null
-                && _catalogSources.TryGetValue(SourceKey(p.Entry), out var source)
-                && source.IsSelected
+                && IsSelectedByFilters(p)
                 && MatchesQuery(p.Entry, query));
         }
     }
@@ -130,24 +133,66 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasBackgroundText));
     }
 
-    partial void OnSelectedCatalogChanged(CatalogDefinition? value)
+    private bool IsSelectedByFilters(CatalogTileViewModel tile) =>
+        _catalogSelection.TryGetValue(tile.CatalogId, out var catalog) && catalog.IsSelected
+        && _catalogSources.TryGetValue(SourceKey(tile.Entry), out var source) && source.IsSelected;
+
+    private readonly Dictionary<string, CatalogFilterNode> _catalogSelection = new(StringComparer.OrdinalIgnoreCase);
+
+    public void LoadCatalogs(IReadOnlyList<CatalogDefinition> catalogs)
     {
-        BuildSourceNodes(value);
+        var previous = CatalogNodes.ToDictionary(n => n.Definition.Id, n => n.IsSelected, StringComparer.OrdinalIgnoreCase);
+        _catalogSelection.Clear();
+        CatalogNodes.Clear();
         _allPackages.Clear();
-        foreach (var entry in value?.Packages ?? [])
+        _updatingCatalogSelection = true;
+        try
         {
-            var tile = new CatalogTileViewModel(entry);
-            _allPackages.Add(tile);
-            var manager = FindManager(entry);
-            var source = FindSource(entry);
-            if (manager is null || source is null) continue;
-            var package = InstalledPackagesLoader.Instance?.Packages.FirstOrDefault(entry.MatchesInstalled)
-                ?? new Package(entry.Name, entry.Id, entry.Version, source, manager);
-            _ = tile.LoadIconAsync(package);
+            foreach (var catalog in catalogs)
+            {
+                var node = new CatalogFilterNode(catalog) { IsSelected = previous.GetValueOrDefault(catalog.Id, true) };
+                node.PropertyChanged += (_, e) =>
+                {
+                    if (!_updatingCatalogSelection && e.PropertyName == nameof(CatalogFilterNode.IsSelected))
+                        ApplyAvailabilityFilter();
+                };
+                CatalogNodes.Add(node);
+                _catalogSelection.TryAdd(catalog.Id, node);
+                foreach (var entry in catalog.Packages)
+                {
+                    var tile = new CatalogTileViewModel(entry, catalog);
+                    _allPackages.Add(tile);
+                    var manager = FindManager(entry);
+                    var source = FindSource(entry);
+                    if (manager is null || source is null) continue;
+                    var package = InstalledPackagesLoader.Instance?.Packages.FirstOrDefault(entry.MatchesInstalled)
+                        ?? new Package(entry.Name, entry.Id, entry.Version, source, manager);
+                    _ = tile.LoadIconAsync(package);
+                }
+            }
         }
+        finally { _updatingCatalogSelection = false; }
+        BuildSourceNodes();
         UpdateStates();
         OnPropertyChanged(nameof(IsEmpty));
         NotifyBackgroundTextChanged();
+    }
+
+    [RelayCommand]
+    private void SelectAllCatalogs() => SetCatalogSelection(true);
+
+    [RelayCommand]
+    private void ClearCatalogSelection() => SetCatalogSelection(false);
+
+    private void SetCatalogSelection(bool selected)
+    {
+        _updatingCatalogSelection = true;
+        try
+        {
+            foreach (var node in CatalogNodes) node.IsSelected = selected;
+        }
+        finally { _updatingCatalogSelection = false; }
+        ApplyAvailabilityFilter();
     }
 
     [ObservableProperty]
@@ -196,10 +241,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
         try
         {
             var catalogs = await SoftwareCatalog.LoadAsync();
-            var selectedId = SelectedCatalog?.Id;
             _sources.Clear();
-            SelectedCatalog = null;
-            Catalogs.Clear();
 
             foreach (var manager in catalogs.SelectMany(c => c.Packages).Select(FindManager).OfType<IPackageManager>().Distinct())
             {
@@ -209,18 +251,13 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
                     : [manager.DefaultSource];
             }
 
-            foreach (var catalog in catalogs)
-                Catalogs.Add(catalog);
-            SelectedCatalog = Catalogs.FirstOrDefault(c => string.Equals(c.Id, selectedId, StringComparison.OrdinalIgnoreCase))
-                ?? Catalogs.FirstOrDefault();
+            LoadCatalogs(catalogs);
         }
         catch (Exception ex)
         {
             Logger.Error("Could not load the software catalog.");
             Logger.Error(ex);
-            SelectedCatalog = null;
-            Catalogs.Clear();
-            Packages.Clear();
+            LoadCatalogs([]);
             ErrorMessage = CoreTools.Translate("The software catalog could not be loaded. Ask an administrator to check {0}, then try again.", SoftwareCatalog.FilePath);
         }
         finally
@@ -236,19 +273,17 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     private static (string Manager, string Source) SourceKey(CatalogEntry entry) =>
         ((FindManager(entry)?.Id ?? entry.ManagerName).ToUpperInvariant(), entry.Source.ToUpperInvariant());
 
-    private void BuildSourceNodes(CatalogDefinition? catalog)
+    private void BuildSourceNodes()
     {
         SourceNodes.Clear();
-        if (catalog is null) return;
-        var previous = string.Equals(_sourceCatalogId, catalog.Id, StringComparison.OrdinalIgnoreCase)
-            ? _catalogSources.ToDictionary(p => p.Key, p => p.Value.IsSelected)
-            : [];
-        _sourceCatalogId = catalog.Id;
+        foreach (var pair in _catalogSources) _sourceSelectionMemory[pair.Key] = pair.Value.IsSelected;
+        var previous = _sourceSelectionMemory.ToDictionary(p => p.Key, p => p.Value);
         _catalogSources.Clear();
         _updatingSourceSelection = true;
         try
         {
-            foreach (var group in catalog.Packages.GroupBy(p => SourceKey(p).Manager))
+            var entries = _allPackages.Select(t => t.Entry).ToArray();
+            foreach (var group in entries.GroupBy(p => SourceKey(p).Manager))
             {
                 var root = new SourceTreeNode
                 {
@@ -361,18 +396,94 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     {
         string query = Query.Trim();
         var visible = _allPackages.Where(p => (!HideUnavailablePackages || p.UnavailableReason is null)
-            && _catalogSources.TryGetValue(SourceKey(p.Entry), out var source) && source.IsSelected
+            && IsSelectedByFilters(p)
             && MatchesQuery(p.Entry, query)).ToArray();
+        visible = SortTiles(visible);
         if (!Packages.SequenceEqual(visible))
         {
             Packages.Clear();
             foreach (var package in visible)
                 Packages.Add(package);
         }
+        RebuildGroups();
         OnPropertyChanged(nameof(HasHiddenPackages));
         OnPropertyChanged(nameof(EmptyMessage));
         OnPropertyChanged(nameof(IsEmpty));
         NotifyBackgroundTextChanged();
+    }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SortFieldName))]
+    private CatalogSortField _sortField = CatalogSortField.Name;
+
+    [ObservableProperty]
+    private bool _sortAscending = true;
+
+    public string SortFieldName => SortField switch
+    {
+        CatalogSortField.Id => CoreTools.Translate("Id"),
+        CatalogSortField.Source => CoreTools.Translate("Source"),
+        CatalogSortField.Catalog => CoreTools.Translate("Catalog"),
+        _ => CoreTools.Translate("Name"),
+    };
+
+    partial void OnSortFieldChanged(CatalogSortField value) => ApplyAvailabilityFilter();
+    partial void OnSortAscendingChanged(bool value) => ApplyAvailabilityFilter();
+
+    [RelayCommand] private void SortByName() => SortField = CatalogSortField.Name;
+    [RelayCommand] private void SortById() => SortField = CatalogSortField.Id;
+    [RelayCommand] private void SortBySource() => SortField = CatalogSortField.Source;
+    [RelayCommand] private void SortByCatalog() => SortField = CatalogSortField.Catalog;
+    [RelayCommand] private void SetSortAscending() => SortAscending = true;
+    [RelayCommand] private void SetSortDescending() => SortAscending = false;
+
+    // Clicking the active column's header flips the direction; a new column starts ascending.
+    public void ToggleSort(CatalogSortField field)
+    {
+        if (SortField == field) SortAscending = !SortAscending;
+        else
+        {
+            _sortAscending = true;
+            OnPropertyChanged(nameof(SortAscending));
+            SortField = field;
+        }
+    }
+
+    private static string SortKey(CatalogSortField field, CatalogTileViewModel t) => field switch
+    {
+        CatalogSortField.Id => t.Entry.Id,
+        CatalogSortField.Source => t.Entry.ManagerName + "/" + t.Entry.Source,
+        CatalogSortField.Catalog => t.CatalogName,
+        _ => t.Entry.Name,
+    };
+
+    public static int CompareTiles(CatalogSortField field, CatalogTileViewModel a, CatalogTileViewModel b)
+        => StringComparer.CurrentCultureIgnoreCase.Compare(SortKey(field, a), SortKey(field, b));
+
+    private CatalogTileViewModel[] SortTiles(CatalogTileViewModel[] tiles)
+    {
+        var field = SortField;
+        string Key(CatalogTileViewModel t) => SortKey(field, t);
+        var comparer = StringComparer.CurrentCultureIgnoreCase;
+        return (SortAscending ? tiles.OrderBy(Key, comparer) : tiles.OrderByDescending(Key, comparer)).ToArray();
+    }
+
+    private void RebuildGroups()
+    {
+        var groups = GroupByCatalog
+            ? CatalogNodes
+                .Select(n => Packages.Where(p => string.Equals(p.CatalogId, n.Definition.Id, StringComparison.OrdinalIgnoreCase)).ToArray())
+                .Where(g => g.Length > 0)
+                .Select(g => new CatalogGroupViewModel(g[0].CatalogName, g, true))
+                .ToArray()
+            : Packages.Count > 0 ? [new CatalogGroupViewModel("", Packages.ToArray(), false)] : [];
+        if (Groups.Count == groups.Length
+            && Groups.Zip(groups).All(p => p.First.Name == p.Second.Name
+                && p.First.HasHeader == p.Second.HasHeader
+                && p.First.Packages.SequenceEqual(p.Second.Packages)))
+            return;
+        Groups.Clear();
+        foreach (var group in groups) Groups.Add(group);
     }
 
     private bool MatchesQuery(CatalogEntry entry, string query) => query.Length == 0 || SearchMode switch
@@ -419,9 +530,29 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     }
 }
 
-public partial class CatalogTileViewModel(CatalogEntry entry) : ViewModelBase
+public enum CatalogSortField { Name, Id, Source, Catalog }
+
+public partial class CatalogFilterNode(CatalogDefinition definition) : ObservableObject
+{
+    public CatalogDefinition Definition { get; } = definition;
+    public string Name => Definition.Name;
+
+    [ObservableProperty]
+    private bool _isSelected = true;
+}
+
+public sealed class CatalogGroupViewModel(string name, IReadOnlyList<CatalogTileViewModel> packages, bool hasHeader)
+{
+    public string Name { get; } = name;
+    public IReadOnlyList<CatalogTileViewModel> Packages { get; } = packages;
+    public bool HasHeader { get; } = hasHeader;
+}
+
+public partial class CatalogTileViewModel(CatalogEntry entry, CatalogDefinition? catalog = null) : ViewModelBase
 {
     public CatalogEntry Entry { get; } = entry;
+    public string CatalogId { get; } = catalog?.Id ?? "";
+    public string CatalogName { get; } = catalog?.Name ?? "";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCustomIcon))]

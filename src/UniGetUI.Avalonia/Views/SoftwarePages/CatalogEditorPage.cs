@@ -60,6 +60,7 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
     {
         _document = document;
         _loader = loader;
+        HideVersionColumn();
         var options = new StackPanel { Spacing = 8, Margin = new Thickness(8, 0, 8, 12) };
         options.Children.Add(_status);
         SetPageOptions(options);
@@ -67,6 +68,14 @@ public sealed class CatalogEditorPage : AbstractPackagesPage
         document.PropertyChanged += DocumentChanged;
         SyncCatalog();
         SyncStatus();
+    }
+
+    private void HideVersionColumn()
+    {
+        foreach (var col in PackageList.Columns)
+            if (col.Tag as string == "Version") col.IsVisible = false;
+        OrderByVersion_Menu.IsVisible = false;
+        if (ViewModel.SortFieldIndex == 2) ViewModel.SortFieldIndex = 0;
     }
 
     protected override void GenerateToolBar(PackagesPageViewModel vm)

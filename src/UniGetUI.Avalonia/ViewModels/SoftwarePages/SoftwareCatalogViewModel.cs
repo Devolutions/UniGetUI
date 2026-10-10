@@ -423,7 +423,6 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     {
         CatalogSortField.Id => CoreTools.Translate("Id"),
         CatalogSortField.Source => CoreTools.Translate("Source"),
-        CatalogSortField.Catalog => CoreTools.Translate("Catalog"),
         _ => CoreTools.Translate("Name"),
     };
 
@@ -433,7 +432,6 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     [RelayCommand] private void SortByName() => SortField = CatalogSortField.Name;
     [RelayCommand] private void SortById() => SortField = CatalogSortField.Id;
     [RelayCommand] private void SortBySource() => SortField = CatalogSortField.Source;
-    [RelayCommand] private void SortByCatalog() => SortField = CatalogSortField.Catalog;
     [RelayCommand] private void SetSortAscending() => SortAscending = true;
     [RelayCommand] private void SetSortDescending() => SortAscending = false;
 
@@ -453,7 +451,6 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     {
         CatalogSortField.Id => t.Entry.Id,
         CatalogSortField.Source => t.Entry.ManagerName + "/" + t.Entry.Source,
-        CatalogSortField.Catalog => t.CatalogName,
         _ => t.Entry.Name,
     };
 
@@ -530,7 +527,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     }
 }
 
-public enum CatalogSortField { Name, Id, Source, Catalog }
+public enum CatalogSortField { Name, Id, Source }
 
 public partial class CatalogFilterNode(CatalogDefinition definition) : ObservableObject
 {

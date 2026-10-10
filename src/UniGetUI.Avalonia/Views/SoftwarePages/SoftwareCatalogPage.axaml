@@ -437,7 +437,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Tag="Catalog" Header="{t:Translate Catalog}" Width="*">
+                        <DataGridTemplateColumn CanUserSort="False" Header="{t:Translate Catalog}" Width="*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:CatalogTileViewModel">
                                     <TextBlock Text="{Binding CatalogName}" VerticalAlignment="Center" Margin="8,0"
@@ -555,7 +555,6 @@
                             <MenuItem Header="{t:Translate Name}" Command="{Binding SortByNameCommand}"/>
                             <MenuItem Header="{t:Translate Id}" Command="{Binding SortByIdCommand}"/>
                             <MenuItem Header="{t:Translate Source}" Command="{Binding SortBySourceCommand}"/>
-                            <MenuItem Header="{t:Translate Catalog}" Command="{Binding SortByCatalogCommand}"/>
                             <Separator/>
                             <MenuItem Header="{t:Translate Ascendant}" Command="{Binding SetSortAscendingCommand}"/>
                             <MenuItem Header="{t:Translate Descendant}" Command="{Binding SetSortDescendingCommand}"/>

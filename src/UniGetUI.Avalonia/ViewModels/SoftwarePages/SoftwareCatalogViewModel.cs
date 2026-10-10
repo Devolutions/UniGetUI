@@ -108,7 +108,7 @@ public partial class SoftwareCatalogViewModel : ViewModelBase
     }
     public string EmptyMessage => CoreTools.Translate(_allPackages.Count > 0
         ? "No packages are available with the current filters."
-        : "This catalog contains no packages.");
+        : "No packages to display.");
 
     public bool IsEmpty => !IsLoading && !HasError && Packages.Count == 0;
 

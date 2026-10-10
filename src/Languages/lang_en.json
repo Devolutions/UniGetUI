@@ -54,6 +54,7 @@
   "Catalog": "Catalog",
   "Select software catalog": "Select software catalog",
   "This catalog contains no packages.": "This catalog contains no packages.",
+  "No packages to display.": "No packages to display.",
   "Enable Software Catalog": "Enable Software Catalog",
   "Requires a machine-wide SoftwareCatalog.json file and an application restart.": "Requires a machine-wide SoftwareCatalog.json file and an application restart.",
   "Software Catalog is disabled": "Software Catalog is disabled",

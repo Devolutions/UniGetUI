@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Threading;
@@ -77,6 +78,7 @@ public partial class SoftwareCatalogPage : UserControl, IEnterLeaveListener, ISe
                 _viewModel.ToggleSort(field);
         };
         UpdateFilterPaneColumn(_viewModel.IsFilterPaneOpen);
+        SyncOrderBy();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -84,9 +86,29 @@ public partial class SoftwareCatalogPage : UserControl, IEnterLeaveListener, ISe
         if (e.PropertyName == nameof(SoftwareCatalogViewModel.IsFilterPaneOpen))
             UpdateFilterPaneColumn(_viewModel.IsFilterPaneOpen);
         else if (e.PropertyName is nameof(SoftwareCatalogViewModel.SortField) or nameof(SoftwareCatalogViewModel.SortAscending))
+        {
             UpdateSortArrows();
+            SyncOrderBy();
+        }
     }
 
+    private static TextBlock? Check(bool show) =>
+        show ? new TextBlock { Text = "✓", FontSize = 12 } : null;
+
+    private void SyncOrderBy()
+    {
+        string direction = _viewModel.SortAscending
+            ? CoreTools.Translate("Ascending")
+            : CoreTools.Translate("Descending");
+        AutomationProperties.SetName(
+            OrderByButton,
+            CoreTools.Translate("{0}: {1}, {2}", CoreTools.Translate("Order by"), _viewModel.SortFieldName, direction));
+        OrderByName_Menu.Icon = Check(_viewModel.SortField == CatalogSortField.Name);
+        OrderById_Menu.Icon = Check(_viewModel.SortField == CatalogSortField.Id);
+        OrderBySource_Menu.Icon = Check(_viewModel.SortField == CatalogSortField.Source);
+        OrderByAscending_Menu.Icon = Check(_viewModel.SortAscending);
+        OrderByDescending_Menu.Icon = Check(!_viewModel.SortAscending);
+    }
     // The arrow is the DataGrid's native one, driven by the collection view's sort descriptions.
     // The view-model already orders the items, so the same order is mirrored onto the grid.
     private void SetupSortArrows()

@@ -355,7 +355,8 @@
                         <DataTemplate x:DataType="vm:CatalogGroupViewModel">
                           <StackPanel>
                             <TextBlock Text="{Binding Name}" IsVisible="{Binding HasHeader}" FontSize="20"
-                                       FontWeight="SemiBold" Margin="0,8,0,12"/>
+                                       FontWeight="SemiBold" Margin="0,8,0,12"
+                                       automation:AutomationProperties.HeadingLevel="2"/>
                     <ItemsControl ItemsSource="{Binding Packages}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
@@ -462,7 +463,8 @@
                         <DataTemplate x:DataType="vm:CatalogGroupViewModel">
                           <StackPanel>
                             <TextBlock Text="{Binding Name}" IsVisible="{Binding HasHeader}" FontSize="20"
-                                       FontWeight="SemiBold" Margin="0,8,0,12"/>
+                                       FontWeight="SemiBold" Margin="0,8,0,12"
+                                       automation:AutomationProperties.HeadingLevel="2"/>
                     <ItemsControl ItemsSource="{Binding Packages}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
@@ -498,7 +500,8 @@
                         <DataTemplate x:DataType="vm:CatalogGroupViewModel">
                           <StackPanel>
                             <TextBlock Text="{Binding Name}" IsVisible="{Binding HasHeader}" FontSize="20"
-                                       FontWeight="SemiBold" Margin="0,8,0,12"/>
+                                       FontWeight="SemiBold" Margin="0,8,0,12"
+                                       automation:AutomationProperties.HeadingLevel="2"/>
                     <ItemsControl ItemsSource="{Binding Packages}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>

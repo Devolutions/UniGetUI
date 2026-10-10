@@ -8,6 +8,7 @@
   "Enable this package's manager and source to view its details.": "Enable this package's manager and source to view its details.",
   "Catalog filters": "Catalog filters",
   "Hide packages with unavailable sources": "Hide packages with unavailable sources",
+  "Group by catalog": "Group by catalog",
   "Packages with unavailable sources are hidden. Change Filters to show them.": "Packages with unavailable sources are hidden. Change Filters to show them.",
   "No packages are available with the current filters.": "No packages are available with the current filters.",
   "Open Catalog Editor": "Open Catalog Editor",

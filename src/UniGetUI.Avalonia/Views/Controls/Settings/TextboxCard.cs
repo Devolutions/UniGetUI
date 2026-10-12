@@ -110,6 +110,10 @@ public sealed partial class TextboxCard : SettingsCard
         if (CoreSettings.ResolveKey(setting_name).Contains("File"))
             sanitizedText = CoreTools.MakeValidFileName(sanitizedText);
 
+        // TextChanged is queued, so loading a setting can reach this handler too.
+        if (sanitizedText == CoreSettings.GetValue(setting_name))
+            return;
+
         if (sanitizedText != "")
             CoreSettings.SetValue(setting_name, sanitizedText);
         else

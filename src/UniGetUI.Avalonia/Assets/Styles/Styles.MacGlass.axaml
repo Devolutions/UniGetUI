@@ -4,7 +4,6 @@
     <!-- macOS vibrancy overrides, merged only when MacGlassWindowHelper.IsGlassEnabled().
          The blur shows real content behind the window, so surfaces stay more opaque than Mica's. -->
     <CornerRadius x:Key="MacGlassPanelCornerRadius">18</CornerRadius>
-    <SolidColorBrush x:Key="MacGlassSelectionBackground" Color="{DynamicResource SystemAccentColor}" Opacity="0.68"/>
     <CornerRadius x:Key="MacGlassMenuCornerRadius">10</CornerRadius>
     <!-- Native menus highlight the hovered row with the accent colour and white text. -->
     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="{DynamicResource SystemAccentColor}" Opacity="0.85"/>
@@ -16,55 +15,56 @@
 
         <ResourceDictionary x:Key="Light">
             <!-- Opaque window surface; only the sidebar panel cut out of it shows the vibrancy. -->
-            <SolidColorBrush x:Key="MacGlassWindowBackground"    Color="#F5F5F5"/>
+            <SolidColorBrush x:Key="MacGlassSelectionBackground" Color="{DynamicResource SystemAccentColor}"/>
+            <SolidColorBrush x:Key="MacGlassWindowBackground"    Color="#FFFFFF"/>
             <!-- Dialogs are opaque on macOS too; match the main window surface. -->
-            <SolidColorBrush x:Key="AppDialogBackground"         Color="#F5F5F5"/>
+            <SolidColorBrush x:Key="AppDialogBackground"         Color="#FFFFFF"/>
             <!-- Floating glass (sidebar panel, toolbar capsules) and the opaque overlay pane.
                  The in-app content behind the overlay can't be blurred, so it stays opaque. -->
-            <SolidColorBrush x:Key="MacGlassPanelBackground"     Color="#B3F7F7F7"/>
-            <SolidColorBrush x:Key="MacGlassControlBackground"   Color="#59FFFFFF"/>
-            <SolidColorBrush x:Key="MacGlassOverlayBackground"   Color="#F0F0F0"/>
+            <SolidColorBrush x:Key="MacGlassPanelBackground"     Color="#C2FCFCFC"/>
+            <SolidColorBrush x:Key="MacGlassControlBackground"   Color="#17000000"/>
+            <SolidColorBrush x:Key="MacGlassOverlayBackground"   Color="#F9F9F9"/>
             <!-- Tint over the native menu blur (popups get NSVisualEffectMaterialMenu). -->
             <SolidColorBrush x:Key="MacGlassMenuBackground"      Color="#99F6F6F6"/>
             <LinearGradientBrush x:Key="MacGlassPanelBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
-                <GradientStop Offset="0" Color="#E6FFFFFF"/>
-                <GradientStop Offset="0.5" Color="#4DFFFFFF"/>
-                <GradientStop Offset="1" Color="#14000000"/>
+                <GradientStop Offset="0" Color="#0F000000"/>
+                <GradientStop Offset="1" Color="#1A000000"/>
             </LinearGradientBrush>
-            <BoxShadows x:Key="MacGlassPanelShadow">0 4 16 0 #1A000000</BoxShadows>
+            <BoxShadows x:Key="MacGlassPanelShadow">0 2 12 0 #14000000</BoxShadows>
             <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
-            <SolidColorBrush x:Key="SettingsCardBackground"      Color="#B3FFFFFF"/>
-            <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#12000000"/>
-            <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#D9FFFFFF"/>
-            <SolidColorBrush x:Key="PackageListBackground"       Color="#8CFFFFFF"/>
-            <SolidColorBrush x:Key="PackageListBorderBrush"      Color="#12000000"/>
-            <SolidColorBrush x:Key="PackageListHeaderBackground" Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="SettingsCardBackground"      Color="#08000000"/>
+            <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#0A000000"/>
+            <SolidColorBrush x:Key="SettingsCardHoverBackground" Color="#0F000000"/>
+            <SolidColorBrush x:Key="PackageListBackground"       Color="#06000000"/>
+            <SolidColorBrush x:Key="PackageListBorderBrush"      Color="#0A000000"/>
+            <SolidColorBrush x:Key="PackageListHeaderBackground" Color="#06000000"/>
             <SolidColorBrush x:Key="AppSplitterBackground"       Color="#18000000"/>
             <SolidColorBrush x:Key="AppOperationsPanelBackground" Color="Transparent"/>
             <SolidColorBrush x:Key="AppBorderBrush"              Color="#18000000"/>
-            <SolidColorBrush x:Key="AppBadgeBackground"          Color="#99FFFFFF"/>
-            <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#99FFFFFF"/>
-            <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#80FFFFFF"/>
-            <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#80FFFFFF"/>
+            <SolidColorBrush x:Key="AppBadgeBackground"          Color="#0F000000"/>
+            <SolidColorBrush x:Key="AppDialogPanelBackground"    Color="#08000000"/>
+            <SolidColorBrush x:Key="AppDialogSubtleBackground"   Color="#0D000000"/>
+            <SolidColorBrush x:Key="AppDialogDarkBackground"     Color="#0D000000"/>
             <!-- Expander chrome -->
-            <SolidColorBrush x:Key="ExpanderHeaderBackground"            Color="#99FFFFFF"/>
-            <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#B3FFFFFF"/>
-            <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed"     Color="#C2FFFFFF"/>
-            <SolidColorBrush x:Key="ExpanderHeaderBackgroundDisabled"    Color="#40FFFFFF"/>
-            <SolidColorBrush x:Key="ExpanderContentBackground"           Color="#4DFFFFFF"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackground"            Color="#08000000"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#0F000000"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed"     Color="#14000000"/>
+            <SolidColorBrush x:Key="ExpanderHeaderBackgroundDisabled"    Color="#05000000"/>
+            <SolidColorBrush x:Key="ExpanderContentBackground"           Color="#04000000"/>
             <SolidColorBrush x:Key="ExpanderHeaderBorderBrush"           Color="#12000000"/>
             <SolidColorBrush x:Key="ExpanderContentBorderBrush"          Color="#12000000"/>
             <!-- Tab headers (selected tab matches the content panel so they read as one surface) -->
-            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelected"              Color="#99FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelected"              Color="#08000000"/>
             <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselected"            Color="Transparent"/>
             <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselectedPointerOver" Color="#0F000000"/>
-            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelectedPointerOver"   Color="#99FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelectedPointerOver"   Color="#08000000"/>
             <SolidColorBrush x:Key="TabItemHeaderBackgroundUnselectedPressed"     Color="#08000000"/>
-            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelectedPressed"       Color="#99FFFFFF"/>
+            <SolidColorBrush x:Key="TabItemHeaderBackgroundSelectedPressed"       Color="#08000000"/>
             <SolidColorBrush x:Key="TabItemHeaderBackgroundDisabled"             Color="Transparent"/>
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="MacGlassSelectionBackground" Color="{DynamicResource SystemAccentColor}" Opacity="0.68"/>
             <SolidColorBrush x:Key="MacGlassWindowBackground"    Color="#232323"/>
             <SolidColorBrush x:Key="AppDialogBackground"         Color="#232323"/>
             <!-- Matches System Settings: the sidebar sits darker than the window, cards lighter. -->

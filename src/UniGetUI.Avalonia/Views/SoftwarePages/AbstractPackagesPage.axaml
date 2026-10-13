@@ -326,9 +326,10 @@
                 </Button>
             </StackPanel>
 
-            <!-- Toolbar (AppBarButtons added by subclass) -->
+            <!-- Toolbar (AppBarButtons added by subclass). The wrapper is unstyled except on the
+                 macOS glass look, where it hugs the buttons and draws one shared glass bar. -->
+            <Border x:Name="ToolbarGlass" Grid.Column="2">
             <controls:ToolbarOverflowPanel x:Name="ToolBar"
-                                           Grid.Column="2"
                                            Spacing="4"
                                            ClipToBounds="True">
                 <Button x:Name="ToolbarOverflowButton"
@@ -341,6 +342,7 @@
                                Margin="0,-4,0,0"/>
                 </Button>
             </controls:ToolbarOverflowPanel>
+            </Border>
 
         </Grid>
 

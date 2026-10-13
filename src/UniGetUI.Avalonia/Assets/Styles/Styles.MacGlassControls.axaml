@@ -80,10 +80,18 @@
                      Button#MainToolbarButtonDropdown:disabled /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="CornerRadius" Value="0,20,20,0"/>
     </Style>
-    <!-- Every toolbar button rests on a glass capsule, as in macOS 26 toolbars. -->
-    <Style Selector="#ToolbarRow Button:not(:disabled), #ToolbarRow Button:disabled,
-                     #ToolbarRow ToggleButton:not(:disabled), #ToolbarRow ToggleButton:disabled">
+    <!-- Filters and the main action each sit on their own glass capsule; the remaining actions
+         share one glass bar, with flat buttons inside that only highlight on hover. -->
+    <Style Selector="#ToolbarRow ToggleButton:not(:disabled), #ToolbarRow ToggleButton:disabled,
+                     Button#MainToolbarButton:not(:disabled), Button#MainToolbarButton:disabled,
+                     Button#MainToolbarButtonDropdown:not(:disabled), Button#MainToolbarButtonDropdown:disabled">
         <Setter Property="Background" Value="{DynamicResource MacGlassControlBackground}"/>
+    </Style>
+    <Style Selector="Window.mac-glass Border#ToolbarGlass">
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="Background" Value="{DynamicResource MacGlassControlBackground}"/>
+        <Setter Property="CornerRadius" Value="20"/>
+        <Setter Property="ClipToBounds" Value="True"/>
     </Style>
 
     <!-- Switches: a large white knob that keeps its size in every state. -->

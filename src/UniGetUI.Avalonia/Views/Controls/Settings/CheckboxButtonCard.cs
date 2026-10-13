@@ -83,6 +83,7 @@ public sealed partial class CheckboxButtonCard : SettingsCard
         };
         _stateLabel = new TextBlock
         {
+            Classes = { "toggle-state-label" },
             Text = DisabledLabel,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 8, 0),
@@ -102,6 +103,7 @@ public sealed partial class CheckboxButtonCard : SettingsCard
         Content = new StackPanel
         {
             Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center,
             Children = { _stateLabel, _checkbox },
         };

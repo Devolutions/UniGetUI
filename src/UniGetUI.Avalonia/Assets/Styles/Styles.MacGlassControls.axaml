@@ -37,4 +37,80 @@
         <Setter Property="MinHeight" Value="26"/>
         <Setter Property="CornerRadius" Value="6"/>
     </Style>
+
+    <!-- Push buttons: flat fill, no border; the radius goes on the template part with a state
+         selector so it wins over the radius each button sets in markup. -->
+    <Style Selector="Button.secondary-action, Button.dropdown-trigger">
+        <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Button.secondary-action:pointerover, Button.dropdown-trigger:pointerover">
+        <Setter Property="Background" Value="{DynamicResource ButtonBackgroundPointerOver}"/>
+    </Style>
+    <Style Selector="Button.secondary-action:pressed, Button.dropdown-trigger:pressed">
+        <Setter Property="Background" Value="{DynamicResource ButtonBackgroundPressed}"/>
+    </Style>
+    <Style Selector="Button.secondary-action:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
+                     Button.secondary-action:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                     Button.dropdown-trigger:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
+                     Button.dropdown-trigger:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                     Button.accent:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
+                     Button.accent:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="CornerRadius" Value="7"/>
+    </Style>
+    <Style Selector="Button.accent controls|SvgIcon, Button.accent:pointerover controls|SvgIcon">
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+
+    <!-- Toolbar: capsule buttons, the main action as one fused capsule, no separator lines. -->
+    <Style Selector="#ToolbarRow Separator">
+        <Setter Property="Opacity" Value="0"/>
+    </Style>
+    <Style Selector="#ToolbarRow Button:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
+                     #ToolbarRow Button:disabled /template/ ContentPresenter#PART_ContentPresenter,
+                     #ToolbarRow ToggleButton:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
+                     #ToolbarRow ToggleButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="CornerRadius" Value="20"/>
+    </Style>
+    <Style Selector="Button#MainToolbarButton:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
+                     Button#MainToolbarButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="CornerRadius" Value="20,0,0,20"/>
+    </Style>
+    <Style Selector="Button#MainToolbarButtonDropdown:not(:disabled) /template/ ContentPresenter#PART_ContentPresenter,
+                     Button#MainToolbarButtonDropdown:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="CornerRadius" Value="0,20,20,0"/>
+    </Style>
+    <Style Selector="Button#MainToolbarButton, Button#MainToolbarButtonDropdown">
+        <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+    </Style>
+
+    <!-- Switches: a large white knob that keeps its size in every state. -->
+    <Style Selector="ToggleSwitch:not(:disabled) /template/ Ellipse#SwitchKnobOff,
+                     ToggleSwitch:disabled /template/ Ellipse#SwitchKnobOff,
+                     ToggleSwitch:not(:disabled) /template/ Ellipse#SwitchKnobOn,
+                     ToggleSwitch:disabled /template/ Ellipse#SwitchKnobOn">
+        <Setter Property="Width" Value="16"/>
+        <Setter Property="Height" Value="16"/>
+    </Style>
+
+    <!-- macOS switches carry no Enabled/Disabled caption next to them. -->
+    <Style Selector="TextBlock.toggle-state-label">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
+
+    <!-- Pop-up buttons show up/down arrows; scroll bars have no arrow buttons. -->
+    <Style Selector="ComboBox:not(:disabled) /template/ PathIcon#DropDownGlyph,
+                     ComboBox:disabled /template/ PathIcon#DropDownGlyph">
+        <Setter Property="Data" Value="M0,5 L4,0 L8,5 Z M0,8 L4,13 L8,8 Z"/>
+        <Setter Property="Width" Value="8"/>
+        <Setter Property="Height" Value="13"/>
+    </Style>
+    <!-- The hero search field gets the accent focus border instead of the WinUI underline. -->
+    <Style Selector="Border#MegaQueryUnderline">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
+    <Style Selector="ScrollBar /template/ RepeatButton#PART_LineUpButton,
+                     ScrollBar /template/ RepeatButton#PART_LineDownButton">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
 </Styles>

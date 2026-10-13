@@ -11,6 +11,39 @@
     <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="White"/>
     <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed"     Color="White"/>
 
+    <!-- Controls: rounder corners, a full focus ring, and the true system accent with white
+         content (Fluent's dark theme uses a lighter accent with dark glyphs). -->
+    <CornerRadius x:Key="ControlCornerRadius">7</CornerRadius>
+    <Thickness x:Key="TextControlBorderThemeThicknessFocused">2</Thickness>
+    <SolidColorBrush x:Key="AccentFillColorDefaultBrush"   Color="{DynamicResource SystemAccentColor}"/>
+    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="{DynamicResource SystemAccentColor}" Opacity="0.9"/>
+    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush"  Color="{DynamicResource SystemAccentColor}" Opacity="0.8"/>
+    <SolidColorBrush x:Key="AccentButtonBackground"            Color="{DynamicResource SystemAccentColor}"/>
+    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="{DynamicResource SystemAccentColor}" Opacity="0.9"/>
+    <SolidColorBrush x:Key="AccentButtonBackgroundPressed"     Color="{DynamicResource SystemAccentColor}" Opacity="0.8"/>
+    <SolidColorBrush x:Key="AccentButtonForeground"            Color="White"/>
+    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="White"/>
+    <SolidColorBrush x:Key="AccentButtonForegroundPressed"     Color="#CCFFFFFF"/>
+    <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush"   Color="White"/>
+    <SolidColorBrush x:Key="TextOnAccentFillColorSecondaryBrush" Color="#CCFFFFFF"/>
+    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="{DynamicResource SystemAccentColor}" Opacity="0.7"/>
+    <SolidColorBrush x:Key="SearchBoxFocusedBorderBrush"   Color="{DynamicResource SystemAccentColor}" Opacity="0.7"/>
+    <SolidColorBrush x:Key="ButtonBorderBrush"            Color="Transparent"/>
+    <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="Transparent"/>
+    <SolidColorBrush x:Key="ButtonBorderBrushPressed"     Color="Transparent"/>
+    <SolidColorBrush x:Key="ButtonBorderBrushDisabled"    Color="Transparent"/>
+    <SolidColorBrush x:Key="ComboBoxBorderBrush"                    Color="Transparent"/>
+    <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushUnfocused" Color="Transparent"/>
+    <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver"         Color="Transparent"/>
+    <SolidColorBrush x:Key="ComboBoxBorderBrushPressed"             Color="Transparent"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOff"            Color="Transparent"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="Transparent"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed"     Color="Transparent"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOffDisabled"    Color="Transparent"/>
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOff"            Color="White"/>
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="White"/>
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed"     Color="White"/>
+
     <ResourceDictionary.ThemeDictionaries>
 
         <ResourceDictionary x:Key="Light">
@@ -31,6 +64,21 @@
                 <GradientStop Offset="1" Color="#1A000000"/>
             </LinearGradientBrush>
             <BoxShadows x:Key="MacGlassPanelShadow">0 2 12 0 #14000000</BoxShadows>
+            <!-- Push buttons, dropdowns and switch tracks: a flat translucent fill, no border. -->
+            <SolidColorBrush x:Key="ButtonBackground"            Color="#14000000"/>
+            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#1C000000"/>
+            <SolidColorBrush x:Key="ButtonBackgroundPressed"     Color="#26000000"/>
+            <SolidColorBrush x:Key="ButtonBackgroundDisabled"    Color="#0A000000"/>
+            <SolidColorBrush x:Key="ComboBoxBackground"            Color="#14000000"/>
+            <SolidColorBrush x:Key="ComboBoxBackgroundUnfocused"   Color="#14000000"/>
+            <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#1C000000"/>
+            <SolidColorBrush x:Key="ComboBoxBackgroundPressed"     Color="#26000000"/>
+            <SolidColorBrush x:Key="ToggleSwitchFillOff"            Color="#26000000"/>
+            <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#2E000000"/>
+            <SolidColorBrush x:Key="ToggleSwitchFillOffPressed"     Color="#38000000"/>
+            <SolidColorBrush x:Key="ToggleSwitchFillOffDisabled"    Color="#14000000"/>
+            <SolidColorBrush x:Key="SearchBoxInactiveBackground" Color="#17000000"/>
+            <SolidColorBrush x:Key="SearchBoxFocusedBackground"  Color="#0F000000"/>
             <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
             <SolidColorBrush x:Key="SettingsCardBackground"      Color="#08000000"/>
             <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#0A000000"/>
@@ -78,6 +126,20 @@
                 <GradientStop Offset="1" Color="#1AFFFFFF"/>
             </LinearGradientBrush>
             <BoxShadows x:Key="MacGlassPanelShadow">0 6 20 0 #4D000000</BoxShadows>
+            <SolidColorBrush x:Key="ButtonBackground"            Color="#1FFFFFFF"/>
+            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#29FFFFFF"/>
+            <SolidColorBrush x:Key="ButtonBackgroundPressed"     Color="#33FFFFFF"/>
+            <SolidColorBrush x:Key="ButtonBackgroundDisabled"    Color="#0FFFFFFF"/>
+            <SolidColorBrush x:Key="ComboBoxBackground"            Color="#1FFFFFFF"/>
+            <SolidColorBrush x:Key="ComboBoxBackgroundUnfocused"   Color="#1FFFFFFF"/>
+            <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#29FFFFFF"/>
+            <SolidColorBrush x:Key="ComboBoxBackgroundPressed"     Color="#33FFFFFF"/>
+            <SolidColorBrush x:Key="ToggleSwitchFillOff"            Color="#33FFFFFF"/>
+            <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#3DFFFFFF"/>
+            <SolidColorBrush x:Key="ToggleSwitchFillOffPressed"     Color="#47FFFFFF"/>
+            <SolidColorBrush x:Key="ToggleSwitchFillOffDisabled"    Color="#1AFFFFFF"/>
+            <SolidColorBrush x:Key="SearchBoxInactiveBackground" Color="#4D000000"/>
+            <SolidColorBrush x:Key="SearchBoxFocusedBackground"  Color="#66000000"/>
             <SolidColorBrush x:Key="MicaPageBackground"          Color="Transparent"/>
             <SolidColorBrush x:Key="SettingsCardBackground"      Color="#12FFFFFF"/>
             <SolidColorBrush x:Key="SettingsCardBorderBrush"     Color="#26000000"/>

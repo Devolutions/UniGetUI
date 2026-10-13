@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
+using System.Text.Json;
 using UniGetUI.Core.Data;
 using UniGetUI.Core.Logging;
 using UniGetUI.Core.Tools;
@@ -90,8 +91,13 @@ public static class CrashHandler
         }
     }
 
-    [SupportedOSPlatform("windows")]
+    private static readonly string[] KnownBundledLibraries =
+        ["libSkiaSharp", "libHarfBuzzSharp", "av_libglesv2", "e_sqlite3"];
+
     internal static bool IsMissingBundledLibrary(Exception exception)
+        => IsMissingBundledLibrary(exception, ReadShippedLibraries());
+
+    internal static bool IsMissingBundledLibrary(Exception exception, IEnumerable<string> shippedFiles)
     {
         if (exception is not DllNotFoundException)
             return false;
@@ -100,13 +106,37 @@ public static class CrashHandler
         int start = message.IndexOf('\'');
         int end = start < 0 ? -1 : message.IndexOf('\'', start + 1);
         if (end <= start + 1)
-            return true;
+            return false;
 
-        string library = Path.GetFileName(message[(start + 1)..end]);
-        if (!library.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-            library += ".dll";
+        string library = LibraryName(message[(start + 1)..end]);
+        return KnownBundledLibraries.Concat(shippedFiles)
+            .Any(file => LibraryName(file).Equals(library, StringComparison.OrdinalIgnoreCase));
+    }
 
-        return !File.Exists(Path.Join(Environment.SystemDirectory, library));
+    private static string LibraryName(string path)
+    {
+        string name = Path.GetFileName(path.Trim());
+        return name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ? name[..^4] : name;
+    }
+
+    private static List<string> ReadShippedLibraries()
+    {
+        try
+        {
+            string tree = Path.Join(CoreData.UniGetUIExecutableDirectory, "IntegrityTree.json");
+            if (!File.Exists(tree))
+                return [];
+
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(tree));
+            return document.RootElement.EnumerateObject()
+                .Select(entry => entry.Name)
+                .Where(name => name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     public static void ReportFatalException(Exception e)

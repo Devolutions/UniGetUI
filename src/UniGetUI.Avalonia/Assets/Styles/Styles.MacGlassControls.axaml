@@ -67,6 +67,7 @@
     <Style Selector="Window.mac-glass controls|ToolbarOverflowPanel#ToolBar">
         <Setter Property="AlwaysCollapseLabels" Value="True"/>
         <Setter Property="GroupBackground" Value="{DynamicResource MacGlassControlBackground}"/>
+        <Setter Property="GroupBorderBrush" Value="{DynamicResource MacGlassPanelBorderBrush}"/>
         <Setter Property="GroupCornerRadius" Value="18"/>
         <Setter Property="GroupVerticalInset" Value="2"/>
     </Style>
@@ -90,6 +91,8 @@
     </Style>
     <Style Selector="#ToolbarRow ToggleButton:not(:disabled), #ToolbarRow ToggleButton:disabled">
         <Setter Property="Background" Value="{DynamicResource MacGlassControlBackground}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource MacGlassPanelBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
     </Style>
     <Style Selector="Button#MainToolbarButton:not(:disabled), Button#MainToolbarButtonDropdown:not(:disabled)">
         <Setter Property="Background" Value="{DynamicResource AccentButtonBackground}"/>

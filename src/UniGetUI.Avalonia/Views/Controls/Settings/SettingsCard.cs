@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Tools;
 using ICommand = System.Windows.Input.ICommand;
@@ -136,8 +137,16 @@ public class SettingsCard : UserControl
     public new CornerRadius CornerRadius
     {
         get => _border.CornerRadius;
-        set => _border.CornerRadius = value;
+        set => _border.CornerRadius = AdaptCorners(value);
     }
+
+    // macOS grouped forms use rounder sections, so the standard 8px card corners widen to 12px there.
+    private static CornerRadius AdaptCorners(CornerRadius radius)
+        => MacGlassWindowHelper.IsGlassEnabled()
+            ? new CornerRadius(Widen(radius.TopLeft), Widen(radius.TopRight), Widen(radius.BottomRight), Widen(radius.BottomLeft))
+            : radius;
+
+    private static double Widen(double corner) => corner == 8 ? 12 : corner;
 
     public new Thickness BorderThickness
     {
@@ -231,7 +240,7 @@ public class SettingsCard : UserControl
 
         _border = new Border
         {
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = AdaptCorners(new CornerRadius(8)),
             BorderThickness = new Thickness(1),
             Child = _layoutGrid,
         };

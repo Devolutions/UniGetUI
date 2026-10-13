@@ -19,6 +19,9 @@ public sealed class ToolbarOverflowPanel : Panel
     public static readonly StyledProperty<IBrush?> GroupBackgroundProperty =
         AvaloniaProperty.Register<ToolbarOverflowPanel, IBrush?>(nameof(GroupBackground));
 
+    public static readonly StyledProperty<IBrush?> GroupBorderBrushProperty =
+        AvaloniaProperty.Register<ToolbarOverflowPanel, IBrush?>(nameof(GroupBorderBrush));
+
     public static readonly StyledProperty<double> GroupCornerRadiusProperty =
         AvaloniaProperty.Register<ToolbarOverflowPanel, double>(nameof(GroupCornerRadius));
 
@@ -43,6 +46,7 @@ public sealed class ToolbarOverflowPanel : Panel
     {
         base.OnPropertyChanged(change);
         if (change.Property == GroupBackgroundProperty
+            || change.Property == GroupBorderBrushProperty
             || change.Property == GroupCornerRadiusProperty
             || change.Property == GroupVerticalInsetProperty)
             _backdrop.InvalidateVisual();
@@ -70,6 +74,12 @@ public sealed class ToolbarOverflowPanel : Panel
     {
         get => GetValue(GroupBackgroundProperty);
         set => SetValue(GroupBackgroundProperty, value);
+    }
+
+    public IBrush? GroupBorderBrush
+    {
+        get => GetValue(GroupBorderBrushProperty);
+        set => SetValue(GroupBorderBrushProperty, value);
     }
 
     public double GroupCornerRadius
@@ -320,7 +330,10 @@ public sealed class ToolbarOverflowPanel : Panel
             if (group is not { } rect)
                 return;
             double radius = owner.GroupCornerRadius;
-            context.DrawRectangle(brush, null, rect.Deflate(new Thickness(0, owner.GroupVerticalInset)), radius, radius);
+            IPen? rim = owner.GroupBorderBrush is { } border ? new Pen(border, 1) : null;
+            // Inset half the pen width so the 1px rim stays inside the capsule.
+            Rect capsule = rect.Deflate(new Thickness(0, owner.GroupVerticalInset)).Deflate(rim is null ? 0 : 0.5);
+            context.DrawRectangle(brush, rim, capsule, radius, radius);
         }
     }
 }

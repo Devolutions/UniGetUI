@@ -579,6 +579,7 @@ public partial class MainWindow : Window
             ExtendClientAreaTitleBarHeightHint = 44;
             MacGlassWindowHelper.Apply(this);
             ApplyMacTitleBarControlSizes();
+            ApplyMacTitleBarChrome();
 
             // Drive height/inset from code rather than the AXAML bindings: in fullscreen the native
             // title bar is hidden and WindowDecorationMargin collapses to 0, which would clip the
@@ -699,6 +700,8 @@ public partial class MainWindow : Window
             NavDock.ClearValue(PaddingProperty);
             SidebarGlass.IsVisible = false;
             BackButton.Background = Brushes.Transparent;
+            BackButton.ClearValue(BorderBrushProperty);
+            BackButton.BorderThickness = new Thickness(0);
             BackButton.CornerRadius = new CornerRadius(4);
             TitleBarTextBlock.IsVisible = true;
             return;
@@ -721,6 +724,8 @@ public partial class MainWindow : Window
 
         // Back is a round glass button, like the back/forward capsule in System Settings.
         BackButton.Bind(BackgroundProperty, this.GetResourceObservable("MacGlassControlBackground"));
+        BackButton.Bind(BorderBrushProperty, this.GetResourceObservable("MacGlassPanelBorderBrush"));
+        BackButton.BorderThickness = new Thickness(1);
         BackButton.CornerRadius = new CornerRadius(MAC_TITLE_BAR_CONTROL_SIZE / 2);
 
         // Apple: don't title windows with the app name; the page header already names the view.
@@ -746,6 +751,21 @@ public partial class MainWindow : Window
             GeometryCombineMode.Exclude,
             new RectangleGeometry(new Rect(MacWindowSurface.Bounds.Size)),
             new RectangleGeometry(new Rect(origin, SidebarGlass.Bounds.Size), radius, radius));
+    }
+
+    // macOS title-bar idioms: the sidebar.left toggle and a back chevron instead of the hamburger and
+    // arrow, and search at the trailing end of the bar, as in Finder.
+    private void ApplyMacTitleBarChrome()
+    {
+        if (SidebarToggleButton.Content is global::Avalonia.Controls.Shapes.Path toggle)
+            toggle.Data = Geometry.Parse("M2.5,0.75 H13.5 A1.75,1.75 0 0 1 15.25,2.5 V11.5 A1.75,1.75 0 0 1 13.5,13.25 "
+                                         + "H2.5 A1.75,1.75 0 0 1 0.75,11.5 V2.5 A1.75,1.75 0 0 1 2.5,0.75 Z M5.75,0.75 V13.25");
+        if (BackButton.Content is global::Avalonia.Controls.Shapes.Path back)
+            back.Data = Geometry.Parse("M10,1 L4,7 L10,13");
+
+        Grid.SetColumn(GlobalSearchContainer, 2);
+        GlobalSearchContainer.HorizontalAlignment = HorizontalAlignment.Right;
+        GlobalSearchContainer.Margin = new Thickness(0, 0, 12, 0);
     }
 
     private void ApplyMacTitleBarControlSizes()

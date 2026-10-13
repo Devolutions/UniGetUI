@@ -169,7 +169,7 @@ internal sealed class PackageRowModel : INotifyPropertyChanged, IDisposable
             Bitmap bitmap;
             if (uri.IsFile)
             {
-                bitmap = new Bitmap(uri.LocalPath);
+                bitmap = BitmapLoader.LoadFile(uri.LocalPath);
             }
             else if (uri.Scheme is "http" or "https")
             {

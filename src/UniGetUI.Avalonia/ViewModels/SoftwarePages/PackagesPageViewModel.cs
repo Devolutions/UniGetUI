@@ -173,7 +173,7 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private bool _backgroundTextVisible;
     [ObservableProperty] private bool _loadingImageVisible;
     private static readonly Lazy<Bitmap?> _loadingImage =
-        new(() => AssetBitmapLoader.TryLoad("avares://UniGetUI/Assets/Images/launcher.png"));
+        new(() => BitmapLoader.TryLoadAsset("avares://UniGetUI/Assets/Images/launcher.png"));
     public Bitmap? LoadingImage => _loadingImage.Value;
     [ObservableProperty] private Bitmap? _noPackagesImage;
     [ObservableProperty] private bool _noPackagesImageVisible;
@@ -255,7 +255,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         NoMatchesText = data.NoMatches_BackgroundText;
         if (_showPackageIllustrations && !string.IsNullOrEmpty(data.NoPackages_ImagePath))
         {
-            NoPackagesImage = AssetBitmapLoader.TryLoad(data.NoPackages_ImagePath);
+            NoPackagesImage = BitmapLoader.TryLoadAsset(data.NoPackages_ImagePath);
         }
         _noPackagesSubtitleBase = data.NoPackages_SubtitleText_Base;
         _stillLoadingSubtitle = data.MainSubtitle_StillLoading;

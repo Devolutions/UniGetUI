@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Avalonia.ViewModels.Pages;
 using UniGetUI.Avalonia.Views.Controls;
 using UniGetUI.Core.Logging;
@@ -777,7 +778,7 @@ public sealed class PackageWrapper : INotifyPropertyChanged, IDisposable, IPacka
     {
         var info = new FileInfo(filePath);
         if (!info.Exists || info.Length == 0) return null;
-        return TryDecodeIcon(() => { using var fs = File.OpenRead(filePath); return DecodeDownscaled(fs); }, filePath);
+        return TryDecodeIcon(() => { using var ms = BitmapLoader.ReadFile(filePath); return DecodeDownscaled(ms); }, filePath);
     }
 
     private static Bitmap? TryDecodeIcon(byte[] bytes, string source)

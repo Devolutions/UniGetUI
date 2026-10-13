@@ -18,7 +18,7 @@ public partial class SplashWindow : Window
         string uri = isDark
             ? "avares://UniGetUI/Assets/SplashScreen.theme-dark.png"
             : "avares://UniGetUI/Assets/SplashScreen.png";
-        SplashImage.Source = AssetBitmapLoader.TryLoad(uri);
+        SplashImage.Source = BitmapLoader.TryLoadAsset(uri);
 
         TaglineText.Text = CoreTools.Translate("Package management made easy");
         TaglineText.Foreground = isDark ? Brushes.White : Brushes.Black;

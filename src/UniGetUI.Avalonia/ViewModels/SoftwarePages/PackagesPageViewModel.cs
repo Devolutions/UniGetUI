@@ -9,7 +9,6 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -173,6 +172,9 @@ public partial class PackagesPageViewModel : ViewModelBase
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _backgroundTextVisible;
     [ObservableProperty] private bool _loadingImageVisible;
+    private static readonly Lazy<Bitmap?> _loadingImage =
+        new(() => AssetBitmapLoader.TryLoad("avares://UniGetUI/Assets/Images/launcher.png"));
+    public Bitmap? LoadingImage => _loadingImage.Value;
     [ObservableProperty] private Bitmap? _noPackagesImage;
     [ObservableProperty] private bool _noPackagesImageVisible;
     [ObservableProperty] private string _backgroundText = "";
@@ -253,8 +255,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         NoMatchesText = data.NoMatches_BackgroundText;
         if (_showPackageIllustrations && !string.IsNullOrEmpty(data.NoPackages_ImagePath))
         {
-            using var stream = AssetLoader.Open(new Uri(data.NoPackages_ImagePath));
-            NoPackagesImage = new Bitmap(stream);
+            NoPackagesImage = AssetBitmapLoader.TryLoad(data.NoPackages_ImagePath);
         }
         _noPackagesSubtitleBase = data.NoPackages_SubtitleText_Base;
         _stillLoadingSubtitle = data.MainSubtitle_StillLoading;
@@ -689,7 +690,7 @@ public partial class PackagesPageViewModel : ViewModelBase
         {
             BackgroundText = _stillLoadingSubtitle;
             BackgroundTextVisible = true;
-            LoadingImageVisible = _showPackageIllustrations;
+            LoadingImageVisible = _showPackageIllustrations && LoadingImage is not null;
             NoPackagesImageVisible = false;
         }
         else if (FilteredPackages.Count == 0)

@@ -2,9 +2,8 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using Avalonia.Styling;
+using UniGetUI.Avalonia.Infrastructure;
 using UniGetUI.Core.Tools;
 
 namespace UniGetUI.Avalonia.Views;
@@ -19,7 +18,7 @@ public partial class SplashWindow : Window
         string uri = isDark
             ? "avares://UniGetUI/Assets/SplashScreen.theme-dark.png"
             : "avares://UniGetUI/Assets/SplashScreen.png";
-        SplashImage.Source = new Bitmap(AssetLoader.Open(new Uri(uri)));
+        SplashImage.Source = AssetBitmapLoader.TryLoad(uri);
 
         TaglineText.Text = CoreTools.Translate("Package management made easy");
         TaglineText.Foreground = isDark ? Brushes.White : Brushes.Black;

@@ -176,6 +176,7 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        UiAutomationGuard.Attach(this);
         Instance = this;
         DataContext = new MainWindowViewModel();
         InitializeComponent();

@@ -213,10 +213,6 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="CornerRadius" Value="10"/>
         </Style>
-        <!-- macOS sidebar icons take the system accent colour (white on the selected pill). -->
-        <Style Selector="Window.mac-glass ListBoxItem.nav-item controls|SvgIcon">
-            <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
-        </Style>
         <Style Selector="Window.mac-glass ListBoxItem.nav-item:selected controls|SvgIcon">
             <Setter Property="Foreground" Value="White"/>
         </Style>
